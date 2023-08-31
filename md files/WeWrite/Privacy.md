@@ -1,0 +1,1 @@
+Privacy will be of immense importance to [[WeWrite]] because it'll potentially be used for recording sensitive personal information for [[WeWrite for Families|familes]], [[WeWrite for Companies|companies]], etc. 
