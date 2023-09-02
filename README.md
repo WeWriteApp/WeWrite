@@ -1,6 +1,6 @@
 # WeWrite
 
-WeWrite is a privacy-oriented social wiki where each page you write is a recurring donation target. 
+WeWrite is a privacy-respecting social wiki where each page you write is a recurring donation target. 
 
 Each page you write could become a fundraiser, a kickstarter, a gofundme page. Write a thousand pages. Collaborate with friends on pages, set up revenue sharing between yourselves. 
 
