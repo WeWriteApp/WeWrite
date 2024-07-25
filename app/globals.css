@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html body .inner-container {
+  max-width: 768px;
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
+
+/* Target div with role="textbox" */
+html body div[role="textbox"] {
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+html body .container {
+  max-width: 900px;
+}
