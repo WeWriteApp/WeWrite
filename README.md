@@ -16,18 +16,26 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Tools & Platforms
 
-## Learn More
+### Firebase
+Firebase isn't just a database anymore. This is an ecosystem of authentication, storage, databases (both relational and nonrelational) built on top of Google Cloud Platform. For the MVP, we chose Firebase for its ease of implementation and its free tier should be sufficient to handle all activities for free. Current services used for the project.
 
-To learn more about Next.js, take a look at the following resources:
+- Firestore
+	- This is the relational database that handles all pages in the system and versions as subcollections. Learn more about Firestore's data model [here](https://firebase.google.com/docs/firestore/data-model)
+- Authentication
+	- Built-in authentciation for email and password was used for th MVP. This is extendable to a variety of other auth types, but for now this works well.
+- Functions
+	- Powerful serverless functions that can be hosted as both APIs and be triggered from database activities. A great example would be when an invite is sent, this can trigger invites to be added to multiple collections, notification sends, etc. 
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Vercel
+Vercel is a hosting platform for javascript projects. They are the creators and managers of NextJS -- which is the server side rendering engine of the MVP application. This is also where domain name assignment occurs. 
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+### Github
+Github, as all devs know, handles the source code. Vercel is connected to the Github repo and auto deploys when configured to do so.  
+
+
 
 ## Deploy on Vercel
 
