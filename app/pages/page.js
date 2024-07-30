@@ -4,9 +4,20 @@ import DashboardLayout from "../DashboardLayout";
 import DataTable from "react-data-table-component";
 import Link from "next/link";
 import { DataContext } from "../providers/DataProvider";
+import { removeDoc } from "../firebase/database";
 
 const Page = () => {
-  const { pages, loading } = useContext(DataContext);
+  const { pages, loading,deletePageState} = useContext(DataContext);
+
+  const deletePage = async (id) => {
+    const res = await removeDoc("pages", id);
+    if (res) {
+      deletePageState(id);
+    } else {
+      console.log("Error deleting page");
+    }
+  }
+
   const [columns, setColumns] = useState([
     {
       name: "User",
@@ -23,6 +34,28 @@ const Page = () => {
       href={`/pages/${row.id}`}>{row.title}</Link>,
       sortable: true,
     },
+    {
+      name: "Created At",
+      cell: (row) => new Date(row.createdAt).toLocaleDateString(),
+      maxWidth: "140px",
+      sortable: true,
+    },
+    {
+      name: "Actions",
+      cell: (row) => (
+        <div className="flex space-x-2">
+          <Link href={`/pages/${row.id}`}>
+            <button className="bg-blue-500 text-white px-2 py-1 rounded">
+              Edit
+            </button>
+          </Link>
+          <button className="bg-red-500 text-white px-2 py-1 rounded" onClick={() => deletePage(row.id)}>
+            Delete
+          </button>
+        </div>
+      ),
+
+    }
   ]);
 
   if (loading) return <DashboardLayout>Loading...</DashboardLayout>;

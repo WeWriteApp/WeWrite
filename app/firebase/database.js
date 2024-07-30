@@ -6,7 +6,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
-
+  deleteDoc
 } from "firebase/firestore";
 import app from "./config";
 
@@ -63,7 +63,7 @@ export const updateDoc = async (collectionName, docName, data) => {
   }
 }
 
-export const deleteDoc = async (collectionName, docName) => {
+export const removeDoc = async (collectionName, docName) => {
   try {
     await deleteDoc(doc(db, collectionName, docName));
     return true;

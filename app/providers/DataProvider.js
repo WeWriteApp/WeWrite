@@ -20,8 +20,13 @@ export const DataProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // a way for a delete method to update the state
+  const deletePageState = (id) => {
+    setPages(pages.filter((page) => page.id !== id));
+  };
+
   return (
-    <DataContext.Provider value={{ loading, pages }}>
+    <DataContext.Provider value={{ loading, pages,deletePageState }}>
       {children}
     </DataContext.Provider>
   );
