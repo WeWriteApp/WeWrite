@@ -15,6 +15,7 @@ const Page = ({ params }) => {
     const fetchPage = async () => {
       const page = await getDocById("pages", params.id);
       setPage(page.data());
+      console.log(page.data());
       setEditorState(page.data().content);
     };
 
@@ -36,13 +37,13 @@ const Page = ({ params }) => {
           }}
         />
         <div className="flex w-full h-1 bg-gray-200 my-4"></div>
-        <TextView content={JSON.parse(editorState).root} />
+        <TextView content={editorState} />
         <DonateBar />
 
-        <div className="mt-8">
+        {/* <div className="mt-8">
           <h2 className="text-2xl font-semibold">Transactions</h2>
           <TransactionsTable id={params.id} />
-        </div>
+        </div> */}
       </div>
     </DashboardLayout>
   );

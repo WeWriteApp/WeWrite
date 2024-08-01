@@ -1,58 +1,49 @@
 import { useEffect, useState } from "react";
 
 const TextView = ({ content }) => {
-  const [elements, setElements] = useState([]);
-
-  useEffect(() => {
-    if (!content) return;
-    let els = content.children.map((child) => {
-      return {
-        type: child.type,
-        children: child.children
-      }
-    });
-
-    setElements(els);
-
-    console.log(els);
-  }, [content]);
+  const elements = JSON.parse(content);
+  
   
   return (
     <>
-      {
-        elements.length > 0 && (
-          <div>
-            {elements.map((element, index) => (
-              <Element key={index} {...element} />
-            ))}
-          </div>
-        )
-      }
+      <RenderContent content={elements} />
     </>
   )
 };
 
-const Element = ({ type, children }) => {
-  console.log(type, children);
-  // if children has children, recursively render them
-  if (children) {
-    return (
-      <div>
-        {
-        children && children.map((child, index) => {
-          switch (child.type) {
-            case "text":
-              return <span key={index}>{child.text}</span>
-            case "linebreak":
-              return <br key={index} />
-            default:
-              return null;
-          }
-        })}
-      </div>
-    );
-  }
-}
+const RenderContent = ({ content }) => {
+  // Render function for text nodes
+  const renderText = (node) => {
+    return node.text ? node.text : null;
+  };
 
+  // Render function for link nodes
+  const renderLink = (node) => {
+    return (
+      <a href={node.url} key={node.url} className="bg-blue-500 text-white px-4 py-2 rounded-full">
+        {node.children.map((child, index) => renderNode(child, index))}
+      </a>
+    );
+  };
+
+  // General render function for all nodes
+  const renderNode = (node, index) => {
+    switch (node.type) {
+      case 'link':
+        return renderLink(node);
+      case 'paragraph':
+        return (
+          <p key={index}>
+            {node.children.map((child, idx) => renderNode(child, idx))}
+            <br /> {/* Optional: Adding line breaks for each paragraph */}
+          </p>
+        );
+      default:
+        return <span key={index}>{renderText(node)}</span>;
+    }
+  };
+
+  return <div>{content.map((node, index) => renderNode(node, index))}</div>;
+};
 
 export default TextView;

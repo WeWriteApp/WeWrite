@@ -1,6 +1,6 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
-import Editor from "../components/Editor";
+import SlateEditor from "../components/SlateEditor";
 import DashboardLayout from "../DashboardLayout";
 import { createDoc } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
@@ -33,27 +33,27 @@ const Form = ({ Page, setPage }) => {
 
   const handleSave = async () => {
 
-    editorState.read(async () => {
-      const jsonString = JSON.stringify(editorState.toJSON());
+    let data = {
+      ...Page,
+      content: JSON.stringify(editorState),
+      userId: user.uid,
+      createdAt: new Date().toISOString(),
+    };
 
-      const doc = {
-        title: Page.title,
-        isPublic: Page.isPublic,
-        content: jsonString,
-        userId: user.uid,
-        createdAt: new Date().toISOString(),
-      };
-
-      if (attachGeo && lat && lng) {
-        doc.lat = lat;
-        doc.lng = lng;
+    if (attachGeo) {
+      data = {
+        ...data,
+        lat,
+        lng,
       }
-      let pageId = await createDoc('pages', doc);
+    }
 
-      window.alert('Page created successfully');
-  
-      router.push(`/pages/${pageId}/edit`);
-    });
+    const res = await createDoc("pages", data);
+    if (res) {
+      router.push("/pages");
+    } else {
+      console.log("Error creating page");
+    }
   }
 
   const getLatLng = () => {
@@ -88,7 +88,8 @@ const Form = ({ Page, setPage }) => {
         />
         <label>Public</label>
       </div>
-      <Editor editorState={editorState} setEditorState={setEditorState} />
+
+      <SlateEditor setEditorState={setEditorState} /> 
 
       <div className="fle flex-col items-center space-x-2">
         <input

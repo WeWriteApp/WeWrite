@@ -10,23 +10,24 @@ export const DataProvider = ({ children }) => {
   const [pages, setPages] = useState([]);
 
   useEffect(() => {
-    const fetchPages = async () => {
-      const pages = await getCollection("pages");
-      setPages(pages.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    };
-
     fetchPages();
 
     setLoading(false);
   }, []);
 
+  const fetchPages = async () => {
+    const pages = await getCollection("pages");
+    setPages(pages.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+  };
+
   // a way for a delete method to update the state
   const deletePageState = (id) => {
-    setPages(pages.filter((page) => page.id !== id));
+    // refetch pages
+    fetchPages();
   };
 
   return (
-    <DataContext.Provider value={{ loading, pages,deletePageState }}>
+    <DataContext.Provider value={{ loading, pages,deletePageState,fetchPages }}>
       {children}
     </DataContext.Provider>
   );

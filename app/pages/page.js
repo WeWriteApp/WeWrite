@@ -7,7 +7,7 @@ import { DataContext } from "../providers/DataProvider";
 import { removeDoc } from "../firebase/database";
 
 const Page = () => {
-  const { pages, loading,deletePageState} = useContext(DataContext);
+  const { pages, loading,deletePageState,fetchPages} = useContext(DataContext);
 
   const deletePage = async (id) => {
     const res = await removeDoc("pages", id);
@@ -17,6 +17,10 @@ const Page = () => {
       console.log("Error deleting page");
     }
   }
+
+  useEffect(() => {
+    fetchPages();
+  }, []);
 
   const [columns, setColumns] = useState([
     {
@@ -44,7 +48,7 @@ const Page = () => {
       name: "Actions",
       cell: (row) => (
         <div className="flex space-x-2">
-          <Link href={`/pages/${row.id}`}>
+          <Link href={`/pages/${row.id}/edit`}>
             <button className="bg-blue-500 text-white px-2 py-1 rounded">
               Edit
             </button>
@@ -63,6 +67,12 @@ const Page = () => {
     <DashboardLayout>
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-semibold">All Pages</h1>
+        {/* Add page button (navigate to /new) */}
+        <Link href="/new">
+          <button className="bg-blue-500 text-white px-4 py-2 rounded mt-4">
+            Add Page
+          </button>
+        </Link>
         <DataTable columns={columns} data={pages} pagination highlightOnHover />
       </div>
     </DashboardLayout>
