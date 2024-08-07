@@ -19,3 +19,7 @@ html body div[role="textbox"] {
 html body .container {
   max-width: 900px;
 }
+
+html body .page-content p {
+  line-height: 2.5;
+}

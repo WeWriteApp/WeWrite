@@ -5,9 +5,9 @@ const TextView = ({ content }) => {
   
   
   return (
-    <>
+    <div className="page-content">
       <RenderContent content={elements} />
-    </>
+    </div>
   )
 };
 
@@ -42,6 +42,10 @@ const RenderContent = ({ content }) => {
         return <span key={index}>{renderText(node)}</span>;
     }
   };
+  console.log('content', content);
+  if (!content || content.length === 0) {
+    return null;
+  }
 
   return <div>{content.map((node, index) => renderNode(node, index))}</div>;
 };

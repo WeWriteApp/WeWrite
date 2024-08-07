@@ -5,10 +5,12 @@ import DataTable from "react-data-table-component";
 import Link from "next/link";
 import { DataContext } from "../providers/DataProvider";
 import { removeDoc } from "../firebase/database";
+import { PillLink } from "../components/PillLink";
 
 const Page = () => {
-  const { pages, loading,deletePageState,fetchPages} = useContext(DataContext);
-
+  const { pages, loading, deletePageState, fetchPages } =
+    useContext(DataContext);
+  const [viewType, setViewType] = useState("list");
   const deletePage = async (id) => {
     const res = await removeDoc("pages", id);
     if (res) {
@@ -16,7 +18,7 @@ const Page = () => {
     } else {
       console.log("Error deleting page");
     }
-  }
+  };
 
   useEffect(() => {
     fetchPages();
@@ -33,9 +35,11 @@ const Page = () => {
       name: "Title",
       selector: (row) => row.title,
       maxWidth: "240px",
-      cell: (row) => <Link 
-        className="text-blue-500 underline"
-      href={`/pages/${row.id}`}>{row.title}</Link>,
+      cell: (row) => (
+        <Link className="text-blue-500 underline" href={`/pages/${row.id}`}>
+          {row.title}
+        </Link>
+      ),
       sortable: true,
     },
     {
@@ -53,16 +57,18 @@ const Page = () => {
               Edit
             </button>
           </Link>
-          <button className="bg-red-500 text-white px-2 py-1 rounded" onClick={() => deletePage(row.id)}>
+          <button
+            className="bg-red-500 text-white px-2 py-1 rounded"
+            onClick={() => deletePage(row.id)}
+          >
             Delete
           </button>
         </div>
       ),
-
-    }
+    },
   ]);
 
-  if (loading) return <DashboardLayout>Loading...</DashboardLayout>;
+  // if (loading) return <DashboardLayout>Loading...</DashboardLayout>;
   return (
     <DashboardLayout>
       <div className="container mx-auto p-4">
@@ -73,7 +79,46 @@ const Page = () => {
             Add Page
           </button>
         </Link>
-        <DataTable columns={columns} data={pages} pagination highlightOnHover />
+        <div className="flex justify-end gap-4 mt-4">
+          <button
+            className={`${
+              viewType === "list" ? "bg-blue-500" : "bg-gray-500"
+            } text-white px-4 py-2 rounded`}
+            onClick={() => setViewType("list")}
+          >
+            List
+          </button>
+          <button
+            className={`${
+              viewType === "table" ? "bg-blue-500" : "bg-gray-500"
+            } text-white px-4 py-2 rounded`}
+            onClick={() => setViewType("table")}
+          >
+            Table
+          </button>
+        </div>
+
+
+        {viewType === "list" && (
+          <>
+            {pages &&
+              pages.map((page) => (
+                <PillLink key={page.id} href={`/pages/${page.id}`}>
+                  {page.title}
+                </PillLink>
+              ))}
+          </>
+        )}
+        {
+          viewType === "table" && (
+            <DataTable
+              columns={columns}
+              data={pages}
+              pagination
+              highlightOnHover
+            />
+          )
+        }
       </div>
     </DashboardLayout>
   );

@@ -59,7 +59,6 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
       children: [{ text: item.title }],
     };
     Transforms.insertNodes(editor, link, { at: editor.selection });
-
     // after insert -- move the cursor to the end of the link
     Transforms.collapse(editor, { edge: "end" });
 
@@ -99,12 +98,8 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
          
           placeholder="Enter some text..."          
         />
-
-
       </Slate>
 
-              {/* show the state of the editor json */}
-              <pre>{JSON.stringify(editor, null, 2)}</pre>
       {showDropdown && (
         <DropdownMenu position={dropdownPosition} onSelect={handleSelection} />
       )}

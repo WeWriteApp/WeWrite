@@ -9,6 +9,7 @@ import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { DrawerProvider } from "./providers/DrawerProvider";
 import { CommunityProvider } from "./providers/CommunityProvider";
 import { Drawer } from "./components/Drawer";
+import Header from "./components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
                 <PortfolioProvider>
                   <MobileProvider>
                     <NavProvider>
+                      <Header />
                       <div className="flex flex-row">
                         <div className="flex flex-col w-full">{children}</div>
                       </div>

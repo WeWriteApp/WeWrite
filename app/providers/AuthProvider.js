@@ -2,9 +2,11 @@
 // an auth provider that watches onAuthState change for firebase with a context provider
 import { useEffect, useState, createContext } from "react";
 import { auth } from "../firebase/auth";
+import { app2 } from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { rtdb } from "../firebase/rtdb";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, set, getDatabase } from "firebase/database";
+import { getCollection } from "../firebase/database";
 
 export const AuthContext = createContext();
 
@@ -28,7 +30,7 @@ export const AuthProvider = ({ children }) => {
           };
           setUser(user);
         }); // Monitor the user ref for changes
-      } else {
+      } else {        
         setUser(null);
         setLoading(false);
       }
