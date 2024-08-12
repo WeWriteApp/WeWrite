@@ -9,12 +9,14 @@ import SlateEditor from "../../components/SlateEditor";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Loader } from "../../components/Loader";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const Page = ({ params }) => {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (!params.id) return;
@@ -41,6 +43,13 @@ const Page = ({ params }) => {
 
     fetchPage();
   }, [params]);
+
+  useEffect(() => {
+    if (isDeleted) {
+      console.log("Page has been deleted");
+      router.push("/pages");
+    }
+  }, [isDeleted]);
 
   if (!page) {
     return <Loader />;
