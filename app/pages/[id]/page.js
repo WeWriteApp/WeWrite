@@ -28,9 +28,7 @@ const Page = ({ params }) => {
       };
 
       if (obj) {
-        console.log(obj);
         if (!obj.content) {
-          console.log('does not exist');
           setIsDeleted(true);
           return;
         } else {
@@ -46,7 +44,6 @@ const Page = ({ params }) => {
 
   useEffect(() => {
     if (isDeleted) {
-      console.log("Page has been deleted");
       router.push("/pages");
     }
   }, [isDeleted]);

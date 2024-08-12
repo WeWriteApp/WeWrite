@@ -42,12 +42,18 @@ const RenderContent = ({ content }) => {
         return <span key={index}>{renderText(node)}</span>;
     }
   };
-  console.log('content', content);
   if (!content || content.length === 0) {
     return null;
   }
 
-  return <div>{content.map((node, index) => renderNode(node, index))}</div>;
+  if (content.children ) {
+    return content.children.map((child, index) => renderNode(child, index));
+  }
+  if (!content.children) {
+    return content.map((child, index) => renderNode(child, index));
+  }
 };
+
+
 
 export default TextView;
