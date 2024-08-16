@@ -1,7 +1,5 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import "envy";
-
 const {
     API_KEY,
     DOMAIN,
@@ -10,7 +8,7 @@ const {
     BUCKET,
     MSNGR_ID,
     APP_ID,
-} =  envy();
+} =  process.env;
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -28,3 +26,4 @@ const newConfig =  {
 
 // Initialize Firebase
 export const app = initializeApp(newConfig);
+// module.exports = { app: initializeApp(newConfig) };
