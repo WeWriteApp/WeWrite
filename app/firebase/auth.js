@@ -2,6 +2,7 @@ import {app} from './config';
 import { getAuth } from "firebase/auth";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
+console.log(JSON.stringify(app))
 export const auth = getAuth(app);
 
 // firebase database service
