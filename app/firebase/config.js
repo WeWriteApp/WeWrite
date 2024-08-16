@@ -5,13 +5,13 @@ import { initializeApp } from "firebase/app";
 // https://firebase.google.com/docs/web/setup#available-libraries
 // Your web app's Firebase configuration
 const newConfig =  {
-  apiKey: process.env.API_KEY,
-  authDomain: process.env.DOMAIN,
-  databaseURL: process.env.DB_URL,
-  projectId: process.env.PID,
-  storageBucket: process.env.BUCKET,
-  messagingSenderId: process.env.MSNGR_ID,
-  appId: process.env.APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 
