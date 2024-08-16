@@ -18,3 +18,5 @@ const newConfig =  {
 // Initialize Firebase
 export const app = initializeApp(newConfig);
 // module.exports = { app: process.env.initializeApp(newConfig) };
+
+export default app; 
