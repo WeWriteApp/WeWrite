@@ -1,3 +1,11 @@
+WeWrite is a social wiki where every page you write is a fundraiser. Learn more about us via the links below 👇
+- [Bento](https://bento.me/wewrite)
+- [Instagram](https://www.instagram.com/getwewrite/)
+- [YouTube](https://www.youtube.com/@WeWriteApp)
+
+![CleanShot 2024-08-18 at 11 56 02@2x](https://github.com/user-attachments/assets/16f6e2c7-fe80-4ce2-8a3c-1aaeb3c3d37e)
+
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app). 
 
 ## Getting Started
