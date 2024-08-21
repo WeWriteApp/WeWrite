@@ -10,8 +10,7 @@ import { DrawerProvider } from "./providers/DrawerProvider";
 import { CommunityProvider } from "./providers/CommunityProvider";
 import { Drawer } from "./components/Drawer";
 import Header from "./components/Header";
-import { Analytics } from "@vercel/analytics/react"
-
+import { Analytics } from "@vercel/analytics/react";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
