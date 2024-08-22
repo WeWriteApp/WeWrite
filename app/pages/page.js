@@ -7,6 +7,11 @@ import { DataContext } from "../providers/DataProvider";
 import { removeDoc } from "../firebase/database";
 import { PillLink } from "../components/PillLink";
 
+// Custom sort function for date columns
+const dateColumnSort = (rowA, rowB, columnId) => {
+  return new Date(rowA.createdAt) - new Date(rowB.createdAt);
+}
+
 const Page = () => {
   const { pages, loading, deletePageState, fetchPages } =
     useContext(DataContext);
@@ -47,6 +52,7 @@ const Page = () => {
       cell: (row) => new Date(row.createdAt).toLocaleDateString(),
       maxWidth: "140px",
       sortable: true,
+      sortFunction: dateColumnSort
     },
     {
       name: "Actions",
