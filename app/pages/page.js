@@ -77,7 +77,7 @@ const Page = () => {
   // if (loading) return <DashboardLayout>Loading...</DashboardLayout>;
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-4">
+      <div>
         <h1 className="text-2xl font-semibold">All Pages</h1>
         {/* Add page button (navigate to /new) */}
         <Link href="/new">

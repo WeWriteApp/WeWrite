@@ -38,7 +38,7 @@ const FundingSources = () => {
     return <div>Loading...</div>;
   }
   return (
-    <div className="container mx-auto pt-10 mb-0">
+    <div className="mt-10">
       <button
         onClick={() => setShowAddFundingSource(!showAddFundingSource)}
         className=" text-black underline"
