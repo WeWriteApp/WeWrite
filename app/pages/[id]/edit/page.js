@@ -45,7 +45,7 @@ const Edit = ({ params }) => {
   }
   return (
     <DashboardLayout>
-      <div className="container mx-auto">
+      <div>
       <h1 className="text-2xl font-semibold">Edit Page: {page.title}</h1>
       
       <SlateEditor setEditorState={setEditorState} initialEditorState={JSON.parse(initialEditorState)} />
