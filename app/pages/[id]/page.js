@@ -54,7 +54,7 @@ const Page = ({ params }) => {
   if (isDeleted) {
     return (
       <DashboardLayout>
-        <div className="container mx-auto">
+        <div>
           <h1 className="text-2xl font-semibold">Page not found</h1>
           <div className="flex items-center gap-2 mt-4">
             <Icon icon="akar-icons:warning" className="text-red-500" />
@@ -71,7 +71,7 @@ const Page = ({ params }) => {
   }
   return (
     <DashboardLayout>
-      <div className="container mx-auto mb-40">
+      <div>
         <ActionRow isEditing={isEditing} setIsEditing={setIsEditing} />
         <div className="flex w-full h-1 bg-gray-200 my-4"></div>
         {isEditing ? (

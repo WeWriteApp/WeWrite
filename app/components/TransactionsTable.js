@@ -66,7 +66,7 @@ const TransactionsTable = ({
     return <div>Loading...</div>;
   }
   return (
-    <div className="container mx-auto pt-10 mb-0">
+    <div className="pt-10 mb-0">
       <DataTable columns={columns} data={filteredTransactions} />
     </div>
   );

@@ -14,7 +14,7 @@ const New = () => {
   return (
     <DashboardLayout>
     <div className="p-4 w-full h-full flex flex-col space-y-4">
-      <div className="container inner-container mx-auto">
+      <div>
         <h1 className="text-2xl font-semibold mb-4">New Page</h1>
         <Form Page={Page} setPage={setPage} />
       </div>

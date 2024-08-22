@@ -13,7 +13,7 @@ const Page = () => {
   
   return (
     <DashboardLayout>
-      <div className="container mx-auto pt-10 mb-0">
+      <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
 
         <div className="flex w-full h-1 bg-gray-200 my-4"></div> 
