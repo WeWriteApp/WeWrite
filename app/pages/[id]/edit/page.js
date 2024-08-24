@@ -10,6 +10,8 @@ const Edit = ({ params }) => {
   const [page, setPage] = useState(null);
   const [editorState, setEditorState] = useState(null);
   const [initialEditorState, setInitialEditorState] = useState(null);
+  const [isPublic, setIsPublic] = useState(false);
+  
   useEffect(() => {
     if (!params.id) return;
     const fetchPage = async () => {
@@ -29,10 +31,8 @@ const Edit = ({ params }) => {
     const editorStateJSON = JSON.stringify(editorState);
 
     // update the page content
-    updateDoc("pages", params.id, { content: editorStateJSON });
+    updateDoc("pages", params.id, { content: editorStateJSON, isPublic: page.isPublic });
 
-    console.log("Page updated");
-    
   }
 
   const handleCancel = () => {
@@ -47,21 +47,19 @@ const Edit = ({ params }) => {
     <DashboardLayout>
       <div>
       <h1 className="text-2xl font-semibold">Edit Page: {page.title}</h1>
-      
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={page.isPublic}
+          onChange={(e) => setPage({ ...page, isPublic: e.target.checked })}
+        />
+        <label>Public</label>
+      </div>
       <SlateEditor setEditorState={setEditorState} initialEditorState={JSON.parse(initialEditorState)} />
 
     {/* diusplay json editor state */}
     <div className="flex w-full h-1 bg-gray-200 my-4"></div>
     </div>
-
-      {/* <div className="flex w-full h-1 bg-gray-200 my-4"></div>
-      {page ? (
-        <Editor initialEditorState={editorState} setEditorState={setEditorState} />
-      ) : (
-        <div>Loading...</div>
-      )} */}
-
-
       <div className="fixed bottom-0 right-0 p-4 bg-white shadow-lg">
         <button 
           onClick={handleSave}

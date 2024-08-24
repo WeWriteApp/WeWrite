@@ -1,47 +1,46 @@
 "use client";
 // an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from "react";
-import {getCollection} from "../firebase/database";
-import { app2 } from "../firebase/config";
+import { useEffect, useState, createContext,useContext } from "react";
+import { AuthContext } from "./AuthProvider";
+import { app } from "../firebase/config";
 import { 
   getFirestore,
-  addDoc,
   collection,
-  doc,
-  setDoc,
-  getDoc,
   getDocs,
-  deleteDoc
+  query,
+  createDoc,
+  where
 } from "firebase/firestore";
+
+export const db = getFirestore(app);
 
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState([]);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    async function fetchData() {
-      await fetchPages();
-
+    if (user) {
+      fetchPages();
+      setLoading(false);
+    } else {
+      setPages([]);
       setLoading(false);
     }
-    fetchData();
-    // Handle destroy here
-    return () => {
-      // Cleanup code for destroy
-      
-    };
-  }, []);
+  }, [user]);
 
   const fetchPages = async () => {
-    const pages = await getCollection("pages");
+    setLoading(true);
+    const db = getFirestore(app);
+    const q = query(collection(db, "pages"), where("userId", "==", user.uid));
+    const pages = await getDocs(q);
     setPages(pages.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
   };
 
   // a way for a delete method to update the state
   const deletePageState = (id) => {
-    // refetch pages
     fetchPages();
   };
 

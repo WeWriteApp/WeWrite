@@ -36,8 +36,6 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
       setShowDropdown(false);
     }
 
-    // update the editor state
-    setEditorState(editor);
   };
 
   const showDropdownMenu = (editor, selection) => {
@@ -80,7 +78,7 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
   };
 
   return (
-    <div>
+    <div className="border border-gray-300 p-4 relative">
       <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
         <Editable
         renderLeaf={({ attributes, children, leaf }) => {
@@ -95,13 +93,12 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
         }}
           renderElement={(props) => <Element {...props} />}
           onKeyDown={(event) => handleKeyDown(event, editor)}
-         
           placeholder="Enter some text..."          
         />
       </Slate>
 
       {showDropdown && (
-        <DropdownMenu position={dropdownPosition} onSelect={handleSelection} />
+        <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
       )}
     </div>
   );
@@ -228,12 +225,6 @@ const LinkComponent = ({ attributes, children, element }) => {
   );
 };
 
-const insertLink = (editor, url) => {
-  if (editor.selection) {
-    wrapLink(editor, url);
-  }
-};
-
 const isLinkActive = (editor) => {
   const [link] = Editor.nodes(editor, {
     match: (n) =>
@@ -243,12 +234,29 @@ const isLinkActive = (editor) => {
 };
 
 
-const DropdownMenu = ({ position, onSelect }) => {
+const DropdownMenu = ({ position, onSelect,showDropdown }) => {
   const { pages } = useContext(DataContext);
 
   // alphabetically sort the pages
   pages.sort((a, b) => a.title.localeCompare(b.title));
 
+  if (!pages) return null;
+  if (pages.length === 0) return (
+    <div
+      style={{
+        position: "absolute",
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        background: "white",
+        border: "1px solid #ccc",
+        padding: "4px",
+        borderRadius: "4px",
+        zIndex: 1000,
+      }}
+    >
+      No pages found
+    </div>
+  );
   return (
     <div
       style={{
