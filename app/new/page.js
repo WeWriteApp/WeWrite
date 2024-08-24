@@ -18,7 +18,7 @@ const New = () => {
           <h1 className="text-2xl font-semibold mb-4">New Page</h1>
           <Form Page={Page} setPage={setPage} />
         </div>
-      </div className>
+      </div>
     </DashboardLayout>
   );
 };
