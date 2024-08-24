@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { getDocById } from "../../firebase/database";
+import React, { useEffect, useState, useContext } from "react";
+import { getPageById } from "../../firebase/database";
 import DashboardLayout from "../../DashboardLayout";
 import TextView from "../../components/TextView";
 import DonateBar from "../../components/DonateBar";
@@ -9,44 +9,58 @@ import SlateEditor from "../../components/SlateEditor";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Loader } from "../../components/Loader";
 import Link from "next/link";
+import {
+  db,
+  deletePage,
+  saveNewVersion,
+  setCurrentVersion,
+} from "../../firebase/database";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import VersionsList from "../../components/VersionsList";
+import { AuthContext } from "../../providers/AuthProvider";
 
 const Page = ({ params }) => {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     if (!params.id) return;
     const fetchPage = async () => {
-      const page = await getDocById("pages", params.id);
-      let obj = {
-        id: page.id,
-        ...page.data(),
-      };
+      const { pageData, versionData, links } = await getPageById(params.id);
+      setPage(pageData);
+      setEditorState(versionData.content);
 
-      if (obj) {
-        if (!obj.content) {
-          setIsDeleted(true);
-          return;
-        } else {
-          setPage(obj);
-          setEditorState(page.data().content);
-        }
+      // check if the page exists
+      if (links.length > 0) {
+        checkLinkExistence(links).then((results) => {
+          // Process results
+          for (let url in results) {
+            const exists = results[url];
+            if (!exists) {
+              // Gray out the corresponding button or link in the UI
+              const linkElement = document.querySelector(`a[href="${url}"]`);
+              if (linkElement) {
+                linkElement.classList.remove("bg-blue-500"); // Remove the blue background color
+                linkElement.classList.add("bg-gray-500"); // Add the gray background color
+                linkElement.disabled = true; // Optionally disable the link
+                // add cursor not-allowed
+                linkElement.style.cursor = "not-allowed";
+              }
+            }
+          }
+        });
       }
-     
+
+      setIsLoading(false);
     };
 
     fetchPage();
   }, [params]);
-
-  useEffect(() => {
-    if (isDeleted) {
-      router.push("/pages");
-    }
-  }, [isDeleted]);
 
   if (!page) {
     return <Loader />;
@@ -69,58 +83,107 @@ const Page = ({ params }) => {
       </DashboardLayout>
     );
   }
+  if (isLoading) {
+    return <Loader />;
+  }
   return (
     <DashboardLayout>
-      <div>
-        <ActionRow isEditing={isEditing} setIsEditing={setIsEditing} />
+      <div className="mb-40">
+        <ActionRow
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          page={page}
+        />
         <div className="flex w-full h-1 bg-gray-200 my-4"></div>
         {isEditing ? (
           <EditPage
             isEditing={isEditing}
             setIsEditing={setIsEditing}
             page={page}
+            current={editorState}
           />
         ) : (
           <>
             <h1 className="text-5xl font-semibold">{page.title}</h1>
+            <p className="text-gray-500 text-sm">
+              current version: {page.currentVersion} - created at{" "}
+              {page.createdAt}
+            </p>
             <TextView content={editorState} />
             <DonateBar />
           </>
         )}
       </div>
+      <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
     </DashboardLayout>
   );
 };
 
-const ActionRow = ({ isEditing, setIsEditing }) => {
+const ActionRow = ({ isEditing, setIsEditing, page }) => {
+  const router = useRouter();
+  const handleDelete = async () => {
+    let confirm = window.confirm("Are you sure you want to delete this page?");
+
+    if (!confirm) return;
+    const result = await deletePage(page.id);
+    if (result) {
+      router.push("/pages");
+    } else {
+      console.log("Error deleting page");
+    }
+  };
+
   return (
     <div className="flex items-center gap-4 mt-4">
       <button
-        className="bg-blue-500 text-white px-4 py-2 rounded-full"
+        className="bg-black text-white px-4 py-2"
         onClick={() => setIsEditing(!isEditing)}
       >
         {isEditing ? "Cancel" : "Edit"}
       </button>
-      <button className="bg-red-500 text-white px-4 py-2 rounded-full">
+      <button onClick={handleDelete} className="bg-black text-white px-4 py-2">
         Delete
       </button>
     </div>
   );
 };
 
-const EditPage = ({ isEditing, setIsEditing, page }) => {
+const EditPage = ({ isEditing, setIsEditing, page, current }) => {
   const [editorState, setEditorState] = useState(null);
-
   const [title, setTitle] = useState(page.title);
+  const { user } = useContext(AuthContext);
+
   const handleSave = () => {
+    if (!user) {
+      console.log("User not authenticated");
+      return;
+    }
+
+    if (!title || title.length === 0) {
+      console.log("Title is required");
+      return;
+    }
     // convert the editorState to JSON
     const editorStateJSON = JSON.stringify(editorState);
 
-    // update the page content
-    updateDoc("pages", page.id, { content: editorStateJSON, title });
-
-    console.log("Page updated");
-    setIsEditing(false);
+    // save the new version
+    saveNewVersion(page.id, {
+      content: editorStateJSON,
+      userId: user.uid,
+    }).then((result) => {
+      if (result) {
+        // update the page title
+        updateDoc(page.id, { title: title }).then((result) => {
+          if (result) {
+            setIsEditing(false);
+          } else {
+            console.log("Error updating page title");
+          }
+        });
+      } else {
+        console.log("Error saving new version");
+      }
+    });
   };
 
   const handleCancel = () => {
@@ -128,8 +191,9 @@ const EditPage = ({ isEditing, setIsEditing, page }) => {
     setEditorState(page.content);
     setIsEditing(false);
   };
+
   return (
-    <div className="container mx-auto">
+    <div>
       <label className="text-lg font-semibold">Title</label>
       <input
         type="text"
@@ -141,38 +205,39 @@ const EditPage = ({ isEditing, setIsEditing, page }) => {
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
       <SlateEditor
         setEditorState={setEditorState}
-        initialEditorState={JSON.parse(page.content)}
+        initialEditorState={JSON.parse(current)}
       />
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
       <button
-        className="bg-blue-500 text-white px-4 py-2 rounded-full"
+        className="bg-black text-white px-4 py-2"
         onClick={() => handleSave()}
       >
         Save
       </button>
-      <button
-        className="bg-red-500 text-white px-4 py-2 rounded-full"
-        onClick={handleCancel}
-      >
+      <button className="bg-black text-white px-4 py-2" onClick={handleCancel}>
         Cancel
       </button>
     </div>
   );
 };
 
-const Author = ({ author }) => {
-  return (
-    <div className="flex items-center gap-2 mt-4">
-      <div className="flex items-center gap-2 border border-gray-200 py-2 px-4 rounded-full hover:bg-gray-100 cursor-pointer">
-        <img
-          src={author.photoURL}
-          className="w-8 h-8 rounded-full"
-          alt={author.displayName}
-        />
-        <span className="text-sm font-semibold">{author.displayName}</span>
-      </div>
-    </div>
-  );
-};
-
 export default Page;
+
+async function checkLinkExistence(links) {
+  const promises = [];
+  const results = {};
+
+  for (let url of links) {
+    const docRef = doc(db, url);
+    promises.push(
+      getDoc(docRef).then((doc) => {
+        results[url] = doc.exists();
+      })
+    );
+  }
+
+  // Wait for all document checks to complete
+  await Promise.all(promises);
+
+  return results;
+}
