@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { DrawerContext } from "../providers/DrawerProvider";
 import SubscriptionsTable from "./SubscriptionsTable";
 import AccountWidget from "./AccountWidget";
+import Image from "next/image";
 
 export default function Header() {
   const { totalSubscriptionsCost, remainingBalance } =
@@ -17,30 +18,28 @@ export default function Header() {
   const { user, loading } = useContext(AuthContext);
   return (
     <header
-      className="top-0 left-0 w-full bg-gray-800 text-white p-4 text-center"
+      className="top-0 left-0 w-full bg-white text-black p-4 text-center"
       style={{ zIndex: 5 }}
     >
       <div className="flex justify-between">
         <div className="flex items-center space-x-2">
-          <Icon icon="bx:bx-menu" className="h-5 w-5 text-gray-500" />
           <Link href={"/pages"} className="text-xl">
-            WeWrite
+            <Image src="/white.svg" alt="logo" width={64} height={64} />
           </Link>
         </div>
         <div className="flex justify-center w-50">{/* <GlobalSearch /> */}</div>
         <div className="flex justify-between">
           <h1 className="text-xl"></h1>
           <NavIcons />
-          <VerticalDivider />
           <div className="flex items-center space-x-4 ml-4">
             <button onClick={() => setSelected(<AccountWidget />)}>
             <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <span className="text-sm">Balance:</span>
                 <span className="text-sm font-semibold">
                   {remainingBalance}
                 </span>
-              </div>
+              </div> */}
               <div className="h-6 w-6 rounded-full bg-gray-500"></div>
               </div>
             </button>
@@ -61,20 +60,6 @@ const NavIcons = () => {
       icon: "material-symbols:add",
       onClick: () => {
         router.push("/new");
-      }
-    },
-    {
-      name: "Messages",
-      icon: "bx:bx-message",
-      onClick: () => {
-        console.log("Messages");
-      },
-    },
-    {
-      name: "Notifications",
-      icon: "bx:bx-bell",
-      onClick: () => {
-        console.log("Notifications");
       }
     },
     {

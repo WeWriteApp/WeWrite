@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
           };
           setUser(user);
         }); // Monitor the user ref for changes
-      } else {        
+      } else {    
         setUser(null);
         setLoading(false);
       }

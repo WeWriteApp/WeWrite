@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 
 const TextView = ({ content }) => {
-  const elements = JSON.parse(content);
+
+  const [elements, setElements] = useState(null);
+
+  useEffect(() => {
+    if (content) {
+      setElements(JSON.parse(content))
+      // console.log("content",JSON.parse(content))
+    }
+  }, [content]);
   
-  
+  if (!elements) {
+    return null;
+  }
   return (
     <div className="page-content">
       <RenderContent content={elements} />
