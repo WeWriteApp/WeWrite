@@ -5,6 +5,8 @@ import {
   doc,
   setDoc,
   getDoc,
+  where,
+  query,
   getDocs,
   deleteDoc
 } from "firebase/firestore";
@@ -18,6 +20,110 @@ export const createDoc = async (collectionName, data) => {
     // return the id of the newly created doc
     return docRef.id;
 
+  } catch (e) {
+    return e;
+  }
+}
+
+export const createPage = async (data) => {
+  try {
+    const pageData = {
+      title: data.title,
+      isPublic: data.isPublic,
+      userId: data.userId,
+      createdAt: new Date().toISOString()
+    };
+
+    const pageRef = await addDoc(collection(db, "pages"), pageData);
+    const versionData = {
+      content: data.content,
+      createdAt: new Date().toISOString(),
+      userId: data.userId
+    };
+
+    // create a subcollection for versions
+    const version = await addDoc(collection(pageRef, "versions"), versionData);
+    
+    // take the version id and add it as the currentVersion on the page
+    await setDoc(pageRef, { currentVersion: version.id }, { merge: true });
+
+    return pageRef.id;
+
+  } catch (e) {
+    console.log('error', e);
+    return e;
+  }
+}
+
+export const getPageById = async (pageId) => {
+  // should get the page and versions
+  try {
+    const pageRef = doc(db, "pages", pageId);
+    const pageSnap = await getDoc(pageRef);
+    const pageData = {
+      id: pageSnap.id,
+      ...pageSnap.data()
+    }
+    // get the current version
+    const currentVersionId = pageData.currentVersion;
+    const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
+    const versionSnap = await getDoc(versionRef);
+    const versionData = versionSnap.data();
+
+    // get links
+    const links = extractLinksFromNodes(JSON.parse(versionData.content));
+    return { pageData, versionData, links };
+  } catch (e) {
+    console.log(e);
+    return e;
+  }
+}
+
+export const getVersionsByPageId = async (pageId) => {
+  try {
+    const pageRef = doc(db, "pages", pageId);
+    const versionsRef = collection(pageRef, "versions");
+    const versionsSnap = await getDocs(versionsRef);
+
+    // add id of each version
+    const versions = versionsSnap.docs.map((doc) => {
+      return {
+        id: doc.id,
+        ...doc.data()
+      }
+    });
+
+    return versions;    
+  } catch (e) {
+    return e;
+  }
+}
+
+export const saveNewVersion = async (pageId, data) => {
+  try {
+    const pageRef = doc(db, "pages", pageId);
+    const versionData = {
+      content: data.content,
+      createdAt: new Date().toISOString(),
+      userId: data.userId
+    };
+
+    const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
+    
+    // set the new version as the current version
+    await setCurrentVersion(pageId, versionRef.id);
+
+    return versionRef.id;
+  } catch (e) {
+    return e;
+  }
+}
+
+export const setCurrentVersion = async (pageId, versionId) => {
+  try {
+    const pageRef = doc(db, "pages", pageId);
+    await setDoc(pageRef, { currentVersion: versionId }, { merge: true });
+    return true;
   } catch (e) {
     return e;
   }
@@ -72,16 +178,34 @@ export const removeDoc = async (collectionName, docName) => {
   }
 }
 
+export const deletePage = async (pageId) => {
+  // remove page and the versions subcollection
+  try {
+    const pageRef = doc(db, "pages", pageId);
+    const versionsRef = collection(pageRef, "versions");
+    const versionsSnap = await getDocs(versionsRef);
+
+    // delete all versions
+    versionsSnap.forEach(async (doc) => {
+      await deleteDoc(doc.ref);
+    });
+
+    // delete the page
+    await deleteDoc(pageRef);
+
+    return true;
+  } catch (e) {
+    console.log(e);
+    return e;
+  }
+}
+
 // create subcollection
 export const createSubcollection = async (collectionName, docId, subcollectionName, data) => {
   try {
     const docRef = doc(db, collectionName, docId);
-    // check if the subcollection exists, if not, create it
-    const subcollectionRef = collection(docRef, subcollectionName);
-    
-    console.log(subcollectionRef);
+    const subcollectionRef = collection(docRef, subcollectionName);    
     const subcollectionDocRef = await addDoc(subcollectionRef, data);
-    console.log(subcollectionDocRef);
     return subcollectionDocRef.id;
   } catch (e) {
     console.log(e);
@@ -100,3 +224,25 @@ export const getSubcollection = async (collectionName, docName, subcollectionNam
     return e;
   }
 }
+
+function extractLinksFromNodes(nodes) {
+  let links = [];
+
+  function traverse(node) {
+    // Check if the node is a link
+    if (node.type === 'link' && node.url) {
+      links.push(node.url);
+    }
+
+    // Recursively check children if they exist
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach(traverse);
+    }
+  }
+
+  // Start traversal
+  nodes.forEach(traverse);
+
+  return links;
+}
+

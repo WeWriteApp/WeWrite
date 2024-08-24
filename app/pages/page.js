@@ -4,30 +4,12 @@ import DashboardLayout from "../DashboardLayout";
 import DataTable from "react-data-table-component";
 import Link from "next/link";
 import { DataContext } from "../providers/DataProvider";
-import { removeDoc } from "../firebase/database";
 import { PillLink } from "../components/PillLink";
-
-// Custom sort function for date columns
-const dateColumnSort = (rowA, rowB, columnId) => {
-  return new Date(rowA.createdAt) - new Date(rowB.createdAt);
-}
 
 const Page = () => {
   const { pages, loading, deletePageState, fetchPages } =
     useContext(DataContext);
   const [viewType, setViewType] = useState("list");
-  const deletePage = async (id) => {
-    const res = await removeDoc("pages", id);
-    if (res) {
-      deletePageState(id);
-    } else {
-      console.log("Error deleting page");
-    }
-  };
-
-  useEffect(() => {
-    fetchPages();
-  }, []);
 
   const [columns, setColumns] = useState([
     {
@@ -52,43 +34,40 @@ const Page = () => {
       cell: (row) => new Date(row.createdAt).toLocaleDateString(),
       maxWidth: "140px",
       sortable: true,
-      sortFunction: dateColumnSort
     },
     {
       name: "Actions",
       cell: (row) => (
         <div className="flex space-x-2">
           <Link href={`/pages/${row.id}/edit`}>
-            <button className="bg-blue-500 text-white px-2 py-1 rounded">
+            <button className="bg-black text-white px-2 py-1 rounded">
               Edit
             </button>
           </Link>
-          <button
+          {/* <button
             className="bg-red-500 text-white px-2 py-1 rounded"
             onClick={() => deletePage(row.id)}
           >
             Delete
-          </button>
+          </button> */}
         </div>
       ),
     },
   ]);
 
-  // if (loading) return <DashboardLayout>Loading...</DashboardLayout>;
   return (
     <DashboardLayout>
-      <div>
+      <div className="p-4">
         <h1 className="text-2xl font-semibold">All Pages</h1>
-        {/* Add page button (navigate to /new) */}
         <Link href="/new">
-          <button className="bg-blue-500 text-white px-4 py-2 rounded mt-4">
+          <button className="bg-black text-white px-4 py-2 mt-4">
             Add Page
           </button>
         </Link>
         <div className="flex justify-end gap-4 mt-4">
           <button
             className={`${
-              viewType === "list" ? "bg-blue-500" : "bg-gray-500"
+              viewType === "list" ? "bg-black" : "bg-gray-500"
             } text-white px-4 py-2 rounded`}
             onClick={() => setViewType("list")}
           >
@@ -96,7 +75,7 @@ const Page = () => {
           </button>
           <button
             className={`${
-              viewType === "table" ? "bg-blue-500" : "bg-gray-500"
+              viewType === "table" ? "bg-black" : "bg-gray-500"
             } text-white px-4 py-2 rounded`}
             onClick={() => setViewType("table")}
           >
@@ -104,27 +83,24 @@ const Page = () => {
           </button>
         </div>
 
-
         {viewType === "list" && (
           <>
             {pages &&
               pages.map((page) => (
-                <PillLink key={page.id} href={`/pages/${page.id}`}>
+                <PillLink key={page.id} href={`/pages/${page.id}`} isPublic={page.isPublic}>
                   {page.title}
                 </PillLink>
               ))}
           </>
         )}
-        {
-          viewType === "table" && (
-            <DataTable
-              columns={columns}
-              data={pages}
-              pagination
-              highlightOnHover
-            />
-          )
-        }
+        {viewType === "table" && (
+          <DataTable
+            columns={columns}
+            data={pages}
+            pagination
+            highlightOnHover
+          />
+        )}
       </div>
     </DashboardLayout>
   );
