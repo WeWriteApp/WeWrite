@@ -5,6 +5,11 @@ import DataTable from "react-data-table-component";
 import Link from "next/link";
 import { DataContext } from "../providers/DataProvider";
 import { PillLink } from "../components/PillLink";
+import { Icon } from "@iconify/react/dist/iconify.js";
+
+const dateColumnSort = (rowA, rowB, columnId) => {
+  return new Date(rowA.createdAt) - new Date(rowB.createdAt);
+}
 
 const Page = () => {
   const { pages, loading, deletePageState, fetchPages } =
@@ -33,6 +38,17 @@ const Page = () => {
       name: "Created At",
       cell: (row) => new Date(row.createdAt).toLocaleDateString(),
       maxWidth: "140px",
+      sortable: true,
+      sortFunction: dateColumnSort
+    },
+    {
+      name: "Is Private",
+      cell: (row) => (
+        <Icon
+          icon={row.isPublic ? "akar-icons:check" : "akar-icons:lock-on"}
+          className={row.isPublic ? "text-green-500" : "text-red-500"}
+        />
+      ),
       sortable: true,
     },
     {

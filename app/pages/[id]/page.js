@@ -27,6 +27,8 @@ const Page = ({ params }) => {
   const [isDeleted, setIsDeleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const [isPublic, setIsPublic] = useState(false);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     if (!params.id) return;
@@ -34,6 +36,12 @@ const Page = ({ params }) => {
       const { pageData, versionData, links } = await getPageById(params.id);
       setPage(pageData);
       setEditorState(versionData.content);
+      
+      if (user && user.uid === pageData.userId) {
+        setIsPublic(true);
+      } else {
+        setIsPublic(pageData.isPublic);
+      }
 
       // check if the page exists
       if (links.length > 0) {
@@ -85,6 +93,24 @@ const Page = ({ params }) => {
   }
   if (isLoading) {
     return <Loader />;
+  }
+  if (!isPublic) {
+    return (
+      <DashboardLayout>
+        <div>
+          <h1 className="text-2xl font-semibold">Sorry this page is private</h1>
+          <div className="flex items-center gap-2 mt-4">
+            <Icon icon="akar-icons:warning" className="text-red-500" />
+            <span className="text-lg">This page is private</span>
+            <Link href="/pages">
+              <button className="bg-blue-500 text-white px-4 py-2 rounded-full">
+                Go back
+              </button>
+            </Link>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
   }
   return (
     <DashboardLayout>
