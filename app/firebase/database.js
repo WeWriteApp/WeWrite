@@ -70,6 +70,23 @@ export const getPageById = async (pageId) => {
     const versionSnap = await getDoc(versionRef);
     const versionData = versionSnap.data();
 
+    // if the version data is null, remove the page
+    if (versionData.content === "null") {
+      await deleteDoc(pageRef);
+      return null;
+    } else if (JSON.parse(versionData.content).history) {
+      console.log('history exists');
+
+      // Migrate to existing data model without
+      let content = JSON.parse(versionData.content).children;
+      let json = JSON.stringify(content);
+
+      // Update the version with the new content
+      await setDoc(versionRef, { content: json }, { merge: true });
+    } else {
+      console.log('history does not exist');
+    }
+
     // get links
     const links = extractLinksFromNodes(JSON.parse(versionData.content));
     return { pageData, versionData, links };
