@@ -44,10 +44,10 @@ const VersionItem = ({ version, isCurrent }) => {
     <li>
       <p>{version.createdAt}</p>
       {isCurrent ? (
-        <button className="bg-gray-300 px-4 py-2">Current version</button>
+        <button className="bg-white text-black px-4 py-2">Current version</button>
       ) : (
         <button
-          className="bg-black text-white px-4 py-2"
+          className="bg-white border border-gray-500 rounded-lg text-black px-4 py-2 hover:bg-gray-200"
           onClick={handleSetCurrentVersion}
         >
           Set as current version

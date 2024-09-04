@@ -100,6 +100,10 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
       {showDropdown && (
         <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
       )}
+
+      <pre className="text-xs text-gray-500 mt-2">
+        Press @ to mention a page
+      </pre>
     </div>
   );
 };

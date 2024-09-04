@@ -6,16 +6,61 @@ import Link from "next/link";
 import { DataContext } from "../providers/DataProvider";
 import { PillLink } from "../components/PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import AllPages from "../components/AllPages";
 
 const dateColumnSort = (rowA, rowB, columnId) => {
   return new Date(rowA.createdAt) - new Date(rowB.createdAt);
 }
 
 const Page = () => {
-  const { pages, loading, deletePageState, fetchPages } =
-    useContext(DataContext);
+  const { pages } = useContext(DataContext);
   const [viewType, setViewType] = useState("list");
 
+  return (
+    <DashboardLayout>
+      <div className="p-4">
+        <h1 className="text-2xl font-semibold">All Pages</h1>
+        <div className="flex justify-between items-center border-b border-gray-500 pb-4 mb-4">
+          
+          <Link href="/new">
+            <button className="bg-white border border-gray-500 hover:bg-gray-200 text-black rounded-lg px-4 py-2 mt-4">
+              Add Page
+            </button>
+          </Link>
+          <div className="flex justify-end gap-4 mt-4">
+            <button
+              className={`${
+                viewType !== "list" ? "bg-white" : "border border-gray-500"
+              } text-black px-4 py-2 rounded`}
+              onClick={() => setViewType("list")}
+            >
+              List
+            </button>
+            <button
+              className={`${
+                viewType !== "table" ? "bg-white" : "border border-gray-500"
+              } text-black px-4 py-2 rounded`}
+              onClick={() => setViewType("table")}
+            >
+              Table
+            </button>
+          </div>
+        </div>  
+
+        {viewType === "list" && (
+          <>
+            <AllPages />
+          </>
+        )}
+        {viewType === "table" && (
+          <Table pages={pages} />
+        )}
+      </div>
+    </DashboardLayout>
+  );
+};
+
+const Table = ({ pages }) => {
   const [columns, setColumns] = useState([
     {
       name: "User",
@@ -56,70 +101,24 @@ const Page = () => {
       cell: (row) => (
         <div className="flex space-x-2">
           <Link href={`/pages/${row.id}/edit`}>
-            <button className="bg-black text-white px-2 py-1 rounded">
+            <button className="bg-white text-black border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
               Edit
             </button>
           </Link>
-          {/* <button
-            className="bg-red-500 text-white px-2 py-1 rounded"
-            onClick={() => deletePage(row.id)}
-          >
-            Delete
-          </button> */}
         </div>
       ),
     },
   ]);
-
   return (
-    <DashboardLayout>
-      <div className="p-4">
-        <h1 className="text-2xl font-semibold">All Pages</h1>
-        <Link href="/new">
-          <button className="bg-black text-white px-4 py-2 mt-4">
-            Add Page
-          </button>
-        </Link>
-        <div className="flex justify-end gap-4 mt-4">
-          <button
-            className={`${
-              viewType === "list" ? "bg-black" : "bg-gray-500"
-            } text-white px-4 py-2 rounded`}
-            onClick={() => setViewType("list")}
-          >
-            List
-          </button>
-          <button
-            className={`${
-              viewType === "table" ? "bg-black" : "bg-gray-500"
-            } text-white px-4 py-2 rounded`}
-            onClick={() => setViewType("table")}
-          >
-            Table
-          </button>
-        </div>
-
-        {viewType === "list" && (
-          <>
-            {pages &&
-              pages.map((page) => (
-                <PillLink key={page.id} href={`/pages/${page.id}`} isPublic={page.isPublic}>
-                  {page.title}
-                </PillLink>
-              ))}
-          </>
-        )}
-        {viewType === "table" && (
-          <DataTable
-            columns={columns}
-            data={pages}
-            pagination
-            highlightOnHover
-          />
-        )}
-      </div>
-    </DashboardLayout>
+    <DataTable
+      columns={columns}
+      data={pages}
+      pagination
+      highlightOnHover
+      striped
+    />
   );
-};
+}
+
 
 export default Page;
