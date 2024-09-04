@@ -4,7 +4,6 @@ import { getPageById } from "../../firebase/database";
 import DashboardLayout from "../../DashboardLayout";
 import TextView from "../../components/TextView";
 import DonateBar from "../../components/DonateBar";
-import { updateDoc } from "../../firebase/database";
 import SlateEditor from "../../components/SlateEditor";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Loader } from "../../components/Loader";
@@ -13,6 +12,8 @@ import {
   db,
   deletePage,
   saveNewVersion,
+  updatePageDoc,
+  updateDoc,
   setCurrentVersion,
 } from "../../firebase/database";
 import { useRouter } from "next/navigation";
@@ -29,45 +30,49 @@ const Page = ({ params }) => {
   const router = useRouter();
   const [isPublic, setIsPublic] = useState(false);
   const { user } = useContext(AuthContext);
+  const [title, setTitle] = useState("");
 
   useEffect(() => {
     if (!params.id) return;
-    const fetchPage = async () => {
-      const { pageData, versionData, links } = await getPageById(params.id);
-      setPage(pageData);
-      setEditorState(versionData.content);
-      
-      if (user && user.uid === pageData.userId) {
-        setIsPublic(true);
-      } else {
-        setIsPublic(pageData.isPublic);
-      }
+    if (!page) {
+      const fetchPage = async () => {
+        const { pageData, versionData, links } = await getPageById(params.id);
+        setPage(pageData);
+        setEditorState(versionData.content);
+        setTitle(pageData.title);
 
-      // check if the page exists
-      if (links.length > 0) {
-        checkLinkExistence(links).then((results) => {
-          // Process results
-          for (let url in results) {
-            const exists = results[url];
-            if (!exists) {
-              // Gray out the corresponding button or link in the UI
-              const linkElement = document.querySelector(`a[href="${url}"]`);
-              if (linkElement) {
-                linkElement.classList.remove("bg-blue-500"); // Remove the blue background color
-                linkElement.classList.add("bg-gray-500"); // Add the gray background color
-                linkElement.disabled = true; // Optionally disable the link
-                // add cursor not-allowed
-                linkElement.style.cursor = "not-allowed";
+        if (user && user.uid === pageData.userId) {
+          setIsPublic(true);
+        } else {
+          setIsPublic(pageData.isPublic);
+        }
+
+        // check if the page exists
+        if (links.length > 0) {
+          checkLinkExistence(links).then((results) => {
+            // Process results
+            for (let url in results) {
+              const exists = results[url];
+              if (!exists) {
+                // Gray out the corresponding button or link in the UI
+                const linkElement = document.querySelector(`a[href="${url}"]`);
+                if (linkElement) {
+                  linkElement.classList.remove("bg-blue-500"); // Remove the blue background color
+                  linkElement.classList.add("bg-gray-500"); // Add the gray background color
+                  linkElement.disabled = true; // Optionally disable the link
+                  // add cursor not-allowed
+                  linkElement.style.cursor = "not-allowed";
+                }
               }
             }
-          }
-        });
-      }
+          });
+        }
 
-      setIsLoading(false);
-    };
+        setIsLoading(false);
+      };
 
-    fetchPage();
+      fetchPage();
+    }
   }, [params]);
 
   if (!page) {
@@ -126,6 +131,8 @@ const Page = ({ params }) => {
             isEditing={isEditing}
             setIsEditing={setIsEditing}
             page={page}
+            title={title}
+            setTitle={setTitle}
             current={editorState}
           />
         ) : (
@@ -139,6 +146,10 @@ const Page = ({ params }) => {
             <DonateBar />
           </>
         )}
+
+          <pre>{title}</pre>
+          <pre>{editorState}</pre>
+
       </div>
       <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
     </DashboardLayout>
@@ -160,23 +171,25 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   };
 
   return (
-    <div className="flex items-center gap-4 mt-4">
+    <div className="flex items-center gap-2 mt-4">
       <button
-        className="bg-black text-white px-4 py-2"
+        className="bg-white text-black  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
         onClick={() => setIsEditing(!isEditing)}
       >
         {isEditing ? "Cancel" : "Edit"}
       </button>
-      <button onClick={handleDelete} className="bg-black text-white px-4 py-2">
+      <button
+        onClick={handleDelete}
+        className="bg-white border-gray-500 border text-black px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+      >
         Delete
       </button>
     </div>
   );
 };
 
-const EditPage = ({ isEditing, setIsEditing, page, current }) => {
-  const [editorState, setEditorState] = useState(null);
-  const [title, setTitle] = useState(page.title);
+const EditPage = ({ isEditing, setIsEditing, page, current, title,setTitle }) => {
+  const [editorState, setEditorState] = useState(JSON.parse(current));
   const { user } = useContext(AuthContext);
 
   const handleSave = () => {
@@ -192,23 +205,25 @@ const EditPage = ({ isEditing, setIsEditing, page, current }) => {
     // convert the editorState to JSON
     const editorStateJSON = JSON.stringify(editorState);
 
-    // save the new version
+    // // save the new version
     saveNewVersion(page.id, {
       content: editorStateJSON,
       userId: user.uid,
     }).then((result) => {
       if (result) {
-        // update the page title
-        updateDoc(page.id, { title: title }).then((result) => {
-          if (result) {
-            setIsEditing(false);
-          } else {
-            console.log("Error updating page title");
-          }
+        // update the page content
+        updateDoc("pages", page.id, {
+          title: title,
+          isPublic: page.isPublic,
         });
+
+        setIsEditing(false);
+        alert("Page updated successfully");
       } else {
         console.log("Error saving new version");
       }
+    }).catch((error) => {
+      console.log("Error saving new version", error);
     });
   };
 
@@ -223,7 +238,7 @@ const EditPage = ({ isEditing, setIsEditing, page, current }) => {
       <label className="text-lg font-semibold">Title</label>
       <input
         type="text"
-        value={title}
+        defaultValue={title}
         onChange={(e) => setTitle(e.target.value)}
         className="border border-gray-200 p-2 text-3xl w-full"
       />
@@ -234,15 +249,20 @@ const EditPage = ({ isEditing, setIsEditing, page, current }) => {
         initialEditorState={JSON.parse(current)}
       />
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
-      <button
-        className="bg-black text-white px-4 py-2"
-        onClick={() => handleSave()}
-      >
-        Save
-      </button>
-      <button className="bg-black text-white px-4 py-2" onClick={handleCancel}>
-        Cancel
-      </button>
+      <div className="flex items-center gap-2 mt-4">
+        <button
+          className="bg-white text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
+          onClick={() => handleSave()}
+        >
+          Save
+        </button>
+        <button
+          className="bg-white text-black px-4 py-2"
+          onClick={handleCancel}
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 };

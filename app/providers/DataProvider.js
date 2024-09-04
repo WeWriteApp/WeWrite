@@ -25,6 +25,13 @@ export const DataProvider = ({ children }) => {
     if (user) {
       fetchPages();
       setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchPages();
+      setLoading(false);
     } else {
       setPages([]);
       setLoading(false);

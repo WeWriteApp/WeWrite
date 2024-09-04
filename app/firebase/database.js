@@ -61,7 +61,7 @@ export const getPageById = async (pageId) => {
     const pageRef = doc(db, "pages", pageId);
     const pageSnap = await getDoc(pageRef);
     const pageData = {
-      id: pageSnap.id,
+      id: pageId,
       ...pageSnap.data()
     }
     // get the current version
@@ -262,4 +262,3 @@ function extractLinksFromNodes(nodes) {
 
   return links;
 }
-

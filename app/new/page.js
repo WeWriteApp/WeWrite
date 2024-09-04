@@ -1,7 +1,7 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
 import SlateEditor from "../components/SlateEditor";
-import {createPage} from "../firebase/database";
+import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
@@ -108,19 +108,28 @@ const Form = ({ Page, setPage }) => {
         )}
       </div> */}
 
-      <button
-        onClick={handleSave}
-        className="bg-blue-500 text-white rounded p-2 w-full mt-2 "
-        type="submit"
-      >
-        Save
-      </button>
+      <div className="flex w-full h-1 bg-gray-200 my-4"></div>
+      <div className="flex items-center gap-2 mt-4">
+        <button
+          onClick={handleSave}
+          disabled={!Page.title || !editorState}
+          className={`text-black bg-white rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
+          type="submit"
+        >
+          Save
+        </button>
+        <button
+          onClick={() => router.push("/pages")}
+          className="bg-white text-black px-4 py-2"
+        >
+          Cancel
+        </button>
+      </div>
 
-      <pre className="bg-gray-100 p-2">
+      <pre className="bg-gray-100 p-2 hidden">
         {JSON.stringify(Page, null, 2)}
         {JSON.stringify(editorState, null, 2)}
       </pre>
-
     </form>
   );
 };
