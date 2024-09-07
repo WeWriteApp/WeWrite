@@ -21,7 +21,8 @@
     "react-tooltip": "^5.27.1",
     "slate": "^0.103.0",
     "slate-history": "^0.100.0",
-    "slate-react": "^0.107.1"
+    "slate-react": "^0.107.1",
+    "react-search-autocomplete": "^8.5.2"
   },
   "devDependencies": {
     "@iconify/react": "^4.1.1",
