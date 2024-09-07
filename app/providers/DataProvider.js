@@ -24,6 +24,9 @@ export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState([]);
   const { user } = useContext(AuthContext);
+  const [filtered, setFiltered] = useState([]);
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -52,9 +55,19 @@ export const DataProvider = ({ children }) => {
     }
 
     let count = pagesArray.length;
-    console.log("pagesArray",count);
     setPages(pagesArray);
 
+    // set filtered to the titles of the pages with ID for link
+    let filteredArray = [];
+    pagesArray.forEach((page) => {
+      filteredArray.push({
+        id: page.id,
+        name: page.title,
+        isPublic: page.isPublic,
+      });
+    });
+
+    setFiltered(filteredArray);
   };
 
   // a way for a delete method to update the state
@@ -63,7 +76,7 @@ export const DataProvider = ({ children }) => {
   };
 
   return (
-    <DataContext.Provider value={{ loading, pages,deletePageState,fetchPages }}>
+    <DataContext.Provider value={{ loading, pages,deletePageState,fetchPages,filtered }}>
       {children}
     </DataContext.Provider>
   );
