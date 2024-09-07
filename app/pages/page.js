@@ -87,7 +87,7 @@ const Table = ({ pages }) => {
       sortFunction: dateColumnSort
     },
     {
-      name: "Is Private",
+      name: "Is Public",
       cell: (row) => (
         <Icon
           icon={row.isPublic ? "akar-icons:check" : "akar-icons:lock-on"}

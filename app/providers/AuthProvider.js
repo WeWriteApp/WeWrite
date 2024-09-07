@@ -2,11 +2,9 @@
 // an auth provider that watches onAuthState change for firebase with a context provider
 import { useEffect, useState, createContext } from "react";
 import { auth } from "../firebase/auth";
-import { app2 } from "../firebase/config";
+import  app  from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
-import { rtdb } from "../firebase/rtdb";
-import { ref, onValue, set, getDatabase } from "firebase/database";
-import { getCollection } from "../firebase/database";
+import { ref, onValue, get, set, getDatabase } from "firebase/database";
 
 export const AuthContext = createContext();
 
@@ -18,18 +16,8 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log('User is logged in', user);
-        // get the user's preferences
-        const uid = user.uid;
-        const userRef = ref(rtdb, `users/${uid}`);
+        getUserFromRTDB(user);
 
-        onValue(userRef, (snapshot) => {
-          const data = snapshot.val();
-          let user = {
-            ...data,
-            uid: snapshot.key,
-          };
-          setUser(user);
-        }); // Monitor the user ref for changes
       } else {    
         setUser(null);
         setLoading(false);
@@ -38,6 +26,24 @@ export const AuthProvider = ({ children }) => {
 
     return unsubscribe;
   }, []);
+
+  const getUserFromRTDB =  (user) => {
+    const db = getDatabase(app);
+
+    let uid = user.uid;
+    const dbRef = ref(db, `users/${uid}`);
+    // get the user from the database
+    onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      setUser({
+        uid: user.uid,
+        email: user.email,
+        ...data
+      });
+      setLoading(false);
+    });
+  }
+
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
