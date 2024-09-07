@@ -127,8 +127,7 @@ const Form = ({ Page, setPage }) => {
       </div>
 
       <pre className="bg-gray-100 p-2 hidden">
-        {JSON.stringify(Page, null, 2)}
-        {JSON.stringify(editorState, null, 2)}
+        
       </pre>
     </form>
   );

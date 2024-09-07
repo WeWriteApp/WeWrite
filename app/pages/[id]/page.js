@@ -147,8 +147,6 @@ const Page = ({ params }) => {
           </>
         )}
 
-          <pre>{title}</pre>
-          <pre>{editorState}</pre>
 
       </div>
       <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
