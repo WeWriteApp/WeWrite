@@ -27,11 +27,11 @@ const Page = () => {
         {user && (
           <>
             <h1 className="text-2xl font-semibold">Your Pages</h1>
-            <div className="flex items-center pb-4 mb-4 align-middle justify-between">
-              <div className="w-1/2">
+            <div className="flex items-center pb-4 mb-4 md:align-middle md:justify-between md:flex-row flex-col">
+              <div className="md:w-1/2 w-full">
                 <Search />
               </div>
-              <div className="flex justify-end gap-4 mt-4">
+              <div className="flex md:justify-end gap-4 md:mt-0 w-full md:w-1/2">
                 <button
                   className={`${
                     viewType !== "list" ? "bg-white" : "border border-gray-500"

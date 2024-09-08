@@ -103,7 +103,7 @@ const NavIcons = () => {
         ))}
         {
           !user && (
-            <Link href="/login">
+            <Link href="/auth/login" className="mt-4">
               <button className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all">
                 <span>Login </span>
                 {/* <Icon icon={"akar-icons:plus"} className="h-4 w-4 text-gray-500" /> */}
