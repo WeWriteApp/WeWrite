@@ -18,7 +18,7 @@ export default function Header() {
   const { user, loading } = useContext(AuthContext);
   return (
     <header
-      className="top-0 left-0 w-full bg-white text-black p-4 text-center"
+      className="top-0 left-0 w-full bg-white text-black px-4 text-center"
       style={{ zIndex: 5 }}
     >
       <div className="flex justify-between">
@@ -101,6 +101,16 @@ const NavIcons = () => {
             {/* <Tooltip id={nav.name} /> */}
           </button>
         ))}
+        {
+          !user && (
+            <Link href="/login">
+              <button className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all">
+                <span>Login </span>
+                {/* <Icon icon={"akar-icons:plus"} className="h-4 w-4 text-gray-500" /> */}
+              </button>
+            </Link>
+          )
+        }
     </div>
   );
 };
