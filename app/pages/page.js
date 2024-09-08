@@ -4,10 +4,10 @@ import DashboardLayout from "../DashboardLayout";
 import DataTable from "react-data-table-component";
 import Link from "next/link";
 import { DataContext } from "../providers/DataProvider";
-import { PillLink } from "../components/PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import AllPages from "../components/AllPages";
 import Search from "../components/Search";
+import TopUsers from "../components/TopUsers";
 
 const dateColumnSort = (rowA, rowB, columnId) => {
   return new Date(rowA.createdAt) - new Date(rowB.createdAt);
@@ -20,8 +20,10 @@ const Page = () => {
   return (
     <DashboardLayout>
       <div className="p-4">
-        <h1 className="text-2xl font-semibold">All Pages</h1>
-        <div className="flex items-center border-b border-gray-500 pb-4 mb-4 align-middle justify-between">
+
+        <TopUsers />
+        <h1 className="text-2xl font-semibold">Your Pages</h1>
+        <div className="flex items-center pb-4 mb-4 align-middle justify-between">
           <div className="w-1/2"><Search /></div>
           {/* <Link href="/new">
             <button className="bg-white border border-gray-500 hover:bg-gray-200 text-black rounded-lg px-4 py-2 mt-4">

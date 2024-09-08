@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import VersionsList from "../../components/VersionsList";
 import { AuthContext } from "../../providers/AuthProvider";
+import Profile from "../../components/ProfileBadge";
 
 const Page = ({ params }) => {
   const [page, setPage] = useState(null);
@@ -120,12 +121,14 @@ const Page = ({ params }) => {
   return (
     <DashboardLayout>
       <div className="mb-40">
-        <ActionRow
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
-          page={page}
-        />
-        <div className="flex w-full h-1 bg-gray-200 my-4"></div>
+        {user && user.uid === page.userId && (
+          <ActionRow
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            page={page}
+          />
+        )}
+
         {isEditing ? (
           <EditPage
             isEditing={isEditing}
@@ -137,19 +140,21 @@ const Page = ({ params }) => {
           />
         ) : (
           <>
-            <h1 className="text-5xl font-semibold">{page.title}</h1>
-            <p className="text-gray-500 text-sm">
-              current version: {page.currentVersion} - created at{" "}
-              {page.createdAt}
-            </p>
+            <h1 className="text-5xl font-semibold">{title}</h1>
+            <div className="flex space-x-1 my-4">
+              <span>Written by {"  "}</span>
+              <Profile uid={page.userId} />
+            </div>
             <TextView content={editorState} />
             <DonateBar />
           </>
         )}
-
-
       </div>
-      <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
+      {
+        user && user.uid === page.userId && (
+          <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
+        )
+      }
     </DashboardLayout>
   );
 };
@@ -169,7 +174,7 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   };
 
   return (
-    <div className="flex items-center gap-2 mt-4">
+    <div className="flex items-center gap-2">
       <button
         className="bg-white text-black  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
         onClick={() => setIsEditing(!isEditing)}
@@ -186,7 +191,14 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   );
 };
 
-const EditPage = ({ isEditing, setIsEditing, page, current, title,setTitle }) => {
+const EditPage = ({
+  isEditing,
+  setIsEditing,
+  page,
+  current,
+  title,
+  setTitle,
+}) => {
   const [editorState, setEditorState] = useState(JSON.parse(current));
   const { user } = useContext(AuthContext);
 
@@ -207,22 +219,24 @@ const EditPage = ({ isEditing, setIsEditing, page, current, title,setTitle }) =>
     saveNewVersion(page.id, {
       content: editorStateJSON,
       userId: user.uid,
-    }).then((result) => {
-      if (result) {
-        // update the page content
-        updateDoc("pages", page.id, {
-          title: title,
-          isPublic: page.isPublic,
-        });
+    })
+      .then((result) => {
+        if (result) {
+          // update the page content
+          updateDoc("pages", page.id, {
+            title: title,
+            isPublic: page.isPublic,
+          });
 
-        setIsEditing(false);
-        alert("Page updated successfully");
-      } else {
-        console.log("Error saving new version");
-      }
-    }).catch((error) => {
-      console.log("Error saving new version", error);
-    });
+          setIsEditing(false);
+          alert("Page updated successfully");
+        } else {
+          console.log("Error saving new version");
+        }
+      })
+      .catch((error) => {
+        console.log("Error saving new version", error);
+      });
   };
 
   const handleCancel = () => {
