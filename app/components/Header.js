@@ -14,7 +14,7 @@ import Image from "next/image";
 export default function Header() {
   const { totalSubscriptionsCost, remainingBalance } =
     useContext(PortfolioContext);
-    const {selected, setSelected} = useContext(DrawerContext);
+  const { selected, setSelected } = useContext(DrawerContext);
   const { user, loading } = useContext(AuthContext);
   return (
     <header
@@ -27,21 +27,12 @@ export default function Header() {
             <Image src="/white.svg" alt="logo" width={64} height={64} />
           </Link>
         </div>
-        <div className="flex justify-center w-50">{/* <GlobalSearch /> */}</div>
         <div className="flex justify-between">
           <h1 className="text-xl"></h1>
           <NavIcons />
           <div className="flex items-center space-x-4 ml-4">
             <button onClick={() => setSelected(<AccountWidget />)}>
-            <div className="flex items-center space-x-2">
-              {/* <div className="flex items-center space-x-2">
-                <span className="text-sm">Balance:</span>
-                <span className="text-sm font-semibold">
-                  {remainingBalance}
-                </span>
-              </div> */}
-              <div className="h-6 w-6 rounded-full bg-gray-500"></div>
-              </div>
+              <div className="flex items-center space-x-2"></div>
             </button>
           </div>
         </div>
@@ -53,28 +44,22 @@ export default function Header() {
 const NavIcons = () => {
   const [isMobile, setIsMobile] = useState(false);
   const { selected, setSelected } = useContext(DrawerContext);
+  const { user } = useContext(AuthContext);
   const router = useRouter();
   let navigation = [
     {
       name: "New Page",
-      icon: "material-symbols:add",
+      icon: () => {
+        return (
+          <button className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all">
+            <span>Add Page </span>
+            <Icon icon={"akar-icons:plus"} className="h-4 w-4 text-gray-500" />
+          </button>
+        );
+      },
       onClick: () => {
         router.push("/new");
-      }
-    },
-    {
-      name: "Subscriptions",
-      icon: "bx:bx-bookmark",
-      onClick: () => {
-        setSelected(<SubscriptionsTable />);
-      }
-    },
-    {
-      name: "Settings",
-      icon: "bx:bx-cog",
-      onClick: () => {
-        router.push("/settings");
-      }
+      },
     },
   ];
 
@@ -101,39 +86,21 @@ const NavIcons = () => {
   }, []);
   return (
     <div className="flex space-x-4">
-      {isMobile && (
-        <button className="p-1">
-          <svg
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M4 6h16M4 12h16m-7 6h7"
-            ></path>
-          </svg>
-        </button>
-      )}
 
-      {navigation.map((nav, index) => (
-        <button
-          href={nav.link}
-          key={index}
-          className="p-1"
-          data-tooltip-id={nav.name}
-          data-tooltip-content={nav.name}
-          onClick={nav.onClick}
-        >
-          <Icon icon={nav.icon} />
-          <Tooltip id={nav.name} />
-        </button>
-      ))}
-      <VerticalDivider />
+      {user &&
+        navigation.map((nav, index) => (
+          <button
+            href={nav.link}
+            key={index}
+            className="p-1"
+            data-tooltip-id={nav.name}
+            data-tooltip-content={nav.name}
+            onClick={nav.onClick}
+          >
+            <nav.icon />
+            {/* <Tooltip id={nav.name} /> */}
+          </button>
+        ))}
     </div>
   );
 };
