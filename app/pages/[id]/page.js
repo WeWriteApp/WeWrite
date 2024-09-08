@@ -140,7 +140,7 @@ const Page = ({ params }) => {
           />
         ) : (
           <>
-            <h1 className="text-5xl font-semibold">{title}</h1>
+            <h1 className="text-2xl md:text-4xl font-semibold">{title}</h1>
             <div className="flex space-x-1 my-4">
               <span>Written by {"  "}</span>
               <Profile uid={page.userId} />

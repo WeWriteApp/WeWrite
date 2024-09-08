@@ -8,55 +8,56 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import AllPages from "../components/AllPages";
 import Search from "../components/Search";
 import TopUsers from "../components/TopUsers";
+import { AuthContext } from "../providers/AuthProvider";
 
 const dateColumnSort = (rowA, rowB, columnId) => {
   return new Date(rowA.createdAt) - new Date(rowB.createdAt);
-}
+};
 
 const Page = () => {
   const { pages } = useContext(DataContext);
+  const { user } = useContext(AuthContext);
   const [viewType, setViewType] = useState("list");
 
   return (
     <DashboardLayout>
-      <div className="p-4">
-
+      <div>
         <TopUsers />
-        <h1 className="text-2xl font-semibold">Your Pages</h1>
-        <div className="flex items-center pb-4 mb-4 align-middle justify-between">
-          <div className="w-1/2"><Search /></div>
-          {/* <Link href="/new">
-            <button className="bg-white border border-gray-500 hover:bg-gray-200 text-black rounded-lg px-4 py-2 mt-4">
-              Add Page
-            </button>
-          </Link> */}
-          <div className="flex justify-end gap-4 mt-4">
-            <button
-              className={`${
-                viewType !== "list" ? "bg-white" : "border border-gray-500"
-              } text-black px-4 py-2 rounded`}
-              onClick={() => setViewType("list")}
-            >
-              List
-            </button>
-            <button
-              className={`${
-                viewType !== "table" ? "bg-white" : "border border-gray-500"
-              } text-black px-4 py-2 rounded`}
-              onClick={() => setViewType("table")}
-            >
-              Table
-            </button>
-          </div>
-        </div>  
 
-        {viewType === "list" && (
+        {user && (
           <>
-            <AllPages />
+            <h1 className="text-2xl font-semibold">Your Pages</h1>
+            <div className="flex items-center pb-4 mb-4 align-middle justify-between">
+              <div className="w-1/2">
+                <Search />
+              </div>
+              <div className="flex justify-end gap-4 mt-4">
+                <button
+                  className={`${
+                    viewType !== "list" ? "bg-white" : "border border-gray-500"
+                  } text-black px-4 py-2 rounded`}
+                  onClick={() => setViewType("list")}
+                >
+                  List
+                </button>
+                <button
+                  className={`${
+                    viewType !== "table" ? "bg-white" : "border border-gray-500"
+                  } text-black px-4 py-2 rounded`}
+                  onClick={() => setViewType("table")}
+                >
+                  Table
+                </button>
+              </div>
+            </div>
+
+            {viewType === "list" && (
+              <>
+                <AllPages />
+              </>
+            )}
+            {viewType === "table" && <Table pages={pages} />}
           </>
-        )}
-        {viewType === "table" && (
-          <Table pages={pages} />
         )}
       </div>
     </DashboardLayout>
@@ -87,7 +88,7 @@ const Table = ({ pages }) => {
       cell: (row) => new Date(row.createdAt).toLocaleDateString(),
       maxWidth: "140px",
       sortable: true,
-      sortFunction: dateColumnSort
+      sortFunction: dateColumnSort,
     },
     {
       name: "Is Public",
@@ -121,7 +122,6 @@ const Table = ({ pages }) => {
       striped
     />
   );
-}
-
+};
 
 export default Page;
