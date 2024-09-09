@@ -15,7 +15,7 @@ const TextView = ({ content }) => {
     return null;
   }
   return (
-    <div className="page-content">
+    <div className="page-content fade-in">
       <RenderContent content={elements} />
     </div>
   )
@@ -38,14 +38,17 @@ const RenderContent = ({ content }) => {
 
   // General render function for all nodes
   const renderNode = (node, index) => {
+    let count = 0;
     switch (node.type) {
       case 'link':
         return renderLink(node);
       case 'paragraph':
         return (
           <p key={index} className="text-text">
-            {node.children.map((child, idx) => renderNode(child, idx))}
-            <br /> {/* Optional: Adding line breaks for each paragraph */}
+            <span className="border border-text rounded-full px-2 py-1 mr-2 bg-background text-text text-xs">
+            {index + 1}
+            </span>
+              {node.children.map((child, idx) => renderNode(child, idx))}
           </p>
         );
       default:

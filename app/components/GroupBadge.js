@@ -4,7 +4,7 @@ import { rtdb } from '../firebase/rtdb'
 import { onValue, ref } from "firebase/database";
 import Link from "next/link";
 
-export default function GroupBadge({ groupId }) {
+export default function GroupBadge({ groupId,index }) {
   const [group, setGroup] = useState(null);
   const [memberCount, setMemberCount] = useState(0);
 
@@ -25,8 +25,8 @@ export default function GroupBadge({ groupId }) {
   if (!group) return <div>Loading...</div>;
 
   return (
-    <Link className="p-4 border bg-background border-gray-500 rounded-lg
-    " href={`/groups/${group.id}`}>
+    <Link className="p-4 border bg-background border-gray-500 rounded-lg fade-in
+    " href={`/groups/${group.id}`} style={{ animationDelay: `${index * 50}ms` }}>
       <h1
         className="text-2xl font-semibold text-text"
       >{group.name}</h1>

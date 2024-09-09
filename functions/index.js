@@ -36,18 +36,29 @@ exports.createPage = functions.firestore
       let existingUserId = change.before.data().userId;
       let existingGroupId = change.before.data().groupId;
       if (existingGroupId) {
-        return rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove();
+        return Promise.all([
+          rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove(),
+          rtdb.ref(`/users/${existingUserId}/pages/${pageId}`).remove(),
+          rtdb.ref(`/pages/${pageId}`).remove(),
+        ]);
       } else {
-        return rtdb.ref(`/users/${existingUserId}/pages/${pageId}`).remove();
+        return Promise.all([
+          rtdb.ref(`/users/${existingUserId}/pages/${pageId}`).remove(),
+          rtdb.ref(`/pages/${pageId}`).remove(),
+        ]);
       }
     } else {
       if (groupId) {
         return Promise.all([
           rtdb.ref(`/groups/${groupId}/pages/${pageId}`).set(page),
           rtdb.ref(`/users/${userId}/pages/${pageId}`).set(page),
+          rtdb.ref(`/pages/${pageId}`).set(page),
         ]);
       } else {
-        return rtdb.ref(`/users/${userId}/pages/${pageId}`).set(page);
+        return Promise.all([
+          rtdb.ref(`/users/${userId}/pages/${pageId}`).set(page),
+          rtdb.ref(`/pages/${pageId}`).set(page),
+        ]);
       }
     }
   });

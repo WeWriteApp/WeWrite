@@ -19,12 +19,12 @@ const AllPages = () => {
   return (
     <div>
       <ul className="space-x-1 flex flex-wrap">
-        {pages.map((page) => {
+        {pages.map((page, index) => {
           if (page.groupId) {
             return null; // Skip pages with groupId
           }
           return (
-            <li key={page.id}>
+            <li key={page.id} className="fade-in" style={{ animationDelay: `${index * 50}ms` }}>
               <PillLink
                 groupId={page.groupId}
                 href={`/pages/${page.id}`}
