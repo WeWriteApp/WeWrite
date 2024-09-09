@@ -37,7 +37,7 @@ export default function Page() {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-background text-text">
       <h1
         className="text-2xl font-semibold"
       >New Group</h1>
@@ -62,7 +62,7 @@ export default function Page() {
         </label>
         <div className="flex flex-row gap-4">
           <button 
-            className="bg-white w-auto inline-block text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white"
+            className="bg-background w-auto inline-block text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white"
           type="button" onClick={handleSave}>Save</button>
         </div>
       </form>

@@ -88,12 +88,12 @@ const Page = ({ params }) => {
     return (
       <DashboardLayout>
         <div>
-          <h1 className="text-2xl font-semibold">Page not found</h1>
+          <h1 className="text-2xl font-semibold text-text">Page not found</h1>
           <div className="flex items-center gap-2 mt-4">
             <Icon icon="akar-icons:warning" className="text-red-500" />
-            <span className="text-lg">This page has been deleted</span>
+            <span className="text-lg text-text">This page has been deleted</span>
             <Link href="/pages">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded-full">
+              <button className="bg-background text-button-text px-4 py-2 rounded-full">
                 Go back
               </button>
             </Link>
@@ -109,12 +109,12 @@ const Page = ({ params }) => {
     return (
       <DashboardLayout>
         <div>
-          <h1 className="text-2xl font-semibold">Sorry this page is private</h1>
+          <h1 className="text-2xl font-semibold text-text">Sorry this page is private</h1>
           <div className="flex items-center gap-2 mt-4">
             <Icon icon="akar-icons:warning" className="text-red-500" />
-            <span className="text-lg">This page is private</span>
+            <span className="text-lg text-text">This page is private</span>
             <Link href="/pages">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded-full">
+              <button className="bg-background text-button-text px-4 py-2 rounded-full">
                 Go back
               </button>
             </Link>
@@ -145,11 +145,11 @@ const Page = ({ params }) => {
           />
         ) : (
           <>
-            <h1 className="text-2xl md:text-4xl font-semibold">{title}</h1>
+            <h1 className="text-2xl md:text-4xl font-semibold text-text">{title}</h1>
             {
               groupId && (
                 <div className="flex items-center gap-2 mt-4">
-                  <div className="flex flex-col">
+                  <div className="flex flex-col text-text">
                     <span>Belongs to</span>
                   <GroupBadge groupId={groupId} />
                   </div>
@@ -157,11 +157,12 @@ const Page = ({ params }) => {
               )
             }
             <div className="flex space-x-1 my-4">
-              <span>Written by {"  "}</span>
+              <span className="text-text">Written by {"  "}</span>
               <Profile uid={page.userId} />
             </div>
             <TextView content={editorState} />
-            <DonateBar />
+
+            <DonateBar />            
           </>
         )}
       </div>
@@ -191,14 +192,14 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   return (
     <div className="flex items-center gap-2">
       <button
-        className="bg-white text-black  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+        className="bg-background text-button-text  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
         onClick={() => setIsEditing(!isEditing)}
       >
         {isEditing ? "Cancel" : "Edit"}
       </button>
       <button
         onClick={handleDelete}
-        className="bg-white border-gray-500 border text-black px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+        className="bg-background border-gray-500 border text-button-text px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
       >
         Delete
       </button>
@@ -300,7 +301,7 @@ const EditPage = ({
 
   return (
     <div>
-      <label className="text-lg font-semibold">Title</label>
+      <label className="text-lg font-semibold text-text">Title</label>
       <input
         type="text"
         defaultValue={title}
@@ -336,7 +337,7 @@ const EditPage = ({
         page.groupId && (
           <div className="flex items-center gap-2 mt-4">
             <button
-              className="bg-white text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
+              className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
               onClick={removeGroup}
             >
               Remove group
@@ -347,13 +348,13 @@ const EditPage = ({
 
       <div className="flex items-center gap-2 mt-4">
         <button
-          className="bg-white text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
+          className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
           onClick={() => handleSave()}
         >
           Save
         </button>
         <button
-          className="bg-white text-black px-4 py-2"
+          className="bg-background text-button-text px-4 py-2"
           onClick={handleCancel}
         >
           Cancel

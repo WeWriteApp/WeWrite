@@ -21,13 +21,14 @@ const Search = () => {
   }
 
   return (
-    <div className="p-4 w-full">
+    <div className="py-4 w-full">
       {/* <h1 className="text-2xl font-semibold">Search</h1> */}
       <ReactSearchAutocomplete
         items={filtered}
         onSearch={handleOnSearch}
         onSelect={handleOnSelect}
         autoFocus
+        className="w-full bg-background text-text searchbar"
         placeholder="Search for a page"
         fuseOptions={{ 
           minMatchCharLength: 2,
