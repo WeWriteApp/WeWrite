@@ -12,15 +12,16 @@ import {
   db,
   deletePage,
   saveNewVersion,
-  updatePageDoc,
   updateDoc,
-  setCurrentVersion,
 } from "../../firebase/database";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import VersionsList from "../../components/VersionsList";
 import { AuthContext } from "../../providers/AuthProvider";
 import Profile from "../../components/ProfileBadge";
+import { ReactSearchAutocomplete } from "react-search-autocomplete";
+import GroupBadge from "../../components/GroupBadge";
+import { GroupsContext } from "../../providers/GroupsProvider";
 
 const Page = ({ params }) => {
   const [page, setPage] = useState(null);
@@ -28,8 +29,8 @@ const Page = ({ params }) => {
   const [editorState, setEditorState] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
   const [isPublic, setIsPublic] = useState(false);
+  const [groupId, setGroupId] = useState(null);
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
 
@@ -41,6 +42,10 @@ const Page = ({ params }) => {
         setPage(pageData);
         setEditorState(versionData.content);
         setTitle(pageData.title);
+        
+        if (pageData.groupId) {
+          setGroupId(pageData.groupId);
+        }
 
         if (user && user.uid === pageData.userId) {
           setIsPublic(true);
@@ -141,6 +146,16 @@ const Page = ({ params }) => {
         ) : (
           <>
             <h1 className="text-2xl md:text-4xl font-semibold">{title}</h1>
+            {
+              groupId && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex flex-col">
+                    <span>Belongs to</span>
+                  <GroupBadge groupId={groupId} />
+                  </div>
+                </div>
+              )
+            }
             <div className="flex space-x-1 my-4">
               <span>Written by {"  "}</span>
               <Profile uid={page.userId} />
@@ -200,7 +215,40 @@ const EditPage = ({
   setTitle,
 }) => {
   const [editorState, setEditorState] = useState(JSON.parse(current));
+  const [groupId, setGroupId] = useState(null);
+  const [localGroups, setLocalGroups] = useState([]);
   const { user } = useContext(AuthContext);
+  const groups = useContext(GroupsContext);
+  useEffect(() => {
+    if (page.groupId) {
+      setGroupId(page.groupId);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("Groups", groups);
+    if (!groups) return;
+    if (groups.length > 0) {
+      if (user.groups) {
+        let arr = [];
+        Object.keys(user.groups).forEach((groupId) => {
+          const group = groups.find((g) => g.id === groupId);
+          if (group) {
+            arr.push({
+              id: groupId,
+              name: group.name,
+            });
+          }
+        })
+        setLocalGroups(arr);
+      }
+    }
+  }, [groups]);
+
+  const handleSelect = (item) => {
+    console.log("Selected item", item);
+    setGroupId(item.id);
+  }
 
   const handleSave = () => {
     if (!user) {
@@ -226,6 +274,7 @@ const EditPage = ({
           updateDoc("pages", page.id, {
             title: title,
             isPublic: page.isPublic,
+            groupId: groupId,
           });
 
           setIsEditing(false);
@@ -238,6 +287,10 @@ const EditPage = ({
         console.log("Error saving new version", error);
       });
   };
+
+  const removeGroup = () => {
+    setGroupId(null);
+  }
 
   const handleCancel = () => {
     // reset the editorState
@@ -261,6 +314,37 @@ const EditPage = ({
         initialEditorState={JSON.parse(current)}
       />
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
+
+      <label className="text-lg font-semibold">Group</label>
+      <p className="text-sm text-gray-500">
+        Currently this page is in the group: {groupId}
+      </p>
+      <ReactSearchAutocomplete
+        items={localGroups}
+        onSelect={handleSelect}
+        autoFocus
+        placeholder="Search for a group"
+        fuseOptions={{
+          minMatchCharLength: 2,
+        }}
+        formatResult={(item) => {
+          return <div key={item.id}>{item.name}</div>;
+        }}
+      />
+
+      {
+        page.groupId && (
+          <div className="flex items-center gap-2 mt-4">
+            <button
+              className="bg-white text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
+              onClick={removeGroup}
+            >
+              Remove group
+            </button>
+          </div>
+        )
+      }
+
       <div className="flex items-center gap-2 mt-4">
         <button
           className="bg-white text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"

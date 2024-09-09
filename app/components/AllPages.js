@@ -19,13 +19,22 @@ const AllPages = () => {
   return (
     <div>
       <ul className="space-x-1 flex flex-wrap">
-        {pages.map((page) => (
-          <li key={page.id}>
-            <PillLink href={`/pages/${page.id}`}
-              isPublic={page.isPublic}
-            >{page.title}</PillLink>
-          </li>
-        ))}
+        {pages.map((page) => {
+          if (page.groupId) {
+            return null; // Skip pages with groupId
+          }
+          return (
+            <li key={page.id}>
+              <PillLink
+                groupId={page.groupId}
+                href={`/pages/${page.id}`}
+                isPublic={page.isPublic}
+              >
+                {page.title}
+              </PillLink>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
