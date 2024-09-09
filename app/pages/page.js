@@ -9,6 +9,7 @@ import AllPages from "../components/AllPages";
 import Search from "../components/Search";
 import TopUsers from "../components/TopUsers";
 import { AuthContext } from "../providers/AuthProvider";
+import YourGroups from "../components/YourGroups";
 
 const dateColumnSort = (rowA, rowB, columnId) => {
   return new Date(rowA.createdAt) - new Date(rowB.createdAt);
@@ -26,6 +27,8 @@ const Page = () => {
 
         {user && (
           <>
+            <h1 className="text-2xl font-semibold">Your Groups</h1>
+            <YourGroups />
             <h1 className="text-2xl font-semibold">Your Pages</h1>
             <div className="flex items-center pb-4 mb-4 md:align-middle md:justify-between md:flex-row flex-col">
               <div className="md:w-1/2 w-full">

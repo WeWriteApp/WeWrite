@@ -38,3 +38,17 @@ exports.createPage = functions.firestore.document("/pages/{pageId}").onWrite((ch
     return rtdb.ref(`/users/${userId}/pages/${pageId}`).set(page);
   }
 });
+
+// groups when added as a member or removed, update the user with the group id
+exports.updateGroupMembers = functions.database.ref("/groups/{groupId}/members/{userId}").onWrite((change, context) => {
+  const userId = context.params.userId;
+  const groupId = context.params.groupId;
+
+  if (!change.after.exists) {
+    console.log("Group member removed, removing from user");
+    return rtdb.ref(`/users/${userId}/groups/${groupId}`).remove();
+  } else {
+    console.log("Group member added, adding to user");
+    return rtdb.ref(`/users/${userId}/groups/${groupId}`).set(true);
+  }
+});
