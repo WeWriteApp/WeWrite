@@ -20,6 +20,11 @@ export default function Page({ params }) {
     });
   }, [params]);
 
+  const handleRemoveGroup = () => {
+    const groupRef = ref(rtdb, `groups/${params.id}`);
+    set(groupRef, null);
+  }
+
   if (!group) return <div>Loading...</div>;
 
   return (
@@ -28,12 +33,13 @@ export default function Page({ params }) {
         className="text-3xl font-semibold"
       >{group.name}</h1>
       <p>{group.description}</p>
-
       {
         group.members && (
           <Members members={group.members} groupId={group.id} />
         )
       }
+
+
     </div>
   );
 }

@@ -27,8 +27,14 @@ const Page = () => {
 
         {user && (
           <>
+          <div className="flex items-center pb-4 mb-4 md:mb-0 md:align-middle md:justify-between md:flex-row flex-col">
             <h1 className="text-2xl font-semibold">Your Groups</h1>
+            <Link className="bg-white text-black border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors" href="/groups/new">
+              Create Group
+            </Link>
+          </div>
             <YourGroups />
+            
             <h1 className="text-2xl font-semibold">Your Pages</h1>
             <div className="flex items-center pb-4 mb-4 md:align-middle md:justify-between md:flex-row flex-col">
               <div className="md:w-1/2 w-full">
