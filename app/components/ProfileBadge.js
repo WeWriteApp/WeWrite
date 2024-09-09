@@ -29,7 +29,7 @@ const Profile = ({ uid }) => {
     });
   }, [uid]);
   return (
-    <Link href={`/profile/${uid}`} className="text-blue-500">
+    <Link href={`/profile/${uid}`} className="text-text underline">
       {profile.username} - ({pageCount})
     </Link>
   );

@@ -27,7 +27,7 @@ const TopUsers = () => {
   }
   return (
     <div className="mb-4">
-      <h2 className="text-2xl font-bold">
+      <h2 className="text-2xl font-semibold text-text">
         Top Users</h2>
       <ul>
         {users.map((user) => (

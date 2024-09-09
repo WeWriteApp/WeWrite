@@ -10,6 +10,7 @@ import Search from "../components/Search";
 import TopUsers from "../components/TopUsers";
 import { AuthContext } from "../providers/AuthProvider";
 import YourGroups from "../components/YourGroups";
+import { useTheme } from "../providers/ThemeProvider";
 
 const dateColumnSort = (rowA, rowB, columnId) => {
   return new Date(rowA.createdAt) - new Date(rowB.createdAt);
@@ -28,14 +29,14 @@ const Page = () => {
         {user && (
           <>
           <div className="flex items-center pb-4 mb-4 md:mb-0 md:align-middle md:justify-between md:flex-row flex-col">
-            <h1 className="text-2xl font-semibold">Your Groups</h1>
-            <Link className="bg-white text-black border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors" href="/groups/new">
+            <h1 className="text-2xl font-semibold text-text">Your Groups</h1>
+            <Link className="bg-background text-button-text border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors" href="/groups/new">
               Create Group
             </Link>
           </div>
             <YourGroups />
             
-            <h1 className="text-2xl font-semibold">Your Pages</h1>
+            <h1 className="text-2xl font-semibold text-text">Your Pages</h1>
             <div className="flex items-center pb-4 mb-4 md:align-middle md:justify-between md:flex-row flex-col">
               <div className="md:w-1/2 w-full">
                 <Search />
@@ -43,16 +44,16 @@ const Page = () => {
               <div className="flex md:justify-end gap-4 md:mt-0 w-full md:w-1/2">
                 <button
                   className={`${
-                    viewType !== "list" ? "bg-white" : "border border-gray-500"
-                  } text-black px-4 py-2 rounded`}
+                    viewType !== "list" ? "bg-background" : "border border-gray-500"
+                  } text-button-text px-4 py-2 rounded`}
                   onClick={() => setViewType("list")}
                 >
                   List
                 </button>
                 <button
                   className={`${
-                    viewType !== "table" ? "bg-white" : "border border-gray-500"
-                  } text-black px-4 py-2 rounded`}
+                    viewType !== "table" ? "bg-background" : "border border-gray-500"
+                  } text-button-text px-4 py-2 rounded`}
                   onClick={() => setViewType("table")}
                 >
                   Table
@@ -74,6 +75,7 @@ const Page = () => {
 };
 
 const Table = ({ pages }) => {
+  const { theme } = useTheme();
   const [columns, setColumns] = useState([
     {
       name: "User",
@@ -86,7 +88,7 @@ const Table = ({ pages }) => {
       selector: (row) => row.title,
       maxWidth: "240px",
       cell: (row) => (
-        <Link className="text-blue-500 underline" href={`/pages/${row.id}`}>
+        <Link className="text-primary underline" href={`/pages/${row.id}`}>
           {row.title}
         </Link>
       ),
@@ -114,7 +116,7 @@ const Table = ({ pages }) => {
       cell: (row) => (
         <div className="flex space-x-2">
           <Link href={`/pages/${row.id}/edit`}>
-            <button className="bg-white text-black border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+            <button className="bg-background text-button-text border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
               Edit
             </button>
           </Link>
@@ -129,6 +131,7 @@ const Table = ({ pages }) => {
       pagination
       highlightOnHover
       striped
+      theme={theme}
     />
   );
 };

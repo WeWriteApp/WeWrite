@@ -110,6 +110,7 @@ const Search = ({
         onSearch={handleOnSearch}
         onSelect={handleOnSelect}
         autoFocus
+        className="searchbar"
         placeholder="Search for a page..."
         fuseOptions={{ 
           minMatchCharLength: 2,

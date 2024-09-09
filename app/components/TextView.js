@@ -43,7 +43,7 @@ const RenderContent = ({ content }) => {
         return renderLink(node);
       case 'paragraph':
         return (
-          <p key={index}>
+          <p key={index} className="text-text">
             {node.children.map((child, idx) => renderNode(child, idx))}
             <br /> {/* Optional: Adding line breaks for each paragraph */}
           </p>

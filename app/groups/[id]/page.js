@@ -6,9 +6,11 @@ import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { AuthContext } from "../../providers/AuthProvider";
 import Profile from "../../components/ProfileBadge";
 import {PillLink} from "../../components/PillLink";
+import { useTheme } from "../../providers/ThemeProvider";
 
 export default function Page({ params }) {
   const [group, setGroup] = useState(null);
+  const { theme } =   useTheme();
 
   useEffect(() => {
     if (!params.id) return;
@@ -29,7 +31,7 @@ export default function Page({ params }) {
   if (!group) return <div>Loading...</div>;
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-background text-text min-h-screen" data-theme={theme}>
       <h1
         className="text-3xl font-semibold"
       >{group.name}</h1>
@@ -96,6 +98,8 @@ const Members = ({ members, groupId }) => {
             <Profile uid={uid} />
             <span>{member.role}</span>
             {
+              members &&
+              user &&
               members[user.uid] && members[user.uid].role === "owner" &&
               member.role !== "owner" && 
                 <button
@@ -109,6 +113,7 @@ const Members = ({ members, groupId }) => {
         ))}
       </ul>
         {
+          members &&
           members[user.uid] && members[user.uid].role === "owner" && (
             <AddMembersForm groupId={groupId} initialMembers={members} />
           )
@@ -187,6 +192,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
         onSearch={setSearch}
         onSelect={handleSelect}
         autoFocus
+        className="searchbar"
         placeholder="Search for a user"
         fuseOptions={{ 
           minMatchCharLength: 2,
@@ -207,7 +213,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
       {
         members && (
           <button
-            className="bg-white w-auto inline-block text-black px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white mt-4"
+            className="bg-background w-auto inline-block text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white mt-4"
             type="button"
             onClick={handleSave}
           >Add Members</button>

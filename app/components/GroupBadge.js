@@ -25,10 +25,10 @@ export default function GroupBadge({ groupId }) {
   if (!group) return <div>Loading...</div>;
 
   return (
-    <Link className="p-4 border border-gray-500 rounded-lg
+    <Link className="p-4 border bg-background border-gray-500 rounded-lg
     " href={`/groups/${group.id}`}>
       <h1
-        className="text-2xl font-semibold"
+        className="text-2xl font-semibold text-text"
       >{group.name}</h1>
       <p className="text-gray-500 text-sm"
       >{group.description} ({memberCount} members)</p>
