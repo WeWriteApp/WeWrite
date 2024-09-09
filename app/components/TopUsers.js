@@ -30,8 +30,8 @@ const TopUsers = () => {
       <h2 className="text-2xl font-semibold text-text">
         Top Users</h2>
       <ul>
-        {users.map((user) => (
-          <li key={user.uid}>
+        {users.map((user,index) => (
+          <li key={user.uid} className="fade-in" style={{ animationDelay: `${index * 50}ms` }}>
             <Profile uid={user.uid} />
           </li>
         ))}

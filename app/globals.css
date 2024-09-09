@@ -62,6 +62,10 @@ html body .page-content p {
   color: var(--button-text);
 }
 
+.border-text {
+  border-color: var(--text-color);
+}
+
 .text-button-text:hover {
   color: var(--button-hover);
 }
@@ -82,4 +86,18 @@ p {
 .searchbar .wrapper {
   background: var(--background-color) !important;
   color: var(--text-color) !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  opacity: 0; /* Ensure all elements start invisible */
+  animation: fadeIn 0.5s forwards; /* 0.5s for each fade effect */
 }

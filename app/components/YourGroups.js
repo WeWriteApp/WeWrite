@@ -9,8 +9,8 @@ export default function YourGroups() {
   if (!user.groups) return null;
   return (
     <div className="grid md:grid-cols-4 grid-cols-1 gap-4 mb-4">
-      {Object.keys(user.groups).map((groupId) => (
-        <GroupBadge key={groupId} groupId={groupId} />
+      {Object.keys(user.groups).map((groupId,index) => (
+        <GroupBadge key={groupId} groupId={groupId} index={index} />
       ))}
     </div>
   );

@@ -81,6 +81,7 @@ const Page = ({ params }) => {
     }
   }, [params]);
 
+
   if (!page) {
     return <Loader />;
   }
@@ -126,13 +127,7 @@ const Page = ({ params }) => {
   return (
     <DashboardLayout>
       <div className="mb-40">
-        {user && user.uid === page.userId && (
-          <ActionRow
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-            page={page}
-          />
-        )}
+       
 
         {isEditing ? (
           <EditPage
@@ -145,10 +140,10 @@ const Page = ({ params }) => {
           />
         ) : (
           <>
-            <h1 className="text-2xl md:text-4xl font-semibold text-text">{title}</h1>
+            <h1 className="text-2xl md:text-4xl font-semibold text-text fade-in">{title}</h1>
             {
               groupId && (
-                <div className="flex items-center gap-2 mt-4">
+                <div className="flex items-center gap-2 mt-4 fade-in" style={{ animationDelay: "100ms" }}>
                   <div className="flex flex-col text-text">
                     <span>Belongs to</span>
                   <GroupBadge groupId={groupId} />
@@ -156,12 +151,19 @@ const Page = ({ params }) => {
                 </div>
               )
             }
-            <div className="flex space-x-1 my-4">
+            <div className="flex space-x-1 my-4 fade-in" style={{ animationDelay: "200ms" }}>
               <span className="text-text">Written by {"  "}</span>
               <Profile uid={page.userId} />
             </div>
+            
             <TextView content={editorState} />
-
+            {user && user.uid === page.userId && (
+          <ActionRow
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            page={page}
+          />
+        )}
             <DonateBar />            
           </>
         )}
@@ -190,7 +192,7 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 mt-20">
       <button
         className="bg-background text-button-text  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
         onClick={() => setIsEditing(!isEditing)}
@@ -318,7 +320,9 @@ const EditPage = ({
 
       <label className="text-lg font-semibold">Group</label>
       <p className="text-sm text-gray-500">
-        Currently this page is in the group: {groupId}
+        {
+          groupId ? `This page belongs to a group ${groupId}` : "This page does not belong to any group"
+        }
       </p>
       <ReactSearchAutocomplete
         items={localGroups}
