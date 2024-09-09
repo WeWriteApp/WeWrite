@@ -51,10 +51,10 @@ const NavIcons = () => {
       name: "New Page",
       icon: () => {
         return (
-          <button className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all">
+          <div className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all">
             <span>Add Page </span>
             <Icon icon={"akar-icons:plus"} className="h-4 w-4 text-gray-500" />
-          </button>
+          </div>
         );
       },
       onClick: () => {
@@ -103,11 +103,8 @@ const NavIcons = () => {
         ))}
         {
           !user && (
-            <Link href="/auth/login" className="mt-4">
-              <button className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all">
+            <Link href="/auth/login"  className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all mt-4">
                 <span>Login </span>
-                {/* <Icon icon={"akar-icons:plus"} className="h-4 w-4 text-gray-500" /> */}
-              </button>
             </Link>
           )
         }
