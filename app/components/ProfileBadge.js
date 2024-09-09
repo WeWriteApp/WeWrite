@@ -18,7 +18,7 @@ const Profile = ({ uid }) => {
         // count isPublic pages
         let count = 0;
         for (let page in user.pages) {
-          if (user.pages[page].isPublic) {
+          if (user.pages[page].isPublic && !user.pages[page].groupId) {
             count++;
           }
         }

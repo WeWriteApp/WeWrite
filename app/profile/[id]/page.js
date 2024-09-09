@@ -69,7 +69,9 @@ const Profile = ({ params }) => {
             <ul className="space-x-1 flex flex-wrap">
               {pages.map((page) => (
                 <li key={page.id}>
-                  <PillLink href={`/pages/${page.id}`} isPublic={page.isPublic}>
+                  <PillLink 
+                    groupId={page.groupId}
+                  href={`/pages/${page.id}`} isPublic={page.isPublic}>
                     {page.title}
                   </PillLink>
                 </li>
@@ -114,7 +116,9 @@ const Search = ({
         }}
         formatResult={(item) => {
           return (
-            <PillLink href={`/pages/${item.id}`} isPublic={item.isPublic} key={item.id}>
+            <PillLink 
+              groupId={item.groupId}
+            href={`/pages/${item.id}`} isPublic={item.isPublic} key={item.id}>
               {item.name}
             </PillLink>
           );

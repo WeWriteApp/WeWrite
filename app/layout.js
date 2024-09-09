@@ -11,6 +11,7 @@ import { CommunityProvider } from "./providers/CommunityProvider";
 import { Drawer } from "./components/Drawer";
 import Header from "./components/Header";
 import { Analytics } from "@vercel/analytics/react";
+import { GroupsProvider } from "./providers/GroupsProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
@@ -25,19 +26,21 @@ export default function RootLayout({ children }) {
         <DrawerProvider>
           <AuthProvider>
             <DataProvider>
-              <CommunityProvider>
-                <PortfolioProvider>
-                  <MobileProvider>
-                    <NavProvider>
-                      <Header />
-                      <div className="flex flex-row">
-                        <div className="flex flex-col w-full">{children}</div>
-                      </div>
-                      <Drawer />
-                    </NavProvider>
-                  </MobileProvider>
-                </PortfolioProvider>
-              </CommunityProvider>
+              <GroupsProvider>
+                <CommunityProvider>
+                  <PortfolioProvider>
+                    <MobileProvider>
+                      <NavProvider>
+                        <Header />
+                        <div className="flex flex-row">
+                          <div className="flex flex-col w-full">{children}</div>
+                        </div>
+                        <Drawer />
+                      </NavProvider>
+                    </MobileProvider>
+                  </PortfolioProvider>
+                </CommunityProvider>
+              </GroupsProvider>
             </DataProvider>
           </AuthProvider>
         </DrawerProvider>

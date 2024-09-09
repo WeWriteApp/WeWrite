@@ -7,6 +7,7 @@ import {
   set,
   getDatabase,
   ref,
+  onValue,
 } from "firebase/database";
 import { 
   getFirestore,
@@ -23,6 +24,7 @@ export const DataContext = createContext();
 export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState([]);
+  const [groups, setGroups] = useState([]);
   const { user } = useContext(AuthContext);
   const [filtered, setFiltered] = useState([]);
   const [search, setSearch] = useState("");
@@ -30,7 +32,6 @@ export const DataProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      console.log("fetching pages",user);
       fetchPages();
     } else {
       setPages([]);

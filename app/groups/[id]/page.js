@@ -5,6 +5,7 @@ import { onValue, ref, set } from "firebase/database";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { AuthContext } from "../../providers/AuthProvider";
 import Profile from "../../components/ProfileBadge";
+import {PillLink} from "../../components/PillLink";
 
 export default function Page({ params }) {
   const [group, setGroup] = useState(null);
@@ -38,8 +39,36 @@ export default function Page({ params }) {
           <Members members={group.members} groupId={group.id} />
         )
       }
+      {
+        group.pages && (
+          <Pages pages={group.pages} />
+        )
+      }
+    </div>
+  );
+}
 
-
+const Pages = ({ pages }) => {
+  return (
+    <div className="mt-4">
+      <h2
+        className="text-lg font-semibold"
+      >Pages</h2>
+      <ul>
+        {
+          Object.entries(pages).map(([pageId, page]) => (
+            <li
+              key={pageId}
+              className="flex items-center space-x-2"
+            >
+              <PillLink 
+              groupId={page.groupId}
+              href={`/pages/${pageId}`} 
+              isPublic={page.isPublic}>{page.title}</PillLink>
+            </li>
+          ))
+        }
+      </ul>
     </div>
   );
 }
