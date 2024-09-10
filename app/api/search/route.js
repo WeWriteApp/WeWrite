@@ -14,6 +14,13 @@ try {
 } catch (error) {
   throw new Error('Failed to parse GOOGLE_CLOUD_KEY_JSON: ' + error.message);
 }
+
+// Create a new BigQuery client using the credentials
+const bigquery = new BigQuery({ 
+  projectId: credentials.project_id,
+  credentials,
+ });
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
