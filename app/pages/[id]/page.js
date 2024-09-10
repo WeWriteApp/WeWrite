@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useContext } from "react";
+import Head from "next/head";
 import { getPageById } from "../../firebase/database";
 import DashboardLayout from "../../DashboardLayout";
 import TextView from "../../components/TextView";

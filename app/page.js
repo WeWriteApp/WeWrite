@@ -5,7 +5,7 @@ import ThreeTier from "./components/marketing/ThreeTier";
 export default function Home() {
   return (
     <>
-      <Header />
+      {/* <Header /> */}
     </>
   );
 }

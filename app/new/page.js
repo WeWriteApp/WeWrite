@@ -70,7 +70,7 @@ const Form = ({ Page, setPage }) => {
         value={Page.title}
         placeholder="Title"
         onChange={(e) => setPage({ ...Page, title: e.target.value })}
-        className="border border-gray-300 rounded p-2 w-full"
+        className="border border-gray-300 rounded p-2 w-full bg-background text-text"
       />
       <div className="flex items-center space-x-2">
         <input
@@ -113,14 +113,14 @@ const Form = ({ Page, setPage }) => {
         <button
           onClick={handleSave}
           disabled={!Page.title || !editorState}
-          className={`text-black bg-white rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
+          className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
           type="submit"
         >
           Save
         </button>
         <button
           onClick={() => router.push("/pages")}
-          className="bg-white text-black px-4 py-2"
+          className="bg-background text-button-text px-4 py-2"
         >
           Cancel
         </button>

@@ -56,7 +56,7 @@ const Pages = ({ pages }) => {
       <h2
         className="text-lg font-semibold"
       >Pages</h2>
-      <ul>
+      <ul className="flex items-center space-x-2">
         {
           Object.entries(pages).map(([pageId, page]) => (
             <li
