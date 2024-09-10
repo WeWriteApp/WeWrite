@@ -3,15 +3,17 @@
 import { NextResponse } from 'next/server';
 import { BigQuery } from '@google-cloud/bigquery';
 
-// Parse the JSON string from the environment variable
-const credentials = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
+// Validate and parse the JSON string from the environment variable
+if (!process.env.GOOGLE_CLOUD_KEY_JSON) {
+  throw new Error('Environment variable GOOGLE_CLOUD_KEY_JSON is not set or is invalid.');
+}
 
-// Initialize BigQuery client with credentials from the parsed JSON
-const bigquery = new BigQuery({
-  projectId: credentials.project_id,
-  credentials,
-});
-
+let credentials;
+try {
+  credentials = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
+} catch (error) {
+  throw new Error('Failed to parse GOOGLE_CLOUD_KEY_JSON: ' + error.message);
+}
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
