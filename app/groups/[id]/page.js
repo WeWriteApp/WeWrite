@@ -56,12 +56,12 @@ const Pages = ({ pages }) => {
       <h2
         className="text-lg font-semibold"
       >Pages</h2>
-      <ul className="flex items-center space-x-2">
+      <ul className="space-x-1 flex flex-wrap">
         {
           Object.entries(pages).map(([pageId, page]) => (
             <li
               key={pageId}
-              className="flex items-center space-x-2"
+              
             >
               <PillLink 
               groupId={page.groupId}
@@ -114,6 +114,7 @@ const Members = ({ members, groupId }) => {
       </ul>
         {
           members &&
+          user &&
           members[user.uid] && members[user.uid].role === "owner" && (
             <AddMembersForm groupId={groupId} initialMembers={members} />
           )
