@@ -18,7 +18,7 @@ const VersionsList = ({ pageId, currentVersion }) => {
   return (
     <div>
       <h2
-        className="text-2xl font-semibold text-text"
+        className="text-md font-semibold text-text mt-4"
       >Versions</h2>
       <ul>
         {versions.map((version) => (
@@ -45,9 +45,9 @@ const VersionItem = ({ version, isCurrent }) => {
   return (
     <li>
       <p
-        className="text-lg font-semibold text-text"
+        className="text-sm font-semibold text-text"
       >{version.createdAt}</p>
-      {isCurrent ? (
+      {/* {isCurrent ? (
         <button className="bg-background text-button-text px-4 py-2">Current version</button>
       ) : (
         <button
@@ -56,7 +56,7 @@ const VersionItem = ({ version, isCurrent }) => {
         >
           Set as current version
         </button>
-      )}
+      )} */}
     </li>
   );
 };

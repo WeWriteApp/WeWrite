@@ -51,7 +51,7 @@ const Profile = ({ params }) => {
   }, [params]);
 
   return (
-    <div className="p-4">
+    <div className="p-2">
       <Link href="/pages">
         Back
       </Link>
@@ -60,14 +60,14 @@ const Profile = ({ params }) => {
       >{profile.username}</h1>
       {
         pages.length > 0 && (
-          <div>
+          <div className="mt-4">
             <h2
               className="text-lg font-semibold"
             >Public Pages - {pageCount}</h2>
 
             <Search pages={searchItems} router={router} />
             <ul className="space-x-1 flex flex-wrap">
-              {pages.map((page) => (
+              {pages.map((page, index) => (
                 <li key={page.id}>
                   <PillLink 
                     groupId={page.groupId}
@@ -104,7 +104,7 @@ const Search = ({
   }
 
   return (
-    <div className="p-4 w-full">
+    <div className="py-4 w-full">
       <ReactSearchAutocomplete
         items={pages}
         onSearch={handleOnSearch}

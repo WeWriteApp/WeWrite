@@ -126,7 +126,7 @@ const Page = ({ params }) => {
   }
   return (
     <DashboardLayout>
-      <div className="mb-40">
+      <div className="">
        
 
         {isEditing ? (
@@ -140,7 +140,7 @@ const Page = ({ params }) => {
           />
         ) : (
           <>
-            <h1 className="text-2xl md:text-4xl font-semibold text-text fade-in">{title}</h1>
+            <h1 className="text-3xl mt-4 md:text-4xl font-semibold text-text fade-in">{title}</h1>
             {
               groupId && (
                 <div className="flex items-center gap-2 mt-4 fade-in" style={{ animationDelay: "100ms" }}>
@@ -164,15 +164,15 @@ const Page = ({ params }) => {
             page={page}
           />
         )}
-            <DonateBar />            
+            {/* <DonateBar />             */}
           </>
         )}
       </div>
-      {
+      {/* {
         user && user.uid === page.userId && (
           <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
         )
-      }
+      } */}
     </DashboardLayout>
   );
 };
@@ -192,7 +192,7 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   };
 
   return (
-    <div className="flex items-center gap-2 mt-20">
+    <div className="flex items-center gap-2 mt-8 border-t border-gray-500 py-2 rounded-lg">
       <button
         className="bg-background text-button-text  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
         onClick={() => setIsEditing(!isEditing)}
@@ -201,7 +201,7 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
       </button>
       <button
         onClick={handleDelete}
-        className="bg-background border-gray-500 border text-button-text px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+        className="bg-background border-gray-500 border text-button-text px-4 py-2 rounded-lg hover:bg-red-700 transition-colors hover:text-white"
       >
         Delete
       </button>
@@ -229,7 +229,6 @@ const EditPage = ({
   }, []);
 
   useEffect(() => {
-    console.log("Groups", groups);
     if (!groups) return;
     if (groups.length > 0) {
       if (user.groups) {
@@ -273,11 +272,14 @@ const EditPage = ({
     })
       .then((result) => {
         if (result) {
+
+          let updateTime = new Date().toISOString();
           // update the page content
           updateDoc("pages", page.id, {
             title: title,
             isPublic: page.isPublic,
             groupId: groupId,
+            lastModified: updateTime,
           });
 
           setIsEditing(false);
@@ -308,7 +310,7 @@ const EditPage = ({
         type="text"
         defaultValue={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="border border-gray-200 p-2 text-3xl w-full"
+        className="border border-gray-200 p-2 text-3xl w-full bg-background text-text"
       />
 
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
@@ -329,6 +331,7 @@ const EditPage = ({
         onSelect={handleSelect}
         autoFocus
         placeholder="Search for a group"
+        className="searchbar"
         fuseOptions={{
           minMatchCharLength: 2,
         }}

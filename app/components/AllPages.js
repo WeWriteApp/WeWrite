@@ -24,7 +24,7 @@ const AllPages = () => {
             return null; // Skip pages with groupId
           }
           return (
-            <li key={page.id} className="fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+            <li key={page.id}>
               <PillLink
                 groupId={page.groupId}
                 href={`/pages/${page.id}`}

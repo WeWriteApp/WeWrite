@@ -205,11 +205,11 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
           );
         }}
       />
-      {
+      {/* {
         members && (
           <pre>{JSON.stringify(members, null, 2)}</pre>
         )
-      }
+      } */}
       {
         members && (
           <button
