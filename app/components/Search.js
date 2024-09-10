@@ -7,14 +7,7 @@ import { PillLink } from "./PillLink";
 
 const Search = () => {
   const { filtered } = useContext(DataContext);
-  const [results, setResults] = useState([]);
   const router = useRouter();
-
-
-  const handleOnSearch = (string, results) => {
-    // search filtered
-    setResults(results);
-  };
 
   const handleOnSelect = (item) => {
     router.push(`/pages/${item.id}`);
