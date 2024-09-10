@@ -18,14 +18,14 @@ export default function Header() {
   const { theme } = useTheme();
   return (
     <header
-      className="top-0 left-0 w-full bg-background text-black px-4 text-center"
+      className="top-0 left-0 w-full bg-background text-black px-2 text-center"
       style={{ zIndex: 5 }}
       data-theme={theme}
     >
       <div className="flex justify-between">
         <div className="flex items-center space-x-2">
           <Link href={"/pages"} className="text-xl">
-            <Image src="/white.svg" alt="logo" width={64} height={64} />
+            <Image src="/white.svg" alt="logo" width={32} height={32} />
           </Link>
         </div>
         <div className="flex justify-between">

@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 html body .page-content p {
-  line-height: 2.5;
+  line-height: 2.3;
+  margin-bottom: 12px;
 }
 
 /* styles/globals.css */
@@ -73,10 +74,11 @@ html body .page-content p {
 html,body {
   min-height: 100vh;
   background: var(--background-color) !important;
+  overflow-x: hidden;
 }
 
 input, textarea {
-  background: var(--background-color) !important;
+  /* background: var(--background-color) !important; */
   color: var(--text-color) !important;
 }
 p {
