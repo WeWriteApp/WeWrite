@@ -3,6 +3,7 @@ import { createUser } from "../../firebase/auth";
 import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
+import Link from "next/link";
 
 const Register = () => {
   const router = useRouter();
@@ -56,7 +57,7 @@ const Form = () => {
         value={user.email}
         onChange={handleChange}
         placeholder="Email"
-        className="border border-gray-300 rounded p-2 w-full"
+        className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
       />
       <input
         type="password"
@@ -64,12 +65,14 @@ const Form = () => {
         value={user.password}
         onChange={handleChange}
         placeholder="Password"
-        className="border border-gray-300 rounded p-2 w-full mt-2"
+        className="border border-gray-300 rounded p-2 w-full mt-2 bg-background text-text"
       />
-      <button type="submit" className="bg-blue-500 text-white rounded p-2 w-full mt-2">
+      <button type="submit" className="bg-background text-button-text rounded p-2 w-full mt-2 border border-gray-300">
         Register
       </button>
       {error && <p className="text-red-500 mt-2">{error}</p>}
+
+      <p className="text-text mt-2">Already have an account? <Link href="/auth/login" className="text-primary">Login</Link></p>
     </form>
   );
 };
