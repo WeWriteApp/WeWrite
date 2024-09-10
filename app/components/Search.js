@@ -13,6 +13,10 @@ const Search = () => {
     router.push(`/pages/${item.id}`);
   }
 
+  const handleOnSearch = (value) => {
+    console.log(value);
+  }
+
   return (
     <div className="py-4 w-full">
       {/* <h1 className="text-2xl font-semibold">Search</h1> */}
