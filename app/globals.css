@@ -10,21 +10,25 @@ html body .page-content p {
 /* styles/globals.css */
 :root {
   --background-color: #ffffff;
+  --light-background-color: #F9FAFB;
   --text-color: #000000;
   --primary-color: #1D4ED8;
   --primary-hover: #2563EB;
   --secondary-color: #64748B;
   --button-text: #000000;
+  --border-color: #64748B;
 }
 
 *[data-theme='dark'] {
   --background-color: #1F2937;
+  --light-background-color: #2D3B4A;
   --text-color: #F3F4F6;
   --primary-color: #1D4ED8;
   --primary-hover: #2563EB;
   --secondary-color: #94A3B8;
   --button-text: #ffffff;
   --button-hover: #1D4ED8;
+  --border-color: #64748B;
 }
 
 /* Custom utility classes using CSS variables */
@@ -33,6 +37,9 @@ html body .page-content p {
   transition: all 0.3s;
   -webkit-transition: all 0.3s;
   -moz-transition: all 0.3s;
+}
+.bg-background--light {
+  background-color: var(--light-background-color);
 }
 
 .text-text {
@@ -69,6 +76,10 @@ html body .page-content p {
 
 .text-button-text:hover {
   color: var(--button-hover);
+}
+
+.border-border {
+  border-color: var(--border-color);
 }
 
 html,body {

@@ -21,6 +21,7 @@
     "react": "^18",
     "react-data-table-component": "^7.6.2",
     "react-dom": "^18",
+    "react-ga4": "^2.1.0",
     "react-search-autocomplete": "^8.5.2",
     "react-tooltip": "^5.27.1",
     "slate": "^0.103.0",

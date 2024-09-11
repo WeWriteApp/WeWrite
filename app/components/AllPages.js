@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+"use client";
+import React, { useContext } from "react";
 import { DataContext } from "../providers/DataProvider";
 import { PillLink } from "./PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 const AllPages = () => {
-  const { pages, loading, fetchPages } = useContext(DataContext);
+  const { pages, loading } = useContext(DataContext);
 
   if (loading) {
     return (
@@ -20,6 +21,7 @@ const AllPages = () => {
     <div>
       <ul className="space-x-1 flex flex-wrap">
         {pages.map((page, index) => {
+          // TODO: only query user pages 
           if (page.groupId) {
             return null; // Skip pages with groupId
           }
