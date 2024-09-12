@@ -52,3 +52,17 @@ export const fetchGroupFromFirebase = async (groupId) => {
     return null;
   }
 };
+
+export const fetchProfileFromFirebase = async (userId) => {
+  try {
+    const profileRef = ref(rtdb, `users/${userId}`);
+    const snapshot = await get(profileRef);
+    return {
+      uid: snapshot.key,
+      ...snapshot.val(),
+    }
+  } catch (error) {
+    console.error("Error fetching profile from Firebase", error);
+    return null;
+  }
+}

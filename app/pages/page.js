@@ -1,12 +1,17 @@
-"use client";
-import React, { useEffect, useState, useContext } from "react";
 import DashboardLayout from "../DashboardLayout";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
 import Search from "../components/Search";
 import TopUsers from "../components/TopUsers";
-import { AuthContext } from "../providers/AuthProvider";
 import YourGroups from "../components/YourGroups";
+
+export async function generateMetadata() {
+  return {
+    title: "Your WeWrite",
+    description: "Your WeWrite dashboard",
+  };
+}
+
 
 const Page = () => {
   return (
