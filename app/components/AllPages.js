@@ -1,11 +1,13 @@
 "use client";
 import React, { useContext } from "react";
 import { DataContext } from "../providers/DataProvider";
+import { AuthContext } from "../providers/AuthProvider";
 import { PillLink } from "./PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 const AllPages = () => {
   const { pages, loading } = useContext(DataContext);
+  const { user } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -16,6 +18,12 @@ const AllPages = () => {
         />
       </div>
     );
+  }
+  if (!pages) {
+    return <div>No pages found</div>;
+  }
+  if (!user) {
+    return <div>Please sign in</div>;
   }
   return (
     <div>

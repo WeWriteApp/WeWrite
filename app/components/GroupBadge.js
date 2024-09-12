@@ -13,10 +13,13 @@ export default function GroupBadge({ groupId,index }) {
     if (!groupId) return;
     const groupRef = ref(rtdb, `groups/${groupId}`);
     return onValue(groupRef, (snapshot) => {
+      if (!snapshot.val()) return;
+
       setGroup({
         id: snapshot.key,
         ...snapshot.val()
       });
+
 
       if (snapshot.val().members) {
         let count = Object.keys(snapshot.val().members).length;
@@ -31,7 +34,7 @@ export default function GroupBadge({ groupId,index }) {
     });
   }, [groupId]);
 
-  if (!group) return <div>Loading...</div>;
+  if (!group || !groupId) return <div>Loading...</div>;
 
   return (
     <Link className="p-4 border bg-background border-gray-500 rounded-lg fade-in
