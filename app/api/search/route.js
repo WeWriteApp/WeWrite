@@ -1,5 +1,3 @@
-// app/api/getPages/route.js
-
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 
@@ -48,56 +46,78 @@ export async function GET(request) {
   try {
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
-      SELECT document_id, JSON_EXTRACT_SCALAR(data, '$.title') AS title, JSON_EXTRACT_SCALAR(data, '$.lastModified') AS lastModified
-      FROM (
-        SELECT document_id, data,
-          ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY JSON_EXTRACT_SCALAR(data, '$.lastModified') DESC) AS row_num
-        FROM \`wewrite-ccd82.firestore_export.pages_raw_latest\`
-        WHERE JSON_EXTRACT_SCALAR(data, '$.userId') = ?
-        AND LOWER(JSON_EXTRACT_SCALAR(data, '$.title')) LIKE ?
-      ) sub
-      WHERE row_num = 1
-      LIMIT 10
-    `;
+    SELECT document_id, title, lastModified
+    FROM (
+      SELECT document_id, title, lastModified,
+             ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
+      FROM \`wewrite-ccd82.pages_indexes.pages\`
+      WHERE userId = @userId
+        AND LOWER(title) LIKE @searchTerm
+    )
+    WHERE row_num = 1
+    ORDER BY lastModified DESC
+    LIMIT 10
+  `;
 
     // Execute user query
     const [userRows] = await bigquery.query({
       query: userQuery,
-      params: [userId, searchTermFormatted],
+      params: {
+        userId: userId,
+        searchTerm: searchTermFormatted,
+      },
+      types: {
+        userId: "STRING",
+        searchTerm: "STRING",
+      },
     });
 
-    // Query 2: Fetch all pages belonging to groups that match the search term
-    const groupQuery = `
-      SELECT document_id, JSON_EXTRACT_SCALAR(data, '$.title') AS title, JSON_EXTRACT_SCALAR(data, '$.lastModified') AS lastModified, JSON_EXTRACT_SCALAR(data, '$.groupId') AS groupId
-      FROM (
-        SELECT document_id, data,
-          ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY JSON_EXTRACT_SCALAR(data, '$.lastModified') DESC) AS row_num
-        FROM \`wewrite-ccd82.firestore_export.pages_raw_latest\`
-        WHERE JSON_EXTRACT_SCALAR(data, '$.groupId') IN UNNEST(?)
-        AND LOWER(JSON_EXTRACT_SCALAR(data, '$.title')) LIKE ?
-      ) sub
-      WHERE row_num = 1
-      LIMIT 5
-    `;
+    let groupRows = [];
 
-    // Execute group query
-    const [groupRows] = await bigquery.query({
-      query: groupQuery,
-      params: [groupIds, searchTermFormatted],
-    });
+    // Check if groupIds are provided and not empty
+    if (groupIds.length > 0) {
+      // Query 2: Fetch all pages belonging to groups that match the search term
+      const groupQuery = `
+        SELECT document_id, title, lastModified, groupId
+        FROM (
+          SELECT document_id, title, lastModified, groupId,
+                 ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
+          FROM \`wewrite-ccd82.pages_indexes.pages\`
+          WHERE groupId IN UNNEST(@groupIds)
+            AND LOWER(title) LIKE @searchTerm
+        )
+        WHERE row_num = 1
+        ORDER BY lastModified DESC
+        LIMIT 5
+      `;
+      // Execute group query
+      const [groupRowsResult] = await bigquery.query({
+        query: groupQuery,
+        params: {
+          groupIds: groupIds,
+          searchTerm: searchTermFormatted,
+        },
+        types: {
+          groupIds: ['STRING'],
+          searchTerm: "STRING",
+        },
+      });
+
+      groupRows = groupRowsResult;
+    }
 
     // Process user pages
     const userPages = userRows.map((row) => ({
       id: row.document_id,
       title: row.title,
-      updated_at: row.lastModified,
+      updated_at: (row.lastModified) ? row.lastModified.value : null,
     }));
 
     // Process group pages
     const groupPages = groupRows.map((row) => ({
       id: row.document_id,
       title: row.title,
-      updated_at: row.lastModified,
+      updated_at: (row.lastModified) ? row.lastModified.value : null,
       groupId: row.groupId,
     }));
 
