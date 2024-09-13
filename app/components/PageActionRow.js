@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { deletePage} from "../firebase/database";
 
 const ActionRow = ({ isEditing, setIsEditing, page }) => {
   const router = useRouter();

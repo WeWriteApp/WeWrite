@@ -31,7 +31,8 @@ export const createPage = async (data) => {
       title: data.title,
       isPublic: data.isPublic,
       userId: data.userId,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
     };
 
     const pageRef = await addDoc(collection(db, "pages"), pageData);
