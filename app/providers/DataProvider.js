@@ -21,6 +21,12 @@ export const DataProvider = ({ children }) => {
 
   const fetchPages = async () => {
     let pagesArray = [];
+
+    if (!user.pages) {
+      setPages([]);
+      setLoading(false);
+      return;
+    }
     for (const [key, value] of Object.entries(user.pages)) {
       pagesArray.push({
         id: key,

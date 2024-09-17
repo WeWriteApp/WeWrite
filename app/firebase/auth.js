@@ -1,8 +1,7 @@
 import {app} from './config';
 import { getAuth } from "firebase/auth";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,updateProfile } from 'firebase/auth';
 
-console.log(JSON.stringify(app))
 export const auth = getAuth(app);
 
 // firebase database service
@@ -32,3 +31,12 @@ export const logoutUser = async () => {
   }
 }
 
+export const addUsername = async (username) => {
+  try {
+    await updateProfile(auth.currentUser, {
+      displayName: username
+    });
+  } catch (error) {
+    return error;
+  }
+}
