@@ -6,7 +6,7 @@ import GroupBadge from "./GroupBadge";
 export default function YourGroups() {
   const { user } = useContext(AuthContext);
 
-  if (!user.groups) return null;
+  if (!user || !user.groups) return null;
   return (
     <div className="grid md:grid-cols-4 grid-cols-1 gap-4 mb-4">
       {Object.keys(user.groups).map((groupId,index) => (

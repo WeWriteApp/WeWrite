@@ -45,13 +45,13 @@ export default function Page() {
         <label className="flex flex-col gap-1">
           Name:
           <input 
-            className="border border-gray-500 rounded-md p-2"
+            className="border border-gray-500 rounded-md p-2 bg-background text-text"
           type="text" value={newGroup.name} onChange={e => setNewGroup({ ...newGroup, name: e.target.value })} />
         </label>
         <label className="flex flex-col gap-1">
           Description:
           <textarea 
-            className="border border-gray-500 rounded-md p-2"
+            className="border border-gray-500 rounded-md p-2 bg-background text-text"
           value={newGroup.description} onChange={e => setNewGroup({ ...newGroup, description: e.target.value })} />
         </label>
         <label className="flex flex-row gap-1">

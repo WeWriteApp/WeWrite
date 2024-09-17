@@ -4,7 +4,7 @@ import { useEffect, useState, createContext } from "react";
 import { auth } from "../firebase/auth";
 import  app  from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue, get, set, getDatabase } from "firebase/database";
+import { ref, onValue, get, set, getDatabase,update } from "firebase/database";
 
 export const AuthContext = createContext();
 
@@ -35,6 +35,14 @@ export const AuthProvider = ({ children }) => {
     // get the user from the database
     onValue(dbRef, (snapshot) => {
       const data = snapshot.val();
+
+      if (!data.username && user.displayName) {
+        let updates = {};
+        updates[`users/${uid}/username`] = user.displayName;
+        update(ref(db), updates);
+        data.displayName = user.displayName;
+      }
+
       setUser({
         uid: user.uid,
         email: user.email,

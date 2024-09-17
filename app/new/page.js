@@ -31,11 +31,14 @@ const Form = ({ Page, setPage }) => {
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
 
+  let updateTime = new Date().toISOString();
+
   const handleSave = async () => {
     let data = {
       ...Page,
       content: JSON.stringify(editorState),
       userId: user.uid,
+      lastModified: updateTime,
     };
 
     const res = await createPage(data);

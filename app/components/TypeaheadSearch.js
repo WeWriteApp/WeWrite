@@ -31,18 +31,25 @@ const TypeaheadSearch = () => {
     const fetchResults = async () => {
       setIsSearching(true);
 
-      let groupIds = [];
-      if (user.groups) {
-        groupIds = Object.keys(user.groups);
-      }
+      try {
 
-      const response = await fetch(
-        `/api/search?userId=${user.uid}&searchTerm=${search}&groupIds=${groupIds}`
-      );
-      const data = await response.json();
-      setUserPages(data.userPages);
-      setGroupPages(data.groupPages);
-      setIsSearching(false);
+        let groupIds = [];
+        if (user.groups) {
+          groupIds = Object.keys(user.groups);
+        }
+
+        const response = await fetch(
+          `/api/search?userId=${user.uid}&searchTerm=${search}&groupIds=${groupIds}`
+        );
+        const data = await response.json();
+        console.log(data);
+        setUserPages(data.userPages);
+        setGroupPages(data.groupPages);
+        setIsSearching(false);
+      } catch (error) {
+        console.error("Error fetching search results", error);
+        setIsSearching(false);
+      }
     };
     fetchResults();
   }, [search,user]);

@@ -1,5 +1,5 @@
 "use client";
-import { createUser } from "../../firebase/auth";
+import { createUser, addUsername } from "../../firebase/auth";
 import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
@@ -19,7 +19,7 @@ const Register = () => {
     return <div>Loading...</div>;
   }
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto md:max-w-lg mx-auto md:mt-10">
       <h1 className="text-2xl font-semibold mb-4">Register</h1>
       <Form />
     </div>
@@ -31,6 +31,7 @@ const Form = () => {
   const [user, setUser] = useState({
     email: "",
     password: "",
+    username: "",
   });
 
   const [error, setError] = useState(null);
@@ -45,12 +46,21 @@ const Form = () => {
     if (response.code) {
       setError(response.message);
     } else {
-      router.push("/pages");
+      await addUsername(user.username);
+      router.push("/pages"); 
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      <input
+        type="text"
+        name="username"
+        value={user.username}
+        onChange={handleChange}
+        placeholder="Username"
+        className="border border-gray-300 rounded p-2 w-full mt-2 bg-background text-text"
+      />
       <input
         type="email"
         name="email"
@@ -59,6 +69,7 @@ const Form = () => {
         placeholder="Email"
         className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
       />
+      
       <input
         type="password"
         name="password"
@@ -67,7 +78,11 @@ const Form = () => {
         placeholder="Password"
         className="border border-gray-300 rounded p-2 w-full mt-2 bg-background text-text"
       />
-      <button type="submit" className="bg-background text-button-text rounded p-2 w-full mt-2 border border-gray-300">
+      
+      <button 
+      disabled={!user.email || !user.password || !user.username}
+      type="submit" 
+      className={`bg-background text-button-text rounded p-2 w-full mt-2 border border-gray-300 ${!user.email || !user.password || !user.username ? 'cursor-not-allowed' : 'cursor-pointer'}`}> 
         Register
       </button>
       {error && <p className="text-red-500 mt-2">{error}</p>}
