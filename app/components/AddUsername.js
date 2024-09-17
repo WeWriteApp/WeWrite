@@ -18,6 +18,9 @@ const AddUsername = () => {
     return null;
   }
   return (
+    <>
+    {
+      user && (
     <div className="bg-blue-100 p-4">
       <label
         htmlFor="username"
@@ -56,6 +59,9 @@ const AddUsername = () => {
       </div>
 
     </div>
+      )
+     }
+    </>
   );
 }
 
