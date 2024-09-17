@@ -41,6 +41,11 @@ export const AuthProvider = ({ children }) => {
         updates[`users/${uid}/username`] = user.displayName;
         update(ref(db), updates);
         data.displayName = user.displayName;
+      } else if (data.username !== user.displayName) {
+        let updates = {};
+        updates[`users/${uid}/username`] = user.displayName;
+        update(ref(db), updates);
+        data.username = user.displayName;
       }
 
       setUser({

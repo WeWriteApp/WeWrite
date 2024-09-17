@@ -4,6 +4,7 @@ import AllPages from "../components/AllPages";
 import Search from "../components/Search";
 import TopUsers from "../components/TopUsers";
 import YourGroups from "../components/YourGroups";
+import AddUsername from "../components/AddUsername";
 
 export async function generateMetadata() {
   return {
@@ -17,6 +18,7 @@ const Page = () => {
   return (
     <DashboardLayout>
       <div>
+        <AddUsername />
         <TopUsers />
         <>
           <div className="flex items-start pb-4 mb-- md:mb-0 md:align-middle md:justify-between md:flex-row justify-between">
