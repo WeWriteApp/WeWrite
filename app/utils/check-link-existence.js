@@ -1,7 +1,4 @@
-import {
-  getDoc,
-  doc
-} from "firebase/firestore";
+import { getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/database";
 
 async function checkLinkExistence(links) {
@@ -9,12 +6,22 @@ async function checkLinkExistence(links) {
   const results = {};
 
   for (let url of links) {
-    const docRef = doc(db, url);
-    promises.push(
-      getDoc(docRef).then((doc) => {
-        results[url] = doc.exists();
-      })
-    );
+    // Strip "/pages/" from the URL to get the document ID
+    const documentId = url.replace("/pages/", "").trim();
+
+    if (isValidDocumentId(documentId)) {
+      const docRef = doc(db, "pages", documentId); // Use the documentId, not the full URL
+      promises.push(
+        getDoc(docRef).then((docSnap) => {
+          results[url] = docSnap.exists(); // Use the original URL as the key
+        }).catch((error) => {
+          console.error("Error getting document:", error);
+        })
+      );
+    } else {
+      console.warn(`Invalid document ID extracted from URL: ${url}`);
+      results[url] = false;
+    }
   }
 
   // Wait for all document checks to complete
@@ -23,7 +30,9 @@ async function checkLinkExistence(links) {
   return results;
 }
 
-
-module.exports = {
-  checkLinkExistence
+// Helper function to check if a Firestore document ID is valid
+function isValidDocumentId(id) {
+  return typeof id === "string" && id.trim() !== "";
 }
+
+export { checkLinkExistence };

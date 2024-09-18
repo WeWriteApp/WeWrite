@@ -18,18 +18,8 @@ export async function generateMetadata({ params }) {
 }
 
 const Page = async ({ params }) => {
-  const { pageData, versionData, links } = await getPageById(params.id);
-
-  if (!pageData) {
-    return (
-      <div>
-        <h1>Page Not Found</h1>
-        <p>This page does not exist</p>
-      </div>
-    );
-  }
   return (
-    <SinglePageView pageData={pageData} versionData={versionData} links={links} />
+    <SinglePageView params={params} />
   );
 };
 

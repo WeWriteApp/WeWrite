@@ -19,5 +19,9 @@ export async function generateMetadata({ params }) {
 
 export default async function Profile({ params }) {
   const profile = await fetchProfileFromFirebase(params.id);
+  // Ensure profile exists before rendering the component
+  if (!profile) {
+    return <div>Profile not found</div>;
+  }
   return <SingleProfileView profile={profile} />;
 }

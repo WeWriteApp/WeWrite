@@ -1,11 +1,11 @@
-// a page to display a user profile
-//
 "use client";
 import React, { useState, useEffect } from "react";
 import { PillLink } from "./PillLink";
 import Link from "next/link";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { useRouter } from "next/navigation";
+import { db } from "../firebase/database";
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 
 const SingleProfileView = ({ profile }) => {
   const [searchItems, setSearchItems] = useState([]);
@@ -14,29 +14,42 @@ const SingleProfileView = ({ profile }) => {
   const router = useRouter();
 
   useEffect(() => {
-    if (profile) {
-      if (profile.pages) {
-        let arr = [];
-        let searchArr = [];
-        Object.keys(profile.pages).forEach((key) => {
-          if (profile.pages[key].isPublic) {
-            arr.push({
-              id: key,
-              ...profile.pages[key],
-            });
+    let unsubscribe = () => {};
 
-            searchArr.push({
-              id: key,
-              name: profile.pages[key].title,
-              isPublic: profile.pages[key].isPublic,
-            });
-          }
+    if (profile) {
+      const pagesQuery = query(
+        collection(db, "pages"),
+        where("userId", "==", profile.uid), // Profile's user ID
+        orderBy("lastModified", "desc") // Order by last modified
+      );
+
+      unsubscribe = onSnapshot(pagesQuery, (snapshot) => {
+        const fetchedPages = [];
+        const fetchedSearchItems = [];
+
+        snapshot.forEach((doc) => {
+          const pageData = {
+            id: doc.id,
+            ...doc.data(),
+          };
+
+          fetchedPages.push(pageData);
+          fetchedSearchItems.push({
+            id: doc.id,
+            name: pageData.title,
+            isPublic: pageData.isPublic,
+          });
         });
-        setPages(arr);
-        setSearchItems(searchArr);
-        setPageCount(arr.length);
-      }
+
+        setPages(fetchedPages);
+        setSearchItems(fetchedSearchItems);
+        // count public pages
+        const publicPages = fetchedPages.filter((page) => page.isPublic);
+        setPageCount(publicPages.length);
+      });
     }
+
+    return () => unsubscribe(); // Clean up the listener when the component unmounts
   }, [profile]);
 
   return (
@@ -49,7 +62,7 @@ const SingleProfileView = ({ profile }) => {
 
           <Search pages={searchItems} router={router} />
           <ul className="space-x-1 flex flex-wrap">
-            {pages.map((page, index) => (
+            {pages.map((page) => (
               <li key={page.id}>
                 <PillLink
                   groupId={page.groupId}
