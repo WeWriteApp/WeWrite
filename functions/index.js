@@ -33,13 +33,6 @@ exports.createPage = functions.firestore
     const pageId = context.params.pageId;
     const page = change.after.exists ? change.after.data() : null;
 
-    logger.info('Resource name',context.resource.name);
-
-    // if (context.resource.name.split('/').length > 6) {
-    //   console.log(`Ignoring subcollection change for document_id ${pageId}`);
-    //   return null;
-    // }
-
     if (!change.after.exists) {
       // Document deleted from Firestore
       await deleteFromBigQuery(pageId);
@@ -128,15 +121,8 @@ async function deleteFromRTDB(existingData, pageId) {
   if (existingGroupId) {
     promises.push(
       rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove(),
-      rtdb.ref(`/users/${existingUserId}/pages/${pageId}`).remove(),
-      rtdb.ref(`/pages/${pageId}`).remove()
     );
-  } else {
-    promises.push(
-      rtdb.ref(`/users/${existingUserId}/pages/${pageId}`).remove(),
-      rtdb.ref(`/pages/${pageId}`).remove()
-    );
-  }
+  } 
 
   await Promise.all(promises);
   logger.info(`Deleted page ${pageId} from RTDB`);
@@ -242,7 +228,6 @@ const query = `
 
 // Function to upsert entries into Realtime Database
 async function upsertToRTDB(page, pageId) {
-  const userId = page.userId;
   const groupId = page.groupId;
   const promises = [];
 
@@ -250,13 +235,6 @@ async function upsertToRTDB(page, pageId) {
   if (groupId) {
     promises.push(
       rtdb.ref(`/groups/${groupId}/pages/${pageId}`).set(page),
-      rtdb.ref(`/users/${userId}/pages/${pageId}`).set(page),
-      rtdb.ref(`/pages/${pageId}`).set(page)
-    );
-  } else {
-    promises.push(
-      rtdb.ref(`/users/${userId}/pages/${pageId}`).set(page),
-      rtdb.ref(`/pages/${pageId}`).set(page)
     );
   }
 
