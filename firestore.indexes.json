@@ -1,4 +1,13 @@
 {
-  "indexes": [],
-  "fieldOverrides": []
+  "indexes": [
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" },
+        { "fieldPath": "isPublic", "order": "DESCENDING" }
+      ]
+    }
+  ]
 }

@@ -80,7 +80,6 @@ const EditPage = ({
           });
 
           setIsEditing(false);
-          alert("Page updated successfully");
         } else {
           console.log("Error saving new version");
         }

@@ -6,10 +6,9 @@ import { PillLink } from "./PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 const AllPages = () => {
-  const { pages, loading } = useContext(DataContext);
-  const { user } = useContext(AuthContext);
+  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  const { user } = useContext(AuthContext);
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex items-center justify-center">
         <Icon
@@ -22,17 +21,11 @@ const AllPages = () => {
   if (!pages) {
     return <div>No pages found</div>;
   }
-  if (!user) {
-    return <div>Please sign in</div>;
-  }
   return (
+    <>
     <div>
       <ul className="space-x-1 flex flex-wrap">
         {pages.map((page, index) => {
-          // TODO: only query user pages 
-          if (page.groupId) {
-            return null; // Skip pages with groupId
-          }
           return (
             <li key={page.id}>
               <PillLink
@@ -47,6 +40,20 @@ const AllPages = () => {
         })}
       </ul>
     </div>
+    <div className="flex justify-center mt-4">
+        {
+          hasMorePages && (
+            <button
+              className="bg-primary text-white px-4 py-2 rounded-full"
+              onClick={loadMorePages}
+              disabled={isMoreLoading}
+            >
+              {isMoreLoading ? "Loading..." : "Load more"}
+            </button>
+          )
+        }
+      </div>
+    </>
   );
 };
 

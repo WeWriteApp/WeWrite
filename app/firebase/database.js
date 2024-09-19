@@ -8,8 +8,11 @@ import {
   where,
   query,
   getDocs,
-  deleteDoc
+  deleteDoc,
+  onSnapshot,
+  writeBatch
 } from "firebase/firestore";
+
 import app from "./config";
 
 export const db = getFirestore(app);
@@ -55,6 +58,96 @@ export const createPage = async (data) => {
     return e;
   }
 }
+
+export const listenToPageById = (pageId, onPageUpdate) => {
+  try {
+    // Reference to the page document
+    const pageRef = doc(db, "pages", pageId);
+
+    console.log(`Listening to document at /pages/${pageId}`);
+
+    // Declare unsubscribeVersion outside of the inner onSnapshot callback
+    let unsubscribeVersion = null;
+
+    // Listener for the page document
+    const unsubscribePage = onSnapshot(pageRef, async (pageSnap) => {
+      if (pageSnap.exists()) {
+        const pageData = {
+          id: pageId,
+          ...pageSnap.data()
+        };
+
+        console.log("Updating page data", pageData);
+
+        // Get the current version ID
+        const currentVersionId = pageData.currentVersion;
+        console.log(`Current version ID: ${currentVersionId}`);
+
+        // Log the version subcollection path
+        const versionCollectionRef = collection(db, "pages", pageId, "versions");
+        console.log(`Subcollection path: /pages/${pageId}/versions`);
+
+        const versionRef = doc(versionCollectionRef, currentVersionId);
+        console.log(`Listening to document at /pages/${pageId}/versions/${currentVersionId}`);
+
+        // If there's an existing unsubscribeVersion listener, remove it before setting a new one
+        if (unsubscribeVersion) {
+          unsubscribeVersion();
+        }
+
+        // Listener for the version document
+        unsubscribeVersion = onSnapshot(versionRef, async (versionSnap) => {
+          if (versionSnap.exists()) {
+            const versionData = versionSnap.data();
+
+            // If the version content is "null", remove the page
+            if (versionData.content === "null") {
+              await deleteDoc(pageRef);
+              console.log("Version content is null, deleting page");
+              onPageUpdate(null); // Notify that the page was removed
+            } else if (JSON.parse(versionData.content).history) {
+              console.log("history exists");
+
+              // Migrate to existing data model without history
+              let content = JSON.parse(versionData.content).children;
+              let json = JSON.stringify(content);
+
+              // Update the version with the new content
+              await setDoc(versionRef, { content: json }, { merge: true });
+              console.log("Migrated content without history");
+            } else {
+              console.log("history does not exist");
+            }
+
+            // Extract links
+            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+            console.log("Extracted links", links);
+
+            // Send updated page and version data
+            onPageUpdate({ pageData, versionData, links });
+          } else {
+            console.log(`Version document not found for /pages/${pageId}/versions/${currentVersionId}`);
+          }
+        });
+      } else {
+        // If page document doesn't exist
+        console.log(`Page document not found for /pages/${pageId}`);
+        onPageUpdate(null);
+      }
+    });
+
+    // Return the unsubscribe functions for cleanup
+    return () => {
+      unsubscribePage();
+      if (unsubscribeVersion) {
+        unsubscribeVersion();
+      }
+    };
+  } catch (e) {
+    console.error("Error in listenToPageById:", e);
+    return e;
+  }
+};
 
 export const getPageById = async (pageId) => {
   // should get the page and versions
@@ -263,3 +356,5 @@ function extractLinksFromNodes(nodes) {
 
   return links;
 }
+
+

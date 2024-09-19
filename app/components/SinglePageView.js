@@ -11,8 +11,9 @@ import GroupBadge from "./GroupBadge";
 import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
 import { checkLinkExistence } from "../utils/check-link-existence";
+import { listenToPageById } from "../firebase/database";
 
-export default function SinglePageView  ({ pageData, versionData, links }) {
+export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState(null);
@@ -24,50 +25,60 @@ export default function SinglePageView  ({ pageData, versionData, links }) {
   const [title, setTitle] = useState("");
 
   useEffect(() => {
-    if (!page) {
-      const fetchPage = async () => {
+    // Setup listener for real-time updates
+    const unsubscribe = listenToPageById(params.id, (data) => {
+      if (data) {
+        const { pageData, versionData, links } = data;
+
+        // Set state with the fetched data
         setPage(pageData);
         setEditorState(versionData.content);
         setTitle(pageData.title);
-        
+
+        // Check and set groupId if it exists
         if (pageData.groupId) {
           setGroupId(pageData.groupId);
         }
 
+        // Check if the current user is the owner or if the page is public
         if (user && user.uid === pageData.userId) {
           setIsPublic(true);
         } else {
           setIsPublic(pageData.isPublic);
         }
 
-        // check if the page exists
+        // Check if links exist
         if (links.length > 0) {
           checkLinkExistence(links).then((results) => {
-            // Process results
+            // Process link existence results
             for (let url in results) {
               const exists = results[url];
               if (!exists) {
-                // Gray out the corresponding button or link in the UI
+                // Update UI for invalid links (e.g., gray out and disable)
                 const linkElement = document.querySelector(`a[href="${url}"]`);
                 if (linkElement) {
-                  linkElement.classList.remove("bg-blue-500"); // Remove the blue background color
-                  linkElement.classList.add("bg-gray-500"); // Add the gray background color
-                  linkElement.disabled = true; // Optionally disable the link
-                  // add cursor not-allowed
-                  linkElement.style.cursor = "not-allowed";
+                  linkElement.classList.remove("bg-blue-500");
+                  linkElement.classList.add("bg-gray-500");
+                  linkElement.disabled = true;
+                  linkElement.style.cursor = "not-allowed"; // Disable click
                 }
               }
             }
           });
         }
 
+        // Data has loaded
         setIsLoading(false);
-      };
+      } else {
+        // Handle case where the page doesn't exist or was deleted
+        setPage(null);
+        setIsLoading(false);
+      }
+    });
 
-      fetchPage();
-    }
-  }, [pageData, versionData, links]);
-
+    // Cleanup listener when component unmounts
+    return () => unsubscribe();
+  }, [params.id, user]);
 
   if (!page) {
     return <Loader />;
@@ -79,7 +90,9 @@ export default function SinglePageView  ({ pageData, versionData, links }) {
           <h1 className="text-2xl font-semibold text-text">Page not found</h1>
           <div className="flex items-center gap-2 mt-4">
             <Icon icon="akar-icons:warning" className="text-red-500" />
-            <span className="text-lg text-text">This page has been deleted</span>
+            <span className="text-lg text-text">
+              This page has been deleted
+            </span>
             <Link href="/pages">
               <button className="bg-background text-button-text px-4 py-2 rounded-full">
                 Go back
@@ -97,7 +110,9 @@ export default function SinglePageView  ({ pageData, versionData, links }) {
     return (
       <DashboardLayout>
         <div>
-          <h1 className="text-2xl font-semibold text-text">Sorry this page is private</h1>
+          <h1 className="text-2xl font-semibold text-text">
+            Sorry this page is private
+          </h1>
           <div className="flex items-center gap-2 mt-4">
             <Icon icon="akar-icons:warning" className="text-red-500" />
             <span className="text-lg text-text">This page is private</span>
@@ -125,39 +140,39 @@ export default function SinglePageView  ({ pageData, versionData, links }) {
           />
         ) : (
           <>
-            <h1 className="text-3xl mt-4 md:text-4xl font-semibold text-text fade-in">{title}</h1>
-            {
-              groupId && (
-                <div className="flex items-center gap-2 mt-4 fade-in" style={{ animationDelay: "100ms" }}>
-                  <div className="flex flex-col text-text">
-                    <span>Belongs to</span>
+            <h1 className="text-3xl mt-4 md:text-4xl font-semibold text-text fade-in">
+              {title}
+            </h1>
+            {groupId && (
+              <div
+                className="flex items-center gap-2 mt-4 fade-in"
+                style={{ animationDelay: "100ms" }}
+              >
+                <div className="flex flex-col text-text">
+                  <span>Belongs to</span>
                   <GroupBadge groupId={groupId} />
-                  </div>
                 </div>
-              )
-            }
-            <div className="flex space-x-1 my-4 fade-in" style={{ animationDelay: "200ms" }}>
+              </div>
+            )}
+            <div
+              className="flex space-x-1 my-4 fade-in"
+              style={{ animationDelay: "200ms" }}
+            >
               <span className="text-text">Written by {"  "}</span>
               <Profile uid={page.userId} />
             </div>
-            
+
             <TextView content={editorState} />
             {user && user.uid === page.userId && (
-          <ActionRow
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-            page={page}
-          />
-        )}
-            {/* <DonateBar />             */}
+              <ActionRow
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                page={page}
+              />
+            )}
           </>
         )}
       </div>
-      {/* {
-        user && user.uid === page.userId && (
-          <VersionsList pageId={params.id} currentVersion={page.currentVersion} />
-        )
-      } */}
     </DashboardLayout>
   );
 }

@@ -14,13 +14,16 @@ const AddUsername = () => {
     setUsername(e.target.value);
   };
 
+  if (!user) {
+    return null;
+  }
   if (user && user.username) {
     return null;
   }
   return (
     <>
     {
-      user && (
+      !user && (
     <div className="bg-blue-100 p-4">
       <label
         htmlFor="username"
