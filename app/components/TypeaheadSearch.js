@@ -71,7 +71,7 @@ const TypeaheadSearch = () => {
 
       <div
         className={`mt-4 shadow-xl p-4 bg-background--light rounded-lg border border-border absolute w-full top-16 transition-all ${
-          search.length >= 3 ? "opacity-100" : "opacity-0"
+          search.length >= 3 ? "opacity-100 z-50" : "opacity-0 -z-10"
         }
         `}
       >
