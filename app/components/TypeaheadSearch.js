@@ -12,7 +12,7 @@ import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const characterCount = 2;
+const characterCount = 1;
 function debounce(func, delay) {
   let timeout;
   return (...args) => {
