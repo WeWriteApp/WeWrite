@@ -9,6 +9,7 @@ import { Editable, withReact, useSlate, useSelected, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
 import { DataContext } from "../providers/DataProvider";
 import { withHistory } from "slate-history";
+import TypeaheadSearch from "./TypeaheadSearch";
 
 const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
@@ -38,17 +39,21 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
 
   };
 
-  const showDropdownMenu = (editor, selection) => {
-    const domRange = ReactEditor.toDOMRange(editor, selection);
-    const rect = domRange.getBoundingClientRect();
-
+  const showDropdownMenu = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount === 0) return;
+  
+    const range = selection.getRangeAt(0).cloneRange();
+    const rect = range.getBoundingClientRect();
+  
     setDropdownPosition({
-      top: rect.top + window.pageYOffset,
-      left: rect.left + window.pageXOffset,
+      top: rect.bottom + window.pageYOffset, // Adjust based on caret position
+      left: rect.left + window.pageXOffset,  // Adjust based on caret position
     });
-
+  
     setShowDropdown(true);
   };
+  
 
   const handleSelection = (item) => {
     const link = {
@@ -238,29 +243,8 @@ const isLinkActive = (editor) => {
 };
 
 
-const DropdownMenu = ({ position, onSelect,showDropdown }) => {
-  const { pages } = useContext(DataContext);
-
-  // alphabetically sort the pages
-  pages.sort((a, b) => a.title.localeCompare(b.title));
-
-  if (!pages) return null;
-  if (pages.length === 0) return (
-    <div
-      style={{
-        position: "absolute",
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        background: "white",
-        border: "1px solid #ccc",
-        padding: "4px",
-        borderRadius: "4px",
-        zIndex: 1000,
-      }}
-    >
-      No pages found
-    </div>
-  );
+const DropdownMenu = ({ position, onSelect,setShowDropdown }) => {
+  // if user clicks outside of the dropdown, hide it
   return (
     <div
       style={{
@@ -274,15 +258,7 @@ const DropdownMenu = ({ position, onSelect,showDropdown }) => {
         zIndex: 1000,
       }}
     >
-      {pages.map((page) => (
-        <div
-          key={page.id}
-          onClick={() => onSelect(page)}
-          className="cursor-pointer hover:bg-gray-100"
-        >
-          {page.title}
-        </div>
-      ))}
+      <TypeaheadSearch onSelect={onSelect} setShowDropdown={setShowDropdown} />
     </div>
   );
 };
