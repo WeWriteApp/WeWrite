@@ -10,7 +10,7 @@ import Profile from "./ProfileBadge";
 import GroupBadge from "./GroupBadge";
 import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
-import { checkLinkExistence } from "../utils/check-link-existence";
+// import { checkLinkExistence } from "../utils/check-link-existence";
 import { listenToPageById } from "../firebase/database";
 
 export default function SinglePageView({ params }) {
@@ -48,24 +48,24 @@ export default function SinglePageView({ params }) {
         }
 
         // Check if links exist
-        if (links.length > 0) {
-          checkLinkExistence(links).then((results) => {
-            // Process link existence results
-            for (let url in results) {
-              const exists = results[url];
-              if (!exists) {
-                // Update UI for invalid links (e.g., gray out and disable)
-                const linkElement = document.querySelector(`a[href="${url}"]`);
-                if (linkElement) {
-                  linkElement.classList.remove("bg-blue-500");
-                  linkElement.classList.add("bg-gray-500");
-                  linkElement.disabled = true;
-                  linkElement.style.cursor = "not-allowed"; // Disable click
-                }
-              }
-            }
-          });
-        }
+        // if (links.length > 0) {
+        //   checkLinkExistence(links).then((results) => {
+        //     // Process link existence results
+        //     for (let url in results) {
+        //       const exists = results[url];
+        //       if (!exists) {
+        //         // Update UI for invalid links (e.g., gray out and disable)
+        //         const linkElement = document.querySelector(`a[href="${url}"]`);
+        //         if (linkElement) {
+        //           linkElement.classList.remove("bg-blue-500");
+        //           linkElement.classList.add("bg-gray-500");
+        //           linkElement.disabled = true;
+        //           linkElement.style.cursor = "not-allowed"; // Disable click
+        //         }
+        //       }
+        //     }
+        //   });
+        // }
 
         // Data has loaded
         setIsLoading(false);

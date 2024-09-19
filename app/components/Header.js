@@ -11,11 +11,8 @@ import { useTheme } from "../providers/ThemeProvider";
 import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Header() {
-  const { totalSubscriptionsCost, remainingBalance } =
-    useContext(PortfolioContext);
-  const { selected, setSelected } = useContext(DrawerContext);
-  const { user, loading } = useContext(AuthContext);
   const { theme } = useTheme();
+  const { user, loading } = useContext(AuthContext);
   return (
     <header
       className="top-0 left-0 w-full bg-background text-black px-2 text-center"
@@ -28,13 +25,31 @@ export default function Header() {
             <Image src="/white.svg" alt="logo" width={32} height={32} />
           </Link>
         </div>
-        <div className="flex justify-between">
-          <h1 className="text-xl"></h1>
-          <NavIcons />
-          <div className="flex items-center space-x-4 ml-4">
+        {loading && (
+          <div className="flex items-center space-x-2">
+            <Icon icon="akar-icons:loading" className="h-6 w-6 animate-spin" />
+          </div>
+        )}
+        {!loading && user && (
+          <div className="flex justify-between">
+            <h1 className="text-xl"></h1>
+            <NavIcons />
+            <div className="flex items-center space-x-4 ml-4">
+              <ThemeSwitcher />
+            </div>
+          </div>
+        )}
+        {!loading && !user && (
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/auth/login"
+              className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all"
+            >
+              <span>Login </span>
+            </Link>
             <ThemeSwitcher />
           </div>
-        </div>
+        )}
       </div>
     </header>
   );
@@ -84,7 +99,6 @@ const NavIcons = () => {
   }, []);
   return (
     <div className="flex space-x-4">
-
       {user &&
         navigation.map((nav, index) => (
           <button
@@ -96,17 +110,16 @@ const NavIcons = () => {
             onClick={nav.onClick}
           >
             <nav.icon />
-            {/* <Tooltip id={nav.name} /> */}
           </button>
         ))}
-        {
-          !user && (
-            <Link href="/auth/login"  className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all mt-4">
-                <span>Login </span>
-            </Link>
-          )
-        }
+      {!user && (
+        <Link
+          href="/auth/login"
+          className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all"
+        >
+          <span>Login </span>
+        </Link>
+      )}
     </div>
   );
 };
-

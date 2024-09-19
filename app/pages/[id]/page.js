@@ -3,6 +3,7 @@ import { getPageById } from "../../firebase/database";
 
 export async function generateMetadata({ params }) {
   const { pageData } = await getPageById(params.id);
+  console.log(pageData);
 
   if (!pageData) {
     return {
