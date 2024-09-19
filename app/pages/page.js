@@ -1,10 +1,10 @@
 import DashboardLayout from "../DashboardLayout";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
-import Search from "../components/Search";
 import TopUsers from "../components/TopUsers";
 import YourGroups from "../components/YourGroups";
 import AddUsername from "../components/AddUsername";
+import TypeaheadSearch from "../components/TypeaheadSearch";
 
 export async function generateMetadata() {
   return {
@@ -35,7 +35,7 @@ const Page = () => {
           <h1 className="text-2xl font-semibold text-text">Your Pages</h1>
           <div className="flex items-center pb-2 md:align-middle md:justify-between md:flex-row flex-col">
             <div className="md:w-1/2 w-full">
-              <Search />
+              <TypeaheadSearch />
             </div>
           </div>
           <AllPages />

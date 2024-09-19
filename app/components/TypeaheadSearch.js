@@ -21,7 +21,6 @@ const TypeaheadSearch = () => {
     }
     if (!user) return;
 
-    console.log(user);
     // if search less than 3 characters, don't make request
     if (search.length < 3 || search === "") {
       setUserPages([]);
@@ -54,9 +53,9 @@ const TypeaheadSearch = () => {
     fetchResults();
   }, [search,user]);
 
-  if (!user) return <Loader />
+  if (!user) return null;
   return (
-    <div className="flex flex-col max-w-md mx-auto relative">
+    <div className="flex flex-col relative">
       <div className="flex flex-col space-y-1">
         <input
           className="border border-gray-500 w-full p-2 text-lg bg-background text-text"
@@ -140,9 +139,9 @@ const TypeaheadSearch = () => {
                 </ul>
               )}
             </div>
-            <div className="mt-2 border-t border-border pt-4 flex">
+            {/* <div className="mt-2 border-t border-border pt-4 flex">
               <NewPageButton title={search} />
-            </div>
+            </div> */}
           </>
         )}
       </div>

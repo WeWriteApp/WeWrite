@@ -5,12 +5,14 @@ import { auth } from "../firebase/auth";
 import  app  from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, get, set, getDatabase,update } from "firebase/database";
+import { useRouter } from "next/navigation";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
