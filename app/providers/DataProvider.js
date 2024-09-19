@@ -17,7 +17,7 @@ export const DataProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      fetchPages();
+      fetchPages(user.uid);
     } else {
       setPages([]);
       setLoading(false);
@@ -25,10 +25,10 @@ export const DataProvider = ({ children }) => {
   }, [user]);
 
   const limitCount = 50;
-  const fetchPages = async (paginationStartDoc = null) => {
+  const fetchPages = async (userId,paginationStartDoc = null) => {
     let pagesQuery = query(
       collection(db, 'pages'),
-      where('userId', '==', user.uid),
+      where('userId', '==', userId),
       orderBy('lastModified', 'desc'),
       limit(limitCount)
     );
@@ -98,7 +98,7 @@ export const DataProvider = ({ children }) => {
     return unsubscribe;
   };
   
-  const loadMorePages = () => {
+  const loadMorePages = (userId) => {
     if (lastPageKey && hasMorePages) {
       setIsMoreLoading(true); // Set loading state for "Load More"
       fetchPages(lastPageKey); // Fetch the next set of pages starting after the last one
