@@ -19,15 +19,14 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={inter.className}>
         <GAProvider>
-        <ThemeProvider>
-          <DrawerProvider>
-            <AuthProvider>
-              <DataProvider>
-                <GroupsProvider>
-                  <CommunityProvider>
-                    <PortfolioProvider>
-                      <MobileProvider>
-                        <NavProvider>
+          <ThemeProvider>
+            <DrawerProvider>
+              <AuthProvider>
+                <DataProvider>
+                  <GroupsProvider>
+                    <CommunityProvider>
+                      <PortfolioProvider>
+                        <MobileProvider>
                           <Header />
                           <div className="flex flex-row">
                             <div className="flex flex-col w-full">
@@ -35,15 +34,14 @@ export default function RootLayout({ children }) {
                             </div>
                           </div>
                           <Drawer />
-                        </NavProvider>
-                      </MobileProvider>
-                    </PortfolioProvider>
-                  </CommunityProvider>
-                </GroupsProvider>
-              </DataProvider>
-            </AuthProvider>
-          </DrawerProvider>
-        </ThemeProvider>
+                        </MobileProvider>
+                      </PortfolioProvider>
+                    </CommunityProvider>
+                  </GroupsProvider>
+                </DataProvider>
+              </AuthProvider>
+            </DrawerProvider>
+          </ThemeProvider>
         </GAProvider>
       </body>
     </html>

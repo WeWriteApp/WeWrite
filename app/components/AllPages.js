@@ -6,7 +6,8 @@ import { PillLink } from "./PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
 const AllPages = () => {
-  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  const { user } = useContext(AuthContext);
+  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  
+  const { user } = useContext(AuthContext);
 
   if (loading || !user) {
     return (
@@ -45,7 +46,7 @@ const AllPages = () => {
           hasMorePages && (
             <button
               className="bg-primary text-white px-4 py-2 rounded-full"
-              onClick={loadMorePages}
+              onClick={() => loadMorePages(user.uid)}
               disabled={isMoreLoading}
             >
               {isMoreLoading ? "Loading..." : "Load more"}

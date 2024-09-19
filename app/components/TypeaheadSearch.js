@@ -1,5 +1,11 @@
 "use client";
-import React, { useEffect, useState, useContext, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useContext,
+  useCallback,
+  useRef,
+} from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import { MobileContext } from "../providers/MobileProvider";
 import { Icon } from "@iconify/react";
@@ -17,9 +23,10 @@ function debounce(func, delay) {
   };
 }
 
-const TypeaheadSearch = ({ 
+const TypeaheadSearch = ({
   onSelect = null,
   setShowDropdown = null,
+  userId = null,
 }) => {
   const [search, setSearch] = useState("");
   const { user } = useContext(AuthContext);
@@ -29,20 +36,20 @@ const TypeaheadSearch = ({
 
   const fetchResults = useCallback(
     debounce(async (search, user) => {
-      if (!user) return;
+      if (!user && !userId) return;
 
       setIsSearching(true);
       try {
+        let selectedUserId = userId ? userId : user.uid;
         let groupIds = [];
         if (user.groups) {
           groupIds = Object.keys(user.groups);
         }
 
         const response = await fetch(
-          `/api/search?userId=${user.uid}&searchTerm=${search}&groupIds=${groupIds}`
+          `/api/search?userId=${selectedUserId}&searchTerm=${search}&groupIds=${groupIds}`
         );
         const data = await response.json();
-        console.log(data);
         setUserPages(data.userPages);
         setGroupPages(data.groupPages);
       } catch (error) {
@@ -117,8 +124,10 @@ const TypeaheadSearch = ({
       </div>
 
       <div
-        className={`mt-4 shadow-xl p-4 bg-background--light rounded-lg border border-border absolute w-full top-16 transition-all ${
-          (search.length >= characterCount && !isSearching) ? "opacity-100 z-50" : "opacity-0 -z-10"
+        className={`mt-4 shadow-xl p-4 bg-background--light rounded-lg border border-border absolute w-full top-8 transition-all ${
+          search.length >= characterCount
+            ? "opacity-100 z-50"
+            : "opacity-0 -z-10"
         }
         `}
       >
@@ -126,50 +135,75 @@ const TypeaheadSearch = ({
           <Loader />
         ) : (
           <>
-            <div>
-              {search.length >= characterCount && (
-                <h3 className="text-xs text-gray-400">Your Pages</h3>
-              )}
-              {userPages.length === 0 && search.length >= characterCount ? (
-                <p className="text-xs text-gray-400">No user pages found.</p>
-              ) : (
-                <ul className="space-y-1 mt-2">
-                  {userPages.map((page) => (
-                    onSelect ? (
-                      <SingleItemButton page={page} search={search} onSelect={onSelect} key={page.id} />
-                    ) : (
-                      <SingleItemLink page={page} search={search} key={page.id} />
-                    )
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="mt-2 border-t border-border pt-2">
-              {search.length >= characterCount && (
-                <h3 className="text-xs text-gray-400">From Groups</h3>
-              )}
-              {groupPages.length === 0 && search.length >= characterCount ? (
-                <p
-                  className="text-xs mt-2
+            {userPages.length > 0 && (
+              <div>
+                {search.length >= characterCount && (
+                  <h3 className="text-xs text-gray-400">
+                    {userId ? "" : "Your"}
+                    Pages
+                  </h3>
+                )}
+                {userPages.length === 0 && search.length >= characterCount ? (
+                  <p className="text-xs text-gray-400">No user pages found.</p>
+                ) : (
+                  <ul className="space-y-1 mt-2">
+                    {userPages.map((page) =>
+                      onSelect ? (
+                        <SingleItemButton
+                          page={page}
+                          search={search}
+                          onSelect={onSelect}
+                          key={page.id}
+                        />
+                      ) : (
+                        <SingleItemLink
+                          page={page}
+                          search={search}
+                          key={page.id}
+                        />
+                      )
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {groupPages.length > 0 && (
+              <div className="mt-2 border-t border-border pt-2">
+                {search.length >= characterCount && (
+                  <h3 className="text-xs text-gray-400">From Groups</h3>
+                )}
+                {groupPages.length === 0 && search.length >= characterCount ? (
+                  <p
+                    className="text-xs mt-2
                 text-gray-400
                 "
-                >
-                  No group pages found.
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  
-                  {groupPages.map((page) => (
+                  >
+                    No group pages found.
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {groupPages.map((page) =>
                       // if onSelect is passed, render button, else render link
                       onSelect ? (
-                        <SingleItemButton page={page} search={search} onSelect={onSelect} key={page.id} />
+                        <SingleItemButton
+                          page={page}
+                          search={search}
+                          onSelect={onSelect}
+                          key={page.id}
+                        />
                       ) : (
-                        <SingleItemLink page={page} search={search} key={page.id} />
+                        <SingleItemLink
+                          page={page}
+                          search={search}
+                          key={page.id}
+                        />
                       )
-                  ))}
-                </ul>
-              )}
-            </div>
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
             {/* <div className="mt-2 border-t border-border pt-4 flex">
               <NewPageButton title={search} />
             </div> */}
@@ -187,14 +221,14 @@ const SingleItemLink = ({ page, search }) => {
       className="flex items-center space-x-2 text-sm hover:bg-background p-1"
       key={page.id}
     >
-    <p className="text-sm text-text">
-      {highlightText(page.title, search)} -{" "}
-      <span className="text-xs text-gray-400">
-        {new Date(page.updated_at).toLocaleDateString() +
-          " " +
-          new Date(page.updated_at).toLocaleTimeString()}
-      </span>
-    </p>
+      <p className="text-sm text-text">
+        {highlightText(page.title, search)} -{" "}
+        <span className="text-xs text-gray-400">
+          {new Date(page.updated_at).toLocaleDateString() +
+            " " +
+            new Date(page.updated_at).toLocaleTimeString()}
+        </span>
+      </p>
     </Link>
   );
 };
@@ -216,7 +250,7 @@ const SingleItemButton = ({ page, search, onSelect }) => {
       </p>
     </button>
   );
-}
+};
 
 const NewPageButton = ({ title, redirect = true }) => {
   const { isMobile } = useContext(MobileContext);
