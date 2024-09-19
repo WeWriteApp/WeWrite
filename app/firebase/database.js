@@ -65,8 +65,6 @@ export const listenToPageById = (pageId, onPageUpdate) => {
     // Reference to the page document
     const pageRef = doc(db, "pages", pageId);
 
-    console.log(`Listening to document at /pages/${pageId}`);
-
     // Declare unsubscribeVersion outside of the inner onSnapshot callback
     let unsubscribeVersion = null;
 
@@ -131,15 +129,15 @@ export const getPageById = async (pageId) => {
       id: pageId,
       ...pageSnap.data()
     }
-    // get the current version
-    const currentVersionId = pageData.currentVersion;
-    const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
-    const versionSnap = await getDoc(versionRef, { source: 'cache' });
-    const versionData = versionSnap.data();
+    // // get the current version
+    // const currentVersionId = pageData.currentVersion;
+    // const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
+    // const versionSnap = await getDoc(versionRef, { source: 'cache' });
+    // const versionData = versionSnap.data();
 
-    // get links
-    const links = extractLinksFromNodes(JSON.parse(versionData.content));
-    return { pageData, versionData, links };
+    // // get links
+    // const links = extractLinksFromNodes(JSON.parse(versionData.content));
+    return { pageData };
   } catch (e) {
     console.log(e);
     return e;

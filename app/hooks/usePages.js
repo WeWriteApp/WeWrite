@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { db } from "../firebase/database";
 import { collection, query, where, orderBy, onSnapshot, limit, startAfter } from "firebase/firestore";
 
-const limitCount = 50;
+const limitCount = 25;
 
 const usePages = (userId) => {
   const [loading, setLoading] = useState(true);
