@@ -5,6 +5,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { GroupsContext } from "../providers/GroupsProvider";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import SlateEditor from "./SlateEditor";
+import { useLogging } from "../providers/LoggingProvider";
 
 const EditPage = ({
   isEditing,
@@ -20,6 +21,7 @@ const EditPage = ({
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
+  const { logError } = useLogging();
 
   useEffect(() => {
     if (page.groupId) {
@@ -91,8 +93,9 @@ const EditPage = ({
           setIsSaving(false);
         }
       })
-      .catch((error) => {
+      .catch(async (error) => {
         console.log("Error saving new version", error);
+        await logError(error, "EditPage.js");
         setIsSaving(false);
       });
   };
