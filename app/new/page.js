@@ -83,7 +83,7 @@ const Form = ({ Page, setPage }) => {
           className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
           type="submit"
         >
-          Save
+          {isSaving ? "Saving..." : "Save"}
         </button>
         <button
           onClick={() => router.push("/pages")}
