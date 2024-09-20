@@ -43,7 +43,11 @@ const Form = ({ Page, setPage }) => {
 
     const res = await createPage(data);
     if (res) {
-      ReactGA.send({ hitType: "event", eventCategory: "Page", eventAction: "Create", eventLabel: "New Page Created" });
+      ReactGA.event({
+        category: "Page",
+        action: "Add new page",
+        label: Page.title,
+      });
       setIsSaving(false);
       router.push("/pages");
     } else {
