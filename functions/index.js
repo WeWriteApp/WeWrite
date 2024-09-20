@@ -33,6 +33,14 @@ exports.createPage = functions.firestore
     const pageId = context.params.pageId;
     const page = change.after.exists ? change.after.data() : null;
 
+    const resourcePath = context.resource.name; 
+    
+    // Check if the update was made to a subcollection (e.g., /pages/{pageId}/versions/{version})
+    if (resourcePath.includes('/versions/')) {
+      console.log(`Ignoring subcollection update at: ${resourcePath}`);
+      return; // Exit early and don't process this update
+    }
+
     if (!change.after.exists) {
       // Document deleted from Firestore
       await deleteFromBigQuery(pageId);

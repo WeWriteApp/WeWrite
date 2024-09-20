@@ -5,13 +5,9 @@ import {
   doc,
   setDoc,
   getDoc,
-  where,
-  query,
   getDocs,
   deleteDoc,
   onSnapshot,
-  writeBatch,
-  CACHE_SIZE_UNLIMITED
 } from "firebase/firestore";
 
 import app from "./config";
@@ -310,5 +306,3 @@ function extractLinksFromNodes(nodes) {
 
   return links;
 }
-
-

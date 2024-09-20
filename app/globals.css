@@ -20,8 +20,8 @@ html body .page-content p {
 }
 
 *[data-theme='dark'] {
-  --background-color: #1F2937;
-  --light-background-color: #2D3B4A;
+  --background-color: #000;
+  --light-background-color: #1F2937;
   --text-color: #F3F4F6;
   --primary-color: #1D4ED8;
   --primary-hover: #2563EB;

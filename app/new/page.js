@@ -5,6 +5,7 @@ import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
+import ReactGA from 'react-ga4';
 
 const New = () => {
   const [Page, setPage] = useState({
@@ -27,13 +28,12 @@ const Form = ({ Page, setPage }) => {
   const router = useRouter();
   const [editorState, setEditorState] = useState();
   const { user, loading } = useContext(AuthContext);
-  const [attachGeo, setAttachGeo] = useState(false);
-  const [lat, setLat] = useState(null);
-  const [lng, setLng] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   let updateTime = new Date().toISOString();
 
   const handleSave = async () => {
+    setIsSaving(true);
     let data = {
       ...Page,
       content: JSON.stringify(editorState),
@@ -43,25 +43,14 @@ const Form = ({ Page, setPage }) => {
 
     const res = await createPage(data);
     if (res) {
+      ReactGA.send({ hitType: "event", eventCategory: "Page", eventAction: "Create", eventLabel: "New Page Created" });
+      setIsSaving(false);
       router.push("/pages");
     } else {
+      setIsSaving(false);
       console.log("Error creating page");
     }
   };
-
-  // const getLatLng = () => {
-  //   navigator.geolocation.getCurrentPosition((position) => {
-  //     setLat(position.coords.latitude);
-  //     setLng(position.coords.longitude);
-  //   });
-  // };
-
-  // useEffect(() => {
-  //   if (!attachGeo) {
-  //     setLat(null);
-  //     setLng(null);
-  //   }
-  // }, [attachGeo]);
 
   return (
     <form
@@ -86,40 +75,15 @@ const Form = ({ Page, setPage }) => {
 
       <SlateEditor setEditorState={setEditorState} />
 
-      {/* <div className="fle flex-col items-center space-x-2">
-        <input
-          type="checkbox"
-          checked={attachGeo}
-          onChange={(e) => setAttachGeo(e.target.checked)}
-        />
-        <label>Attach Geo Location</label>
-
-        {attachGeo && (
-          <button
-            onClick={getLatLng}
-            className="bg-blue-500 text-white rounded p-2"
-          >
-            Get Location
-          </button>
-        )}
-
-        {lat && lng && (
-          <div>
-            <p>Latitude: {lat}</p>
-            <p>Longitude: {lng}</p>
-          </div>
-        )}
-      </div> */}
-
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
       <div className="flex items-center gap-2 mt-4">
         <button
           onClick={handleSave}
-          disabled={!Page.title || !editorState}
+          disabled={!Page.title || !editorState || isSaving}
           className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
           type="submit"
         >
-          Save
+          {isSaving ? "Saving..." : "Save"}
         </button>
         <button
           onClick={() => router.push("/pages")}
