@@ -12,12 +12,14 @@ import Header from "./components/Header";
 import { GroupsProvider } from "./providers/GroupsProvider";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import GAProvider from "./providers/GAProvider";
+import LoggingProvider from "./providers/LoggingProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={inter.className}>
+        <LoggingProvider>
         <GAProvider>
           <ThemeProvider>
             <DrawerProvider>
@@ -43,6 +45,7 @@ export default function RootLayout({ children }) {
             </DrawerProvider>
           </ThemeProvider>
         </GAProvider>
+        </LoggingProvider>
       </body>
     </html>
   );
