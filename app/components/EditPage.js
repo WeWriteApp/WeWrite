@@ -19,6 +19,8 @@ const EditPage = ({
   const [localGroups, setLocalGroups] = useState([]);
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     if (page.groupId) {
       setGroupId(page.groupId);
@@ -50,6 +52,7 @@ const EditPage = ({
   }
 
   const handleSave = () => {
+
     if (!user) {
       console.log("User not authenticated");
       return;
@@ -59,6 +62,8 @@ const EditPage = ({
       console.log("Title is required");
       return;
     }
+
+    setIsSaving(true);
     // convert the editorState to JSON
     const editorStateJSON = JSON.stringify(editorState);
 
@@ -80,12 +85,15 @@ const EditPage = ({
           });
 
           setIsEditing(false);
+          setIsSaving(false);
         } else {
           console.log("Error saving new version");
+          setIsSaving(false);
         }
       })
       .catch((error) => {
         console.log("Error saving new version", error);
+        setIsSaving(false);
       });
   };
 
@@ -151,10 +159,11 @@ const EditPage = ({
 
       <div className="flex items-center gap-2 mt-4">
         <button
+          disabled={isSaving}
           className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
           onClick={() => handleSave()}
         >
-          Save
+          {isSaving ? "Saving..." : "Save"}
         </button>
         <button
           className="bg-background text-button-text px-4 py-2"
