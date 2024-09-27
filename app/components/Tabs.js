@@ -1,23 +1,28 @@
-import React, {useState} from 'react';
+import React, { useState } from "react";
 
-const Tabs = ({ options = [],tab,setTab, align = 'start' }) => {
-
-  let activeClass = "text-blue-500 border-b-2 border-blue-500";
+const Tabs = ({ children }) => {
+  const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <div className={`flex w-full border-gray-200 mt-4 space-x-6 justify-${align}`}>
-
-      {
-        options.map((tabName) => (
-          <button 
-            key={tabName}
-            className={`text-lg ${tab === tabName ? activeClass : ""}`}
-            onClick={() => setTab(tabName)}
+    <div className="mt-4 md:mt-10">
+      {/* Make the tabs scrollable horizontally on mobile */}
+      <div className="flex overflow-x-auto whitespace-nowrap">
+        {children.map((child, index) => (
+          <button
+            key={index}
+            className={`${
+              activeTab === index ? "border border-border" : "border-b border-gray-200"
+            } px-4 py-2 whitespace-nowrap`}
+            onClick={() => setActiveTab(index)}
           >
-            {tabName.charAt(0).toUpperCase() + tabName.slice(1)}
+            {child.props.label}
           </button>
-        ))
-      }
+        ))}
+      </div>
+      {/* Render the active tab content */}
+      <div className="mt-4">
+        {children[activeTab]}
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useContext } from "react";
+import React, { useContext } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
 
