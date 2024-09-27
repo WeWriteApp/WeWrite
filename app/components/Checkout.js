@@ -4,7 +4,7 @@ import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-
 import { loadStripe } from "@stripe/stripe-js";
 
 // Your public test key from Stripe
-const stripePromise = loadStripe('pk_test_51Q08VWIsJOA8IjJRnJg25SjW6aayav9j6lF2UMiMWP3o3wsFrwvULkuopDaIgujlFVJBdabvbHXjFG6TXPx6yoQu00DUGmhTyZ');
+const stripePromise = loadStripe('123');
 
 export default function Checkout({ clientSecret }) {
   const options = {
