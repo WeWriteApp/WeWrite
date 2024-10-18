@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Helvetica';
+  src: url('../public/fonts/Helvetica-Neue-Font/Medium-Extended.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+
 html body .page-content p {
   line-height: 2.3;
   margin-bottom: 12px;
@@ -31,6 +38,20 @@ html body .page-content p {
   --border-color: #64748B;
 }
 
+
+/* Hide the spinner for WebKit browsers (Chrome, Safari) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hide the spinner for Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+  /* Remove the spinner in Firefox */
+}
+
 /* Custom utility classes using CSS variables */
 .bg-background {
   background-color: var(--background-color);
@@ -38,6 +59,7 @@ html body .page-content p {
   -webkit-transition: all 0.3s;
   -moz-transition: all 0.3s;
 }
+
 .bg-background--light {
   background-color: var(--light-background-color);
 }
@@ -82,16 +104,19 @@ html body .page-content p {
   border-color: var(--border-color);
 }
 
-html,body {
+html,
+body {
   min-height: 100vh;
   background: var(--background-color) !important;
   overflow-x: hidden;
 }
 
-input, textarea {
+input,
+textarea {
   /* background: var(--background-color) !important; */
   color: var(--text-color) !important;
 }
+
 p {
   color: var(--text-color) !important;
 }
@@ -105,12 +130,47 @@ p {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
 .fade-in {
-  opacity: 0; /* Ensure all elements start invisible */
-  animation: fadeIn 0.5s forwards; /* 0.5s for each fade effect */
+  opacity: 0;
+  /* Ensure all elements start invisible */
+  animation: fadeIn 0.5s forwards;
+  /* 0.5s for each fade effect */
+}
+
+.border-gradient {
+  border: 1px solid;
+  border-radius: 21px;
+  border-color: #FFFFFF5E;
+  background-color: #FFFFFF2B;
+  box-shadow: 0px 4px 74px 0px #00000033;
+  backdrop-filter: blur(40px);
+}
+
+.action-button-gradient {
+  border: 1px solid;
+  border-radius: 16px;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0px 4px 14px 0px #0808081a;
+}
+
+.active-bar {
+  box-shadow: 0px 0px 24px 0px #0083FD80;
+}
+
+.focus-text {
+  border-radius: 10px;
+  background: linear-gradient(0deg, rgba(2, 2, 2, 0.6), rgba(2, 2, 2, 0.6)),
+    linear-gradient(0deg, rgba(13, 139, 255, 0.1), rgba(13, 139, 255, 0.1));
+}
+
+.adjust-box {
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(135.91409301757812px)
 }

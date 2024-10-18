@@ -12,6 +12,7 @@ import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
 // import { checkLinkExistence } from "../utils/check-link-existence";
 import { listenToPageById } from "../firebase/database";
+import PledgeBar from "./PledgeBar";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -128,7 +129,7 @@ export default function SinglePageView({ params }) {
   }
   return (
     <DashboardLayout>
-      <div className="">
+      <div className="p-2">
         {isEditing ? (
           <EditPage
             isEditing={isEditing}
@@ -172,6 +173,9 @@ export default function SinglePageView({ params }) {
             )}
           </>
         )}
+      </div>
+      <div className=" fixed bottom-[40px] w-full p-2 flex justify-center">
+        <PledgeBar />
       </div>
     </DashboardLayout>
   );
