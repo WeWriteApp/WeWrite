@@ -19,10 +19,10 @@ const config: Config = {
         'gray-bar': '#FFFFFF5E'
       }, 
       width: {
-        'action-button': '60px',
+        'action-button': '50px',
       },
       height: {
-        'action-button': '60px',
+        'action-button': '50px',
         'fill': '-webkit-fill-available'
       },
       borderRadius: {
@@ -33,7 +33,6 @@ const config: Config = {
       },
       colors: {
         'gray': '#FFFFFF5E',
-        'blue': '#0083FD',
         'gray-30': '#FFFFFF4D',
         'gray-46': '#FFFFFF75'
       },

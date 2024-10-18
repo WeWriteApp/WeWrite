@@ -61,15 +61,15 @@ const PledgeBar = () => {
   const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
 
   return (
-    <>
+    <div>
       {customVisible && (
-        <div className="w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
+        <div className="max-w-[300px] z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
           <div className="flex items-center justify-center">
             <Icon
               icon="mdi:close"
               width="24"
               height="24"
-              className="absolute left-3 rounded-full border-2 cursor-pointer active:text-blue"
+              className="absolute left-3 rounded-full border-2 cursor-pointer active:text-blue-500"
               onClick={() => {
                 setCustomVisible(false);
                 setCustomCheck(true);
@@ -77,7 +77,7 @@ const PledgeBar = () => {
             />
             <h3 className="text-center text-[17px]">Custom pledge interval</h3>
           </div>
-          <div className="flex flex-row border-2 border-blue p-4 rounded-xl justify-between">
+          <div className="flex flex-row border-2 border-blue-500 p-4 rounded-xl justify-between">
             <div className="flex flex-row gap-2">
               <span className="font-medium text-gray-46">$</span>
               <input
@@ -95,7 +95,7 @@ const PledgeBar = () => {
       )}
 
       {menuVisible && (
-        <div className="w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
+        <div className="max-w-[300px] z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
           <h3 className="p-3 text-center">+/- Increment Amount</h3>
           {intervalOptions.map(({ value, label }) => (
             <div
@@ -107,7 +107,7 @@ const PledgeBar = () => {
                 <span className="font-medium text-gray-46">$</span>
                 <span>{label}</span>
               </div>
-              {interval === value && <Icon icon="mdi:check" width="24" height="24" className="text-blue" />}
+              {interval === value && <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />}
             </div>
           ))}
           <div
@@ -123,7 +123,7 @@ const PledgeBar = () => {
               <span className="font-medium text-gray-46">custom</span>
             </div>
             {customCheck ? (
-              <Icon icon="mdi:check" width="24" height="24" className="text-blue" />
+              <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />
             ) : (
               <Icon icon="mdi:keyboard-arrow-right" width="24" height="24" />
             )}
@@ -131,7 +131,7 @@ const PledgeBar = () => {
         </div>
       )}
 
-      <div className="w-full z-10 relative border-gradient overflow-hidden">
+      <div className="max-w-[300px] z-10 relative border-gradient overflow-hidden">
         <div
           className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
           style={{ width: progressBarWidth(usedAmount, budget) }}
@@ -153,7 +153,7 @@ const PledgeBar = () => {
 
         <div className="flex gap-2 justify-between p-2">
           <div
-            className="w-action-button h-action-button action-button-gradient p-[8px_17px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
+            className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
             onClick={() => {
               if (donateAmount - interval >= 0) setDonateAmount(donateAmount - interval);
             }}
@@ -166,7 +166,7 @@ const PledgeBar = () => {
           </div>
 
           <div
-            className="flex justify-center items-center text-gray gap-1 text-[24px] z-10"
+            className="flex justify-center items-center text-gray gap-1 text-[18px] z-10"
             onDoubleClick={() => setInputVisible(true)}
           >
             $
@@ -174,7 +174,7 @@ const PledgeBar = () => {
               <input
                 type="number"
                 ref={textRef}
-                className="w-[100px] h-full focus-text text-center text-[30px]"
+                className="w-[80px] h-full focus-text text-center text-[24px]"
                 value={donateAmount}
                 onChange={(e) => {
                   const value = Number(e.target.value);
@@ -182,7 +182,7 @@ const PledgeBar = () => {
                 }}
               />
             ) : (
-              <span className="text-[29px] font-normal text-white">
+              <span className="text-[24px] font-normal text-white">
                 {donateAmount.toFixed(2)}
               </span>
             )}
@@ -190,7 +190,7 @@ const PledgeBar = () => {
           </div>
 
           <div
-            className="w-action-button h-action-button action-button-gradient p-[8px_17px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
+            className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
             onClick={() => {
               if (donateAmount + interval <= budget - usedAmount) setDonateAmount(donateAmount + interval);
             }}
@@ -203,7 +203,7 @@ const PledgeBar = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
