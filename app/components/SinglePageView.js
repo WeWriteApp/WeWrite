@@ -174,7 +174,7 @@ export default function SinglePageView({ params }) {
           </>
         )}
       </div>
-      <div className=" fixed bottom-0 pb-16 pt-4 w-full flex justify-center bg-black backdrop-blur-sm bg-opacity-15">
+      <div className=" fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
         <PledgeBar />
       </div>
     </DashboardLayout>

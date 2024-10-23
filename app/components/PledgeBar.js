@@ -61,9 +61,9 @@ const PledgeBar = () => {
   const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
 
   return (
-    <>
+    <div className="w-11/12 sm:max-w-[300px]">
       {customVisible && (
-        <div className="max-w-80 sm:max-w-xl w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
+        <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
           <div className="flex items-center justify-center">
             <Icon
               icon="mdi:close"
@@ -96,7 +96,7 @@ const PledgeBar = () => {
       )}
 
       {menuVisible && (
-        <div className="max-w-80 sm:max-w-xl w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
+        <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
           <h3 className="p-3 text-center">+/- Increment Amount</h3>
           {intervalOptions.map(({ value, label }) => (
             <div
@@ -132,7 +132,7 @@ const PledgeBar = () => {
         </div>
       )}
 
-      <div className="max-w-80 sm:max-w-xl w-full z-10 relative border-gradient overflow-hidden">
+      <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden">
         <div
           className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
           style={{ width: progressBarWidth(usedAmount, budget) }}
@@ -205,7 +205,7 @@ const PledgeBar = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
