@@ -87,6 +87,7 @@ const PledgeBar = () => {
                 className="w-[100px] bg-transparent outline-none"
                 value={interval}
                 onChange={(e) => setInterval(Number(e.target.value))}
+                autoComplete="off"
               />
             </div>
             <span className="font-medium text-gray-46">per month</span>
@@ -180,6 +181,7 @@ const PledgeBar = () => {
                   const value = Number(e.target.value);
                   if (value <= budget - usedAmount) setDonateAmount(value);
                 }}
+                autoComplete="off"
               />
             ) : (
               <span className="text-[24px] font-normal text-white">

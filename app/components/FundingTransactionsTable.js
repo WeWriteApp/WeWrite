@@ -80,6 +80,7 @@ const AddFundingForm = () => {
         onChange={(e) => setAmount(e.target.value)}
         placeholder="Amount"
         className="border border-gray-400 p-2"
+        autoComplete="off"
       />
       <select
         value={fundingSourceId}

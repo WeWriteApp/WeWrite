@@ -39,6 +39,7 @@ const AddUsername = () => {
         className="mt-1 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md py-4"
         value={username}
         onChange={handleChange}
+        autoComplete="off"
       />
       <input 
         type="text"
@@ -47,6 +48,7 @@ const AddUsername = () => {
         value={confirmUsername}
         className="mt-1 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md py-4"
         onChange={(e) => setConfirmUsername(e.target.value)}
+        autoComplete="off"
       />
       <button
       className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"

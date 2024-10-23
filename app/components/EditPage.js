@@ -118,6 +118,7 @@ const EditPage = ({
         defaultValue={title}
         onChange={(e) => setTitle(e.target.value)}
         className="border border-gray-200 p-2 text-3xl w-full bg-background text-text"
+        autoComplete="off"
       />
 
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>

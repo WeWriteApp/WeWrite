@@ -120,6 +120,7 @@ const TypeaheadSearch = ({
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          autoComplete="off"
         />
       </div>
 
