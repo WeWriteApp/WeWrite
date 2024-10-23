@@ -64,6 +64,7 @@ function BracketComponent() {
         onChange={handleInputChange}
         placeholder="Create or select a page..."
         className="w-full p-2 border border-gray-300 rounded-md"
+        autoComplete="off"
       />
       {filteredPages.length > 0 && (
         <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md">

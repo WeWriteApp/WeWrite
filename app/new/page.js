@@ -67,12 +67,14 @@ const Form = ({ Page, setPage }) => {
         placeholder="Title"
         onChange={(e) => setPage({ ...Page, title: e.target.value })}
         className="border border-gray-300 rounded p-2 w-full bg-background text-text"
+        autoComplete="off"
       />
       <div className="flex items-center space-x-2">
         <input
           type="checkbox"
           checked={Page.isPublic}
           onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
+          autoComplete="off"
         />
         <label>Public</label>
       </div>

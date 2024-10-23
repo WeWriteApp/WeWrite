@@ -52,6 +52,7 @@ const Edit = ({ params }) => {
           type="checkbox"
           checked={page.isPublic}
           onChange={(e) => setPage({ ...page, isPublic: e.target.checked })}
+          autoComplete="off"
         />
         <label>Public</label>
       </div>

@@ -45,7 +45,7 @@ export default function Page() {
         <label className="flex flex-col gap-1">
           Name:
           <input 
-            className="border border-gray-500 rounded-md p-2 bg-background text-text"
+            className="border border-gray-500 rounded-md p-2 bg-background text-text" autoComplete="off"
           type="text" value={newGroup.name} onChange={e => setNewGroup({ ...newGroup, name: e.target.value })} />
         </label>
         <label className="flex flex-col gap-1">
@@ -57,7 +57,7 @@ export default function Page() {
         <label className="flex flex-row gap-1">
           Is Public:
           <input 
-            className="border border-gray-500 rounded-md p-2"
+            className="border border-gray-500 rounded-md p-2" autoComplete="off"
           type="checkbox" checked={newGroup.isPublic} onChange={e => setNewGroup({ ...newGroup, isPublic: e.target.checked })} />
         </label>
         <div className="flex flex-row gap-4">

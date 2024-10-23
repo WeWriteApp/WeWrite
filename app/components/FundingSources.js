@@ -89,6 +89,7 @@ const AddFundingSourceForm = () => {
           className="mb-2 border p-2"
           value={last4}
           onChange={(e) => setLast4(e.target.value)}
+          autoComplete="off"
         />
       </div>
       <div className="flex flex-row items-start">
@@ -98,6 +99,7 @@ const AddFundingSourceForm = () => {
           id="default"
           value={defaultSource}
           onChange={(e) => setDefaultSource(e.target.checked)}
+          autoComplete="off"
         />
         <label htmlFor="default">Default</label>
       </div>

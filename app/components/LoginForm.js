@@ -35,6 +35,7 @@ const LoginForm = () => {
         value={user.email}
         onChange={handleChange}
         placeholder="Email"
+        autoComplete="off"
         className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
       />
       <input
@@ -43,6 +44,7 @@ const LoginForm = () => {
         value={user.password}
         onChange={handleChange}
         placeholder="Password"
+        autoComplete="off"
         className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
       />
       <button type="submit" className="bg-background text-button-text rounded p-2 w-full mt-2 border border-gray-300">

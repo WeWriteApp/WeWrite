@@ -38,6 +38,7 @@ const RegisterForm = () => {
         onChange={handleChange}
         placeholder="Username"
         className="border border-gray-300 rounded p-2 w-full mt-2 bg-background text-text"
+        autoComplete="off"
       />
       <input
         type="email"
@@ -46,6 +47,7 @@ const RegisterForm = () => {
         onChange={handleChange}
         placeholder="Email"
         className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
+        autoComplete="off"
       />
       
       <input
@@ -55,6 +57,7 @@ const RegisterForm = () => {
         onChange={handleChange}
         placeholder="Password"
         className="border border-gray-300 rounded p-2 w-full mt-2 bg-background text-text"
+        autoComplete="off"
       />
       
       <button 
