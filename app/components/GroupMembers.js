@@ -4,7 +4,7 @@ import { rtdb } from '../firebase/rtdb'
 import { onValue, ref, set } from "firebase/database";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { AuthContext } from "../providers/AuthProvider";
-import Profile from "./ProfileBadge";
+import User from "./UserBadge";
 
 const GroupMembers = ({ members, groupId }) => {
   const {user } = useContext(AuthContext)
@@ -26,7 +26,7 @@ const GroupMembers = ({ members, groupId }) => {
             key={uid}
             className="flex items-center space-x-2"
           >
-            <Profile uid={uid} />
+            <User uid={uid} />
             <span>{member.role}</span>
             {
               members &&

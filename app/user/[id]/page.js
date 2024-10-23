@@ -2,26 +2,26 @@ import SingleProfileView from "../../components/SingleProfileView";
 import { fetchProfileFromFirebase } from "../../firebase/rtdb";
 
 export async function generateMetadata({ params }) {
-  const profile = await fetchProfileFromFirebase(params.id);
+  const user = await fetchProfileFromFirebase(params.id);
 
-  if (!profile) {
+  if (!user) {
     return {
       title: "Profile Not Found",
       description: "Profile not found"
     };
   } else {
     return {
-      title: profile.username + " on WeWrite",
-      description: profile.username,
+      title: user.username + " on WeWrite",
+      description: user.username,
     };
   }
 }
 
-export default async function Profile({ params }) {
-  const profile = await fetchProfileFromFirebase(params.id);
+export default async function User({ params }) {
+  const user = await fetchProfileFromFirebase(params.id);
   // Ensure profile exists before rendering the component
-  if (!profile) {
+  if (!user) {
     return <div>Profile not found</div>;
   }
-  return <SingleProfileView profile={profile} />;
+  return <SingleProfileView profile={user} />;
 }

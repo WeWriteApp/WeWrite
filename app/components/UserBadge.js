@@ -4,7 +4,7 @@ import { rtdb } from "../firebase/rtdb";
 import { ref, get } from "firebase/database";
 import Link from "next/link";
 
-const Profile = ({ uid }) => {
+const User = ({ uid }) => {
   const [profile, setProfile] = useState({});
 
   useEffect(() => {
@@ -16,10 +16,10 @@ const Profile = ({ uid }) => {
     });
   }, [uid]);
   return (
-    <Link href={`/profile/${uid}`} className="text-text underline">
+    <Link href={`/user/${uid}`} className="text-text underline">
       {profile.username}
     </Link>
   );
 }
 
-export default Profile;
+export default User;
