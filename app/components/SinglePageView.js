@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { Loader } from "./Loader";
 import Link from "next/link";
 import { AuthContext } from "../providers/AuthProvider";
-import Profile from "./ProfileBadge";
+import User from "./UserBadge";
 import GroupBadge from "./GroupBadge";
 import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
@@ -160,7 +160,7 @@ export default function SinglePageView({ params }) {
               style={{ animationDelay: "200ms" }}
             >
               <span className="text-text">Written by {"  "}</span>
-              <Profile uid={page.userId} />
+              <User uid={page.userId} />
             </div>
 
             <TextView content={editorState} />

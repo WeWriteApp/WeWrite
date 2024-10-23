@@ -3,7 +3,7 @@ import React, { useState, useEffect} from "react";
 import { rtdb } from "../firebase/rtdb";
 import { ref, onValue } from "firebase/database";
 import Link from "next/link";
-import Profile from "./ProfileBadge";
+import User from "./UserBadge";
 
 const TopUsers = () => {
   const [users, setUsers] = useState([]);
@@ -32,7 +32,7 @@ const TopUsers = () => {
       <ul>
         {users.map((user,index) => (
           <li key={user.uid} className="fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-            <Profile uid={user.uid} />
+            <User uid={user.uid} />
           </li>
         ))}
       </ul>
