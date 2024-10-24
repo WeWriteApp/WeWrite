@@ -19,7 +19,7 @@ export default function SettingsPage() {
       content: <ChargesTable />,
     },
     {
-      label: "Funding Sources",
+      label: "Payment Method",
       content: <FundingSources />,
     },
     {

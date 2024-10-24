@@ -3,6 +3,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import PaymentCard from "./card/PaymentCard";
 
 const FundingSources = () => {
   const { fundingSources } = useContext(PortfolioContext);
@@ -41,7 +42,7 @@ const FundingSources = () => {
     <div className="mt-10">
       <button
         onClick={() => setShowAddFundingSource(!showAddFundingSource)}
-        className=" text-black underline"
+        className=" text-white underline"
       >
         Add Funding Source
       </button>
@@ -68,41 +69,7 @@ const AddFundingSourceForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col p-4 border">
-      <div className="flex flex-col">
-        <label htmlFor="type">Type</label>
-        <select
-          id="type"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="mb-2 border p-2"
-        >
-          <option value="">Select type</option>
-          <option value="card">Card</option>
-          <option value="bank">Bank</option>
-        </select>
-      </div>
-      <div className="flex flex-col">
-        <label htmlFor="last4">Last 4</label>
-        <input
-          type="text"
-          id="last4"
-          className="mb-2 border p-2"
-          value={last4}
-          onChange={(e) => setLast4(e.target.value)}
-          autoComplete="off"
-        />
-      </div>
-      <div className="flex flex-row items-start">
-        <input
-          className="mb-2"
-          type="checkbox"
-          id="default"
-          value={defaultSource}
-          onChange={(e) => setDefaultSource(e.target.checked)}
-          autoComplete="off"
-        />
-        <label htmlFor="default">Default</label>
-      </div>
+      <PaymentCard />
       <button type="submit">Add Funding Source</button>
     </form>
   );
