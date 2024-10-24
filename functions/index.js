@@ -17,6 +17,8 @@ const bigquery = new BigQuery();
 const DATASET_ID = "pages_indexes";
 const TABLE_ID = "pages";
 
+const stripe = require("stripe")("sk_test_51QD1IkDvb2vcGPvNuGAHGR9SoYtXpDRH3Xx51EGvkq5wlc8hDP9xAVvVJ2GGZwxrkWcj322Agwbwpxq2Ar5auuEH00nEXDQmDI");
+
 exports.createUser = functions.auth.user().onCreate((user) => {
   logger.info(`User created: ${user.uid}`);
   return admin.database().ref(`/users/${user.uid}`).set({
@@ -29,12 +31,12 @@ exports.createUser = functions.auth.user().onCreate((user) => {
 // when a page is made in firestore /pages/{pageId}, add it to the users pages in rtdb at /users/{userId}/pages/{pageId}
 exports.createPage = functions.firestore
   .document("/pages/{pageId}")
-  .onWrite(async(change, context) => {
+  .onWrite(async (change, context) => {
     const pageId = context.params.pageId;
     const page = change.after.exists ? change.after.data() : null;
 
-    const resourcePath = context.resource.name; 
-    
+    const resourcePath = context.resource.name;
+
     // Check if the update was made to a subcollection (e.g., /pages/{pageId}/versions/{version})
     if (resourcePath.includes('/versions/')) {
       console.log(`Ignoring subcollection update at: ${resourcePath}`);
@@ -103,7 +105,51 @@ exports.onDeleteGroup = functions.database
     }
   });
 
-async function updateUserGroupsInRTDB (groupId, group) {
+
+exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, "whsec_QEwYrjqGF1ZqBAgO3IljrGq5cUfjPONx");
+  } catch (err) {
+    console.log(`⚠️  Webhook signature verification failed:`, err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      console.log('PaymentIntent was successful!', paymentIntent);
+      const transaction = {
+        id: paymentIntent.id,
+        amount: paymentIntent.amount_received / 100,
+        currency: paymentIntent.currency,
+        created: paymentIntent.created,
+        status: paymentIntent.status,
+        latest_charge: paymentIntent.latest_charge,
+        payment_method_types: paymentIntent.payment_method_types,
+      }
+
+      const userId = paymentIntent.userId;
+      const type = paymentIntent.type;
+
+      console.log("UserID", userId, type)
+
+      break;
+    // ... handle other event types
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  // Return a response to acknowledge receipt of the event
+  res.json({ received: true });
+});
+
+
+async function updateUserGroupsInRTDB(groupId, group) {
   try {
     let updates = {};
     if (group.members) {
@@ -130,7 +176,7 @@ async function deleteFromRTDB(existingData, pageId) {
     promises.push(
       rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove(),
     );
-  } 
+  }
 
   await Promise.all(promises);
   logger.info(`Deleted page ${pageId} from RTDB`);
@@ -195,7 +241,7 @@ async function deleteFromBigQuery(pageId) {
 // Function to upsert an entry into BigQuery
 async function upsertToBigQuery(pageId, newValue) {
   logger.info(`Upserting entry with document_id ${pageId} into BigQuery`);
-const query = `
+  const query = `
     MERGE \`${DATASET_ID}.${TABLE_ID}\` T
     USING (SELECT @document_id AS document_id, @userId AS userId, @groupId AS groupId, @title AS title, @lastModified AS lastModified) S
     ON T.document_id = S.document_id
@@ -205,7 +251,7 @@ const query = `
       INSERT (document_id, userId, groupId, title, lastModified)
       VALUES (S.document_id, S.userId, S.groupId, S.title, S.lastModified)
   `;
-  
+
   // Define the parameter values
   const params = {
     document_id: pageId,
@@ -248,4 +294,11 @@ async function upsertToRTDB(page, pageId) {
 
   await Promise.all(promises);
   logger.info(`Upserted page ${pageId} into RTDB`);
+}
+
+// Function to receive stripe event
+async function stripeHook(result) {
+
+
+  logger.info(`Upserted page ${result} into RTDB`);
 }
