@@ -5,9 +5,10 @@ import Input from "../input/DefaultInput"
 import Button from "../button/DefaultButton"
 import { updateData } from "../../firebase/rtdb"
 import { AuthContext } from "../../providers/AuthProvider"
+import { DataContext } from "../../providers/DataProvider"
 
 const PaymentCard = (props) => {
-
+  const { setLoading } = useContext(DataContext);
   const { className } = props
   const { user } = useContext(AuthContext);
   const [cardNumber, setCardNumber] = useState("")
@@ -58,7 +59,7 @@ const PaymentCard = (props) => {
       console.log("User not authenticated");
       return;
     }
-
+    setLoading(true)
     console.log("user", user)
 
     const paymentMethod = {
@@ -71,6 +72,8 @@ const PaymentCard = (props) => {
 
     const result = await updateData(`users/${user.uid}`, { paymentMethod })
     console.log("save result", result)
+    setLoading(false)
+
   };
 
 
@@ -84,7 +87,7 @@ const PaymentCard = (props) => {
   }, [user])
 
   return (
-    <div className={`${className} rounded-lg border-white border w-fit p-4`}>
+    <div className={`${className} rounded-lg border-white border sm:w-fit p-4`}>
       <div className="flex flex-col items-end max-w-xl gap-2">
         <div className="flex flex-col gap-1 w-full">
           <label htmlFor="cardNumber">Card Number:</label>
@@ -110,7 +113,10 @@ const PaymentCard = (props) => {
               onChange={handleChangeEXPDate}
               maxLength={5} // Max length for a 16-digit card expire with / 
               placeholder="MM/YY"
-              className="text-white bg-black border mt-1 outline-none px-2 py-1 rounded-md flex-1  "
+              className="text-white min-w-0 w-full bg-black border mt-1 outline-none px-2 py-1 rounded-md"
+              style={{
+                minWidth: "0px"
+              }}
             />
           </div>
           <div className="flex w-full flex-col">
@@ -122,12 +128,12 @@ const PaymentCard = (props) => {
               value={CVC}
               onChange={handleChangeCVC}
               placeholder="CVC"
-              className="text-white bg-black border mt-1 outline-none px-2 py-1 rounded-md flex-1"
+              className="text-white min-w-0 w-full bg-black border mt-1 outline-none px-2 py-1 rounded-md"
               maxLength={3}
             />
           </div>
         </div>
-        <Button onClick={saveChange}>Save</Button>
+        <Button onClick={saveChange} className="mt-2">Save</Button>
       </div>
     </div>
   )

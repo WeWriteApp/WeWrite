@@ -1,10 +1,11 @@
 import type { Config } from "tailwindcss";
-
+const {nextui} = require("@nextui-org/react");
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -34,13 +35,18 @@ const config: Config = {
       colors: {
         'gray': '#FFFFFF5E',
         'gray-30': '#FFFFFF4D',
-        'gray-46': '#FFFFFF75'
+        'gray-46': '#FFFFFF75',
+        dark:{
+          DEFAULT:"#272727",
+          100:"#2d2d2d",
+          400:"#161616"
+        }
       },
       fontFamily: {
         Helvetica: ['Helvetica', 'sans-serif']
       },
     },
   },
-  plugins: [],
+  plugins: [nextui()],
 };
 export default config;
