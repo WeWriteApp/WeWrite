@@ -16,8 +16,9 @@ const bigquery = new BigQuery();
 
 const DATASET_ID = "pages_indexes";
 const TABLE_ID = "pages";
+require('dotenv').config()
 
-const stripe = require("stripe")("sk_test_51QD1IkDvb2vcGPvNuGAHGR9SoYtXpDRH3Xx51EGvkq5wlc8hDP9xAVvVJ2GGZwxrkWcj322Agwbwpxq2Ar5auuEH00nEXDQmDI");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.createUser = functions.auth.user().onCreate((user) => {
   logger.info(`User created: ${user.uid}`);
@@ -112,7 +113,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, "whsec_QEwYrjqGF1ZqBAgO3IljrGq5cUfjPONx");
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_HOOK_KEY);
   } catch (err) {
     console.log(`⚠️  Webhook signature verification failed:`, err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

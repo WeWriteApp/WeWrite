@@ -27,7 +27,7 @@ export async function POST(req) {
       let price;
       if (!priceEnum[amount]) {
         const product = await stripe.products.create({
-          name: 'Custom Subscription',
+          name: `Custom Subscription $${amount * 100}`,
         });
         price = await stripe.prices.create({
           unit_amount: amount * 100,  // The custom amount (in cents, e.g., $20 = 2000)
