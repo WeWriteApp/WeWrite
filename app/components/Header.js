@@ -74,6 +74,20 @@ const NavIcons = () => {
         router.push("/new");
       },
     },
+    {
+      name: "Edit Profile",
+      icon: () => {
+        return (
+          <div className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-background text-button-text transition-all">
+            <span>Profile</span>
+            <Icon icon={"akar-icons:pencil"} className="h-4 w-4 text-gray-500" />
+          </div>
+        );
+      },
+      onClick: () => {
+        router.push("/profile");
+      },
+    },
   ];
 
   // check if mobile to hide the icons

@@ -74,18 +74,17 @@ const PaymentCard = (props) => {
   };
 
 
-  useEffect(()=>{
-    if(user)
-    {
+  useEffect(() => {
+    if (user) {
       const paymentMethod = user.paymentMethod
       setCardNumber(paymentMethod.cardNumber)
       setCVC(paymentMethod.cvc)
       setEXPDate(paymentMethod.expDate)
     }
-  },[user])
+  }, [user])
 
   return (
-    <div className={`${className}`}>
+    <div className={`${className} rounded-lg border-white border w-fit p-4`}>
       <div className="flex flex-col items-end max-w-xl gap-2">
         <div className="flex flex-col gap-1 w-full">
           <label htmlFor="cardNumber">Card Number:</label>
@@ -101,26 +100,32 @@ const PaymentCard = (props) => {
           />
         </div>
         <div className="flex flex-row w-full gap-1">
-          <input
-            id="cardNumber"
-            type="text"
-            autoComplete="off"
-            value={EXPDate}
-            onChange={handleChangeEXPDate}
-            maxLength={5} // Max length for a 16-digit card expire with /
-            placeholder="MM/YY"
-            className="text-white bg-black border outline-none px-2 py-1 rounded-md flex-1  "
-          />
-          <input
-            id="cardNumber"
-            type="text"
-            autoComplete="off"
-            value={CVC}
-            onChange={handleChangeCVC}
-            placeholder="CVC"
-            className="text-white bg-black border outline-none px-2 py-1 rounded-md flex-1"
-            maxLength={3}
-          />
+          <div className="flex w-full flex-col">
+            <label htmlFor="expdate">Expire Date:</label>
+            <input
+              id="expdate"
+              type="text"
+              autoComplete="off"
+              value={EXPDate}
+              onChange={handleChangeEXPDate}
+              maxLength={5} // Max length for a 16-digit card expire with / 
+              placeholder="MM/YY"
+              className="text-white bg-black border mt-1 outline-none px-2 py-1 rounded-md flex-1  "
+            />
+          </div>
+          <div className="flex w-full flex-col">
+            <label htmlFor="cvc">CVC:</label>
+            <input
+              id="cvc"
+              type="text"
+              autoComplete="off"
+              value={CVC}
+              onChange={handleChangeCVC}
+              placeholder="CVC"
+              className="text-white bg-black border mt-1 outline-none px-2 py-1 rounded-md flex-1"
+              maxLength={3}
+            />
+          </div>
         </div>
         <Button onClick={saveChange}>Save</Button>
       </div>
