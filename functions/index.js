@@ -16,6 +16,9 @@ const bigquery = new BigQuery();
 
 const DATASET_ID = "pages_indexes";
 const TABLE_ID = "pages";
+require('dotenv').config()
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 exports.createUser = functions.auth.user().onCreate((user) => {
   logger.info(`User created: ${user.uid}`);
@@ -29,12 +32,12 @@ exports.createUser = functions.auth.user().onCreate((user) => {
 // when a page is made in firestore /pages/{pageId}, add it to the users pages in rtdb at /users/{userId}/pages/{pageId}
 exports.createPage = functions.firestore
   .document("/pages/{pageId}")
-  .onWrite(async(change, context) => {
+  .onWrite(async (change, context) => {
     const pageId = context.params.pageId;
     const page = change.after.exists ? change.after.data() : null;
 
-    const resourcePath = context.resource.name; 
-    
+    const resourcePath = context.resource.name;
+
     // Check if the update was made to a subcollection (e.g., /pages/{pageId}/versions/{version})
     if (resourcePath.includes('/versions/')) {
       console.log(`Ignoring subcollection update at: ${resourcePath}`);
@@ -103,7 +106,50 @@ exports.onDeleteGroup = functions.database
     }
   });
 
-async function updateUserGroupsInRTDB (groupId, group) {
+
+exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_HOOK_KEY);
+  } catch (err) {
+    console.log(`⚠️  Webhook signature verification failed:`, err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const paymentIntent = event.data.object;
+      console.log('PaymentIntent was successful!', paymentIntent);
+      const transaction = {
+        id: paymentIntent.id,
+        amount: paymentIntent.amount_total,
+        currency: paymentIntent.currency,
+        created: paymentIntent.created,
+        status: paymentIntent.status,
+        invoice: paymentIntent.invoice,
+        subscription: paymentIntent.subscription,
+        payment_status: paymentIntent.payment_status,
+        customer: paymentIntent.customer,
+      }
+      const userId = paymentIntent.metadata.userId;
+      const type = paymentIntent.metadata.type;
+
+      
+      break;
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  // Return a response to acknowledge receipt of the event
+  res.json({ received: true });
+});
+
+
+async function updateUserGroupsInRTDB(groupId, group) {
   try {
     let updates = {};
     if (group.members) {
@@ -130,7 +176,7 @@ async function deleteFromRTDB(existingData, pageId) {
     promises.push(
       rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove(),
     );
-  } 
+  }
 
   await Promise.all(promises);
   logger.info(`Deleted page ${pageId} from RTDB`);
@@ -195,7 +241,7 @@ async function deleteFromBigQuery(pageId) {
 // Function to upsert an entry into BigQuery
 async function upsertToBigQuery(pageId, newValue) {
   logger.info(`Upserting entry with document_id ${pageId} into BigQuery`);
-const query = `
+  const query = `
     MERGE \`${DATASET_ID}.${TABLE_ID}\` T
     USING (SELECT @document_id AS document_id, @userId AS userId, @groupId AS groupId, @title AS title, @lastModified AS lastModified) S
     ON T.document_id = S.document_id
@@ -205,7 +251,7 @@ const query = `
       INSERT (document_id, userId, groupId, title, lastModified)
       VALUES (S.document_id, S.userId, S.groupId, S.title, S.lastModified)
   `;
-  
+
   // Define the parameter values
   const params = {
     document_id: pageId,
@@ -248,4 +294,11 @@ async function upsertToRTDB(page, pageId) {
 
   await Promise.all(promises);
   logger.info(`Upserted page ${pageId} into RTDB`);
+}
+
+// Function to receive stripe event
+async function stripeHook(result) {
+
+
+  logger.info(`Upserted page ${result} into RTDB`);
 }

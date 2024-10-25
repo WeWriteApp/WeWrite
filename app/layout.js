@@ -14,6 +14,8 @@ import { ThemeProvider } from "./providers/ThemeProvider";
 import GAProvider from "./providers/GAProvider";
 import LoggingProvider from "./providers/LoggingProvider";
 import GestureProvider from "./providers/GestureProvider";
+import { NextUIProvider } from "@nextui-org/react";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {
@@ -24,35 +26,37 @@ export default function RootLayout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body className={inter.className}>
-        <LoggingProvider>
-        <GAProvider>
-          <ThemeProvider>
-            <GestureProvider>
-            <DrawerProvider>
-              <AuthProvider>
-                <DataProvider>
-                  <GroupsProvider>
-                    <CommunityProvider>
-                      <PortfolioProvider>
-                        <MobileProvider>
-                          <Header />
-                          <div className="flex flex-row">
-                            <div className="flex flex-col w-full">
-                              {children}
-                            </div>
-                          </div>
-                          <Drawer />
-                        </MobileProvider>
-                      </PortfolioProvider>
-                    </CommunityProvider>
-                  </GroupsProvider>
-                </DataProvider>
-              </AuthProvider>
-            </DrawerProvider>
-            </GestureProvider>
-          </ThemeProvider>
-        </GAProvider>
-        </LoggingProvider>
+        <NextUIProvider theme={'light'}>
+          <LoggingProvider>
+            <GAProvider>
+              <ThemeProvider>
+                <GestureProvider>
+                  <DrawerProvider>
+                    <AuthProvider>
+                      <DataProvider>
+                        <GroupsProvider>
+                          <CommunityProvider>
+                            <PortfolioProvider>
+                              <MobileProvider>
+                                <Header />
+                                <div className="flex flex-row light">
+                                  <div className="flex flex-col w-full">
+                                    {children}
+                                  </div>
+                                </div>
+                                <Drawer />
+                              </MobileProvider>
+                            </PortfolioProvider>
+                          </CommunityProvider>
+                        </GroupsProvider>
+                      </DataProvider>
+                    </AuthProvider>
+                  </DrawerProvider>
+                </GestureProvider>
+              </ThemeProvider>
+            </GAProvider>
+          </LoggingProvider>
+        </NextUIProvider>
       </body>
     </html>
   );

@@ -20,7 +20,8 @@ export const add = async (path, data) => {
 
 export const updateData = async (path, data) => {
   const dbRef = ref(rtdb, path);
-  await update(dbRef, data);
+  const result = await update(dbRef, data);
+  return result
 };
 
 export const getDoc = async (path) => {

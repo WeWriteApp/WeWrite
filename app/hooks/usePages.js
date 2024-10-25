@@ -81,7 +81,7 @@ const usePages = (userId) => {
     }
   };
 
-  return { pages, loading, loadMorePages, isMoreLoading, hasMorePages };
+  return { pages, loading, loadMorePages, isMoreLoading, hasMorePages, setLoading };
 };
 
 export default usePages;
