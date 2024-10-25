@@ -26,7 +26,7 @@ const AccountWidget = () => {
       const payment_id = await axios.post('/api/payments', {
         amount: amount, // Amount in cents (5000 cents = $50)
         currency: 'usd', // Or 'eur', 'gbp', etc.
-        userId: user.uid,
+        user: user,
         type: "deposit"
       });
 

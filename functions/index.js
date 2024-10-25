@@ -121,26 +121,25 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
   // Handle the event
   switch (event.type) {
-    case 'payment_intent.succeeded':
+    case 'checkout.session.completed':
       const paymentIntent = event.data.object;
       console.log('PaymentIntent was successful!', paymentIntent);
       const transaction = {
         id: paymentIntent.id,
-        amount: paymentIntent.amount_received / 100,
+        amount: paymentIntent.amount_total,
         currency: paymentIntent.currency,
         created: paymentIntent.created,
         status: paymentIntent.status,
-        latest_charge: paymentIntent.latest_charge,
-        payment_method_types: paymentIntent.payment_method_types,
+        invoice: paymentIntent.invoice,
+        subscription: paymentIntent.subscription,
+        payment_status: paymentIntent.payment_status,
+        customer: paymentIntent.customer,
       }
+      const userId = paymentIntent.metadata.userId;
+      const type = paymentIntent.metadata.type;
 
-      const userId = paymentIntent.userId;
-      const type = paymentIntent.type;
-
-      console.log("UserID", userId, type)
-
+      
       break;
-    // ... handle other event types
     default:
       console.log(`Unhandled event type ${event.type}`);
   }

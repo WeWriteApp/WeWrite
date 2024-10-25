@@ -3,23 +3,23 @@ const stripe = require('stripe')(process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY);
 
 export async function POST(req) {
   const request = await req.json()
-  const { amount, currency, userId, type } = request
+  const { amount, currency, user, type } = request
 
   const priceEnum = {
     10: {
-      id: "price_1QDWsjDvb2vcGPvNWIu2Jczh"
+      id: "price_1QDXjYIsJOA8IjJR5MPPFfnl"
     },
     50: {
-      id: "price_1QDWoSDvb2vcGPvNablWmjcH"
+      id: "price_1QDXk6IsJOA8IjJR7Hi8w7Lx"
     },
     100: {
-      id: "price_1QDWnzDvb2vcGPvNw0gRI1uc"
+      id: "price_1QDXkiIsJOA8IjJRuHFAKQKv"
     },
     300: {
-      id: "price_1QD1axDvb2vcGPvNQCypFWfA"
+      id: "price_1QDXlIIsJOA8IjJROZIwroQM"
     }
   }
-  console.log("Metadata", userId, type, priceEnum[amount])
+  console.log("Metadata", type, priceEnum[amount])
   if (req.method === 'POST') {
     try {
       // const { amount, currency, customerEmail } = req.body; // Assume these come from frontend
@@ -39,6 +39,15 @@ export async function POST(req) {
       else {
         price = priceEnum[amount]
       }
+
+      const customer = await stripe.customers.create({
+        name: user.username,
+        email: user.email,
+        metadata: {
+          id: user.uid
+        }
+      });
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -48,8 +57,9 @@ export async function POST(req) {
           },
         ],
         mode: 'subscription',
+        customer: customer.id,
         metadata: {
-          id: userId,         // Custom data (example)
+          userId: user.uid,         // Custom data (example)
           type: type,       // Any additional custom field
         },
         success_url: `http://localhost:3000/profile`,
