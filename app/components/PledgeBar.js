@@ -61,7 +61,7 @@ const PledgeBar = () => {
   const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
 
   return (
-    <div className="w-11/12 sm:max-w-[300px]">
+    <div className="w-11/12 sm:max-w-[300px] hidden">
       {customVisible && (
         <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
           <div className="flex items-center justify-center">
