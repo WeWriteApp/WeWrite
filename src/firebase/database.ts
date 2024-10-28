@@ -1,4 +1,4 @@
-import { 
+import {
   getFirestore,
   addDoc,
   collection,
@@ -14,7 +14,7 @@ import app from "./config";
 
 export const db = getFirestore(app);
 
-export const createDoc = async (collectionName, data) => {
+export const createDoc = async (collectionName: string, data: any) => {
   try {
     const docRef = await addDoc(collection(db, collectionName), data);
     // return the id of the newly created doc
@@ -25,7 +25,7 @@ export const createDoc = async (collectionName, data) => {
   }
 }
 
-export const createPage = async (data) => {
+export const createPage = async (data: any) => {
   try {
     const pageData = {
       title: data.title,
@@ -44,7 +44,7 @@ export const createPage = async (data) => {
 
     // create a subcollection for versions
     const version = await addDoc(collection(pageRef, "versions"), versionData);
-    
+
     // take the version id and add it as the currentVersion on the page
     await setDoc(pageRef, { currentVersion: version.id }, { merge: true });
 
@@ -56,16 +56,16 @@ export const createPage = async (data) => {
   }
 }
 
-export const listenToPageById = (pageId, onPageUpdate) => {
+export const listenToPageById = (pageId: string, onPageUpdate: any) => {
   try {
     // Reference to the page document
     const pageRef = doc(db, "pages", pageId);
 
     // Declare unsubscribeVersion outside of the inner onSnapshot callback
-    let unsubscribeVersion = null;
+    let unsubscribeVersion: any;
 
     // Listener for the page document
-    const unsubscribePage = onSnapshot(pageRef, { includeMetadataChanges: true }, async (pageSnap) => {
+    const unsubscribePage = onSnapshot(pageRef, { includeMetadataChanges: true }, async (pageSnap: any) => {
       if (pageSnap.exists()) {
         const pageData = {
           id: pageId,
@@ -86,7 +86,7 @@ export const listenToPageById = (pageId, onPageUpdate) => {
         }
 
         // Listener for the version document
-        unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
+        unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
           if (versionSnap.exists()) {
             const versionData = versionSnap.data();
 
@@ -95,7 +95,7 @@ export const listenToPageById = (pageId, onPageUpdate) => {
 
             // Send updated page and version data
             onPageUpdate({ pageData, versionData, links });
-          } 
+          }
         });
       } else {
         // If page document doesn't exist
@@ -116,31 +116,47 @@ export const listenToPageById = (pageId, onPageUpdate) => {
   }
 };
 
-export const getPageById = async (pageId) => {
+
+export const getPageById = async (pageId: string) => {
   // should get the page and versions
   try {
     const pageRef = doc(db, "pages", pageId);
-    const pageSnap = await getDoc(pageRef, { source: 'cache' });
+
+    // Fetch the document
+    const pageSnap = await getDoc(pageRef);
+
+    // Check if the document exists
+    if (!pageSnap.exists()) {
+      console.log('No such document!');
+      return null; // or handle the absence of the document as needed
+    }
+
+    // Extract page data
     const pageData = {
       id: pageId,
-      ...pageSnap.data()
-    }
-    // // get the current version
+      ...pageSnap.data(), // Spread the data into the pageData object
+    };
+
+    // Uncomment and handle the current version retrieval if needed
     // const currentVersionId = pageData.currentVersion;
     // const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
-    // const versionSnap = await getDoc(versionRef, { source: 'cache' });
-    // const versionData = versionSnap.data();
+    // const versionSnap = await getDoc(versionRef);
 
-    // // get links
-    // const links = extractLinksFromNodes(JSON.parse(versionData.content));
-    return { pageData };
+    // Check if the version document exists
+    // if (versionSnap.exists()) {
+    //   const versionData = versionSnap.data();
+    //   // get links
+    //   const links = extractLinksFromNodes(JSON.parse(versionData.content));
+    // }
+
+    return { pageData }; // Return the page data
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error('Error fetching page:', e);
+    return null; // Handle the error as needed
   }
 }
 
-export const getVersionsByPageId = async (pageId) => {
+export const getVersionsByPageId = async (pageId: string) => {
   try {
     const pageRef = doc(db, "pages", pageId);
     const versionsRef = collection(pageRef, "versions");
@@ -154,13 +170,13 @@ export const getVersionsByPageId = async (pageId) => {
       }
     });
 
-    return versions;    
+    return versions;
   } catch (e) {
     return e;
   }
 }
 
-export const saveNewVersion = async (pageId, data) => {
+export const saveNewVersion = async (pageId: string, data: any) => {
   try {
     const pageRef = doc(db, "pages", pageId);
     const versionData = {
@@ -170,7 +186,7 @@ export const saveNewVersion = async (pageId, data) => {
     };
 
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
-    
+
     // set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
 
@@ -180,7 +196,7 @@ export const saveNewVersion = async (pageId, data) => {
   }
 }
 
-export const setCurrentVersion = async (pageId, versionId) => {
+export const setCurrentVersion = async (pageId: string, versionId: string) => {
   try {
     const pageRef = doc(db, "pages", pageId);
     await setDoc(pageRef, { currentVersion: versionId }, { merge: true });
@@ -190,7 +206,7 @@ export const setCurrentVersion = async (pageId, versionId) => {
   }
 }
 
-export const setDocData = async (collectionName, docName, data) => {
+export const setDocData = async (collectionName: string, docName: string, data: any) => {
   try {
     const docRef = await setDoc(doc(db, collectionName, docName), data);
     return docRef;
@@ -199,7 +215,7 @@ export const setDocData = async (collectionName, docName, data) => {
   }
 }
 
-export const getDocById = async (collectionName, docId) => {
+export const getDocById = async (collectionName: string, docId: string) => {
   try {
     const docRef = doc(db, collectionName, docId);
     const docSnap = await getDoc(docRef);
@@ -210,7 +226,7 @@ export const getDocById = async (collectionName, docId) => {
   }
 }
 
-export const getCollection = async (collectionName) => {
+export const getCollection = async (collectionName: string) => {
   try {
     const collectionRef = collection(db, collectionName);
     const collectionSnap = await getDocs(collectionRef);
@@ -220,7 +236,7 @@ export const getCollection = async (collectionName) => {
   }
 }
 
-export const updateDoc = async (collectionName, docName, data) => {
+export const updateDoc = async (collectionName: string, docName: string, data: any) => {
   try {
     const docRef = doc(db, collectionName, docName);
     await setDoc(docRef, data, { merge: true });
@@ -230,7 +246,7 @@ export const updateDoc = async (collectionName, docName, data) => {
   }
 }
 
-export const removeDoc = async (collectionName, docName) => {
+export const removeDoc = async (collectionName: string, docName: string) => {
   try {
     await deleteDoc(doc(db, collectionName, docName));
     return true;
@@ -239,7 +255,7 @@ export const removeDoc = async (collectionName, docName) => {
   }
 }
 
-export const deletePage = async (pageId) => {
+export const deletePage = async (pageId: string) => {
   // remove page and the versions subcollection
   try {
     const pageRef = doc(db, "pages", pageId);
@@ -262,10 +278,10 @@ export const deletePage = async (pageId) => {
 }
 
 // create subcollection
-export const createSubcollection = async (collectionName, docId, subcollectionName, data) => {
+export const createSubcollection = async (collectionName: string, docId: string, subcollectionName: string, data: any) => {
   try {
     const docRef = doc(db, collectionName, docId);
-    const subcollectionRef = collection(docRef, subcollectionName);    
+    const subcollectionRef = collection(docRef, subcollectionName);
     const subcollectionDocRef = await addDoc(subcollectionRef, data);
     return subcollectionDocRef.id;
   } catch (e) {
@@ -275,7 +291,7 @@ export const createSubcollection = async (collectionName, docId, subcollectionNa
 }
 
 // get subcollection
-export const getSubcollection = async (collectionName, docName, subcollectionName) => {
+export const getSubcollection = async (collectionName: string, docName: string, subcollectionName: string) => {
   try {
     const docRef = doc(db, collectionName, docName);
     const subcollectionRef = collection(docRef, subcollectionName);
@@ -286,10 +302,10 @@ export const getSubcollection = async (collectionName, docName, subcollectionNam
   }
 }
 
-function extractLinksFromNodes(nodes) {
-  let links = [];
+function extractLinksFromNodes(nodes: any) {
+  let links = <any>[];
 
-  function traverse(node) {
+  function traverse(node: any) {
     // Check if the node is a link
     if (node.type === 'link' && node.url) {
       links.push(node.url);

@@ -1,10 +1,10 @@
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL,deleteObject} from "firebase/storage";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import app from "./config";
 import { rtdb } from "./rtdb";
 import { get, ref, set, push } from "firebase/database";
 export const storage = getStorage(app);
 
-export const addDocument = async (imageFile, owner, requestId = null, status = "pending", workflowStatus = "pending") => {
+export const addDocument = async (imageFile: any, owner: any, requestId = null, status = "pending", workflowStatus = "pending") => {
 
   if (!imageFile) {
     return;
@@ -27,7 +27,7 @@ export const addDocument = async (imageFile, owner, requestId = null, status = "
     const docRef = ref(rtdb, "documents");
     const newDocRef = push(docRef);
 
-    let docObj = {
+    let docObj: any = {
       url: downloadURL,
       type: fileType,
       status: status,
@@ -42,9 +42,9 @@ export const addDocument = async (imageFile, owner, requestId = null, status = "
     if (requestId) {
       docObj.requestId = requestId;
     }
-    
+
     set(newDocRef, docObj);
-    
+
     return downloadURL;
 
   } catch (error) {
@@ -54,7 +54,7 @@ export const addDocument = async (imageFile, owner, requestId = null, status = "
   }
 };
 
-export const removeDocument = async (docId) => {
+export const removeDocument = async (docId: string) => {
   const docRef = ref(rtdb, `documents/${docId}`);
   try {
     await set(docRef, null);
@@ -64,7 +64,7 @@ export const removeDocument = async (docId) => {
   }
 }
 
-export const removeDocFromStorage = async (path,docId) => { 
+export const removeDocFromStorage = async (path: string, docId: string) => {
   const docRef = storageRef(storage, `documents/${path}`);
   try {
     await deleteObject(docRef);

@@ -1,11 +1,11 @@
-import {app} from './config';
+import { app } from './config';
 import { getAuth } from "firebase/auth";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 
 export const auth = getAuth(app);
 
 // firebase database service
-export const createUser = async (email, password) => {
+export const createUser = async (email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return userCredential;
@@ -14,7 +14,7 @@ export const createUser = async (email, password) => {
   }
 }
 
-export const loginUser = async (email, password) => {
+export const loginUser = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential;
@@ -31,9 +31,9 @@ export const logoutUser = async () => {
   }
 }
 
-export const addUsername = async (username) => {
+export const addUsername = async (username: string) => {
   try {
-    await updateProfile(auth.currentUser, {
+    await updateProfile(auth.currentUser!!, {
       displayName: username
     });
   } catch (error) {
