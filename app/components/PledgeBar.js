@@ -27,6 +27,10 @@ const PledgeBar = () => {
   const [inputVisible, setInputVisible] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(true);
 
+  const [isVisible, setIsVisible] = useState(true) // Visibility state
+  const scrollTimeoutRef = useRef(null) // Ref for timeout
+
+
   const timerRef = useRef(null);
   const textRef = useRef(null);
   const { id } = useParams();
@@ -60,8 +64,39 @@ const PledgeBar = () => {
 
   const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
 
+  useEffect(() => {
+    // Function to handle scroll events
+    const handleScroll = () => {
+      // Hide the component when scrolling
+      setIsVisible(false)
+
+      // Clear the previous timeout if it exists
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+
+      // Set a new timeout to show the component after 1 second
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsVisible(true)
+      }, 1000)
+    }
+
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll)
+
+    // Clean up event listener on component unmount
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [])
+
   return (
-    <div className="w-11/12 sm:max-w-[300px] hidden">
+    <div className={`w-11/12 sm:max-w-[300px] transition-opacity duration-500 ease-in-out ${
+      isVisible ? 'opacity-100' : 'opacity-0'
+    }`}> 
       {customVisible && (
         <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
           <div className="flex items-center justify-center">
