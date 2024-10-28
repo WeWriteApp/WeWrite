@@ -57,7 +57,7 @@ const RegisterForm = () => {
         onChange={handleChange}
         placeholder="Password"
         className="border border-gray-300 rounded p-2 w-full mt-2 bg-background text-text"
-        autoComplete="off"
+        autoComplete="new-password"
       />
       
       <button 

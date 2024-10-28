@@ -12,6 +12,7 @@ export const DataProvider = ({ children }) => {
   const {
     pages,
     loading,
+    setLoading,
     loadMorePages,
     isMoreLoading,
     hasMorePages
@@ -28,7 +29,8 @@ export const DataProvider = ({ children }) => {
         filtered,
         loadMorePages,
         isMoreLoading,
-        hasMorePages
+        hasMorePages,
+        setLoading
       }}
     >
       {children}
