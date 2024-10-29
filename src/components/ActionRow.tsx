@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { deletePage } from "../firebase/database";
 
-const ActionRow = (isEditing: boolean, setIsEditing: any, page: any) => {
+const ActionRow = ({ isEditing, setIsEditing, page }: any) => {
   const router = useRouter();
   const handleDelete = async () => {
     let confirm = window.confirm("Are you sure you want to delete this page?");
