@@ -25,6 +25,7 @@ const LoginForm = () => {
     e.preventDefault();
     setLoading(true)
     const response: any = await loginUser(user.email, user.password);
+    setLoading(false)
     if (response?.code) {
       setError(response.message);
     } else {

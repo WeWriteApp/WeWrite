@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { addUsername, createUser } from "@/firebase/auth";
 import toast from "react-hot-toast";
+import { AppContext } from "@/providers/AppProvider";
 
 const RegisterForm = () => {
   const router = useRouter();
@@ -14,6 +15,7 @@ const RegisterForm = () => {
   });
 
   const [error, setError] = useState(null);
+  const { setLoading } = useContext(AppContext)
 
   const handleChange = (e: any) => {
     setUser({ ...user, [e.target.name]: e.target.value });
@@ -21,10 +23,12 @@ const RegisterForm = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-
+    setLoading(true)
     const response: any = await createUser(user.email, user.password);
+    setLoading(false)
     if (response.code) {
       setError(response.message);
+
     } else {
       await addUsername(user.username);
       toast('Registered!',
