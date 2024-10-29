@@ -5,14 +5,14 @@ import { Logging } from '@google-cloud/logging';
 // Initialize Google Cloud Logging
 const logging = new Logging({
   projectId: process.env.PROJECT_ID,
-  credentials: JSON.parse(process.env.LOGGING_CLOUD_KEY_JSON),
+  credentials: JSON.parse(process.env.LOGGING_CLOUD_KEY_JSON!!),
 });
 
 
 const log = logging.log('frontend-errors'); // Log name
 
 // Function to log the error to Google Cloud Logging
-const logToGCP = async (error) => {
+const logToGCP = async (error:any) => {
   const metadata = { resource: { type: 'global' } };
   const entry = log.entry(metadata, {
     message: error.message,
@@ -22,7 +22,7 @@ const logToGCP = async (error) => {
   await log.write(entry);
 };
 
-export async function POST(request) {
+export async function POST(request:any) {
 
   if (!request) {
     return NextResponse.json({ error: 'Request is required' }, { status: 400 });

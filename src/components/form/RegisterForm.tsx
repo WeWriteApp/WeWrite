@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { addUsername, createUser } from "@/firebase/auth";
+import toast from "react-hot-toast";
 
 const RegisterForm = () => {
   const router = useRouter();
@@ -20,11 +21,22 @@ const RegisterForm = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+
     const response: any = await createUser(user.email, user.password);
     if (response.code) {
       setError(response.message);
     } else {
       await addUsername(user.username);
+      toast('Registered!',
+        {
+          icon: '✔',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        }
+      );
       router.push("/");
     }
   };

@@ -6,6 +6,7 @@ import MobileProvider from "@/providers/MobileProvider";
 import AppProvider from "@/providers/AppProvider";
 import { NextUIProvider } from "@nextui-org/react";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { Toaster } from "react-hot-toast"
 
 const geistSans = localFont({
   src: "./fonts/Medium-Extended.ttf",
@@ -39,6 +40,8 @@ export default function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </AppProvider>
+        <Toaster position="top-right"
+          reverseOrder={false} />
       </body>
     </html>
   );

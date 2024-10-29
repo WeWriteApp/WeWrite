@@ -11,7 +11,7 @@ if (!process.env.GOOGLE_CLOUD_KEY_JSON) {
 let credentials;
 try {
   credentials = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
-} catch (error) {
+} catch (error: any) {
   throw new Error("Failed to parse GOOGLE_CLOUD_KEY_JSON: " + error.message);
 }
 
@@ -21,8 +21,8 @@ const bigquery = new BigQuery({
   credentials,
 });
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
+export async function GET(request: any) {
+  const { searchParams }: any = new URL(request.url);
 
   // Extract query parameters from the URL
   const userId = searchParams.get("userId");
@@ -72,7 +72,7 @@ export async function GET(request) {
       },
     });
 
-    let groupRows = [];
+    let groupRows = <any>[];
 
     // Check if groupIds are provided and not empty
     if (groupIds.length > 0) {
@@ -114,7 +114,7 @@ export async function GET(request) {
     }));
 
     // Process group pages
-    const groupPages = groupRows.map((row) => ({
+    const groupPages = groupRows.map((row: any) => ({
       id: row.document_id,
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
@@ -123,7 +123,7 @@ export async function GET(request) {
 
     // Return formatted results
     return NextResponse.json({ userPages, groupPages }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error querying BigQuery:", error);
     return NextResponse.json(
       { message: "Error querying data", error: error.message },

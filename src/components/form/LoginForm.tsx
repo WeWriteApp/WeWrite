@@ -1,8 +1,10 @@
 'use client'
 import { loginUser } from "@/firebase/auth";
+import { AppContext } from "@/providers/AppProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import toast from "react-hot-toast";
 
 const LoginForm = () => {
 
@@ -13,6 +15,7 @@ const LoginForm = () => {
   });
 
   const [error, setError] = useState(null);
+  const {setLoading} = useContext(AppContext)
 
   const handleChange = (e: any) => {
     setUser({ ...user, [e.target.name]: e.target.value });
@@ -20,10 +23,20 @@ const LoginForm = () => {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setLoading(true)
     const response: any = await loginUser(user.email, user.password);
     if (response?.code) {
       setError(response.message);
     } else {
+      toast('Logged in!',
+        {
+          icon: '✔',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        })
       router.push("/");
     }
   };
