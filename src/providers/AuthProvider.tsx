@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { getDatabase, ref, onValue, update } from 'firebase/database';
 import app from '@/firebase/config';
 import { auth } from '@/firebase/auth';
+import { AppContext } from './AppProvider';
 
 interface User {
   uid: string;
@@ -14,12 +15,12 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  user?: User | null;
+  loading?: boolean;
+  setUser?: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType>({});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -31,7 +32,7 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { loading, setLoading } = useContext(AppContext)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {

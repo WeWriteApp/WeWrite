@@ -14,8 +14,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <main className={`dark text-foreground bg-background min-h-screen`}>
       <Navbar />
-      <SettingsModal />
-      <Loader />
     </main>
   )
 }

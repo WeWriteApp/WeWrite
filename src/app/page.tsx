@@ -2,19 +2,32 @@
 
 import Layout from "@/components/layout/Layout";
 import { AppContext } from "@/providers/AppProvider";
-import Image from "next/image";
+import { AuthContext } from "@/providers/AuthProvider";
+import { useRouter } from "next/navigation";
 import { useContext, useEffect } from "react";
 
 export default function Home() {
 
-  const { setLoading } = useContext(AppContext)
+  const { loading, setLoading } = useContext(AppContext)
+  const { user } = useContext(AuthContext)
+  const router = useRouter();
+
+  // useEffect(() => {
+  //   setLoading(false)
+  // }, [])
 
   useEffect(() => {
-    setLoading(false)
-  }, [])
+    if (!loading && !user) {
+      router.push("/auth/login");
+    }
+  }, [user, loading]);
+
+  if (loading || !user) {
+    return null;
+  }
   return (
     <Layout>
-      <p>???</p>
+      <p>This means you logged in</p>
     </Layout>
   );
 }
