@@ -5,7 +5,9 @@ import React, { createContext, useState, useEffect, ReactNode } from "react";
 // Define the context type
 interface AppContextType {
   loading?: boolean;
-  setLoading?: any
+  setLoading?: any;
+  openSetting?: boolean;
+  setOpenSetting?: any;
 }
 
 // Create the context with a default value
@@ -18,13 +20,14 @@ interface AppProviderProps {
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [openSetting, setOpenSetting] = useState<boolean>(true);
 
   useEffect(() => {
 
   }, []);
 
   return (
-    <AppContext.Provider value={{ loading, setLoading }}>
+    <AppContext.Provider value={{ loading, setLoading, openSetting, setOpenSetting }}>
       {children}
     </AppContext.Provider>
   );

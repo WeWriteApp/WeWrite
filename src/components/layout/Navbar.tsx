@@ -1,8 +1,13 @@
+'use client'
 import { Navbar as NUINavbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button, NavbarMenu, NavbarMenuItem, NavbarMenuToggle } from "@nextui-org/react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faGear } from '@fortawesome/free-solid-svg-icons';
 import Logo from "../Logo";
 import Image from "next/image";
+import { useContext, useState } from "react";
+import SettingsModal from "../modal/Settings";
+import { AppContext } from "@/providers/AppProvider";
+import SettingsPopup from "../popup/settings";
 
 
 const menuItems = [
@@ -25,6 +30,9 @@ const menuItems = [
 ];
 
 const Navbar = () => {
+
+  const [openSetting, setOpenSetting] = useState(false)
+
   return (
     <NUINavbar shouldHideOnScroll className="flex" classNames={{ wrapper: "max-w-screen-2xl" }}>
       <NavbarContent justify="start">
@@ -68,18 +76,15 @@ const Navbar = () => {
             Today's note
           </Link>
         </NavbarItem>
-        <NavbarItem className="flex items-center gap-[10px] px-[10px] py-[8px] border bg-white/10 hover:bg-white/15 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-          <FontAwesomeIcon icon={faPlus} />
-          <Link color="foreground" href="#">
-            New page
-          </Link>
+        <NavbarItem className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
+          <FontAwesomeIcon icon={faGear} />
+          <p color="foreground"  >
+            Settings
+          </p>
         </NavbarItem>
       </NavbarContent>
-      <NavbarItem className="sm:hidden flex items-center gap-[10px] px-[10px] py-[8px] border bg-white/10 hover:bg-white/15 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-        <FontAwesomeIcon icon={faPlus} />
-        <Link color="foreground" href="#">
-          New page
-        </Link>
+      <NavbarItem className="sm:hidden flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
+        <FontAwesomeIcon icon={faGear} />
       </NavbarItem>
       <NavbarMenu>
         {menuItems.map((item, index) => (
@@ -97,6 +102,8 @@ const Navbar = () => {
           </NavbarMenuItem>
         ))}
       </NavbarMenu>
+      <SettingsPopup isOpen={openSetting} onClose={() => { setOpenSetting(false) }} />
+
     </NUINavbar>
   );
 }

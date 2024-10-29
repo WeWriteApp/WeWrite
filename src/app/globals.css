@@ -145,9 +145,9 @@ textarea {
   color: var(--text-color) !important;
 }
 
-p {
+/* p {
   color: var(--text-color) !important;
-}
+} */
 
 .searchbar .wrapper {
   background: var(--background-color) !important;
