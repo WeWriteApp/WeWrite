@@ -5,6 +5,9 @@ import Layout from "@/components/layout/Layout";
 import { AppContext } from "@/providers/AppProvider";
 import { AuthContext } from "@/providers/AuthProvider";
 import { DataContext } from "@/providers/DataProvider";
+import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Input } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { useContext, useEffect } from "react";
 
@@ -26,7 +29,17 @@ export default function Home() {
   }
   return (
     <Layout>
-      <div>
+      <div className="px-4 sm:px-6">
+        <Input
+          type="text"
+          isClearable
+          placeholder="Search Pages, Users, Groups"
+          labelPlacement="outside"
+          startContent={
+            <FontAwesomeIcon icon={faSearch} />
+          }
+        />
+
         <p>My pages</p>
         <div className="mt-4">
           <div>

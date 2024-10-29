@@ -16,7 +16,7 @@ export async function generateMetadata({params}: any) {
 
   return {
     title: pageData.title,
-    description: "A page"
+    description: "page"
   };
 }
 

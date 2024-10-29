@@ -34,7 +34,7 @@ const Navbar = () => {
   const [openSetting, setOpenSetting] = useState(false)
 
   return (
-    <NUINavbar shouldHideOnScroll className="flex" classNames={{ wrapper: "max-w-screen-2xl" }}>
+    <NUINavbar shouldHideOnScroll classNames={{ wrapper: "max-w-screen-2xl" }}>
       <NavbarContent justify="start">
         <NavbarMenuToggle className="sm:hidden" />
         <NavbarBrand>

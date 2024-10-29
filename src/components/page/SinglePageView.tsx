@@ -10,7 +10,7 @@ import PledgeBar from "../PledgeBar";
 import ActionRow from "../ActionRow";
 import TextView from "../TextView";
 import EditPage from "../EditPage";
-import User from "../badge/user";
+import User from "../badge/User";
 import { useParams, useSearchParams } from "next/navigation";
 
 export default function SinglePageView({ params }: any) {
