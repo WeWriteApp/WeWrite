@@ -5,7 +5,7 @@ import { onValue, ref } from "firebase/database";
 
 
 interface GroupsContextType {
-  groups?: any;
+  groups?: any[];
 }
 
 interface GroupsProviderProps {

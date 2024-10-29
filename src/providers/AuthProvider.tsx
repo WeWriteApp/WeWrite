@@ -12,6 +12,7 @@ interface User {
   email: string;
   username?: string;
   displayName?: string;
+  groups?:any
 }
 
 interface AuthContextType {
