@@ -19,7 +19,7 @@ html body .page-content p {
   --background-color: #ffffff;
   --light-background-color: #F9FAFB;
   --text-color: #000000;
-  --primary-color: #1D4ED8;
+  --primary-color: #0083FD;
   --primary-hover: #2563EB;
   --secondary-color: #64748B;
   --button-text: #000000;
@@ -29,8 +29,32 @@ html body .page-content p {
 *[data-theme='dark'] {
   --background-color: #000;
   --light-background-color: #1F2937;
-  --text-color: #F3F4F6;
-  --primary-color: #1D4ED8;
+  --text-color: #ffffff;
+  --primary-color: #0083FD;
+  --primary-hover: #2563EB;
+  --secondary-color: #94A3B8;
+  --button-text: #ffffff;
+  --button-hover: #1D4ED8;
+  --border-color: #64748B;
+}
+
+*[data-theme='paper'] {
+  --background-color: #E1DBCC;
+  --light-background-color: #1F2937;
+  --text-color: #7E7254;
+  --primary-color: #BBAE8C;
+  --primary-hover: #2563EB;
+  --secondary-color: #94A3B8;
+  --button-text: #ffffff;
+  --button-hover: #1D4ED8;
+  --border-color: #64748B;
+}
+
+*[data-theme='astronomy'] {
+  --background-color: #000;
+  --light-background-color: #1F2937;
+  --text-color: #FF3737;
+  --primary-color: #B30505;
   --primary-hover: #2563EB;
   --secondary-color: #94A3B8;
   --button-text: #ffffff;
@@ -66,6 +90,10 @@ input[type="number"] {
 
 .text-text {
   color: var(--text-color);
+}
+
+.bg-text {
+  background-color: var(--text-color);
 }
 
 .text-primary {

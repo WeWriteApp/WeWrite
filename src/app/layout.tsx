@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { AuthProvider } from "@/providers/AuthProvider";
+import MobileProvider from "@/providers/MobileProvider";
+import AppProvider from "@/providers/AppProvider";
+import { NextUIProvider } from "@nextui-org/react";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 const geistSans = localFont({
   src: "./fonts/Medium-Extended.ttf",
@@ -23,7 +28,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} antialiased`}
       >
-        {children}
+        <AppProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <MobileProvider>
+                <NextUIProvider>
+                  {children}
+                </NextUIProvider>
+              </MobileProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </AppProvider>
       </body>
     </html>
   );
