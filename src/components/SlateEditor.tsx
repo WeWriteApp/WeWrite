@@ -84,7 +84,7 @@ const SlateEditor = ({ initialEditorState = null, setEditorState}:any) => {
   };
 
   return (
-    <div className="border border-gray-300 p-4 relative">
+    <div className="border border-white/30 rounded-xl p-4 relative bg-white/15">
       <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
         <Editable
           renderLeaf={({ attributes, children, leaf }: any) => {

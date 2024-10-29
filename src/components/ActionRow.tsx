@@ -10,7 +10,7 @@ const ActionRow = ({ isEditing, setIsEditing, page }: any) => {
     if (!confirm) return;
     const result = await deletePage(page.id);
     if (result) {
-      router.push("/pages");
+      router.push("/");
     } else {
       console.log("Error deleting page");
     }

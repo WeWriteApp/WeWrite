@@ -48,8 +48,8 @@ const SettingsPopup: React.FC<PopupDialogProps> = ({ isOpen, onClose }) => {
           <p className={`${hoverTheme ? "text-white" : "text-white/55"}`} >Theme</p>
         </div>
         <div className="flex gap-[10px] items-center p-2 cursor-pointer" onMouseEnter={() => setHoverLogout(true)} onMouseLeave={() => setHoverLogout(false)} onClick={handleLogout}>
-          <FontAwesomeIcon icon={faWarning} className={` ${hoverLogout ? "text-red-700" : "text-red-700/35"}`} />
-          <p className={` ${hoverLogout ? "text-red-700" : "text-red-700/35"} `}>Log out</p>
+          <FontAwesomeIcon icon={faWarning} className={` ${hoverLogout ? "text-red-700" : "text-red-700/65"}`} />
+          <p className={` ${hoverLogout ? "text-red-700" : "text-red-700/65"} `}>Log out</p>
         </div>
       </div>
     </Popup>

@@ -13,10 +13,17 @@ import EditPage from "../EditPage";
 import User from "../badge/User";
 import { useParams, useSearchParams } from "next/navigation";
 
+interface IPageData {
+  isPublic: boolean;
+  userId: string;
+  createdAt: string;
+  lastModified: string;
+}
+
 export default function SinglePageView({ params }: any) {
 
   const param = useParams()
-  const [page, setPage] = useState<any>(null);
+  const [page, setPage] = useState<IPageData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -101,7 +108,7 @@ export default function SinglePageView({ params }: any) {
             <span className="text-lg text-text">
               This page has been deleted
             </span>
-            <Link href="/pages">
+            <Link href="/">
               <button className="bg-background text-button-text px-4 py-2 rounded-full">
                 Go back
               </button>
@@ -126,7 +133,7 @@ export default function SinglePageView({ params }: any) {
           <div className="flex items-center gap-2 mt-4">
             <Icon icon="akar-icons:warning" className="text-red-500" />
             <span className="text-lg text-text">This page is private</span>
-            <Link href="/pages">
+            <Link href="/">
               <button className="bg-background text-button-text px-4 py-2 rounded-full">
                 Go back
               </button>
@@ -183,7 +190,7 @@ export default function SinglePageView({ params }: any) {
           </>
         )}
       </div>
-      <div className=" fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
+      <div className={`fixed bottom-0 pb-16 pt-4 w-full flex justify-center ${page.userId === user?.uid ? "hidden" : ""}`}>
         <PledgeBar />
       </div>
     </Layout>

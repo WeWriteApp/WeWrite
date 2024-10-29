@@ -5,9 +5,10 @@ import Layout from "@/components/layout/Layout";
 import { AppContext } from "@/providers/AppProvider";
 import { AuthContext } from "@/providers/AuthProvider";
 import { DataContext } from "@/providers/DataProvider";
-import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Input } from "@nextui-org/react";
+import { Input, NavbarItem } from "@nextui-org/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useContext, useEffect } from "react";
 
@@ -29,7 +30,7 @@ export default function Home() {
   }
   return (
     <Layout>
-      <div className="px-4 sm:px-6">
+      <div className="">
         <Input
           type="text"
           isClearable
@@ -40,13 +41,20 @@ export default function Home() {
           }
         />
 
-        <p>My pages</p>
+        <div className="flex justify-between mt-4">
+          <p>My pages</p>
+          <Link href="/new">
+            <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
+              <FontAwesomeIcon icon={faPlus} />
+            </div>
+          </Link>
+        </div>
         <div className="mt-4">
           <div>
-            <ul className="space-x-1 flex flex-wrap">
+            <div className="flex flex-wrap gap-2">
               {pages?.map((page: any, index: number) => {
                 return (
-                  <li key={page.id}>
+                  <div key={page.id} className="flex">
                     <LinkButton
                       // groupId={page.groupId}
                       href={`/pages/${page.id}`}
@@ -54,10 +62,10 @@ export default function Home() {
                     >
                       {page.title}
                     </LinkButton>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           </div>
           <div className="flex justify-center mt-4">
             {

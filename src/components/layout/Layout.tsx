@@ -14,7 +14,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <main className={`dark text-foreground bg-background min-h-screen`}>
       <Navbar />
-      <div className="max-w-screen-2xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6">
         {children}
       </div>
     </main>
