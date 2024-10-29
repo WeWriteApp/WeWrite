@@ -37,9 +37,11 @@ const Navbar = () => {
     <NUINavbar shouldHideOnScroll className="flex" classNames={{ wrapper: "max-w-screen-2xl" }}>
       <NavbarContent justify="start">
         <NavbarMenuToggle className="sm:hidden" />
-        <NavbarBrand className="flex gap-[10px]">
-          <Logo />
-          <p className="font-bold text-inherit">WeWrite</p>
+        <NavbarBrand>
+          <Link href="/" className="flex gap-[10px]">
+            <Logo />
+            <p className="font-bold text-text">WeWrite</p>
+          </Link>
         </NavbarBrand>
       </NavbarContent>
       <NavbarContent className="hidden sm:flex gap-3" justify="center">

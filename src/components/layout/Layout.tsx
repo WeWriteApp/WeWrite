@@ -10,10 +10,13 @@ import SettingsModal from "../modal/Settings"
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const { theme } = useContext(ThemeContext)
-  
+
   return (
     <main className={`dark text-foreground bg-background min-h-screen`}>
       <Navbar />
+      <div className="max-w-screen-2xl mx-auto">
+        {children}
+      </div>
     </main>
   )
 }

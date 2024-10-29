@@ -5,6 +5,7 @@ import Popup from "./simple"
 import { useState } from "react";
 import { logoutUser } from "@/firebase/auth";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 
 interface PopupDialogProps {
@@ -21,6 +22,15 @@ const SettingsPopup: React.FC<PopupDialogProps> = ({ isOpen, onClose }) => {
 
   const handleLogout = () => {
     logoutUser().then(() => {
+      toast('Logged out!',
+        {
+          icon: '✔',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        })
       router.push('/auth/login')
     });
   }
