@@ -7,7 +7,7 @@ import app from '@/firebase/config';
 import { auth } from '@/firebase/auth';
 import { AppContext } from './AppProvider';
 
-interface User {
+export interface User {
   uid: string;
   email: string;
   username?: string;
