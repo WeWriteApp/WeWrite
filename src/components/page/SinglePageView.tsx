@@ -11,8 +11,11 @@ import ActionRow from "../ActionRow";
 import TextView from "../TextView";
 import EditPage from "../EditPage";
 import User from "../badge/user";
+import { useParams, useSearchParams } from "next/navigation";
 
-export default function SinglePageView(params: any) {
+export default function SinglePageView({ params }: any) {
+
+  const param = useParams()
   const [page, setPage] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState(null);
@@ -25,7 +28,7 @@ export default function SinglePageView(params: any) {
 
   useEffect(() => {
     // Setup listener for real-time updates
-    const unsubscribe: any = listenToPageById(params.id, (data: any) => {
+    const unsubscribe = listenToPageById(param?.id as string, (data: any) => {
       if (data) {
         const { pageData, versionData, links } = data;
 
@@ -76,8 +79,12 @@ export default function SinglePageView(params: any) {
     });
 
     // Cleanup listener when component unmounts
-    return () => unsubscribe();
-  }, [params.id, user]);
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [param, user]);
 
   if (!page) {
     return <div className={`fixed top-0 bottom-0 left-0 right-0 z-max`}>

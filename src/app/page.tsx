@@ -31,7 +31,7 @@ export default function Home() {
         <div className="mt-4">
           <div>
             <ul className="space-x-1 flex flex-wrap">
-              {pages.map((page: any, index: number) => {
+              {pages?.map((page: any, index: number) => {
                 return (
                   <li key={page.id}>
                     <LinkButton

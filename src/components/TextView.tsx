@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 
-const TextView = (content: any) => {
+const TextView = ({content}: any) => {
+
 
   const [elements, setElements] = useState(null);
 
   useEffect(() => {
     if (content) {
       setElements(JSON.parse(content))
-      // console.log("content",JSON.parse(content))
+      console.log("content",JSON.parse(content))
     }
   }, [content]);
 
@@ -21,7 +22,7 @@ const TextView = (content: any) => {
   )
 };
 
-const RenderContent = (content: any) => {
+const RenderContent = ({content}: any) => {
   // Render function for text nodes
   const renderText = (node: any) => {
     return node.text ? node.text : null;

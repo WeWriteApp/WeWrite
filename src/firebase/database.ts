@@ -120,6 +120,8 @@ export const listenToPageById = (pageId: string, onPageUpdate: any) => {
 export const getPageById = async (pageId: string) => {
   // should get the page and versions
   try {
+
+    console.log("PageID", pageId)
     const pageRef = doc(db, "pages", pageId);
 
     // Fetch the document
