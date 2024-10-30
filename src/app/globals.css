@@ -15,7 +15,7 @@ html body .page-content p {
 }
 
 /* styles/globals.css */
-:root {
+*[data-theme='light'] {
   --background-color: #ffffff;
   --light-background-color: #F9FAFB;
   --text-color: #000000;
@@ -26,7 +26,8 @@ html body .page-content p {
   --border-color: #64748B;
 }
 
-*[data-theme='dark'] {
+
+:root {
   --background-color: #000;
   --light-background-color: #1F2937;
   --text-color: #ffffff;

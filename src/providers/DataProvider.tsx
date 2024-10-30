@@ -1,7 +1,7 @@
 "use client";
 import { createContext, ReactNode, useContext } from "react";
 import { AuthContext } from "./AuthProvider";
-import usePages from "@/hook/usePages";
+import usePages from "@/hooks/usePages";
 
 interface DataContextType {
   pages?: any;

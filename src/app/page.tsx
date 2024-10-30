@@ -2,6 +2,7 @@
 
 import LinkButton from "@/components/button/link";
 import Layout from "@/components/layout/Layout";
+import TotalSearch from "@/components/search/TotalSearch";
 import { AppContext } from "@/providers/AppProvider";
 import { AuthContext } from "@/providers/AuthProvider";
 import { DataContext } from "@/providers/DataProvider";
@@ -28,66 +29,65 @@ export default function Home() {
   if (loading || !user) {
     return null;
   }
+
+
   return (
     <Layout>
       <div className="">
-        <Input
-          type="text"
-          isClearable
-          placeholder="Search Pages, Users, Groups"
-          labelPlacement="outside"
-          startContent={
-            <FontAwesomeIcon icon={faSearch} />
-          }
-        />
+        <TotalSearch />
 
-        <div className="flex justify-between mt-4">
-          <p>My pages</p>
-          <Link href="/pages/new">
-            <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-              <FontAwesomeIcon icon={faPlus} />
+
+        <div className="flex flex-col border rounded-2xl border-white/25 p-2 mt-4">
+          <div className="flex justify-between items-center">
+            <p className="font-bold">My pages</p>
+            <Link href="/pages/new">
+              <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
+                <FontAwesomeIcon icon={faPlus} />
+              </div>
+            </Link>
+          </div>
+          <div className="mt-4">
+            <div>
+              <div className="flex flex-wrap gap-2">
+                {pages?.map((page: any, index: number) => {
+                  return (
+                    <div key={page.id} className="flex">
+                      <LinkButton
+                        // groupId={page.groupId}
+                        href={`/pages/${page.id}`}
+                      // isPublic={page.isPublic}
+                      >
+                        {page.title}
+                      </LinkButton>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </Link>
-        </div>
-        <div className="mt-4">
-          <div>
-            <div className="flex flex-wrap gap-2">
-              {pages?.map((page: any, index: number) => {
-                return (
-                  <div key={page.id} className="flex">
-                    <LinkButton
-                      // groupId={page.groupId}
-                      href={`/pages/${page.id}`}
-                    // isPublic={page.isPublic}
-                    >
-                      {page.title}
-                    </LinkButton>
-                  </div>
-                );
-              })}
+            <div className="flex justify-center mt-4">
+              {
+                hasMorePages && (
+                  <button
+                    className="bg-primary text-white px-4 py-2 rounded-full"
+                    onClick={() => loadMorePages(user.uid)}
+                    disabled={isMoreLoading}
+                  >
+                    {isMoreLoading ? "Loading..." : "Load more"}
+                  </button>
+                )
+              }
             </div>
           </div>
-          <div className="flex justify-center mt-4">
-            {
-              hasMorePages && (
-                <button
-                  className="bg-primary text-white px-4 py-2 rounded-full"
-                  onClick={() => loadMorePages(user.uid)}
-                  disabled={isMoreLoading}
-                >
-                  {isMoreLoading ? "Loading..." : "Load more"}
-                </button>
-              )
-            }
-          </div>
         </div>
-        <div className="flex justify-between mt-4">
-          <p>My groups</p>
-          <Link href="/group/new">
-            <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-              <FontAwesomeIcon icon={faPlus} />
-            </div>
-          </Link>
+        <div className="flex flex-col border rounded-2xl border-white/25 p-2 mt-4">
+          <div className="flex justify-between items-center">
+            <p>My groups</p>
+            <Link href="/group/new">
+              <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
+                <FontAwesomeIcon icon={faPlus} />
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
     </Layout>

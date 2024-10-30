@@ -1,0 +1,75 @@
+'use client'
+
+import { faSearch } from "@fortawesome/free-solid-svg-icons"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { Button, Input, Spinner } from "@nextui-org/react"
+import { useEffect, useState } from "react"
+import axios from 'axios'
+import { useSearch } from "@/hooks/useSearch"
+import LinkButton from "../button/link"
+import toast from "react-hot-toast"
+const TotalSearch = () => {
+  const { results, loading, error, search } = useSearch();
+  const [keyword, setKeyword] = useState("")
+
+  const handleSearch = async () => {
+    if (!keyword || keyword.length === 0) {
+      toast('Keyword required. Please input keyword to search',
+        {
+          icon: '👀',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        })
+    }
+    search(keyword);
+  }
+
+  const handleKeyDown = (e: any) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent default form submission if in a form
+      handleSearch(); // Call the search function with the current query
+    }
+  };
+
+  useEffect(() => {
+    console.log("result", results)
+  }, [results])
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-4">
+        <Input
+          value={keyword}
+          onValueChange={setKeyword}
+          type="text"
+          isClearable
+          placeholder="Search Pages, Users, Groups"
+          labelPlacement="outside"
+          onKeyDown={handleKeyDown}
+          startContent={
+            <FontAwesomeIcon icon={faSearch} />
+          }
+        />
+        <Button onClick={() => handleSearch()} color="primary">
+          Search
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        {loading ? <Spinner />
+          :
+          results.map((item, idx) => (
+            <LinkButton href={`/pages/${item.document_id}`} key={idx}>
+              {item.title}
+            </LinkButton>
+          ))}
+
+      </div>
+    </div>
+
+  )
+}
+
+export default TotalSearch
