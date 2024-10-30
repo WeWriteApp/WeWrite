@@ -1,6 +1,6 @@
 'use client'
 
-import { faSearch } from "@fortawesome/free-solid-svg-icons"
+import { faSearch, faUser, faUserAlt } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { Button, Input, Spinner } from "@nextui-org/react"
 import { useEffect, useState } from "react"
@@ -9,6 +9,7 @@ import { useSearch } from "@/hooks/useSearch"
 import LinkButton from "../button/link"
 import toast from "react-hot-toast"
 import { useUsers } from "@/hooks/useUsers"
+import UserLink from "../button/userLink"
 const TotalSearch = () => {
   const { results, loading, error, search, clear } = useSearch();
   const { users, loading: userLoading, userSearch, clear: userClear } = useUsers()
@@ -63,7 +64,7 @@ const TotalSearch = () => {
           Search
         </Button>
       </div>
-      <div className="flex flex-col border border-white/25 p-2 rounded-xl">
+      <div className={`flex flex-col border border-white/25 p-2 rounded-xl ${results.length === 0 && !loading && users.length === 0 && !userLoading ? "hidden" : ""} `}>
         <p>Search Result</p>
         <div className={`flex flex-col rounded-xl border-l-2 border-white/25 p-2 mt-4 gap-4 ${results.length === 0 && !loading ? "hidden" : ""}`}>
           <p>Pages</p>
@@ -86,12 +87,8 @@ const TotalSearch = () => {
               userLoading ? <Spinner /> :
                 users.length === 0 ? <p>No user found</p> :
                   users.map((item, idx) => (
-                    <LinkButton href={`/users/profile/${item.uid}`} key={idx}>
-                      {item.username}
-                    </LinkButton>
-                  ))
+                    <UserLink user={item} key={idx} />))
             }
-
           </div>
         </div>
       </div>

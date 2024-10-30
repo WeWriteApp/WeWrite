@@ -8,6 +8,7 @@ import { AuthContext } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import ReactGA from 'react-ga4';
 import { Input } from "@nextui-org/react";
+import toast from "react-hot-toast";
 
 const NewPageForm = () => {
   const router = useRouter();
@@ -22,6 +23,18 @@ const NewPageForm = () => {
   let updateTime = new Date().toISOString();
 
   const handleSave = async () => {
+    if (Page.title || !editorState) {
+      toast('Title and Content is required, Please input valid data.',
+        {
+          icon: '❌',
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+        })
+      return
+    }
     setIsSaving(true);
     let data = {
       ...Page,
@@ -92,7 +105,7 @@ const NewPageForm = () => {
             <div className="flex items-center gap-2 mt-4">
               <button
                 onClick={handleSave}
-                disabled={!Page.title || !editorState || isSaving}
+                disabled={isSaving}
                 className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
                 type="submit"
               >

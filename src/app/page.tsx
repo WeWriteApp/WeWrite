@@ -35,8 +35,6 @@ export default function Home() {
     <Layout>
       <div className="">
         <TotalSearch />
-
-
         <div className="flex flex-col border rounded-2xl border-white/25 p-2 mt-4">
           <div className="flex justify-between items-center">
             <p className="font-bold">My pages</p>
