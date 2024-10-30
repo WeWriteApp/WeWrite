@@ -30,7 +30,7 @@ const Popup: React.FC<PopupDialogProps> = ({ isOpen, onClose, children }) => {
   }, [isOpen, onClose]);
 
   return (
-    <div className={`absolute top-14 right-10 p-2 border-white/15 border bg-white/10 rounded-xl backdrop-blur-sm ${!isOpen ? "hidden" : ""} `} ref={modalRef} >
+    <div className={`absolute top-14 right-10 p-2 border-white/15 border bg-white/30 rounded-xl backdrop-blur-xl ${!isOpen ? "hidden" : ""} `} ref={modalRef} >
       {children}
     </div>
   )

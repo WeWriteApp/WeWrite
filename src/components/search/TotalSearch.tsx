@@ -8,8 +8,10 @@ import axios from 'axios'
 import { useSearch } from "@/hooks/useSearch"
 import LinkButton from "../button/link"
 import toast from "react-hot-toast"
+import { useUsers } from "@/hooks/useUsers"
 const TotalSearch = () => {
-  const { results, loading, error, search } = useSearch();
+  const { results, loading, error, search, clear } = useSearch();
+  const { users, loading: userLoading, userSearch, clear: userClear } = useUsers()
   const [keyword, setKeyword] = useState("")
 
   const handleSearch = async () => {
@@ -25,6 +27,7 @@ const TotalSearch = () => {
         })
     }
     search(keyword);
+    userSearch(keyword);
   }
 
   const handleKeyDown = (e: any) => {
@@ -35,8 +38,11 @@ const TotalSearch = () => {
   };
 
   useEffect(() => {
-    console.log("result", results)
-  }, [results])
+    if (!keyword || keyword.length === 0) {
+      clear()
+      userClear()
+    }
+  }, [keyword])
 
   return (
     <div className="flex flex-col gap-4">
@@ -57,15 +63,37 @@ const TotalSearch = () => {
           Search
         </Button>
       </div>
-      <div className="flex flex-wrap gap-4">
-        {loading ? <Spinner />
-          :
-          results.map((item, idx) => (
-            <LinkButton href={`/pages/${item.document_id}`} key={idx}>
-              {item.title}
-            </LinkButton>
-          ))}
+      <div className="flex flex-col border border-white/25 p-2 rounded-xl">
+        <p>Search Result</p>
+        <div className={`flex flex-col rounded-xl border-l-2 border-white/25 p-2 mt-4 gap-4 ${results.length === 0 && !loading ? "hidden" : ""}`}>
+          <p>Pages</p>
+          <div className="flex flex-wrap gap-4 ">
+            {loading ? <Spinner />
+              :
+              results.map((item, idx) => (
+                <LinkButton href={`/pages/${item.document_id}`} key={idx}>
+                  {item.title}
+                </LinkButton>
+              ))}
 
+          </div>
+        </div>
+
+        <div className={`flex flex-col border-l-2 rounded-xl border-white/25 p-2 mt-4 gap-4  ${users.length === 0 && !userLoading ? "hidden" : ""}`}>
+          <p>Users</p>
+          <div className="flex flex-wrap gap-4 ">
+            {
+              userLoading ? <Spinner /> :
+                users.length === 0 ? <p>No user found</p> :
+                  users.map((item, idx) => (
+                    <LinkButton href={`/users/profile/${item.uid}`} key={idx}>
+                      {item.username}
+                    </LinkButton>
+                  ))
+            }
+
+          </div>
+        </div>
       </div>
     </div>
 

@@ -34,7 +34,7 @@ const Navbar = () => {
   const [openSetting, setOpenSetting] = useState(false)
 
   return (
-    <NUINavbar shouldHideOnScroll classNames={{ wrapper: "max-w-screen-2xl" }}>
+    <NUINavbar classNames={{ wrapper: "max-w-screen-2xl" }}>
       <NavbarContent justify="start">
         <NavbarMenuToggle className="sm:hidden" />
         <NavbarBrand>
@@ -78,7 +78,7 @@ const Navbar = () => {
             Today's note
           </Link>
         </NavbarItem>
-        <NavbarItem className="flex items-center gap-[10px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-full p-1 font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
+        <NavbarItem className="flex items-center gap-[10px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-full font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
           <FontAwesomeIcon icon={faUserCircle} size="2x"/>
           
         </NavbarItem>

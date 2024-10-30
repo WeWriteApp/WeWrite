@@ -36,5 +36,9 @@ export const useSearch = () => {
     }
   };
 
-  return { results, loading, error, search };
+  const clear = () =>{
+    setResults([])
+  }
+
+  return { results, loading, error, search, clear };
 };
