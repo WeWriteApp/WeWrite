@@ -1,7 +1,7 @@
 'use client'
 import { Navbar as NUINavbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button, NavbarMenu, NavbarMenuItem, NavbarMenuToggle } from "@nextui-org/react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGear } from '@fortawesome/free-solid-svg-icons';
+import { faGear, faUser, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 import Logo from "../Logo";
 import Image from "next/image";
 import { useContext, useState } from "react";
@@ -78,15 +78,13 @@ const Navbar = () => {
             Today's note
           </Link>
         </NavbarItem>
-        <NavbarItem className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
-          <FontAwesomeIcon icon={faGear} />
-          <p color="foreground"  >
-            Settings
-          </p>
+        <NavbarItem className="flex items-center gap-[10px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-full p-1 font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
+          <FontAwesomeIcon icon={faUserCircle} size="2x"/>
+          
         </NavbarItem>
       </NavbarContent>
       <NavbarItem className="sm:hidden flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer" onClick={() => setOpenSetting(true)}>
-        <FontAwesomeIcon icon={faGear} />
+        <FontAwesomeIcon icon={faGear} className="hover:scale-99" />
       </NavbarItem>
       <NavbarMenu>
         {menuItems.map((item, index) => (
