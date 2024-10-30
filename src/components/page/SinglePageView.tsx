@@ -20,7 +20,7 @@ interface IPageData {
   lastModified: string;
 }
 
-export default function SinglePageView({ params }: any) {
+export default function SinglePageView() {
 
   const param = useParams()
   const [page, setPage] = useState<IPageData | null>(null);

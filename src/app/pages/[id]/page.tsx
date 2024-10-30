@@ -20,9 +20,9 @@ export async function generateMetadata({params}: any) {
   };
 }
 
-const Page = async ({params}: any) => {
+const Page = async () => {
   return (
-    <SinglePageView params={params} />
+    <SinglePageView />
   );
 };
 
