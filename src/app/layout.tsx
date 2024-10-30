@@ -9,6 +9,8 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { Toaster } from "react-hot-toast"
 import { DataProvider } from "@/providers/DataProvider";
 import { GroupsProvider } from "@/providers/GroupsProvider";
+import NextTopLoader from "nextjs-toploader";
+
 
 const geistSans = localFont({
   src: "./fonts/Medium-Extended.ttf",
@@ -38,6 +40,7 @@ export default function RootLayout({
                 <DataProvider>
                   <GroupsProvider>
                     <NextUIProvider>
+                      <NextTopLoader />
                       {children}
                     </NextUIProvider>
                   </GroupsProvider>
