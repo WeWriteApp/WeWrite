@@ -26,6 +26,7 @@ const PledgeBar = () => {
   const [interval, setInterval] = useState(1);
   const [inputVisible, setInputVisible] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
 
   const timerRef = useRef(null);
   const textRef = useRef(null);
@@ -51,8 +52,19 @@ const PledgeBar = () => {
   };
 
   useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setIsVisible(currentScrollY <= lastScrollY);
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll);
     document.addEventListener('mousedown', handleClickOutside);
+
     return () => {
+      window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
       clearTimeout(timerRef.current);
     };
@@ -61,147 +73,155 @@ const PledgeBar = () => {
   const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
 
   return (
-    <div className="w-11/12 sm:max-w-[300px]">
-      {customVisible && (
-        <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
-          <div className="flex items-center justify-center">
-            <Icon
-              icon="mdi:close"
-              width="24"
-              height="24"
-              className="absolute left-3 rounded-full border-2 cursor-pointer active:text-blue-500"
-              onClick={() => {
-                setCustomVisible(false);
-                setCustomCheck(true);
-              }}
-            />
-            <h3 className="text-center text-[17px]">Custom pledge interval</h3>
-          </div>
-          <div className="flex flex-row border-2 border-blue-500 p-4 rounded-xl justify-between">
-            <div className="flex flex-row gap-2">
-              <span className="font-medium text-gray-46">$</span>
-              <input
-                type="number"
-                inputmode="decimal"
-                autoFocus
-                className="w-[100px] bg-transparent outline-none"
-                value={interval}
-                onChange={(e) => setInterval(Number(e.target.value))}
-                autoComplete="off"
+    <div 
+      className={`
+        fixed bottom-0 left-0 right-0 flex justify-center items-center p-4 z-50
+        transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.8,0.64,1)]
+        ${isVisible ? 'translate-y-0' : 'translate-y-full'}
+      `}
+    >
+      <div className="w-11/12 sm:max-w-[300px]">
+        {customVisible && (
+          <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
+            <div className="flex items-center justify-center">
+              <Icon
+                icon="mdi:close"
+                width="24"
+                height="24"
+                className="absolute left-3 rounded-full border-2 cursor-pointer active:text-blue-500"
+                onClick={() => {
+                  setCustomVisible(false);
+                  setCustomCheck(true);
+                }}
               />
+              <h3 className="text-center text-[17px]">Custom pledge interval</h3>
             </div>
-            <span className="font-medium text-gray-46">per month</span>
+            <div className="flex flex-row border-2 border-blue-500 p-4 rounded-xl justify-between">
+              <div className="flex flex-row gap-2">
+                <span className="font-medium text-gray-46">$</span>
+                <input
+                  type="number"
+                  inputmode="decimal"
+                  autoFocus
+                  className="w-[100px] bg-transparent outline-none"
+                  value={interval}
+                  onChange={(e) => setInterval(Number(e.target.value))}
+                  autoComplete="off"
+                />
+              </div>
+              <span className="font-medium text-gray-46">per month</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {menuVisible && (
-        <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
-          <h3 className="p-3 text-center">+/- Increment Amount</h3>
-          {intervalOptions.map(({ value, label }) => (
+        {menuVisible && (
+          <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
+            <h3 className="p-3 text-center">+/- Increment Amount</h3>
+            {intervalOptions.map(({ value, label }) => (
+              <div
+                key={value}
+                className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
+                onClick={() => handleAdjustInterval(value)}
+              >
+                <div className="flex flex-row gap-2 text-[17px]">
+                  <span className="font-medium text-gray-46">$</span>
+                  <span>{label}</span>
+                </div>
+                {interval === value && <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />}
+              </div>
+            ))}
             <div
-              key={value}
               className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
-              onClick={() => handleAdjustInterval(value)}
+              onClick={() => {
+                setCustomVisible(true);
+                setMenuVisible(false);
+              }}
             >
               <div className="flex flex-row gap-2 text-[17px]">
                 <span className="font-medium text-gray-46">$</span>
-                <span>{label}</span>
+                <span>{`${interval}`}</span>
+                <span className="font-medium text-gray-46">custom</span>
               </div>
-              {interval === value && <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />}
+              {customCheck ? (
+                <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />
+              ) : (
+                <Icon icon="mdi:keyboard-arrow-right" width="24" height="24" />
+              )}
             </div>
-          ))}
+          </div>
+        )}
+
+        <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden">
           <div
-            className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
-            onClick={() => {
-              setCustomVisible(true);
-              setMenuVisible(false);
-            }}
+            className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
+            style={{ width: progressBarWidth(usedAmount, budget) }}
           >
-            <div className="flex flex-row gap-2 text-[17px]">
-              <span className="font-medium text-gray-46">$</span>
-              <span>{`${interval}`}</span>
-              <span className="font-medium text-gray-46">custom</span>
+            <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
+              {Array.from({ length: data.used + 30 }, (_, index) => (
+                <div key={index} className="w-[6px] h-[calc(100%+50px)] bg-reactangle rotate-45"></div>
+              ))}
             </div>
-            {customCheck ? (
-              <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />
-            ) : (
-              <Icon icon="mdi:keyboard-arrow-right" width="24" height="24" />
-            )}
           </div>
-        </div>
-      )}
 
-      <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden">
-        <div
-          className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
-          style={{ width: progressBarWidth(usedAmount, budget) }}
-        >
-          <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
-            {Array.from({ length: data.used + 30 }, (_, index) => (
-              <div key={index} className="w-[6px] h-[calc(100%+50px)] bg-reactangle rotate-45"></div>
-            ))}
-          </div>
-        </div>
-
-        <div
-          style={{
-            width: progressBarWidth(donateAmount, budget),
-            left: progressBarWidth(usedAmount, budget),
-          }}
-          className={`absolute h-full ${isConfirmed ? 'bg-active-bar active-bar' : 'bg-gray-bar'}`}
-        ></div>
-
-        <div className="flex gap-2 justify-between p-2">
           <div
-            className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
-            onClick={() => {
-              if (donateAmount - interval >= 0) setDonateAmount(donateAmount - interval);
+            style={{
+              width: progressBarWidth(donateAmount, budget),
+              left: progressBarWidth(usedAmount, budget),
             }}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchEnd={handleMouseUp}
-          >
-            <Icon icon="mdi:minus" width="24" height="24" />
-          </div>
+            className={`absolute h-full ${isConfirmed ? 'bg-active-bar active-bar' : 'bg-gray-bar'}`}
+          ></div>
 
-          <div
-            className="flex justify-center items-center text-gray gap-1 text-[18px] z-10"
-            onDoubleClick={() => setInputVisible(true)}
-          >
-            $
-            {inputVisible ? (
-              <input
-                type="number"
-                ref={textRef}
-                className="w-[80px] h-full focus-text text-center text-[24px]"
-                value={donateAmount}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  if (value <= budget - usedAmount) setDonateAmount(value);
-                }}
-                autoComplete="off"
-              />
-            ) : (
-              <span className="text-[24px] font-normal text-white">
-                {donateAmount.toFixed(2)}
-              </span>
-            )}
-            /mo
-          </div>
+          <div className="flex gap-2 justify-between p-2">
+            <div
+              className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
+              onClick={() => {
+                if (donateAmount - interval >= 0) setDonateAmount(donateAmount - interval);
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchEnd={handleMouseUp}
+            >
+              <Icon icon="mdi:minus" width="24" height="24" />
+            </div>
 
-          <div
-            className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
-            onClick={() => {
-              if (donateAmount + interval <= budget - usedAmount) setDonateAmount(donateAmount + interval);
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchEnd={handleMouseUp}
-          >
-            <Icon icon="mdi:plus" width="24" height="24" />
+            <div
+              className="flex justify-center items-center text-gray gap-1 text-[18px] z-10"
+              onDoubleClick={() => setInputVisible(true)}
+            >
+              $
+              {inputVisible ? (
+                <input
+                  type="number"
+                  ref={textRef}
+                  className="w-[80px] h-full focus-text text-center text-[24px]"
+                  value={donateAmount}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (value <= budget - usedAmount) setDonateAmount(value);
+                  }}
+                  autoComplete="off"
+                />
+              ) : (
+                <span className="text-[24px] font-normal text-white">
+                  {donateAmount.toFixed(2)}
+                </span>
+              )}
+              /mo
+            </div>
+
+            <div
+              className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
+              onClick={() => {
+                if (donateAmount + interval <= budget - usedAmount) setDonateAmount(donateAmount + interval);
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchEnd={handleMouseUp}
+            >
+              <Icon icon="mdi:plus" width="24" height="24" />
+            </div>
           </div>
         </div>
       </div>
