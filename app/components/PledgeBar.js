@@ -5,8 +5,8 @@ import { useParams } from "next/navigation";
 
 const data = {
   budget: 100,
-  used: 0,
-  donate: 10,
+  used: 6,
+  donate: 0,
 };
 
 const intervalOptions = [
