@@ -4,9 +4,9 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
 
 const data = {
-  budget: 300,
-  used: 50,
-  donate: 250,
+  budget: 100,
+  used: 0,
+  donate: 10,
 };
 
 const intervalOptions = [
