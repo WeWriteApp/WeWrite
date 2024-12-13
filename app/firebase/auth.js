@@ -2,7 +2,9 @@
 export class MockAuth {
   constructor(app) {
     this.app = app;
-    this.currentUser = null;
+    // Try to restore auth state from localStorage
+    const savedUser = typeof window !== 'undefined' ? localStorage.getItem('mockAuthUser') : null;
+    this.currentUser = savedUser ? JSON.parse(savedUser) : null;
     this._authStateObservers = new Set();
   }
 
@@ -25,6 +27,10 @@ export class MockAuth {
           lastSignInTime: new Date().toISOString()
         }
       };
+      // Persist auth state in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mockAuthUser', JSON.stringify(this.currentUser));
+      }
       this._notifyAuthStateObservers();
       return Promise.resolve({ user: this.currentUser });
     }
@@ -37,6 +43,9 @@ export class MockAuth {
 
   signOut() {
     this.currentUser = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mockAuthUser');
+    }
     this._notifyAuthStateObservers();
     return Promise.resolve();
   }
