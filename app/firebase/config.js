@@ -13,25 +13,23 @@ const mockConfig = {
   appId: 'mock-app-id',
 };
 
-// Initialize mock Firebase with required methods
-const app = {
-  name: '[DEFAULT]',
-  options: mockConfig,
-  automaticDataCollectionEnabled: true,
-  getProvider: (name) => {
-    if (name === 'auth') {
-      return {
-        initialize: () => {},
-        isInitialized: () => true,
-        getImmediate: () => new MockAuth(app)
-      };
-    }
+// Initialize Firebase with mock configuration
+const app = initializeApp(mockConfig);
+
+// Override app's getProvider method for mocking
+app.getProvider = (name) => {
+  if (name === 'auth') {
     return {
       initialize: () => {},
       isInitialized: () => true,
-      getImmediate: () => ({})
+      getImmediate: () => new MockAuth(app)
     };
   }
+  return {
+    initialize: () => {},
+    isInitialized: () => true,
+    getImmediate: () => ({})
+  };
 };
 
 export { app };
