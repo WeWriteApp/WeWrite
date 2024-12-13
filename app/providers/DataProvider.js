@@ -17,8 +17,10 @@ export const DataProvider = ({ children }) => {
     hasMorePages
   } = usePages(user ? user.uid : null); // Use `user.uid` to fetch pages for the logged-in user
 
-  // Optionally: Handle filtered pages if needed
-  const filtered = [];
+  // Filter pages that are either public or owned by the user
+  const filtered = pages.filter(page =>
+    page.isPublic || (user && page.userId === user.uid)
+  );
 
   return (
     <DataContext.Provider

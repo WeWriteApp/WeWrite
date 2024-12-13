@@ -23,7 +23,7 @@ class BracketNode extends DecoratorNode {
   }
 
   decorate() {
-    return <BracketComponent />;
+    return <BracketComponent showDropdown={true} />;
   }
 
   // allow export of the node to JSON with exportJSON
@@ -33,7 +33,7 @@ class BracketNode extends DecoratorNode {
       version: 1,
     };
   }
-  
+
 }
 
 function BracketTriggerPlugin() {
