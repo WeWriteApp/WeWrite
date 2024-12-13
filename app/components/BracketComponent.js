@@ -23,8 +23,10 @@ function BracketComponent({ showDropdown = false }) {
   }
 
   return (
-    <div ref={containerRef} className="relative inline-block">
-      <LinkDropdownPlugin />
+    <div ref={containerRef} className="relative inline-block" style={{ display: showDropdown ? 'inline-block' : 'none' }}>
+      <div className="absolute top-full left-0 mt-1">
+        <LinkDropdownPlugin />
+      </div>
     </div>
   );
 }
