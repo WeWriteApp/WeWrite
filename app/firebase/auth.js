@@ -11,19 +11,24 @@ export class MockAuth {
   }
 
   signInWithEmailAndPassword(email, password) {
-    this.currentUser = {
-      uid: 'mock-uid',
-      email,
-      emailVerified: true,
-      displayName: 'Mock User',
-      photoURL: null,
-      metadata: {
-        creationTime: new Date().toISOString(),
-        lastSignInTime: new Date().toISOString()
-      }
-    };
-    this._notifyAuthStateObservers();
-    return Promise.resolve({ user: this.currentUser });
+    // Accept only test credentials for mock auth
+    if (email === 'test@example.com' && password === 'testpassword') {
+      this.currentUser = {
+        uid: 'mock-user-1',
+        email,
+        emailVerified: true,
+        displayName: 'Mock User',
+        photoURL: null,
+        groups: ['default-group'],
+        metadata: {
+          creationTime: new Date().toISOString(),
+          lastSignInTime: new Date().toISOString()
+        }
+      };
+      this._notifyAuthStateObservers();
+      return Promise.resolve({ user: this.currentUser });
+    }
+    return Promise.reject(new Error('Invalid credentials'));
   }
 
   createUserWithEmailAndPassword(email, password) {
