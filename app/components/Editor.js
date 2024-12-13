@@ -12,6 +12,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
 import { BracketNode, BracketTriggerPlugin } from "./BracketTriggerPlugin";
+import { LinkDropdownPlugin } from "./LinkDropdownPlugin";
 
 const theme = {
 };
@@ -25,7 +26,7 @@ function Editor({ initialEditorState, setEditorState }) {
     namespace: "MyEditor",
     theme,
     onError,
-    nodes: [BracketNode,CustomLinkNode], // Registering the custom node and LinkNode
+    nodes: [BracketNode, CustomLinkNode], // Registering the custom node and LinkNode
   };
 
   function onChange(editorState) {
@@ -44,13 +45,14 @@ function Editor({ initialEditorState, setEditorState }) {
         contentEditable={<ContentEditable />}
         placeholder={<></>}
         ErrorBoundary={LexicalErrorBoundary}
-        
+
       />
       <HistoryPlugin />
       <AutoFocusPlugin />
       <CustomLinkPlugin />
       <MyOnChangePlugin onChange={onChange} initialEditorState={initialEditorState} />
       <BracketTriggerPlugin />
+      <LinkDropdownPlugin />
     </LexicalComposer>
 
     </>
