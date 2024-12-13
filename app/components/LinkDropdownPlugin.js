@@ -10,6 +10,9 @@ export function LinkDropdownPlugin() {
   const { pages } = useContext(DataContext);
   const { user } = useContext(AuthContext);
 
+  console.log('LinkDropdownPlugin: Rendering with pages:', pages);
+  console.log('LinkDropdownPlugin: Current user:', user);
+
   const filteredPages = pages.filter(page => {
     if (!user || !user.groups) return false;
     return user.groups.includes(page.groupId);

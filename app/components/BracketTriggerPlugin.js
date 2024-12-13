@@ -54,7 +54,9 @@ function BracketTriggerPlugin() {
   useEffect(() => {
     const removeTransform = editor.registerNodeTransform(TextNode, (textNode) => {
       const text = textNode.getTextContent();
+      console.log('BracketTriggerPlugin: Checking text content:', text);
       if (text.endsWith("[[")) {
+        console.log('BracketTriggerPlugin: Creating BracketNode');
         const bracketNode = $createBracketNode();
         const parent = textNode.getParent();
         textNode.insertAfter(bracketNode);
@@ -69,6 +71,7 @@ function BracketTriggerPlugin() {
 
         // Force editor update to show dropdown
         editor.update(() => {
+          console.log('BracketTriggerPlugin: Editor updated with BracketNode');
           bracketNode.getLatest();
         });
       }
