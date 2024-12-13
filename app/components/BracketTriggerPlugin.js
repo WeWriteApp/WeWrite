@@ -48,13 +48,21 @@ function BracketTriggerPlugin() {
       const text = textNode.getTextContent();
       if (text.endsWith("[[")) {
         const bracketNode = $createBracketNode();
+        const parent = textNode.getParent();
         textNode.insertAfter(bracketNode);
+
+        // Remove the [[ characters from the text node
         const textContent = text.slice(0, -2);
         if (textContent) {
           textNode.setTextContent(textContent);
         } else {
           textNode.remove();
         }
+
+        // Force editor update to show dropdown
+        editor.update(() => {
+          bracketNode.getLatest();
+        });
       }
     });
 
