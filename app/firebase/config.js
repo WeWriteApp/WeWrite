@@ -5,10 +5,10 @@ import { MockAuth } from './auth';
 
 const mockConfig = {
   apiKey: process.env.API_KEY || 'mock-api-key',
-  authDomain: 'mock-domain',
-  databaseURL: 'mock-db-url',
-  projectId: process.env.PROJECT_ID || 'mock-project-id',
-  storageBucket: 'mock-bucket',
+  authDomain: 'mock-project.firebaseapp.com',
+  databaseURL: 'https://mock-project.firebaseio.com',
+  projectId: process.env.PROJECT_ID || 'mock-project',
+  storageBucket: 'mock-project.appspot.com',
   messagingSenderId: 'mock-sender-id',
   appId: 'mock-app-id',
 };
