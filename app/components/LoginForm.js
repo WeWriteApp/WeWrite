@@ -19,11 +19,13 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await loginUser(user.email, user.password);
-    if (response.code) {
-      setError(response.message);
-    } else {
-      router.push("/pages");
+    try {
+      const response = await loginUser(user.email, user.password);
+      if (response.user) {
+        router.push("/pages");
+      }
+    } catch (error) {
+      setError(error.message);
     }
   };
 
