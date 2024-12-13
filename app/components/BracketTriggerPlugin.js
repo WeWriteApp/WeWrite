@@ -6,12 +6,19 @@ import { $createTextNode } from "lexical";
 import BracketComponent from "./BracketComponent";
 
 class BracketNode extends DecoratorNode {
+  __showDropdown;
+
+  constructor(showDropdown = true, key) {
+    super(key);
+    this.__showDropdown = showDropdown;
+  }
+
   static getType() {
     return "bracket";
   }
 
   static clone(node) {
-    return new BracketNode(node.__key);
+    return new BracketNode(node.__showDropdown, node.__key);
   }
 
   createDOM() {
@@ -25,7 +32,7 @@ class BracketNode extends DecoratorNode {
   }
 
   decorate() {
-    return <BracketComponent showDropdown={true} onSelect={(pageId, pageName) => {
+    return <BracketComponent showDropdown={this.__showDropdown} onSelect={(pageId, pageName) => {
       const linkNode = $createLinkNode(`/pages/${pageId}`);
       linkNode.append($createTextNode(pageName));
       return linkNode;
@@ -35,6 +42,7 @@ class BracketNode extends DecoratorNode {
   exportJSON() {
     return {
       type: 'bracket',
+      showDropdown: this.__showDropdown,
       version: 1,
     };
   }
@@ -75,7 +83,7 @@ function BracketTriggerPlugin() {
 }
 
 function $createBracketNode() {
-  return new BracketNode();
+  return new BracketNode(true);
 }
 
 export { BracketTriggerPlugin, BracketNode }
