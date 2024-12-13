@@ -22,7 +22,8 @@ export const AuthProvider = ({ children }) => {
           uid: user.uid,
           email: user.email,
           displayName: user.displayName,
-          username: user.displayName
+          username: user.displayName,
+          groups: ['default-group'] // Add default group for testing
         });
       } else {
         setUser(null);

@@ -1,6 +1,6 @@
 // Mock Firebase configuration
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "./firestore";
+import { getFirestore } from "./firestore";
 import { MockAuth } from './auth';
 
 const mockConfig = {
@@ -16,13 +16,16 @@ const mockConfig = {
 // Initialize Firebase with mock configuration
 const app = initializeApp(mockConfig);
 
+// Create mock auth instance
+const auth = new MockAuth(app);
+
 // Override app's getProvider method for mocking
 app.getProvider = (name) => {
   if (name === 'auth') {
     return {
       initialize: () => {},
       isInitialized: () => true,
-      getImmediate: () => new MockAuth(app)
+      getImmediate: () => auth
     };
   }
   return {
@@ -32,6 +35,6 @@ app.getProvider = (name) => {
   };
 };
 
-export { app };
+export { app, auth };
 export const db = getFirestore(app);
 export default app;

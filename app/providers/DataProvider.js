@@ -4,10 +4,10 @@ import { AuthContext } from "./AuthProvider";
 
 // Mock data for testing without Firebase
 const mockPages = [
-  { id: '1', name: 'Getting Started', isPublic: true, userId: 'mock-user-1' },
-  { id: '2', name: 'User Guide', isPublic: true, userId: 'mock-user-2' },
-  { id: '3', name: 'Private Notes', isPublic: false, userId: 'mock-user-1' },
-  { id: '4', name: 'Project Ideas', isPublic: false, userId: 'mock-user-1' },
+  { id: '1', name: 'Getting Started', isPublic: true, userId: 'mock-user-1', groupId: 'default-group' },
+  { id: '2', name: 'User Guide', isPublic: true, userId: 'mock-user-2', groupId: 'default-group' },
+  { id: '3', name: 'Private Notes', isPublic: false, userId: 'mock-user-1', groupId: 'default-group' },
+  { id: '4', name: 'Project Ideas', isPublic: false, userId: 'mock-user-1', groupId: 'default-group' },
 ];
 
 export const DataContext = createContext();
