@@ -50,8 +50,14 @@ class BracketNode extends DecoratorNode {
 
 function BracketTriggerPlugin() {
   const [editor] = useLexicalComposerContext();
+  console.log('BracketTriggerPlugin: Plugin initialized');
 
   useEffect(() => {
+    console.log('BracketTriggerPlugin: Setting up node transform');
+    if (!editor) {
+      console.error('BracketTriggerPlugin: Editor not available');
+      return;
+    }
     const removeTransform = editor.registerNodeTransform(TextNode, (textNode) => {
       const text = textNode.getTextContent();
       console.log('BracketTriggerPlugin: Checking text content:', text);
