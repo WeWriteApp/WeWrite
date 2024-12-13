@@ -1,25 +1,30 @@
 "use client";
 import { createContext, useContext } from "react";
 import { AuthContext } from "./AuthProvider";
-import usePages from "../hooks/usePages";
+
+// Mock data for testing without Firebase
+const mockPages = [
+  { id: '1', name: 'Getting Started', isPublic: true, userId: 'mock-user-1' },
+  { id: '2', name: 'User Guide', isPublic: true, userId: 'mock-user-2' },
+  { id: '3', name: 'Private Notes', isPublic: false, userId: 'mock-user-1' },
+  { id: '4', name: 'Project Ideas', isPublic: false, userId: 'mock-user-1' },
+];
 
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const { user } = useContext(AuthContext); // Get the authenticated user
+  const { user } = useContext(AuthContext);
 
-  // Use the usePages hook, passing in the userId if the user is authenticated
-  const {
-    pages,
-    loading,
-    loadMorePages,
-    isMoreLoading,
-    hasMorePages
-  } = usePages(user ? user.uid : null); // Use `user.uid` to fetch pages for the logged-in user
+  // Use mock data instead of Firebase
+  const pages = mockPages;
+  const loading = false;
+  const loadMorePages = () => {};
+  const isMoreLoading = false;
+  const hasMorePages = false;
 
-  // Filter pages that are either public or owned by the user
+  // Filter pages that are either public or owned by the mock user
   const filtered = pages.filter(page =>
-    page.isPublic || (user && page.userId === user.uid)
+    page.isPublic || (user && page.userId === (user.uid || 'mock-user-1'))
   );
 
   return (
