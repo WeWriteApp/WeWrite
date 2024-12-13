@@ -11,7 +11,7 @@ import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
-import { BracketNode, BracketTriggerPlugin } from "./BracketTriggerPlugin";
+import BracketTriggerPlugin, { BracketNode, $createBracketNode } from "./BracketTriggerPlugin";
 import { LinkDropdownPlugin } from "./LinkDropdownPlugin";
 
 const theme = {

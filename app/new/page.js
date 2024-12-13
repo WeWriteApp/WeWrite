@@ -1,6 +1,6 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
-import SlateEditor from "../components/SlateEditor";
+import Editor from "../components/Editor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
@@ -79,7 +79,7 @@ const Form = ({ Page, setPage }) => {
         <label>Public</label>
       </div>
 
-      <SlateEditor setEditorState={setEditorState} />
+      <Editor setEditorState={setEditorState} />
 
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
       <div className="flex items-center gap-2 mt-4">
@@ -100,7 +100,7 @@ const Form = ({ Page, setPage }) => {
       </div>
 
       <pre className="bg-gray-100 p-2 hidden">
-        
+
       </pre>
     </form>
   );

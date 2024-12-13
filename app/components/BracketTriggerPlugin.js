@@ -95,4 +95,4 @@ function $createBracketNode() {
   return new BracketNode(true);
 }
 
-export { BracketTriggerPlugin, BracketNode }
+export { BracketTriggerPlugin as default, BracketNode, $createBracketNode };
