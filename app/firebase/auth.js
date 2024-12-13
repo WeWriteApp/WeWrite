@@ -80,8 +80,8 @@ export const mockAuth = new MockAuth(null);
 // Helper functions to match Firebase Auth API
 export const auth = mockAuth;
 export const getAuth = () => mockAuth;
-export const createUser = (email, password) => mockAuth.createUserWithEmailAndPassword(auth, email, password);
-export const loginUser = (email, password) => mockAuth.signInWithEmailAndPassword(auth, email, password);
+export const createUser = (email, password) => mockAuth.createUserWithEmailAndPassword(email, password);
+export const loginUser = (email, password) => mockAuth.signInWithEmailAndPassword(email, password);
 export const logoutUser = () => mockAuth.signOut();
 export const addUsername = (uid, username) => mockAuth.addUsername(uid, username);
 export const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
