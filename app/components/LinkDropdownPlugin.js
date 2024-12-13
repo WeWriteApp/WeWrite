@@ -3,10 +3,17 @@ import { useContext } from 'react';
 import { DataContext } from '../providers/DataProvider';
 import { ReactSearchAutocomplete } from 'react-search-autocomplete';
 import { INSERT_CUSTOM_LINK_COMMAND } from './CustomLinkPlugin';
+import { AuthContext } from '../providers/AuthProvider';
 
 export function LinkDropdownPlugin() {
   const [editor] = useLexicalComposerContext();
   const { pages } = useContext(DataContext);
+  const { user } = useContext(AuthContext);
+
+  const filteredPages = pages.filter(page => {
+    if (!user || !user.groups) return false;
+    return user.groups.includes(page.groupId);
+  });
 
   const handleSelect = (item) => {
     editor.dispatchCommand(INSERT_CUSTOM_LINK_COMMAND, {
@@ -18,10 +25,15 @@ export function LinkDropdownPlugin() {
   return (
     <div className="absolute z-50 w-64 bg-white shadow-lg rounded-md">
       <ReactSearchAutocomplete
-        items={pages}
+        items={filteredPages}
         onSelect={handleSelect}
         fuseOptions={{ minMatchCharLength: 2 }}
         placeholder="Search for a page..."
+        styling={{
+          zIndex: 50,
+          borderRadius: '0.375rem',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+        }}
       />
     </div>
   );

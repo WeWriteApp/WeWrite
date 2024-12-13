@@ -27,7 +27,8 @@ class MockFirestore {
       path: name,
       doc: (id) => this._createDocRef(name, id),
       where: () => this._createQuery(name),
-      onSnapshot: (callback) => this._createCollectionSnapshot(name, callback)
+      onSnapshot: (callback) => this._createCollectionSnapshot(name, callback),
+      add: async (data) => this._addDoc(name, data)
     };
   }
 
@@ -40,8 +41,31 @@ class MockFirestore {
       set: async (data) => this._setDoc(collectionName, docId, data),
       update: async (data) => this._updateDoc(collectionName, docId, data),
       delete: async () => this._deleteDoc(collectionName, docId),
-      onSnapshot: (callback) => this._createDocSnapshot(collectionName, docId, callback)
+      onSnapshot: (callback) => this._createDocSnapshot(collectionName, docId, callback),
+      collection: (subCollectionName) => this._createSubcollection(collectionName, docId, subCollectionName)
     };
+  }
+
+  _createSubcollection(parentCollection, parentId, subCollectionName) {
+    const path = `${parentCollection}/${parentId}/${subCollectionName}`;
+    if (!this._collections[path]) {
+      this._collections[path] = {};
+    }
+    return {
+      type: 'collection-ref',
+      id: subCollectionName,
+      path: path,
+      doc: (id) => this._createDocRef(path, id),
+      where: () => this._createQuery(path),
+      onSnapshot: (callback) => this._createCollectionSnapshot(path, callback),
+      add: async (data) => this._addDoc(path, data)
+    };
+  }
+
+  _addDoc(collectionPath, data) {
+    const docId = `mock-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this._setDoc(collectionPath, docId, data);
+    return this._createDocRef(collectionPath, docId);
   }
 
   _createQuery(collectionName) {
@@ -97,17 +121,12 @@ export const getFirestore = (app) => new MockFirestore(app);
 export const collection = (db, name) => db.collection(name);
 export const doc = (collectionRef, id) => collectionRef.doc(id);
 export const getDoc = async (docRef) => docRef.get();
+export const getDocs = async (collectionRef) => collectionRef.get();
 export const setDoc = async (docRef, data) => docRef.set(data);
 export const updateDoc = async (docRef, data) => docRef.update(data);
 export const deleteDoc = async (docRef) => docRef.delete();
-export const onSnapshot = (ref, callback) => {
-  if (ref.type === 'collection-ref') {
-    return ref.onSnapshot(callback);
-  } else if (ref.type === 'document-ref') {
-    return ref.onSnapshot(callback);
-  }
-  return () => {};
-};
+export const addDoc = async (collectionRef, data) => collectionRef.add(data);
+export const onSnapshot = (ref, callback) => ref.onSnapshot(callback);
 export const query = (collectionRef) => collectionRef;
 export const where = () => ({
   type: 'query-mock'

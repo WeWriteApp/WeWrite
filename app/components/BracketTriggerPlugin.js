@@ -1,6 +1,8 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useEffect,useContext,useRef,useState } from "react";
-import { LexicalNode, TextNode, DecoratorNode } from "lexical";
+import { useEffect, useContext } from "react";
+import { TextNode, DecoratorNode } from "lexical";
+import { $createLinkNode } from "@lexical/link";
+import { $createTextNode } from "lexical";
 import BracketComponent from "./BracketComponent";
 
 class BracketNode extends DecoratorNode {
@@ -23,17 +25,19 @@ class BracketNode extends DecoratorNode {
   }
 
   decorate() {
-    return <BracketComponent showDropdown={true} />;
+    return <BracketComponent showDropdown={true} onSelect={(pageId, pageName) => {
+      const linkNode = $createLinkNode(`/pages/${pageId}`);
+      linkNode.append($createTextNode(pageName));
+      return linkNode;
+    }} />;
   }
 
-  // allow export of the node to JSON with exportJSON
   exportJSON() {
     return {
       type: 'bracket',
       version: 1,
     };
   }
-
 }
 
 function BracketTriggerPlugin() {
@@ -45,7 +49,12 @@ function BracketTriggerPlugin() {
       if (text.endsWith("[[")) {
         const bracketNode = $createBracketNode();
         textNode.insertAfter(bracketNode);
-        textNode.remove();
+        const textContent = text.slice(0, -2);
+        if (textContent) {
+          textNode.setTextContent(textContent);
+        } else {
+          textNode.remove();
+        }
       }
     });
 
@@ -61,5 +70,4 @@ function $createBracketNode() {
   return new BracketNode();
 }
 
-
-export { BracketTriggerPlugin, BracketNode}
+export { BracketTriggerPlugin, BracketNode }

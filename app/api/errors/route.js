@@ -1,6 +1,6 @@
 // app/api/logError/route.js
 import { NextResponse } from 'next/server';
-import { Logging } from '@google-cloud/logging';
+import { Logging } from '../../../mocks/logging';
 
 // Initialize Google Cloud Logging
 const logging = new Logging({
@@ -37,7 +37,7 @@ export async function POST(request) {
 
     // Log the error to Google Cloud
     await logToGCP(error);
-    
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error('Error logging to GCP:', err);
