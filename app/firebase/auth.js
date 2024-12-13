@@ -54,6 +54,14 @@ export class MockAuth {
     return Promise.resolve();
   }
 
+  async addUsername(uid, username) {
+    if (this.currentUser && this.currentUser.uid === uid) {
+      this.currentUser.username = username;
+      this._notifyAuthStateObservers();
+    }
+    return Promise.resolve();
+  }
+
   _notifyAuthStateObservers() {
     this._authStateObservers.forEach(callback => {
       callback(this.currentUser);
@@ -67,6 +75,11 @@ export const mockAuth = new MockAuth(null);
 // Helper functions to match Firebase Auth API
 export const auth = mockAuth;
 export const getAuth = () => mockAuth;
+export const createUser = (email, password) => mockAuth.createUserWithEmailAndPassword(auth, email, password);
+export const loginUser = (email, password) => mockAuth.signInWithEmailAndPassword(auth, email, password);
+export const logoutUser = () => mockAuth.signOut();
+export const addUsername = (uid, username) => mockAuth.addUsername(uid, username);
+export const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
 export const createUserWithEmailAndPassword = (auth, email, password) => auth.createUserWithEmailAndPassword(email, password);
 export const signInWithEmailAndPassword = (auth, email, password) => auth.signInWithEmailAndPassword(email, password);
 export const signOut = (auth) => auth.signOut();
