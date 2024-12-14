@@ -1,9 +1,4 @@
 // Mock Firestore implementation
-export const mockPages = Object.entries(mockCollections.pages).map(([id, data]) => ({
-  id,
-  ...data
-}));
-
 const mockCollections = {
   users: {
     'mock-user-1': { id: 'mock-user-1', email: 'test@example.com', displayName: 'Test User' },
@@ -18,6 +13,11 @@ const mockCollections = {
     'group-1': { id: 'group-1', name: 'Test Group', members: ['mock-user-1'] }
   }
 };
+
+export const mockPages = Object.entries(mockCollections.pages).map(([id, data]) => ({
+  id,
+  ...data
+}));
 
 class MockFirestore {
   constructor(app) {
