@@ -2,7 +2,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useEffect, useContext } from "react";
 import { TextNode, DecoratorNode } from "lexical";
 import { $createLinkNode } from "@lexical/link";
-import { $createTextNode } from "lexical";
+import { $createTextNode, $createRangeSelection, $setSelection } from "lexical";
 import BracketComponent from "./BracketComponent";
 
 class BracketNode extends DecoratorNode {
@@ -63,23 +63,24 @@ function BracketTriggerPlugin() {
       console.log('BracketTriggerPlugin: Checking text content:', textContent);
 
       if (textContent.includes('[[')) {
-        console.log('BracketTriggerPlugin: Creating BracketNode');
+        console.log('BracketTriggerPlugin: Found trigger, creating BracketNode');
 
         const [beforeBracket, afterBracket] = textContent.split('[[');
         const beforeNode = $createTextNode(beforeBracket);
         const bracketNode = $createBracketNode();
+        bracketNode.__showDropdown = true;
 
         textNode.replace(beforeNode);
         beforeNode.insertAfter(bracketNode);
 
-        console.log('BracketTriggerPlugin: Editor updated with BracketNode');
-
         editor.update(() => {
-          const selection = $getSelection();
-          if (selection) {
-            selection.insertNodes([bracketNode]);
-          }
+          const selection = $createRangeSelection();
+          selection.anchor.set(bracketNode.getKey(), 0, 'element');
+          selection.focus.set(bracketNode.getKey(), 0, 'element');
+          $setSelection(selection);
         });
+
+        console.log('BracketTriggerPlugin: Editor updated with BracketNode, dropdown should be visible');
       }
     });
 
