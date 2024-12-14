@@ -1,3 +1,16 @@
+"use client";
+import { mockPages } from './firestore';
+
+export const getPages = async () => {
+  try {
+    console.log('Database: Fetching mock pages:', mockPages);
+    return mockPages;
+  } catch (error) {
+    console.error('Error fetching pages:', error);
+    return [];
+  }
+}
+
 import {
   getFirestore,
   collection,

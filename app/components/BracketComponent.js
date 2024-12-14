@@ -16,17 +16,20 @@ function BracketComponent({ node }) {
 
   useEffect(() => {
     // Sync with node's showDropdown state
-    setShowDropdown(node.__showDropdown || false);
+    if (node.__showDropdown !== showDropdown) {
+      setShowDropdown(node.__showDropdown || false);
+    }
   }, [node.__showDropdown]);
 
   useEffect(() => {
-    // Fetch pages when dropdown becomes visible
-    if (showDropdown && user) {
-      getPages().then(fetchedPages => {
+    const fetchPages = async () => {
+      if (showDropdown && user) {
+        const fetchedPages = await getPages();
         console.log('BracketComponent: Fetched pages:', fetchedPages);
         setPages(fetchedPages);
-      });
-    }
+      }
+    };
+    fetchPages();
   }, [showDropdown, user]);
 
   useEffect(() => {
