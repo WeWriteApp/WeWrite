@@ -32,11 +32,7 @@ class BracketNode extends DecoratorNode {
   }
 
   decorate() {
-    return <BracketComponent showDropdown={this.__showDropdown} onSelect={(pageId, pageName) => {
-      const linkNode = $createLinkNode(`/pages/${pageId}`);
-      linkNode.append($createTextNode(pageName));
-      return linkNode;
-    }} />;
+    return <BracketComponent node={this} />;
   }
 
   exportJSON() {

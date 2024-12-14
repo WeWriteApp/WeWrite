@@ -15,11 +15,10 @@ function BracketComponent({ node }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Sync with node's showDropdown state
-    if (node.__showDropdown !== showDropdown) {
-      setShowDropdown(node.__showDropdown || false);
+    if (node && typeof node.__showDropdown !== 'undefined') {
+      setShowDropdown(node.__showDropdown);
     }
-  }, [node.__showDropdown]);
+  }, [node]);
 
   useEffect(() => {
     const fetchPages = async () => {
