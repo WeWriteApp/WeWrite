@@ -10,7 +10,6 @@ import User from "./UserBadge";
 import GroupBadge from "./GroupBadge";
 import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
-// import { checkLinkExistence } from "../utils/check-link-existence";
 import { listenToPageById } from "../firebase/database";
 import PledgeBar from "./PledgeBar";
 
@@ -24,66 +23,82 @@ export default function SinglePageView({ params }) {
   const [groupId, setGroupId] = useState(null);
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
+  const [isClient, setIsClient] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Setup listener for real-time updates
-    const unsubscribe = listenToPageById(params.id, (data) => {
-      if (data) {
-        const { pageData, versionData, links } = data;
+    setIsClient(true);
+  }, []);
 
-        // Set state with the fetched data
-        setPage(pageData);
-        setEditorState(versionData.content);
-        setTitle(pageData.title);
+  useEffect(() => {
+    if (!isClient) return;
 
-        // Check and set groupId if it exists
-        if (pageData.groupId) {
-          setGroupId(pageData.groupId);
-        }
+    let unsubscribe;
+    try {
+      unsubscribe = listenToPageById(params.id, (data) => {
+        if (data) {
+          const { pageData, versionData } = data;
+          console.log('Received page data:', pageData);
+          console.log('Received version data:', versionData);
 
-        // Check if the current user is the owner or if the page is public
-        if (user && user.uid === pageData.userId) {
-          setIsPublic(true);
+          // In development, always grant access to test user
+          if (process.env.NODE_ENV === 'development' && user?.uid === 'test-user') {
+            setIsPublic(true);
+          } else {
+            setIsPublic(pageData.isPublic || (user && user.uid === pageData.userId));
+          }
+
+          setPage(pageData);
+          setEditorState(versionData?.content || '');
+          setTitle(pageData.title);
+
+          if (pageData.groupId) {
+            setGroupId(pageData.groupId);
+          }
+
+          setIsLoading(false);
+          setError(null);
         } else {
-          setIsPublic(pageData.isPublic);
+          setPage(null);
+          setIsLoading(false);
+          setError('Page not found');
         }
+      });
+    } catch (err) {
+      console.error('Error in listenToPageById:', err);
+      setError(err.message);
+      setIsLoading(false);
+    }
 
-        // Check if links exist
-        // if (links.length > 0) {
-        //   checkLinkExistence(links).then((results) => {
-        //     // Process link existence results
-        //     for (let url in results) {
-        //       const exists = results[url];
-        //       if (!exists) {
-        //         // Update UI for invalid links (e.g., gray out and disable)
-        //         const linkElement = document.querySelector(`a[href="${url}"]`);
-        //         if (linkElement) {
-        //           linkElement.classList.remove("bg-blue-500");
-        //           linkElement.classList.add("bg-gray-500");
-        //           linkElement.disabled = true;
-        //           linkElement.style.cursor = "not-allowed"; // Disable click
-        //         }
-        //       }
-        //     }
-        //   });
-        // }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [params.id, user, isClient]);
 
-        // Data has loaded
-        setIsLoading(false);
-      } else {
-        // Handle case where the page doesn't exist or was deleted
-        setPage(null);
-        setIsLoading(false);
-      }
-    });
-
-    // Cleanup listener when component unmounts
-    return () => unsubscribe();
-  }, [params.id, user]);
-
-  if (!page) {
-    return <Loader />;
+  if (!isClient || isLoading) {
+    return (
+      <DashboardLayout>
+        <Loader />
+      </DashboardLayout>
+    );
   }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="p-4">
+          <h1 className="text-2xl font-semibold text-text">Error</h1>
+          <p className="text-red-500 mt-2">{error}</p>
+          <Link href="/pages">
+            <button className="bg-background text-button-text px-4 py-2 rounded-full mt-4">
+              Go back
+            </button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   if (isDeleted) {
     return (
       <DashboardLayout>
@@ -103,9 +118,6 @@ export default function SinglePageView({ params }) {
         </div>
       </DashboardLayout>
     );
-  }
-  if (isLoading) {
-    return <Loader />;
   }
   if (!isPublic) {
     return (

@@ -35,6 +35,16 @@ class BracketNode extends DecoratorNode {
     return "[[";
   }
 
+  setShowDropdown(show) {
+    const self = this.getWritable();
+    self.__showDropdown = show;
+    return self;
+  }
+
+  getShowDropdown() {
+    return this.__showDropdown;
+  }
+
   getChildren() {
     return [];
   }
@@ -88,7 +98,7 @@ function BracketTriggerPlugin() {
         const [beforeBracket, afterBracket] = textContent.split('[[');
         const beforeNode = $createTextNode(beforeBracket);
         const bracketNode = $createBracketNode();
-        bracketNode.__showDropdown = true;
+        bracketNode.setShowDropdown(true);
 
         textNode.replace(beforeNode);
         beforeNode.insertAfter(bracketNode);

@@ -9,7 +9,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { LinkNode } from "@lexical/link";  // Add LinkNode import
+import { LinkNode } from "@lexical/link";
 import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
 import BracketTriggerPlugin, { BracketNode, $createBracketNode } from "./BracketTriggerPlugin";
@@ -27,11 +27,10 @@ function Editor({ initialEditorState, setEditorState }) {
     namespace: "MyEditor",
     theme,
     onError,
-    nodes: [BracketNode, CustomLinkNode, LinkNode], // Add LinkNode to registered nodes
+    nodes: [BracketNode, CustomLinkNode, LinkNode],
   };
 
   function onChange(editorState) {
-    // read the editor state and console log the JSON
     editorState.read(async () => {
       console.log(editorState.toJSON());
     });
@@ -46,7 +45,6 @@ function Editor({ initialEditorState, setEditorState }) {
         contentEditable={<ContentEditable />}
         placeholder={<></>}
         ErrorBoundary={LexicalErrorBoundary}
-
       />
       <HistoryPlugin />
       <AutoFocusPlugin />
@@ -55,7 +53,6 @@ function Editor({ initialEditorState, setEditorState }) {
       <BracketTriggerPlugin />
       <LinkDropdownPlugin />
     </LexicalComposer>
-
     </>
   );
 }
@@ -64,23 +61,19 @@ function MyOnChangePlugin({ onChange, initialEditorState }) {
   const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    // Load initial editor state
     if (initialEditorState) {
       editor.update(() => {
         const state = editor.parseEditorState(initialEditorState);
         editor.setEditorState(state);
       });
     }
-
   }, [editor]);
 
   useEffect(() => {
-    // Register change listener
     const unregister = editor.registerUpdateListener(({ editorState }) => {
       onChange(editorState);
     });
 
-    // Cleanup function to unregister listener and command
     return () => {
       unregister();
     };

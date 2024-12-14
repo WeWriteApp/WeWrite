@@ -1,36 +1,101 @@
-"use client";
-import { mockPages } from './firestore';
-
-export const getPages = async () => {
-  try {
-    console.log('Database: Fetching mock pages:', mockPages);
-    return mockPages;
-  } catch (error) {
-    console.error('Error fetching pages:', error);
-    return [];
-  }
-}
-
-import {
-  getFirestore,
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  deleteDoc,
-  onSnapshot,
-  addDoc,
-} from "../firebase/firestore";
-
-import app from "./config";
+import { doc, getDoc, collection, getDocs, setDoc, deleteDoc, addDoc, getFirestore } from 'firebase/firestore';
+import app from './config';
 
 export const db = getFirestore(app);
 
+// Mock store for development
+const mockStore = {
+  pages: new Map(),
+  getNextId: () => `mock-${Date.now()}`
+};
+
+// Initialize test data if in development
+if (process.env.NODE_ENV === 'development') {
+  // Test Page One
+  const pageOneId = '1';
+  const versionOneId = 'v1';
+  const pageOneContent = {
+    type: 'root',
+    children: [
+      {
+        type: 'paragraph',
+        children: [
+          {
+            text: 'This is Test Page One. It will be linked to from another page to test the linking functionality.'
+          }
+        ]
+      }
+    ]
+  };
+
+  mockStore.pages.set(pageOneId, {
+    id: pageOneId,
+    title: 'Test Page One',
+    content: JSON.stringify(pageOneContent),
+    isPublic: true,
+    userId: 'test-user',
+    groupId: 'test-group',
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    currentVersion: versionOneId,
+    versions: new Map([[versionOneId, {
+      id: versionOneId,
+      content: JSON.stringify(pageOneContent),
+      createdAt: new Date().toISOString(),
+      userId: 'test-user'
+    }]])
+  });
+
+  // Test Page Two
+  const pageTwoId = '2';
+  const versionTwoId = 'v1';
+  const pageTwoContent = {
+    type: 'root',
+    children: [
+      {
+        type: 'paragraph',
+        children: [
+          {
+            text: 'This is Test Page Two. Here is a link to '
+          },
+          {
+            type: 'link',
+            url: '/pages/1',
+            children: [{ text: 'Test Page One' }]
+          },
+          {
+            text: '.'
+          }
+        ]
+      }
+    ]
+  };
+
+  mockStore.pages.set(pageTwoId, {
+    id: pageTwoId,
+    title: 'Test Page Two',
+    content: JSON.stringify(pageTwoContent),
+    isPublic: false,
+    userId: 'test-user',
+    groupId: 'test-group',
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString(),
+    currentVersion: versionTwoId,
+    versions: new Map([[versionTwoId, {
+      id: versionTwoId,
+      content: JSON.stringify(pageTwoContent),
+      createdAt: new Date().toISOString(),
+      userId: 'test-user'
+    }]])
+  });
+}
+
 export const createDoc = async (collectionName, data) => {
   try {
-    const docRef = await addDoc(collection(db, collectionName), data);
-    return docRef.id;
+    const docId = mockStore.getNextId();
+    mockStore[collectionName] = mockStore[collectionName] || new Map();
+    mockStore[collectionName].set(docId, { id: docId, ...data });
+    return docId;
   } catch (e) {
     return e;
   }
@@ -38,7 +103,9 @@ export const createDoc = async (collectionName, data) => {
 
 export const createPage = async (data) => {
   try {
+    const pageId = mockStore.getNextId();
     const pageData = {
+      id: pageId,
       title: data.title,
       isPublic: data.isPublic,
       userId: data.userId,
@@ -46,79 +113,88 @@ export const createPage = async (data) => {
       lastModified: new Date().toISOString(),
     };
 
-    const pageRef = await addDoc(collection(db, "pages"), pageData);
+    // Create versions subcollection for the page
+    const versionId = mockStore.getNextId();
     const versionData = {
+      id: versionId,
       content: data.content,
       createdAt: new Date().toISOString(),
       userId: data.userId
     };
 
-    const version = await addDoc(collection(pageRef, "versions"), versionData);
-    await setDoc(pageRef, { currentVersion: version.id }, { merge: true });
+    // Store page with its versions
+    mockStore.pages.set(pageId, {
+      ...pageData,
+      currentVersion: versionId,
+      versions: new Map([[versionId, versionData]])
+    });
 
-    return pageRef.id;
+    return pageId;
   } catch (e) {
     console.log('error', e);
-    return e;
+    return null;
   }
 }
 
 export const listenToPageById = (pageId, onPageUpdate) => {
   try {
-    const pageRef = doc(db, "pages", pageId);
-    let unsubscribeVersion = null;
+    const page = mockStore.pages.get(pageId);
+    if (!page) {
+      console.log('Page not found:', pageId);
+      onPageUpdate(null);
+      return () => {};
+    }
 
-    const unsubscribePage = onSnapshot(pageRef, { includeMetadataChanges: true }, async (pageSnap) => {
-      if (pageSnap.exists()) {
-        const pageData = {
-          id: pageId,
-          ...pageSnap.data()
-        };
+    console.log('Found page:', page);
+    const { versions, currentVersion, ...pageData } = page;
+    const versionData = versions.get(currentVersion);
 
-        const currentVersionId = pageData.currentVersion;
-        const versionCollectionRef = collection(db, "pages", pageId, "versions");
-        const versionRef = doc(versionCollectionRef, currentVersionId);
+    if (!versionData) {
+      console.log('Version not found:', currentVersion);
+      onPageUpdate(null);
+      return () => {};
+    }
 
-        if (unsubscribeVersion) {
-          unsubscribeVersion();
-        }
+    console.log('Found version:', versionData);
+    onPageUpdate({ pageData, versionData });
 
-        unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
-          if (versionSnap.exists()) {
-            const versionData = versionSnap.data();
-            const links = extractLinksFromNodes(JSON.parse(versionData.content));
-            onPageUpdate({ pageData, versionData, links });
-          }
-        });
-      } else {
-        onPageUpdate(null);
-      }
-    });
-
-    return () => {
-      unsubscribePage();
-      if (unsubscribeVersion) {
-        unsubscribeVersion();
-      }
-    };
+    // Return unsubscribe function
+    return () => {};
   } catch (e) {
     console.error("Error in listenToPageById:", e);
-    return e;
+    return () => {};
   }
 };
 
 export const getPageById = async (pageId) => {
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const page = mockStore.pages.get(pageId);
+      if (!page) {
+        return { pageData: null };
+      }
+      const { versions, currentVersion, ...pageData } = page;
+      return { pageData };
+    } catch (e) {
+      console.log('Error in mock getPageById:', e);
+      return { pageData: null };
+    }
+  }
+
   try {
     const pageRef = doc(db, "pages", pageId);
-    const pageSnap = await getDoc(pageRef, { source: 'cache' });
+    const pageSnap = await getDoc(pageRef);
+    if (!pageSnap.exists()) {
+      return { pageData: null };
+    }
     const pageData = {
       id: pageId,
       ...pageSnap.data()
-    }
+    };
     return { pageData };
   } catch (e) {
-    console.log(e);
-    return e;
+    console.log('Error in getPageById:', e);
+    return { pageData: null };
   }
 }
 
@@ -276,3 +352,40 @@ function extractLinksFromNodes(nodes) {
 
   return links;
 }
+
+// Export getPages function for page linking functionality
+export const getPages = async () => {
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      // Convert mock store pages Map to array
+      const pages = Array.from(mockStore.pages.values()).map(page => ({
+        id: page.id,
+        name: page.title,
+        isPublic: page.isPublic,
+        userId: page.userId,
+        groupId: page.groupId
+      }));
+      console.log('Fetched pages from mock store:', pages);
+      return pages;
+    } catch (e) {
+      console.error('Error getting pages from mock store:', e);
+      return [];
+    }
+  }
+
+  try {
+    const pagesRef = collection(db, "pages");
+    const pagesSnap = await getDocs(pagesRef);
+    const pages = pagesSnap.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().title,
+      isPublic: doc.data().isPublic,
+      userId: doc.data().userId,
+      groupId: doc.data().groupId
+    }));
+    return pages;
+  } catch (e) {
+    console.error('Error getting pages:', e);
+    return [];
+  }
+};

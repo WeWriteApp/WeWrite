@@ -1,41 +1,45 @@
 "use client";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { AuthContext } from "./AuthProvider";
-
-// Mock data for testing without Firebase
-const mockPages = [
-  { id: '1', name: 'Getting Started', isPublic: true, userId: 'mock-user-1', groupId: 'default-group' },
-  { id: '2', name: 'User Guide', isPublic: true, userId: 'mock-user-2', groupId: 'default-group' },
-  { id: '3', name: 'Private Notes', isPublic: false, userId: 'mock-user-1', groupId: 'default-group' },
-  { id: '4', name: 'Project Ideas', isPublic: false, userId: 'mock-user-1', groupId: 'default-group' },
-];
+import { getPages } from "../firebase/database";
 
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Use mock data instead of Firebase
-  const pages = mockPages;
-  const loading = false;
-  const loadMorePages = () => {};
-  const isMoreLoading = false;
-  const hasMorePages = false;
+  useEffect(() => {
+    const fetchPages = async () => {
+      try {
+        const fetchedPages = await getPages();
+        setPages(fetchedPages);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Filter pages that are either public or owned by the mock user
+    fetchPages();
+  }, []);
+
   const filtered = pages.filter(page =>
-    page.isPublic || (user && page.userId === (user.uid || 'mock-user-1'))
+    page.isPublic || (user && (page.userId === user.uid || (user.groups && user.groups.includes(page.groupId))))
   );
 
   return (
     <DataContext.Provider
       value={{
         loading,
+        error,
         pages,
         filtered,
-        loadMorePages,
-        isMoreLoading,
-        hasMorePages
+        loadMorePages: () => {},
+        isMoreLoading: false,
+        hasMorePages: false
       }}
     >
       {children}
