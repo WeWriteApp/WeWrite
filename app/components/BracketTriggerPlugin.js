@@ -59,26 +59,26 @@ function BracketTriggerPlugin() {
       return;
     }
     const removeTransform = editor.registerNodeTransform(TextNode, (textNode) => {
-      const text = textNode.getTextContent();
-      console.log('BracketTriggerPlugin: Checking text content:', text);
-      if (text.endsWith("[[")) {
+      const textContent = textNode.getTextContent();
+      console.log('BracketTriggerPlugin: Checking text content:', textContent);
+
+      if (textContent.includes('[[')) {
         console.log('BracketTriggerPlugin: Creating BracketNode');
+
+        const [beforeBracket, afterBracket] = textContent.split('[[');
+        const beforeNode = $createTextNode(beforeBracket);
         const bracketNode = $createBracketNode();
-        const parent = textNode.getParent();
-        textNode.insertAfter(bracketNode);
 
-        // Remove the [[ characters from the text node
-        const textContent = text.slice(0, -2);
-        if (textContent) {
-          textNode.setTextContent(textContent);
-        } else {
-          textNode.remove();
-        }
+        textNode.replace(beforeNode);
+        beforeNode.insertAfter(bracketNode);
 
-        // Force editor update to show dropdown
+        console.log('BracketTriggerPlugin: Editor updated with BracketNode');
+
         editor.update(() => {
-          console.log('BracketTriggerPlugin: Editor updated with BracketNode');
-          bracketNode.getLatest();
+          const selection = $getSelection();
+          if (selection) {
+            selection.insertNodes([bracketNode]);
+          }
         });
       }
     });
