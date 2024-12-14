@@ -54,8 +54,10 @@ function BracketComponent({ node }) {
   }, [editor, node]);
 
   const filteredPages = pages.filter(page =>
+    page && page.name &&
+    searchTerm &&
     page.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ) || [];
 
   if (!showDropdown) {
     return null;

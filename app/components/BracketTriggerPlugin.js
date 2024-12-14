@@ -31,6 +31,30 @@ class BracketNode extends DecoratorNode {
     return false;
   }
 
+  getTextContent() {
+    return "[[";
+  }
+
+  getChildren() {
+    return [];
+  }
+
+  getChildrenSize() {
+    return 0;
+  }
+
+  getChildAtIndex(index) {
+    return null;
+  }
+
+  insertNewAfter() {
+    return null;
+  }
+
+  collapseAtStart() {
+    return true;
+  }
+
   decorate() {
     return <BracketComponent node={this} />;
   }
