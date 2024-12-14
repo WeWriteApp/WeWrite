@@ -9,6 +9,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { LinkNode } from "@lexical/link";  // Add LinkNode import
 import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
 import BracketTriggerPlugin, { BracketNode, $createBracketNode } from "./BracketTriggerPlugin";
@@ -26,7 +27,7 @@ function Editor({ initialEditorState, setEditorState }) {
     namespace: "MyEditor",
     theme,
     onError,
-    nodes: [BracketNode, CustomLinkNode], // Registering the custom node and LinkNode
+    nodes: [BracketNode, CustomLinkNode, LinkNode], // Add LinkNode to registered nodes
   };
 
   function onChange(editorState) {
