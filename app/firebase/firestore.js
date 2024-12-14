@@ -16,7 +16,10 @@ const mockCollections = {
 
 export const mockPages = Object.entries(mockCollections.pages).map(([id, data]) => ({
   id,
-  ...data
+  name: data.title, // Map title to name for component compatibility
+  content: data.content,
+  isPublic: data.isPublic,
+  userId: data.userId
 }));
 
 class MockFirestore {
