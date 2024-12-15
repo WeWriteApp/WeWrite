@@ -1,22 +1,74 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore } from "./firestore";
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-// Your web app's Firebase configuration
-const newConfig =  {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_DOMAIN,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+const mockConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'mock-api-key',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'mock-project.firebaseapp.com',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'mock-project',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'mock-project.appspot.com',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '123456789',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:123456789:web:abcdef',
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://mock-project-default-rtdb.firebaseio.com'
 };
 
+let app;
+try {
+  app = getApps().length ? getApp() : initializeApp(mockConfig);
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+  app = initializeApp(mockConfig);
+}
 
-// Initialize Firebase
-export const app = initializeApp(newConfig);
+const providers = new Map();
 
+const mockData = {
+  users: new Map([
+    ['test-user', {
+      uid: 'test-user',
+      username: 'Test User',
+      email: 'test@example.com',
+      createdAt: new Date().toISOString()
+    }]
+  ])
+};
 
+providers.set('database', {
+  initialize: () => {},
+  isInitialized: () => true,
+  getImmediate: () => ({
+    ref: (path) => {
+      const [collection, id] = path.split('/');
+      return {
+        val: () => mockData[collection]?.get(id) || null,
+        once: () => Promise.resolve({
+          val: () => mockData[collection]?.get(id) || null
+        }),
+        get: () => Promise.resolve({
+          val: () => mockData[collection]?.get(id) || null
+        })
+      };
+    }
+  })
+});
+
+app.getProvider = (name) => {
+  const provider = providers.get(name);
+  if (provider) return provider;
+
+  return {
+    initialize: () => {},
+    isInitialized: () => true,
+    getImmediate: () => ({
+      collection: () => ({}),
+      doc: () => ({}),
+      onSnapshot: () => () => {},
+      set: () => Promise.resolve(),
+      update: () => Promise.resolve(),
+      delete: () => Promise.resolve()
+    })
+  };
+};
+
+export { app };
+export const db = getFirestore(app);
 export default app;

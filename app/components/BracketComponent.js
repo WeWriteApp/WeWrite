@@ -1,21 +1,48 @@
 "use client";
-import { useContext, useState, useEffect, useRef } from "react";
-import { DataContext } from "../providers/DataProvider";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { INSERT_CUSTOM_LINK_COMMAND } from "./CustomLinkPlugin";
+import { useRef, useEffect, useState, useCallback, useContext } from "react";
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { $createTextNode } from 'lexical';
+import { useAuth } from '../providers/AuthProvider';
+import { DataContext } from '../providers/DataProvider';
+import { $createCustomLinkNode } from './CustomLinkNode';
 
-function BracketComponent() {
-  const { pages, loading } = useContext(DataContext);
-  const [inputValue, setInputValue] = useState("");
-  const [filteredPages, setFilteredPages] = useState(pages);
-  const containerRef = useRef(null);
+function BracketComponent({ node }) {
+  const [isClient, setIsClient] = useState(false);
   const [editor] = useLexicalComposerContext();
+  const { user } = useAuth();
+  const { pages } = useContext(DataContext);
+  const containerRef = useRef(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
+  // Set isClient on mount
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Initialize node state
+  useEffect(() => {
+    if (!isClient || !node) return;
+
+    editor.update(() => {
+      if (typeof node.getShowDropdown === 'function') {
+        setShowDropdown(node.getShowDropdown());
+      }
+    });
+  }, [node, editor, isClient]);
+
+  // Handle click outside
+  useEffect(() => {
+    if (!isClient) return;
+
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
-        // Hide the component (can use a state or context to handle this)
-        containerRef.current.style.display = 'none';
+        editor.update(() => {
+          setShowDropdown(false);
+          if (node && typeof node.setShowDropdown === 'function') {
+            node.setShowDropdown(false);
+          }
+        });
       }
     };
 
@@ -23,62 +50,57 @@ function BracketComponent() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [containerRef]);
+  }, [containerRef, node, editor, isClient]);
 
-  useEffect(() => {
-    setFilteredPages(
-      pages.filter((page) =>
-        page.title.toLowerCase().includes(inputValue.toLowerCase())
-      )
-    );
-  }, [inputValue, pages]);
-
-  const handleInputChange = (event) => {
-    setInputValue(event.target.value);
-  };
-
-  const handlePageClick = (page) => {
-    const url = `/page/${page.id}`;
-    const text = page.title;
-
-    if (!url || !text) {
-      console.error('URL or text is undefined');
+  const handlePageSelect = useCallback((page) => {
+    if (!node || !editor) {
+      console.warn('BracketComponent: Missing node or editor');
       return;
     }
 
-    editor.dispatchCommand(INSERT_CUSTOM_LINK_COMMAND, { url, text });
+    editor.update(() => {
+      const linkNode = $createCustomLinkNode(`/pages/${page.id}`);
+      linkNode.append($createTextNode(page.title));
+      node.replace(linkNode);
+    });
+  }, [node, editor]);
 
-    // Use an effect to hide the component after a slight delay to avoid state update during render
-    setTimeout(() => {
-      if (containerRef.current) {
-        containerRef.current.style.display = 'none';
-      }
-    }, 0);
-  };
+  const filteredPages = pages.filter(page =>
+    page && page.title &&
+    page.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (page.isPublic || (user && (page.userId === user.uid || (user.groups && user.groups.includes(page.groupId)))))
+  );
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
-    <div ref={containerRef} className="relative bg-white shadow-md rounded-md p-4 w-64">
-      <input
-        type="text"
-        value={inputValue}
-        onChange={handleInputChange}
-        placeholder="Create or select a page..."
-        className="w-full p-2 border border-gray-300 rounded-md"
-        autoComplete="off"
-      />
-      {filteredPages.length > 0 && (
-        <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md">
-          {filteredPages.map((page) => (
-            <li
-              key={page.id}
-              className="p-2 hover:bg-gray-200 cursor-pointer"
-              onClick={() => handlePageClick(page)}
-            >
-              {page.title}
-            </li>
-          ))}
-        </ul>
+    <div ref={containerRef} className="relative inline-block">
+      <span className="text-blue-500">[[</span>
+      {showDropdown && (
+        <div className="absolute z-10 mt-1 w-60 rounded-md bg-white shadow-lg">
+          <input
+            type="text"
+            className="w-full p-2 border-b"
+            placeholder="Search pages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <ul className="max-h-60 overflow-auto">
+            {filteredPages.map((page) => (
+              <li
+                key={page.id}
+                className="p-2 hover:bg-gray-100 cursor-pointer"
+                onClick={() => handlePageSelect(page)}
+              >
+                {page.title}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
+      <span className="text-blue-500">]]</span>
     </div>
   );
 }

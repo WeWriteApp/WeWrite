@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { rtdb } from "../firebase/rtdb";
-import { onValue, ref } from "firebase/database";
+import { rtdb, ref, onValue } from "../firebase/rtdb";
 
 export const GroupsContext = React.createContext();
 
@@ -21,7 +20,7 @@ export const GroupsProvider = ({ children }) => {
       } else {
         setGroups([]);
       }
-      
+
     });
   }, []);
 

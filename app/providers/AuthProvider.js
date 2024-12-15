@@ -1,67 +1,107 @@
 "use client";
-// an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from "react";
-import { auth } from "../firebase/auth";
-import  app  from "../firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue, get, set, getDatabase,update } from "firebase/database";
-import { useRouter } from "next/navigation";
+
+import { useEffect, useState, createContext, useContext } from "react";
+import { auth, onAuthStateChanged } from "../firebase/auth";
 
 export const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log('User is logged in', user);
-        getUserFromRTDB(user);
-
-      } else {    
-        setUser(null);
-        setLoading(false);
+    if (typeof window === 'undefined') {
+      // In development, set mock user for SSR
+      if (process.env.NODE_ENV === 'development') {
+        setUser({
+          uid: 'test-user',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          username: 'Test User',
+          groups: ['default-group', 'test-group']
+        });
       }
-    });
+      setLoading(false);
+      return;
+    }
 
-    return unsubscribe;
+    let unsubscribe;
+    try {
+      // In development, always use mock auth
+      if (process.env.NODE_ENV === 'development') {
+        setUser({
+          uid: 'test-user',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          username: 'Test User',
+          groups: ['default-group', 'test-group']
+        });
+        setLoading(false);
+        return;
+      }
+
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        try {
+          if (user) {
+            setUser({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              username: user.username || user.displayName,
+              groups: user.groups || ['default-group']
+            });
+          } else {
+            setUser(null);
+          }
+          setError(null);
+        } catch (err) {
+          console.error('Error processing auth state:', err);
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      });
+    } catch (err) {
+      console.error('Error setting up auth listener:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
-  const getUserFromRTDB =  (user) => {
-    const db = getDatabase(app);
-
-    let uid = user.uid;
-    const dbRef = ref(db, `users/${uid}`);
-    // get the user from the database
-    onValue(dbRef, (snapshot) => {
-      const data = snapshot.val();
-
-      if (!data.username && user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.displayName = user.displayName;
-      } else if (data.username !== user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.username = user.displayName;
-      }
-
-      setUser({
-        uid: user.uid,
-        email: user.email,
-        ...data
-      });
-      setLoading(false);
-    });
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500 text-center">
+          <p>Authentication Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, error }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,20 +2,27 @@ import SinglePageView from "../../components/SinglePageView";
 import { getPageById } from "../../firebase/database";
 
 export async function generateMetadata({ params }) {
-  const { pageData } = await getPageById(params.id);
-  console.log(pageData);
+  try {
+    const { pageData } = await getPageById(params.id);
 
-  if (!pageData) {
+    if (!pageData) {
+      return {
+        title: "Page Not Found",
+        description: "This page does not exist"
+      };
+    }
+
     return {
-      title: "Page Not Found",
-      description: "This page does not exist"
+      title: pageData.title,
+      description: "A page"
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return {
+      title: "Error",
+      description: "An error occurred"
     };
   }
-
-  return {
-    title: pageData.title,
-    description: "A page"
-  };
 }
 
 const Page = async ({ params }) => {

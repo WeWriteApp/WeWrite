@@ -1,15 +1,24 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useEffect,useContext,useRef,useState } from "react";
-import { LexicalNode, TextNode, DecoratorNode } from "lexical";
+import { useEffect, useContext } from "react";
+import { TextNode, DecoratorNode } from "lexical";
+import { $createLinkNode } from "@lexical/link";
+import { $createTextNode, $createRangeSelection, $setSelection } from "lexical";
 import BracketComponent from "./BracketComponent";
 
 class BracketNode extends DecoratorNode {
+  __showDropdown;
+
+  constructor(showDropdown = true, key) {
+    super(key);
+    this.__showDropdown = showDropdown;
+  }
+
   static getType() {
     return "bracket";
   }
 
   static clone(node) {
-    return new BracketNode(node.__key);
+    return new BracketNode(node.__showDropdown, node.__key);
   }
 
   createDOM() {
@@ -22,30 +31,97 @@ class BracketNode extends DecoratorNode {
     return false;
   }
 
-  decorate() {
-    return <BracketComponent />;
+  getTextContent() {
+    return "[[";
   }
 
-  // allow export of the node to JSON with exportJSON
+  setShowDropdown(show) {
+    if (typeof show !== 'boolean') {
+      console.warn('BracketNode: setShowDropdown requires a boolean value');
+      return this;
+    }
+    const self = this.getWritable();
+    self.__showDropdown = show;
+    return self;
+  }
+
+  getShowDropdown() {
+    const self = this.getLatest();
+    return self.__showDropdown;
+  }
+
+  getChildren() {
+    return [];
+  }
+
+  getChildrenSize() {
+    return 0;
+  }
+
+  getChildAtIndex(index) {
+    return null;
+  }
+
+  insertNewAfter() {
+    return null;
+  }
+
+  collapseAtStart() {
+    return true;
+  }
+
+  decorate() {
+    return <BracketComponent node={this} />;
+  }
+
   exportJSON() {
     return {
       type: 'bracket',
+      showDropdown: this.__showDropdown,
       version: 1,
     };
   }
-  
+
+  static importJSON(serializedNode) {
+    const node = $createBracketNode();
+    node.setShowDropdown(serializedNode.showDropdown);
+    return node;
+  }
 }
 
 function BracketTriggerPlugin() {
   const [editor] = useLexicalComposerContext();
+  console.log('BracketTriggerPlugin: Plugin initialized');
 
   useEffect(() => {
+    console.log('BracketTriggerPlugin: Setting up node transform');
+    if (!editor) {
+      console.error('BracketTriggerPlugin: Editor not available');
+      return;
+    }
     const removeTransform = editor.registerNodeTransform(TextNode, (textNode) => {
-      const text = textNode.getTextContent();
-      if (text.endsWith("[[")) {
-        const bracketNode = $createBracketNode();
-        textNode.insertAfter(bracketNode);
-        textNode.remove();
+      const textContent = textNode.getTextContent();
+      console.log('BracketTriggerPlugin: Checking text content:', textContent);
+
+      if (textContent.includes('[[')) {
+        console.log('BracketTriggerPlugin: Found trigger, creating BracketNode');
+
+        editor.update(() => {
+          const [beforeBracket, afterBracket] = textContent.split('[[');
+          const beforeNode = $createTextNode(beforeBracket);
+          const bracketNode = $createBracketNode();
+          bracketNode.setShowDropdown(true);
+
+          textNode.replace(beforeNode);
+          beforeNode.insertAfter(bracketNode);
+
+          const selection = $createRangeSelection();
+          selection.anchor.set(bracketNode.getKey(), 0, 'element');
+          selection.focus.set(bracketNode.getKey(), 0, 'element');
+          $setSelection(selection);
+
+          console.log('BracketTriggerPlugin: Editor updated with BracketNode, dropdown should be visible');
+        });
       }
     });
 
@@ -58,8 +134,7 @@ function BracketTriggerPlugin() {
 }
 
 function $createBracketNode() {
-  return new BracketNode();
+  return new BracketNode(true);
 }
 
-
-export { BracketTriggerPlugin, BracketNode}
+export { BracketTriggerPlugin as default, BracketNode, $createBracketNode };

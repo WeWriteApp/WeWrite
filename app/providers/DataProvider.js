@@ -1,34 +1,45 @@
 "use client";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { AuthContext } from "./AuthProvider";
-import usePages from "../hooks/usePages";
+import { getPages } from "../firebase/database";
 
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const { user } = useContext(AuthContext); // Get the authenticated user
+  const { user } = useContext(AuthContext);
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Use the usePages hook, passing in the userId if the user is authenticated
-  const {
-    pages,
-    loading,
-    loadMorePages,
-    isMoreLoading,
-    hasMorePages
-  } = usePages(user ? user.uid : null); // Use `user.uid` to fetch pages for the logged-in user
+  useEffect(() => {
+    const fetchPages = async () => {
+      try {
+        const fetchedPages = await getPages();
+        setPages(fetchedPages);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Optionally: Handle filtered pages if needed
-  const filtered = [];
+    fetchPages();
+  }, []);
+
+  const filtered = pages.filter(page =>
+    page.isPublic || (user && (page.userId === user.uid || (user.groups && user.groups.includes(page.groupId))))
+  );
 
   return (
     <DataContext.Provider
       value={{
         loading,
+        error,
         pages,
         filtered,
-        loadMorePages,
-        isMoreLoading,
-        hasMorePages
+        loadMorePages: () => {},
+        isMoreLoading: false,
+        hasMorePages: false
       }}
     >
       {children}
