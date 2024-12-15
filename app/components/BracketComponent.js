@@ -1,44 +1,48 @@
 "use client";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useContext } from "react";
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $createLinkNode } from '@lexical/link';
 import { $createTextNode } from 'lexical';
-import { getPages } from '../firebase/database';
 import { useAuth } from '../providers/AuthProvider';
+import { DataContext } from '../providers/DataProvider';
+import { $createCustomLinkNode } from './CustomLinkNode';
 
 function BracketComponent({ node }) {
+  const [isClient, setIsClient] = useState(false);
   const [editor] = useLexicalComposerContext();
   const { user } = useAuth();
+  const { pages } = useContext(DataContext);
   const containerRef = useRef(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [pages, setPages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Set isClient on mount
   useEffect(() => {
-    if (node && typeof node.__showDropdown !== 'undefined') {
-      setShowDropdown(node.__showDropdown);
-    }
-  }, [node]);
+    setIsClient(true);
+  }, []);
 
+  // Initialize node state
   useEffect(() => {
-    const fetchPages = async () => {
-      if (showDropdown && user) {
-        console.log('BracketComponent: Fetching pages for user:', user);
-        const fetchedPages = await getPages();
-        console.log('BracketComponent: Fetched pages:', fetchedPages);
-        if (Array.isArray(fetchedPages)) {
-          setPages(fetchedPages);
-        }
+    if (!isClient || !node) return;
+
+    editor.update(() => {
+      if (typeof node.getShowDropdown === 'function') {
+        setShowDropdown(node.getShowDropdown());
       }
-    };
-    fetchPages();
-  }, [showDropdown, user]);
+    });
+  }, [node, editor, isClient]);
 
+  // Handle click outside
   useEffect(() => {
+    if (!isClient) return;
+
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setShowDropdown(false);
-        node.__showDropdown = false;
+        editor.update(() => {
+          setShowDropdown(false);
+          if (node && typeof node.setShowDropdown === 'function') {
+            node.setShowDropdown(false);
+          }
+        });
       }
     };
 
@@ -46,56 +50,57 @@ function BracketComponent({ node }) {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [containerRef, node]);
+  }, [containerRef, node, editor, isClient]);
 
   const handlePageSelect = useCallback((page) => {
+    if (!node || !editor) {
+      console.warn('BracketComponent: Missing node or editor');
+      return;
+    }
+
     editor.update(() => {
-      const linkNode = $createLinkNode(`/pages/${page.id}`);
-      linkNode.append($createTextNode(page.name));
+      const linkNode = $createCustomLinkNode(`/pages/${page.id}`);
+      linkNode.append($createTextNode(page.title));
       node.replace(linkNode);
     });
-  }, [editor, node]);
+  }, [node, editor]);
 
   const filteredPages = pages.filter(page =>
-    page && page.name && (
-      !searchTerm ||
-      page.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    page && page.title &&
+    page.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (page.isPublic || (user && (page.userId === user.uid || (user.groups && user.groups.includes(page.groupId)))))
   );
 
-  if (!showDropdown) {
+  if (!isClient) {
     return null;
   }
 
   return (
     <div ref={containerRef} className="relative inline-block">
-      <div className="absolute z-50 top-full left-0 mt-1 bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-2 min-w-[200px]">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search for a page..."
-          className="w-full p-2 border rounded mb-2 dark:bg-gray-700 dark:text-white"
-        />
-        <div className="max-h-40 overflow-y-auto">
-          {filteredPages.length > 0 ? (
-            filteredPages.map((page) => (
-              <div
+      <span className="text-blue-500">[[</span>
+      {showDropdown && (
+        <div className="absolute z-10 mt-1 w-60 rounded-md bg-white shadow-lg">
+          <input
+            type="text"
+            className="w-full p-2 border-b"
+            placeholder="Search pages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <ul className="max-h-60 overflow-auto">
+            {filteredPages.map((page) => (
+              <li
                 key={page.id}
+                className="p-2 hover:bg-gray-100 cursor-pointer"
                 onClick={() => handlePageSelect(page)}
-                className="cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded dark:text-white"
               >
-                {page.name}
-                <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                  {page.isPublic ? '(Public)' : '(Private)'}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="p-2 text-gray-500 dark:text-gray-400">No pages found</div>
-          )}
+                {page.title}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
+      )}
+      <span className="text-blue-500">]]</span>
     </div>
   );
 }

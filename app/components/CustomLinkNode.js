@@ -33,7 +33,27 @@ class CustomLinkNode extends ElementNode {
   }
 
   decorate() {
-    return null; // No additional decoration needed for now
+    return null;
+  }
+
+  static importJSON(serializedNode) {
+    const node = new CustomLinkNode(serializedNode.url);
+
+    const children = serializedNode.children;
+    if (Array.isArray(children)) {
+      const childNodes = children.map((child) => {
+        if (child.type === 'text') {
+          return TextNode.importJSON(child);
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (childNodes.length > 0) {
+        node.append(...childNodes);
+      }
+    }
+
+    return node;
   }
 
   exportJSON() {

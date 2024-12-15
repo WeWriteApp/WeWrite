@@ -36,13 +36,18 @@ class BracketNode extends DecoratorNode {
   }
 
   setShowDropdown(show) {
+    if (typeof show !== 'boolean') {
+      console.warn('BracketNode: setShowDropdown requires a boolean value');
+      return this;
+    }
     const self = this.getWritable();
     self.__showDropdown = show;
     return self;
   }
 
   getShowDropdown() {
-    return this.__showDropdown;
+    const self = this.getLatest();
+    return self.__showDropdown;
   }
 
   getChildren() {
@@ -76,6 +81,12 @@ class BracketNode extends DecoratorNode {
       version: 1,
     };
   }
+
+  static importJSON(serializedNode) {
+    const node = $createBracketNode();
+    node.setShowDropdown(serializedNode.showDropdown);
+    return node;
+  }
 }
 
 function BracketTriggerPlugin() {
@@ -95,22 +106,22 @@ function BracketTriggerPlugin() {
       if (textContent.includes('[[')) {
         console.log('BracketTriggerPlugin: Found trigger, creating BracketNode');
 
-        const [beforeBracket, afterBracket] = textContent.split('[[');
-        const beforeNode = $createTextNode(beforeBracket);
-        const bracketNode = $createBracketNode();
-        bracketNode.setShowDropdown(true);
-
-        textNode.replace(beforeNode);
-        beforeNode.insertAfter(bracketNode);
-
         editor.update(() => {
+          const [beforeBracket, afterBracket] = textContent.split('[[');
+          const beforeNode = $createTextNode(beforeBracket);
+          const bracketNode = $createBracketNode();
+          bracketNode.setShowDropdown(true);
+
+          textNode.replace(beforeNode);
+          beforeNode.insertAfter(bracketNode);
+
           const selection = $createRangeSelection();
           selection.anchor.set(bracketNode.getKey(), 0, 'element');
           selection.focus.set(bracketNode.getKey(), 0, 'element');
           $setSelection(selection);
-        });
 
-        console.log('BracketTriggerPlugin: Editor updated with BracketNode, dropdown should be visible');
+          console.log('BracketTriggerPlugin: Editor updated with BracketNode, dropdown should be visible');
+        });
       }
     });
 

@@ -360,10 +360,12 @@ export const getPages = async () => {
       // Convert mock store pages Map to array
       const pages = Array.from(mockStore.pages.values()).map(page => ({
         id: page.id,
-        name: page.title,
+        title: page.title,
         isPublic: page.isPublic,
         userId: page.userId,
-        groupId: page.groupId
+        groupId: page.groupId,
+        createdAt: page.createdAt,
+        lastModified: page.lastModified
       }));
       console.log('Fetched pages from mock store:', pages);
       return pages;
@@ -378,10 +380,12 @@ export const getPages = async () => {
     const pagesSnap = await getDocs(pagesRef);
     const pages = pagesSnap.docs.map(doc => ({
       id: doc.id,
-      name: doc.data().title,
+      title: doc.data().title,
       isPublic: doc.data().isPublic,
       userId: doc.data().userId,
-      groupId: doc.data().groupId
+      groupId: doc.data().groupId,
+      createdAt: doc.data().createdAt,
+      lastModified: doc.data().lastModified
     }));
     return pages;
   } catch (e) {
