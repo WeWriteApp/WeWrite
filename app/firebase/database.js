@@ -167,6 +167,7 @@ export const listenToPageById = (pageId, onPageUpdate) => {
 };
 
 export const getPageById = async (pageId) => {
+  // Use mock data in development environment
   if (process.env.NODE_ENV === 'development') {
     try {
       const page = mockStore.pages.get(pageId);
@@ -181,6 +182,26 @@ export const getPageById = async (pageId) => {
     }
   }
 
+  // Check if we're in a server context (SSR)
+  if (typeof window === 'undefined') {
+    try {
+      const { adminDb } = require('./admin');
+      const pageSnap = await adminDb.collection('pages').doc(pageId).get();
+      if (!pageSnap.exists) {
+        return { pageData: null };
+      }
+      const pageData = {
+        id: pageId,
+        ...pageSnap.data()
+      };
+      return { pageData };
+    } catch (e) {
+      console.error('Error in SSR getPageById:', e);
+      return { pageData: null };
+    }
+  }
+
+  // Client-side Firebase operation
   try {
     const pageRef = doc(db, "pages", pageId);
     const pageSnap = await getDoc(pageRef);
@@ -193,7 +214,7 @@ export const getPageById = async (pageId) => {
     };
     return { pageData };
   } catch (e) {
-    console.log('Error in getPageById:', e);
+    console.log('Error in client getPageById:', e);
     return { pageData: null };
   }
 }

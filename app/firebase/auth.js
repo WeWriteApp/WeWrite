@@ -1,6 +1,7 @@
-// Mock Firebase Auth implementation
+import { getAuth as getFirebaseAuth, signInWithEmailAndPassword as firebaseSignIn, createUserWithEmailAndPassword as firebaseCreateUser, signOut as firebaseSignOut, updateProfile as firebaseUpdateProfile, onAuthStateChanged as firebaseAuthStateChanged } from 'firebase/auth';
 import { app } from './config';
 
+// Mock Firebase Auth implementation - only used in development
 export class MockAuth {
   constructor(app) {
     this.app = app;
@@ -136,25 +137,64 @@ export class MockAuth {
   }
 }
 
-// Create and export a singleton instance with the initialized app
-const mockAuth = new MockAuth(app);
+// Initialize auth based on environment
+const auth = process.env.NODE_ENV === 'development'
+  ? new MockAuth(app)
+  : getFirebaseAuth(app);
 
-// Register auth provider in the app
-app.getProvider('auth', {
-  initialize: () => {},
-  isInitialized: () => true,
-  getImmediate: () => mockAuth
-});
+// Only register mock provider in development
+if (process.env.NODE_ENV === 'development') {
+  app.getProvider('auth', {
+    initialize: () => {},
+    isInitialized: () => true,
+    getImmediate: () => auth
+  });
+}
 
-// Helper functions to match Firebase Auth API
-export const auth = mockAuth;
-export const getAuth = () => mockAuth;
-export const createUser = (email, password) => mockAuth.createUserWithEmailAndPassword(email, password);
-export const loginUser = (email, password) => mockAuth.signInWithEmailAndPassword(email, password);
-export const logoutUser = () => mockAuth.signOut();
-export const addUsername = (uid, username) => mockAuth.addUsername(uid, username);
-export const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
-export const createUserWithEmailAndPassword = (auth, email, password) => auth.createUserWithEmailAndPassword(email, password);
-export const signInWithEmailAndPassword = (auth, email, password) => auth.signInWithEmailAndPassword(email, password);
-export const signOut = (auth) => auth.signOut();
-export const updateProfile = (user, profile) => mockAuth.updateProfile(user, profile);
+// Helper functions that work with both mock and real auth
+export { auth };
+export const getAuth = () => auth;
+export const createUser = (email, password) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.createUserWithEmailAndPassword(email, password)
+    : firebaseCreateUser(auth, email, password);
+
+export const loginUser = (email, password) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.signInWithEmailAndPassword(email, password)
+    : firebaseSignIn(auth, email, password);
+
+export const logoutUser = () =>
+  process.env.NODE_ENV === 'development'
+    ? auth.signOut()
+    : firebaseSignOut(auth);
+
+export const addUsername = (uid, username) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.addUsername(uid, username)
+    : Promise.resolve(); // Not implemented in real Firebase auth
+
+export const onAuthStateChanged = (auth, callback) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.onAuthStateChanged(callback)
+    : firebaseAuthStateChanged(auth, callback);
+
+export const createUserWithEmailAndPassword = (auth, email, password) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.createUserWithEmailAndPassword(email, password)
+    : firebaseCreateUser(auth, email, password);
+
+export const signInWithEmailAndPassword = (auth, email, password) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.signInWithEmailAndPassword(email, password)
+    : firebaseSignIn(auth, email, password);
+
+export const signOut = (auth) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.signOut()
+    : firebaseSignOut(auth);
+
+export const updateProfile = (user, profile) =>
+  process.env.NODE_ENV === 'development'
+    ? auth.updateProfile(user, profile)
+    : firebaseUpdateProfile(user, profile);

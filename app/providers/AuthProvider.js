@@ -19,36 +19,14 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Handle SSR context
     if (typeof window === 'undefined') {
-      // In development, set mock user for SSR
-      if (process.env.NODE_ENV === 'development') {
-        setUser({
-          uid: 'test-user',
-          email: 'test@example.com',
-          displayName: 'Test User',
-          username: 'Test User',
-          groups: ['default-group', 'test-group']
-        });
-      }
       setLoading(false);
       return;
     }
 
     let unsubscribe;
     try {
-      // In development, always use mock auth
-      if (process.env.NODE_ENV === 'development') {
-        setUser({
-          uid: 'test-user',
-          email: 'test@example.com',
-          displayName: 'Test User',
-          username: 'Test User',
-          groups: ['default-group', 'test-group']
-        });
-        setLoading(false);
-        return;
-      }
-
       unsubscribe = onAuthStateChanged(auth, (user) => {
         try {
           if (user) {
