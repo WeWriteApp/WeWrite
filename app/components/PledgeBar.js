@@ -14,7 +14,7 @@ const intervalOptions = [
 
 const PledgeBar = () => {
   const { subscriptions, totalSubscriptionsCost, addSubscription } = useContext(PortfolioContext);
-  const [amount, setAmount] = useState(totalSubscriptionsCost || 10);
+  const [amount, setAmount] = useState(0);
   const [percentage, setPercentage] = useState(0);
   const [displayMode, setDisplayMode] = useState('amount');
   const [menuVisible, setMenuVisible] = useState(false);
@@ -24,29 +24,44 @@ const PledgeBar = () => {
   const [inputVisible, setInputVisible] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [usedAmount, setUsedAmount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
+  const progressBarWidth = (value, total) => {
+    if (!total || total <= 0) return '0%';
+    const percentage = (value / total) * 100;
+    return `${Math.min(Math.max(percentage, 0), 100)}%`;
+  };
 
   const timerRef = useRef(null);
   const textRef = useRef(null);
   const { id } = useParams();
 
   useEffect(() => {
-    if (totalSubscriptionsCost) {
-      setAmount(totalSubscriptionsCost);
-      const used = subscriptions
-        .filter(sub => sub.id !== id)
-        .reduce((total, sub) => total + sub.amount, 0);
-      setUsedAmount(used);
-      const currentSubscription = subscriptions.find(sub => sub.id === id);
-      if (currentSubscription) {
-        setIsSubscribed(true);
-        setAmount(currentSubscription.amount);
-        setPercentage((currentSubscription.amount / totalSubscriptionsCost) * 100);
+    try {
+      setIsLoading(true);
+      if (totalSubscriptionsCost) {
+        setAmount(totalSubscriptionsCost);
+        const used = subscriptions
+          .filter(sub => sub.id !== id)
+          .reduce((total, sub) => total + sub.amount, 0);
+        setUsedAmount(used);
+        const currentSubscription = subscriptions.find(sub => sub.id === id);
+        if (currentSubscription) {
+          setIsSubscribed(true);
+          setAmount(currentSubscription.amount);
+          setPercentage((currentSubscription.amount / totalSubscriptionsCost) * 100);
+        }
+      } else {
+        setAmount(10);
+        setPercentage(0);
       }
-    } else {
-      setAmount(10);
-      setPercentage(0);
+      setError(null);
+    } catch (err) {
+      console.error('Error processing subscription data:', err);
+      setError('Unable to load subscription data');
+    } finally {
+      setIsLoading(false);
     }
   }, [subscriptions, totalSubscriptionsCost, id]);
 
@@ -194,22 +209,28 @@ const PledgeBar = () => {
 
       <div className="sm:max-w-[300px] w-full z-10 relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50 min-h-[48px]">
         {/* Gray area for other pages */}
-        <div
-          className={`h-full rounded-l-[21px] absolute ${styles['bg-reactangle']} overflow-hidden z-10`}
-          style={{ width: progressBarWidth(usedAmount, totalSubscriptionsCost || 10) }}
-        >
-          <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
-            {Array.from({ length: Math.ceil(usedAmount) + 30 }, (_, index) => (
-              <div key={index} className={`w-[6px] h-[calc(100%+50px)] ${styles['bg-reactangle']} rotate-45`}></div>
-            ))}
+        {usedAmount > 0 && (
+          <div
+            className={`h-full rounded-l-[21px] absolute ${styles['bg-reactangle']} overflow-hidden z-10`}
+            style={{
+              width: progressBarWidth(usedAmount, totalSubscriptionsCost || 10),
+              transition: 'width 0.3s ease-in-out'
+            }}
+          >
+            <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
+              {Array.from({ length: Math.ceil(usedAmount) + 30 }, (_, index) => (
+                <div key={index} className={`w-[6px] h-[calc(100%+50px)] ${styles['bg-reactangle']} rotate-45`}></div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Blue bar for current allocation */}
         <div
           style={{
             width: progressBarWidth(amount, totalSubscriptionsCost || 10),
-            left: progressBarWidth(usedAmount, totalSubscriptionsCost || 10),
+            left: usedAmount > 0 ? progressBarWidth(usedAmount, totalSubscriptionsCost || 10) : '0%',
+            transition: 'width 0.3s ease-in-out, left 0.3s ease-in-out'
           }}
           className={`absolute h-full z-20 ${isSubscribed ? `${styles['bg-active-bar']} ${styles['active-bar']}` : styles['bg-gray-bar']}`}
         ></div>

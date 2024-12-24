@@ -177,9 +177,18 @@ export const PortfolioProvider = ({ children }) => {
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
+        const customerId = localStorage.getItem('stripe_customer_id');
+        if (!customerId) {
+          console.log('No customer ID found, using default values');
+          setSubscriptions([]);
+          setTotalSubscriptionsCost(0);
+          setRemainingBalance(10); // Default starting budget
+          return;
+        }
+
         const response = await fetch('/api/subscriptions/active', {
           headers: {
-            'x-customer-id': localStorage.getItem('stripe_customer_id') || '',
+            'x-customer-id': customerId,
           }
         });
         const data = await response.json();

@@ -142,9 +142,9 @@ export default function SinglePageView({ params }) {
   return (
     <DashboardLayout>
       <div className="fixed top-0 left-0 w-full flex justify-center bg-background z-50">
-        <PledgeBar pageId={params.id} />
+        {user && <PledgeBar pageId={params.id} />}
       </div>
-      <div className="p-2 mt-24">
+      <div className="p-2 mt-28">
         {isEditing ? (
           <EditPage
             isEditing={isEditing}
