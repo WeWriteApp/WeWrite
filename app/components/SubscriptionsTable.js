@@ -6,7 +6,7 @@ import {PillLink} from "./PillLink";
 
 const SubscriptionsTable = () => {
   const { subscriptions } = useContext(PortfolioContext);
-  
+
   // Local copy of subscriptions for editing
   const [localSubscriptions, setLocalSubscriptions] = useState([]);
   const [changesMade, setChangesMade] = useState(false);
@@ -19,9 +19,32 @@ const SubscriptionsTable = () => {
   }, [subscriptions]);
 
   // Function to handle saving changes
-  const handleSaveChanges = () => {
-    // Call the function to save updated subscriptions
-    setChangesMade(false); // Reset changes state after saving
+  const handleSaveChanges = async () => {
+    try {
+      const customerId = localStorage.getItem('stripe_customer_id');
+      if (!customerId) {
+        console.error('No customer ID found');
+        return;
+      }
+
+      const promises = localSubscriptions.map(sub =>
+        fetch('/api/subscriptions/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-customer-id': customerId
+          },
+          body: JSON.stringify({
+            pageId: sub.id,
+            amount: sub.amount
+          })
+        })
+      );
+      await Promise.all(promises);
+      setChangesMade(false);
+    } catch (error) {
+      console.error('Error saving subscription changes:', error);
+    }
   };
 
   if (!localSubscriptions) {
@@ -44,7 +67,7 @@ const SubscriptionsTable = () => {
       ) : (
         <div>No subscriptions available.</div>
       )}
-      
+
       {/* Save Changes Button */}
       <div className="pt-4">
         <button

@@ -74,15 +74,27 @@ const NavIcons = () => {
         router.push("/new");
       },
     },
+    {
+      name: "Settings",
+      icon: () => {
+        return (
+          <div className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-background text-button-text transition-all">
+            <span>Settings </span>
+            <Icon icon={"akar-icons:gear"} className="h-4 w-4 text-gray-500" />
+          </div>
+        );
+      },
+      onClick: () => {
+        router.push("/profile");
+      },
+    },
   ];
 
-  // check if mobile to hide the icons
   useEffect(() => {
     if (window.innerWidth < 768) {
       setIsMobile(true);
     }
 
-    // check for resize
     window.addEventListener("resize", () => {
       if (window.innerWidth < 768) {
         setIsMobile(true);
