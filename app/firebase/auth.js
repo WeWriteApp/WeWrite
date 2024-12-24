@@ -1,4 +1,4 @@
-// Mock Firebase Auth implementation
+import { getAuth } from "firebase/auth";
 import { app } from './config';
 
 export class MockAuth {
@@ -136,25 +136,36 @@ export class MockAuth {
   }
 }
 
-// Create and export a singleton instance with the initialized app
-const mockAuth = new MockAuth(app);
+// Initialize Firebase Auth
+let auth;
 
-// Register auth provider in the app
-app.getProvider('auth', {
-  initialize: () => {},
-  isInitialized: () => true,
-  getImmediate: () => mockAuth
-});
+try {
+  auth = getAuth(app);
 
-// Helper functions to match Firebase Auth API
-export const auth = mockAuth;
-export const getAuth = () => mockAuth;
-export const createUser = (email, password) => mockAuth.createUserWithEmailAndPassword(email, password);
-export const loginUser = (email, password) => mockAuth.signInWithEmailAndPassword(email, password);
-export const logoutUser = () => mockAuth.signOut();
-export const addUsername = (uid, username) => mockAuth.addUsername(uid, username);
+  // Only use mock auth in development
+  if (process.env.NODE_ENV === 'development') {
+    const mockAuth = new MockAuth(app);
+    auth = mockAuth;
+  }
+} catch (error) {
+  console.error('Firebase Auth initialization error:', error);
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Using mock auth in development');
+    const mockAuth = new MockAuth(app);
+    auth = mockAuth;
+  } else {
+    throw error;
+  }
+}
+
+// Export auth instance and helper functions
+export { auth };
+export const createUser = (email, password) => auth.createUserWithEmailAndPassword(email, password);
+export const loginUser = (email, password) => auth.signInWithEmailAndPassword(email, password);
+export const logoutUser = () => auth.signOut();
+export const addUsername = (uid, username) => auth.addUsername(uid, username);
 export const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
 export const createUserWithEmailAndPassword = (auth, email, password) => auth.createUserWithEmailAndPassword(email, password);
 export const signInWithEmailAndPassword = (auth, email, password) => auth.signInWithEmailAndPassword(email, password);
 export const signOut = (auth) => auth.signOut();
-export const updateProfile = (user, profile) => mockAuth.updateProfile(user, profile);
+export const updateProfile = (user, profile) => auth.updateProfile(user, profile);

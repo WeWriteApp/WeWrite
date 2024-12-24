@@ -1,0 +1,30 @@
+[debug] [2024-12-24T18:51:26.613Z] ----------------------------------------------------------------------
+[debug] [2024-12-24T18:51:26.615Z] Command:       /home/ubuntu/.nvm/versions/node/v22.11.0/bin/node /home/ubuntu/.nvm/versions/node/v22.11.0/bin/firebase login --no-localhost
+[debug] [2024-12-24T18:51:26.615Z] CLI Version:   13.29.1
+[debug] [2024-12-24T18:51:26.615Z] Platform:      linux
+[debug] [2024-12-24T18:51:26.615Z] Node Version:  v22.11.0
+[debug] [2024-12-24T18:51:26.615Z] Time:          Tue Dec 24 2024 18:51:26 GMT+0000 (Coordinated Universal Time)
+[debug] [2024-12-24T18:51:26.616Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-12-24T18:51:26.618Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[info] i  Firebase optionally collects CLI and Emulator Suite usage and error reporting information to help improve our products. Data is collected in accordance with Google's privacy policy (https://policies.google.com/privacy) and is not used to identify you.
+ 
+[debug] [2024-12-24T18:51:26.880Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2024-12-24T18:51:26.880Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2024-12-24T18:52:10.848Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2024-12-24T18:52:10.849Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"a4754ab2-1a85-40d3-b511-6ea9a8813cff"}
+[debug] [2024-12-24T18:52:11.263Z] <<< [apiv2][status] POST https://auth.firebase.tools/attest 200
+[debug] [2024-12-24T18:52:11.264Z] <<< [apiv2][body] POST https://auth.firebase.tools/attest {"token":"6LSpJXuC2ySiyoPPeXSD_-NMICP7r4cvkLz-EvCZAiw"}
+[info] 
+[info] To sign in to the Firebase CLI:
+[info] 
+[info] 1. Take note of your session ID:
+[info] 
+[info]    A4754
+[info] 
+[info] 2. Visit the URL below on any device and follow the instructions to get your code:
+[info] 
+[info]    https://auth.firebase.tools/login?code_challenge=ZGOfKVAlbbgzZ4bSpzajYfUIjXdLqpwcIz-u7otRsys&session=a4754ab2-1a85-40d3-b511-6ea9a8813cff&attest=6LSpJXuC2ySiyoPPeXSD_-NMICP7r4cvkLz-EvCZAiw
+[info] 
+[info] 3. Paste or enter the authorization code below once you have it:
+[info] 
