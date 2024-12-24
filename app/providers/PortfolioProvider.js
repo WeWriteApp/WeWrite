@@ -172,16 +172,24 @@ export const PortfolioProvider = ({ children }) => {
         const data = await response.json();
 
         if (data.subscription) {
-          setSubscriptions([data.subscription]);
-          setTotalSubscriptionsCost(data.subscription.amount);
-          setRemainingBalance(100 - data.subscription.amount);
+          const subscription = {
+            ...data.subscription,
+            status: 'active'
+          };
+          setSubscriptions([subscription]);
+          setTotalSubscriptionsCost(subscription.amount);
+          const maxBudget = subscription.amount * 2; // Allow up to double the current subscription
+          setRemainingBalance(maxBudget - subscription.amount);
         } else {
           setSubscriptions([]);
           setTotalSubscriptionsCost(0);
-          setRemainingBalance(100);
+          setRemainingBalance(10); // Default starting budget
         }
       } catch (error) {
         console.error('Error fetching subscription:', error);
+        setSubscriptions([]);
+        setTotalSubscriptionsCost(0);
+        setRemainingBalance(10);
       }
     };
 

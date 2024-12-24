@@ -1,5 +1,5 @@
 "use client";
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { PortfolioContext } from '@/providers/PortfolioProvider';
 import Checkout from '@/components/Checkout';
 import PledgeBar from '@/components/PledgeBar';
@@ -10,14 +10,45 @@ export default function TestSubscriptionPage() {
   const [clientSecret, setClientSecret] = useState(null);
   const { addSubscription } = useContext(PortfolioContext);
 
+  // Create customer if doesn't exist
+  useEffect(() => {
+    const createCustomer = async () => {
+      const existingCustomerId = localStorage.getItem('stripe_customer_id');
+      if (!existingCustomerId) {
+        try {
+          const response = await fetch('/api/payments/create-customer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          const data = await response.json();
+          if (data.customerId) {
+            localStorage.setItem('stripe_customer_id', data.customerId);
+          }
+        } catch (error) {
+          console.error('Error creating customer:', error);
+        }
+      }
+    };
+    createCustomer();
+  }, []);
+
   const handleSubscribe = async () => {
     try {
+      const customerId = localStorage.getItem('stripe_customer_id');
+      if (!customerId) {
+        console.error('No customer ID found');
+        return;
+      }
+
       const response = await fetch('/api/payments/create-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          customerId,
           amount: 1000, // $10 in cents
         }),
       });

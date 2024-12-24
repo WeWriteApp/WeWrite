@@ -1,14 +1,38 @@
 import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
-  const { amount, currency } = await request.json();
-
   try {
-    // return test route
+    const { customerId, amount = 1000 } = await request.json(); // Default to $10
 
-    return NextResponse.json({ amount, currency });
+    // Create a subscription with the specified amount
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{
+        price_data: {
+          currency: 'usd',
+          product: 'prod_default',
+          recurring: {
+            interval: 'month'
+          },
+          unit_amount: amount, // Amount in cents
+        },
+      }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
+    });
+
+    return NextResponse.json({
+      subscriptionId: subscription.id,
+      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+    });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error creating subscription:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 }

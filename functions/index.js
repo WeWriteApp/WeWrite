@@ -9,6 +9,8 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { BigQuery } = require("@google-cloud/bigquery");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 admin.initializeApp();
 const rtdb = admin.database();
 const db = getFirestore();
@@ -33,8 +35,8 @@ exports.createPage = functions.firestore
     const pageId = context.params.pageId;
     const page = change.after.exists ? change.after.data() : null;
 
-    const resourcePath = context.resource.name; 
-    
+    const resourcePath = context.resource.name;
+
     // Check if the update was made to a subcollection (e.g., /pages/{pageId}/versions/{version})
     if (resourcePath.includes('/versions/')) {
       console.log(`Ignoring subcollection update at: ${resourcePath}`);
@@ -130,7 +132,7 @@ async function deleteFromRTDB(existingData, pageId) {
     promises.push(
       rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove(),
     );
-  } 
+  }
 
   await Promise.all(promises);
   logger.info(`Deleted page ${pageId} from RTDB`);
@@ -205,7 +207,7 @@ const query = `
       INSERT (document_id, userId, groupId, title, lastModified)
       VALUES (S.document_id, S.userId, S.groupId, S.title, S.lastModified)
   `;
-  
+
   // Define the parameter values
   const params = {
     document_id: pageId,
@@ -249,3 +251,206 @@ async function upsertToRTDB(page, pageId) {
   await Promise.all(promises);
   logger.info(`Upserted page ${pageId} into RTDB`);
 }
+
+// Handle Stripe webhook events
+exports.handleStripeWebhook = functions.https.onRequest(async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.rawBody,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    logger.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        await handleSubscriptionChange(event.data.object);
+        break;
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeletion(event.data.object);
+        break;
+    }
+    res.json({ received: true });
+  } catch (err) {
+    logger.error('Error processing webhook:', err);
+    res.status(500).send(`Webhook processing failed: ${err.message}`);
+  }
+});
+
+// Handle subscription changes (creation and updates)
+async function handleSubscriptionChange(subscription) {
+  const customerId = subscription.customer;
+  const amount = subscription.items.data[0].price.unit_amount / 100; // Convert from cents
+  const status = subscription.status;
+
+  try {
+    // Get user by Stripe customer ID
+    const userSnapshot = await admin.firestore()
+      .collection('users')
+      .where('stripeCustomerId', '==', customerId)
+      .get();
+
+    if (userSnapshot.empty) {
+      throw new Error(`No user found for customer ${customerId}`);
+    }
+
+    const userId = userSnapshot.docs[0].id;
+    const subscriptionData = {
+      id: subscription.id,
+      status,
+      amount,
+      currentPeriodEnd: admin.firestore.Timestamp.fromDate(
+        new Date(subscription.current_period_end * 1000)
+      ),
+      currentPeriodStart: admin.firestore.Timestamp.fromDate(
+        new Date(subscription.current_period_start * 1000)
+      ),
+      defaultAmount: amount || 10, // Default to $10 if no amount specified
+      allocations: {} // Store page-specific allocations
+    };
+
+    // Update Firestore
+    await admin.firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('subscriptions')
+      .doc(subscription.id)
+      .set(subscriptionData, { merge: true });
+
+    // Update RTDB for real-time access
+    await admin.database()
+      .ref(`/users/${userId}/subscriptions/${subscription.id}`)
+      .update({
+        status,
+        amount,
+        currentPeriodEnd: subscription.current_period_end * 1000,
+        currentPeriodStart: subscription.current_period_start * 1000,
+        defaultAmount: amount || 10
+      });
+
+    logger.info(`Updated subscription ${subscription.id} for user ${userId}`);
+  } catch (error) {
+    logger.error('Error handling subscription change:', error);
+    throw error;
+  }
+}
+
+// Handle subscription deletions
+async function handleSubscriptionDeletion(subscription) {
+  const customerId = subscription.customer;
+
+  try {
+    // Get user by Stripe customer ID
+    const userSnapshot = await admin.firestore()
+      .collection('users')
+      .where('stripeCustomerId', '==', customerId)
+      .get();
+
+    if (userSnapshot.empty) {
+      throw new Error(`No user found for customer ${customerId}`);
+    }
+
+    const userId = userSnapshot.docs[0].id;
+
+    // Update Firestore
+    await admin.firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('subscriptions')
+      .doc(subscription.id)
+      .update({
+        status: 'canceled',
+        canceledAt: admin.firestore.Timestamp.fromDate(new Date())
+      });
+
+    // Update RTDB
+    await admin.database()
+      .ref(`/users/${userId}/subscriptions/${subscription.id}`)
+      .update({
+        status: 'canceled',
+        canceledAt: Date.now()
+      });
+
+    logger.info(`Marked subscription ${subscription.id} as canceled for user ${userId}`);
+  } catch (error) {
+    logger.error('Error handling subscription deletion:', error);
+    throw error;
+  }
+}
+
+// Update subscription allocations
+exports.updateSubscriptionAllocation = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { subscriptionId, allocations } = data;
+  if (!subscriptionId || !allocations || typeof allocations !== 'object') {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+  }
+
+  // Validate total percentage equals 100
+  const totalPercentage = Object.values(allocations).reduce((sum, allocation) => sum + allocation.percentage, 0);
+  if (totalPercentage !== 100) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Total allocation percentage must equal 100%'
+    );
+  }
+
+  try {
+    const userId = context.auth.uid;
+    const subscriptionRef = admin.firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('subscriptions')
+      .doc(subscriptionId);
+
+    const subscription = await subscriptionRef.get();
+    if (!subscription.exists) {
+      throw new functions.https.HttpsError('not-found', 'Subscription not found');
+    }
+
+    const subscriptionData = subscription.data();
+    const monthlyAmount = subscriptionData.defaultAmount || 10; // Default to $10/month
+
+    // Calculate amounts for each allocation
+    const allocationUpdates = {};
+    const rtdbUpdates = {};
+
+    for (const [pageId, allocation] of Object.entries(allocations)) {
+      const amount = (monthlyAmount * allocation.percentage) / 100;
+      allocationUpdates[`allocations.${pageId}`] = {
+        percentage: allocation.percentage,
+        amount,
+        updatedAt: admin.firestore.Timestamp.now()
+      };
+      rtdbUpdates[pageId] = {
+        percentage: allocation.percentage,
+        amount,
+        updatedAt: Date.now()
+      };
+    }
+
+    // Update Firestore
+    await subscriptionRef.update(allocationUpdates);
+
+    // Update RTDB
+    await admin.database()
+      .ref(`/users/${userId}/subscriptions/${subscriptionId}/allocations`)
+      .update(rtdbUpdates);
+
+    return { success: true, allocations: rtdbUpdates };
+  } catch (error) {
+    logger.error('Error updating subscription allocation:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});

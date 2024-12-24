@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
 import { PortfolioContext } from "@/providers/PortfolioProvider";
+import styles from './PledgeBar.module.css';
 
 const intervalOptions = [
   { value: 0.01, label: '0.01' },
@@ -13,15 +14,18 @@ const intervalOptions = [
 
 const PledgeBar = () => {
   const { subscriptions, totalSubscriptionsCost, addSubscription } = useContext(PortfolioContext);
-  const [budget, setBudget] = useState(totalSubscriptionsCost || 10); // Default $10/month
-  const [usedAmount, setUsedAmount] = useState(0);
-  const [donateAmount, setDonateAmount] = useState(0);
+  const [amount, setAmount] = useState(totalSubscriptionsCost || 10);
+  const [percentage, setPercentage] = useState(0);
+  const [displayMode, setDisplayMode] = useState('amount');
   const [menuVisible, setMenuVisible] = useState(false);
   const [customVisible, setCustomVisible] = useState(false);
   const [customCheck, setCustomCheck] = useState(false);
   const [interval, setInterval] = useState(1);
   const [inputVisible, setInputVisible] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [usedAmount, setUsedAmount] = useState(0);
+
+  const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
 
   const timerRef = useRef(null);
   const textRef = useRef(null);
@@ -29,14 +33,22 @@ const PledgeBar = () => {
 
   useEffect(() => {
     if (totalSubscriptionsCost) {
-      setBudget(totalSubscriptionsCost);
-      const used = subscriptions.reduce((total, sub) => total + sub.amount, 0);
+      setAmount(totalSubscriptionsCost);
+      const used = subscriptions
+        .filter(sub => sub.id !== id)
+        .reduce((total, sub) => total + sub.amount, 0);
       setUsedAmount(used);
+      const currentSubscription = subscriptions.find(sub => sub.id === id);
+      if (currentSubscription) {
+        setIsSubscribed(true);
+        setAmount(currentSubscription.amount);
+        setPercentage((currentSubscription.amount / totalSubscriptionsCost) * 100);
+      }
     } else {
-      setBudget(10);
-      setUsedAmount(0);
+      setAmount(10);
+      setPercentage(0);
     }
-  }, [subscriptions, totalSubscriptionsCost]);
+  }, [subscriptions, totalSubscriptionsCost, id]);
 
   const handleMouseDown = () => {
     timerRef.current = setTimeout(() => setMenuVisible(true), 500);
@@ -65,10 +77,51 @@ const PledgeBar = () => {
     };
   }, []);
 
-  const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
+  const handleAmountChange = (newAmount) => {
+    if (newAmount >= 0 && newAmount <= (totalSubscriptionsCost || 10)) {
+      setAmount(newAmount);
+      setPercentage((newAmount / (totalSubscriptionsCost || 10)) * 100);
+      addSubscription(newAmount, id);
+    }
+  };
+
+  const handlePercentageChange = (newPercentage) => {
+    if (newPercentage >= 0 && newPercentage <= 100) {
+      setPercentage(newPercentage);
+      const newAmount = ((newPercentage / 100) * (totalSubscriptionsCost || 10));
+      setAmount(newAmount);
+      addSubscription(newAmount, id);
+    }
+  };
 
   return (
-    <div className="w-11/12 sm:max-w-[300px]">
+    <div className="w-11/12 sm:max-w-[300px] space-y-6 bg-white rounded-lg p-6 shadow-sm">
+      <div className="space-y-4">
+        <div className="flex justify-between items-center border-b pb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Subscription Amount</h2>
+          <button
+            onClick={() => setDisplayMode(displayMode === 'amount' ? 'percentage' : 'amount')}
+            className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+          >
+            Switch to {displayMode === 'amount' ? 'Percentage' : 'Amount'}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between text-gray-600">
+          <span className="text-sm">
+            {displayMode === 'amount'
+              ? `Total Budget: $${totalSubscriptionsCost || 10}/mo`
+              : 'Percentage Allocation'
+            }
+          </span>
+          {isSubscribed && (
+            <span className="text-sm text-green-600 font-medium">
+              Active Subscription
+            </span>
+          )}
+        </div>
+      </div>
+
       {customVisible && (
         <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
           <div className="flex items-center justify-center">
@@ -139,34 +192,36 @@ const PledgeBar = () => {
         </div>
       )}
 
-      <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden">
+      <div className="sm:max-w-[300px] w-full z-10 relative border border-gray-200 rounded-lg overflow-hidden bg-gray-50 min-h-[48px]">
+        {/* Gray area for other pages */}
         <div
-          className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
-          style={{ width: progressBarWidth(usedAmount, budget) }}
+          className={`h-full rounded-l-[21px] absolute ${styles['bg-reactangle']} overflow-hidden z-10`}
+          style={{ width: progressBarWidth(usedAmount, totalSubscriptionsCost || 10) }}
         >
           <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
             {Array.from({ length: Math.ceil(usedAmount) + 30 }, (_, index) => (
-              <div key={index} className="w-[6px] h-[calc(100%+50px)] bg-reactangle rotate-45"></div>
+              <div key={index} className={`w-[6px] h-[calc(100%+50px)] ${styles['bg-reactangle']} rotate-45`}></div>
             ))}
           </div>
         </div>
 
+        {/* Blue bar for current allocation */}
         <div
           style={{
-            width: progressBarWidth(donateAmount, budget),
-            left: progressBarWidth(usedAmount, budget),
+            width: progressBarWidth(amount, totalSubscriptionsCost || 10),
+            left: progressBarWidth(usedAmount, totalSubscriptionsCost || 10),
           }}
-          className={`absolute h-full ${isConfirmed ? 'bg-active-bar active-bar' : 'bg-gray-bar'}`}
+          className={`absolute h-full z-20 ${isSubscribed ? `${styles['bg-active-bar']} ${styles['active-bar']}` : styles['bg-gray-bar']}`}
         ></div>
 
-        <div className="flex gap-2 justify-between p-2">
-          <div
-            className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
+        <div className="flex gap-4 justify-between p-4">
+          <button
+            className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
             onClick={() => {
-              if (donateAmount - interval >= 0) {
-                const newAmount = donateAmount - interval;
-                setDonateAmount(newAmount);
-                addSubscription(newAmount, id);
+              if (displayMode === 'amount') {
+                handleAmountChange(amount - interval);
+              } else {
+                handlePercentageChange(percentage - 5);
               }
             }}
             onMouseDown={handleMouseDown}
@@ -174,44 +229,59 @@ const PledgeBar = () => {
             onTouchStart={handleMouseDown}
             onTouchEnd={handleMouseUp}
           >
-            <Icon icon="mdi:minus" width="24" height="24" />
-          </div>
+            <Icon icon="mdi:minus" width="20" height="20" />
+          </button>
 
           <div
-            className="flex justify-center items-center text-gray gap-1 text-[18px] z-10"
+            className="flex justify-center items-center gap-1 text-lg"
             onDoubleClick={() => setInputVisible(true)}
           >
-            $
-            {inputVisible ? (
-              <input
-                type="number"
-                ref={textRef}
-                className="w-[80px] h-full focus-text text-center text-[24px]"
-                value={donateAmount}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  if (value <= budget - usedAmount) {
-                    setDonateAmount(value);
-                    addSubscription(value, id);
-                  }
-                }}
-                autoComplete="off"
-              />
+            {displayMode === 'amount' ? (
+              <>
+                <span className="text-gray-600">$</span>
+                {inputVisible ? (
+                  <input
+                    type="number"
+                    ref={textRef}
+                    className="w-20 text-center bg-white border rounded-md py-1 text-gray-900"
+                    value={amount}
+                    onChange={(e) => handleAmountChange(Number(e.target.value))}
+                    autoComplete="off"
+                  />
+                ) : (
+                  <span className="font-medium text-gray-900">
+                    {amount.toFixed(2)}
+                  </span>
+                )}
+                <span className="text-gray-600">/mo</span>
+              </>
             ) : (
-              <span className="text-[24px] font-normal text-white">
-                {donateAmount.toFixed(2)}
-              </span>
+              <>
+                {inputVisible ? (
+                  <input
+                    type="number"
+                    ref={textRef}
+                    className="w-20 text-center bg-white border rounded-md py-1 text-gray-900"
+                    value={percentage}
+                    onChange={(e) => handlePercentageChange(Number(e.target.value))}
+                    autoComplete="off"
+                  />
+                ) : (
+                  <span className="font-medium text-gray-900">
+                    {percentage.toFixed(1)}%
+                  </span>
+                )}
+              </>
             )}
-            /mo
           </div>
 
-          <div
-            className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
+          <button
+            className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
             onClick={() => {
-              if (donateAmount + interval <= budget - usedAmount) {
-                const newAmount = donateAmount + interval;
-                setDonateAmount(newAmount);
-                addSubscription(newAmount, id);
+              if (displayMode === 'amount') {
+                handleAmountChange(amount + interval);
+              } else {
+                handlePercentageChange(percentage + 5);
               }
             }}
             onMouseDown={handleMouseDown}
@@ -219,8 +289,8 @@ const PledgeBar = () => {
             onTouchStart={handleMouseDown}
             onTouchEnd={handleMouseUp}
           >
-            <Icon icon="mdi:plus" width="24" height="24" />
-          </div>
+            <Icon icon="mdi:plus" width="20" height="20" />
+          </button>
         </div>
       </div>
     </div>

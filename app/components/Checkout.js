@@ -3,66 +3,82 @@ import { useState } from "react";
 import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
-// Your public test key from Stripe
-const stripePromise = loadStripe('123');
+// Use the publishable key from stripe/index.js
+const stripePromise = loadStripe('pk_test_51Q08VWIsJOA8IjJRnJg25SjW6aayav9j6lF2UMiMWP3o3wsFrwvULkuopDaIgujlFVJBdabvbHXjFG6TXPx6yoQu00DUGmhTyZ');
 
-export default function Checkout({ clientSecret }) {
+export default function Checkout({ clientSecret, onSuccess }) {
   const options = {
-    clientSecret: clientSecret, // Pass the client secret from the server
+    clientSecret,
+    appearance: {
+      theme: 'stripe',
+    },
   };
 
   return (
     <Elements stripe={stripePromise} options={options}>
-      <CheckoutForm />
+      <CheckoutForm onSuccess={onSuccess} />
     </Elements>
   );
 }
 
-const CheckoutForm = () => {
+const CheckoutForm = ({ onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
-  const [succeeded, setSucceeded] = useState(false);
-  const [paymentIntentId, setPaymentIntentId] = useState(null);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!stripe || !elements) {
-      // Stripe.js has not yet loaded.
       return;
     }
 
     setProcessing(true);
+    setError(null);
 
-    // Confirm the payment using PaymentElement
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: window.location.href, // Optional: redirect URL after payment
-      },
-    });
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/payment/success`,
+        },
+      });
 
-    if (error) {
-      setError(`Payment failed: ${error.message}`);
-      setProcessing(false);
-    } else {
-      setSucceeded(true);
-      setPaymentIntentId(paymentIntent.id);
+      if (error) {
+        setError(`Payment failed: ${error.message}`);
+        setProcessing(false);
+      } else if (paymentIntent.status === 'succeeded') {
+        if (onSuccess) {
+          onSuccess(paymentIntent);
+        }
+        setProcessing(false);
+      }
+    } catch (err) {
+      setError(`An unexpected error occurred: ${err.message}`);
       setProcessing(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      {/* PaymentElement will render all available payment methods */}
-      <PaymentElement />
-      {error && <div role="alert">{error}</div>}
-      <button type="submit" disabled={!stripe || processing || succeeded}>
-        {processing ? "Processing..." : "Pay Now"}
+    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
+      <PaymentElement className="mb-6" />
+      {error && (
+        <div className="text-red-500 mb-4" role="alert">
+          {error}
+        </div>
+      )}
+      <button
+        type="submit"
+        disabled={!stripe || processing}
+        className={`w-full py-2 px-4 rounded ${
+          processing
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-blue-500 hover:bg-blue-600'
+        } text-white font-semibold`}
+      >
+        {processing ? "Processing..." : "Subscribe"}
       </button>
-      {succeeded && <p>Payment successful! Payment Intent ID: {paymentIntentId}</p>}
     </form>
   );
 };
