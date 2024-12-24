@@ -14,8 +14,19 @@ import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
 import BracketTriggerPlugin, { BracketNode, $createBracketNode } from "./BracketTriggerPlugin";
 import { LinkDropdownPlugin } from "./LinkDropdownPlugin";
+import { LineNumberPlugin } from "./LineNumberPlugin";
 
 const theme = {
+  lineNumber: {
+    fontSize: '12px',
+    lineHeight: '24px',
+    color: '#6B7280',
+    backgroundColor: '#F3F4F6',
+    padding: '0 8px',
+    marginRight: '8px',
+    borderRadius: '4px',
+    userSelect: 'none',
+  }
 };
 
 function onError(error) {
@@ -41,17 +52,22 @@ function Editor({ initialEditorState, setEditorState }) {
   return (
     <>
     <LexicalComposer initialConfig={initialConfig}>
-      <PlainTextPlugin
-        contentEditable={<ContentEditable />}
-        placeholder={<></>}
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      <HistoryPlugin />
-      <AutoFocusPlugin />
-      <CustomLinkPlugin />
-      <MyOnChangePlugin onChange={onChange} initialEditorState={initialEditorState} />
-      <BracketTriggerPlugin />
-      <LinkDropdownPlugin />
+      <div className="relative flex">
+        <div className="flex-1 relative">
+          <PlainTextPlugin
+            contentEditable={<ContentEditable className="pl-12 min-h-[200px] outline-none" />}
+            placeholder={<></>}
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+          <HistoryPlugin />
+          <AutoFocusPlugin />
+          <CustomLinkPlugin />
+          <MyOnChangePlugin onChange={onChange} initialEditorState={initialEditorState} />
+          <BracketTriggerPlugin />
+          <LinkDropdownPlugin />
+          <LineNumberPlugin />
+        </div>
+      </div>
     </LexicalComposer>
     </>
   );
