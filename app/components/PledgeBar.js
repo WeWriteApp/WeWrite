@@ -1,13 +1,8 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
-
-const data = {
-  budget: 100,
-  used: 6,
-  donate: 0,
-};
+import { PortfolioContext } from "@/providers/PortfolioProvider";
 
 const intervalOptions = [
   { value: 0.01, label: '0.01' },
@@ -17,9 +12,10 @@ const intervalOptions = [
 ];
 
 const PledgeBar = () => {
-  const [budget, setBudget] = useState(data.budget || 0);
-  const [usedAmount, setUsedAmount] = useState(data.used || 0);
-  const [donateAmount, setDonateAmount] = useState(data.donate || 0);
+  const { subscriptions, totalSubscriptionsCost, addSubscription } = useContext(PortfolioContext);
+  const [budget, setBudget] = useState(totalSubscriptionsCost || 10); // Default $10/month
+  const [usedAmount, setUsedAmount] = useState(0);
+  const [donateAmount, setDonateAmount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
   const [customVisible, setCustomVisible] = useState(false);
   const [customCheck, setCustomCheck] = useState(false);
@@ -30,6 +26,17 @@ const PledgeBar = () => {
   const timerRef = useRef(null);
   const textRef = useRef(null);
   const { id } = useParams();
+
+  useEffect(() => {
+    if (totalSubscriptionsCost) {
+      setBudget(totalSubscriptionsCost);
+      const used = subscriptions.reduce((total, sub) => total + sub.amount, 0);
+      setUsedAmount(used);
+    } else {
+      setBudget(10);
+      setUsedAmount(0);
+    }
+  }, [subscriptions, totalSubscriptionsCost]);
 
   const handleMouseDown = () => {
     timerRef.current = setTimeout(() => setMenuVisible(true), 500);
@@ -138,7 +145,7 @@ const PledgeBar = () => {
           style={{ width: progressBarWidth(usedAmount, budget) }}
         >
           <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
-            {Array.from({ length: data.used + 30 }, (_, index) => (
+            {Array.from({ length: Math.ceil(usedAmount) + 30 }, (_, index) => (
               <div key={index} className="w-[6px] h-[calc(100%+50px)] bg-reactangle rotate-45"></div>
             ))}
           </div>
@@ -156,7 +163,11 @@ const PledgeBar = () => {
           <div
             className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
             onClick={() => {
-              if (donateAmount - interval >= 0) setDonateAmount(donateAmount - interval);
+              if (donateAmount - interval >= 0) {
+                const newAmount = donateAmount - interval;
+                setDonateAmount(newAmount);
+                addSubscription(newAmount, id);
+              }
             }}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
@@ -179,7 +190,10 @@ const PledgeBar = () => {
                 value={donateAmount}
                 onChange={(e) => {
                   const value = Number(e.target.value);
-                  if (value <= budget - usedAmount) setDonateAmount(value);
+                  if (value <= budget - usedAmount) {
+                    setDonateAmount(value);
+                    addSubscription(value, id);
+                  }
                 }}
                 autoComplete="off"
               />
@@ -194,7 +208,11 @@ const PledgeBar = () => {
           <div
             className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
             onClick={() => {
-              if (donateAmount + interval <= budget - usedAmount) setDonateAmount(donateAmount + interval);
+              if (donateAmount + interval <= budget - usedAmount) {
+                const newAmount = donateAmount + interval;
+                setDonateAmount(newAmount);
+                addSubscription(newAmount, id);
+              }
             }}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
