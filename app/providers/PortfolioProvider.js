@@ -38,7 +38,20 @@ export const PortfolioProvider = ({ children }) => {
     },
   ]);
   const [payouts, setPayouts] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([
+    {
+      id: "08ZRuAurh0msxGB2cEdc",
+      amount: 10,
+      date: new Date(new Date().setDate(new Date().getDate() - 3)),
+      status: "active",
+    },
+    {
+      id: "0Cd78pNqhoYmsfjxy3G5",
+      amount: 5,
+      date: new Date(new Date().setDate(new Date().getDate() - 3)),
+      status: "active",
+    },
+  ]);
   const [transactions, setTransactions] = useState([
     {
       id: 1,

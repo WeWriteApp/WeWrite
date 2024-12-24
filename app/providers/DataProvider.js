@@ -12,6 +12,11 @@ export const DataProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     const fetchPages = async () => {
       try {
         const fetchedPages = await getPages();
@@ -24,7 +29,7 @@ export const DataProvider = ({ children }) => {
     };
 
     fetchPages();
-  }, []);
+  }, [user]);
 
   const filtered = pages.filter(page =>
     page.isPublic || (user && (page.userId === user.uid || (user.groups && user.groups.includes(page.groupId))))
