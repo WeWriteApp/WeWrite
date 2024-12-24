@@ -62,7 +62,7 @@ const PledgeBar = ({ user, pageId }) => {
 
   const progressBarWidth = useCallback((value, total) => {
     if (!total || total <= 0) return '0%';
-    const percentage = (value / total) * 100;
+    const percentage = ((value || 0) / total) * 100;
     return `${Math.min(Math.max(percentage, 0), 100)}%`;
   }, []);
 
@@ -253,10 +253,10 @@ const PledgeBar = ({ user, pageId }) => {
       <div className="relative h-[42px] rounded-[21px] bg-gray-100 overflow-hidden">
         <div
           className={`h-full rounded-l-[21px] absolute ${styles['bg-rectangle']} overflow-hidden`}
-          style={{ width: progressBarWidth(usedAmount, totalSubscriptionsCost) }}
+          style={{ width: progressBarWidth(usedAmount || 0, totalSubscriptionsCost || 10) }}
         >
           <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
-            {Array.from({ length: Math.ceil(usedAmount) + 30 }, (_, index) => (
+            {Array.from({ length: Math.ceil((usedAmount || 0) + 30) }, (_, index) => (
               <div
                 key={index}
                 className={`w-[6px] h-[calc(100%+50px)] ${styles['bg-rectangle']} rotate-45`}
@@ -267,8 +267,8 @@ const PledgeBar = ({ user, pageId }) => {
 
         <div
           style={{
-            width: progressBarWidth(amount, totalSubscriptionsCost),
-            left: progressBarWidth(usedAmount, totalSubscriptionsCost),
+            width: progressBarWidth(amount || 0, totalSubscriptionsCost || 10),
+            left: progressBarWidth(usedAmount || 0, totalSubscriptionsCost || 10),
           }}
           className={`absolute h-full ${
             isSubscribed ? `${styles['bg-active-bar']} ${styles['active-bar']}` : styles['bg-gray-bar']
