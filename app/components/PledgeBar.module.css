@@ -1,17 +1,17 @@
-.bg-reactangle {
+.bgReactangle {
   background-color: rgba(128, 128, 128, 0.3);
 }
 
-.bg-active-bar {
+.bgActiveBar {
   background-color: #3b82f6;
   opacity: 1;
 }
 
-.bg-gray-bar {
+.bgGrayBar {
   background-color: rgba(128, 128, 128, 0.4);
   opacity: 0.8;
 }
 
-.active-bar {
+.activeBar {
   transition: all 0.3s ease;
 }

@@ -38,20 +38,7 @@ export const PortfolioProvider = ({ children }) => {
     },
   ]);
   const [payouts, setPayouts] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([
-    {
-      id: "08ZRuAurh0msxGB2cEdc",
-      amount: 10,
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    },
-    {
-      id: "0Cd78pNqhoYmsfjxy3G5",
-      amount: 5,
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    },
-  ]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [transactions, setTransactions] = useState([
     {
       id: 1,
@@ -177,7 +164,10 @@ export const PortfolioProvider = ({ children }) => {
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
+        console.log('Fetching subscription data...');
         const customerId = localStorage.getItem('stripe_customer_id');
+        console.log('Customer ID:', customerId);
+
         if (!customerId) {
           console.log('No customer ID found, using default values');
           setSubscriptions([]);
@@ -192,20 +182,23 @@ export const PortfolioProvider = ({ children }) => {
           }
         });
         const data = await response.json();
+        console.log('Subscription data received:', data);
 
         if (data.subscription) {
           const subscription = {
             ...data.subscription,
             status: 'active'
           };
+          console.log('Setting active subscription:', subscription);
           setSubscriptions([subscription]);
           setTotalSubscriptionsCost(subscription.amount);
-          const maxBudget = subscription.amount * 2; // Allow up to double the current subscription
+          const maxBudget = subscription.amount * 2;
           setRemainingBalance(maxBudget - subscription.amount);
         } else {
+          console.log('No active subscription found, using default values');
           setSubscriptions([]);
           setTotalSubscriptionsCost(0);
-          setRemainingBalance(10); // Default starting budget
+          setRemainingBalance(10);
         }
       } catch (error) {
         console.error('Error fetching subscription:', error);

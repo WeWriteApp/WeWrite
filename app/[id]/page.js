@@ -1,5 +1,5 @@
-import SinglePageView from "../../components/SinglePageView";
-import { getPageById } from "../../firebase/database";
+import SinglePageView from "../components/SinglePageView";
+import { getPageById } from "../firebase/database";
 
 export async function generateMetadata({ params }) {
   try {

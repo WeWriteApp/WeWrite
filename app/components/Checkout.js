@@ -49,6 +49,10 @@ const CheckoutForm = ({ onSuccess }) => {
         setError(`Payment failed: ${error.message}`);
         setProcessing(false);
       } else if (paymentIntent.status === 'succeeded') {
+        // Store customer ID in localStorage
+        if (paymentIntent.customer) {
+          localStorage.setItem('stripe_customer_id', paymentIntent.customer);
+        }
         if (onSuccess) {
           onSuccess(paymentIntent);
         }

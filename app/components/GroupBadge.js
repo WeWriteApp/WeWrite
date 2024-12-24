@@ -1,52 +1,51 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { rtdb } from '../firebase/rtdb'
-import { onValue, ref } from "firebase/database";
+import { ref, onValue, getMockDatabase } from "../firebase/rtdb";
 import Link from "next/link";
 
-export default function GroupBadge({ groupId,index }) {
+export default function GroupBadge({ groupId, index }) {
   const [group, setGroup] = useState(null);
   const [memberCount, setMemberCount] = useState(0);
   const [pageCount, setPageCount] = useState(0);
 
   useEffect(() => {
     if (!groupId) return;
-    const groupRef = ref(rtdb, `groups/${groupId}`);
-    return onValue(groupRef, (snapshot) => {
+
+    const db = getMockDatabase();
+    const groupRef = ref(db, `groups/${groupId}`);
+    const unsubscribe = onValue(groupRef, (snapshot) => {
       if (!snapshot.val()) return;
 
-      setGroup({
+      const groupData = {
         id: snapshot.key,
         ...snapshot.val()
-      });
+      };
+      setGroup(groupData);
 
-
-      if (snapshot.val().members) {
-        let count = Object.keys(snapshot.val().members).length;
+      if (groupData.members) {
+        const count = Object.keys(groupData.members).length;
         setMemberCount(count);
       }
-      if (snapshot.val().pages) {
-        let pageC = Object.keys(snapshot.val().pages).length;
+      if (groupData.pages) {
+        const pageC = Object.keys(groupData.pages).length;
         setPageCount(pageC);
       }
-      
-      
     });
+
+    return () => unsubscribe();
   }, [groupId]);
 
   if (!group || !groupId) return <div>Loading...</div>;
 
   return (
-    <Link className="p-4 border bg-background border-gray-500 rounded-lg fade-in
-    " href={`/groups/${group.id}`} style={{ animationDelay: `${index * 50}ms` }}>
-      <h1
-        className="text-lg font-semibold text-text"
-      >{group.name}</h1>
-      <p className="text-gray-600 text-sm mt-1"
-      >{group.description}</p>
-      <p className="text-gray-600 text-sm mt-1"
-      >{memberCount} members | {pageCount} pages</p>
-      
+    <Link
+      className="p-4 border bg-background border-gray-500 rounded-lg fade-in"
+      href={`/groups/${group.id}`}
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      <h1 className="text-lg font-semibold text-text">{group.name}</h1>
+      <p className="text-gray-600 text-sm mt-1">{group.description}</p>
+      <p className="text-gray-600 text-sm mt-1">{memberCount} members | {pageCount} pages</p>
     </Link>
   );
 }

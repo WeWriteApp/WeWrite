@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "./firestore";
+import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 
 const mockConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'mock-api-key',
@@ -12,63 +13,112 @@ const mockConfig = {
 };
 
 let app;
+let db;
+let rtdb;
+
 try {
   app = getApps().length ? getApp() : initializeApp(mockConfig);
-} catch (error) {
-  console.error('Error initializing Firebase:', error);
-  app = initializeApp(mockConfig);
-}
+  db = getFirestore(app);
+  rtdb = getDatabase(app);
 
-const providers = new Map();
+  // Only use mock provider in development
+  if (process.env.NODE_ENV === 'development') {
+    const mockData = {
+      users: new Map([
+        ['test-user', {
+          uid: 'test-user',
+          username: 'Test User',
+          email: 'test@example.com',
+          createdAt: new Date().toISOString()
+        }]
+      ])
+    };
 
-const mockData = {
-  users: new Map([
-    ['test-user', {
-      uid: 'test-user',
-      username: 'Test User',
-      email: 'test@example.com',
-      createdAt: new Date().toISOString()
-    }]
-  ])
-};
+    // Mock Firestore
+    const mockFirestore = {
+      _checkNotDeleted: () => true,
+      collection: () => ({
+        doc: () => ({
+          get: () => Promise.resolve({ exists: () => false, data: () => null }),
+          set: () => Promise.resolve(),
+          update: () => Promise.resolve(),
+          delete: () => Promise.resolve()
+        }),
+        add: () => Promise.resolve({ id: `mock-${Date.now()}` })
+      })
+    };
 
-providers.set('database', {
-  initialize: () => {},
-  isInitialized: () => true,
-  getImmediate: () => ({
-    ref: (path) => {
-      const [collection, id] = path.split('/');
-      return {
+    // Mock Realtime Database
+    const createMockRef = (path) => {
+      const [collection, id] = path?.split('/') || [];
+      const mockRef = {
+        _checkNotDeleted: () => true,
+        _path: path,
         val: () => mockData[collection]?.get(id) || null,
         once: () => Promise.resolve({
-          val: () => mockData[collection]?.get(id) || null
+          val: () => mockData[collection]?.get(id) || null,
+          exists: () => mockData[collection]?.has(id) || false,
+          key: id,
+          ref: mockRef
         }),
         get: () => Promise.resolve({
-          val: () => mockData[collection]?.get(id) || null
-        })
+          val: () => mockData[collection]?.get(id) || null,
+          exists: () => mockData[collection]?.has(id) || false,
+          key: id,
+          ref: mockRef
+        }),
+        onValue: (callback) => {
+          callback({
+            val: () => mockData[collection]?.get(id) || null,
+            exists: () => mockData[collection]?.has(id) || false,
+            key: id,
+            ref: mockRef
+          });
+          return () => {};
+        },
+        off: () => {},
+        set: (data) => {
+          if (!mockData[collection]) mockData[collection] = new Map();
+          mockData[collection].set(id, data);
+          return Promise.resolve();
+        },
+        update: (data) => {
+          if (!mockData[collection]) mockData[collection] = new Map();
+          const existing = mockData[collection].get(id) || {};
+          mockData[collection].set(id, { ...existing, ...data });
+          return Promise.resolve();
+        },
+        remove: () => {
+          mockData[collection]?.delete(id);
+          return Promise.resolve();
+        }
       };
-    }
-  })
-});
+      return mockRef;
+    };
 
-app.getProvider = (name) => {
-  const provider = providers.get(name);
-  if (provider) return provider;
+    const mockRtdb = {
+      _checkNotDeleted: () => true,
+      ref: createMockRef,
+      refFromURL: createMockRef
+    };
 
-  return {
-    initialize: () => {},
-    isInitialized: () => true,
-    getImmediate: () => ({
-      collection: () => ({}),
-      doc: () => ({}),
-      onSnapshot: () => () => {},
-      set: () => Promise.resolve(),
-      update: () => Promise.resolve(),
-      delete: () => Promise.resolve()
-    })
-  };
-};
+    // Override database instances
+    db = mockFirestore;
+    rtdb = mockRtdb;
+  }
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Attempting to initialize with mock config in development');
+    app = initializeApp(mockConfig);
+    db = getFirestore(app);
+    rtdb = getDatabase(app);
+  } else {
+    throw error;
+  }
+}
 
 export { app };
-export const db = getFirestore(app);
+export { db };
+export { rtdb as database };
 export default app;
