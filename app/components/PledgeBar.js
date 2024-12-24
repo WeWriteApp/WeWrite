@@ -12,6 +12,39 @@ const intervalOptions = [
   { value: 10, label: '10.00' },
 ];
 
+const LoadingSkeleton = () => (
+  <div className="w-11/12 sm:max-w-[300px] space-y-6 bg-white rounded-lg p-6 shadow-sm animate-pulse">
+    <div className="space-y-4">
+      <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+    </div>
+    <div className="h-12 bg-gray-200 rounded"></div>
+    <div className="flex justify-between">
+      <div className="h-10 w-10 bg-gray-200 rounded-md"></div>
+      <div className="h-10 w-20 bg-gray-200 rounded-md"></div>
+      <div className="h-10 w-10 bg-gray-200 rounded-md"></div>
+    </div>
+  </div>
+);
+
+const ErrorDisplay = ({ error, onRetry }) => (
+  <div className="w-11/12 sm:max-w-[300px] space-y-4 bg-white rounded-lg p-6 shadow-sm border border-red-200">
+    <div className="flex items-center gap-2 text-red-600">
+      <Icon icon="mdi:alert-circle" width="24" height="24" />
+      <h2 className="text-lg font-semibold">Error</h2>
+    </div>
+    <p className="text-sm text-red-600">{error?.message || 'Failed to load subscription data'}</p>
+    {onRetry && (
+      <button
+        onClick={onRetry}
+        className="w-full px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+      >
+        Try Again
+      </button>
+    )}
+  </div>
+);
+
 const PledgeBar = () => {
   const { subscriptions, totalSubscriptionsCost, addSubscription } = useContext(PortfolioContext);
   const [amount, setAmount] = useState(0);
@@ -59,9 +92,9 @@ const PledgeBar = () => {
       setError(null);
     } catch (err) {
       console.error('Error processing subscription data:', err);
-      setError('Unable to load subscription data');
+      setError(err instanceof Error ? err : new Error('Failed to process subscription data'));
     } finally {
-      setIsLoading(false);
+      setTimeout(() => setIsLoading(false), 300);
     }
   }, [subscriptions, totalSubscriptionsCost, id]);
 
@@ -108,6 +141,14 @@ const PledgeBar = () => {
       addSubscription(newAmount, id);
     }
   };
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (error) {
+    return <ErrorDisplay error={error} onRetry={() => window.location.reload()} />;
+  }
 
   return (
     <div className="w-11/12 sm:max-w-[300px] space-y-6 bg-white rounded-lg p-6 shadow-sm">
