@@ -1,5 +1,4 @@
 "use client";
-// an auth provider that watches onAuthState change for firebase with a context provider
 import { useEffect, useState, createContext } from "react";
 
 export const PortfolioContext = createContext();
@@ -34,26 +33,12 @@ export const PortfolioProvider = ({ children }) => {
       id: 1,
       paidTo: "dFAKH3QHPID7TJCydfFf",
       amount: 10,
-      // date 1 month ago
       date: new Date(new Date().setMonth(new Date().getMonth() - 1)),
       status: "paid",
     },
   ]);
   const [payouts, setPayouts] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([
-    {
-      id: "08ZRuAurh0msxGB2cEdc",
-      amount: 10,
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    },
-    {
-      id: "0Cd78pNqhoYmsfjxy3G5",
-      amount: 5,
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    },
-  ]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [transactions, setTransactions] = useState([
     {
       id: 1,
@@ -74,8 +59,8 @@ export const PortfolioProvider = ({ children }) => {
       paidFor: "dFAKH3QHPID7TJCydfFf"
     }
   ]);
-  const [totalSubscriptionsCost, setTotalSubscriptionsCost] = useState(15);
-  const [remainingBalance, setRemainingBalance] = useState(985);
+  const [totalSubscriptionsCost, setTotalSubscriptionsCost] = useState(0);
+  const [remainingBalance, setRemainingBalance] = useState(0);
 
   const addFunding = (amount, fundingSourceId) => {
     setFundingTransactions([
@@ -105,7 +90,6 @@ export const PortfolioProvider = ({ children }) => {
   };
 
   const removeSubscription = (id) => {
-    // set to inactive
     setSubscriptions(
       subscriptions.map((sub) => {
         if (sub.id === id) {
@@ -121,7 +105,6 @@ export const PortfolioProvider = ({ children }) => {
 
   const activateSubscription = (id) => {
     console.log("Activating subscription", id);
-    // set to active
     setSubscriptions(
       subscriptions.map((sub) => {
         if (sub.id === id) {
@@ -135,49 +118,76 @@ export const PortfolioProvider = ({ children }) => {
     );
   };
 
-  const addSubscription = (amount, id) => {
-    //  check if the subscription already exists, if it is does activate it and set the amount
-    //  if it does not exist, add it
-    const subscription = subscriptions.find((sub) => sub.id === id);
-    if (subscription) {
-      // activateSubscription(id);
-      setSubscriptions(
-        subscriptions.map((sub) => {
-          if (sub.id === id) {
-            return {
-              ...sub,
-              status: "active",
-              amount: amount,
-            };
-          }
-          return sub;
-        })
-      );
-    } else {
-      setSubscriptions([
-        ...subscriptions,
-        {
-          id,
-          amount,
-          date: new Date(),
-          status: "active",
+  const addSubscription = async (amount, id) => {
+    try {
+      const response = await fetch('/api/subscriptions/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-customer-id': localStorage.getItem('stripe_customer_id') || '',
         },
-      ]);
+        body: JSON.stringify({
+          pageId: id,
+          amount: amount,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update subscription');
+      }
+
+      const data = await response.json();
+
+      if (data.subscription) {
+        setSubscriptions(prevSubscriptions => {
+          const existingIndex = prevSubscriptions.findIndex(sub => sub.id === id);
+          if (existingIndex >= 0) {
+            return prevSubscriptions.map((sub, index) =>
+              index === existingIndex ? { ...sub, amount, status: 'active' } : sub
+            );
+          }
+          return [...prevSubscriptions, {
+            id,
+            amount,
+            date: new Date(),
+            status: 'active',
+          }];
+        });
+        setRemainingBalance(prev => prev - amount);
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      throw error;
     }
-    setRemainingBalance(parseInt(remainingBalance) - parseInt(amount));
   };
+
   useEffect(() => {
-    // calculate based on active
-    const activeSubscriptions = subscriptions.filter(
-      (sub) => sub.status === "active"
-    );
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch('/api/subscriptions/active', {
+          headers: {
+            'x-customer-id': localStorage.getItem('stripe_customer_id') || '',
+          }
+        });
+        const data = await response.json();
 
-    const total = activeSubscriptions.reduce((acc, sub) => {
-      return acc + sub.amount;
-    }, 0);
+        if (data.subscription) {
+          setSubscriptions([data.subscription]);
+          setTotalSubscriptionsCost(data.subscription.amount);
+          setRemainingBalance(100 - data.subscription.amount);
+        } else {
+          setSubscriptions([]);
+          setTotalSubscriptionsCost(0);
+          setRemainingBalance(100);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
+    };
 
-    setTotalSubscriptionsCost(total);
-  }, [subscriptions]);
+    fetchSubscription();
+  }, []);
+
   return (
     <PortfolioContext.Provider
       value={{
