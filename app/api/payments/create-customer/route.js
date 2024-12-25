@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getDatabase } from '@/firebase/database';
+import { getRTDB } from '@/firebase/rtdb';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const db = getDatabase();
+const db = getRTDB();
 
 export async function POST(request) {
   try {
@@ -26,9 +26,12 @@ export async function POST(request) {
     });
 
     // Update user record with Stripe customer ID
-    await db.ref(`users/${userId}`).update({
+    const userRef = db.ref(`users/${userId}`);
+    await userRef.update({
       stripeCustomerId: customer.id,
     });
+
+    console.log('Successfully created Stripe customer:', customer.id, 'for user:', userId);
 
     return NextResponse.json({
       customerId: customer.id
