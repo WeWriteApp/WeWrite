@@ -5,7 +5,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
   try {
-    const { pageId, amount } = await req.json();
+    const { pageId, amount, percentage } = await req.json();
     const customerId = req.headers.get('x-customer-id');
 
     if (!customerId) {
@@ -20,8 +20,10 @@ export async function POST(req) {
     });
 
     let subscription;
+    const baseAmount = 1000; // $10 in cents - base subscription amount
+
     if (subscriptions.data.length > 0) {
-      // Update existing subscription
+      // Update existing subscription - keep the base amount constant
       subscription = await stripe.subscriptions.update(
         subscriptions.data[0].id,
         {
@@ -33,7 +35,7 @@ export async function POST(req) {
               recurring: {
                 interval: 'month'
               },
-              unit_amount: Math.round(amount * 100), // Convert to cents
+              unit_amount: baseAmount, // Always $10 in cents
             },
           }],
         }
@@ -49,16 +51,20 @@ export async function POST(req) {
             recurring: {
               interval: 'month'
             },
-            unit_amount: 1000, // $10 in cents
+            unit_amount: baseAmount, // $10 in cents
           },
         }],
       });
     }
 
+    // Calculate the actual amount based on percentage
+    const allocatedAmount = percentage ? (baseAmount / 100) * percentage : amount * 100;
+
     // Update subscription status in Firebase
     await updateSubscriptionStatus(subscription.id, {
       pageId,
-      amount: amount || 10,
+      amount: allocatedAmount / 100, // Convert back to dollars
+      percentage: percentage || (amount / 10) * 100, // Calculate percentage if not provided
       status: subscription.status,
       customerId,
       currentPeriodEnd: subscription.current_period_end,
@@ -67,7 +73,8 @@ export async function POST(req) {
     return new Response(JSON.stringify({
       subscription: {
         id: subscription.id,
-        amount: amount || 10,
+        amount: allocatedAmount / 100,
+        percentage: percentage || (amount / 10) * 100,
         date: new Date(subscription.created * 1000),
         status: subscription.status,
         currentPeriodEnd: subscription.current_period_end,

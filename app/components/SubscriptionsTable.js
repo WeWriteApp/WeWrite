@@ -2,23 +2,22 @@
 import React, { useContext, useEffect, useState } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import { getPageById } from "../firebase/database";
-import {PillLink} from "./PillLink";
+import { PillLink } from "./PillLink";
 
 const SubscriptionsTable = () => {
-  const { subscriptions } = useContext(PortfolioContext);
-
-  // Local copy of subscriptions for editing
+  const { subscriptions, totalSubscriptionsCost } = useContext(PortfolioContext);
   const [localSubscriptions, setLocalSubscriptions] = useState([]);
   const [changesMade, setChangesMade] = useState(false);
+  const [totalPercentage, setTotalPercentage] = useState(0);
 
-  // Initialize the local subscriptions with the context subscriptions
   useEffect(() => {
     if (subscriptions) {
       setLocalSubscriptions(subscriptions);
+      const total = subscriptions.reduce((sum, sub) => sum + (sub.percentage || 0), 0);
+      setTotalPercentage(total);
     }
   }, [subscriptions]);
 
-  // Function to handle saving changes
   const handleSaveChanges = async () => {
     try {
       const customerId = localStorage.getItem('stripe_customer_id');
@@ -36,7 +35,7 @@ const SubscriptionsTable = () => {
           },
           body: JSON.stringify({
             pageId: sub.id,
-            amount: sub.amount
+            percentage: sub.percentage
           })
         })
       );
@@ -53,6 +52,15 @@ const SubscriptionsTable = () => {
 
   return (
     <div className="mb-0">
+      <div className="mb-4 text-sm font-medium">
+        Total Allocated: {totalPercentage.toFixed(1)}%
+        {totalPercentage > 100 && (
+          <span className="text-red-500 ml-2">
+            Warning: Total allocation exceeds 100%
+          </span>
+        )}
+      </div>
+
       {localSubscriptions.length > 0 ? (
         localSubscriptions.map((subscription, index) => (
           <SubscriptionItem
@@ -68,7 +76,6 @@ const SubscriptionsTable = () => {
         <div>No subscriptions available.</div>
       )}
 
-      {/* Save Changes Button */}
       <div className="pt-4">
         <button
           className={`px-4 py-2 bg-blue-600 text-white font-semibold rounded ${
@@ -91,9 +98,10 @@ const SubscriptionItem = ({
   setLocalSubscriptions,
   setChangesMade
 }) => {
-  const { id, amount } = subscription;
+  const { id, percentage = 0 } = subscription;
   const [page, setPage] = useState(null);
-  const { subscriptions } = useContext(PortfolioContext);
+  const { totalSubscriptionsCost } = useContext(PortfolioContext);
+  const baseAmount = 10;
 
   useEffect(() => {
     if (!id) return;
@@ -104,9 +112,11 @@ const SubscriptionItem = ({
     }
   }, [id, page]);
 
-  const handleAmountChange = (change) => {
+  const handlePercentageChange = (change) => {
     const updatedSubscriptions = [...localSubscriptions];
-    updatedSubscriptions[index].amount = Math.max(0, updatedSubscriptions[index].amount + change);
+    const newPercentage = Math.max(0, Math.min(100, updatedSubscriptions[index].percentage + change));
+    updatedSubscriptions[index].percentage = newPercentage;
+    updatedSubscriptions[index].amount = (baseAmount * newPercentage) / 100;
     setLocalSubscriptions(updatedSubscriptions);
     setChangesMade(true);
   };
@@ -116,35 +126,37 @@ const SubscriptionItem = ({
   }
 
   return (
-    <>
-      <div className="flex items-center justify-between border-b border-gray-200 py-4">
-        <PillLink href={`/pages/${page.id}`} isPublic={page.isPublic}>
-          {page.title}
-        </PillLink>
-        <SubscriptionAmount amount={subscription.amount} handleAmountChange={handleAmountChange} />
-      </div>
-    </>
+    <div className="flex items-center justify-between border-b border-gray-200 py-4">
+      <PillLink href={`/pages/${page.id}`} isPublic={page.isPublic}>
+        {page.title}
+      </PillLink>
+      <SubscriptionAmount
+        percentage={percentage}
+        handlePercentageChange={handlePercentageChange}
+        amount={(baseAmount * percentage) / 100}
+      />
+    </div>
   );
 };
 
-const SubscriptionAmount = ({ amount, handleAmountChange }) => {
+const SubscriptionAmount = ({ percentage, handlePercentageChange, amount }) => {
   return (
     <div className="flex items-center space-x-4">
-      {/* Decrement Button */}
       <button
         className="flex items-center justify-center w-8 h-8 bg-background--light text-text rounded-sm border-border border"
-        onClick={() => handleAmountChange(-1)}
+        onClick={() => handlePercentageChange(-5)}
       >
-        &#8211; {/* HTML entity for dash/minus */}
+        &#8211;
       </button>
 
-      {/* Amount Display */}
-      <span className="text-text text-lg font-medium">${amount}/mo</span>
+      <div className="flex flex-col items-end">
+        <span className="text-text text-lg font-medium">{percentage.toFixed(1)}%</span>
+        <span className="text-sm text-gray-500">${amount.toFixed(2)}/mo</span>
+      </div>
 
-      {/* Increment Button */}
       <button
         className="flex items-center justify-center w-8 h-8 bg-background--light text-text rounded-sm border-border border"
-        onClick={() => handleAmountChange(1)}
+        onClick={() => handlePercentageChange(5)}
       >
         +
       </button>

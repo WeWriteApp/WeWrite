@@ -61,6 +61,7 @@ export const PortfolioProvider = ({ children }) => {
   ]);
   const [totalSubscriptionsCost, setTotalSubscriptionsCost] = useState(0);
   const [remainingBalance, setRemainingBalance] = useState(0);
+  const [totalAllocatedPercentage, setTotalAllocatedPercentage] = useState(0);
 
   const addFunding = (amount, fundingSourceId) => {
     setFundingTransactions([
@@ -118,7 +119,7 @@ export const PortfolioProvider = ({ children }) => {
     );
   };
 
-  const addSubscription = async (amount, id) => {
+  const addSubscription = async ({ id, percentage }) => {
     try {
       const response = await fetch('/api/subscriptions/update', {
         method: 'POST',
@@ -128,7 +129,7 @@ export const PortfolioProvider = ({ children }) => {
         },
         body: JSON.stringify({
           pageId: id,
-          amount: amount,
+          percentage,
         }),
       });
 
@@ -141,19 +142,34 @@ export const PortfolioProvider = ({ children }) => {
       if (data.subscription) {
         setSubscriptions(prevSubscriptions => {
           const existingIndex = prevSubscriptions.findIndex(sub => sub.id === id);
-          if (existingIndex >= 0) {
-            return prevSubscriptions.map((sub, index) =>
-              index === existingIndex ? { ...sub, amount, status: 'active' } : sub
-            );
-          }
-          return [...prevSubscriptions, {
+          const newSubscription = {
             id,
-            amount,
+            amount: data.subscription.amount,
+            percentage: data.subscription.percentage,
             date: new Date(),
             status: 'active',
-          }];
+          };
+
+          const otherSubscriptionsTotal = prevSubscriptions.reduce((total, sub) =>
+            sub.id !== id ? total + (sub.percentage || 0) : total, 0);
+
+          if (otherSubscriptionsTotal + percentage > 100) {
+            throw new Error('Total allocation cannot exceed 100%');
+          }
+
+          if (existingIndex >= 0) {
+            return prevSubscriptions.map((sub, index) =>
+              index === existingIndex ? newSubscription : sub
+            );
+          }
+          return [...prevSubscriptions, newSubscription];
         });
-        setRemainingBalance(prev => prev - amount);
+
+        setTotalAllocatedPercentage(prev => {
+          const newTotal = subscriptions.reduce((total, sub) =>
+            total + (sub.percentage || 0), 0);
+          return newTotal;
+        });
       }
     } catch (error) {
       console.error('Error updating subscription:', error);
@@ -172,7 +188,8 @@ export const PortfolioProvider = ({ children }) => {
           console.log('No customer ID found, using default values');
           setSubscriptions([]);
           setTotalSubscriptionsCost(0);
-          setRemainingBalance(10); // Default starting budget
+          setRemainingBalance(10);
+          setTotalAllocatedPercentage(0);
           return;
         }
 
@@ -191,20 +208,22 @@ export const PortfolioProvider = ({ children }) => {
           };
           console.log('Setting active subscription:', subscription);
           setSubscriptions([subscription]);
-          setTotalSubscriptionsCost(subscription.amount);
-          const maxBudget = subscription.amount * 2;
-          setRemainingBalance(maxBudget - subscription.amount);
+          setTotalSubscriptionsCost(10);
+          setTotalAllocatedPercentage(subscription.percentage || 0);
+          setRemainingBalance(10 - subscription.amount);
         } else {
           console.log('No active subscription found, using default values');
           setSubscriptions([]);
           setTotalSubscriptionsCost(0);
           setRemainingBalance(10);
+          setTotalAllocatedPercentage(0);
         }
       } catch (error) {
         console.error('Error fetching subscription:', error);
         setSubscriptions([]);
         setTotalSubscriptionsCost(0);
         setRemainingBalance(10);
+        setTotalAllocatedPercentage(0);
       }
     };
 
@@ -221,6 +240,7 @@ export const PortfolioProvider = ({ children }) => {
         subscriptions,
         totalSubscriptionsCost,
         remainingBalance,
+        totalAllocatedPercentage,
         addFunding,
         addFundingSource,
         removeSubscription,

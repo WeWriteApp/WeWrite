@@ -45,7 +45,7 @@ const ErrorDisplay = ({ error, onRetry }) => (
 );
 
 const PledgeBar = ({ user, pageId }) => {
-  const { subscriptions, totalSubscriptionsCost, addSubscription } = React.useContext(PortfolioContext);
+  const { subscriptions, totalSubscriptionsCost, totalAllocatedPercentage, addSubscription } = React.useContext(PortfolioContext);
   const [amount, setAmount] = useState(0);
   const [percentage, setPercentage] = useState(0);
   const [displayMode, setDisplayMode] = useState('amount');
@@ -114,13 +114,13 @@ const PledgeBar = ({ user, pageId }) => {
           if (currentSubscription) {
             setIsSubscribed(true);
             setAmount(currentSubscription.amount);
-            setPercentage((currentSubscription.amount / totalSubscriptionsCost) * 100);
+            setPercentage(currentSubscription.percentage);
           } else {
-            setAmount(10);
+            setAmount(0);
             setPercentage(0);
           }
         } else {
-          setAmount(10);
+          setAmount(0);
           setPercentage(0);
           setUsedAmount(0);
         }
@@ -279,17 +279,18 @@ const PledgeBar = ({ user, pageId }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">
-            {displayMode === 'amount' ? `$${amount}` : `${percentage.toFixed(1)}%`}
+            {displayMode === 'amount' ? `$${amount.toFixed(2)}` : `${percentage.toFixed(1)}%`}
           </span>
           <span className="text-sm text-gray-500">
             {displayMode === 'amount'
               ? `/ $${totalSubscriptionsCost || 10}`
-              : `/ ${((totalSubscriptionsCost || 10) / (totalSubscriptionsCost || 10) * 100).toFixed(1)}%`}
+              : `/ 100%`}
           </span>
         </div>
         <button
-          onClick={() => addSubscription({ id: pageId, amount })}
+          onClick={() => addSubscription({ id: pageId, percentage })}
           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          disabled={percentage === 0}
         >
           {isSubscribed ? 'Update' : 'Subscribe'}
         </button>
