@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import database, { ref, update } from '@/firebase/rtdb';
+import { getFirebase } from '@/firebase/rtdb';
+import { ref, update } from '@/firebase/rtdb';
 import Stripe from 'stripe';
 
 const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -35,7 +36,8 @@ export async function POST(request) {
       });
       console.log('Successfully created Stripe customer:', customer.id);
 
-      const userRef = ref(database, `users/${uid}`);
+      const { rtdb } = await getFirebase();
+      const userRef = ref(rtdb, `users/${uid}`);
       await update(userRef, {
         stripeCustomerId: customer.id,
       });

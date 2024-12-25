@@ -1,4 +1,4 @@
-import { getAuth } from "firebase/auth";
+import { getAuth as getFirebaseAuth } from "firebase/auth";
 import { getFirebase } from './config';
 
 export class MockAuth {
@@ -138,6 +138,7 @@ export class MockAuth {
 
 // Initialize Firebase Auth
 let auth;
+let initializationPromise = null;
 
 const initializeAuth = async () => {
   try {
@@ -149,30 +150,53 @@ const initializeAuth = async () => {
     }
 
     // Initialize auth with the Firebase app instance
-    auth = getAuth(app);
+    const authInstance = getFirebaseAuth(app);
     console.log('Firebase Auth initialized successfully');
 
     // Only use mock auth in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DB === 'true') {
       console.log('Using mock auth in development mode');
-      const mockAuth = new MockAuth(app);
-      auth = mockAuth;
+      return new MockAuth(app);
     }
+
+    return authInstance;
   } catch (error) {
     console.error('Firebase Auth initialization error:', error);
     throw error;
   }
 };
 
-// Initialize auth
-initializeAuth();
+export const getAuth = async () => {
+  if (!auth) {
+    if (!initializationPromise) {
+      initializationPromise = initializeAuth();
+    }
+    auth = await initializationPromise;
+  }
+  return auth;
+};
 
-// Export auth instance and helper functions
-export { auth };
-export const createUser = (email, password) => auth.createUserWithEmailAndPassword(email, password);
-export const loginUser = (email, password) => auth.signInWithEmailAndPassword(email, password);
-export const logoutUser = () => auth.signOut();
-export const addUsername = (uid, username) => auth.addUsername(uid, username);
+// Export auth helper functions
+export const createUser = async (email, password) => {
+  const auth = await getAuth();
+  return auth.createUserWithEmailAndPassword(email, password);
+};
+
+export const loginUser = async (email, password) => {
+  const auth = await getAuth();
+  return auth.signInWithEmailAndPassword(email, password);
+};
+
+export const logoutUser = async () => {
+  const auth = await getAuth();
+  return auth.signOut();
+};
+
+export const addUsername = async (uid, username) => {
+  const auth = await getAuth();
+  return auth.addUsername(uid, username);
+};
+
 export const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
 export const createUserWithEmailAndPassword = (auth, email, password) => auth.createUserWithEmailAndPassword(email, password);
 export const signInWithEmailAndPassword = (auth, email, password) => auth.signInWithEmailAndPassword(email, password);

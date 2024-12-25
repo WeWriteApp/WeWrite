@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../../providers/AuthProvider";
-import { rtdb } from '../../firebase/rtdb';
+import { getFirebase } from '../../firebase/rtdb';
 import { onValue, ref, push } from "../../firebase/rtdb";
 import { useRouter } from "next/navigation";
 
@@ -31,6 +31,7 @@ export default function Page() {
 
     console.log("Saving group", data);
 
+    const { rtdb } = await getFirebase();
     const newGroupRef = push(ref(rtdb, 'groups'), data);
 
     router.push(`/groups/${newGroupRef.key}`);

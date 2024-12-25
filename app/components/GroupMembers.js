@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
-import { rtdb } from '../firebase/rtdb';
+import { getFirebase } from '../firebase/rtdb';
 import { onValue, ref, set } from "../firebase/rtdb";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { AuthContext } from "../providers/AuthProvider";
@@ -9,11 +9,12 @@ import User from "./UserBadge";
 const GroupMembers = ({ members, groupId }) => {
   const { user } = useContext(AuthContext);
 
-  const handleRemove = (uid) => {
+  const handleRemove = async (uid) => {
     let newMembers = { ...members };
     delete newMembers[uid];
+    const { rtdb } = await getFirebase();
     const groupMembersRef = ref(rtdb, `groups/${groupId}/members`);
-    set(groupMembersRef, newMembers);
+    await set(groupMembersRef, newMembers);
   };
 
   return (
@@ -46,17 +47,21 @@ const AddMembersForm = ({ groupId, initialMembers }) => {
 
   useEffect(() => {
     if (users.length) return;
-    const usersRef = ref(rtdb, 'users');
-    let arr = [];
-    return onValue(usersRef, (snapshot) => {
-      snapshot.forEach((child) => {
-        arr.push({
-          id: child.key,
-          name: child.val().username
+    const fetchUsers = async () => {
+      const { rtdb } = await getFirebase();
+      const usersRef = ref(rtdb, 'users');
+      let arr = [];
+      return onValue(usersRef, (snapshot) => {
+        snapshot.forEach((child) => {
+          arr.push({
+            id: child.key,
+            name: child.val().username
+          });
         });
+        setUsers(arr);
       });
-      setUsers(arr);
-    });
+    };
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -80,15 +85,16 @@ const AddMembersForm = ({ groupId, initialMembers }) => {
     setSearch("");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     let membersArr = [];
 
     Object.entries(members).forEach(([uid, member]) => {
       membersArr[uid] = member;
     });
 
+    const { rtdb } = await getFirebase();
     const groupMembersRef = ref(rtdb, `groups/${groupId}/members`);
-    set(groupMembersRef, membersArr);
+    await set(groupMembersRef, membersArr);
   };
 
   if (!users.length) return <div>Loading...</div>;
