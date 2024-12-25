@@ -1,78 +1,143 @@
 import { getDatabase, ref as dbRef, onValue as dbOnValue, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove } from 'firebase/database';
-import { database } from './config';
+import { database, isInitialized, initializationError } from './config';
 
 // Re-export the database instance and functions with proper error handling
-export const ref = (path) => {
-  if (!database || !database._checkNotDeleted || typeof database.ref !== 'function') {
-    console.error('Database instance not available or invalid:', {
-      exists: !!database,
-      hasCheckNotDeleted: database?._checkNotDeleted,
-      hasRef: typeof database?.ref === 'function'
-    });
-    throw new Error('Database not initialized or invalid');
+export const ref = async (path) => {
+  // Wait for initialization with timeout
+  const timeout = 5000;
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeout) {
+    if (initializationError) {
+      console.error('Database initialization failed:', initializationError);
+      throw initializationError;
+    }
+
+    if (isInitialized && database && typeof database.ref === 'function') {
+      try {
+        // Use the database's ref method directly if available (for mock database)
+        return database.ref(path);
+      } catch (error) {
+        console.error('Error creating database reference:', error);
+        throw error;
+      }
+    }
+
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  throw new Error('Database initialization timeout');
+};
+
+export const onValue = async (reference, callback) => {
+  if (!reference) {
+    const error = new Error('Database reference is required');
+    console.error(error);
+    throw error;
   }
 
   try {
-    // Use the database's ref method directly if available (for mock database)
-    if (typeof database.ref === 'function') {
-      return database.ref(path);
+    // Wait for reference if it's a promise
+    const resolvedRef = await Promise.resolve(reference);
+
+    // Use native method if available (mock database)
+    if (typeof resolvedRef.on === 'function') {
+      return resolvedRef.on('value', callback);
     }
-    // Otherwise use Firebase's dbRef
-    return dbRef(database, path);
+    return dbOnValue(resolvedRef, callback);
   } catch (error) {
-    console.error('Error creating database reference:', error);
+    console.error('Error setting up value listener:', error);
     throw error;
   }
 };
 
-export const onValue = (reference, callback) => {
-  if (!reference) throw new Error('Database reference is required');
-
-  // Use native method if available (mock database)
-  if (typeof reference.on === 'function') {
-    return reference.on('value', callback);
+export const get = async (reference) => {
+  if (!reference) {
+    const error = new Error('Database reference is required');
+    console.error(error);
+    throw error;
   }
-  return dbOnValue(reference, callback);
+
+  try {
+    // Wait for reference if it's a promise
+    const resolvedRef = await Promise.resolve(reference);
+
+    // Use native method if available (mock database)
+    if (typeof resolvedRef.once === 'function') {
+      return resolvedRef.once('value');
+    }
+    return dbGet(resolvedRef);
+  } catch (error) {
+    console.error('Error getting value:', error);
+    throw error;
+  }
 };
 
-export const get = (reference) => {
-  if (!reference) throw new Error('Database reference is required');
-
-  // Use native method if available (mock database)
-  if (typeof reference.once === 'function') {
-    return reference.once('value');
+export const set = async (reference, value) => {
+  if (!reference) {
+    const error = new Error('Database reference is required');
+    console.error(error);
+    throw error;
   }
-  return dbGet(reference);
+
+  try {
+    // Wait for reference if it's a promise
+    const resolvedRef = await Promise.resolve(reference);
+
+    // Use native method if available (mock database)
+    if (typeof resolvedRef.set === 'function') {
+      return resolvedRef.set(value);
+    }
+    return dbSet(resolvedRef, value);
+  } catch (error) {
+    console.error('Error setting value:', error);
+    throw error;
+  }
 };
 
-export const set = (reference, value) => {
-  if (!reference) throw new Error('Database reference is required');
-
-  // Use native method if available (mock database)
-  if (typeof reference.set === 'function') {
-    return reference.set(value);
+export const update = async (reference, value) => {
+  if (!reference) {
+    const error = new Error('Database reference is required');
+    console.error(error);
+    throw error;
   }
-  return dbSet(reference, value);
+
+  try {
+    // Wait for reference if it's a promise
+    const resolvedRef = await Promise.resolve(reference);
+
+    // Use native method if available (mock database)
+    if (typeof resolvedRef.update === 'function') {
+      return resolvedRef.update(value);
+    }
+    return dbUpdate(resolvedRef, value);
+  } catch (error) {
+    console.error('Error updating value:', error);
+    throw error;
+  }
 };
 
-export const update = (reference, value) => {
-  if (!reference) throw new Error('Database reference is required');
-
-  // Use native method if available (mock database)
-  if (typeof reference.update === 'function') {
-    return reference.update(value);
+export const remove = async (reference) => {
+  if (!reference) {
+    const error = new Error('Database reference is required');
+    console.error(error);
+    throw error;
   }
-  return dbUpdate(reference, value);
-};
 
-export const remove = (reference) => {
-  if (!reference) throw new Error('Database reference is required');
+  try {
+    // Wait for reference if it's a promise
+    const resolvedRef = await Promise.resolve(reference);
 
-  // Use native method if available (mock database)
-  if (typeof reference.remove === 'function') {
-    return reference.remove();
+    // Use native method if available (mock database)
+    if (typeof resolvedRef.remove === 'function') {
+      return resolvedRef.remove();
+    }
+    return dbRemove(resolvedRef);
+  } catch (error) {
+    console.error('Error removing value:', error);
+    throw error;
   }
-  return dbRemove(reference);
 };
 
 // Export the database instance

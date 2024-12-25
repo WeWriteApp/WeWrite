@@ -6,6 +6,8 @@ import { FirebaseError, FIREBASE_ERROR_TYPES } from "../utils/firebase-errors";
 let app;
 let db;
 let rtdb;
+let isInitialized = false;
+let initializationError = null;
 
 // Mock data and implementations
 const mockData = {
@@ -208,15 +210,19 @@ const mockConfig = {
 };
 
 // Initialize Firebase with proper configuration
-try {
-  // In development with mock DB, use mock config without checking env vars
-  if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DB === 'true') {
-    console.log('Using mock configuration in development mode');
-    app = getApps().length ? getApp() : initializeApp(mockConfig);
-    db = mockFirestore;
-    rtdb = mockRtdb;
-    console.log('Mock RTDB initialized with methods:', Object.keys(mockRtdb));
-  } else {
+const initializeFirebase = async () => {
+  try {
+    // In development with mock DB, use mock config without checking env vars
+    if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DB === 'true') {
+      console.log('Using mock configuration in development mode');
+      app = getApps().length ? getApp() : initializeApp(mockConfig);
+      db = mockFirestore;
+      rtdb = mockRtdb;
+      isInitialized = true;
+      console.log('Mock RTDB initialized with methods:', Object.keys(mockRtdb));
+      return;
+    }
+
     // Use environment variables for configuration
     const firebaseConfig = {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -253,17 +259,55 @@ try {
       app = getApp();
     }
 
-    // Initialize Firestore and RTDB
-    try {
-      db = getFirestore(app);
-      rtdb = getDatabase(app);
+    // Initialize Firestore and RTDB with retry logic
+    console.log('Initializing Firebase databases...');
 
-      // Verify database instances
-      if (!rtdb || typeof rtdb.ref !== 'function') {
-        console.error('RTDB initialization failed. Database instance:', rtdb);
-        throw new Error('Failed to initialize Firebase Realtime Database');
+    // Initialize Firestore
+    db = getFirestore(app);
+
+    // Initialize RTDB with retry logic
+    const initializeRTDB = async (retries = 3, delay = 1000) => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          console.log(`RTDB initialization attempt ${attempt}/${retries}`);
+          rtdb = getDatabase(app);
+
+          // Verify RTDB instance
+          if (!rtdb || typeof rtdb.ref !== 'function') {
+            throw new Error('Invalid RTDB instance');
+          }
+
+          // Test RTDB functionality
+          const testRef = rtdb.ref('_test_');
+          if (typeof testRef.once !== 'function') {
+            throw new Error('Invalid RTDB reference');
+          }
+
+          console.log('RTDB initialization successful');
+          return true;
+        } catch (error) {
+          console.warn(`RTDB initialization attempt ${attempt} failed:`, error);
+          if (attempt === retries) {
+            throw error;
+          }
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
+      return false;
+    };
 
+    // Wait for RTDB initialization with timeout
+    try {
+      const timeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('RTDB initialization timeout')), 10000);
+      });
+
+      await Promise.race([
+        initializeRTDB(),
+        timeout
+      ]);
+
+      isInitialized = true;
       console.log('Firebase initialized successfully:', {
         app: !!app,
         db: !!db,
@@ -271,32 +315,37 @@ try {
         rtdbRef: typeof rtdb.ref === 'function'
       });
     } catch (error) {
-      console.error('Error initializing Firebase databases:', error);
+      console.error('Error initializing RTDB:', error);
       throw error;
     }
-  }
-} catch (error) {
-  const errorDetails = error.message || 'Unknown error';
-  console.error('Firebase initialization error:', errorDetails);
+  } catch (error) {
+    const errorDetails = error.message || 'Unknown error';
+    console.error('Firebase initialization error:', errorDetails);
+    initializationError = error;
 
-  // Only allow mock database in development
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('Using mock database in development mode due to initialization error');
-    app = initializeApp(mockConfig);
-    db = mockFirestore;
-    rtdb = mockRtdb;
-  } else {
-    // In production, throw a structured error
-    const firebaseError = new FirebaseError(
-      FIREBASE_ERROR_TYPES.INITIALIZATION,
-      errorDetails
-    );
-    console.error('Firebase initialization failed in production environment:', firebaseError);
-    throw firebaseError;
+    // Only allow mock database in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Using mock database in development mode due to initialization error');
+      app = initializeApp(mockConfig);
+      db = mockFirestore;
+      rtdb = mockRtdb;
+      isInitialized = true;
+    } else {
+      // In production, throw a structured error
+      const firebaseError = new FirebaseError(
+        FIREBASE_ERROR_TYPES.INITIALIZATION,
+        errorDetails
+      );
+      console.error('Firebase initialization failed in production environment:', firebaseError);
+      throw firebaseError;
+    }
   }
-}
+};
 
-export { app };
-export { db };
-export { rtdb as database };
+// Initialize Firebase immediately
+initializeFirebase().catch(error => {
+  console.error('Failed to initialize Firebase:', error);
+});
+
+export { app, db, rtdb as database, isInitialized, initializationError };
 export default app;
