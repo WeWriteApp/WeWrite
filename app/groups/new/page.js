@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../../providers/AuthProvider";
-import { getFirebase } from '../../firebase/rtdb';
+import { getFirebase } from '../../firebase/config';
 import { onValue, ref, push } from "../../firebase/rtdb";
 import { useRouter } from "next/navigation";
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getFirebase } from "../firebase/rtdb";
+import { getFirebase } from "../firebase/config";
 import { ref, get } from "../firebase/rtdb";
 import Link from "next/link";
 

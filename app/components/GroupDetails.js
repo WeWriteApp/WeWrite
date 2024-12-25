@@ -1,8 +1,8 @@
 "use client";
 import React, { useContext } from "react";
 import { useTheme } from "../providers/ThemeProvider";
-import { getFirebase } from "../firebase/rtdb";
-import { ref, set } from "firebase/database";
+import { getFirebase } from "../firebase/config";
+import { ref, set } from "../firebase/rtdb";
 import { AuthContext } from "../providers/AuthProvider";
 import GroupMembers from "./GroupMembers";
 import GroupPages from "./GroupPages";

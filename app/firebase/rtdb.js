@@ -1,6 +1,22 @@
 import { getDatabase, ref as dbRef, onValue as dbOnValue, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, push as dbPush } from 'firebase/database';
 import { getFirebase } from './config';
 
+// Initialize database with error handling
+let database = null;
+
+const initializeDatabase = async () => {
+  if (database) return database;
+
+  try {
+    const { app } = await getFirebase();
+    database = getDatabase(app);
+    return database;
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    return null;
+  }
+};
+
 // Helper functions for database operations
 export const fetchGroupFromFirebase = async (groupId) => {
   try {
@@ -26,15 +42,21 @@ export const fetchProfileFromFirebase = async (userId) => {
 
 // Re-export database functions with proper error handling
 export const ref = async (path) => {
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock reference');
+    return { key: path };
+  }
+
   // Wait for initialization with timeout
   const timeout = 5000;
   const startTime = Date.now();
 
   while (Date.now() - startTime < timeout) {
-    const { rtdb } = await getFirebase();
-    if (rtdb) {
+    const db = await initializeDatabase();
+    if (db) {
       try {
-        return dbRef(rtdb, path);
+        return dbRef(db, path);
       } catch (error) {
         console.error('Error creating database reference:', error);
         throw error;
@@ -51,6 +73,13 @@ export const ref = async (path) => {
 export const onValue = async (reference, callback) => {
   if (!reference) throw new Error('Database reference is required');
 
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock onValue');
+    callback({ val: () => null, exists: () => false });
+    return () => {};
+  }
+
   try {
     const resolvedRef = await Promise.resolve(reference);
     return dbOnValue(resolvedRef, callback);
@@ -62,6 +91,12 @@ export const onValue = async (reference, callback) => {
 
 export const get = async (reference) => {
   if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock get');
+    return Promise.resolve({ val: () => null, exists: () => false });
+  }
 
   try {
     const resolvedRef = await Promise.resolve(reference);
@@ -75,6 +110,12 @@ export const get = async (reference) => {
 export const set = async (reference, value) => {
   if (!reference) throw new Error('Database reference is required');
 
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock set');
+    return Promise.resolve();
+  }
+
   try {
     const resolvedRef = await Promise.resolve(reference);
     return dbSet(resolvedRef, value);
@@ -86,6 +127,12 @@ export const set = async (reference, value) => {
 
 export const update = async (reference, value) => {
   if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock update');
+    return Promise.resolve();
+  }
 
   try {
     const resolvedRef = await Promise.resolve(reference);
@@ -99,6 +146,12 @@ export const update = async (reference, value) => {
 export const remove = async (reference) => {
   if (!reference) throw new Error('Database reference is required');
 
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock remove');
+    return Promise.resolve();
+  }
+
   try {
     const resolvedRef = await Promise.resolve(reference);
     return dbRemove(resolvedRef);
@@ -111,6 +164,12 @@ export const remove = async (reference) => {
 export const push = async (reference, value) => {
   if (!reference) throw new Error('Database reference is required');
 
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock push');
+    return Promise.resolve({ key: `mock-${Date.now()}` });
+  }
+
   try {
     const resolvedRef = await Promise.resolve(reference);
     return dbPush(resolvedRef, value);
@@ -120,5 +179,8 @@ export const push = async (reference, value) => {
   }
 };
 
-// Export the database instance
-export default database;
+// Export the database initialization function
+export { initializeDatabase as getDatabase };
+
+// Export a function to check if database is initialized
+export const isDatabaseInitialized = () => database !== null;

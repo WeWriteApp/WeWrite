@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
-import { getFirebase } from '../firebase/rtdb';
+import { getFirebase } from '../firebase/config';
 import { onValue, ref, set } from "../firebase/rtdb";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { AuthContext } from "../providers/AuthProvider";

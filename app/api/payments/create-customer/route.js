@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getFirebase } from '@/firebase/rtdb';
+import { getFirebase } from '@/firebase/config';
 import { ref, update } from '@/firebase/rtdb';
 import Stripe from 'stripe';
 
