@@ -14,6 +14,7 @@ import GAProvider from "./providers/GAProvider";
 import LoggingProvider from "./providers/LoggingProvider";
 import GestureProvider from "./providers/GestureProvider";
 import { StripeProvider } from "./providers/StripeProvider";
+import { FirebaseErrorBoundary } from "./components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,27 +31,29 @@ export default function RootLayout({ children }) {
             <ThemeProvider>
               <GestureProvider>
                 <DrawerProvider>
-                  <AuthProvider>
-                    <DataProvider>
-                      <GroupsProvider>
-                        <CommunityProvider>
-                          <PortfolioProvider>
-                            <StripeProvider>
-                              <MobileProvider>
-                                <Header />
-                                <div className="flex flex-row">
-                                  <div className="flex flex-col w-full">
-                                    {children}
+                  <FirebaseErrorBoundary>
+                    <AuthProvider>
+                      <DataProvider>
+                        <GroupsProvider>
+                          <CommunityProvider>
+                            <PortfolioProvider>
+                              <StripeProvider>
+                                <MobileProvider>
+                                  <Header />
+                                  <div className="flex flex-row">
+                                    <div className="flex flex-col w-full">
+                                      {children}
+                                    </div>
                                   </div>
-                                </div>
-                                <Drawer />
-                              </MobileProvider>
-                            </StripeProvider>
-                          </PortfolioProvider>
-                        </CommunityProvider>
-                      </GroupsProvider>
-                    </DataProvider>
-                  </AuthProvider>
+                                  <Drawer />
+                                </MobileProvider>
+                              </StripeProvider>
+                            </PortfolioProvider>
+                          </CommunityProvider>
+                        </GroupsProvider>
+                      </DataProvider>
+                    </AuthProvider>
+                  </FirebaseErrorBoundary>
                 </DrawerProvider>
               </GestureProvider>
             </ThemeProvider>

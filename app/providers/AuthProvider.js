@@ -2,7 +2,8 @@
 
 import { useEffect, useState, createContext, useContext } from "react";
 import { auth, onAuthStateChanged } from "../firebase/auth";
-import database from "../firebase/rtdb";
+import { ref } from "../firebase/rtdb";
+import { FirebaseError, FIREBASE_ERROR_TYPES } from "../utils/firebase-errors";
 
 export const AuthContext = createContext();
 
@@ -57,15 +58,41 @@ export const AuthProvider = ({ children }) => {
 
     let unsubscribe;
     try {
+      console.log('Setting up auth state listener');
       unsubscribe = onAuthStateChanged(auth, async (authUser) => {
         console.log('Auth state changed:', authUser ? 'User logged in' : 'User logged out');
         try {
           if (authUser) {
             console.log('Fetching user data from RTDB for:', authUser.uid);
-            const userRef = database.ref(`users/${authUser.uid}`);
-            const userSnapshot = await userRef.get();
-            const userData = userSnapshot.val() || {};
-            console.log('User data from RTDB:', userData);
+
+            // Create and verify user reference
+            const userRef = ref(`users/${authUser.uid}`);
+            if (!userRef || typeof userRef.get !== 'function') {
+              console.error('Invalid database reference:', userRef);
+              throw new FirebaseError(
+                FIREBASE_ERROR_TYPES.RTDB_INIT_FAILED,
+                'Invalid database reference - missing required methods'
+              );
+            }
+
+            // Get user data
+            let userData = {};
+            try {
+              const userSnapshot = await userRef.get();
+              userData = userSnapshot.val() || {};
+              console.log('User data from RTDB:', userData);
+            } catch (error) {
+              console.warn('Error fetching user data, using defaults:', error);
+              // In development with mock DB, create default user data
+              if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DB === 'true') {
+                userData = {
+                  username: authUser.displayName,
+                  groups: ['default-group']
+                };
+              } else {
+                throw error;
+              }
+            }
 
             let stripeCustomerId = userData.stripeCustomerId;
             console.log('Existing Stripe customer ID:', stripeCustomerId);
@@ -99,7 +126,7 @@ export const AuthProvider = ({ children }) => {
           setError(null);
         } catch (err) {
           console.error('Error processing auth state:', err);
-          setError(err.message);
+          setError(err instanceof FirebaseError ? err.message : 'Failed to access user data');
         } finally {
           setLoading(false);
         }
