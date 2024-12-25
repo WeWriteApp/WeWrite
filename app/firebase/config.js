@@ -242,8 +242,24 @@ const initializeFirebase = async () => {
       'NEXT_PUBLIC_FIREBASE_DATABASE_URL'
     ];
 
+    // Log environment variable status
+    console.log('Checking Firebase environment variables:', {
+      ...Object.fromEntries(
+        Object.entries(firebaseConfig).map(([key, value]) => [
+          key,
+          value ? (key.includes('KEY') ? '[REDACTED]' : 'present') : 'missing'
+        ])
+      )
+    });
+
     const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
     if (missingEnvVars.length > 0) {
+      console.error('Missing required Firebase configuration:', missingEnvVars);
+      // In production, use mock config for non-database operations
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('Using fallback configuration in production');
+        return initializeWithMockConfig();
+      }
       throw new Error(`Missing required Firebase configuration: ${missingEnvVars.join(', ')}`);
     }
 
@@ -299,7 +315,7 @@ const initializeFirebase = async () => {
     // Wait for RTDB initialization with timeout
     try {
       const timeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('RTDB initialization timeout')), 10000);
+        setTimeout(() => reject(new Error('RTDB initialization timeout')), 30000); // Increased timeout to 30s
       });
 
       await Promise.race([
@@ -323,20 +339,28 @@ const initializeFirebase = async () => {
     console.error('Firebase initialization error:', errorDetails);
     initializationError = error;
 
-    // Only allow mock database in development
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Using mock database in development mode due to initialization error');
-      app = initializeApp(mockConfig);
+    // Allow mock database in development or for non-database operations in production
+    if (process.env.NODE_ENV === 'development' || (process.env.NODE_ENV === 'production' && !error.message?.includes('database'))) {
+      console.warn(`Using mock configuration due to initialization error: ${errorDetails}`);
+      app = getApps().length ? getApp() : initializeApp(mockConfig);
       db = mockFirestore;
       rtdb = mockRtdb;
       isInitialized = true;
+      return;
     } else {
-      // In production, throw a structured error
+      // In production, throw a structured error for database-related issues
       const firebaseError = new FirebaseError(
         FIREBASE_ERROR_TYPES.INITIALIZATION,
-        errorDetails
+        `Firebase initialization failed: ${errorDetails}`
       );
-      console.error('Firebase initialization failed in production environment:', firebaseError);
+      console.error('Firebase initialization failed in production environment:', {
+        error: firebaseError,
+        config: {
+          ...firebaseConfig,
+          apiKey: '[REDACTED]',
+          appId: '[REDACTED]'
+        }
+      });
       throw firebaseError;
     }
   }
