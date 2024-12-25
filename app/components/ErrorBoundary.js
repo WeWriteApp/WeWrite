@@ -43,7 +43,16 @@ export function FirebaseErrorBoundary({ children }) {
   return (
     <ErrorBoundary
       fallback={
-        <div>Error: Failed to initialize Firebase. Please try again later.</div>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Firebase Initialization Error</h2>
+          <p className="text-red-600">Failed to initialize Firebase. Please try refreshing the page.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors duration-200"
+          >
+            Refresh Page
+          </button>
+        </div>
       }
     >
       {children}
