@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   const createStripeCustomer = async (userData) => {
+    console.log('Attempting to create Stripe customer for user:', userData.uid);
     try {
       const response = await fetch('/api/payments/create-customer', {
         method: 'POST',
@@ -33,15 +34,18 @@ export const AuthProvider = ({ children }) => {
         }),
       });
 
+      console.log('Stripe customer creation response status:', response.status);
+      const responseData = await response.json();
+      console.log('Stripe customer creation response:', responseData);
+
       if (!response.ok) {
-        throw new Error('Failed to create Stripe customer');
+        throw new Error(`Failed to create Stripe customer: ${responseData.error || 'Unknown error'}`);
       }
 
-      const { customerId } = await response.json();
-      return customerId;
+      return responseData.customerId;
     } catch (error) {
       console.error('Error creating Stripe customer:', error);
-      return null;
+      throw error;
     }
   };
 
@@ -54,17 +58,30 @@ export const AuthProvider = ({ children }) => {
     let unsubscribe;
     try {
       unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+        console.log('Auth state changed:', authUser ? 'User logged in' : 'User logged out');
         try {
           if (authUser) {
+            console.log('Fetching user data from RTDB for:', authUser.uid);
             const userRef = database.ref(`users/${authUser.uid}`);
             const userSnapshot = await userRef.get();
             const userData = userSnapshot.val() || {};
+            console.log('User data from RTDB:', userData);
 
             let stripeCustomerId = userData.stripeCustomerId;
+            console.log('Existing Stripe customer ID:', stripeCustomerId);
+
             if (!stripeCustomerId) {
-              stripeCustomerId = await createStripeCustomer(authUser);
-              if (stripeCustomerId) {
-                await userRef.update({ stripeCustomerId });
+              console.log('No Stripe customer ID found, creating new customer');
+              try {
+                stripeCustomerId = await createStripeCustomer(authUser);
+                console.log('Created new Stripe customer:', stripeCustomerId);
+                if (stripeCustomerId) {
+                  await userRef.update({ stripeCustomerId });
+                  console.log('Updated user with Stripe customer ID');
+                }
+              } catch (error) {
+                console.error('Failed to create/update Stripe customer:', error);
+                setError('Failed to set up payment information');
               }
             }
 

@@ -1,15 +1,24 @@
 import Stripe from 'stripe';
 
-// Use test keys for development
-export const publishableKey = 'pk_test_51Q08VWIsJOA8IjJRnJg25SjW6aayav9j6lF2UMiMWP3o3wsFrwvULkuopDaIgujlFVJBdabvbHXjFG6TXPx6yoQu00DUGmhTyZ';
-const secretKey = 'sk_test_51Q08VWIsJOA8IjJRAEDM7p2WQzje0diYeJM9Ye8FZSMiafuSw4xF0Hu2rQGCmP74Ke8Ku464yGE2jfVtnpwPTkwD00v0siKhNJ';
+// Use environment variables for Stripe keys
+export const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const stripe = new Stripe(secretKey);
+// Default product ID from environment
+const DEFAULT_PRODUCT_ID = process.env.STRIPE_PRODUCT_ID;
+const DEFAULT_PRICE_ID = process.env.STRIPE_PRICE_ID;
+const BASE_AMOUNT = parseInt(process.env.SUBSCRIPTION_BASE_AMOUNT || '1000');
 
 // Subscription management functions
-export const createCustomer = async (email) => {
+export const createCustomer = async (email, name, userId) => {
   try {
-    const customer = await stripe.customers.create({ email });
+    const customer = await stripe.customers.create({
+      email,
+      name,
+      metadata: {
+        userId,
+      },
+    });
     return customer;
   } catch (error) {
     console.error('Error creating customer:', error);
@@ -19,18 +28,11 @@ export const createCustomer = async (email) => {
 
 export const createSubscription = async (customerId) => {
   try {
-    // Create a subscription with default $10/month plan
+    // Create a subscription using the default price
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{
-        price_data: {
-          currency: 'usd',
-          product: 'prod_default', // We'll need to create this product in Stripe dashboard
-          recurring: {
-            interval: 'month'
-          },
-          unit_amount: 1000, // $10 in cents
-        },
+        price: DEFAULT_PRICE_ID,
       }],
     });
     return subscription;
@@ -50,7 +52,7 @@ export const updateSubscription = async (subscriptionId, amount) => {
           id: subscription.items.data[0].id,
           price_data: {
             currency: 'usd',
-            product: 'prod_default',
+            product: DEFAULT_PRODUCT_ID,
             recurring: {
               interval: 'month'
             },

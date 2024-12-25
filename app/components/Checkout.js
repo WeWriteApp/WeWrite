@@ -3,8 +3,8 @@ import { useState } from "react";
 import { Elements, useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
-// Use the publishable key from stripe/index.js
-const stripePromise = loadStripe('pk_test_51Q08VWIsJOA8IjJRnJg25SjW6aayav9j6lF2UMiMWP3o3wsFrwvULkuopDaIgujlFVJBdabvbHXjFG6TXPx6yoQu00DUGmhTyZ');
+// Use environment variable for publishable key
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 export default function Checkout({ clientSecret, onSuccess }) {
   const options = {
@@ -49,7 +49,6 @@ const CheckoutForm = ({ onSuccess }) => {
         setError(`Payment failed: ${error.message}`);
         setProcessing(false);
       } else if (paymentIntent.status === 'succeeded') {
-        // Store customer ID in localStorage
         if (paymentIntent.customer) {
           localStorage.setItem('stripe_customer_id', paymentIntent.customer);
         }
