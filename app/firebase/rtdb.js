@@ -1,8 +1,5 @@
 import { getDatabase, ref as dbRef, onValue as dbOnValue, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, push as dbPush } from 'firebase/database';
-import { database, isInitialized } from './config';
-
-// Re-export the database instance
-export const rtdb = database;
+import { getFirebase } from './config';
 
 // Helper functions for database operations
 export const fetchGroupFromFirebase = async (groupId) => {
@@ -33,10 +30,11 @@ export const ref = async (path) => {
   const timeout = 5000;
   const startTime = Date.now();
 
-  while (Date.now() -startTime < timeout) {
-    if (isInitialized && database) {
+  while (Date.now() - startTime < timeout) {
+    const { rtdb } = await getFirebase();
+    if (rtdb) {
       try {
-        return dbRef(database, path);
+        return dbRef(rtdb, path);
       } catch (error) {
         console.error('Error creating database reference:', error);
         throw error;
