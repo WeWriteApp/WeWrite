@@ -2,7 +2,7 @@
 
 import { useEffect, useState, createContext, useContext } from "react";
 import { auth, onAuthStateChanged } from "../firebase/auth";
-import { db } from "../firebase/rtdb";
+import database from "../firebase/rtdb";
 
 export const AuthContext = createContext();
 
@@ -56,12 +56,16 @@ export const AuthProvider = ({ children }) => {
       unsubscribe = onAuthStateChanged(auth, async (authUser) => {
         try {
           if (authUser) {
-            const userSnapshot = await db.ref(`users/${authUser.uid}`).get();
+            const userRef = database.ref(`users/${authUser.uid}`);
+            const userSnapshot = await userRef.get();
             const userData = userSnapshot.val() || {};
 
             let stripeCustomerId = userData.stripeCustomerId;
             if (!stripeCustomerId) {
               stripeCustomerId = await createStripeCustomer(authUser);
+              if (stripeCustomerId) {
+                await userRef.update({ stripeCustomerId });
+              }
             }
 
             setUser({
