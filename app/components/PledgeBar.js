@@ -44,90 +44,86 @@ const ErrorDisplay = ({ error, onRetry }) => (
   </div>
 );
 
-const PledgeBar = ({ user, pageId }) => {
+const PledgeBar = ({ user, pageId, onSubscribe }) => {
   const { subscriptions, totalSubscriptionsCost, totalAllocatedPercentage, addSubscription } = React.useContext(PortfolioContext);
   const [amount, setAmount] = useState(0);
   const [percentage, setPercentage] = useState(0);
-  const [displayMode, setDisplayMode] = useState('amount');
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [customVisible, setCustomVisible] = useState(false);
-  const [customCheck, setCustomCheck] = useState(false);
-  const [interval, setInterval] = useState(1);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [usedAmount, setUsedAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const timerRef = useRef(null);
+  // Debug logging
+  useEffect(() => {
+    console.log('PledgeBar state:', {
+      amount,
+      percentage,
+      subscriptions,
+      totalSubscriptionsCost,
+      totalAllocatedPercentage,
+      pageId,
+      user
+    });
+  }, [amount, percentage, subscriptions, totalSubscriptionsCost, totalAllocatedPercentage, pageId, user]);
 
-  const progressBarWidth = useCallback((value, total) => {
-    if (!total || total <= 0) return '0%';
-    const percentage = ((value || 0) / total) * 100;
-    return `${Math.min(Math.max(percentage, 0), 100)}%`;
-  }, []);
+  const handleIncrement = () => {
+    console.log('Increment clicked');
+    setPercentage(prev => {
+      const newValue = Math.min(prev + 10, 100);
+      console.log('New percentage:', newValue);
+      return newValue;
+    });
+    setAmount(prev => {
+      const newValue = Math.min((prev + 1), 10);
+      console.log('New amount:', newValue);
+      return newValue;
+    });
+  };
 
-  const handleMouseDown = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+  const handleDecrement = () => {
+    console.log('Decrement clicked');
+    setPercentage(prev => {
+      const newValue = Math.max(prev - 10, 0);
+      console.log('New percentage:', newValue);
+      return newValue;
+    });
+    setAmount(prev => {
+      const newValue = Math.max((prev - 1), 0);
+      console.log('New amount:', newValue);
+      return newValue;
+    });
+  };
+
+  const handleSubscribe = async () => {
+    console.log('Subscribe clicked with:', { amount, percentage });
+    if (amount > 0) {
+      try {
+        await addSubscription(pageId, amount, percentage);
+        // Redirect to success page after subscription
+        window.location.href = '/test/subscription/success';
+      } catch (error) {
+        console.error('Error in handleSubscribe:', error);
+        setError(error.message);
+      }
     }
-    timerRef.current = setTimeout(() => setMenuVisible(true), 500);
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-  }, []);
-
-  const handleAdjustInterval = useCallback((newInterval) => {
-    setInterval(newInterval);
-    setMenuVisible(false);
-  }, []);
-
-  const handleCustomIntervalClose = useCallback(() => {
-    setCustomVisible(false);
-    setCustomCheck(true);
-  }, []);
-
-  const handleCustomIntervalOpen = useCallback(() => {
-    setCustomVisible(true);
-    setMenuVisible(false);
-  }, []);
-
-  const handleDisplayModeToggle = useCallback(() => {
-    setDisplayMode(prev => prev === 'amount' ? 'percentage' : 'amount');
-  }, []);
+  };
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
-
         if (totalSubscriptionsCost) {
-          const used = subscriptions
-            .filter(sub => sub.id !== pageId)
-            .reduce((total, sub) => total + sub.amount, 0);
-          setUsedAmount(used);
-
           const currentSubscription = subscriptions.find(sub => sub.id === pageId);
           if (currentSubscription) {
-            setIsSubscribed(true);
             setAmount(currentSubscription.amount);
             setPercentage(currentSubscription.percentage);
           } else {
             setAmount(0);
             setPercentage(0);
           }
-        } else {
-          setAmount(0);
-          setPercentage(0);
-          setUsedAmount(0);
         }
         setError(null);
       } catch (err) {
-        console.error('Error processing subscription data:', err);
-        setError(err instanceof Error ? err : new Error('Failed to process subscription data'));
+        console.error('Error loading subscription data:', err);
+        setError(err.message);
       } finally {
         setIsLoading(false);
       }
@@ -136,165 +132,70 @@ const PledgeBar = ({ user, pageId }) => {
     loadData();
   }, [subscriptions, totalSubscriptionsCost, pageId]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSkeleton />;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} onRetry={() => window.location.reload()} />;
-  }
-
-  const renderMenu = () => {
-    if (!menuVisible) return null;
-    return (
-      <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
-        <h3 className="p-3 text-center">+/- Increment Amount</h3>
-        {intervalOptions.map(({ value, label }) => (
-          <div
-            key={value}
-            className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
-            onClick={() => handleAdjustInterval(value)}
-          >
-            <div className="flex flex-row gap-2 text-[17px]">
-              <span className="font-medium text-gray-46">$</span>
-              <span>{label}</span>
-            </div>
-            {interval === value && <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />}
-          </div>
-        ))}
-        <div
-          className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
-          onClick={handleCustomIntervalOpen}
-        >
-          <div className="flex flex-row gap-2 text-[17px]">
-            <span className="font-medium text-gray-46">$</span>
-            <span>{`${interval}`}</span>
-            <span className="font-medium text-gray-46">custom</span>
-          </div>
-          {customCheck ? (
-            <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />
-          ) : (
-            <Icon icon="mdi:keyboard-arrow-right" width="24" height="24" />
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderCustomInterval = () => {
-    if (!customVisible) return null;
-    return (
-      <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
-        <div className="flex items-center justify-center">
-          <Icon
-            icon="mdi:close"
-            width="24"
-            height="24"
-            className="absolute left-3 rounded-full border-2 cursor-pointer active:text-blue-500"
-            onClick={handleCustomIntervalClose}
-          />
-          <h3 className="text-center text-[17px]">Custom pledge interval</h3>
-        </div>
-        <div className="flex flex-row border-2 border-blue-500 p-4 rounded-xl justify-between">
-          <div className="flex flex-row gap-2">
-            <span className="font-medium text-gray-46">$</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              autoFocus
-              className="w-[100px] bg-transparent outline-none"
-              value={interval}
-              onChange={(e) => setInterval(Number(e.target.value))}
-              autoComplete="off"
-            />
-          </div>
-          <span className="font-medium text-gray-46">per month</span>
-        </div>
-      </div>
-    );
-  };
+  if (isLoading) return <LoadingSkeleton />;
+  if (error) return <ErrorDisplay error={error} onRetry={() => window.location.reload()} />;
 
   return (
-    <div className="w-11/12 sm:max-w-[300px] space-y-6 bg-white rounded-lg p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-medium">Pledge</h3>
-          <button
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <Icon icon="heroicons:clock" className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="w-full max-w-md bg-white rounded-lg shadow p-4 mb-4">
+      <h3 className="text-lg font-semibold mb-2">Pledge</h3>
+      <div className="flex items-center justify-between mb-4">
         <button
-          onClick={handleDisplayModeToggle}
-          className="text-gray-500 hover:text-gray-700"
+          onClick={handleDecrement}
+          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+          aria-label="Decrease allocation"
         >
-          <Icon
-            icon={displayMode === 'amount' ? 'heroicons:currency-dollar' : 'heroicons:percent'}
-            className="w-5 h-5"
+          -
+        </button>
+        <div className="flex-1 mx-4 h-6 bg-gray-200 rounded-full relative overflow-hidden">
+          {/* Gray area for other allocations */}
+          <div
+            className={styles['bg-gray-bar']}
+            style={{
+              width: `${totalAllocatedPercentage}%`,
+              position: 'absolute',
+              height: '100%'
+            }}
           />
-        </button>
-      </div>
-
-      {renderMenu()}
-      {renderCustomInterval()}
-
-      <div className="relative h-[42px] rounded-[21px] bg-gray-100 overflow-hidden">
-        <div
-          className={`h-full rounded-l-[21px] absolute ${styles['bg-rectangle']} overflow-hidden`}
-          style={{ width: progressBarWidth(usedAmount || 0, totalSubscriptionsCost || 10) }}
-        >
-          <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
-            {Array.from({ length: Math.ceil((usedAmount || 0) + 30) }, (_, index) => (
-              <div
-                key={index}
-                className={`w-[6px] h-[calc(100%+50px)] ${styles['bg-rectangle']} rotate-45`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div
-          style={{
-            width: progressBarWidth(amount || 0, totalSubscriptionsCost || 10),
-            left: progressBarWidth(usedAmount || 0, totalSubscriptionsCost || 10),
-          }}
-          className={`absolute h-full ${
-            isSubscribed ? `${styles['bg-active-bar']} ${styles['active-bar']}` : styles['bg-gray-bar']
-          }`}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            {displayMode === 'amount' ? `$${amount.toFixed(2)}` : `${percentage.toFixed(1)}%`}
-          </span>
-          <span className="text-sm text-gray-500">
-            {displayMode === 'amount'
-              ? `/ $${totalSubscriptionsCost || 10}`
-              : `/ 100%`}
-          </span>
+          {/* Blue bar with striped pattern */}
+          <div
+            className={`${styles['bg-rectangle']} ${styles['active-bar']}`}
+            style={{
+              width: `${percentage}%`,
+              position: 'absolute',
+              height: '100%',
+              borderRadius: percentage === 100 ? '9999px' : '9999px 0 0 9999px'
+            }}
+          />
         </div>
         <button
-          onClick={() => addSubscription({ id: pageId, percentage })}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          disabled={percentage === 0}
+          onClick={handleIncrement}
+          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+          aria-label="Increase allocation"
         >
-          {isSubscribed ? 'Update' : 'Subscribe'}
+          +
         </button>
       </div>
+      <div className="flex justify-between items-center">
+        <span className="text-sm text-gray-600">
+          ${amount.toFixed(2)}/ $10
+        </span>
+        <button
+          onClick={handleSubscribe}
+          disabled={amount === 0}
+          className={`px-4 py-2 rounded ${
+            amount === 0
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          Subscribe
+        </button>
+      </div>
+      {error && (
+        <div className="mt-2 text-red-500 text-sm">
+          {error}
+        </div>
+      )}
     </div>
   );
 };

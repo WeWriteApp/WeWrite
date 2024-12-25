@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: userData.uid,
+          uid: userData.uid,
           email: userData.email,
           name: userData.displayName,
         }),

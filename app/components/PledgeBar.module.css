@@ -1,15 +1,24 @@
 .bg-rectangle {
-  background-color: rgba(128, 128, 128, 0.3);
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(59, 130, 246, 0.9),  /* bg-blue-500 with opacity */
+    rgba(59, 130, 246, 0.9) 6px,
+    rgba(37, 99, 235, 0.9) 6px,  /* bg-blue-600 with opacity */
+    rgba(37, 99, 235, 0.9) 12px
+  );
+  transition: width 0.2s ease-in-out;
 }
 
 .bg-active-bar {
   background-color: #3b82f6;
   opacity: 1;
+  transition: all 0.3s ease;
 }
 
 .bg-gray-bar {
-  background-color: rgba(128, 128, 128, 0.4);
+  background-color: rgba(209, 213, 219, 0.5); /* bg-gray-300 with opacity */
   opacity: 0.8;
+  transition: width 0.2s ease-in-out;
 }
 
 .active-bar {

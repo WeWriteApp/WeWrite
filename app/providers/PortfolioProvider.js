@@ -119,8 +119,9 @@ export const PortfolioProvider = ({ children }) => {
     );
   };
 
-  const addSubscription = async ({ id, percentage }) => {
+  const addSubscription = async (pageId, amount, percentage) => {
     try {
+      console.log('Adding subscription:', { pageId, amount, percentage });
       const response = await fetch('/api/subscriptions/update', {
         method: 'POST',
         headers: {
@@ -128,7 +129,7 @@ export const PortfolioProvider = ({ children }) => {
           'x-customer-id': localStorage.getItem('stripe_customer_id') || '',
         },
         body: JSON.stringify({
-          pageId: id,
+          pageId,
           percentage,
         }),
       });
@@ -141,9 +142,9 @@ export const PortfolioProvider = ({ children }) => {
 
       if (data.subscription) {
         setSubscriptions(prevSubscriptions => {
-          const existingIndex = prevSubscriptions.findIndex(sub => sub.id === id);
+          const existingIndex = prevSubscriptions.findIndex(sub => sub.id === pageId);
           const newSubscription = {
-            id,
+            id: pageId,
             amount: data.subscription.amount,
             percentage: data.subscription.percentage,
             date: new Date(),
@@ -151,11 +152,13 @@ export const PortfolioProvider = ({ children }) => {
           };
 
           const otherSubscriptionsTotal = prevSubscriptions.reduce((total, sub) =>
-            sub.id !== id ? total + (sub.percentage || 0) : total, 0);
+            sub.id !== pageId ? total + (sub.percentage || 0) : total, 0);
 
           if (otherSubscriptionsTotal + percentage > 100) {
             throw new Error('Total allocation cannot exceed 100%');
           }
+
+          setTotalAllocatedPercentage(otherSubscriptionsTotal + percentage);
 
           if (existingIndex >= 0) {
             return prevSubscriptions.map((sub, index) =>
@@ -163,12 +166,6 @@ export const PortfolioProvider = ({ children }) => {
             );
           }
           return [...prevSubscriptions, newSubscription];
-        });
-
-        setTotalAllocatedPercentage(prev => {
-          const newTotal = subscriptions.reduce((total, sub) =>
-            total + (sub.percentage || 0), 0);
-          return newTotal;
         });
       }
     } catch (error) {
@@ -201,18 +198,21 @@ export const PortfolioProvider = ({ children }) => {
         const data = await response.json();
         console.log('Subscription data received:', data);
 
-        if (data.subscription) {
-          const subscription = {
-            ...data.subscription,
+        if (data.subscriptions && data.subscriptions.length > 0) {
+          console.log('Setting active subscriptions:', data.subscriptions);
+          setSubscriptions(data.subscriptions.map(sub => ({
+            ...sub,
             status: 'active'
-          };
-          console.log('Setting active subscription:', subscription);
-          setSubscriptions([subscription]);
-          setTotalSubscriptionsCost(10);
-          setTotalAllocatedPercentage(subscription.percentage || 0);
-          setRemainingBalance(10 - subscription.amount);
+          })));
+
+          const totalCost = data.subscriptions.reduce((total, sub) => total + (sub.amount || 0), 0);
+          const totalPercentage = data.subscriptions.reduce((total, sub) => total + (sub.percentage || 0), 0);
+
+          setTotalSubscriptionsCost(totalCost);
+          setTotalAllocatedPercentage(totalPercentage);
+          setRemainingBalance(10 - totalCost);
         } else {
-          console.log('No active subscription found, using default values');
+          console.log('No active subscriptions found, using default values');
           setSubscriptions([]);
           setTotalSubscriptionsCost(0);
           setRemainingBalance(10);

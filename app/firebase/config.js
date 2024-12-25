@@ -25,13 +25,18 @@ try {
   if (process.env.NODE_ENV === 'development') {
     const mockData = {
       users: new Map([
-        ['test-user', {
-          uid: 'test-user',
+        ['mock-user-1', {
+          uid: 'mock-user-1',
           username: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          stripeCustomerId: null,
+          subscriptions: [],
+          allocations: new Map()
         }]
-      ])
+      ]),
+      subscriptions: new Map(),
+      pages: new Map()
     };
 
     // Mock Firestore

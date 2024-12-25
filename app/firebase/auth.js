@@ -31,13 +31,13 @@ export class MockAuth {
   }
 
   signInWithEmailAndPassword(email, password) {
-    // Accept only test credentials for mock auth
-    if (email === 'test@example.com' && password === 'testpassword') {
+    // In development mode, accept any credentials
+    if (process.env.NODE_ENV === 'development') {
       this.currentUser = {
-        uid: 'mock-user-1',
+        uid: `mock-user-${Date.now()}`, // Generate unique ID for testing
         email,
         emailVerified: true,
-        displayName: 'Mock User',
+        displayName: email.split('@')[0],
         photoURL: null,
         groups: ['default-group'],
         metadata: {

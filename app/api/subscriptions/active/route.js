@@ -1,5 +1,13 @@
 import Stripe from 'stripe';
 
+// Log key presence without exposing the full key
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+console.log('Active subscriptions - Stripe key status:', {
+  exists: !!stripeKey,
+  length: stripeKey?.length,
+  prefix: stripeKey?.substring(0, 7),
+});
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function GET(req) {
@@ -13,11 +21,22 @@ export async function GET(req) {
       });
     }
 
+    console.log('Fetching subscriptions for customer:', {
+      customerId,
+      hasStripeInstance: !!stripe,
+      hasSecretKey: !!process.env.STRIPE_SECRET_KEY,
+    });
+
     // Fetch active subscriptions for the customer
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: 'active',
       limit: 1,
+    });
+
+    console.log('Subscription list response:', {
+      hasData: !!subscriptions.data,
+      count: subscriptions.data.length,
     });
 
     if (subscriptions.data.length === 0) {
@@ -41,9 +60,20 @@ export async function GET(req) {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error fetching subscription:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    console.error('Error fetching subscription:', {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      param: error.param,
+      statusCode: error.statusCode,
+      stack: error.stack,
+    });
+    return new Response(JSON.stringify({
+      error: error.message,
+      type: error.type,
+      code: error.code,
+    }), {
+      status: error.statusCode || 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }

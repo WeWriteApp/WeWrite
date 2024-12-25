@@ -2,7 +2,10 @@ import Stripe from 'stripe';
 
 // Use environment variables for Stripe keys
 export const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
+  typescript: true,
+});
 
 // Default product ID from environment
 const DEFAULT_PRODUCT_ID = process.env.STRIPE_PRODUCT_ID;
@@ -28,12 +31,14 @@ export const createCustomer = async (email, name, userId) => {
 
 export const createSubscription = async (customerId) => {
   try {
-    // Create a subscription using the default price
+    // Create a subscription with payment confirmation required
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{
         price: DEFAULT_PRICE_ID,
       }],
+      payment_behavior: 'default_incomplete',
+      expand: ['latest_invoice.payment_intent'],
     });
     return subscription;
   } catch (error) {

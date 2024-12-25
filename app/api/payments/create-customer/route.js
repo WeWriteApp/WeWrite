@@ -1,42 +1,68 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import database, { ref, update } from '@/firebase/rtdb';
+import Stripe from 'stripe';
+
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+console.log('Create customer - Stripe key status:', {
+  exists: !!stripeKey,
+  length: stripeKey?.length,
+  prefix: stripeKey?.substring(0, 7),
+});
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
-    const { userId, email, name } = await request.json();
+    console.log('Received create-customer request');
 
-    if (!userId) {
+    const { uid, email, name } = await request.json();
+    console.log('Creating customer with data:', { uid, email, name });
+
+    if (!uid) {
+      console.error('Missing uid in request');
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
       );
     }
 
-    // Create a Stripe customer with user information
-    const customer = await stripe.customers.create({
-      email,
-      name,
-      metadata: {
-        userId,
-      },
-    });
+    try {
+      console.log('Creating Stripe customer');
+      const customer = await stripe.customers.create({
+        email,
+        name,
+        metadata: { uid },
+      });
+      console.log('Successfully created Stripe customer:', customer.id);
 
-    // Update user record with Stripe customer ID
-    const userRef = ref(database, `users/${userId}`);
-    await update(userRef, {
-      stripeCustomerId: customer.id,
-    });
+      const userRef = ref(database, `users/${uid}`);
+      await update(userRef, {
+        stripeCustomerId: customer.id,
+      });
+      console.log('Updated user record with Stripe customer ID');
 
-    console.log('Successfully created Stripe customer:', customer.id, 'for user:', userId);
+      return NextResponse.json({ customerId: customer.id });
+    } catch (stripeError) {
+      console.error('Stripe customer creation error:', {
+        message: stripeError.message,
+        type: stripeError.type,
+        code: stripeError.code,
+        statusCode: stripeError.statusCode,
+      });
 
-    return NextResponse.json({
-      customerId: customer.id
-    });
+      return NextResponse.json(
+        {
+          error: 'Failed to create Stripe customer',
+          details: stripeError.message
+        },
+        { status: stripeError.statusCode || 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error creating customer:', error);
+    console.error('Server Error:', {
+      message: error.message,
+      stack: error.stack,
+    });
     return NextResponse.json(
       { error: error.message },
       { status: 500 }
