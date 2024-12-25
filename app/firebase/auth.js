@@ -1,5 +1,5 @@
 import { getAuth } from "firebase/auth";
-import { app } from './config';
+import { getFirebase } from './config';
 
 export class MockAuth {
   constructor(app) {
@@ -139,27 +139,33 @@ export class MockAuth {
 // Initialize Firebase Auth
 let auth;
 
-try {
-  // Ensure app is initialized first
-  if (!app) {
-    console.error('Firebase app not initialized');
-    throw new Error('Firebase app must be initialized before auth');
-  }
+const initializeAuth = async () => {
+  try {
+    // Wait for Firebase initialization
+    const { app } = await getFirebase();
 
-  // Initialize auth with the Firebase app instance
-  auth = getAuth(app);
-  console.log('Firebase Auth initialized successfully');
+    if (!app) {
+      throw new Error('Firebase app must be initialized before auth');
+    }
 
-  // Only use mock auth in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Using mock auth in development mode');
-    const mockAuth = new MockAuth(app);
-    auth = mockAuth;
+    // Initialize auth with the Firebase app instance
+    auth = getAuth(app);
+    console.log('Firebase Auth initialized successfully');
+
+    // Only use mock auth in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Using mock auth in development mode');
+      const mockAuth = new MockAuth(app);
+      auth = mockAuth;
+    }
+  } catch (error) {
+    console.error('Firebase Auth initialization error:', error);
+    throw error;
   }
-} catch (error) {
-  console.error('Firebase Auth initialization error:', error);
-  throw error;
-}
+};
+
+// Initialize auth
+initializeAuth();
 
 // Export auth instance and helper functions
 export { auth };
