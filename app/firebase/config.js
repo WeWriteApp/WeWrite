@@ -1,13 +1,12 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
-import { FirebaseError, FIREBASE_ERROR_TYPES } from "../utils/firebase-errors";
+import { FirebaseError } from "../utils/firebase-errors";
 
 let app;
 let db;
 let rtdb;
 let isInitialized = false;
-let initializationError = null;
 
 // Mock data and implementations
 const mockData = {
@@ -47,7 +46,6 @@ const createMockRef = (path) => {
     path = String(path || '');
   }
 
-  // Helper function to get/set nested object value by path
   const getNestedValue = (obj, path) => {
     if (!path) return obj;
     const parts = path.split('/').filter(Boolean);
@@ -82,7 +80,6 @@ const createMockRef = (path) => {
 
     child: (childPath) => createMockRef(`${path}/${childPath}`),
 
-    // Query methods
     orderByKey: () => mockRef,
     orderByValue: () => mockRef,
     orderByChild: (child) => mockRef,
@@ -158,7 +155,6 @@ const createMockRef = (path) => {
     toString: () => path
   };
 
-  // Set up parent/root references
   const pathParts = path.split('/').filter(Boolean);
   if (pathParts.length > 0) {
     const parentPath = pathParts.slice(0, -1).join('/');
@@ -209,10 +205,18 @@ const mockConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://mock-project-default-rtdb.firebaseio.com'
 };
 
+// Initialize with mock configuration
+const initializeWithMockConfig = () => {
+  app = getApps().length ? getApp() : initializeApp(mockConfig);
+  db = mockFirestore;
+  rtdb = mockRtdb;
+  isInitialized = true;
+  return { app, db, rtdb };
+};
+
 // Initialize Firebase with proper configuration
 const initializeFirebase = async () => {
   try {
-    // Validate required configuration first
     const requiredEnvVars = [
       'NEXT_PUBLIC_FIREBASE_API_KEY',
       'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
@@ -223,14 +227,13 @@ const initializeFirebase = async () => {
     const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
     if (missingEnvVars.length > 0) {
       console.error('Missing required Firebase configuration:', missingEnvVars);
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('Using fallback configuration in production');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Using fallback configuration in development');
         return initializeWithMockConfig();
       }
       throw new Error(`Missing required Firebase configuration: ${missingEnvVars.join(', ')}`);
     }
 
-    // Use environment variables for configuration
     const firebaseConfig = {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
       authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -241,11 +244,9 @@ const initializeFirebase = async () => {
       databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
     };
 
-    // Initialize Firebase app first
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     console.log('Firebase app initialized successfully');
 
-    // Initialize Firestore and RTDB
     db = getFirestore(app);
     rtdb = getDatabase(app);
     console.log('Firebase databases initialized');
@@ -254,68 +255,19 @@ const initializeFirebase = async () => {
     return { app, db, rtdb };
   } catch (error) {
     console.error('Firebase initialization error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Falling back to mock configuration in development');
+      return initializeWithMockConfig();
+    }
     throw error;
-  }
-};
-
-    // Wait for RTDB initialization with timeout
-    try {
-      const timeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('RTDB initialization timeout')), 30000); // Increased timeout to 30s
-      });
-
-      await Promise.race([
-        initializeRTDB(),
-        timeout
-      ]);
-
-      isInitialized = true;
-      console.log('Firebase initialized successfully:', {
-        app: !!app,
-        db: !!db,
-        rtdb: !!rtdb,
-        rtdbRef: typeof rtdb.ref === 'function'
-      });
-    } catch (error) {
-      console.error('Error initializing RTDB:', error);
-      throw error;
-    }
-  } catch (error) {
-    const errorDetails = error.message || 'Unknown error';
-    console.error('Firebase initialization error:', errorDetails);
-    initializationError = error;
-
-    // Allow mock database in development or for non-database operations in production
-    if (process.env.NODE_ENV === 'development' || (process.env.NODE_ENV === 'production' && !error.message?.includes('database'))) {
-      console.warn(`Using mock configuration due to initialization error: ${errorDetails}`);
-      app = getApps().length ? getApp() : initializeApp(mockConfig);
-      db = mockFirestore;
-      rtdb = mockRtdb;
-      isInitialized = true;
-      return;
-    } else {
-      // In production, throw a structured error for database-related issues
-      const firebaseError = new FirebaseError(
-        FIREBASE_ERROR_TYPES.INITIALIZATION,
-        `Firebase initialization failed: ${errorDetails}`
-      );
-      console.error('Firebase initialization failed in production environment:', {
-        error: firebaseError,
-        config: {
-          ...firebaseConfig,
-          apiKey: '[REDACTED]',
-          appId: '[REDACTED]'
-        }
-      });
-      throw firebaseError;
-    }
   }
 };
 
 // Initialize Firebase immediately
 initializeFirebase().catch(error => {
   console.error('Failed to initialize Firebase:', error);
+  throw error;
 });
 
-export { app, db, rtdb as database, isInitialized, initializationError };
+export { app, db, rtdb as database, isInitialized };
 export default app;
