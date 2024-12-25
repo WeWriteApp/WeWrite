@@ -5,21 +5,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
-    const { customerId } = await request.json();
-    const baseAmount = 1000; // $10 in cents - fixed base subscription amount
+    const { customerId, priceId } = await request.json();
 
-    // Create a subscription with the fixed base amount
+    if (!customerId) {
+      return NextResponse.json(
+        { error: 'Customer ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create a subscription with the specified price
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{
-        price_data: {
-          currency: 'usd',
-          product: process.env.STRIPE_PRODUCT_ID,
-          recurring: {
-            interval: 'month'
-          },
-          unit_amount: baseAmount,
-        },
+        price: priceId || process.env.STRIPE_PRICE_ID, // Use provided price or fallback
       }],
       payment_behavior: 'default_incomplete',
       expand: ['latest_invoice.payment_intent'],
