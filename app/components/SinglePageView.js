@@ -41,7 +41,6 @@ export default function SinglePageView({ params }) {
           console.log('Received page data:', pageData);
           console.log('Received version data:', versionData);
 
-          // In development, always grant access to test user
           if (process.env.NODE_ENV === 'development' && user?.uid === 'test-user') {
             setIsPublic(true);
           } else {
@@ -141,7 +140,10 @@ export default function SinglePageView({ params }) {
   }
   return (
     <DashboardLayout>
-      <div className="p-2">
+      <div className="fixed top-0 left-0 w-full flex justify-center bg-background z-50">
+        {user && <PledgeBar pageId={params.id} user={user} />}
+      </div>
+      <div className="p-2 mt-28">
         {isEditing ? (
           <EditPage
             isEditing={isEditing}
@@ -185,9 +187,6 @@ export default function SinglePageView({ params }) {
             )}
           </>
         )}
-      </div>
-      <div className=" fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-        <PledgeBar />
       </div>
     </DashboardLayout>
   );

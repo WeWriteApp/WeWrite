@@ -29,7 +29,8 @@
     "react-tooltip": "^5.27.1",
     "slate": "^0.103.0",
     "slate-history": "^0.100.0",
-    "slate-react": "^0.107.1"
+    "slate-react": "^0.107.1",
+    "stripe": "^17.5.0"
   },
   "devDependencies": {
     "@iconify/react": "^4.1.1",

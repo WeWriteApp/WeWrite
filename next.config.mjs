@@ -9,8 +9,15 @@ const {
     APP_ID,
     GOOGLE_CLOUD_KEY_JSON,
     LOGGING_CLOUD_KEY_JSON,
-    PROJECT_ID
+    PROJECT_ID,
+    STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    STRIPE_PRODUCT_ID,
+    STRIPE_PRICE_ID,
+    SUBSCRIPTION_BASE_AMOUNT
 } = process.env;
+
 const nextConfig = {
     env: {
         API_KEY,
@@ -22,7 +29,13 @@ const nextConfig = {
         APP_ID,
         GOOGLE_CLOUD_KEY_JSON,
         LOGGING_CLOUD_KEY_JSON,
-        PROJECT_ID
+        PROJECT_ID,
+        STRIPE_SECRET_KEY,
+        STRIPE_WEBHOOK_SECRET,
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+        STRIPE_PRODUCT_ID,
+        STRIPE_PRICE_ID,
+        SUBSCRIPTION_BASE_AMOUNT
     },
     webpack(config) {
         config.resolve.fallback = {

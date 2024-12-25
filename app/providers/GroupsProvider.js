@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { rtdb, ref, onValue } from "../firebase/rtdb";
+import database, { ref, onValue } from "../firebase/rtdb";
 
 export const GroupsContext = React.createContext();
 
@@ -8,7 +8,7 @@ export const GroupsProvider = ({ children }) => {
   const [groups, setGroups] = useState([]);
 
   useEffect(() => {
-    const groupsRef = ref(rtdb, "groups");
+    const groupsRef = ref(database, "groups");
     return onValue(groupsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {

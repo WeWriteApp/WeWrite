@@ -1,5 +1,5 @@
-// Mock Firebase Auth implementation
-import { app } from './config';
+import { getAuth as getFirebaseAuth } from "firebase/auth";
+import { getFirebase } from './config';
 
 export class MockAuth {
   constructor(app) {
@@ -31,13 +31,13 @@ export class MockAuth {
   }
 
   signInWithEmailAndPassword(email, password) {
-    // Accept only test credentials for mock auth
-    if (email === 'test@example.com' && password === 'testpassword') {
+    // In development mode, accept any credentials
+    if (process.env.NODE_ENV === 'development') {
       this.currentUser = {
-        uid: 'mock-user-1',
+        uid: `mock-user-${Date.now()}`, // Generate unique ID for testing
         email,
         emailVerified: true,
-        displayName: 'Mock User',
+        displayName: email.split('@')[0],
         photoURL: null,
         groups: ['default-group'],
         metadata: {
@@ -136,25 +136,69 @@ export class MockAuth {
   }
 }
 
-// Create and export a singleton instance with the initialized app
-const mockAuth = new MockAuth(app);
+// Initialize Firebase Auth
+let auth;
+let initializationPromise = null;
 
-// Register auth provider in the app
-app.getProvider('auth', {
-  initialize: () => {},
-  isInitialized: () => true,
-  getImmediate: () => mockAuth
-});
+const initializeAuth = async () => {
+  try {
+    // Wait for Firebase initialization
+    const { app } = await getFirebase();
 
-// Helper functions to match Firebase Auth API
-export const auth = mockAuth;
-export const getAuth = () => mockAuth;
-export const createUser = (email, password) => mockAuth.createUserWithEmailAndPassword(email, password);
-export const loginUser = (email, password) => mockAuth.signInWithEmailAndPassword(email, password);
-export const logoutUser = () => mockAuth.signOut();
-export const addUsername = (uid, username) => mockAuth.addUsername(uid, username);
+    if (!app) {
+      throw new Error('Firebase app must be initialized before auth');
+    }
+
+    // Initialize auth with the Firebase app instance
+    const authInstance = getFirebaseAuth(app);
+    console.log('Firebase Auth initialized successfully');
+
+    // Only use mock auth in development
+    if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_DB === 'true') {
+      console.log('Using mock auth in development mode');
+      return new MockAuth(app);
+    }
+
+    return authInstance;
+  } catch (error) {
+    console.error('Firebase Auth initialization error:', error);
+    throw error;
+  }
+};
+
+export const getAuth = async () => {
+  if (!auth) {
+    if (!initializationPromise) {
+      initializationPromise = initializeAuth();
+    }
+    auth = await initializationPromise;
+  }
+  return auth;
+};
+
+// Export auth helper functions
+export const createUser = async (email, password) => {
+  const auth = await getAuth();
+  return auth.createUserWithEmailAndPassword(email, password);
+};
+
+export const loginUser = async (email, password) => {
+  const auth = await getAuth();
+  return auth.signInWithEmailAndPassword(email, password);
+};
+
+export const logoutUser = async () => {
+  const auth = await getAuth();
+  return auth.signOut();
+};
+
+export const addUsername = async (uid, username) => {
+  const auth = await getAuth();
+  return auth.addUsername(uid, username);
+};
+
 export const onAuthStateChanged = (auth, callback) => auth.onAuthStateChanged(callback);
 export const createUserWithEmailAndPassword = (auth, email, password) => auth.createUserWithEmailAndPassword(email, password);
 export const signInWithEmailAndPassword = (auth, email, password) => auth.signInWithEmailAndPassword(email, password);
 export const signOut = (auth) => auth.signOut();
-export const updateProfile = (user, profile) => mockAuth.updateProfile(user, profile);
+export const updateProfile = (user, profile) => auth.updateProfile(user, profile);

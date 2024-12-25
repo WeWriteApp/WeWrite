@@ -284,6 +284,20 @@ export const updateDoc = async (collectionName, docName, data) => {
   }
 }
 
+export const updateSubscriptionStatus = async (subscriptionId, data) => {
+  try {
+    const subscriptionRef = doc(db, 'subscriptions', subscriptionId);
+    await setDoc(subscriptionRef, {
+      ...data,
+      updatedAt: Date.now(),
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error updating subscription status:', error);
+    return false;
+  }
+}
+
 export const removeDoc = async (collectionName, docName) => {
   try {
     await deleteDoc(doc(db, collectionName, docName));

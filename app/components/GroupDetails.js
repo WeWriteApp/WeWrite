@@ -1,8 +1,8 @@
 "use client";
 import React, { useContext } from "react";
 import { useTheme } from "../providers/ThemeProvider";
-import { rtdb } from "../firebase/rtdb";
-import { ref, set } from "firebase/database";
+import { getFirebase } from "../firebase/config";
+import { ref, set } from "../firebase/rtdb";
 import { AuthContext } from "../providers/AuthProvider";
 import GroupMembers from "./GroupMembers";
 import GroupPages from "./GroupPages";
@@ -30,12 +30,13 @@ export default function GroupDetails({ group }) {
 const DeleteGroupButton = ({ group }) => {
   const router = useRouter();
   const { user } = useContext(AuthContext);
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this group?")) {
+      const { rtdb } = await getFirebase();
       const groupRef = ref(rtdb, `groups/${group.id}`);
-      set(groupRef, null);
+      await set(groupRef, null);
       router.push("/pages");
-    } 
+    }
   };
   if (!user || user.uid !== group.owner) return null;
   return (

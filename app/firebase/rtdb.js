@@ -1,120 +1,186 @@
-// Mock implementation for testing without Firebase
-const mockDb = {
-  users: {
-    'mock-user-1': {
-      uid: 'mock-user-1',
-      email: 'test@example.com',
-      displayName: 'Test User',
-      username: 'Test User'
-    }
-  },
-  pages: {
-    'page-1': { id: 'page-1', name: 'Getting Started', isPublic: true, userId: 'mock-user-1' },
-    'page-2': { id: 'page-2', name: 'User Guide', isPublic: true, userId: 'mock-user-2' },
-    'page-3': { id: 'page-3', name: 'Private Notes', isPublic: false, userId: 'mock-user-1' },
-    'page-4': { id: 'page-4', name: 'Project Ideas', isPublic: false, userId: 'mock-user-1' }
-  },
-  groups: {}
-};
+import { getDatabase, ref as dbRef, onValue as dbOnValue, get as dbGet, set as dbSet, update as dbUpdate, remove as dbRemove, push as dbPush } from 'firebase/database';
+import { getFirebase } from './config';
 
-// Mock Firebase Database Reference
-class MockDatabaseRef {
-  constructor(path) {
-    this.path = path;
-    this._checkNotDeleted = () => true;
-  }
+// Initialize database with error handling
+let database = null;
 
-  val() {
-    return this.getData();
-  }
+const initializeDatabase = async () => {
+  if (database) return database;
 
-  getData() {
-    const pathParts = this.path.split('/');
-    let current = mockDb;
-    for (const part of pathParts) {
-      if (part && current) {
-        current = current[part];
-      }
-    }
-    return current;
-  }
-}
-
-// Mock Firebase Database
-class MockDatabase {
-  ref(path) {
-    return new MockDatabaseRef(path);
-  }
-}
-
-// Export mock database instance
-export const rtdb = new MockDatabase();
-
-// Mock database operations using the new classes
-export const ref = (db, path) => db.ref(path);
-
-export const onValue = (ref, callback) => {
-  callback(ref);
-  return () => {};
-};
-
-export const add = async (path, data) => {
-  const pathParts = path.split('/');
-  const collection = pathParts[0];
-  const id = `${collection}-${Date.now()}`;
-  mockDb[collection] = mockDb[collection] || {};
-  mockDb[collection][id] = { id, ...data };
-  return { key: id };
-};
-
-export const updateData = async (path, data) => {
-  const pathParts = path.split('/');
-  const collection = pathParts[0];
-  const id = pathParts[1];
-  if (mockDb[collection] && mockDb[collection][id]) {
-    mockDb[collection][id] = { ...mockDb[collection][id], ...data };
+  try {
+    const { app } = await getFirebase();
+    database = getDatabase(app);
+    return database;
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    return null;
   }
 };
 
-export const getDoc = async (path) => {
-  const pathParts = path.split('/');
-  const collection = pathParts[0];
-  const id = pathParts[1];
-  return mockDb[collection]?.[id] || null;
-};
-
-export const setDoc = async (path, data) => {
-  const pathParts = path.split('/');
-  const collection = pathParts[0];
-  const id = pathParts[1];
-  if (data === null) {
-    delete mockDb[collection]?.[id];
-  } else {
-    mockDb[collection] = mockDb[collection] || {};
-    mockDb[collection][id] = data;
-  }
-};
-
-export const removeDoc = async (path) => {
-  await setDoc(path, null);
-};
-
+// Helper functions for database operations
 export const fetchGroupFromFirebase = async (groupId) => {
   try {
-    const group = await getDoc(`groups/${groupId}`);
-    return group ? { id: groupId, ...group } : null;
+    const groupRef = await ref(`groups/${groupId}`);
+    const snapshot = await get(groupRef);
+    return snapshot.val();
   } catch (error) {
-    console.error("Error fetching group from mock database", error);
+    console.error('Error fetching group:', error);
     return null;
   }
 };
 
 export const fetchProfileFromFirebase = async (userId) => {
   try {
-    const profile = await getDoc(`users/${userId}`);
-    return profile ? { uid: userId, ...profile } : null;
+    const userRef = await ref(`users/${userId}`);
+    const snapshot = await get(userRef);
+    return snapshot.val();
   } catch (error) {
-    console.error("Error fetching profile from mock database", error);
+    console.error('Error fetching profile:', error);
     return null;
   }
 };
+
+// Re-export database functions with proper error handling
+export const ref = async (path) => {
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock reference');
+    return { key: path };
+  }
+
+  // Wait for initialization with timeout
+  const timeout = 5000;
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeout) {
+    const db = await initializeDatabase();
+    if (db) {
+      try {
+        return dbRef(db, path);
+      } catch (error) {
+        console.error('Error creating database reference:', error);
+        throw error;
+      }
+    }
+
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  throw new Error('Database initialization timeout');
+};
+
+export const onValue = async (reference, callback) => {
+  if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock onValue');
+    callback({ val: () => null, exists: () => false });
+    return () => {};
+  }
+
+  try {
+    const resolvedRef = await Promise.resolve(reference);
+    return dbOnValue(resolvedRef, callback);
+  } catch (error) {
+    console.error('Error setting up value listener:', error);
+    throw error;
+  }
+};
+
+export const get = async (reference) => {
+  if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock get');
+    return Promise.resolve({ val: () => null, exists: () => false });
+  }
+
+  try {
+    const resolvedRef = await Promise.resolve(reference);
+    return dbGet(resolvedRef);
+  } catch (error) {
+    console.error('Error getting value:', error);
+    throw error;
+  }
+};
+
+export const set = async (reference, value) => {
+  if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock set');
+    return Promise.resolve();
+  }
+
+  try {
+    const resolvedRef = await Promise.resolve(reference);
+    return dbSet(resolvedRef, value);
+  } catch (error) {
+    console.error('Error setting value:', error);
+    throw error;
+  }
+};
+
+export const update = async (reference, value) => {
+  if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock update');
+    return Promise.resolve();
+  }
+
+  try {
+    const resolvedRef = await Promise.resolve(reference);
+    return dbUpdate(resolvedRef, value);
+  } catch (error) {
+    console.error('Error updating value:', error);
+    throw error;
+  }
+};
+
+export const remove = async (reference) => {
+  if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock remove');
+    return Promise.resolve();
+  }
+
+  try {
+    const resolvedRef = await Promise.resolve(reference);
+    return dbRemove(resolvedRef);
+  } catch (error) {
+    console.error('Error removing value:', error);
+    throw error;
+  }
+};
+
+export const push = async (reference, value) => {
+  if (!reference) throw new Error('Database reference is required');
+
+  // Handle SSR case
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+    console.log('Server-side rendering detected, using mock push');
+    return Promise.resolve({ key: `mock-${Date.now()}` });
+  }
+
+  try {
+    const resolvedRef = await Promise.resolve(reference);
+    return dbPush(resolvedRef, value);
+  } catch (error) {
+    console.error('Error pushing value:', error);
+    throw error;
+  }
+};
+
+// Export the database initialization function
+export { initializeDatabase as getDatabase };
+
+// Export a function to check if database is initialized
+export const isDatabaseInitialized = () => database !== null;
