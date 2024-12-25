@@ -3,6 +3,7 @@ import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
 import { FirebaseError } from "../utils/firebase-errors";
 
+// Firebase instances
 let app;
 let db;
 let rtdb;
@@ -220,7 +221,6 @@ const initializeWithMockConfig = async () => {
 
 // Initialize Firebase with proper configuration
 const initializeFirebase = async () => {
-  // Return existing initialization promise if it exists
   if (initializationPromise) {
     return initializationPromise;
   }
@@ -291,28 +291,13 @@ const initialized = initializeFirebase();
 
 // Export the initialization promise and instances
 export const getFirebase = async () => initialized;
+
+// Export instances and helper functions
 export const getApp = () => app;
 export const getDb = () => db;
 export const getRtdb = () => rtdb;
-export { isInitialized };
+export const getIsInitialized = () => isInitialized;
 
 // For compatibility with existing code
 export { app, db, rtdb as database };
-export default app;
-    }
-  })();
-
-  return initializationPromise;
-};
-
-// Export initialization function and status
-export const getFirebase = async () => {
-  if (!initializationPromise) {
-    initializationPromise = initializeFirebase();
-  }
-  return initializationPromise;
-};
-
-export { isInitialized };
-export const database = rtdb;
 export default app;
