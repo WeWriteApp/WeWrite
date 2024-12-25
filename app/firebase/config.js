@@ -293,7 +293,7 @@ const initialized = initializeFirebase();
 export const getFirebase = async () => initialized;
 
 // Export instances and helper functions
-export const getApp = () => app;
+export const getFirebaseApp = () => app;
 export const getDb = () => db;
 export const getRtdb = () => rtdb;
 export const getIsInitialized = () => isInitialized;
