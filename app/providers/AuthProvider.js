@@ -2,8 +2,10 @@
 
 import { useEffect, useState, createContext, useContext } from "react";
 import { auth, onAuthStateChanged } from "../firebase/auth";
+import { getDatabase } from "../firebase/database";
 
 export const AuthContext = createContext();
+const db = getDatabase();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -18,6 +20,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const createStripeCustomer = async (userData) => {
+    try {
+      const response = await fetch('/api/payments/create-customer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userData.uid,
+          email: userData.email,
+          name: userData.displayName,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create Stripe customer');
+      }
+
+      const { customerId } = await response.json();
+      return customerId;
+    } catch (error) {
+      console.error('Error creating Stripe customer:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       setLoading(false);
@@ -26,15 +54,24 @@ export const AuthProvider = ({ children }) => {
 
     let unsubscribe;
     try {
-      unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe = onAuthStateChanged(auth, async (authUser) => {
         try {
-          if (user) {
+          if (authUser) {
+            const userSnapshot = await db.ref(`users/${authUser.uid}`).get();
+            const userData = userSnapshot.val() || {};
+
+            let stripeCustomerId = userData.stripeCustomerId;
+            if (!stripeCustomerId) {
+              stripeCustomerId = await createStripeCustomer(authUser);
+            }
+
             setUser({
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              username: user.username || user.displayName,
-              groups: user.groups || ['default-group']
+              uid: authUser.uid,
+              email: authUser.email,
+              displayName: authUser.displayName,
+              username: userData.username || authUser.displayName,
+              groups: userData.groups || ['default-group'],
+              stripeCustomerId,
             });
           } else {
             setUser(null);
