@@ -1,12 +1,14 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";
 import { FirebaseError } from "../utils/firebase-errors";
 
 // Firebase instances
 let app;
 let db;
 let rtdb;
+let auth;
 let isInitialized = false;
 let initializationPromise = null;
 
@@ -213,10 +215,11 @@ const initializeWithMockConfig = async () => {
     app = getApps().length ? getApp() : initializeApp(mockConfig);
     db = mockFirestore;
     rtdb = mockRtdb;
+    auth = getAuth(app);
     isInitialized = true;
     console.log('Initialized with mock configuration');
   }
-  return { app, db, rtdb };
+  return { app, db, rtdb, auth };
 };
 
 // Initialize Firebase with proper configuration
@@ -227,7 +230,7 @@ const initializeFirebase = async () => {
 
   initializationPromise = (async () => {
     if (isInitialized) {
-      return { app, db, rtdb };
+      return { app, db, rtdb, auth };
     }
 
     try {
@@ -266,12 +269,13 @@ const initializeFirebase = async () => {
         // Initialize services sequentially
         db = getFirestore(app);
         rtdb = getDatabase(app);
-        console.log('Firebase databases initialized');
+        auth = getAuth(app);
+        console.log('Firebase databases and auth initialized');
 
         isInitialized = true;
       }
 
-      return { app, db, rtdb };
+      return { app, db, rtdb, auth };
     } catch (error) {
       console.error('Firebase initialization error:', error);
       initializationPromise = null; // Reset promise on error
@@ -296,8 +300,9 @@ export const getFirebase = async () => initialized;
 export const getFirebaseApp = () => app;
 export const getDb = () => db;
 export const getRtdb = () => rtdb;
+export const getFirebaseAuth = () => auth;
 export const getIsInitialized = () => isInitialized;
 
 // For compatibility with existing code
-export { app, db, rtdb as database };
+export { app, db, rtdb as database, auth };
 export default app;
