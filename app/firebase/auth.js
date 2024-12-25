@@ -140,22 +140,25 @@ export class MockAuth {
 let auth;
 
 try {
+  // Ensure app is initialized first
+  if (!app) {
+    console.error('Firebase app not initialized');
+    throw new Error('Firebase app must be initialized before auth');
+  }
+
+  // Initialize auth with the Firebase app instance
   auth = getAuth(app);
+  console.log('Firebase Auth initialized successfully');
 
   // Only use mock auth in development
   if (process.env.NODE_ENV === 'development') {
+    console.log('Using mock auth in development mode');
     const mockAuth = new MockAuth(app);
     auth = mockAuth;
   }
 } catch (error) {
   console.error('Firebase Auth initialization error:', error);
-  if (process.env.NODE_ENV === 'development') {
-    console.warn('Using mock auth in development');
-    const mockAuth = new MockAuth(app);
-    auth = mockAuth;
-  } else {
-    throw error;
-  }
+  throw error;
 }
 
 // Export auth instance and helper functions
