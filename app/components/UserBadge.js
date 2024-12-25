@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ref, get, getMockDatabase } from "../firebase/rtdb";
+import { ref, get, rtdb } from "../firebase/rtdb";
 import Link from "next/link";
 
 const User = ({ uid }) => {
@@ -11,8 +11,7 @@ const User = ({ uid }) => {
 
     const fetchProfile = async () => {
       try {
-        const db = getMockDatabase();
-        const userRef = ref(db, `users/${uid}`);
+        const userRef = ref(rtdb, `users/${uid}`);
         const snapshot = await get(userRef);
         const userData = snapshot.val();
 

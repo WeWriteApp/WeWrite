@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ref, onValue, getMockDatabase } from "../firebase/rtdb";
+import { ref, onValue, rtdb } from "../firebase/rtdb";
 import Link from "next/link";
 
 export default function GroupBadge({ groupId, index }) {
@@ -11,28 +11,36 @@ export default function GroupBadge({ groupId, index }) {
   useEffect(() => {
     if (!groupId) return;
 
-    const db = getMockDatabase();
-    const groupRef = ref(db, `groups/${groupId}`);
-    const unsubscribe = onValue(groupRef, (snapshot) => {
-      if (!snapshot.val()) return;
+    const fetchGroup = async () => {
+      try {
+        const groupRef = await ref(`groups/${groupId}`);
+        const unsubscribe = await onValue(groupRef, (snapshot) => {
+          if (!snapshot.val()) return;
 
-      const groupData = {
-        id: snapshot.key,
-        ...snapshot.val()
-      };
-      setGroup(groupData);
+          const groupData = {
+            id: snapshot.key,
+            ...snapshot.val()
+          };
+          setGroup(groupData);
 
-      if (groupData.members) {
-        const count = Object.keys(groupData.members).length;
-        setMemberCount(count);
+          if (groupData.members) {
+            const count = Object.keys(groupData.members).length;
+            setMemberCount(count);
+          }
+          if (groupData.pages) {
+            const pageC = Object.keys(groupData.pages).length;
+            setPageCount(pageC);
+          }
+        });
+
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('Error fetching group:', error);
+        setGroup({ name: 'Error loading group' });
       }
-      if (groupData.pages) {
-        const pageC = Object.keys(groupData.pages).length;
-        setPageCount(pageC);
-      }
-    });
+    };
 
-    return () => unsubscribe();
+    fetchGroup();
   }, [groupId]);
 
   if (!group || !groupId) return <div>Loading...</div>;
