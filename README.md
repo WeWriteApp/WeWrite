@@ -6,8 +6,6 @@ WeWrite is a social wiki where every page you write is a fundraiser. Learn more 
 - [Instagram](https://www.instagram.com/getwewrite/)
 - [YouTube](https://www.youtube.com/@WeWriteApp)
 
-![17E8B098-9821-4C3F-8A5C-72A6B0042A1B_1_105_c](https://github.com/user-attachments/assets/ce72dc43-145b-43c0-b525-967a523902ca)
-
 ![image](https://github.com/user-attachments/assets/fd3f7853-9032-4b3a-a080-ad040747ceee)
 
 
