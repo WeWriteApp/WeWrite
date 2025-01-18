@@ -1,5 +1,7 @@
 "use client";
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/database"; // Import your Firestore configuration
 
 const LedgerContext = createContext();
 
@@ -11,6 +13,7 @@ const defaultLedger = {
 
 export const LedgerProvider = ({ children }) => {
   const [ledger, setLedger] = useState(defaultLedger);
+  const [pageInfo, setPageInfo] = useState({});
 
   useEffect(() => {
     // Load ledger from localStorage on the client side
@@ -21,6 +24,29 @@ export const LedgerProvider = ({ children }) => {
       }
     }
   }, []);
+
+  // Function to fetch and cache page info
+  const getPageInfo = async (pageId) => {
+    if (pageInfo[pageId]) {
+      console.log(`Page info (cached) for ${pageId}:`, pageInfo[pageId]);
+      return pageInfo[pageId];
+    }
+    try {
+      const pageDoc = await getDoc(doc(db, "pages", pageId));
+      if (pageDoc.exists()) {
+        const page = { id: pageDoc.id, ...pageDoc.data() };
+        console.log(`Page info for ${pageId}:`, page);
+        setPageInfo((prev) => ({ ...prev, [pageId]: page })); // Cache the page info
+        return page;
+      } else {
+        console.warn(`Page with ID ${pageId} does not exist in Firestore.`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Error fetching page info for ${pageId}:`, error);
+      return null;
+    }
+  };
 
   const saveToLocalStorage = (updatedLedger) => {
     if (typeof window !== "undefined") {
@@ -98,6 +124,7 @@ export const LedgerProvider = ({ children }) => {
         addSubscription,
         updateSubscription,
         removeSubscription,
+        getPageInfo,
       }}
     >
       {children}

@@ -7,6 +7,7 @@ import AddUsername from "../components/AddUsername";
 import TypeaheadSearch from "../components/TypeaheadSearch";
 import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
+import SubscriptionsTable from "./SubscriptionsTable";
 
 const Dashboard = () => {
   const { user,loading } = useContext(AuthContext);
@@ -34,6 +35,7 @@ const Dashboard = () => {
         </div>
         <AllPages />
         <TopUsers />
+        <SubscriptionsTable />
       </div>
     </DashboardLayout>
   );

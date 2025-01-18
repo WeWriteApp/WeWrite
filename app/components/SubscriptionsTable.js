@@ -1,130 +1,124 @@
 "use client";
-import React, { useContext, useEffect, useState } from "react";
-import { PortfolioContext } from "../providers/PortfolioProvider";
-import { getPageById } from "../firebase/database";
-import {PillLink} from "./PillLink";
+import React, { useEffect, useState } from "react";
+import { useLedger } from "../providers/LedgerProvider";
+import { PillLink } from "./PillLink"; // Import the PillLink component
+
+const centsToDollars = (cents) => (cents / 100).toFixed(2);
 
 const SubscriptionsTable = () => {
-  const { subscriptions } = useContext(PortfolioContext);
-  
-  // Local copy of subscriptions for editing
-  const [localSubscriptions, setLocalSubscriptions] = useState([]);
-  const [changesMade, setChangesMade] = useState(false);
+  const { ledger, updateSubscription, getPageInfo } = useLedger();
+  const [subscriptionsWithPages, setSubscriptionsWithPages] = useState([]);
+  const [showAll, setShowAll] = useState(false); // State for filtering subscriptions
 
-  // Initialize the local subscriptions with the context subscriptions
   useEffect(() => {
-    if (subscriptions) {
-      setLocalSubscriptions(subscriptions);
-    }
-  }, [subscriptions]);
+    const fetchSubscriptions = async () => {
+      const enrichedSubscriptions = await Promise.all(
+        Object.entries(ledger.subscriptions || {}).map(async ([pageId, subscription]) => {
+          const pageInfo = await getPageInfo(pageId);
+          return {
+            ...subscription,
+            pageId,
+            pageName: pageInfo?.title || "Unknown Page",
+            isPublic: pageInfo?.isPublic || false,
+          };
+        })
+      );
+      setSubscriptionsWithPages(enrichedSubscriptions);
+    };
 
-  // Function to handle saving changes
-  const handleSaveChanges = () => {
-    // Call the function to save updated subscriptions
-    setChangesMade(false); // Reset changes state after saving
+    fetchSubscriptions();
+  }, [ledger, getPageInfo]);
+
+  const totalBudget = ledger?.budget || 0;
+  const usedBudget = subscriptionsWithPages.reduce(
+    (total, { amount }) => total + (amount || 0),
+    0
+  );
+
+  const handleIncrement = (pageId, currentAmount, increment = 100) => {
+    if (usedBudget + increment <= totalBudget) {
+      const newAmount = currentAmount + increment;
+      updateSubscription(pageId, { amount: newAmount });
+    }
   };
 
-  if (!localSubscriptions) {
-    return <div>Loading...</div>;
-  }
+  const handleDecrement = (pageId, currentAmount, decrement = 100) => {
+    const newAmount = Math.max(0, currentAmount - decrement);
+    updateSubscription(pageId, { amount: newAmount });
+  };
+
+  const filteredSubscriptions = showAll
+    ? subscriptionsWithPages
+    : subscriptionsWithPages.filter(({ amount }) => amount > 0);
 
   return (
-    <div className="mb-0">
-      {localSubscriptions.length > 0 ? (
-        localSubscriptions.map((subscription, index) => (
-          <SubscriptionItem
-            key={subscription.id}
-            subscription={subscription}
-            index={index}
-            localSubscriptions={localSubscriptions}
-            setLocalSubscriptions={setLocalSubscriptions}
-            setChangesMade={setChangesMade}
-          />
-        ))
-      ) : (
-        <div>No subscriptions available.</div>
-      )}
-      
-      {/* Save Changes Button */}
-      <div className="pt-4">
+    <div className="subscriptions-table mt-6">
+      <h2 className="text-xl text-white font-bold">Subscriptions</h2>
+      {/* Budget Metrics */}
+      <BudgetMetrics totalBudget={totalBudget} usedBudget={usedBudget} />
+
+      <div className="flex justify-between items-center mb-4">
+        
         <button
-          className={`px-4 py-2 bg-blue-600 text-white font-semibold rounded ${
-            !changesMade ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-700"
+          className={`text-white px-4 py-2 rounded ${
+            showAll ? "bg-blue-500" : "bg-gray-700"
           }`}
-          disabled={!changesMade}
-          onClick={handleSaveChanges}
+          onClick={() => setShowAll(!showAll)}
         >
-          Save Changes
+          {showAll ? "Hide $0 Subscriptions" : "Show $0 Subscriptions"}
         </button>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {filteredSubscriptions.map(({ pageId, pageName, amount, isPublic }) => (
+          <div key={pageId} className="flex items-center justify-between bg-gray-800 px-4 py-1 rounded-lg">
+            {/* PillLink for the Page Name */}
+            <PillLink href={`/pages/${pageId}`} isPublic={isPublic} groupId={pageId}>
+              {pageName}
+            </PillLink>
+            {/* Increment, Balance, and Decrement Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                className="bg-red-500 text-white px-3 py-1 rounded"
+                onClick={() => handleDecrement(pageId, amount || 0)}
+              >
+                -
+              </button>
+              <div className="text-white text-lg font-medium">${centsToDollars(amount || 0)}</div>
+              <button
+                className="bg-green-500 text-white px-3 py-1 rounded"
+                onClick={() => handleIncrement(pageId, amount || 0)}
+                disabled={usedBudget + 100 > totalBudget}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-const SubscriptionItem = ({
-  subscription,
-  index,
-  localSubscriptions,
-  setLocalSubscriptions,
-  setChangesMade
-}) => {
-  const { id, amount } = subscription;
-  const [page, setPage] = useState(null);
-  const { subscriptions } = useContext(PortfolioContext);
-
-  useEffect(() => {
-    if (!id) return;
-    if (!page) {
-      getPageById(id).then((data) => {
-        setPage(data.pageData);
-      });
-    }
-  }, [id, page]);
-
-  const handleAmountChange = (change) => {
-    const updatedSubscriptions = [...localSubscriptions];
-    updatedSubscriptions[index].amount = Math.max(0, updatedSubscriptions[index].amount + change);
-    setLocalSubscriptions(updatedSubscriptions);
-    setChangesMade(true);
-  };
-
-  if (!page) {
-    return <div>Loading...</div>;
-  }
+const BudgetMetrics = ({ totalBudget, usedBudget }) => {
+  const remainingBudget = totalBudget - usedBudget;
 
   return (
-    <>
-      <div className="flex items-center justify-between border-b border-gray-200 py-4">
-        <PillLink href={`/pages/${page.id}`} isPublic={page.isPublic}>
-          {page.title}
-        </PillLink>
-        <SubscriptionAmount amount={subscription.amount} handleAmountChange={handleAmountChange} />
+    <div className="budget-metrics mb-4 bg-gray-800 p-4 rounded-lg flex justify-between items-center text-white">
+      <div>
+        <h3 className="text-lg font-bold">Total Budget:</h3>
+        <p>${(totalBudget / 100).toFixed(2)}</p>
       </div>
-    </>
-  );
-};
-
-const SubscriptionAmount = ({ amount, handleAmountChange }) => {
-  return (
-    <div className="flex items-center space-x-4">
-      {/* Decrement Button */}
-      <button
-        className="flex items-center justify-center w-8 h-8 bg-background--light text-text rounded-sm border-border border"
-        onClick={() => handleAmountChange(-1)}
-      >
-        &#8211; {/* HTML entity for dash/minus */}
-      </button>
-
-      {/* Amount Display */}
-      <span className="text-text text-lg font-medium">${amount}/mo</span>
-
-      {/* Increment Button */}
-      <button
-        className="flex items-center justify-center w-8 h-8 bg-background--light text-text rounded-sm border-border border"
-        onClick={() => handleAmountChange(1)}
-      >
-        +
-      </button>
+      <div>
+        <h3 className="text-lg font-bold">Used Budget:</h3>
+        <p>${(usedBudget / 100).toFixed(2)}</p>
+      </div>
+      <div>
+        <h3 className="text-lg font-bold">Remaining Budget:</h3>
+        <p className={remainingBudget >= 0 ? "text-green-500" : "text-red-500"}>
+          ${(remainingBudget / 100).toFixed(2)}
+        </p>
+      </div>
     </div>
   );
 };
