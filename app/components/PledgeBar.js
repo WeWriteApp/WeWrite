@@ -39,19 +39,20 @@ const PledgeBar = () => {
   const { id } = useParams();
 
   useEffect(() => {
-    // Ensure ledger is loaded and contains required data
     if (!ledger) return;
   
     const { budget, subscriptions } = ledger;
   
-    // Set budget and usedAmount in cents
-    setBudget(budget || 0); // Fallback to 0 if undefined
-    const used = Object.values(subscriptions || {})
-      .filter((sub) => sub.status === "active")
-      .reduce((total, sub) => total + sub.amount, 0);
-    setUsedAmount(used); // Calculate used budget
+    // Set budget in cents
+    setBudget(budget || 0);
   
-    // Set donation amount for the current subscription (if exists)
+    // Calculate `usedAmount` excluding the current page
+    const used = Object.entries(subscriptions || {})
+      .filter(([key, sub]) => sub.status === "active" && key !== id) // Exclude current page
+      .reduce((total, [, sub]) => total + sub.amount, 0);
+    setUsedAmount(used);
+  
+    // Set donation amount for the current page
     const subscription = subscriptions[id];
     if (subscription) {
       setDonateAmount(subscription.amount || 0);
