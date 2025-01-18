@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
+import { useLedger } from "../providers/LedgerProvider";
 
 const data = {
   budget: 100,
@@ -31,41 +32,50 @@ const PledgeBar = () => {
   const [interval, setInterval] = useState(100);
   const [inputVisible, setInputVisible] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(true);
+  const { ledger, addSubscription, updateSubscription } = useLedger();
 
   const timerRef = useRef(null);
   const textRef = useRef(null);
   const { id } = useParams();
 
   useEffect(() => {
-    if (!user || loading) return;
-
-    if (user.ledger) {
-      const { budget, subscriptions } = user.ledger;
-
-      // Set budget and usedAmount in cents
-      setBudget(budget); // Already in cents
-      const used = Object.values(subscriptions)
-        .filter((sub) => sub.status === "active")
-        .reduce((total, sub) => total + sub.amount, 0);
-      setUsedAmount(used); // Sum of all active subscription amounts
-
-      const subscription = subscriptions[id];
-      if (subscription) {
-        setDonateAmount(subscription.amount || 0);
-      }
+    // Ensure ledger is loaded and contains required data
+    if (!ledger) return;
+  
+    const { budget, subscriptions } = ledger;
+  
+    // Set budget and usedAmount in cents
+    setBudget(budget || 0); // Fallback to 0 if undefined
+    const used = Object.values(subscriptions || {})
+      .filter((sub) => sub.status === "active")
+      .reduce((total, sub) => total + sub.amount, 0);
+    setUsedAmount(used); // Calculate used budget
+  
+    // Set donation amount for the current subscription (if exists)
+    const subscription = subscriptions[id];
+    if (subscription) {
+      setDonateAmount(subscription.amount || 0);
+    } else {
+      setDonateAmount(0); // Default to 0 if no subscription found
     }
-  }, [user, loading]);
+  }, [ledger, id]);
 
   const handleDonationChange = (newAmount) => {
     if (isNaN(newAmount) || newAmount < 0 || newAmount > budget - usedAmount + donateAmount) return;
-  
+
     setDonateAmount(newAmount);
-  
-    // Dynamically update the total used amount
-    setUsedAmount((prevUsedAmount) => {
-      const updatedUsedAmount = prevUsedAmount - donateAmount + newAmount; // Adjust used amount
-      return updatedUsedAmount >= 0 ? updatedUsedAmount : 0; // Ensure no negative values
-    });
+
+    if (ledger.subscriptions[id]) {
+      // Update existing subscription
+      updateSubscription(id, { amount: newAmount });
+    } else {
+      // Add new subscription
+      addSubscription(id, {
+        amount: newAmount,
+        status: "active",
+        date: new Date().toISOString(),
+      });
+    }
   };
   const handleMouseDown = () => {
     timerRef.current = setTimeout(() => setMenuVisible(true), 500);
