@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 
 const LedgerContext = createContext();
 
@@ -10,13 +10,22 @@ const defaultLedger = {
 };
 
 export const LedgerProvider = ({ children }) => {
-  const [ledger, setLedger] = useState(() => {
-    const savedLedger = localStorage.getItem("ledger");
-    return savedLedger ? JSON.parse(savedLedger) : defaultLedger;
-  });
+  const [ledger, setLedger] = useState(defaultLedger);
+
+  useEffect(() => {
+    // Load ledger from localStorage on the client side
+    if (typeof window !== "undefined") {
+      const savedLedger = localStorage.getItem("ledger");
+      if (savedLedger) {
+        setLedger(JSON.parse(savedLedger));
+      }
+    }
+  }, []);
 
   const saveToLocalStorage = (updatedLedger) => {
-    localStorage.setItem("ledger", JSON.stringify(updatedLedger));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ledger", JSON.stringify(updatedLedger));
+    }
   };
 
   const calculateUsed = (subscriptions) => {
