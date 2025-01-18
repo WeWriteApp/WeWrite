@@ -3,7 +3,6 @@ import "./globals.css";
 import { AuthProvider } from "./providers/AuthProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { MobileProvider } from "./providers/MobileProvider";
-import { NavProvider } from "./providers/NavProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { DrawerProvider } from "./providers/DrawerProvider";
 import { CommunityProvider } from "./providers/CommunityProvider";
@@ -25,33 +24,33 @@ export default function RootLayout({ children }) {
       </head>
       <body className={inter.className}>
         <LoggingProvider>
-        <GAProvider>
-          <ThemeProvider>
-            <GestureProvider>
-            <DrawerProvider>
-              <AuthProvider>
-                <DataProvider>
-                  <GroupsProvider>
-                    <CommunityProvider>
+          <GAProvider>
+            <ThemeProvider>
+              <GestureProvider>
+                <DrawerProvider>
+                  <AuthProvider>
+                    <DataProvider>
+                      <GroupsProvider>
+                      <CommunityProvider>
                       <PortfolioProvider>
-                        <MobileProvider>
-                          <Header />
-                          <div className="flex flex-row">
-                            <div className="flex flex-col w-full">
-                              {children}
-                            </div>
+                      <MobileProvider>
+                        <Header />
+                        <div className="flex flex-row">
+                          <div className="flex flex-col w-full">
+                            {children}
                           </div>
-                          <Drawer />
-                        </MobileProvider>
+                        </div>
+                        <Drawer />
+                      </MobileProvider>
                       </PortfolioProvider>
-                    </CommunityProvider>
-                  </GroupsProvider>
-                </DataProvider>
-              </AuthProvider>
-            </DrawerProvider>
-            </GestureProvider>
-          </ThemeProvider>
-        </GAProvider>
+                      </CommunityProvider>
+                      </GroupsProvider>
+                    </DataProvider>
+                  </AuthProvider>
+                </DrawerProvider>
+              </GestureProvider>
+            </ThemeProvider>
+          </GAProvider>
         </LoggingProvider>
       </body>
     </html>

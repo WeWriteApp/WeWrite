@@ -48,26 +48,6 @@ export default function SinglePageView({ params }) {
           setIsPublic(pageData.isPublic);
         }
 
-        // Check if links exist
-        // if (links.length > 0) {
-        //   checkLinkExistence(links).then((results) => {
-        //     // Process link existence results
-        //     for (let url in results) {
-        //       const exists = results[url];
-        //       if (!exists) {
-        //         // Update UI for invalid links (e.g., gray out and disable)
-        //         const linkElement = document.querySelector(`a[href="${url}"]`);
-        //         if (linkElement) {
-        //           linkElement.classList.remove("bg-blue-500");
-        //           linkElement.classList.add("bg-gray-500");
-        //           linkElement.disabled = true;
-        //           linkElement.style.cursor = "not-allowed"; // Disable click
-        //         }
-        //       }
-        //     }
-        //   });
-        // }
-
         // Data has loaded
         setIsLoading(false);
       } else {
