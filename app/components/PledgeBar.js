@@ -29,7 +29,7 @@ const PledgeBar = () => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [customVisible, setCustomVisible] = useState(false);
   const [customCheck, setCustomCheck] = useState(false);
-  const [interval, setInterval] = useState(100);
+  const [interval, setInterval] = useState(10);
   const [inputVisible, setInputVisible] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(true);
   const { ledger, addSubscription, updateSubscription } = useLedger();
