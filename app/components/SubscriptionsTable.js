@@ -10,6 +10,8 @@ const SubscriptionsTable = () => {
   const { ledger, updateSubscription, getPageInfo } = useLedger();
   const [subscriptionsWithPages, setSubscriptionsWithPages] = useState([]);
   const [showAll, setShowAll] = useState(false); // State for filtering subscriptions
+  const [totalBudget, setTotalBudget] = useState(0);
+  const [usedBudget, setUsedBudget] = useState(0);
   const { user } = useAuth();
   useEffect(() => {
     const fetchSubscriptions = async () => {
@@ -30,11 +32,16 @@ const SubscriptionsTable = () => {
     fetchSubscriptions();
   }, [ledger, getPageInfo]);
 
-  const totalBudget = user.budget || 0;
-  const usedBudget = subscriptionsWithPages.reduce(
-    (total, { amount }) => total + (amount || 0),
-    0
-  );
+  useEffect(() => {
+    if (!user) return;
+    const tmpTotalBudget = user?.budget || 0;
+    const tmpUsedBudget = subscriptionsWithPages.reduce(
+      (total, { amount }) => total + (amount || 0),
+      0
+    );
+    setTotalBudget(tmpTotalBudget);
+    setUsedBudget(tmpUsedBudget);
+  }, [user, subscriptionsWithPages]);
 
   const handleIncrement = (pageId, currentAmount, increment = 100) => {
     if (usedBudget + increment <= totalBudget) {
