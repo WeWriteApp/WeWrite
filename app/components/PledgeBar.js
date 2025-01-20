@@ -23,8 +23,8 @@ const intervalOptions = [
 
 const PledgeBar = () => {
   const { user, loading } = useAuth();
-  const [budget, setBudget] = useState(0); // in cents
-  const [usedAmount, setUsedAmount] = useState(0); // in cents
+  // const [budget, setBudget] = useState(0); // in cents
+  // const [usedAmount, setUsedAmount] = useState(0); // in cents
   const [donateAmount, setDonateAmount] = useState(0); // in cents
   const [menuVisible, setMenuVisible] = useState(false);
   const [customVisible, setCustomVisible] = useState(false);
@@ -32,46 +32,50 @@ const PledgeBar = () => {
   const [interval, setInterval] = useState(10);
   const [inputVisible, setInputVisible] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(true);
-  const { ledger, addSubscription, updateSubscription } = useLedger();
+  const { ledger, addSubscription, updateSubscription, budget, usedAmount } = useLedger();
 
   const timerRef = useRef(null);
   const textRef = useRef(null);
   const { id } = useParams();
 
-  useEffect(() => {
-    if (!ledger) return;
+  // useEffect(() => {
+  //   if (!ledger) return;
   
-    const { budget, subscriptions } = ledger;
+  //   const { budget, subscriptions } = ledger;
   
-    // Set budget in cents
-    setBudget(budget || 0);
+  //   // Set budget in cents
+  //   setBudget(budget || 0);
   
-    // Calculate `usedAmount` excluding the current page
-    const used = Object.entries(subscriptions || {})
-      .filter(([key, sub]) => sub.status === "active" && key !== id) // Exclude current page
-      .reduce((total, [, sub]) => total + sub.amount, 0);
-    setUsedAmount(used);
+  //   // Calculate `usedAmount` excluding the current page
+  //   const used = Object.entries(subscriptions || {})
+  //     .filter(([key, sub]) => sub.status === "active" && key !== id) // Exclude current page
+  //     .reduce((total, [, sub]) => total + sub.amount, 0);
+  //   setUsedAmount(used);
   
-    // Set donation amount for the current page
-    const subscription = subscriptions[id];
+  //   // Set donation amount for the current page
+  //   const subscription = subscriptions[id];
+  //   if (subscription) {
+  //     setDonateAmount(subscription.amount || 0);
+  //   } else {
+  //     setDonateAmount(0); // Default to 0 if no subscription found
+  //   }
+  // }, [ledger, id]);
+
+  const handleDonationChange = async (newAmount) => {
+    console.log("Budget:", budget);
+    console.log("Used amount:", usedAmount);
+
+    if (newAmount < 0 || newAmount > budget - usedAmount) return; // Validate against available budget
+    setDonateAmount(newAmount); // Update the local state optimistically
+
+    // Find the subscription for the current page
+    const subscription = ledger.find((sub) => sub.pageId === id);
     if (subscription) {
-      setDonateAmount(subscription.amount || 0);
-    } else {
-      setDonateAmount(0); // Default to 0 if no subscription found
-    }
-  }, [ledger, id]);
-
-  const handleDonationChange = (newAmount) => {
-    if (isNaN(newAmount) || newAmount < 0 || newAmount > budget - usedAmount + donateAmount) return;
-
-    setDonateAmount(newAmount);
-
-    if (ledger.subscriptions[id]) {
-      // Update existing subscription
-      updateSubscription(id, { amount: newAmount });
+    // Update existing subscription
+      await updateSubscription(subscription.id, { amount: newAmount });
     } else {
       // Add new subscription
-      addSubscription(id, {
+      await addSubscription(user.uid, id, {
         amount: newAmount,
         status: "active",
         date: new Date().toISOString(),

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useLedger } from "../providers/LedgerProvider";
+import { useAuth } from "../providers/AuthProvider";
 import { PillLink } from "./PillLink"; // Import the PillLink component
 
 const centsToDollars = (cents) => (cents / 100).toFixed(2);
@@ -9,15 +10,15 @@ const SubscriptionsTable = () => {
   const { ledger, updateSubscription, getPageInfo } = useLedger();
   const [subscriptionsWithPages, setSubscriptionsWithPages] = useState([]);
   const [showAll, setShowAll] = useState(false); // State for filtering subscriptions
-
+  const { user } = useAuth();
   useEffect(() => {
     const fetchSubscriptions = async () => {
       const enrichedSubscriptions = await Promise.all(
-        Object.entries(ledger.subscriptions || {}).map(async ([pageId, subscription]) => {
-          const pageInfo = await getPageInfo(pageId);
+        ledger.map(async (subscription) => {
+          const pageInfo = await getPageInfo(subscription.pageId);
           return {
             ...subscription,
-            pageId,
+            pageId: subscription.pageId,
             pageName: pageInfo?.title || "Unknown Page",
             isPublic: pageInfo?.isPublic || false,
           };
@@ -29,7 +30,7 @@ const SubscriptionsTable = () => {
     fetchSubscriptions();
   }, [ledger, getPageInfo]);
 
-  const totalBudget = ledger?.budget || 0;
+  const totalBudget = user.budget || 0;
   const usedBudget = subscriptionsWithPages.reduce(
     (total, { amount }) => total + (amount || 0),
     0
@@ -70,7 +71,7 @@ const SubscriptionsTable = () => {
       </div>
 
       <div className="flex flex-col gap-3">
-        {filteredSubscriptions.map(({ pageId, pageName, amount, isPublic }) => (
+        {filteredSubscriptions.map(({ pageId,id, pageName, amount, isPublic }) => (
           <div key={pageId} className="flex items-center justify-between bg-gray-800 px-4 py-1 rounded-lg">
             {/* PillLink for the Page Name */}
             <PillLink href={`/pages/${pageId}`} isPublic={isPublic} groupId={pageId}>
@@ -80,14 +81,14 @@ const SubscriptionsTable = () => {
             <div className="flex items-center gap-2">
               <button
                 className="bg-red-500 text-white px-3 py-1 rounded"
-                onClick={() => handleDecrement(pageId, amount || 0)}
+                onClick={() => handleDecrement(id, amount || 0)}
               >
                 -
               </button>
               <div className="text-white text-lg font-medium">${centsToDollars(amount || 0)}</div>
               <button
                 className="bg-green-500 text-white px-3 py-1 rounded"
-                onClick={() => handleIncrement(pageId, amount || 0)}
+                onClick={() => handleIncrement(id, amount || 0)}
                 disabled={usedBudget + 100 > totalBudget}
               >
                 +

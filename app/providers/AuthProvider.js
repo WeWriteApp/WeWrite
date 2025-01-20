@@ -7,27 +7,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, get, set, getDatabase,update } from "firebase/database";
 import { useRouter } from "next/navigation";
 
-// Starting to decide on budget
-let budgetAllocation = {
-  budget: 1000, // $10 in cents
-  subscriptions: {
-    "zE0nideSRtREdbbDOext": {
-      amount: 500,
-      sellerId: "fWNeCuussPgYgkN2LGohFRCPXiy1",
-      pageId: "zE0nideSRtREdbbDOext",
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    }
-  }
-};
-
-const calculateUsedBudget = (subscriptions) => {
-  return Object.values(subscriptions)
-    .filter((sub) => sub.status === "active")
-    .reduce((sum, sub) => sum + sub.amount, 0);
-};
-
-
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -70,16 +49,10 @@ export const AuthProvider = ({ children }) => {
         data.username = user.displayName;
       }
 
-      const ledger = data.ledger || budgetAllocation;
-      const used = calculateUsedBudget(ledger.subscriptions);
-
       setUser({
         uid: user.uid,
         email: user.email,
-        ledger: {
-          ...ledger,
-          used, // Calculate used budget
-        },
+        budget: 1000,
         ...data
       });
 
