@@ -184,7 +184,7 @@ const PledgeBar = () => {
                 autoComplete="off"
               />
             ) : (
-              <span className="text-[24px] font-normal text-white">
+              <span className="text-[24px] font-normal text-text">
                 {donateAmount.toFixed(2)}
               </span>
             )}

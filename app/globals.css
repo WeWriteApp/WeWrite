@@ -1,6 +1,6 @@
-@tailwind base;
+/* @tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities; */
 
 @font-face {
   font-family: 'Helvetica';
@@ -114,11 +114,11 @@ body {
 input,
 textarea {
   /* background: var(--background-color) !important; */
-  color: var(--text-color) !important;
+  /* color: var(--text-color) !important; */
 }
 
 p {
-  color: var(--text-color) !important;
+  /* color: var(--text-color) !important; */
 }
 
 .searchbar .wrapper {

@@ -1,125 +1,60 @@
 "use client";
-import { AuthContext } from "../providers/AuthProvider";
-import { useState, useEffect, useContext } from "react";
-import { Icon } from "@iconify/react";
-import Link from "next/link";
-import { PortfolioContext } from "../providers/PortfolioProvider";
+import { useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { DrawerContext } from "../providers/DrawerProvider";
-import Image from "next/image";
+import Link from "next/link";
+import { Icon } from "@iconify/react";
+import { AuthContext } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
 import ThemeSwitcher from "./ThemeSwitcher";
 
 export default function Header() {
   const { theme } = useTheme();
   const { user, loading } = useContext(AuthContext);
+  const router = useRouter();
+
   return (
     <header
-      className="top-0 left-0 w-full bg-background text-black px-2 text-center"
-      style={{ zIndex: 5 }}
+      className="fixed top-0 left-0 w-full bg-background shadow-lg px-4 py-3 flex items-center justify-between border-b-2 border-glow"
+      style={{ zIndex: 10 }}
       data-theme={theme}
     >
-      <div className="flex justify-between">
-        <div className="flex items-center space-x-2">
-          <Link href={"/pages"} className="text-xl">
-            <Image src="/white.svg" alt="logo" width={32} height={32} />
+      {/* Left Section - Logo */}
+      <div className="flex items-center space-x-4">
+        <Link href="/" className="flex items-center space-x-2">
+          {/* logo is white.svg */}
+          <img src="/white.svg" alt="logo" className="h-8 w-8" />
+          <span className="text-xl font-semibold hidden md:inline text-glow">WeWrite</span>
+        </Link>
+      </div>
+
+      {/* Center Section - Product Demo Navigation */}
+      <nav className="hidden md:flex space-x-6 text-lg font-medium text-bright">
+        <Link href="/demo" className="hover:text-primary transition border-b-2 border-transparent hover:border-glow">Product Demo</Link>
+        <Link href="/features" className="hover:text-primary transition border-b-2 border-transparent hover:border-glow">Why WeWrite?</Link>
+        <Link href="/pricing" className="hover:text-primary transition border-b-2 border-transparent hover:border-glow">How It Works</Link>
+      </nav>
+
+      {/* Right Section - User Actions */}
+      <div className="flex items-center space-x-4">
+        <ThemeSwitcher />
+        {loading ? (
+          <Icon icon="akar-icons:loading" className="h-6 w-6 animate-spin text-glow" />
+        ) : user ? (
+          <button
+            onClick={() => router.push("/pages")}
+            className="px-4 py-2 border rounded-lg border-glow hover:bg-gray-300 transition text-bright"
+          >
+            Your Pages
+          </button>
+        ) : (
+          <Link
+            href="/auth/login"
+            className="px-4 py-2 border rounded-lg border-glow hover:bg-gray-300 transition text-bright"
+          >
+            Login
           </Link>
-        </div>
-        {loading && (
-          <div className="flex items-center space-x-2">
-            <Icon icon="akar-icons:loading" className="h-6 w-6 animate-spin" />
-          </div>
-        )}
-        {!loading && user && (
-          <div className="flex justify-between">
-            <h1 className="text-xl"></h1>
-            <NavIcons />
-            <div className="flex items-center space-x-4 ml-4">
-              <ThemeSwitcher />
-            </div>
-          </div>
-        )}
-        {!loading && !user && (
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/auth/login"
-              className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all"
-            >
-              <span>Login </span>
-            </Link>
-            <ThemeSwitcher />
-          </div>
         )}
       </div>
     </header>
   );
 }
-
-const NavIcons = () => {
-  const [isMobile, setIsMobile] = useState(false);
-  const { user } = useContext(AuthContext);
-  const router = useRouter();
-  let navigation = [
-    {
-      name: "New Page",
-      icon: () => {
-        return (
-          <div className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-background text-button-text transition-all">
-            <span>Add Page </span>
-            <Icon icon={"akar-icons:plus"} className="h-4 w-4 text-gray-500" />
-          </div>
-        );
-      },
-      onClick: () => {
-        router.push("/new");
-      },
-    },
-  ];
-
-  // check if mobile to hide the icons
-  useEffect(() => {
-    if (window.innerWidth < 768) {
-      setIsMobile(true);
-    }
-
-    // check for resize
-    window.addEventListener("resize", () => {
-      if (window.innerWidth < 768) {
-        setIsMobile(true);
-      }
-    });
-
-    return () => {
-      window.removeEventListener("resize", () => {
-        if (window.innerWidth < 768) {
-          setIsMobile(true);
-        }
-      });
-    };
-  }, []);
-  return (
-    <div className="flex space-x-4">
-      {user &&
-        navigation.map((nav, index) => (
-          <button
-            href={nav.link}
-            key={index}
-            className="p-1"
-            data-tooltip-id={nav.name}
-            data-tooltip-content={nav.name}
-            onClick={nav.onClick}
-          >
-            <nav.icon />
-          </button>
-        ))}
-      {!user && (
-        <Link
-          href="/auth/login"
-          className="flex items-center space-x-2 border rounded-lg border-gray-500 px-4 py-2 hover:bg-gray-300 bg-white transition-all"
-        >
-          <span>Login </span>
-        </Link>
-      )}
-    </div>
-  );
-};

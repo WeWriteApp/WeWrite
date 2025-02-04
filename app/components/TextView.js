@@ -45,7 +45,7 @@ const RenderContent = ({ content }) => {
       case 'paragraph':
         return (
           <p key={index} className="text-text">
-            <span className="border border-text rounded-full px-2 py-1 mr-2 bg-background text-text text-xs">
+            <span className="rounded-full px-2 py-1 mr-2 bg-background text-text text-xs">
             {index + 1}
             </span>
               {node.children.map((child, idx) => renderNode(child, idx))}

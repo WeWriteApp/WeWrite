@@ -22,6 +22,7 @@ export default function RootLayout({ children }) {
       <head>
         {/* Disable pinch-to-zoom */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
       </head>
       <body className={inter.className}>
         <LoggingProvider>
@@ -35,7 +36,7 @@ export default function RootLayout({ children }) {
                     <CommunityProvider>
                       <PortfolioProvider>
                         <MobileProvider>
-                          <Header />
+                          {/* <Header /> */}
                           <div className="flex flex-row">
                             <div className="flex flex-col w-full">
                               {children}
