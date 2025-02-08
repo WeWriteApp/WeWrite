@@ -24,7 +24,7 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col bg-white text-black">
+      <div className="flex flex-col bg-background text-text">
         {/* Search Bar */}
         <div className="w-full">
           <TypeaheadSearch />
@@ -34,14 +34,13 @@ const Dashboard = () => {
         <SetupYourAccount />
 
         {/* My Pages Section */}
-        <div className="bg-white border border-gray-300 p-5 shadow-md">
-          <h2 className="text-lg font-semibold mb-2 text-gray-800">My Pages</h2>
+        <div className="bg-background border border-gray-300 p-5 shadow-md">
+          <h2 className="text-lg font-semibold mb-2 text-text">My Pages</h2>
           <AllPages />
         </div>
 
         {/* Recent Activity (Replaces Activity Section with Top Users) */}
-        <div className="bg-white border border-gray-300 p-5 shadow-md">
-          <h2 className="text-lg font-semibold mb-2 text-gray-800">Recent Activity</h2>
+        <div className="bg-background border border-gray-300 p-5 shadow-md">
           <TopUsers />
         </div>
       </div>

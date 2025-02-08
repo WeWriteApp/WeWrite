@@ -1,21 +1,61 @@
 "use client";
+import React, { useState } from "react";
+import Modal from "./Modal";
+import { Icon } from "@iconify/react/dist/iconify.js";
 
 const SubscriptionNotice = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const handleActivate = () => {
+    setIsSubscribed(true);
+    setIsOpen(false);
+    alert("Subscription Activated!");
+  };
+
   return (
-    <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 text-gray-800 text-center flex flex-col items-center shadow-sm">
-      {/* Warning Icon */}
-      <div className="text-yellow-500 text-2xl mb-2">⚠</div>
+    <>
+      <button
+        className="bg-background text-start border border-gray-700 dark:border-gray-300 p-4 rounded-xl shadow-lg text-text flex flex-col gap-2"
+        onClick={() => setIsOpen(true)}
+      >
+        {/* Inactive Status */}
+        <div className="flex items-center gap-2">
+          <Icon icon="solar:danger-bold" className="text-yellow-500 text-lg" />
+          <h2 className="text-md font-semibold">Inactive</h2>
+        </div>
 
-      {/* Subscription Message */}
-      <p className="text-gray-700 text-sm mb-3">
-        To start supporting writers, you must activate your subscription.
-      </p>
+        {/* Subscription Message */}
+        <p className="text-sm text-text">
+          To start supporting writers, you must activate your subscription.
+        </p>
 
-      {/* Activate Button */}
-      <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg transition">
-        Activate
+        {/* Activate Button */}
+        <div className="bg-blue-600 text-white text-center py-2 rounded-lg font-semibold w-full">
+          Activate
+        </div>
       </button>
-    </div>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Activate Your Subscription"
+        footer={
+          <button
+            onClick={handleActivate}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 rounded-lg transition"
+          >
+            Activate
+          </button>
+        }
+      >
+        <div className="text-center">
+          <div className="text-yellow-500 text-2xl mb-2">⚠</div>
+          <p className="text-text text-sm mb-3">
+            To start supporting writers, you must activate your subscription.
+          </p>
+        </div>
+      </Modal>
+    </>
   );
 };
 

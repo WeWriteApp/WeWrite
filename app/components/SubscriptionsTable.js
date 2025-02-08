@@ -30,6 +30,7 @@ const SubscriptionsTable = () => {
 
   return (
     <div className="mb-0">
+      <h2 className="text-2xl font-semibold text-text">My Subscriptions</h2>
       {localSubscriptions.length > 0 ? (
         localSubscriptions.map((subscription, index) => (
           <SubscriptionItem
@@ -109,7 +110,7 @@ const SubscriptionAmount = ({ amount, handleAmountChange }) => {
     <div className="flex items-center space-x-4">
       {/* Decrement Button */}
       <button
-        className="flex items-center justify-center w-8 h-8 bg-background--light text-text rounded-sm border-border border"
+        className="flex items-center justify-center w-8 h-8 bg-background text-text rounded-sm border-border border"
         onClick={() => handleAmountChange(-1)}
       >
         &#8211; {/* HTML entity for dash/minus */}

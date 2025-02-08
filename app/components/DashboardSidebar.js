@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import SubscriptionNotice from "./SubscriptionNotice";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 const navItems = [
   { name: "Home", href: "/pages", icon: "carbon:home" },
-  { name: "New page", href: "/new", icon: "carbon:document-add" },
+  { name: "New page", href: "/new-page", icon: "carbon:document-add" },
   { name: "Search", href: "/search", icon: "carbon:search" },
   { name: "History", href: "/history", icon: "carbon:reset" },
   { name: "Profile", href: "/profile", icon: "carbon:user" },
@@ -35,11 +36,11 @@ const DashboardSidebar = ({
   }, []);
 
   return (
-    <div className="relative">
+    <div className="relative bg-background text-text">
       {/* Toggle Button */}
       <button
         onClick={toggleSidebar}
-        className="absolute top-0 left-0 bg-gray-200 p-2 rounded-lg shadow-md hover:bg-gray-300 transition"
+        className="absolute top-0 left-0 bg-background p-2 rounded-lg shadow-md hover:bg-gray-300 transition"
       >
         <Icon icon="carbon:menu" className="text-gray-700 text-md" />
       </button>
@@ -48,8 +49,8 @@ const DashboardSidebar = ({
 
       {/* Sidebar */}
       <div
-        className={`h-screen bg-white  text-gray-900 flex flex-col justify-between p-4 shadow-sm transition-all duration-300
-        ${isSidebarOpen ? "w-64" : "w-0 overflow-hidden"}`}
+        className={`h-screen bg-background  text-text flex flex-col justify-between p-4 shadow-sm transition-all duration-300
+        ${isSidebarOpen ? "w-72" : "w-0 overflow-hidden"}`}
       >
         {/* Navigation Links */}
         <div className={`${isSidebarOpen ? "opacity-100" : "opacity-0 hidden"} transition-opacity`}>
@@ -65,6 +66,8 @@ const DashboardSidebar = ({
           ))}
         </div>
 
+        {/* Theme Switcher */}
+        <ThemeSwitcher />
         {/* Subscription Notice Component */}
         {isSidebarOpen && <SubscriptionNotice />}
 
