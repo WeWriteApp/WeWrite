@@ -7,14 +7,7 @@ import SubscriptionSettings from "../components/SubscriptionSettings";
 
 export default function SettingsPage() {
     return (
-        <DashboardLayout>
-            <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
-                <PageNav />
-                <div className="flex-1 bg-background p-6 rounded-lg shadow-sm">
-                    <SubscriptionSettings />
-                </div>
-            </div>
-        </DashboardLayout>
+        <SubscriptionSettings />
     );
 }
 

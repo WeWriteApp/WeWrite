@@ -9,17 +9,14 @@ import ReactGA from 'react-ga4';
 
 const New = () => {
   const [Page, setPage] = useState({
-    title: "",
+    title: "New page",
     isPublic: true,
   });
 
   return (
     <DashboardLayout>
-      <div className="w-full h-full flex flex-col space-y-6 bg-white p-6">
-        <div>
-          <h1 className="text-2xl font-semibold mb-4 text-gray-900">New Page</h1>
-          <Form Page={Page} setPage={setPage} />
-        </div>
+      <div className="w-full h-full flex flex-col bg-background p-6">
+        <Form Page={Page} setPage={setPage} />
       </div>
     </DashboardLayout>
   );
@@ -60,41 +57,44 @@ const Form = ({ Page, setPage }) => {
     }
   };
 
+
   return (
     <form
-      className="w-full flex flex-col space-y-4 bg-white p-6 border border-gray-300 rounded-lg shadow-sm"
+      className="w-full h-full flex flex-col bg-background p-6"
       onSubmit={(e) => e.preventDefault()}
     >
-      {/* Title Input */}
-      <input
-        type="text"
-        value={Page.title}
-        placeholder="Title"
-        onChange={(e) => setPage({ ...Page, title: e.target.value })}
-        className="border border-gray-300 rounded p-3 w-full text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        autoComplete="off"
-      />
-
-      {/* Public Checkbox */}
+      {/* Title and Author */}
       <div className="flex items-center space-x-2">
         <input
-          type="checkbox"
-          checked={Page.isPublic}
-          onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
-          className="cursor-pointer"
+          type="text"
+          value={Page.title}
+          placeholder="New page"
+          onChange={(e) => setPage({ ...Page, title: e.target.value })}
+          className="text-xl font-bold text-text px-2 py-1 rounded-lg bg-background focus:ring-2 focus:ring-blue-500 focus:outline-none border border-gray-300"
           autoComplete="off"
         />
-        <label className="text-gray-800">Public</label>
+        <span className="text-gray-500 text-sm">by 🇺🇸 
+          {user?.username || "Anonymous"}
+        </span>
       </div>
 
       {/* Slate Editor */}
       <SlateEditor setEditorState={setEditorState} />
 
-      {/* Divider */}
-      <div className="flex w-full h-1 bg-gray-200 my-4"></div>
-
-      {/* Save & Cancel Buttons */}
-      <div className="flex items-center gap-4 mt-4">
+      {/* Button Section */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 bg-background p-2 shadow-lg rounded-full">
+        <button
+          className="bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+          onClick={() => router.push("/pages")}
+        >
+          Insert
+        </button>
+        <button
+          className="bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+          onClick={() => router.push("/pages")}
+        >
+          Discard
+        </button>
         <button
           onClick={handleSave}
           disabled={!Page.title || !editorState || isSaving}
@@ -102,12 +102,6 @@ const Form = ({ Page, setPage }) => {
           type="submit"
         >
           {isSaving ? "Saving..." : "Save"}
-        </button>
-        <button
-          onClick={() => router.push("/pages")}
-          className="bg-gray-200 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
-        >
-          Cancel
         </button>
       </div>
     </form>
