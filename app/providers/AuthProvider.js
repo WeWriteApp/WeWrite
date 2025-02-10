@@ -1,6 +1,6 @@
 "use client";
 // an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { auth } from "../firebase/auth";
 import  app  from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -65,4 +65,8 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  return useContext(AuthContext);
 };

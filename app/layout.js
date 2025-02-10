@@ -14,6 +14,7 @@ import { ThemeProvider } from "./providers/ThemeProvider";
 import GAProvider from "./providers/GAProvider";
 import LoggingProvider from "./providers/LoggingProvider";
 import GestureProvider from "./providers/GestureProvider";
+import {LedgerProvider} from "./providers/LedgerProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {
@@ -31,6 +32,7 @@ export default function RootLayout({ children }) {
             <GestureProvider>
             <DrawerProvider>
               <AuthProvider>
+                <LedgerProvider>
                 <DataProvider>
                   <GroupsProvider>
                     <CommunityProvider>
@@ -48,6 +50,7 @@ export default function RootLayout({ children }) {
                     </CommunityProvider>
                   </GroupsProvider>
                 </DataProvider>
+                </LedgerProvider>
               </AuthProvider>
             </DrawerProvider>
             </GestureProvider>

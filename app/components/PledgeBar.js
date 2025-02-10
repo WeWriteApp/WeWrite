@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
+import { useAuth } from "../providers/AuthProvider";
+import { useLedger } from "../providers/LedgerProvider";
 
 const data = {
   budget: 100,
@@ -9,28 +11,77 @@ const data = {
   donate: 10,
 };
 
+const centsToDollars = (cents) => (cents / 100).toFixed(2);
+const dollarsToCents = (dollars) => Math.round(dollars * 100);
+
 const intervalOptions = [
-  { value: 0.01, label: '0.01' },
-  { value: 0.1, label: '0.10' },
-  { value: 1, label: '1.00' },
-  { value: 10, label: '10.00' },
+  { value: 1, label: '0.01' },
+  { value: 10, label: '0.10' },
+  { value: 100, label: '1.00' },
+  { value: 1000, label: '10.00' },
 ];
 
 const PledgeBar = () => {
-  const [budget, setBudget] = useState(data.budget || 0);
-  const [usedAmount, setUsedAmount] = useState(data.used || 0);
-  const [donateAmount, setDonateAmount] = useState(data.donate || 0);
+  const { user, loading } = useAuth();
+  // const [budget, setBudget] = useState(0); // in cents
+  // const [usedAmount, setUsedAmount] = useState(0); // in cents
+  const [donateAmount, setDonateAmount] = useState(0); // in cents
   const [menuVisible, setMenuVisible] = useState(false);
   const [customVisible, setCustomVisible] = useState(false);
   const [customCheck, setCustomCheck] = useState(false);
-  const [interval, setInterval] = useState(1);
+  const [interval, setInterval] = useState(10);
   const [inputVisible, setInputVisible] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(true);
+  const { ledger, addSubscription, updateSubscription, budget, usedAmount } = useLedger();
 
   const timerRef = useRef(null);
   const textRef = useRef(null);
   const { id } = useParams();
 
+  // useEffect(() => {
+  //   if (!ledger) return;
+  
+  //   const { budget, subscriptions } = ledger;
+  
+  //   // Set budget in cents
+  //   setBudget(budget || 0);
+  
+  //   // Calculate `usedAmount` excluding the current page
+  //   const used = Object.entries(subscriptions || {})
+  //     .filter(([key, sub]) => sub.status === "active" && key !== id) // Exclude current page
+  //     .reduce((total, [, sub]) => total + sub.amount, 0);
+  //   setUsedAmount(used);
+  
+  //   // Set donation amount for the current page
+  //   const subscription = subscriptions[id];
+  //   if (subscription) {
+  //     setDonateAmount(subscription.amount || 0);
+  //   } else {
+  //     setDonateAmount(0); // Default to 0 if no subscription found
+  //   }
+  // }, [ledger, id]);
+
+  const handleDonationChange = async (newAmount) => {
+    console.log("Budget:", budget);
+    console.log("Used amount:", usedAmount);
+
+    if (newAmount < 0 || newAmount > budget - usedAmount) return; // Validate against available budget
+    setDonateAmount(newAmount); // Update the local state optimistically
+
+    // Find the subscription for the current page
+    const subscription = ledger.find((sub) => sub.pageId === id);
+    if (subscription) {
+    // Update existing subscription
+      await updateSubscription(subscription.id, { amount: newAmount });
+    } else {
+      // Add new subscription
+      await addSubscription(user.uid, id, {
+        amount: newAmount,
+        status: "active",
+        date: new Date().toISOString(),
+      });
+    }
+  };
   const handleMouseDown = () => {
     timerRef.current = setTimeout(() => setMenuVisible(true), 500);
   };
@@ -58,7 +109,10 @@ const PledgeBar = () => {
     };
   }, []);
 
-  const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
+  const progressBarWidth = (value, total) => {
+    return total > 0 ? `${(value / total) * 100}%` : "0%";
+  };
+
 
   return (
     <div className="w-11/12 sm:max-w-[300px]">
@@ -120,7 +174,7 @@ const PledgeBar = () => {
           >
             <div className="flex flex-row gap-2 text-[17px]">
               <span className="font-medium text-gray-46">$</span>
-              <span>{`${interval}`}</span>
+              <span>{`${interval}.00`}</span>
               <span className="font-medium text-gray-46">custom</span>
             </div>
             {customCheck ? (
@@ -135,7 +189,7 @@ const PledgeBar = () => {
       <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden">
         <div
           className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
-          style={{ width: progressBarWidth(usedAmount, budget) }}
+          style={{ width: progressBarWidth(usedAmount, budget) }} // Used amount in cents
         >
           <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
             {Array.from({ length: data.used + 30 }, (_, index) => (
@@ -146,18 +200,16 @@ const PledgeBar = () => {
 
         <div
           style={{
-            width: progressBarWidth(donateAmount, budget),
-            left: progressBarWidth(usedAmount, budget),
+            width: progressBarWidth(donateAmount, budget), // Donation in cents
+            left: progressBarWidth(usedAmount, budget), // Overlay donation bar on used amount
           }}
-          className={`absolute h-full ${isConfirmed ? 'bg-active-bar active-bar' : 'bg-gray-bar'}`}
+          className={`absolute h-full ${isConfirmed ? "bg-active-bar active-bar" : "bg-gray-bar"}`}
         ></div>
 
         <div className="flex gap-2 justify-between p-2">
           <div
             className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
-            onClick={() => {
-              if (donateAmount - interval >= 0) setDonateAmount(donateAmount - interval);
-            }}
+            onClick={() => handleDonationChange(donateAmount - interval)} // Decrement
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onTouchStart={handleMouseDown}
@@ -172,20 +224,20 @@ const PledgeBar = () => {
           >
             $
             {inputVisible ? (
-              <input
-                type="number"
-                ref={textRef}
-                className="w-[80px] h-full focus-text text-center text-[24px]"
-                value={donateAmount}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-                  if (value <= budget - usedAmount) setDonateAmount(value);
-                }}
-                autoComplete="off"
-              />
+             <input
+             type="number"
+             ref={textRef}
+             className="w-[80px] h-full focus-text text-center text-[24px]"
+             value={centsToDollars(donateAmount)} // Convert cents to dollars for display
+             onChange={(e) => {
+               const value = dollarsToCents(Number(e.target.value)); // Convert input dollars to cents
+               if (value <= budget - usedAmount) setDonateAmount(value); // Validate against available budget
+             }}
+             autoComplete="off"
+           />
             ) : (
               <span className="text-[24px] font-normal text-text">
-                {donateAmount.toFixed(2)}
+                {centsToDollars(donateAmount)} {/* Convert cents to dollars for display */}
               </span>
             )}
             /mo
@@ -193,9 +245,7 @@ const PledgeBar = () => {
 
           <div
             className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
-            onClick={() => {
-              if (donateAmount + interval <= budget - usedAmount) setDonateAmount(donateAmount + interval);
-            }}
+            onClick={() => handleDonationChange(donateAmount + interval)} // Increment
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onTouchStart={handleMouseDown}
