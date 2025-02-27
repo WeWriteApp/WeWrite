@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { get, child } from 'firebase/database';
+// import { get, child } from 'firebase/database';
 import admin from "firebase-admin";
 import Stripe from "stripe";
 
@@ -66,4 +66,22 @@ export async function GET(request) {
   });
 
   return NextResponse.json(JSON.stringify(subscriptions.data));
+}
+
+export async function PATCH(request) {
+  const {subscription_id, item_id, price_id} = await request.json();
+
+  const subscription = await stripe.subscriptions.update(
+    subscription_id,
+    {
+      items: [
+        {
+          id: item_id,
+          price: price_id,
+        },
+      ],
+    }
+  );
+
+  return NextResponse.json(JSON.stringify(subscription));
 }
