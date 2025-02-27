@@ -6,6 +6,7 @@ import { useAuth } from "../providers/AuthProvider";
 
 const SubscriptionSettings = () => {
     const { user } = useAuth();
+    const [prices, setPrices] = useState([]);
     
     useEffect(() => {
         if (user == null || user.loading) {
@@ -17,15 +18,25 @@ const SubscriptionSettings = () => {
             headers: { "Content-Type": "application/json" },
         }).then((res) => res.json()
         ).catch(() => console.log("Failed to load payment form. Please refresh."));
+
+        fetch("/api/payments/get-prices", {
+            method: "GET",
+            headers: {"Content-Type": "application/json"}
+        }).then((res) => res.json()).then((data) => {
+            setPrices(data);
+        }).catch((err) => {
+            console.error("Error fetching prices:", err);
+            // setError("Failed to load prices.");
+        });
     }, [user])
     
     // const [isLoading, setIsLoading] = useState(user.loading);
-    const [selectedPlan, setSelectedPlan] = useState(20);
+    const [selectedPlan, setSelectedPlan] = useState(null);
     const [isPaused, setIsPaused] = useState(false);
     const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
 
-    const handleSelectPlan = (amount) => {
-        setSelectedPlan(amount);
+    const handleSelectPlan = (price_id) => {
+        setSelectedPlan(price_id);
         setIsPaused(false); // Ensure active state when selecting a plan
     };
 
@@ -48,18 +59,18 @@ const SubscriptionSettings = () => {
                     Your subscription is your monthly budget to spend on pages on WeWrite.
                 </p>
                 <div className="mt-4 space-y-2">
-                    {[10, 20, 50, 100].map((amount) => (
+                    {prices.map((amount) => (
                         <button
-                            key={amount}
-                            onClick={() => handleSelectPlan(amount)}
+                            key={amount.id}
+                            onClick={() => handleSelectPlan(amount.id)}
                             className={`w-full flex justify-between 
                 hover:bg-gray-800
-                items-center border rounded-lg p-3 cursor-pointer transition-all ${selectedPlan === amount
+                items-center border rounded-lg p-3 cursor-pointer transition-all ${selectedPlan === amount.id
                                     ? "bg-blue-600 text-white border-blue-500 hover:bg-blue-800"
                                     : "bg-background text-text border-gray-700 hover:bg-gray-800"
                                 }`}
                         >
-                            ${amount} / mo
+                            ${amount.unit_amount / 100} / mo
                         </button>
                     ))}
                     <button className="w-full flex justify-between items-center border border-gray-700 rounded-lg p-3 bg-background text-text hover:bg-gray-800" onClick={() => setShowCustomAmountModal(true)}>

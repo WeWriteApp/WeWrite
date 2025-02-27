@@ -44,6 +44,10 @@ export async function POST(request) {
 export async function GET(request) {
   const {searchParams} = new URL(request.url);
   const stripeCustomerId = searchParams.get('uid');
+
+  if (stripeCustomerId == null) {
+    return NextResponse.json({error: "Bad Request"}, {status: 400});
+  }
   /* const uid = searchParams.get('uid');
   const firedb = admin.database();
   const dbRef = firedb.ref();
