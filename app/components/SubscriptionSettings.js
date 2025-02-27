@@ -2,8 +2,24 @@
 import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { Icon } from "@iconify/react";
+import { useAuth } from "../providers/AuthProvider";
 
 const SubscriptionSettings = () => {
+    const { user } = useAuth();
+    
+    useEffect(() => {
+        if (user == null || user.loading) {
+            return;
+        }
+        console.log("user", user);
+        fetch(`/api/payments/subscription?uid=${user.stripeCustomerId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        }).then((res) => res.json()
+        ).catch(() => console.log("Failed to load payment form. Please refresh."));
+    }, [user])
+    
+    // const [isLoading, setIsLoading] = useState(user.loading);
     const [selectedPlan, setSelectedPlan] = useState(20);
     const [isPaused, setIsPaused] = useState(false);
     const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
