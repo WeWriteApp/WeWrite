@@ -6,17 +6,17 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 export default function SettingsLayout({ children }) {
     const navItems = [
         {
-            name: "My Subscription",
+            name: "Subscription",
             href: "/settings/subscription",
             icon: "carbon:settings",
         },
         {
-            name: "Set Up Stripe payment",
+            name: "Payouts",
             href: "/settings/billing",
             icon: "carbon:credit-card",
         },
         {
-            name: "Pledges",
+            name: "Pledges to pages",
             href: "/settings/pledges",
             icon: "carbon:user-avatar",
         },
