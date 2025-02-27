@@ -13,7 +13,7 @@ const navItems = [
   { name: "Profile", href: "/profile", icon: "carbon:user" },
   { name: "Activity", href: "/activity", icon: "carbon:fire" },
   { name: "Top up", href: "/top-up", icon: "carbon:wallet" },
-  { name: "Settings", href: "/settings", icon: "carbon:settings" },
+  { name: "Settings", href: "/settings/subscription", icon: "carbon:settings" },
 ];
 
 const DashboardSidebar = ({
