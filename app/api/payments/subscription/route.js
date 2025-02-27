@@ -65,7 +65,7 @@ export async function GET(request) {
     "customer": stripeCustomerId
   });
 
-  return NextResponse.json(JSON.stringify(subscriptions.data));
+  return NextResponse.json(subscriptions.data);
 }
 
 export async function PATCH(request) {
@@ -83,5 +83,5 @@ export async function PATCH(request) {
     }
   );
 
-  return NextResponse.json(JSON.stringify(subscription));
+  return NextResponse.json(subscription);
 }
