@@ -1,11 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import { useStripe } from "../providers/StripeProvider";
 
 const SubscriptionNotice = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { subscription }  = useStripe();
 
   const handleActivate = () => {
     setIsSubscribed(true);
@@ -13,6 +15,15 @@ const SubscriptionNotice = () => {
     alert("Subscription Activated!");
   };
 
+  useEffect(() => {
+    if (subscription) {
+      setIsSubscribed(true);
+    }
+  }, [subscription]);
+
+  if (isSubscribed) {
+    return null;
+  }
   return (
     <>
       <button

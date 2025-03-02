@@ -48,23 +48,7 @@ export async function GET(request) {
   if (stripeCustomerId == null) {
     return NextResponse.json({error: "Bad Request"}, {status: 400});
   }
-  /* const uid = searchParams.get('uid');
-  const firedb = admin.database();
-  const dbRef = firedb.ref();
 
-  var stripeCustomerId = get(child(dbRef, `users/${uid}`)).then((snapshot) => {
-    if (snapshot.exists()) {
-      // console.log(snapshot.val());
-      return snapshot.val().stripeCustomerId;
-    } else {
-      console.log("No data available");
-      return null;
-    }
-  }).catch((error) => {
-    console.error(error);
-  }); */
-
-  // const uid = await request.uid;
   const subscriptions = await stripe.subscriptions.list({
     "customer": stripeCustomerId
   });
@@ -84,6 +68,7 @@ export async function PATCH(request) {
           price: price_id,
         },
       ],
+      proration_behavior: 'none',
     }
   );
 

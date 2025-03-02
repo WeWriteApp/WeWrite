@@ -20,26 +20,30 @@ const TopUsers = () => {
       onValue(usersRef, async (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          const pageCounts = {};
-          const pagesRef = collection(firestore, 'pages');
-          const pagesSnapshot = await getDocs(pagesRef);
+          // const pageCounts = {};
+          // const pagesRef = collection(firestore, 'pages');
+          // const pagesSnapshot = await getDocs(pagesRef);
           
-          pagesSnapshot.forEach((doc) => {
-            const userId = doc.data().userId;
-            if (userId) {
-              pageCounts[userId] = (pageCounts[userId] || 0) + 1;
-            }
-          });
+          // pagesSnapshot.forEach((doc) => {
+          //   const userId = doc.data().userId;
+          //   if (userId) {
+          //     pageCounts[userId] = (pageCounts[userId] || 0) + 1;
+          //   }
+          // });
 
           const usersArray = Object.entries(data).map(([id, userData]) => ({
             id,
             username: userData.username || userData.displayName || "NULL",
             photoURL: userData.photoURL,
-            pageCount: pageCounts[id] || 0
+            // pageCount: pageCounts[id] || 0
           }));
+
+          // filter users with null username
+          const filteredUsers = usersArray.filter((user) => user.username !== "NULL");
           
-          const sortedUsers = usersArray.sort((a, b) => b.pageCount - a.pageCount);
-          setUsers(sortedUsers);
+          
+          // const sortedUsers = usersArray.sort((a, b) => b.pageCount - a.pageCount);
+          setUsers(filteredUsers);
         }
       });
     };
@@ -52,7 +56,7 @@ const TopUsers = () => {
       <h2 className="text-2xl font-semibold mb-4 text-text">Top Users</h2>
       <div className="flex flex-wrap gap-2">
         {users.map((user) => {
-          const hasPages = user.pageCount > 0;
+          const hasPages = true;
           return (
             <Link
               key={user.id}
@@ -73,7 +77,9 @@ const TopUsers = () => {
                     className="rounded-full"
                   />
                 )}
-                <span>{user.username || "NULL"} ({user.pageCount})</span>
+                <span>{user.username || "NULL"} 
+                  {/* ({user.pageCount}) */}
+                  </span>
               </div>
             </Link>
           );

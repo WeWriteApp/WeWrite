@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log('User is logged in', user);
         getUserFromRTDB(user);
 
       } else {    
@@ -29,33 +28,44 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
+  const getSubscription = async (customerId) => {
+    try {
+      const response = await fetch(`/api/payments/subscription?uid=${customerId}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching subscription");
+      return null;
+    }
+  }
+
   const getUserFromRTDB =  (user) => {
     const db = getDatabase(app);
 
     let uid = user.uid;
     const dbRef = ref(db, `users/${uid}`);
-    // get the user from the database
+
     onValue(dbRef, (snapshot) => {
       const data = snapshot.val();
-
-      if (!data.username && user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.displayName = user.displayName;
-      } else if (data.username !== user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.username = user.displayName;
-      }
-
       setUser({
         uid: user.uid,
         email: user.email,
         ...data
       });
-      setLoading(false);
+
+      console.log(uid);
+
+      // get the subscription data
+      getSubscription(data.stripeCustomerId).then((subscriptionData) => {
+        setUser((prevUser) => ({
+          ...prevUser,
+          subscription: subscriptionData
+        }));
+        setLoading(false);
+      }).catch((error) => {
+        console.error("Error fetching subscription data:", error);
+        setLoading(false);
+      });
     });
   }
 

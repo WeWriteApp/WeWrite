@@ -4,7 +4,9 @@ import { loginUser } from "../firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const LoginForm = () => {
+const LoginForm = ({
+  redirect = true,
+}) => {
   const router = useRouter();
   const [user, setUser] = useState({
     email: "",
@@ -23,7 +25,9 @@ const LoginForm = () => {
     if (response.code) {
       setError(response.message);
     } else {
-      router.push("/pages");
+      if (redirect) {
+        router.push("/pages");
+      }
     }
   };
 

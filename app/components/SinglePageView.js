@@ -28,6 +28,7 @@ export default function SinglePageView({ params }) {
     const unsubscribe = listenToPageById(params.id, (data) => {
       if (data) {
         const { pageData, versionData, links } = data;
+        console.log('Page Data:', pageData);
         setPage(pageData);
         setEditorState(versionData.content);
         setTitle(pageData.title);
@@ -81,7 +82,6 @@ export default function SinglePageView({ params }) {
   }
 
   return (
-    <DashboardLayout>
       <div className="relative p-2 text-text text-center">
         {/* ActionRow in the top-right corner */}
         {user && user.uid === page.userId && (
@@ -116,9 +116,11 @@ export default function SinglePageView({ params }) {
         )}
 
         <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-          <PledgeBar />
+          {
+            // if the user is the author, hide the pledge bar
+            user && user.uid === page.userId ? null : <PledgeBar author={page.userId} />
+          }
         </div>
       </div>
-    </DashboardLayout>
   );
 }

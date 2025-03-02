@@ -43,10 +43,14 @@ export const LedgerProvider = ({ children, userId }) => {
 
   useEffect(() => {
     // on ledger change, calculate budget, usedAmount, and donation amount
-    if (!ledger.length) return;
-
+    if (!ledger.length || !user.subscription) return;
+    if (user.subscription.length === 0) {
+      setBudget(0);
+      setUsedAmount(0);
+      return;
+    }
     // Budget is stored on the user object
-    setBudget(user.budget || 1000);
+    setBudget(user.subscription[0].plan.amount || 1000);
 
     // Calculate `usedAmount` excluding the current page
     const used = ledger
@@ -57,11 +61,12 @@ export const LedgerProvider = ({ children, userId }) => {
 
   }, [ledger]);
 
-  const addSubscription = async (userId, pageId, subscription) => {
+  const addSubscription = async (userId, pageId, author, subscription) => {
     try {
       await addDoc(collection(db, "ledger"), {
         userId,
         pageId,
+        payTo: author,
         ...subscription, // e.g., { status: "active", amount: 500, subscriptionDate: new Date().toISOString() }
       });
     } catch (error) {

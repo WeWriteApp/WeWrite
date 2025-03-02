@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -7,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
-        const customerId = searchParams.get("customerId");
+        const customerId = searchParams.get("uid");
 
         if (!customerId) {
             return new Response(JSON.stringify({ error: "Missing Stripe Customer ID" }), { status: 400 });
@@ -19,9 +20,9 @@ export async function GET(req) {
             type: "card", // Fetch only card-type payment methods
         });
 
-        return new Response(JSON.stringify({ paymentMethods: paymentMethods.data }), {
-            headers: { "Content-Type": "application/json" },
-        });
+        let data = paymentMethods.data;
+
+        return NextResponse.json(data);
 
     } catch (error) {
         console.error("Error fetching payment methods:", error);

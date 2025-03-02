@@ -7,7 +7,7 @@ import { PillLink } from "./PillLink"; // Import the PillLink component
 const centsToDollars = (cents) => (cents / 100).toFixed(2);
 
 const SubscriptionsTable = () => {
-  const { ledger, updateSubscription, getPageInfo } = useLedger();
+  const { ledger, updateSubscription, getPageInfo, budget } = useLedger();
   const [subscriptionsWithPages, setSubscriptionsWithPages] = useState([]);
   const [showAll, setShowAll] = useState(false); // State for filtering subscriptions
   const [totalBudget, setTotalBudget] = useState(0);
@@ -34,7 +34,7 @@ const SubscriptionsTable = () => {
 
   useEffect(() => {
     if (!user) return;
-    const tmpTotalBudget = user?.budget || 0;
+    const tmpTotalBudget = budget || 0;
     const tmpUsedBudget = subscriptionsWithPages.reduce(
       (total, { amount }) => total + (amount || 0),
       0

@@ -1,8 +1,4 @@
 "use client";
-import DashboardLayout from "../DashboardLayout";
-import Link from "next/link";
-import { Icon } from "@iconify/react/dist/iconify.js";
-import SubscriptionsTable from "../components/SubscriptionsTable";
 import SubscriptionSettings from "../components/SubscriptionSettings";
 
 export default function SettingsPage() {
@@ -11,37 +7,3 @@ export default function SettingsPage() {
     );
 }
 
-const PageNav = () => {
-    let navItems = [
-        {
-            name: "My Subscription",
-            href: "/settings/subscription",
-            icon: "carbon:settings",
-        },
-        {
-            name: "Set Up Stripe payment",
-            href: "/settings/billing",
-            icon: "carbon:credit-card",
-        },
-        {
-            name: "Pledges",
-            href: "/settings/pledges",
-            icon: "carbon:user-avatar",
-        },
-    ];
-
-    return (
-        <div className="w-[300px] h-full flex flex-col space-y-6 bg-background text-text p-6">
-            <div>
-                <div className="flex flex-col space-y-1">
-                    {navItems.map((item, index) => (
-                        <Link key={index} href={item.href} className="flex items-center p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:border hover:border-blue-500 hover:text-gray-900">
-                            <Icon icon={item.icon} className="text-gray-600 text-lg mr-3" />
-                            {item.name}
-                        </Link>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}

@@ -4,17 +4,7 @@ import Link from "next/link";
 import { Icon } from "@iconify/react";
 import SubscriptionNotice from "./SubscriptionNotice";
 import ThemeSwitcher from "./ThemeSwitcher";
-
-const navItems = [
-  { name: "Home", href: "/pages", icon: "carbon:home" },
-  { name: "New page", href: "/new-page", icon: "carbon:document-add" },
-  { name: "Search", href: "/search", icon: "carbon:search" },
-  { name: "History", href: "/history", icon: "carbon:reset" },
-  { name: "Profile", href: "/profile", icon: "carbon:user" },
-  { name: "Activity", href: "/activity", icon: "carbon:fire" },
-  { name: "Top up", href: "/top-up", icon: "carbon:wallet" },
-  { name: "Settings", href: "/settings/subscription", icon: "carbon:settings" },
-];
+import { useAuth } from "../providers/AuthProvider";
 
 const DashboardSidebar = ({
   isSidebarOpen,
@@ -22,6 +12,9 @@ const DashboardSidebar = ({
 }) => {
   // Toggle sidebar visibility
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const {user } = useAuth();
+  const [navItems, setNavItems] = useState([]);
+
 
   // Keyboard shortcut: Cmd + K (Mac) / Ctrl + K (Windows)
   useEffect(() => {
@@ -34,6 +27,24 @@ const DashboardSidebar = ({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (user == null || user.loading) {
+      return;
+    }
+    const items = [
+      { name: "Home", href: "/pages", icon: "carbon:home" },
+      { name: "New page", href: "/new-page", icon: "carbon:document-add" },
+      { name: "Search", href: "/search", icon: "carbon:search" },
+      // { name: "History", href: "/history", icon: "carbon:reset" },
+      { name: "Profile", href: "/user/" + user.uid, icon: "carbon:user" },
+      // { name: "Activity", href: "/activity", icon: "carbon:fire" },
+      // { name: "Top up", href: "/top-up", icon: "carbon:wallet" },
+      { name: "Settings", href: "/settings/subscription", icon: "carbon:settings" },
+    ];
+    setNavItems(items);
+}, [user]);
+
 
   return (
     <div className="relative bg-background text-text">
@@ -58,7 +69,7 @@ const DashboardSidebar = ({
             <Link
               key={index}
               href={item.href}
-              className="flex items-center p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:border hover:border-blue-500 hover:text-gray-900"
+              className="flex items-center border border-transparent p-3 rounded-lg hover:bg-gray-100 hover:border hover:border-blue-500 hover:text-gray-900"
             >
               <Icon icon={item.icon} className="text-gray-600 text-lg mr-3" />
               {isSidebarOpen && item.name}

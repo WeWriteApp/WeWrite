@@ -15,6 +15,8 @@ import GAProvider from "./providers/GAProvider";
 import LoggingProvider from "./providers/LoggingProvider";
 import GestureProvider from "./providers/GestureProvider";
 import {LedgerProvider} from "./providers/LedgerProvider";
+import { StripeProvider } from "./providers/StripeProvider";
+import { ConnectProvider } from "./providers/ConnectProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {
@@ -32,6 +34,8 @@ export default function RootLayout({ children }) {
             <GestureProvider>
             <DrawerProvider>
               <AuthProvider>
+                <StripeProvider>
+                  <ConnectProvider>
                 <LedgerProvider>
                 <DataProvider>
                   <GroupsProvider>
@@ -51,6 +55,8 @@ export default function RootLayout({ children }) {
                   </GroupsProvider>
                 </DataProvider>
                 </LedgerProvider>
+                </ConnectProvider>
+                </StripeProvider>
               </AuthProvider>
             </DrawerProvider>
             </GestureProvider>

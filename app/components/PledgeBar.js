@@ -4,6 +4,8 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import { useLedger } from "../providers/LedgerProvider";
+import AuthModal from "./AuthModal";
+import Link from "next/link";
 
 const data = {
   budget: 100,
@@ -21,8 +23,11 @@ const intervalOptions = [
   { value: 1000, label: '10.00' },
 ];
 
-const PledgeBar = () => {
+const PledgeBar = ({
+  author
+}) => {
   const { user, loading } = useAuth();
+  const [showModal, setShowModal] = useState(false);
   // const [budget, setBudget] = useState(0); // in cents
   // const [usedAmount, setUsedAmount] = useState(0); // in cents
   const [donateAmount, setDonateAmount] = useState(0); // in cents
@@ -38,46 +43,35 @@ const PledgeBar = () => {
   const textRef = useRef(null);
   const { id } = useParams();
 
-  // useEffect(() => {
-  //   if (!ledger) return;
-  
-  //   const { budget, subscriptions } = ledger;
-  
-  //   // Set budget in cents
-  //   setBudget(budget || 0);
-  
-  //   // Calculate `usedAmount` excluding the current page
-  //   const used = Object.entries(subscriptions || {})
-  //     .filter(([key, sub]) => sub.status === "active" && key !== id) // Exclude current page
-  //     .reduce((total, [, sub]) => total + sub.amount, 0);
-  //   setUsedAmount(used);
-  
-  //   // Set donation amount for the current page
-  //   const subscription = subscriptions[id];
-  //   if (subscription) {
-  //     setDonateAmount(subscription.amount || 0);
-  //   } else {
-  //     setDonateAmount(0); // Default to 0 if no subscription found
-  //   }
-  // }, [ledger, id]);
+  useEffect(() => {
+    if (!ledger) return;
+    if (!user) return;
+    const subscription = ledger.filter((sub) => sub.pageId === id);
+    if (subscription && subscription.length > 0) {
+      setDonateAmount(subscription[0].amount || 0);
+    } else {
+      setDonateAmount(0); // Default to 0 if no subscription found
+    }
+  }, [ledger, id]);
 
   const handleDonationChange = async (newAmount) => {
-    console.log("Budget:", budget);
-    console.log("Used amount:", usedAmount);
-
-    if (newAmount < 0 || newAmount > budget - usedAmount) return; // Validate against available budget
+    console.log("New Amount:", newAmount,budget,usedAmount);
+    if (newAmount < 0) return; // Prevent negative donations
     setDonateAmount(newAmount); // Update the local state optimistically
 
     // Find the subscription for the current page
     const subscription = ledger.find((sub) => sub.pageId === id);
+    console.log("Subscription:", subscription);
     if (subscription) {
     // Update existing subscription
-      await updateSubscription(subscription.id, { amount: newAmount });
+      await updateSubscription(subscription.id, { amount: newAmount, lastUpdated: new Date().toISOString(), payTo: author });
     } else {
       // Add new subscription
-      await addSubscription(user.uid, id, {
+      await addSubscription(user.uid, id,  author,{
         amount: newAmount,
         status: "active",
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
         date: new Date().toISOString(),
       });
     }
@@ -114,8 +108,35 @@ const PledgeBar = () => {
   };
 
 
-  return (
+  if (!user || loading) return (
     <div className="w-11/12 sm:max-w-[300px]">
+      <div className="w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
+        <button
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-3"
+          onClick={() => setShowModal(true)}
+        >
+          Sign in to pledge
+        </button>
+        <AuthModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      </div>
+    </div>
+  )
+
+  if (user && user.subscription?.length === 0) return (
+    // button to configure your subscription /settings/subscriptions
+    <div className="w-11/12 sm:max-w-[300px]">
+      <div className="w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
+        <Link
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-3"
+          href="/settings/subscription"
+        >
+          Configure your subscription
+        </Link>
+      </div>
+    </div>
+  )
+  return (
+    <div className="w-12/12 sm:max-w-[300px]">
       {customVisible && (
         <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
           <div className="flex items-center justify-center">

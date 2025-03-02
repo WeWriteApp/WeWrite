@@ -1,54 +1,65 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Modal from "./Modal";
-import { Icon } from "@iconify/react";
-import { useAuth } from "../providers/AuthProvider";
+import { useStripe } from "../providers/StripeProvider";
 
 const SubscriptionSettings = () => {
-    const { user } = useAuth();
+    const { subscription } = useStripe();
     const [prices, setPrices] = useState([]);
-    
-    useEffect(() => {
-        if (user == null || user.loading) {
-            return;
-        }
-        console.log("user", user);
-        fetch(`/api/payments/subscription?uid=${user.stripeCustomerId}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-        }).then((res) => res.json()
-        ).catch(() => console.log("Failed to load payment form. Please refresh."));
+    const [currentPlan, setCurrentPlan] = useState(null);
+    const [showConfirmChanges, setShowConfirmChanges] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState(null);
+    const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
 
+    useEffect(() => {
         fetch("/api/payments/get-prices", {
             method: "GET",
-            headers: {"Content-Type": "application/json"}
+            headers: { "Content-Type": "application/json" }
         }).then((res) => res.json()).then((data) => {
             setPrices(data);
         }).catch((err) => {
             console.error("Error fetching prices:", err);
-            // setError("Failed to load prices.");
         });
-    }, [user])
-    
-    // const [isLoading, setIsLoading] = useState(user.loading);
-    const [selectedPlan, setSelectedPlan] = useState(null);
-    const [isPaused, setIsPaused] = useState(false);
-    const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
+    }, [])
+
+    useEffect(() => {
+        if (selectedPlan !== currentPlan) {
+            setShowConfirmChanges(true);
+        } else {
+            setShowConfirmChanges(false);
+        }
+    }, [selectedPlan, currentPlan]);
 
     const handleSelectPlan = (price_id) => {
         setSelectedPlan(price_id);
         setIsPaused(false); // Ensure active state when selecting a plan
     };
 
-    const handlePauseSubscription = () => {
-        setIsPaused(true);
-    };
-
-    useEffect(() => {
-        if (isPaused) {
-            console.log("Subscription paused");
+    const handleUpdateSubscription = () => {
+        if (subscription.length === 0) {
+            console.error("No subscription found");
+            return;
         }
-    }, [isPaused]);
+        // Call API to update subscription with patch to /api/payments/subscription
+        // with the selectedPlan
+        fetch(`/api/payments/subscription`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ price_id: selectedPlan, subscription_id: subscription[0].id, item_id: subscription[0].items.data[0].id })
+        }).then((res) => {
+            if (res.ok) {
+                console.log("Subscription updated successfully");
+                setCurrentPlan(selectedPlan);
+                setShowConfirmChanges(false);
+            } else {
+                console.error("Failed to update subscription");
+            }
+        }).catch((err) => {
+            console.error("Error updating subscription:", err);
+        });
+    }
+
+
 
     return (
         <div className="max-w-lg mx-auto bg-background p-6 rounded-lg space-y-6">
@@ -79,48 +90,17 @@ const SubscriptionSettings = () => {
                 </div>
             </div>
 
-            {/* Account Preview Section */}
-            <div>
-                <h2 className="text-xl font-semibold text-text">Account preview</h2>
-                <p className="text-sm text-gray-400">
-                    To cultivate a "pay-it-forward" culture on WeWrite, your account will look inactive if you don’t have an active subscription.
-                </p>
-
-                <div className="mt-6 flex items-center justify-between">
-                    {/* Inactive Subscription */}
-                    <div className="flex flex-col items-center border border-gray-700 px-4 py-3 rounded-lg bg-background">
-                        <span className="flex items-center gap-2">
-                            🇺🇸 <span className="text-gray-500">jamie</span>
-                        </span>
-                    </div>
-
-                    {/* Active Subscription */}
-                    <div
-                        className={`flex flex-col items-center border px-4 py-3 rounded-lg transition-all ${isPaused
-                            ? "border-gray-700 bg-background text-gray-500"
-                            : "border-green-600 bg-background text-text"
-                            }`}
-                    >
-                        <span className="flex items-center gap-2">
-                            🇺🇸 <span className={isPaused ? "text-gray-500" : "text-blue-400"}>jamie</span>
-                        </span>
-                        {!isPaused && (
-                            <span className="mt-2 bg-green-600 text-white px-3 py-1 rounded-lg text-sm">
-                                Current
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
+            {/* If plan is changed, confirm changes button  */}
+            {showConfirmChanges && (
+                <button
+                    onClick={() => handleUpdateSubscription()}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all"
+                >
+                    Confirm Changes
+                </button>
+            )}
 
             {/* Pause Subscription Button */}
-            <button
-                onClick={handlePauseSubscription}
-                className="w-full bg-red-900 text-red-300 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-800 transition-all"
-            >
-                <Icon icon="mdi:pause-circle-outline" className="text-lg" />
-                Pause subscription
-            </button>
 
             {showCustomAmountModal && (
                 <CustomAmountModal
@@ -176,3 +156,5 @@ const CustomAmountModal = ({ setShowCustomAmountModal, setSelectedPlan }) => {
 
 
 export default SubscriptionSettings;
+
+

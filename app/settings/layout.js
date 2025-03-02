@@ -29,7 +29,7 @@ export default function SettingsLayout({ children }) {
                 <div className="w-[300px] h-full sticky top-0 flex flex-col space-y-6 bg-background p-6 border-r border-gray-200">
                     <div className="flex flex-col space-y-1">
                         {navItems.map((item, index) => (
-                            <Link key={index} href={item.href} className="flex items-center p-3 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:border hover:border-blue-500 hover:text-gray-900">
+                            <Link key={index} href={item.href} className="flex items-center p-3 rounded-lg border border-transparent hover:bg-gray-100 hover:border hover:border-blue-500 hover:text-gray-900">
                                 <Icon icon={item.icon} className="text-gray-600 text-lg mr-3" />
                                 {item.name}
                             </Link>

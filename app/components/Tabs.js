@@ -4,7 +4,7 @@ const Tabs = ({ children }) => {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <div className="mt-4 md:mt-10">
+    <div className="mt-4 md:mt-0 w-full">
       {/* Make the tabs scrollable horizontally on mobile */}
       <div className="flex overflow-x-auto whitespace-nowrap">
         {children.map((child, index) => (
@@ -20,7 +20,7 @@ const Tabs = ({ children }) => {
         ))}
       </div>
       {/* Render the active tab content */}
-      <div className="mt-4">
+      <div className="mt-4 w-full">
         {children[activeTab]}
       </div>
     </div>
