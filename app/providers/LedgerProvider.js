@@ -43,7 +43,7 @@ export const LedgerProvider = ({ children, userId }) => {
 
   useEffect(() => {
     // on ledger change, calculate budget, usedAmount, and donation amount
-    if (!ledger.length || !user.subscription) return;
+    if (!user?.subscription) return;
     if (user.subscription.length === 0) {
       setBudget(0);
       setUsedAmount(0);
@@ -53,13 +53,17 @@ export const LedgerProvider = ({ children, userId }) => {
     setBudget(user.subscription[0].plan.amount || 1000);
 
     // Calculate `usedAmount` excluding the current page
+    if (ledger.length === 0) {
+      setUsedAmount(0);
+      return
+    }
     const used = ledger
       .filter((sub) => sub.status === "active")
       .reduce((total, sub) => total + sub.amount, 0);
 
     setUsedAmount(used);
 
-  }, [ledger]);
+  }, [ledger,user]);
 
   const addSubscription = async (userId, pageId, author, subscription) => {
     try {
