@@ -50,7 +50,7 @@ const TopUsers = () => {
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-semibold mb-4 text-text">Top Users</h2>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap space-x-1">
         {users.map((user) => {
           const hasPages = user.pageCount > 0;
           return (
@@ -59,7 +59,7 @@ const TopUsers = () => {
               href={`/user/${user.id}`}
               className={!hasPages ? 'opacity-50' : ''}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {user.photoURL && (
                   <Image
                     src={user.photoURL}
