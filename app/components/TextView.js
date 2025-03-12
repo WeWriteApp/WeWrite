@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PillLink } from "./PillLink";
 
 const TextView = ({ content }) => {
 
@@ -29,10 +30,11 @@ const RenderContent = ({ content }) => {
 
   // Render function for link nodes
   const renderLink = (node) => {
+    const href = node.url;
     return (
-      <a href={node.url} key={node.url} className="bg-blue-500 text-white px-4 py-2 rounded-full whitespace-nowrap">
+      <PillLink href={href} key={href}>
         {node.children.map((child, index) => renderNode(child, index))}
-      </a>
+      </PillLink>
     );
   };
 

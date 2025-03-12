@@ -11,6 +11,7 @@ import { MobileContext } from "../providers/MobileProvider";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PillLink } from "./PillLink";
 
 const characterCount = 1;
 function debounce(func, delay) {
@@ -217,20 +218,14 @@ const TypeaheadSearch = ({
 
 const SingleItemLink = ({ page, search }) => {
   return (
-    <Link
-      href={`/pages/${page.id}`}
-      className="flex items-center space-x-2 text-sm hover:bg-background p-1"
-      key={page.id}
-    >
-      <p className="text-sm text-text">
-        {highlightText(page.title, search)} -{" "}
-        <span className="text-xs text-gray-400">
-          {new Date(page.updated_at).toLocaleDateString() +
-            " " +
-            new Date(page.updated_at).toLocaleTimeString()}
-        </span>
-      </p>
-    </Link>
+    <PillLink href={`/pages/${page.id}`} key={page.id}>
+      {highlightText(page.title, search)} -{" "}
+      <span className="text-xs opacity-75">
+        {new Date(page.updated_at).toLocaleDateString() +
+          " " +
+          new Date(page.updated_at).toLocaleTimeString()}
+      </span>
+    </PillLink>
   );
 };
 

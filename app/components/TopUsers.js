@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect} from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { AuthContext } from "../providers/AuthProvider";
 import { useContext } from "react";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { PillLink } from "./PillLink";
 
 const TopUsers = () => {
   const [users, setUsers] = useState([]);
@@ -54,14 +54,10 @@ const TopUsers = () => {
         {users.map((user) => {
           const hasPages = user.pageCount > 0;
           return (
-            <Link
+            <PillLink
               key={user.id}
               href={`/user/${user.id}`}
-              className={
-                hasPages 
-                  ? "bg-[#1D4ED8] text-white hover:bg-[#1e40af] px-4 py-2 rounded-full transition-colors"
-                  : "dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 bg-neutral-100 text-neutral-600 hover:bg-neutral-200 px-4 py-2 rounded-full transition-colors"
-              }
+              className={!hasPages ? 'opacity-50' : ''}
             >
               <div className="flex items-center gap-2">
                 {user.photoURL && (
@@ -75,7 +71,7 @@ const TopUsers = () => {
                 )}
                 <span>{user.username || "NULL"} ({user.pageCount})</span>
               </div>
-            </Link>
+            </PillLink>
           );
         })}
       </div>
