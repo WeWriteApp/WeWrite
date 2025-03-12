@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { Icon } from "@iconify/react/dist/iconify.js";
 
-export const PillLink = ({ children, href, isPublic, groupId }) => {
+export const PillLink = ({ children, href, isPublic, groupId, className }) => {
   // Only show lock if this is a page link (starts with /pages/) and isPublic is explicitly false
   const showLock = href?.startsWith('/pages/') && isPublic === false;
   
@@ -25,6 +25,7 @@ export const PillLink = ({ children, href, isPublic, groupId }) => {
         hover:bg-[#0046CC]
         transition-colors duration-200
         ${groupId ? 'opacity-90' : ''}
+        ${className || ''}
       `}
     >
       {showLock && <Icon icon="akar-icons:lock-on" className="mr-2 inline" />}

@@ -50,28 +50,29 @@ const TopUsers = () => {
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-semibold mb-4 text-text">Top Users</h2>
-      <div className="flex flex-wrap space-x-1">
+      <div className="flex flex-wrap">
         {users.map((user) => {
           const hasPages = user.pageCount > 0;
           return (
-            <PillLink
-              key={user.id}
-              href={`/user/${user.id}`}
-              className={!hasPages ? 'opacity-50' : ''}
-            >
-              <div className="flex items-center gap-1">
-                {user.photoURL && (
-                  <Image
-                    src={user.photoURL}
-                    alt={user.username || "NULL"}
-                    width={24}
-                    height={24}
-                    className="rounded-full"
-                  />
-                )}
-                <span>{user.username || "NULL"} ({user.pageCount})</span>
-              </div>
-            </PillLink>
+            <div key={user.id} className="m-0.5">
+              <PillLink
+                href={`/user/${user.id}`}
+                className={!hasPages ? 'opacity-50' : ''}
+              >
+                <div className="flex items-center gap-1">
+                  {user.photoURL && (
+                    <Image
+                      src={user.photoURL}
+                      alt={user.username || "NULL"}
+                      width={24}
+                      height={24}
+                      className="rounded-full"
+                    />
+                  )}
+                  <span>{user.username || "NULL"} ({user.pageCount})</span>
+                </div>
+              </PillLink>
+            </div>
           );
         })}
       </div>

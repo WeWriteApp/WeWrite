@@ -21,17 +21,48 @@ const SingleProfileView = ({ profile }) => {
           <div className="my-4">
             <TypeaheadSearch userId={profile.uid} />
           </div>
-          <PagesList />
+          <PagesList profile={profile} />
       </div>
     </ProfilePagesProvider>
   );
 };
 
-const PagesList = () => {
+const PagesList = ({ profile }) => {
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } =
-    useContext(ProfilePagesContext); // Use context for data
+    useContext(ProfilePagesContext);
 
   if (!pages) return null;
+
+  if (pages.length === 0) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
+          <div className="text-text text-xl mb-4">
+            {profile.username} hasn't written any pages yet.
+          </div>
+          <div className="text-text/60 mb-6">
+            Check back later!
+          </div>
+          <Link 
+            href="/pages" 
+            className="
+              inline-block
+              bg-[#0057FF]
+              text-white text-sm font-medium
+              px-6 py-2.5
+              rounded-full
+              hover:bg-[#0046CC]
+              transition-colors duration-200
+              shadow-[0_0_12px_rgba(0,87,255,0.4)]
+            "
+          >
+            Back to home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <ul className="space-x-1 flex flex-wrap">
