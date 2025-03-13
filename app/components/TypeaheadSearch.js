@@ -40,6 +40,15 @@ const TypeaheadSearch = ({
     debounce(async (search, user) => {
       if (!user && !userId) return;
 
+      console.log('TypeaheadSearch - Fetching results for:', {
+        search,
+        searchLength: search?.length,
+        searchTrimmed: search?.trim(),
+        searchTrimmedLength: search?.trim()?.length,
+        userId: userId || user.uid,
+        groups: user?.groups
+      });
+
       setIsSearching(true);
       try {
         let selectedUserId = userId ? userId : user.uid;
@@ -49,9 +58,18 @@ const TypeaheadSearch = ({
         }
 
         const response = await fetch(
-          `/api/search?userId=${selectedUserId}&searchTerm=${search}&groupIds=${groupIds}`
+          `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`
         );
+
+        if (!response.ok) {
+          console.error('Search API returned error:', response.status);
+          const errorText = await response.text();
+          console.error('Error details:', errorText);
+          throw new Error(`Search API error: ${response.status}`);
+        }
+
         const data = await response.json();
+        console.log('TypeaheadSearch API response:', data);
         setUserPages(data.userPages || []);
         setGroupPages(data.groupPages || []);
         setPublicPages(data.publicPages || []);
@@ -76,38 +94,15 @@ const TypeaheadSearch = ({
     }
     if (!user) return;
 
-    // if search less than 3 characters, don't make request
-    if (search.length < characterCount || search === "") {
+    // if search less than minimum characters, don't make request
+    if (search.length < characterCount || !search.trim()) {
       setUserPages([]);
       setGroupPages([]);
       setPublicPages([]);
       return;
     }
 
-    fetchResults(search, user);
-    // const fetchResults = debounce(async () => {
-    //   setIsSearching(true);
-
-    //   try {
-    //     let groupIds = [];
-    //     if (user.groups) {
-    //       groupIds = Object.keys(user.groups);
-    //     }
-
-    //     const response = await fetch(
-    //       `/api/search?userId=${user.uid}&searchTerm=${search}&groupIds=${groupIds}`
-    //     );
-    //     const data = await response.json();
-    //     console.log(data);
-    //     setUserPages(data.userPages);
-    //     setGroupPages(data.groupPages);
-    //     setIsSearching(false);
-    //   } catch (error) {
-    //     console.error("Error fetching search results", error);
-    //     setIsSearching(false);
-    //   }
-    // }, 500); // Adjust the debounce delay as needed (500ms in this case)
-    // fetchResults();
+    fetchResults(search.trim(), user);
   }, [search, user, fetchResults]);
 
   useEffect(() => {

@@ -45,7 +45,7 @@ export async function GET(request) {
 
   // Ensure searchTerm is properly handled if not provided
   const searchTermFormatted = searchTerm
-    ? `%${searchTerm.toLowerCase().trim().replace(/\s+/g, '%')}%`
+    ? `%${searchTerm.toLowerCase().trim()}%`
     : "%";
 
   console.log('Search parameters:', {
@@ -53,7 +53,9 @@ export async function GET(request) {
     searchTerm,
     searchTermFormatted,
     groupIds,
-    rawSearchTerm: searchTerm
+    rawSearchTerm: searchTerm,
+    searchTermLength: searchTerm?.length,
+    searchTermTrimmedLength: searchTerm?.trim()?.length
   });
 
   try {
@@ -74,7 +76,7 @@ export async function GET(request) {
       params: {
         userId,
         searchTerm: searchTermFormatted,
-        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
+        rawSearchTerm: searchTerm
       }
     });
 
@@ -83,13 +85,11 @@ export async function GET(request) {
       query: userQuery,
       params: {
         userId: userId,
-        searchTerm: searchTermFormatted,
-        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
+        searchTerm: searchTermFormatted
       },
       types: {
         userId: "STRING",
-        searchTerm: "STRING",
-        exactSearchTerm: "STRING"
+        searchTerm: "STRING"
       },
     }).catch(error => {
       console.error("Error executing user query:", error);
@@ -105,15 +105,12 @@ export async function GET(request) {
     if (groupIds && groupIds.length > 0) {
       // Query 2: Fetch all pages belonging to groups that match the search term
       const groupQuery = `
-        SELECT p.document_id, p.title, p.lastModified, p.groupId,
+        SELECT DISTINCT p.document_id, p.title, p.groupId,
                COALESCE(u.username, 'NULL') as username
         FROM \`wewrite-ccd82.pages_indexes.pages\` p
         LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
         WHERE p.groupId IN UNNEST(@groupIds)
-          AND (
-            LOWER(p.title) LIKE @searchTerm
-            OR LOWER(p.title) LIKE @exactSearchTerm
-          )
+          AND LOWER(p.title) LIKE @searchTerm
         ORDER BY p.lastModified DESC
         LIMIT 5
       `;
@@ -123,7 +120,7 @@ export async function GET(request) {
         params: {
           groupIds,
           searchTerm: searchTermFormatted,
-          exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
+          rawSearchTerm: searchTerm
         }
       });
 
@@ -132,13 +129,11 @@ export async function GET(request) {
         query: groupQuery,
         params: {
           groupIds: groupIds,
-          searchTerm: searchTermFormatted,
-          exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
+          searchTerm: searchTermFormatted
         },
         types: {
           groupIds: ['STRING'],
-          searchTerm: "STRING",
-          exactSearchTerm: "STRING"
+          searchTerm: "STRING"
         },
       }).catch(error => {
         console.error("Error executing group query:", error);
@@ -173,7 +168,7 @@ export async function GET(request) {
         userId,
         groupIds,
         searchTerm: searchTermFormatted,
-        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
+        rawSearchTerm: searchTerm
       }
     });
 
@@ -182,14 +177,12 @@ export async function GET(request) {
       params: {
         userId: userId,
         ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
-        searchTerm: searchTermFormatted,
-        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
+        searchTerm: searchTermFormatted
       },
       types: {
         userId: "STRING",
         ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
-        searchTerm: "STRING",
-        exactSearchTerm: "STRING"
+        searchTerm: "STRING"
       },
     }).catch(error => {
       console.error("Error executing public query:", error);
