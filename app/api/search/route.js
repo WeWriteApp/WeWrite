@@ -45,7 +45,7 @@ export async function GET(request) {
 
   // Ensure searchTerm is properly handled if not provided
   const searchTermFormatted = searchTerm
-    ? `%${searchTerm.toLowerCase().trim().split(/\s+/).join('%')}%`
+    ? `%${searchTerm.toLowerCase().trim()}%`
     : "%";
 
   console.log('Search parameters:', {
@@ -56,7 +56,9 @@ export async function GET(request) {
     rawSearchTerm: searchTerm,
     searchTermLength: searchTerm?.length,
     searchTermTrimmedLength: searchTerm?.trim()?.length,
-    searchTermWords: searchTerm?.trim().split(/\s+/)
+    searchTermWords: searchTerm?.trim().split(/\s+/),
+    searchTermLower: searchTerm?.toLowerCase(),
+    searchTermTrimmedLower: searchTerm?.toLowerCase().trim()
   });
 
   try {
@@ -67,7 +69,7 @@ export async function GET(request) {
     FROM \`wewrite-ccd82.pages_indexes.pages\` p
     LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
     WHERE p.userId = @userId
-      AND LOWER(CAST(p.title AS STRING)) LIKE @searchTerm
+      AND LOWER(p.title) LIKE @searchTerm
     ORDER BY p.lastModified DESC
     LIMIT 10
   `;
@@ -80,6 +82,12 @@ export async function GET(request) {
         rawSearchTerm: searchTerm
       }
     });
+
+    // Let's also log a sample query to check
+    const sampleUserQuery = userQuery
+      .replace('@userId', `'${userId}'`)
+      .replace('@searchTerm', `'${searchTermFormatted}'`);
+    console.log('Sample user query:', sampleUserQuery);
 
     // Execute user query
     const [userRows] = await bigquery.query({
@@ -111,7 +119,7 @@ export async function GET(request) {
         FROM \`wewrite-ccd82.pages_indexes.pages\` p
         LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
         WHERE p.groupId IN UNNEST(@groupIds)
-          AND LOWER(CAST(p.title AS STRING)) LIKE @searchTerm
+          AND LOWER(p.title) LIKE @searchTerm
         ORDER BY p.lastModified DESC
         LIMIT 5
       `;
@@ -152,7 +160,7 @@ export async function GET(request) {
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId != @userId
-        AND LOWER(CAST(p.title AS STRING)) LIKE @searchTerm
+        AND LOWER(p.title) LIKE @searchTerm
         ${groupIds.length > 0 ? `AND p.document_id NOT IN (
           SELECT document_id 
           FROM \`wewrite-ccd82.pages_indexes.pages\` 
@@ -173,6 +181,13 @@ export async function GET(request) {
       }
     });
 
+    // Let's also log a sample query to check
+    const samplePublicQuery = publicQuery
+      .replace('@userId', `'${userId}'`)
+      .replace('@searchTerm', `'${searchTermFormatted}'`)
+      .replace('UNNEST(@groupIds)', `UNNEST(['${groupIds.join("','")}'])`);
+    console.log('Sample public query:', samplePublicQuery);
+
     const [publicRowsResult] = await bigquery.query({
       query: publicQuery,
       params: {
@@ -192,6 +207,16 @@ export async function GET(request) {
 
     console.log('Public pages query results:', publicRowsResult);
     publicRows = publicRowsResult || [];
+
+    // Let's also log the raw data from BigQuery
+    console.log('Raw data from BigQuery:', {
+      userRows,
+      groupRows,
+      publicRows,
+      searchTerm,
+      searchTermFormatted,
+      userId
+    });
 
     // Process user pages
     const userPages = (userRows || []).map((row) => ({
