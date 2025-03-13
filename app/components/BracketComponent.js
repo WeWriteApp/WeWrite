@@ -26,7 +26,12 @@ function BracketComponent() {
     debounce(async (search) => {
       if (!user) return;
 
-      console.log('BracketComponent searching for:', search);
+      console.log('BracketComponent - Fetching results for:', {
+        search,
+        userId: user.uid,
+        groups: user.groups
+      });
+
       setIsSearching(true);
       try {
         let groupIds = [];
@@ -37,8 +42,16 @@ function BracketComponent() {
         const response = await fetch(
           `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`
         );
+
+        if (!response.ok) {
+          console.error('Search API returned error:', response.status);
+          const errorText = await response.text();
+          console.error('Error details:', errorText);
+          throw new Error(`Search API error: ${response.status}`);
+        }
+
         const data = await response.json();
-        console.log('BracketComponent search results:', data);
+        console.log('BracketComponent search response:', data);
         
         // Combine all pages into one array
         const combinedPages = [
@@ -47,7 +60,16 @@ function BracketComponent() {
           ...(data.publicPages || [])
         ];
 
-        console.log('BracketComponent combined pages:', combinedPages);
+        console.log('BracketComponent processed results:', {
+          total: combinedPages.length,
+          bySection: {
+            userPages: data.userPages?.length || 0,
+            groupPages: data.groupPages?.length || 0,
+            publicPages: data.publicPages?.length || 0
+          },
+          combinedPages
+        });
+
         setAllPages(combinedPages);
       } catch (error) {
         console.error("Error fetching search results", error);
@@ -82,7 +104,13 @@ function BracketComponent() {
   }, [inputValue, fetchResults]);
 
   const handleInputChange = (event) => {
-    setInputValue(event.target.value);
+    const value = event.target.value;
+    console.log('BracketComponent input change:', {
+      value,
+      length: value?.length,
+      trimmed: value?.trim()?.length
+    });
+    setInputValue(value);
   };
 
   const handlePageClick = (page) => {

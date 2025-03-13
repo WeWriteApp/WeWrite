@@ -25,7 +25,12 @@ const Search = () => {
     debounce(async (searchTerm) => {
       if (!user) return;
 
-      console.log('Fetching results for search term:', searchTerm);
+      console.log('Search component - Fetching results for:', {
+        searchTerm,
+        userId: user.uid,
+        groups: user.groups
+      });
+
       setIsSearching(true);
       try {
         let groupIds = [];
@@ -36,8 +41,16 @@ const Search = () => {
         const response = await fetch(
           `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`
         );
+        
+        if (!response.ok) {
+          console.error('Search API returned error:', response.status);
+          const errorText = await response.text();
+          console.error('Error details:', errorText);
+          throw new Error(`Search API error: ${response.status}`);
+        }
+
         const data = await response.json();
-        console.log('Search results:', data);
+        console.log('Search API response:', data);
         
         // Combine all pages and format them for ReactSearchAutocomplete
         const combinedPages = [
@@ -58,7 +71,16 @@ const Search = () => {
           }))
         ];
 
-        console.log('Combined pages:', combinedPages);
+        console.log('Processed search results:', {
+          total: combinedPages.length,
+          bySection: {
+            userPages: data.userPages?.length || 0,
+            groupPages: data.groupPages?.length || 0,
+            publicPages: data.publicPages?.length || 0
+          },
+          combinedPages
+        });
+
         setSearchResults(combinedPages);
       } catch (error) {
         console.error("Error fetching search results", error);
@@ -75,8 +97,14 @@ const Search = () => {
   }
 
   const handleOnSearch = (searchTerm) => {
-    console.log('Search triggered with term:', searchTerm);
-    if (!searchTerm) {
+    console.log('Search triggered:', {
+      searchTerm,
+      length: searchTerm?.length,
+      trimmed: searchTerm?.trim()?.length
+    });
+    
+    if (!searchTerm?.trim()) {
+      console.log('Empty search term, clearing results');
       setSearchResults([]);
       return;
     }

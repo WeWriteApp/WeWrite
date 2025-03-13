@@ -45,21 +45,23 @@ export async function GET(request) {
 
   // Ensure searchTerm is properly handled if not provided
   const searchTermFormatted = searchTerm
-    ? `%${searchTerm.toLowerCase()}%`
+    ? `%${searchTerm.toLowerCase().trim()}%`
     : "%";
+
+  console.log('Search parameters:', {
+    userId,
+    searchTerm,
+    searchTermFormatted,
+    groupIds
+  });
 
   try {
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
     SELECT document_id, title, lastModified
-    FROM (
-      SELECT document_id, title, lastModified,
-             ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
-      FROM \`wewrite-ccd82.pages_indexes.pages\`
-      WHERE userId = @userId
-        AND LOWER(title) LIKE @searchTerm
-    )
-    WHERE row_num = 1
+    FROM \`wewrite-ccd82.pages_indexes.pages\`
+    WHERE userId = @userId
+      AND LOWER(title) LIKE @searchTerm
     ORDER BY lastModified DESC
     LIMIT 10
   `;
@@ -80,6 +82,8 @@ export async function GET(request) {
       return [[]];
     });
 
+    console.log('User pages query results:', userRows);
+
     let groupRows = [];
     let publicRows = [];
 
@@ -88,14 +92,9 @@ export async function GET(request) {
       // Query 2: Fetch all pages belonging to groups that match the search term
       const groupQuery = `
         SELECT document_id, title, lastModified, groupId
-        FROM (
-          SELECT document_id, title, lastModified, groupId,
-                 ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
-          FROM \`wewrite-ccd82.pages_indexes.pages\`
-          WHERE groupId IN UNNEST(@groupIds)
-            AND LOWER(title) LIKE @searchTerm
-        )
-        WHERE row_num = 1
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE groupId IN UNNEST(@groupIds)
+          AND LOWER(title) LIKE @searchTerm
         ORDER BY lastModified DESC
         LIMIT 5
       `;
@@ -115,20 +114,16 @@ export async function GET(request) {
         return [[]];
       });
 
+      console.log('Group pages query results:', groupRowsResult);
       groupRows = groupRowsResult || [];
     }
 
     // Query 3: Fetch public pages from other users that match the search term
     const publicQuery = `
-      SELECT document_id, title, lastModified, userId, isPublic
-      FROM (
-        SELECT document_id, title, lastModified, userId, isPublic,
-               ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
-        FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE userId != @userId
-          AND LOWER(title) LIKE @searchTerm
-      )
-      WHERE row_num = 1
+      SELECT document_id, title, lastModified, userId
+      FROM \`wewrite-ccd82.pages_indexes.pages\`
+      WHERE userId != @userId
+        AND LOWER(title) LIKE @searchTerm
       ORDER BY lastModified DESC
       LIMIT 10
     `;
@@ -156,6 +151,24 @@ export async function GET(request) {
     });
 
     console.log('Public pages query results:', publicRowsResult);
+    publicRows = publicRowsResult || [];
+
+    // Let's also do a direct search for the specific page we're looking for
+    const directQuery = `
+      SELECT document_id, title, lastModified, userId
+      FROM \`wewrite-ccd82.pages_indexes.pages\`
+      WHERE userId = 'sFswtpNAETUbfOZkZ2IkxupDPYm1'
+        AND LOWER(title) LIKE '%usps%'
+    `;
+
+    const [directResult] = await bigquery.query({
+      query: directQuery
+    }).catch(error => {
+      console.error("Error executing direct query:", error);
+      return [[]];
+    });
+
+    console.log('Direct search results:', directResult);
 
     // Process user pages
     const userPages = (userRows || []).map((row) => ({
@@ -183,6 +196,13 @@ export async function GET(request) {
       isOwned: false,
       isPublic: true
     }));
+
+    console.log('Final processed results:', {
+      userPagesCount: userPages.length,
+      groupPagesCount: groupPages.length,
+      publicPagesCount: publicPages.length,
+      publicPages
+    });
 
     // Return formatted results
     return NextResponse.json({ userPages, groupPages, publicPages }, { status: 200 });
