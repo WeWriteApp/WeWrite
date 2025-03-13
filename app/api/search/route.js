@@ -58,11 +58,13 @@ export async function GET(request) {
   try {
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
-    SELECT document_id, title, lastModified
-    FROM \`wewrite-ccd82.pages_indexes.pages\`
-    WHERE userId = @userId
-      AND LOWER(title) LIKE @searchTerm
-    ORDER BY lastModified DESC
+    SELECT p.document_id, p.title, p.lastModified,
+           COALESCE(u.username, 'NULL') as username
+    FROM \`wewrite-ccd82.pages_indexes.pages\` p
+    LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
+    WHERE p.userId = @userId
+      AND LOWER(p.title) LIKE @searchTerm
+    ORDER BY p.lastModified DESC
     LIMIT 10
   `;
 
@@ -91,11 +93,14 @@ export async function GET(request) {
     if (groupIds && groupIds.length > 0) {
       // Query 2: Fetch all pages belonging to groups that match the search term
       const groupQuery = `
-        SELECT document_id, title, lastModified, groupId
-        FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE groupId IN UNNEST(@groupIds)
-          AND LOWER(title) LIKE @searchTerm
-        ORDER BY lastModified DESC
+        SELECT p.document_id, p.title, p.lastModified, p.groupId,
+               COALESCE(u.username, 'NULL') as username
+        FROM \`wewrite-ccd82.pages_indexes.pages\` p
+        LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
+        WHERE p.groupId IN UNNEST(@groupIds)
+          AND LOWER(p.title) LIKE @searchTerm
+          AND p.userId != @userId
+        ORDER BY p.lastModified DESC
         LIMIT 5
       `;
       // Execute group query
@@ -103,10 +108,12 @@ export async function GET(request) {
         query: groupQuery,
         params: {
           groupIds: groupIds,
+          userId: userId,
           searchTerm: searchTermFormatted,
         },
         types: {
           groupIds: ['STRING'],
+          userId: "STRING",
           searchTerm: "STRING",
         },
       }).catch(error => {
@@ -120,11 +127,16 @@ export async function GET(request) {
 
     // Query 3: Fetch public pages from other users that match the search term
     const publicQuery = `
-      SELECT p.document_id, p.title, p.lastModified, p.userId,
+      SELECT DISTINCT p.document_id, p.title, p.lastModified, p.userId,
              COALESCE(u.username, 'NULL') as username
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId != @userId
+        AND p.document_id NOT IN (
+          SELECT document_id 
+          FROM \`wewrite-ccd82.pages_indexes.pages\` 
+          WHERE groupId IN UNNEST(@groupIds)
+        )
         AND LOWER(p.title) LIKE @searchTerm
       ORDER BY p.lastModified DESC
       LIMIT 10
@@ -141,10 +153,12 @@ export async function GET(request) {
       query: publicQuery,
       params: {
         userId: userId,
+        groupIds: groupIds,
         searchTerm: searchTermFormatted,
       },
       types: {
         userId: "STRING",
+        groupIds: ['STRING'],
         searchTerm: "STRING",
       },
     }).catch(error => {
@@ -159,7 +173,7 @@ export async function GET(request) {
     const userPages = (userRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
-      updated_at: (row.lastModified) ? row.lastModified.value : null,
+      username: row.username,
       isOwned: true
     }));
 
@@ -167,8 +181,8 @@ export async function GET(request) {
     const groupPages = (groupRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
-      updated_at: (row.lastModified) ? row.lastModified.value : null,
       groupId: row.groupId,
+      username: row.username,
       isOwned: false
     }));
 
@@ -176,7 +190,6 @@ export async function GET(request) {
     const publicPages = (publicRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
-      updated_at: (row.lastModified) ? row.lastModified.value : null,
       userId: row.userId,
       username: row.username,
       isOwned: false,
