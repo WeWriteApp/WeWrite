@@ -23,7 +23,7 @@ export const DataProvider = ({ children }) => {
   return (
     <DataContext.Provider
       value={{
-        loading,
+        loading: user ? loading : false, // Only show loading state for logged-in users
         pages,
         filtered,
         loadMorePages,
