@@ -6,6 +6,8 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 export const PillLink = ({ children, href, isPublic, groupId, className }) => {
   // Only show lock if this is a page link (starts with /pages/) and isPublic is explicitly false
   const showLock = href?.startsWith('/pages/') && isPublic === false;
+  // Show globe for public pages
+  const showGlobe = href?.startsWith('/pages/') && isPublic === true;
   
   return (
     <Link 
@@ -29,6 +31,7 @@ export const PillLink = ({ children, href, isPublic, groupId, className }) => {
       `}
     >
       {showLock && <Icon icon="akar-icons:lock-on" className="mr-2 inline" />}
+      {showGlobe && <Icon icon="akar-icons:globe" className="mr-2 inline" />}
       {children}
     </Link>
   );

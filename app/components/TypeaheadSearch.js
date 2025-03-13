@@ -33,6 +33,7 @@ const TypeaheadSearch = ({
   const { user } = useContext(AuthContext);
   const [userPages, setUserPages] = useState([]);
   const [groupPages, setGroupPages] = useState([]);
+  const [publicPages, setPublicPages] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const fetchResults = useCallback(
@@ -53,6 +54,7 @@ const TypeaheadSearch = ({
         const data = await response.json();
         setUserPages(data.userPages);
         setGroupPages(data.groupPages);
+        setPublicPages(data.publicPages || []);
       } catch (error) {
         console.error("Error fetching search results", error);
       } finally {
@@ -66,6 +68,7 @@ const TypeaheadSearch = ({
     if (!search) {
       setUserPages([]);
       setGroupPages([]);
+      setPublicPages([]);
       return;
     }
     if (!user) return;
@@ -74,6 +77,7 @@ const TypeaheadSearch = ({
     if (search.length < characterCount || search === "") {
       setUserPages([]);
       setGroupPages([]);
+      setPublicPages([]);
       return;
     }
 
@@ -176,17 +180,44 @@ const TypeaheadSearch = ({
                   <h3 className="text-xs text-gray-400">From Groups</h3>
                 )}
                 {groupPages.length === 0 && search.length >= characterCount ? (
-                  <p
-                    className="text-xs mt-2
-                text-gray-400
-                "
-                  >
+                  <p className="text-xs mt-2 text-gray-400">
                     No group pages found.
                   </p>
                 ) : (
                   <ul className="space-y-1">
                     {groupPages.map((page) =>
-                      // if onSelect is passed, render button, else render link
+                      onSelect ? (
+                        <SingleItemButton
+                          page={page}
+                          search={search}
+                          onSelect={onSelect}
+                          key={page.id}
+                        />
+                      ) : (
+                        <SingleItemLink
+                          page={page}
+                          search={search}
+                          key={page.id}
+                        />
+                      )
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {publicPages.length > 0 && (
+              <div className="mt-2 border-t border-border pt-2">
+                {search.length >= characterCount && (
+                  <h3 className="text-xs text-gray-400">Public Pages</h3>
+                )}
+                {publicPages.length === 0 && search.length >= characterCount ? (
+                  <p className="text-xs mt-2 text-gray-400">
+                    No public pages found.
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {publicPages.map((page) =>
                       onSelect ? (
                         <SingleItemButton
                           page={page}
@@ -218,13 +249,22 @@ const TypeaheadSearch = ({
 
 const SingleItemLink = ({ page, search }) => {
   return (
-    <PillLink href={`/pages/${page.id}`} key={page.id}>
+    <PillLink 
+      href={`/pages/${page.id}`} 
+      key={page.id}
+      isPublic={page.isPublic}
+    >
       {highlightText(page.title, search)} -{" "}
       <span className="text-xs opacity-75">
         {new Date(page.updated_at).toLocaleDateString() +
           " " +
           new Date(page.updated_at).toLocaleTimeString()}
       </span>
+      {page.isPublic && (
+        <span className="text-xs opacity-75 ml-2">
+          by {page.userId}
+        </span>
+      )}
     </PillLink>
   );
 };
@@ -243,6 +283,11 @@ const SingleItemButton = ({ page, search, onSelect }) => {
             " " +
             new Date(page.updated_at).toLocaleTimeString()}
         </span>
+        {page.isPublic && (
+          <span className="text-xs text-gray-400 ml-2">
+            by {page.userId}
+          </span>
+        )}
       </p>
     </button>
   );

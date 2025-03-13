@@ -73,6 +73,7 @@ export async function GET(request) {
     });
 
     let groupRows = [];
+    let publicRows = [];
 
     // Check if groupIds are provided and not empty
     if (groupIds.length > 0) {
@@ -106,11 +107,43 @@ export async function GET(request) {
       groupRows = groupRowsResult;
     }
 
+    // Query 3: Fetch public pages from other users that match the search term
+    const publicQuery = `
+      SELECT document_id, title, lastModified, userId
+      FROM (
+        SELECT document_id, title, lastModified, userId,
+               ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE isPublic = true
+          AND userId != @userId
+          AND LOWER(title) LIKE @searchTerm
+      )
+      WHERE row_num = 1
+      ORDER BY lastModified DESC
+      LIMIT 10
+    `;
+
+    // Execute public pages query
+    const [publicRowsResult] = await bigquery.query({
+      query: publicQuery,
+      params: {
+        userId: userId,
+        searchTerm: searchTermFormatted,
+      },
+      types: {
+        userId: "STRING",
+        searchTerm: "STRING",
+      },
+    });
+
+    publicRows = publicRowsResult;
+
     // Process user pages
     const userPages = userRows.map((row) => ({
       id: row.document_id,
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
+      isOwned: true
     }));
 
     // Process group pages
@@ -119,10 +152,21 @@ export async function GET(request) {
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
       groupId: row.groupId,
+      isOwned: false
+    }));
+
+    // Process public pages
+    const publicPages = publicRows.map((row) => ({
+      id: row.document_id,
+      title: row.title,
+      updated_at: (row.lastModified) ? row.lastModified.value : null,
+      userId: row.userId,
+      isOwned: false,
+      isPublic: true
     }));
 
     // Return formatted results
-    return NextResponse.json({ userPages, groupPages }, { status: 200 });
+    return NextResponse.json({ userPages, groupPages, publicPages }, { status: 200 });
   } catch (error) {
     console.error("Error querying BigQuery:", error);
     return NextResponse.json(
