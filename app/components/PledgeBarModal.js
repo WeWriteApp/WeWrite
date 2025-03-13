@@ -8,7 +8,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
   } : {
     message: "To donate, you must sign in!",
     primaryActionLabel: "Sign in",
-    primaryActionHref: "/signin"
+    primaryActionHref: "/auth/login"
   };
 
   return (
