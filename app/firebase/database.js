@@ -1,5 +1,4 @@
 import { 
-  getFirestore,
   addDoc,
   collection,
   doc,
@@ -10,9 +9,8 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 
-import app from "./config";
-
-export const db = getFirestore(app);
+import { db } from './firebase';
+import { updateBacklinks } from '../utils/backlinks';
 
 export const createDoc = async (collectionName, data) => {
   try {
@@ -33,6 +31,15 @@ export const createPage = async (data) => {
       userId: data.userId,
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
+      // New metadata fields
+      customDate: null,
+      location: null,
+      totalReaders: 1, // Start with 1 (the creator)
+      supporterCount: 0,
+      editorCount: 1, // Start with 1 (the creator)
+      pageIncome: 0,
+      relatedPages: [], // Will be populated after content analysis
+      backlinks: [], // Will be populated when other pages link to this
     };
 
     const pageRef = await addDoc(collection(db, "pages"), pageData);
@@ -41,6 +48,19 @@ export const createPage = async (data) => {
       createdAt: new Date().toISOString(),
       userId: data.userId
     };
+
+    // Create initial subcollections
+    await createSubcollection("pages", pageRef.id, "readers", {
+      userId: data.userId,
+      lastActive: new Date().toISOString()
+    });
+
+    await createSubcollection("pages", pageRef.id, "editors", {
+      userId: data.userId,
+      editCount: 1,
+      firstEdit: new Date().toISOString(),
+      lastEdit: new Date().toISOString()
+    });
 
     // create a subcollection for versions
     const version = await addDoc(collection(pageRef, "versions"), versionData);
@@ -63,6 +83,7 @@ export const listenToPageById = (pageId, onPageUpdate) => {
 
     // Declare unsubscribeVersion outside of the inner onSnapshot callback
     let unsubscribeVersion = null;
+    let previousContent = null;
 
     // Listener for the page document
     const unsubscribePage = onSnapshot(pageRef, { includeMetadataChanges: true }, async (pageSnap) => {
@@ -71,7 +92,6 @@ export const listenToPageById = (pageId, onPageUpdate) => {
           id: pageId,
           ...pageSnap.data()
         };
-
 
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
@@ -86,15 +106,27 @@ export const listenToPageById = (pageId, onPageUpdate) => {
         }
 
         // Listener for the version document
-        unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
+        unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
           if (versionSnap.exists()) {
             const versionData = versionSnap.data();
+            const currentContent = versionData.content;
 
-            // Extract links
-            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+            // Only update backlinks if content has changed
+            if (currentContent !== previousContent) {
+              console.log('Content changed, updating backlinks');
+              await updateBacklinks(pageId, previousContent, currentContent);
+              previousContent = currentContent;
+            }
+
+            // Extract page IDs from links
+            const pageIds = extractLinksFromNodes(JSON.parse(currentContent));
 
             // Send updated page and version data
-            onPageUpdate({ pageData, versionData, links });
+            onPageUpdate({ 
+              pageData, 
+              versionData,
+              links: pageIds.map(id => `/pages/${id}`) // Convert back to URLs for UI
+            });
           } 
         });
       } else {
@@ -163,19 +195,51 @@ export const getVersionsByPageId = async (pageId) => {
 export const saveNewVersion = async (pageId, data) => {
   try {
     const pageRef = doc(db, "pages", pageId);
+    
+    // Get the current version's content for backlinks comparison
+    const pageDoc = await getDoc(pageRef);
+    if (!pageDoc.exists()) {
+      throw new Error(`Page ${pageId} not found`);
+    }
+    
+    const pageData = pageDoc.data();
+    const currentVersionId = pageData.currentVersion;
+    
+    let oldContent = null;
+    if (currentVersionId) {
+      const currentVersionRef = doc(collection(pageRef, "versions"), currentVersionId);
+      const currentVersionDoc = await getDoc(currentVersionRef);
+      if (currentVersionDoc.exists()) {
+        oldContent = currentVersionDoc.data()?.content;
+      }
+    }
+
+    // Ensure content is a string, but don't double stringify
+    const contentString = typeof data.content === 'string' ? data.content : JSON.stringify(data.content);
+
     const versionData = {
-      content: data.content,
+      content: contentString,
       createdAt: new Date().toISOString(),
       userId: data.userId
     };
 
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
     
+    console.log('Updating backlinks with:', {
+      pageId,
+      oldContent,
+      newContent: contentString
+    });
+    
+    // Update backlinks - content is already stringified
+    await updateBacklinks(pageId, oldContent, contentString);
+    
     // set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
 
     return versionRef.id;
   } catch (e) {
+    console.error('Error saving new version:', e);
     return e;
   }
 }
@@ -290,9 +354,13 @@ function extractLinksFromNodes(nodes) {
   let links = [];
 
   function traverse(node) {
-    // Check if the node is a link
-    if (node.type === 'link' && node.url) {
-      links.push(node.url);
+    // Check if the node is a link or custom-link
+    if ((node.type === 'link' || node.type === 'custom-link') && node.url) {
+      // Extract page ID from URL (format: /pages/[id])
+      const match = node.url.match(/\/pages\/([^/]+)/);
+      if (match) {
+        links.push(match[1]); // Store the page ID instead of the full URL
+      }
     }
 
     // Recursively check children if they exist
@@ -301,8 +369,25 @@ function extractLinksFromNodes(nodes) {
     }
   }
 
+  // Handle potentially stringified content
+  let contentNodes = nodes;
+  if (typeof nodes === 'string') {
+    try {
+      contentNodes = JSON.parse(nodes);
+      // Check if it's still a string (double-stringified)
+      if (typeof contentNodes === 'string') {
+        contentNodes = JSON.parse(contentNodes);
+      }
+    } catch (error) {
+      console.error('Error parsing nodes in extractLinksFromNodes:', error);
+      return [];
+    }
+  }
+
   // Start traversal
-  nodes.forEach(traverse);
+  if (Array.isArray(contentNodes)) {
+    contentNodes.forEach(traverse);
+  }
 
   return links;
 }

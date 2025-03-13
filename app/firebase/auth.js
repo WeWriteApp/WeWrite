@@ -1,8 +1,5 @@
-import {app} from './config';
-import { getAuth } from "firebase/auth";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,updateProfile } from 'firebase/auth';
-
-export const auth = getAuth(app);
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { auth } from './firebase';
 
 // firebase database service
 export const createUser = async (email, password) => {
@@ -40,3 +37,13 @@ export const addUsername = async (username) => {
     return error;
   }
 }
+
+const authService = {
+  createUser,
+  loginUser,
+  logoutUser,
+  addUsername,
+  auth
+};
+
+export default authService;

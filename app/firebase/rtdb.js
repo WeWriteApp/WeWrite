@@ -1,5 +1,4 @@
 import {
-  getDatabase,
   ref,
   push,
   onValue,
@@ -7,9 +6,9 @@ import {
   set,
   update,
 } from "firebase/database";
-import { app } from "./config";
+import { rtdb } from "./firebase";
 
-export const rtdb = getDatabase(app);
+export { rtdb };
 
 export const add = async (path, data) => {
   const dbRef = ref(rtdb, path);
