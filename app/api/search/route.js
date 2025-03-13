@@ -45,14 +45,15 @@ export async function GET(request) {
 
   // Ensure searchTerm is properly handled if not provided
   const searchTermFormatted = searchTerm
-    ? `%${searchTerm.toLowerCase().trim()}%`
+    ? `%${searchTerm.toLowerCase().trim().replace(/\s+/g, '%')}%`
     : "%";
 
   console.log('Search parameters:', {
     userId,
     searchTerm,
     searchTermFormatted,
-    groupIds
+    groupIds,
+    rawSearchTerm: searchTerm
   });
 
   try {
@@ -63,7 +64,10 @@ export async function GET(request) {
     FROM \`wewrite-ccd82.pages_indexes.pages\` p
     LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
     WHERE p.userId = @userId
-      AND LOWER(p.title) LIKE @searchTerm
+      AND (
+        LOWER(p.title) LIKE @searchTerm
+        OR LOWER(p.title) LIKE @exactSearchTerm
+      )
     ORDER BY p.lastModified DESC
     LIMIT 10
   `;
@@ -72,7 +76,8 @@ export async function GET(request) {
       query: userQuery,
       params: {
         userId,
-        searchTerm: searchTermFormatted
+        searchTerm: searchTermFormatted,
+        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
       }
     });
 
@@ -82,10 +87,12 @@ export async function GET(request) {
       params: {
         userId: userId,
         searchTerm: searchTermFormatted,
+        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
       },
       types: {
         userId: "STRING",
         searchTerm: "STRING",
+        exactSearchTerm: "STRING"
       },
     }).catch(error => {
       console.error("Error executing user query:", error);
@@ -106,7 +113,10 @@ export async function GET(request) {
         FROM \`wewrite-ccd82.pages_indexes.pages\` p
         LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
         WHERE p.groupId IN UNNEST(@groupIds)
-          AND LOWER(p.title) LIKE @searchTerm
+          AND (
+            LOWER(p.title) LIKE @searchTerm
+            OR LOWER(p.title) LIKE @exactSearchTerm
+          )
         ORDER BY p.lastModified DESC
         LIMIT 5
       `;
@@ -115,7 +125,8 @@ export async function GET(request) {
         query: groupQuery,
         params: {
           groupIds,
-          searchTerm: searchTermFormatted
+          searchTerm: searchTermFormatted,
+          exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
         }
       });
 
@@ -125,10 +136,12 @@ export async function GET(request) {
         params: {
           groupIds: groupIds,
           searchTerm: searchTermFormatted,
+          exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
         },
         types: {
           groupIds: ['STRING'],
           searchTerm: "STRING",
+          exactSearchTerm: "STRING"
         },
       }).catch(error => {
         console.error("Error executing group query:", error);
@@ -146,7 +159,10 @@ export async function GET(request) {
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId != @userId
-        AND LOWER(p.title) LIKE @searchTerm
+        AND (
+          LOWER(p.title) LIKE @searchTerm
+          OR LOWER(p.title) LIKE @exactSearchTerm
+        )
         ${groupIds.length > 0 ? `AND p.document_id NOT IN (
           SELECT document_id 
           FROM \`wewrite-ccd82.pages_indexes.pages\` 
@@ -162,7 +178,8 @@ export async function GET(request) {
       params: {
         userId,
         groupIds,
-        searchTerm: searchTermFormatted
+        searchTerm: searchTermFormatted,
+        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
       }
     });
 
@@ -172,11 +189,13 @@ export async function GET(request) {
         userId: userId,
         ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
         searchTerm: searchTermFormatted,
+        exactSearchTerm: `%${searchTerm?.toLowerCase().trim()}%`
       },
       types: {
         userId: "STRING",
         ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
         searchTerm: "STRING",
+        exactSearchTerm: "STRING"
       },
     }).catch(error => {
       console.error("Error executing public query:", error);
@@ -219,7 +238,9 @@ export async function GET(request) {
       publicPagesCount: publicPages.length,
       userPages,
       groupPages,
-      publicPages
+      publicPages,
+      searchTerm,
+      searchTermFormatted
     });
 
     // Return formatted results
