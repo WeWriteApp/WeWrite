@@ -1,6 +1,6 @@
 'use client';
 
-import { useFirebase } from '../hooks/useFirebase';
+export { FirebaseProvider, useFirebase } from '../context/FirebaseContext';
 
 // Re-export the hook for convenience
 export { useFirebase };
