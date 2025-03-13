@@ -36,11 +36,8 @@ const PledgeBar = () => {
   const { id } = useParams();
 
   const handleInteraction = () => {
-    if (!user) {
-      setIsModalOpen(true);
-      return true; // Return true to indicate interaction was blocked
-    }
-    return false; // Return false to indicate interaction can proceed
+    setIsModalOpen(true);
+    return true; // Always block interaction and show modal
   };
 
   const handleMouseDown = () => {
