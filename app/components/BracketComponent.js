@@ -154,9 +154,9 @@ function BracketComponent() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate">{page.title}</span>
-                  {page.userId !== user.uid && (
+                  {page.username !== 'NULL' && page.userId !== user.uid && (
                     <span className="text-xs text-gray-500 whitespace-nowrap">
-                      by {page.username || "NULL"}
+                      by {page.username}
                     </span>
                   )}
                 </div>

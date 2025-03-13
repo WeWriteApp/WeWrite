@@ -59,15 +59,12 @@ export async function GET(request) {
   try {
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
-    SELECT p.document_id, p.title, p.lastModified,
+    SELECT DISTINCT p.document_id, p.title,
            COALESCE(u.username, 'NULL') as username
     FROM \`wewrite-ccd82.pages_indexes.pages\` p
     LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
     WHERE p.userId = @userId
-      AND (
-        LOWER(p.title) LIKE @searchTerm
-        OR LOWER(p.title) LIKE @exactSearchTerm
-      )
+      AND LOWER(p.title) LIKE @searchTerm
     ORDER BY p.lastModified DESC
     LIMIT 10
   `;
@@ -154,15 +151,12 @@ export async function GET(request) {
 
     // Query 3: Fetch public pages from other users that match the search term
     const publicQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.lastModified, p.userId,
+      SELECT DISTINCT p.document_id, p.title, p.userId,
              COALESCE(u.username, 'NULL') as username
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId != @userId
-        AND (
-          LOWER(p.title) LIKE @searchTerm
-          OR LOWER(p.title) LIKE @exactSearchTerm
-        )
+        AND LOWER(p.title) LIKE @searchTerm
         ${groupIds.length > 0 ? `AND p.document_id NOT IN (
           SELECT document_id 
           FROM \`wewrite-ccd82.pages_indexes.pages\` 

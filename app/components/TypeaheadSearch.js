@@ -257,17 +257,14 @@ const SingleItemLink = ({ page, search }) => {
       key={page.id}
       isPublic={page.isPublic}
     >
-      {highlightText(page.title, search)} -{" "}
-      <span className="text-xs opacity-75">
-        {new Date(page.updated_at).toLocaleDateString() +
-          " " +
-          new Date(page.updated_at).toLocaleTimeString()}
-      </span>
-      {page.isPublic && (
-        <span className="text-xs opacity-75 ml-2">
-          by {page.userId}
-        </span>
-      )}
+      <div className="flex items-center justify-between gap-2 w-full">
+        <span className="truncate">{highlightText(page.title, search)}</span>
+        {page.username !== 'NULL' && page.isPublic && (
+          <span className="text-xs opacity-75 whitespace-nowrap">
+            by {page.username}
+          </span>
+        )}
+      </div>
     </PillLink>
   );
 };
@@ -276,22 +273,15 @@ const SingleItemButton = ({ page, search, onSelect }) => {
   return (
     <button
       onClick={() => onSelect(page)}
-      className="flex items-center space-x-2 text-sm hover:bg-background p-1 inline-block"
+      className="flex items-center justify-between w-full text-sm hover:bg-background p-1 rounded"
       key={page.id}
     >
-      <p className="text-sm text-text">
-        {highlightText(page.title, search)} -{" "}
-        <span className="text-xs text-gray-400">
-          {new Date(page.updated_at).toLocaleDateString() +
-            " " +
-            new Date(page.updated_at).toLocaleTimeString()}
+      <span className="truncate">{highlightText(page.title, search)}</span>
+      {page.username !== 'NULL' && page.isPublic && (
+        <span className="text-xs text-gray-400 whitespace-nowrap">
+          by {page.username}
         </span>
-        {page.isPublic && (
-          <span className="text-xs text-gray-400 ml-2">
-            by {page.userId}
-          </span>
-        )}
-      </p>
+      )}
     </button>
   );
 };
