@@ -120,11 +120,13 @@ export async function GET(request) {
 
     // Query 3: Fetch public pages from other users that match the search term
     const publicQuery = `
-      SELECT document_id, title, lastModified, userId
-      FROM \`wewrite-ccd82.pages_indexes.pages\`
-      WHERE userId != @userId
-        AND LOWER(title) LIKE @searchTerm
-      ORDER BY lastModified DESC
+      SELECT p.document_id, p.title, p.lastModified, p.userId,
+             COALESCE(u.username, 'NULL') as username
+      FROM \`wewrite-ccd82.pages_indexes.pages\` p
+      LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
+      WHERE p.userId != @userId
+        AND LOWER(p.title) LIKE @searchTerm
+      ORDER BY p.lastModified DESC
       LIMIT 10
     `;
 
@@ -153,23 +155,6 @@ export async function GET(request) {
     console.log('Public pages query results:', publicRowsResult);
     publicRows = publicRowsResult || [];
 
-    // Let's also do a direct search for the specific page we're looking for
-    const directQuery = `
-      SELECT document_id, title, lastModified, userId
-      FROM \`wewrite-ccd82.pages_indexes.pages\`
-      WHERE userId = 'sFswtpNAETUbfOZkZ2IkxupDPYm1'
-        AND LOWER(title) LIKE '%usps%'
-    `;
-
-    const [directResult] = await bigquery.query({
-      query: directQuery
-    }).catch(error => {
-      console.error("Error executing direct query:", error);
-      return [[]];
-    });
-
-    console.log('Direct search results:', directResult);
-
     // Process user pages
     const userPages = (userRows || []).map((row) => ({
       id: row.document_id,
@@ -193,6 +178,7 @@ export async function GET(request) {
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
       userId: row.userId,
+      username: row.username,
       isOwned: false,
       isPublic: true
     }));

@@ -131,14 +131,16 @@ const Search = () => {
               isPublic={item.isPublic} 
               key={item.id}
               isOwned={item.section === "Your Pages"}
+              className="max-w-full"
             >
-              {item.name}
-              {item.section !== "Your Pages" && (
-                <span className="text-xs opacity-75 ml-2">
-                  ({item.section})
-                  {item.section === "Public Pages" && ` by ${item.userId}`}
-                </span>
-              )}
+              <div className="flex items-center justify-between gap-2 w-full">
+                <span className="truncate">{item.name}</span>
+                {item.section !== "Your Pages" && (
+                  <span className="text-xs opacity-75 whitespace-nowrap">
+                    by {item.username || "NULL"}
+                  </span>
+                )}
+              </div>
             </PillLink>
           );
         }}

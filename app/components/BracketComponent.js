@@ -149,13 +149,17 @@ function BracketComponent() {
             {allPages.map((page) => (
               <li
                 key={page.id}
-                className="p-2 hover:bg-gray-200 cursor-pointer flex items-center justify-between"
+                className="p-2 hover:bg-gray-200 cursor-pointer"
                 onClick={() => handlePageClick(page)}
               >
-                <span>{page.title}</span>
-                {page.isPublic && page.userId !== user.uid && (
-                  <span className="text-xs text-gray-500">by {page.userId}</span>
-                )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate">{page.title}</span>
+                  {page.userId !== user.uid && (
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      by {page.username || "NULL"}
+                    </span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
