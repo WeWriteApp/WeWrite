@@ -14,6 +14,7 @@ import { ThemeProvider } from "./providers/ThemeProvider";
 import GAProvider from "./providers/GAProvider";
 import LoggingProvider from "./providers/LoggingProvider";
 import GestureProvider from "./providers/GestureProvider";
+import { Analytics } from "@vercel/analytics/react";
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
                             </div>
                           </div>
                           <Drawer />
+                          <Analytics />
                         </MobileProvider>
                       </PortfolioProvider>
                     </CommunityProvider>
