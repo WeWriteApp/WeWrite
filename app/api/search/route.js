@@ -67,36 +67,6 @@ export async function GET(request) {
       ? `%${searchTerm.toLowerCase().trim()}%`
       : "%";
 
-    // Query 3: Fetch public pages from other users that match the search term
-    const publicQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.userId,
-             COALESCE(u.username, 'NULL') as username
-      FROM \`wewrite-ccd82.pages_indexes.pages\` p
-      LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
-      WHERE p.userId != @userId
-        AND LOWER(p.title) LIKE @searchTerm
-        ${groupIds.length > 0 ? `AND p.document_id NOT IN (
-          SELECT document_id 
-          FROM \`wewrite-ccd82.pages_indexes.pages\` 
-          WHERE groupId IN UNNEST(@groupIds)
-        )` : ''}
-      ORDER BY p.lastModified DESC
-      LIMIT 10
-    `;
-
-    console.log('Search parameters:', {
-      userId,
-      searchTerm,
-      searchTermFormatted,
-      groupIds,
-      rawSearchTerm: searchTerm,
-      searchTermLength: searchTerm?.length,
-      searchTermTrimmedLength: searchTerm?.trim()?.length,
-      searchTermWords: searchTerm?.trim().split(/\s+/),
-      searchTermLower: searchTerm?.toLowerCase(),
-      searchTermTrimmedLower: searchTerm?.toLowerCase().trim()
-    });
-
     // Let's also verify the data exists with a simpler query
     const verifyQuery = `
       SELECT COUNT(*) as count, STRING_AGG(title) as titles
@@ -133,30 +103,13 @@ export async function GET(request) {
 
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
-      SELECT DISTINCT p.document_id, p.title,
-             COALESCE(u.username, 'NULL') as username
+      SELECT DISTINCT p.document_id, p.title, p.userId
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
-      LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId = @userId
         AND LOWER(p.title) LIKE @searchTerm
       ORDER BY p.lastModified DESC
       LIMIT 10
     `;
-
-    // Log the exact parameters being sent
-    console.log('Search debug info:', {
-      searchTerm,
-      searchTermFormatted,
-      userId,
-      groupIds,
-      fullUserQuery: userQuery
-        .replace('@userId', `'${userId}'`)
-        .replace('@searchTerm', `'${searchTermFormatted}'`),
-      fullPublicQuery: publicQuery
-        .replace('@userId', `'${userId}'`)
-        .replace('@searchTerm', `'${searchTermFormatted}'`)
-        .replace('UNNEST(@groupIds)', groupIds.length ? `UNNEST(['${groupIds.join("','")}'])` : '[]')
-    });
 
     // Execute user query
     const [userRows] = await bigquery.query({
@@ -171,7 +124,7 @@ export async function GET(request) {
       },
     }).catch(error => {
       console.error("Error executing user query:", error);
-      return [[]];
+      throw error;
     });
 
     console.log('User pages query results:', JSON.stringify(userRows, null, 2));
@@ -183,24 +136,13 @@ export async function GET(request) {
     if (groupIds && groupIds.length > 0) {
       // Query 2: Fetch all pages belonging to groups that match the search term
       const groupQuery = `
-        SELECT DISTINCT p.document_id, p.title, p.groupId,
-               COALESCE(u.username, 'NULL') as username
+        SELECT DISTINCT p.document_id, p.title, p.groupId, p.userId
         FROM \`wewrite-ccd82.pages_indexes.pages\` p
-        LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
         WHERE p.groupId IN UNNEST(@groupIds)
           AND LOWER(p.title) LIKE @searchTerm
         ORDER BY p.lastModified DESC
         LIMIT 5
       `;
-
-      console.log('Executing group query:', {
-        query: groupQuery,
-        params: {
-          groupIds,
-          searchTerm: searchTermFormatted,
-          rawSearchTerm: searchTerm
-        }
-      });
 
       // Execute group query
       const [groupRowsResult] = await bigquery.query({
@@ -215,28 +157,29 @@ export async function GET(request) {
         },
       }).catch(error => {
         console.error("Error executing group query:", error);
-        return [[]];
+        throw error;
       });
 
       console.log('Group pages query results:', groupRowsResult);
       groupRows = groupRowsResult || [];
     }
 
-    // Execute public pages query
-    console.log('Public query debug info:', {
-      query: publicQuery,
-      params: {
-        userId,
-        groupIds,
-        searchTerm: searchTermFormatted,
-        rawSearchTerm: searchTerm
-      },
-      fullQuery: publicQuery
-        .replace('@userId', `'${userId}'`)
-        .replace('@searchTerm', `'${searchTermFormatted}'`)
-        .replace('UNNEST(@groupIds)', groupIds.length ? `UNNEST(['${groupIds.join("','")}'])` : '[]')
-    });
+    // Query 3: Fetch public pages from other users that match the search term
+    const publicQuery = `
+      SELECT DISTINCT p.document_id, p.title, p.userId
+      FROM \`wewrite-ccd82.pages_indexes.pages\` p
+      WHERE p.userId != @userId
+        AND LOWER(p.title) LIKE @searchTerm
+        ${groupIds.length > 0 ? `AND p.document_id NOT IN (
+          SELECT document_id 
+          FROM \`wewrite-ccd82.pages_indexes.pages\` 
+          WHERE groupId IN UNNEST(@groupIds)
+        )` : ''}
+      ORDER BY p.lastModified DESC
+      LIMIT 10
+    `;
 
+    // Execute public pages query
     const [publicRowsResult] = await bigquery.query({
       query: publicQuery,
       params: {
@@ -251,27 +194,17 @@ export async function GET(request) {
       },
     }).catch(error => {
       console.error("Error executing public query:", error);
-      return [[]];
+      throw error;
     });
 
     console.log('Public pages query results:', JSON.stringify(publicRowsResult, null, 2));
     publicRows = publicRowsResult || [];
 
-    // Let's also log the raw data from BigQuery
-    console.log('Raw data from BigQuery:', {
-      userRows,
-      groupRows,
-      publicRows,
-      searchTerm,
-      searchTermFormatted,
-      userId
-    });
-
     // Process user pages
     const userPages = (userRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
-      username: row.username,
+      username: 'NULL',
       isOwned: true
     }));
 
@@ -280,7 +213,7 @@ export async function GET(request) {
       id: row.document_id,
       title: row.title,
       groupId: row.groupId,
-      username: row.username,
+      username: 'NULL',
       isOwned: false
     }));
 
@@ -289,7 +222,7 @@ export async function GET(request) {
       id: row.document_id,
       title: row.title,
       userId: row.userId,
-      username: row.username,
+      username: 'NULL',
       isOwned: false,
       isPublic: true
     }));
