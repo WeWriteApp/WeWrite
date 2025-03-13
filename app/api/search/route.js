@@ -45,7 +45,7 @@ export async function GET(request) {
 
   // Ensure searchTerm is properly handled if not provided
   const searchTermFormatted = searchTerm
-    ? `%${searchTerm.toLowerCase().trim()}%`
+    ? `%${searchTerm.toLowerCase().trim().split(/\s+/).join('%')}%`
     : "%";
 
   console.log('Search parameters:', {
@@ -55,7 +55,8 @@ export async function GET(request) {
     groupIds,
     rawSearchTerm: searchTerm,
     searchTermLength: searchTerm?.length,
-    searchTermTrimmedLength: searchTerm?.trim()?.length
+    searchTermTrimmedLength: searchTerm?.trim()?.length,
+    searchTermWords: searchTerm?.trim().split(/\s+/)
   });
 
   try {
@@ -66,7 +67,7 @@ export async function GET(request) {
     FROM \`wewrite-ccd82.pages_indexes.pages\` p
     LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
     WHERE p.userId = @userId
-      AND LOWER(p.title) LIKE @searchTerm
+      AND LOWER(CAST(p.title AS STRING)) LIKE @searchTerm
     ORDER BY p.lastModified DESC
     LIMIT 10
   `;
@@ -110,7 +111,7 @@ export async function GET(request) {
         FROM \`wewrite-ccd82.pages_indexes.pages\` p
         LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
         WHERE p.groupId IN UNNEST(@groupIds)
-          AND LOWER(p.title) LIKE @searchTerm
+          AND LOWER(CAST(p.title AS STRING)) LIKE @searchTerm
         ORDER BY p.lastModified DESC
         LIMIT 5
       `;
@@ -151,7 +152,7 @@ export async function GET(request) {
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId != @userId
-        AND LOWER(p.title) LIKE @searchTerm
+        AND LOWER(CAST(p.title AS STRING)) LIKE @searchTerm
         ${groupIds.length > 0 ? `AND p.document_id NOT IN (
           SELECT document_id 
           FROM \`wewrite-ccd82.pages_indexes.pages\` 
