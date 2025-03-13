@@ -1,3 +1,5 @@
+'use client';
+
 import { initializeApp, getApps } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 import { getFirestore } from "firebase/firestore";
@@ -13,65 +15,44 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Add debug logging for environment variables
-if (process.env.NODE_ENV !== 'production') {
-  console.log('Firebase Config:', {
-    apiKey: firebaseConfig.apiKey ? '✓' : '✗',
-    authDomain: firebaseConfig.authDomain ? '✓' : '✗',
-    databaseURL: firebaseConfig.databaseURL ? '✓' : '✗',
-    projectId: firebaseConfig.projectId ? '✓' : '✗',
-    storageBucket: firebaseConfig.storageBucket ? '✓' : '✗',
-    messagingSenderId: firebaseConfig.messagingSenderId ? '✓' : '✗',
-    appId: firebaseConfig.appId ? '✓' : '✗',
-  });
-}
-
-// Initialize Firebase - with singleton pattern
 let firebase_app;
-let db;
-let rtdb;
-let auth;
+let db = null;
+let rtdb = null;
+let auth = null;
 
-// Only initialize Firebase if we're in the browser or if all required config is present
-const isBrowser = typeof window !== 'undefined';
-const hasRequiredConfig = firebaseConfig.projectId && firebaseConfig.apiKey;
-
-if (isBrowser || hasRequiredConfig) {
+// Only initialize Firebase on the client side
+if (typeof window !== 'undefined') {
   try {
     const apps = getApps();
     firebase_app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
 
-    if (!firebase_app) {
-      throw new Error('Firebase initialization failed');
-    }
+    if (firebase_app) {
+      // Initialize services
+      rtdb = getDatabase(firebase_app);
+      db = getFirestore(firebase_app);
+      auth = getAuth(firebase_app);
 
-    // Initialize services
-    rtdb = getDatabase(firebase_app);
-    db = getFirestore(firebase_app);
-    auth = getAuth(firebase_app);
-
-    if (!auth || !db || !rtdb) {
-      throw new Error('Firebase services initialization failed');
+      // Add debug logging for environment variables in development
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Firebase Config:', {
+          apiKey: firebaseConfig.apiKey ? '✓' : '✗',
+          authDomain: firebaseConfig.authDomain ? '✓' : '✗',
+          databaseURL: firebaseConfig.databaseURL ? '✓' : '✗',
+          projectId: firebaseConfig.projectId ? '✓' : '✗',
+          storageBucket: firebaseConfig.storageBucket ? '✓' : '✗',
+          messagingSenderId: firebaseConfig.messagingSenderId ? '✓' : '✗',
+          appId: firebaseConfig.appId ? '✓' : '✗',
+        });
+      }
     }
   } catch (error) {
     console.error('Firebase initialization error:', error);
-    // During build, we'll just set these to null instead of throwing
-    if (!isBrowser) {
-      firebase_app = null;
-      db = null;
-      rtdb = null;
-      auth = null;
-    } else {
-      throw error;
-    }
+    // Reset variables on error
+    firebase_app = null;
+    db = null;
+    rtdb = null;
+    auth = null;
   }
-} else {
-  // During build time, set these to null
-  firebase_app = null;
-  db = null;
-  rtdb = null;
-  auth = null;
 }
 
-// Export everything
 export { firebase_app, rtdb, db, auth }; 
