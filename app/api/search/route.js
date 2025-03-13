@@ -74,20 +74,42 @@ export async function GET(request) {
     LIMIT 10
   `;
 
-    console.log('Executing user query:', {
-      query: userQuery,
-      params: {
-        userId,
-        searchTerm: searchTermFormatted,
-        rawSearchTerm: searchTerm
-      }
+    // Log the exact parameters being sent
+    console.log('Search debug info:', {
+      searchTerm,
+      searchTermFormatted,
+      userId,
+      groupIds,
+      fullUserQuery: userQuery
+        .replace('@userId', `'${userId}'`)
+        .replace('@searchTerm', `'${searchTermFormatted}'`),
+      fullPublicQuery: publicQuery
+        .replace('@userId', `'${userId}'`)
+        .replace('@searchTerm', `'${searchTermFormatted}'`)
+        .replace('UNNEST(@groupIds)', groupIds.length ? `UNNEST(['${groupIds.join("','")}'])` : '[]')
     });
 
-    // Let's also log a sample query to check
-    const sampleUserQuery = userQuery
-      .replace('@userId', `'${userId}'`)
-      .replace('@searchTerm', `'${searchTermFormatted}'`);
-    console.log('Sample user query:', sampleUserQuery);
+    // Let's also verify the data exists with a simpler query
+    const verifyQuery = `
+      SELECT COUNT(*) as count
+      FROM \`wewrite-ccd82.pages_indexes.pages\`
+      WHERE LOWER(title) LIKE @searchTerm
+    `;
+
+    const [verifyResult] = await bigquery.query({
+      query: verifyQuery,
+      params: {
+        searchTerm: searchTermFormatted
+      },
+      types: {
+        searchTerm: "STRING"
+      }
+    }).catch(error => {
+      console.error("Error executing verify query:", error);
+      return [[]];
+    });
+
+    console.log('Verify query results:', verifyResult);
 
     // Execute user query
     const [userRows] = await bigquery.query({
@@ -105,7 +127,7 @@ export async function GET(request) {
       return [[]];
     });
 
-    console.log('User pages query results:', userRows);
+    console.log('User pages query results:', JSON.stringify(userRows, null, 2));
 
     let groupRows = [];
     let publicRows = [];
@@ -171,22 +193,19 @@ export async function GET(request) {
     `;
 
     // Execute public pages query
-    console.log('Executing public pages query:', {
+    console.log('Public query debug info:', {
       query: publicQuery,
       params: {
         userId,
         groupIds,
         searchTerm: searchTermFormatted,
         rawSearchTerm: searchTerm
-      }
+      },
+      fullQuery: publicQuery
+        .replace('@userId', `'${userId}'`)
+        .replace('@searchTerm', `'${searchTermFormatted}'`)
+        .replace('UNNEST(@groupIds)', groupIds.length ? `UNNEST(['${groupIds.join("','")}'])` : '[]')
     });
-
-    // Let's also log a sample query to check
-    const samplePublicQuery = publicQuery
-      .replace('@userId', `'${userId}'`)
-      .replace('@searchTerm', `'${searchTermFormatted}'`)
-      .replace('UNNEST(@groupIds)', `UNNEST(['${groupIds.join("','")}'])`);
-    console.log('Sample public query:', samplePublicQuery);
 
     const [publicRowsResult] = await bigquery.query({
       query: publicQuery,
@@ -205,7 +224,7 @@ export async function GET(request) {
       return [[]];
     });
 
-    console.log('Public pages query results:', publicRowsResult);
+    console.log('Public pages query results:', JSON.stringify(publicRowsResult, null, 2));
     publicRows = publicRowsResult || [];
 
     // Let's also log the raw data from BigQuery
