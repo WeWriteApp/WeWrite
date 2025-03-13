@@ -68,6 +68,14 @@ export async function GET(request) {
     LIMIT 10
   `;
 
+    console.log('Executing user query:', {
+      query: userQuery,
+      params: {
+        userId,
+        searchTerm: searchTermFormatted
+      }
+    });
+
     // Execute user query
     const [userRows] = await bigquery.query({
       query: userQuery,
@@ -99,21 +107,27 @@ export async function GET(request) {
         LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
         WHERE p.groupId IN UNNEST(@groupIds)
           AND LOWER(p.title) LIKE @searchTerm
-          AND p.userId != @userId
         ORDER BY p.lastModified DESC
         LIMIT 5
       `;
+
+      console.log('Executing group query:', {
+        query: groupQuery,
+        params: {
+          groupIds,
+          searchTerm: searchTermFormatted
+        }
+      });
+
       // Execute group query
       const [groupRowsResult] = await bigquery.query({
         query: groupQuery,
         params: {
           groupIds: groupIds,
-          userId: userId,
           searchTerm: searchTermFormatted,
         },
         types: {
           groupIds: ['STRING'],
-          userId: "STRING",
           searchTerm: "STRING",
         },
       }).catch(error => {
@@ -132,33 +146,36 @@ export async function GET(request) {
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
       WHERE p.userId != @userId
-        AND p.document_id NOT IN (
+        AND LOWER(p.title) LIKE @searchTerm
+        ${groupIds.length > 0 ? `AND p.document_id NOT IN (
           SELECT document_id 
           FROM \`wewrite-ccd82.pages_indexes.pages\` 
           WHERE groupId IN UNNEST(@groupIds)
-        )
-        AND LOWER(p.title) LIKE @searchTerm
+        )` : ''}
       ORDER BY p.lastModified DESC
       LIMIT 10
     `;
 
     // Execute public pages query
-    console.log('Executing public pages query with params:', {
-      userId,
-      searchTerm: searchTermFormatted,
-      query: publicQuery
+    console.log('Executing public pages query:', {
+      query: publicQuery,
+      params: {
+        userId,
+        groupIds,
+        searchTerm: searchTermFormatted
+      }
     });
 
     const [publicRowsResult] = await bigquery.query({
       query: publicQuery,
       params: {
         userId: userId,
-        groupIds: groupIds,
+        ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
         searchTerm: searchTermFormatted,
       },
       types: {
         userId: "STRING",
-        groupIds: ['STRING'],
+        ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
         searchTerm: "STRING",
       },
     }).catch(error => {
@@ -200,6 +217,8 @@ export async function GET(request) {
       userPagesCount: userPages.length,
       groupPagesCount: groupPages.length,
       publicPagesCount: publicPages.length,
+      userPages,
+      groupPages,
       publicPages
     });
 
