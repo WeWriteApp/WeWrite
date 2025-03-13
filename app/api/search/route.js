@@ -27,13 +27,18 @@ export async function GET(request) {
   // Extract query parameters from the URL
   const userId = searchParams.get("userId");
   const groupIds = searchParams.get("groupIds")
-    ? searchParams.get("groupIds").split(",")
-    : []; // Handle multiple groupIds or empty array
+    ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
+    : []; // Handle multiple groupIds or empty array, filter out empty strings
   const searchTerm = searchParams.get("searchTerm");
 
   if (!userId) {
     return NextResponse.json(
-      { message: "userId is required" },
+      { 
+        userPages: [], 
+        groupPages: [], 
+        publicPages: [],
+        message: "userId is required" 
+      },
       { status: 400 }
     );
   }
@@ -41,7 +46,7 @@ export async function GET(request) {
   // Ensure searchTerm is properly handled if not provided
   const searchTermFormatted = searchTerm
     ? `%${searchTerm.toLowerCase()}%`
-    : "%"; // Use '%' to match any if no searchTerm
+    : "%";
 
   try {
     // Query 1: Fetch all pages owned by the user that match the search term
@@ -70,13 +75,16 @@ export async function GET(request) {
         userId: "STRING",
         searchTerm: "STRING",
       },
+    }).catch(error => {
+      console.error("Error executing user query:", error);
+      return [[]];
     });
 
     let groupRows = [];
     let publicRows = [];
 
     // Check if groupIds are provided and not empty
-    if (groupIds.length > 0) {
+    if (groupIds && groupIds.length > 0) {
       // Query 2: Fetch all pages belonging to groups that match the search term
       const groupQuery = `
         SELECT document_id, title, lastModified, groupId
@@ -102,9 +110,12 @@ export async function GET(request) {
           groupIds: ['STRING'],
           searchTerm: "STRING",
         },
+      }).catch(error => {
+        console.error("Error executing group query:", error);
+        return [[]];
       });
 
-      groupRows = groupRowsResult;
+      groupRows = groupRowsResult || [];
     }
 
     // Query 3: Fetch public pages from other users that match the search term
@@ -134,12 +145,15 @@ export async function GET(request) {
         userId: "STRING",
         searchTerm: "STRING",
       },
+    }).catch(error => {
+      console.error("Error executing public query:", error);
+      return [[]];
     });
 
-    publicRows = publicRowsResult;
+    publicRows = publicRowsResult || [];
 
     // Process user pages
-    const userPages = userRows.map((row) => ({
+    const userPages = (userRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
@@ -147,7 +161,7 @@ export async function GET(request) {
     }));
 
     // Process group pages
-    const groupPages = groupRows.map((row) => ({
+    const groupPages = (groupRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
@@ -156,7 +170,7 @@ export async function GET(request) {
     }));
 
     // Process public pages
-    const publicPages = publicRows.map((row) => ({
+    const publicPages = (publicRows || []).map((row) => ({
       id: row.document_id,
       title: row.title,
       updated_at: (row.lastModified) ? row.lastModified.value : null,
@@ -170,7 +184,13 @@ export async function GET(request) {
   } catch (error) {
     console.error("Error querying BigQuery:", error);
     return NextResponse.json(
-      { message: "Error querying data", error: error.message },
+      { 
+        message: "Error querying data", 
+        error: error.message,
+        userPages: [],
+        groupPages: [],
+        publicPages: []
+      },
       { status: 500 }
     );
   }

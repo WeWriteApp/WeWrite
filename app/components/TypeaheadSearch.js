@@ -44,7 +44,7 @@ const TypeaheadSearch = ({
       try {
         let selectedUserId = userId ? userId : user.uid;
         let groupIds = [];
-        if (user.groups) {
+        if (user && user.groups) {
           groupIds = Object.keys(user.groups);
         }
 
@@ -52,15 +52,18 @@ const TypeaheadSearch = ({
           `/api/search?userId=${selectedUserId}&searchTerm=${search}&groupIds=${groupIds}`
         );
         const data = await response.json();
-        setUserPages(data.userPages);
-        setGroupPages(data.groupPages);
+        setUserPages(data.userPages || []);
+        setGroupPages(data.groupPages || []);
         setPublicPages(data.publicPages || []);
       } catch (error) {
         console.error("Error fetching search results", error);
+        setUserPages([]);
+        setGroupPages([]);
+        setPublicPages([]);
       } finally {
         setIsSearching(false);
       }
-    }, 500), // 500ms delay
+    }, 500),
     []
   );
 
