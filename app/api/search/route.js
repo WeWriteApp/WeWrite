@@ -6,7 +6,9 @@ let bigquery = null;
 // Only try to initialize BigQuery if we have credentials
 if (process.env.GOOGLE_CLOUD_KEY_JSON) {
   try {
-    const credentials = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
+    // Try to parse the JSON string, handling any special characters
+    const jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+    const credentials = JSON.parse(jsonString);
     bigquery = new BigQuery({
       projectId: credentials.project_id,
       credentials,
