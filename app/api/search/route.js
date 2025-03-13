@@ -103,7 +103,7 @@ export async function GET(request) {
 
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.userId
+      SELECT DISTINCT p.document_id, p.title, p.userId, p.lastModified
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       WHERE p.userId = @userId
         AND LOWER(p.title) LIKE @searchTerm
@@ -136,7 +136,7 @@ export async function GET(request) {
     if (groupIds && groupIds.length > 0) {
       // Query 2: Fetch all pages belonging to groups that match the search term
       const groupQuery = `
-        SELECT DISTINCT p.document_id, p.title, p.groupId, p.userId
+        SELECT DISTINCT p.document_id, p.title, p.groupId, p.userId, p.lastModified
         FROM \`wewrite-ccd82.pages_indexes.pages\` p
         WHERE p.groupId IN UNNEST(@groupIds)
           AND LOWER(p.title) LIKE @searchTerm
@@ -166,7 +166,7 @@ export async function GET(request) {
 
     // Query 3: Fetch public pages from other users that match the search term
     const publicQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.userId
+      SELECT DISTINCT p.document_id, p.title, p.userId, p.lastModified
       FROM \`wewrite-ccd82.pages_indexes.pages\` p
       WHERE p.userId != @userId
         AND LOWER(p.title) LIKE @searchTerm
