@@ -21,75 +21,127 @@ const bigquery = new BigQuery({
   credentials,
 });
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-
-  // Extract query parameters from the URL
-  const userId = searchParams.get("userId");
-  const groupIds = searchParams.get("groupIds")
-    ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
-    : []; // Handle multiple groupIds or empty array, filter out empty strings
-  const searchTerm = searchParams.get("searchTerm");
-
-  if (!userId) {
-    return NextResponse.json(
-      { 
-        userPages: [], 
-        groupPages: [], 
-        publicPages: [],
-        message: "userId is required" 
-      },
-      { status: 400 }
-    );
-  }
-
-  // Ensure searchTerm is properly handled if not provided
-  const searchTermFormatted = searchTerm
-    ? `%${searchTerm.toLowerCase().trim()}%`
-    : "%";
-
-  // Query 3: Fetch public pages from other users that match the search term
-  const publicQuery = `
-    SELECT DISTINCT p.document_id, p.title, p.userId,
-           COALESCE(u.username, 'NULL') as username
-    FROM \`wewrite-ccd82.pages_indexes.pages\` p
-    LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
-    WHERE p.userId != @userId
-      AND LOWER(p.title) LIKE @searchTerm
-      ${groupIds.length > 0 ? `AND p.document_id NOT IN (
-        SELECT document_id 
-        FROM \`wewrite-ccd82.pages_indexes.pages\` 
-        WHERE groupId IN UNNEST(@groupIds)
-      )` : ''}
-    ORDER BY p.lastModified DESC
-    LIMIT 10
-  `;
-
-  console.log('Search parameters:', {
-    userId,
-    searchTerm,
-    searchTermFormatted,
-    groupIds,
-    rawSearchTerm: searchTerm,
-    searchTermLength: searchTerm?.length,
-    searchTermTrimmedLength: searchTerm?.trim()?.length,
-    searchTermWords: searchTerm?.trim().split(/\s+/),
-    searchTermLower: searchTerm?.toLowerCase(),
-    searchTermTrimmedLower: searchTerm?.toLowerCase().trim()
-  });
-
+// Test BigQuery connection
+async function testBigQueryConnection() {
   try {
+    const [datasets] = await bigquery.getDatasets();
+    console.log('BigQuery connection successful. Found datasets:', datasets.map(d => d.id));
+    return true;
+  } catch (error) {
+    console.error('BigQuery connection test failed:', error);
+    return false;
+  }
+}
+
+export async function GET(request) {
+  try {
+    // Test BigQuery connection first
+    const isConnected = await testBigQueryConnection();
+    if (!isConnected) {
+      throw new Error('Failed to connect to BigQuery');
+    }
+
+    const { searchParams } = new URL(request.url);
+
+    // Extract query parameters from the URL
+    const userId = searchParams.get("userId");
+    const groupIds = searchParams.get("groupIds")
+      ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
+      : []; // Handle multiple groupIds or empty array, filter out empty strings
+    const searchTerm = searchParams.get("searchTerm");
+
+    if (!userId) {
+      return NextResponse.json(
+        { 
+          userPages: [], 
+          groupPages: [], 
+          publicPages: [],
+          message: "userId is required" 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Ensure searchTerm is properly handled if not provided
+    const searchTermFormatted = searchTerm
+      ? `%${searchTerm.toLowerCase().trim()}%`
+      : "%";
+
+    // Query 3: Fetch public pages from other users that match the search term
+    const publicQuery = `
+      SELECT DISTINCT p.document_id, p.title, p.userId,
+             COALESCE(u.username, 'NULL') as username
+      FROM \`wewrite-ccd82.pages_indexes.pages\` p
+      LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
+      WHERE p.userId != @userId
+        AND LOWER(p.title) LIKE @searchTerm
+        ${groupIds.length > 0 ? `AND p.document_id NOT IN (
+          SELECT document_id 
+          FROM \`wewrite-ccd82.pages_indexes.pages\` 
+          WHERE groupId IN UNNEST(@groupIds)
+        )` : ''}
+      ORDER BY p.lastModified DESC
+      LIMIT 10
+    `;
+
+    console.log('Search parameters:', {
+      userId,
+      searchTerm,
+      searchTermFormatted,
+      groupIds,
+      rawSearchTerm: searchTerm,
+      searchTermLength: searchTerm?.length,
+      searchTermTrimmedLength: searchTerm?.trim()?.length,
+      searchTermWords: searchTerm?.trim().split(/\s+/),
+      searchTermLower: searchTerm?.toLowerCase(),
+      searchTermTrimmedLower: searchTerm?.toLowerCase().trim()
+    });
+
+    // Let's also verify the data exists with a simpler query
+    const verifyQuery = `
+      SELECT COUNT(*) as count, STRING_AGG(title) as titles
+      FROM \`wewrite-ccd82.pages_indexes.pages\`
+      WHERE LOWER(title) LIKE @searchTerm
+    `;
+
+    console.log('Executing verify query:', {
+      query: verifyQuery,
+      params: {
+        searchTerm: searchTermFormatted
+      }
+    });
+
+    const [verifyResult] = await bigquery.query({
+      query: verifyQuery,
+      params: {
+        searchTerm: searchTermFormatted
+      },
+      types: {
+        searchTerm: "STRING"
+      }
+    }).catch(error => {
+      console.error("Error executing verify query:", {
+        error,
+        stack: error.stack,
+        query: verifyQuery,
+        params: { searchTerm: searchTermFormatted }
+      });
+      throw error;
+    });
+
+    console.log('Verify query results:', JSON.stringify(verifyResult, null, 2));
+
     // Query 1: Fetch all pages owned by the user that match the search term
     const userQuery = `
-    SELECT DISTINCT p.document_id, p.title,
-           COALESCE(u.username, 'NULL') as username
-    FROM \`wewrite-ccd82.pages_indexes.pages\` p
-    LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
-    WHERE p.userId = @userId
-      AND LOWER(p.title) LIKE @searchTerm
-    ORDER BY p.lastModified DESC
-    LIMIT 10
-  `;
+      SELECT DISTINCT p.document_id, p.title,
+             COALESCE(u.username, 'NULL') as username
+      FROM \`wewrite-ccd82.pages_indexes.pages\` p
+      LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
+      WHERE p.userId = @userId
+        AND LOWER(p.title) LIKE @searchTerm
+      ORDER BY p.lastModified DESC
+      LIMIT 10
+    `;
 
     // Log the exact parameters being sent
     console.log('Search debug info:', {
@@ -105,28 +157,6 @@ export async function GET(request) {
         .replace('@searchTerm', `'${searchTermFormatted}'`)
         .replace('UNNEST(@groupIds)', groupIds.length ? `UNNEST(['${groupIds.join("','")}'])` : '[]')
     });
-
-    // Let's also verify the data exists with a simpler query
-    const verifyQuery = `
-      SELECT COUNT(*) as count
-      FROM \`wewrite-ccd82.pages_indexes.pages\`
-      WHERE LOWER(title) LIKE @searchTerm
-    `;
-
-    const [verifyResult] = await bigquery.query({
-      query: verifyQuery,
-      params: {
-        searchTerm: searchTermFormatted
-      },
-      types: {
-        searchTerm: "STRING"
-      }
-    }).catch(error => {
-      console.error("Error executing verify query:", error);
-      return [[]];
-    });
-
-    console.log('Verify query results:', verifyResult);
 
     // Execute user query
     const [userRows] = await bigquery.query({
