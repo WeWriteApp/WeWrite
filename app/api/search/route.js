@@ -48,6 +48,23 @@ export async function GET(request) {
     ? `%${searchTerm.toLowerCase().trim()}%`
     : "%";
 
+  // Query 3: Fetch public pages from other users that match the search term
+  const publicQuery = `
+    SELECT DISTINCT p.document_id, p.title, p.userId,
+           COALESCE(u.username, 'NULL') as username
+    FROM \`wewrite-ccd82.pages_indexes.pages\` p
+    LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
+    WHERE p.userId != @userId
+      AND LOWER(p.title) LIKE @searchTerm
+      ${groupIds.length > 0 ? `AND p.document_id NOT IN (
+        SELECT document_id 
+        FROM \`wewrite-ccd82.pages_indexes.pages\` 
+        WHERE groupId IN UNNEST(@groupIds)
+      )` : ''}
+    ORDER BY p.lastModified DESC
+    LIMIT 10
+  `;
+
   console.log('Search parameters:', {
     userId,
     searchTerm,
@@ -174,23 +191,6 @@ export async function GET(request) {
       console.log('Group pages query results:', groupRowsResult);
       groupRows = groupRowsResult || [];
     }
-
-    // Query 3: Fetch public pages from other users that match the search term
-    const publicQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.userId,
-             COALESCE(u.username, 'NULL') as username
-      FROM \`wewrite-ccd82.pages_indexes.pages\` p
-      LEFT JOIN \`wewrite-ccd82.users.users\` u ON p.userId = u.userId
-      WHERE p.userId != @userId
-        AND LOWER(p.title) LIKE @searchTerm
-        ${groupIds.length > 0 ? `AND p.document_id NOT IN (
-          SELECT document_id 
-          FROM \`wewrite-ccd82.pages_indexes.pages\` 
-          WHERE groupId IN UNNEST(@groupIds)
-        )` : ''}
-      ORDER BY p.lastModified DESC
-      LIMIT 10
-    `;
 
     // Execute public pages query
     console.log('Public query debug info:', {
