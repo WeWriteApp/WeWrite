@@ -26,36 +26,51 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Validate required config
-if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
-  throw new Error('Missing required Firebase configuration. Check your environment variables.');
-}
-
 // Initialize Firebase - with singleton pattern
 let firebase_app;
 let db;
 let rtdb;
 let auth;
 
-try {
-  const apps = getApps();
-  firebase_app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
+// Only initialize Firebase if we're in the browser or if all required config is present
+const isBrowser = typeof window !== 'undefined';
+const hasRequiredConfig = firebaseConfig.projectId && firebaseConfig.apiKey;
 
-  if (!firebase_app) {
-    throw new Error('Firebase initialization failed');
+if (isBrowser || hasRequiredConfig) {
+  try {
+    const apps = getApps();
+    firebase_app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
+
+    if (!firebase_app) {
+      throw new Error('Firebase initialization failed');
+    }
+
+    // Initialize services
+    rtdb = getDatabase(firebase_app);
+    db = getFirestore(firebase_app);
+    auth = getAuth(firebase_app);
+
+    if (!auth || !db || !rtdb) {
+      throw new Error('Firebase services initialization failed');
+    }
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
+    // During build, we'll just set these to null instead of throwing
+    if (!isBrowser) {
+      firebase_app = null;
+      db = null;
+      rtdb = null;
+      auth = null;
+    } else {
+      throw error;
+    }
   }
-
-  // Initialize services
-  rtdb = getDatabase(firebase_app);
-  db = getFirestore(firebase_app);
-  auth = getAuth(firebase_app);
-
-  if (!auth || !db || !rtdb) {
-    throw new Error('Firebase services initialization failed');
-  }
-} catch (error) {
-  console.error('Firebase initialization error:', error);
-  throw error;
+} else {
+  // During build time, set these to null
+  firebase_app = null;
+  db = null;
+  rtdb = null;
+  auth = null;
 }
 
 // Export everything
