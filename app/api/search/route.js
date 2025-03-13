@@ -120,13 +120,12 @@ export async function GET(request) {
 
     // Query 3: Fetch public pages from other users that match the search term
     const publicQuery = `
-      SELECT document_id, title, lastModified, userId
+      SELECT document_id, title, lastModified, userId, isPublic
       FROM (
-        SELECT document_id, title, lastModified, userId,
+        SELECT document_id, title, lastModified, userId, isPublic,
                ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY lastModified DESC) AS row_num
         FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE isPublic = true
-          AND userId != @userId
+        WHERE userId != @userId
           AND LOWER(title) LIKE @searchTerm
       )
       WHERE row_num = 1
@@ -135,6 +134,12 @@ export async function GET(request) {
     `;
 
     // Execute public pages query
+    console.log('Executing public pages query with params:', {
+      userId,
+      searchTerm: searchTermFormatted,
+      query: publicQuery
+    });
+
     const [publicRowsResult] = await bigquery.query({
       query: publicQuery,
       params: {
@@ -150,7 +155,7 @@ export async function GET(request) {
       return [[]];
     });
 
-    publicRows = publicRowsResult || [];
+    console.log('Public pages query results:', publicRowsResult);
 
     // Process user pages
     const userPages = (userRows || []).map((row) => ({

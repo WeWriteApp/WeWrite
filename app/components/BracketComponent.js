@@ -26,6 +26,7 @@ function BracketComponent() {
     debounce(async (search) => {
       if (!user) return;
 
+      console.log('BracketComponent searching for:', search);
       setIsSearching(true);
       try {
         let groupIds = [];
@@ -34,9 +35,10 @@ function BracketComponent() {
         }
 
         const response = await fetch(
-          `/api/search?userId=${user.uid}&searchTerm=${search}&groupIds=${groupIds}`
+          `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`
         );
         const data = await response.json();
+        console.log('BracketComponent search results:', data);
         
         // Combine all pages into one array
         const combinedPages = [
@@ -45,6 +47,7 @@ function BracketComponent() {
           ...(data.publicPages || [])
         ];
 
+        console.log('BracketComponent combined pages:', combinedPages);
         setAllPages(combinedPages);
       } catch (error) {
         console.error("Error fetching search results", error);

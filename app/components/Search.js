@@ -25,6 +25,7 @@ const Search = () => {
     debounce(async (searchTerm) => {
       if (!user) return;
 
+      console.log('Fetching results for search term:', searchTerm);
       setIsSearching(true);
       try {
         let groupIds = [];
@@ -33,9 +34,10 @@ const Search = () => {
         }
 
         const response = await fetch(
-          `/api/search?userId=${user.uid}&searchTerm=${searchTerm}&groupIds=${groupIds}`
+          `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`
         );
         const data = await response.json();
+        console.log('Search results:', data);
         
         // Combine all pages and format them for ReactSearchAutocomplete
         const combinedPages = [
@@ -56,6 +58,7 @@ const Search = () => {
           }))
         ];
 
+        console.log('Combined pages:', combinedPages);
         setSearchResults(combinedPages);
       } catch (error) {
         console.error("Error fetching search results", error);
@@ -72,6 +75,7 @@ const Search = () => {
   }
 
   const handleOnSearch = (searchTerm) => {
+    console.log('Search triggered with term:', searchTerm);
     if (!searchTerm) {
       setSearchResults([]);
       return;
@@ -98,6 +102,7 @@ const Search = () => {
               href={`/pages/${item.id}`} 
               isPublic={item.isPublic} 
               key={item.id}
+              isOwned={item.section === "Your Pages"}
             >
               {item.name}
               {item.section !== "Your Pages" && (
