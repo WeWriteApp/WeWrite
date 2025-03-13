@@ -1,28 +1,28 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 
-// Validate and parse the JSON string from the environment variable
-if (!process.env.GOOGLE_CLOUD_KEY_JSON) {
-  throw new Error(
-    "Environment variable GOOGLE_CLOUD_KEY_JSON is not set or is invalid."
-  );
-}
+let bigquery = null;
 
-let credentials;
-try {
-  credentials = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
-} catch (error) {
-  throw new Error("Failed to parse GOOGLE_CLOUD_KEY_JSON: " + error.message);
+// Only try to initialize BigQuery if we have credentials
+if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+  try {
+    const credentials = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
+    bigquery = new BigQuery({
+      projectId: credentials.project_id,
+      credentials,
+    });
+  } catch (error) {
+    console.error("Failed to initialize BigQuery:", error);
+  }
 }
-
-// Create a new BigQuery client using the credentials
-const bigquery = new BigQuery({
-  projectId: credentials.project_id,
-  credentials,
-});
 
 // Test BigQuery connection
 async function testBigQueryConnection() {
+  if (!bigquery) {
+    console.error('BigQuery client not initialized');
+    return false;
+  }
+
   try {
     const [datasets] = await bigquery.getDatasets();
     console.log('BigQuery connection successful. Found datasets:', datasets.map(d => d.id));
@@ -35,6 +35,17 @@ async function testBigQueryConnection() {
 
 export async function GET(request) {
   try {
+    // If BigQuery is not initialized, return empty results
+    if (!bigquery) {
+      console.warn('BigQuery not initialized - returning empty results');
+      return NextResponse.json({ 
+        userPages: [], 
+        groupPages: [], 
+        publicPages: [],
+        message: "Search functionality temporarily unavailable" 
+      }, { status: 503 });
+    }
+
     // Test BigQuery connection first
     const isConnected = await testBigQueryConnection();
     if (!isConnected) {
