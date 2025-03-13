@@ -13,21 +13,49 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const apps = getApps();
-const firebase_app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
-
-if (!firebase_app) {
-  throw new Error('Firebase initialization failed');
+// Add debug logging for environment variables
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Firebase Config:', {
+    apiKey: firebaseConfig.apiKey ? '✓' : '✗',
+    authDomain: firebaseConfig.authDomain ? '✓' : '✗',
+    databaseURL: firebaseConfig.databaseURL ? '✓' : '✗',
+    projectId: firebaseConfig.projectId ? '✓' : '✗',
+    storageBucket: firebaseConfig.storageBucket ? '✓' : '✗',
+    messagingSenderId: firebaseConfig.messagingSenderId ? '✓' : '✗',
+    appId: firebaseConfig.appId ? '✓' : '✗',
+  });
 }
 
-// Initialize services
-const rtdb = getDatabase(firebase_app);
-const db = getFirestore(firebase_app);
-const auth = getAuth(firebase_app);
+// Validate required config
+if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
+  throw new Error('Missing required Firebase configuration. Check your environment variables.');
+}
 
-if (!auth || !db || !rtdb) {
-  throw new Error('Firebase services initialization failed');
+// Initialize Firebase - with singleton pattern
+let firebase_app;
+let db;
+let rtdb;
+let auth;
+
+try {
+  const apps = getApps();
+  firebase_app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
+
+  if (!firebase_app) {
+    throw new Error('Firebase initialization failed');
+  }
+
+  // Initialize services
+  rtdb = getDatabase(firebase_app);
+  db = getFirestore(firebase_app);
+  auth = getAuth(firebase_app);
+
+  if (!auth || !db || !rtdb) {
+    throw new Error('Firebase services initialization failed');
+  }
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+  throw error;
 }
 
 // Export everything
