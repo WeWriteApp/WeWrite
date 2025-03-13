@@ -37,14 +37,14 @@ const ActionModal = ({
           
           {/* Modal */}
           <motion.div
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 500 }}
-            className={`fixed left-1/2 bottom-4 transform -translate-x-1/2 z-50 ${className}`}
+            className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm mx-auto ${className}`}
           >
-            <div className="bg-blue-500 rounded-lg overflow-hidden shadow-xl w-full max-w-md">
-              <div className="p-4 text-white text-center">
+            <div className="bg-blue-500 rounded-lg overflow-hidden shadow-xl">
+              <div className="p-6 text-white text-center text-lg">
                 {message}
               </div>
               
@@ -58,7 +58,7 @@ const ActionModal = ({
                 
                 <a
                   href={primaryActionHref}
-                  className="flex-1 p-4 text-center bg-white text-gray-900 hover:bg-gray-100 transition-colors"
+                  className="flex-1 p-4 text-center bg-white text-black hover:bg-gray-100 transition-colors"
                 >
                   {primaryActionLabel}
                 </a>
