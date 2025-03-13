@@ -3,11 +3,18 @@ import { NextResponse } from 'next/server';
 import { Logging } from '@google-cloud/logging';
 
 // Initialize Google Cloud Logging
-const logging = new Logging({
-  projectId: process.env.PROJECT_ID,
-  credentials: JSON.parse(process.env.LOGGING_CLOUD_KEY_JSON),
-});
-
+let logging;
+try {
+  const jsonString = process.env.LOGGING_CLOUD_KEY_JSON?.replace(/[\n\r\t]/g, '') || '{}';
+  const credentials = JSON.parse(jsonString);
+  logging = new Logging({
+    projectId: process.env.PROJECT_ID,
+    credentials,
+  });
+} catch (error) {
+  console.error('Failed to initialize logging:', error);
+  logging = new Logging(); // Fallback to default credentials
+}
 
 const log = logging.log('frontend-errors'); // Log name
 

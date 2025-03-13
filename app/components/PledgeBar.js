@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { AuthContext } from "../providers/AuthProvider";
 import PledgeBarModal from "./PledgeBarModal";
 
 const data = {
@@ -19,7 +19,7 @@ const intervalOptions = [
 ];
 
 const PledgeBar = () => {
-  const { data: session } = useSession();
+  const { user } = useContext(AuthContext);
   const [budget, setBudget] = useState(data.budget || 0);
   const [usedAmount, setUsedAmount] = useState(data.used || 0);
   const [donateAmount, setDonateAmount] = useState(data.donate || 0);
@@ -36,7 +36,7 @@ const PledgeBar = () => {
   const { id } = useParams();
 
   const handleInteraction = () => {
-    if (!session) {
+    if (!user) {
       setIsModalOpen(true);
       return true; // Return true to indicate interaction was blocked
     }
@@ -235,7 +235,7 @@ const PledgeBar = () => {
       <PledgeBarModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        isSignedIn={!!session}
+        isSignedIn={!!user}
       />
     </>
   );
