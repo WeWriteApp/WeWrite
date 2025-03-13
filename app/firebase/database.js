@@ -12,6 +12,8 @@ import {
 import { db } from './firebase';
 import { updateBacklinks } from '../utils/backlinks';
 
+export { db };  // Re-export db
+
 export const createDoc = async (collectionName, data) => {
   try {
     const docRef = await addDoc(collection(db, collectionName), data);
