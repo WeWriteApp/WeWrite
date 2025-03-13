@@ -1,20 +1,64 @@
 "use client";
-import { useContext, useState, useEffect, useRef } from "react";
-import { DataContext } from "../providers/DataProvider";
+import { useContext, useState, useEffect, useRef, useCallback } from "react";
+import { AuthContext } from "../providers/AuthProvider";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { INSERT_CUSTOM_LINK_COMMAND } from "./CustomLinkPlugin";
 
+function debounce(func, delay) {
+  let timeout;
+  return (...args) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+}
+
 function BracketComponent() {
-  const { pages, loading } = useContext(DataContext);
   const [inputValue, setInputValue] = useState("");
-  const [filteredPages, setFilteredPages] = useState(pages);
+  const [allPages, setAllPages] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const containerRef = useRef(null);
   const [editor] = useLexicalComposerContext();
+  const { user } = useContext(AuthContext);
+
+  const fetchResults = useCallback(
+    debounce(async (search) => {
+      if (!user) return;
+
+      setIsSearching(true);
+      try {
+        let groupIds = [];
+        if (user.groups) {
+          groupIds = Object.keys(user.groups);
+        }
+
+        const response = await fetch(
+          `/api/search?userId=${user.uid}&searchTerm=${search}&groupIds=${groupIds}`
+        );
+        const data = await response.json();
+        
+        // Combine all pages into one array
+        const combinedPages = [
+          ...(data.userPages || []),
+          ...(data.groupPages || []),
+          ...(data.publicPages || [])
+        ];
+
+        setAllPages(combinedPages);
+      } catch (error) {
+        console.error("Error fetching search results", error);
+        setAllPages([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500),
+    [user]
+  );
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
-        // Hide the component (can use a state or context to handle this)
         containerRef.current.style.display = 'none';
       }
     };
@@ -26,19 +70,20 @@ function BracketComponent() {
   }, [containerRef]);
 
   useEffect(() => {
-    setFilteredPages(
-      pages.filter((page) =>
-        page.title.toLowerCase().includes(inputValue.toLowerCase())
-      )
-    );
-  }, [inputValue, pages]);
+    if (!inputValue) {
+      setAllPages([]);
+      return;
+    }
+
+    fetchResults(inputValue);
+  }, [inputValue, fetchResults]);
 
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
   };
 
   const handlePageClick = (page) => {
-    const url = `/page/${page.id}`;
+    const url = `/pages/${page.id}`;
     const text = page.title;
 
     if (!url || !text) {
@@ -48,7 +93,6 @@ function BracketComponent() {
 
     editor.dispatchCommand(INSERT_CUSTOM_LINK_COMMAND, { url, text });
 
-    // Use an effect to hide the component after a slight delay to avoid state update during render
     setTimeout(() => {
       if (containerRef.current) {
         containerRef.current.style.display = 'none';
@@ -62,22 +106,29 @@ function BracketComponent() {
         type="text"
         value={inputValue}
         onChange={handleInputChange}
-        placeholder="Create or select a page..."
+        placeholder="Search for a page..."
         className="w-full p-2 border border-gray-300 rounded-md"
         autoComplete="off"
       />
-      {filteredPages.length > 0 && (
-        <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md">
-          {filteredPages.map((page) => (
-            <li
-              key={page.id}
-              className="p-2 hover:bg-gray-200 cursor-pointer"
-              onClick={() => handlePageClick(page)}
-            >
-              {page.title}
-            </li>
-          ))}
-        </ul>
+      {isSearching ? (
+        <div className="mt-2 text-center text-gray-500">Loading...</div>
+      ) : (
+        allPages.length > 0 && (
+          <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md">
+            {allPages.map((page) => (
+              <li
+                key={page.id}
+                className="p-2 hover:bg-gray-200 cursor-pointer flex items-center justify-between"
+                onClick={() => handlePageClick(page)}
+              >
+                <span>{page.title}</span>
+                {page.isPublic && page.userId !== user.uid && (
+                  <span className="text-xs text-gray-500">by {page.userId}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )
       )}
     </div>
   );
