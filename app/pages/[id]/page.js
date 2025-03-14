@@ -4,10 +4,11 @@ import { getPageById } from "../../firebase/database";
 export async function generateMetadata({ params }) {
   const { pageData, versionData } = await getPageById(params.id);
 
-  console.log('Page Data:', pageData);
-  console.log('Version Data:', versionData);
+  console.log('Raw Page Data:', JSON.stringify(pageData, null, 2));
+  console.log('Raw Version Data:', JSON.stringify(versionData, null, 2));
 
   if (!pageData) {
+    console.error('No page data found');
     return {
       title: "Page Not Found",
       description: "This page does not exist"
@@ -20,36 +21,67 @@ export async function generateMetadata({ params }) {
     if (!versionData?.content) {
       console.error('No content found in version data');
     } else {
+      console.log('Raw content before parsing:', versionData.content);
+      
       // Parse content if it's a string, otherwise use it directly
       const parsedContent = typeof versionData.content === 'string' 
         ? JSON.parse(versionData.content)
         : versionData.content;
 
-      console.log('Parsed content:', parsedContent);
+      console.log('Parsed content structure:', JSON.stringify(parsedContent, null, 2));
 
-      if (parsedContent?.root?.children) {
+      // Try different content structures
+      if (Array.isArray(parsedContent)) {
+        // If content is a direct array of nodes
+        contentText = parsedContent
+          .map(node => {
+            console.log('Processing array node:', node);
+            if (node.text) return node.text;
+            if (node.children) {
+              return node.children
+                .map(child => child.text || '')
+                .join('');
+            }
+            return '';
+          })
+          .filter(Boolean)
+          .join(' ');
+      } else if (parsedContent.root?.children) {
+        // If content has root.children structure
         contentText = parsedContent.root.children
           .map(node => {
-            if (!node?.children) return '';
-            return node.children
-              .map(child => {
-                console.log('Processing child node:', child);
-                return child?.text || '';
-              })
-              .join('');
+            console.log('Processing root child node:', node);
+            if (node.text) return node.text;
+            if (node.children) {
+              return node.children
+                .map(child => child.text || '')
+                .join('');
+            }
+            return '';
           })
-          .filter(text => text) // Remove empty strings
+          .filter(Boolean)
           .join(' ');
+      } else {
+        // If content is in a different structure
+        console.error('Unrecognized content structure:', parsedContent);
       }
     }
 
-    console.log('Extracted text:', contentText);
+    console.log('Final extracted text:', contentText);
   } catch (e) {
     console.error('Error parsing content:', e);
+    console.error('Error stack:', e.stack);
     contentText = '';
   }
 
   const description = contentText.slice(0, 200) + (contentText.length > 200 ? '...' : '');
+
+  // Get author name from the correct location in user data
+  const authorName = pageData.author?.displayName || 'NULL';
+  console.log('Author data:', {
+    fullAuthorObject: pageData.author,
+    finalAuthorName: authorName
+  });
 
   // Base URL for OpenGraph image
   const baseUrl = process.env.VERCEL_URL 
@@ -62,13 +94,12 @@ export async function generateMetadata({ params }) {
   
   // Only set content if we actually have content
   if (contentText) {
-    ogImageUrl.searchParams.set('content', contentText);
+    ogImageUrl.searchParams.set('content', contentText.slice(0, 200));
   }
   
-  // Get author name from the correct location in user data
-  const authorName = pageData.author?.displayName || 'NULL';
-  console.log('Author name:', authorName);
   ogImageUrl.searchParams.set('author', authorName);
+
+  console.log('Final OpenGraph URL:', ogImageUrl.toString());
 
   return {
     metadataBase: new URL(baseUrl),

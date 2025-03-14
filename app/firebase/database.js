@@ -147,23 +147,27 @@ export const getPageById = async (pageId) => {
 
     // Get the author data from users collection
     if (pageData.userId) {
+      console.log('Attempting to fetch user data for userId:', pageData.userId);
       const userRef = doc(db, "users", pageData.userId);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        console.log('Raw user data:', JSON.stringify(userData, null, 2));
         pageData.author = {
           displayName: userData.displayName || userData.name,
-          // Explicitly do not include email
         };
+        console.log('Set author data:', JSON.stringify(pageData.author, null, 2));
       } else {
         console.error('No user data found for userId:', pageData.userId);
+        pageData.author = { displayName: 'NULL' };
       }
     } else {
       console.error('No userId found for page:', pageId);
+      pageData.author = { displayName: 'NULL' };
     }
 
-    console.log('Fetched page data:', pageData);
-    console.log('Fetched version data:', versionData);
+    console.log('Final page data:', JSON.stringify(pageData, null, 2));
+    console.log('Final version data:', JSON.stringify(versionData, null, 2));
 
     return { pageData, versionData };
   } catch (e) {
