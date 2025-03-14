@@ -96,8 +96,9 @@ export async function generateMetadata({ params }) {
   
   // Always set content, even if empty
   const finalContent = contentText?.trim() || 'No content available';
-  ogImageUrl.searchParams.set('content', finalContent);
+  ogImageUrl.searchParams.set('content', encodeURIComponent(finalContent));
   console.log('Setting content in URL:', finalContent);
+  console.log('Encoded content in URL:', encodeURIComponent(finalContent));
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
 

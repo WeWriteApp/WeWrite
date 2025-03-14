@@ -22,10 +22,10 @@ export async function GET(request) {
       ? 'NULL'
       : rawAuthor;
 
-    // Process content - only show "No content available" if truly empty
-    const content = !rawContent || rawContent === 'null' || rawContent.trim() === '' 
+    // Process content - only show "No content available" if truly empty or "null"
+    const content = !rawContent || rawContent === 'null' || rawContent === 'undefined' || rawContent.trim() === '' 
       ? 'No content available'
-      : rawContent;
+      : decodeURIComponent(rawContent);
 
     console.log('Processed values:', { title, author, content });
 
@@ -125,6 +125,7 @@ export async function GET(request) {
     );
   } catch (e) {
     console.error('Error generating image:', e);
+    console.error('Error stack:', e.stack);
     return new Response(`Failed to generate image: ${e.message}`, {
       status: 500,
     });
