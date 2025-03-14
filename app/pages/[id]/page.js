@@ -2,8 +2,7 @@ import SinglePageView from "../../components/SinglePageView";
 import { getPageById } from "../../firebase/database";
 
 export async function generateMetadata({ params }) {
-  const { pageData } = await getPageById(params.id);
-  console.log(pageData);
+  const { pageData, versionData } = await getPageById(params.id);
 
   if (!pageData) {
     return {
@@ -12,9 +11,42 @@ export async function generateMetadata({ params }) {
     };
   }
 
+  // Get the first 200 characters of content for the description
+  const contentText = versionData?.content?.root?.children
+    ?.map(node => node?.children?.map(child => child?.text || '').join('') || '')
+    .join(' ') || '';
+  const description = contentText.slice(0, 200) + (contentText.length > 200 ? '...' : '');
+
+  // Base URL for OpenGraph image
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000';
+
+  // Create OpenGraph image URL with parameters
+  const ogImageUrl = new URL('/api/og', baseUrl);
+  ogImageUrl.searchParams.set('title', pageData.title);
+  ogImageUrl.searchParams.set('content', description);
+  ogImageUrl.searchParams.set('author', pageData.userName || 'Anonymous');
+
   return {
     title: pageData.title,
-    description: "A page"
+    description,
+    openGraph: {
+      title: pageData.title,
+      description,
+      images: [{
+        url: ogImageUrl.toString(),
+        width: 1200,
+        height: 630,
+        alt: pageData.title
+      }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: pageData.title,
+      description,
+      images: [ogImageUrl.toString()],
+    },
   };
 }
 
