@@ -17,7 +17,7 @@ export async function GET(request) {
     console.log('Received params:', { title, author, content });
 
     // Truncate content to prevent overflow
-    const truncatedContent = content && content !== 'No content available'
+    const truncatedContent = content && content.trim()
       ? (content.length > 150 ? content.substring(0, 150) + '...' : content)
       : 'No content available';
 
@@ -104,9 +104,7 @@ export async function GET(request) {
         emoji: 'twemoji',
         // Disable caching for development
         headers: {
-          'cache-control': process.env.NODE_ENV === 'development' 
-            ? 'no-cache, no-store' 
-            : 'public, immutable, no-transform, max-age=31536000',
+          'cache-control': 'no-cache, no-store',
         },
       }
     );

@@ -85,12 +85,12 @@ export async function generateMetadata({ params }) {
   // Only set content if we have it
   if (contentText && contentText.trim()) {
     // Ensure content is properly encoded and truncated
-    const truncatedContent = contentText.trim().slice(0, 200);
+    const truncatedContent = contentText.trim();
     ogImageUrl.searchParams.set('content', truncatedContent);
     console.log('Setting content in URL:', truncatedContent);
   } else {
-    console.log('No content to set in URL');
-    ogImageUrl.searchParams.set('content', 'No content available');
+    console.log('No content available');
+    // Don't set content parameter if there's no content
   }
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
