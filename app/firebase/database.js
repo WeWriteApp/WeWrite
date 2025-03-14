@@ -122,6 +122,7 @@ export const getPageById = async (pageId) => {
     const pageSnap = await getDoc(pageRef);
     
     if (!pageSnap.exists()) {
+      console.error('Page not found:', pageId);
       return { pageData: null, versionData: null };
     }
 
@@ -129,6 +130,8 @@ export const getPageById = async (pageId) => {
       id: pageId,
       ...pageSnap.data()
     };
+
+    console.log('Raw page data from Firestore:', JSON.stringify(pageData, null, 2));
 
     // Get the current version
     const currentVersionId = pageData.currentVersion;
@@ -143,30 +146,40 @@ export const getPageById = async (pageId) => {
 
     if (!versionData) {
       console.error('No version data found for version:', currentVersionId);
+    } else {
+      console.log('Version data found:', JSON.stringify(versionData, null, 2));
     }
 
-    // Get the author data from users collection
+    // ALWAYS set a default author object
+    pageData.author = { displayName: 'NULL' };
+
+    // Try to get author data if userId exists
     if (pageData.userId) {
-      console.log('Attempting to fetch user data for userId:', pageData.userId);
-      const userRef = doc(db, "users", pageData.userId);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        console.log('Raw user data:', JSON.stringify(userData, null, 2));
-        pageData.author = {
-          displayName: userData.displayName || userData.name,
-        };
-        console.log('Set author data:', JSON.stringify(pageData.author, null, 2));
-      } else {
-        console.error('No user data found for userId:', pageData.userId);
-        pageData.author = { displayName: 'NULL' };
+      try {
+        console.log('Attempting to fetch user data for userId:', pageData.userId);
+        const userRef = doc(db, "users", pageData.userId);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          console.log('Found user data:', JSON.stringify(userData, null, 2));
+          
+          // Only update author if we actually have a display name
+          if (userData.displayName || userData.name) {
+            pageData.author.displayName = userData.displayName || userData.name;
+          }
+        } else {
+          console.log('No user document found - using default NULL');
+        }
+      } catch (userError) {
+        console.error('Error fetching user data:', userError);
+        // Keep the default NULL author
       }
     } else {
-      console.error('No userId found for page:', pageId);
-      pageData.author = { displayName: 'NULL' };
+      console.log('No userId in page data - using default NULL');
     }
 
-    console.log('Final page data:', JSON.stringify(pageData, null, 2));
+    console.log('Final page data with author:', JSON.stringify(pageData, null, 2));
     console.log('Final version data:', JSON.stringify(versionData, null, 2));
 
     return { pageData, versionData };

@@ -21,67 +21,43 @@ export async function generateMetadata({ params }) {
     if (!versionData?.content) {
       console.error('No content found in version data');
     } else {
-      console.log('Raw content before parsing:', versionData.content);
+      console.log('Raw content before parsing:', typeof versionData.content, versionData.content);
       
-      // Parse content if it's a string, otherwise use it directly
-      const parsedContent = typeof versionData.content === 'string' 
-        ? JSON.parse(versionData.content)
-        : versionData.content;
+      let parsedContent;
+      try {
+        // Handle different content formats
+        if (typeof versionData.content === 'string') {
+          parsedContent = JSON.parse(versionData.content);
+        } else if (typeof versionData.content === 'object') {
+          parsedContent = versionData.content;
+        } else {
+          throw new Error('Content is neither string nor object');
+        }
 
-      console.log('Parsed content structure:', JSON.stringify(parsedContent, null, 2));
+        console.log('Successfully parsed content:', JSON.stringify(parsedContent, null, 2));
 
-      // Try different content structures
-      if (Array.isArray(parsedContent)) {
-        // If content is a direct array of nodes
-        contentText = parsedContent
-          .map(node => {
-            console.log('Processing array node:', node);
-            if (node.text) return node.text;
-            if (node.children) {
-              return node.children
-                .map(child => child.text || '')
-                .join('');
-            }
-            return '';
-          })
-          .filter(Boolean)
-          .join(' ');
-      } else if (parsedContent.root?.children) {
-        // If content has root.children structure
-        contentText = parsedContent.root.children
-          .map(node => {
-            console.log('Processing root child node:', node);
-            if (node.text) return node.text;
-            if (node.children) {
-              return node.children
-                .map(child => child.text || '')
-                .join('');
-            }
-            return '';
-          })
-          .filter(Boolean)
-          .join(' ');
-      } else {
-        // If content is in a different structure
-        console.error('Unrecognized content structure:', parsedContent);
+        // Extract text based on content structure
+        if (Array.isArray(parsedContent)) {
+          contentText = extractTextFromNodes(parsedContent);
+        } else if (parsedContent.root?.children) {
+          contentText = extractTextFromNodes(parsedContent.root.children);
+        } else {
+          console.error('Unrecognized content structure');
+        }
+
+      } catch (parseError) {
+        console.error('Error parsing content:', parseError);
+        // If JSON parsing fails, try to use content directly
+        contentText = String(versionData.content);
       }
     }
 
-    console.log('Final extracted text:', contentText);
+    console.log('Extracted content text:', contentText);
   } catch (e) {
-    console.error('Error parsing content:', e);
+    console.error('Error processing content:', e);
     console.error('Error stack:', e.stack);
     contentText = '';
   }
-
-  const description = contentText.slice(0, 200) + (contentText.length > 200 ? '...' : '');
-
-  // Get author name from the correct location in user data
-  const authorName = pageData.author?.displayName || 'NULL';
-  console.log('Author data:', {
-    fullAuthorObject: pageData.author,
-    finalAuthorName: authorName
-  });
 
   // Base URL for OpenGraph image
   const baseUrl = process.env.VERCEL_URL 
@@ -90,40 +66,80 @@ export async function generateMetadata({ params }) {
 
   // Create OpenGraph image URL with parameters
   const ogImageUrl = new URL('/api/og', baseUrl);
-  ogImageUrl.searchParams.set('title', pageData.title);
   
-  // Only set content if we actually have content
-  if (contentText) {
-    ogImageUrl.searchParams.set('content', contentText.slice(0, 200));
+  // Always set these parameters
+  ogImageUrl.searchParams.set('title', pageData.title || 'Untitled');
+  ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
+  
+  // Only set content if we have it
+  if (contentText && contentText.trim()) {
+    // Ensure content is properly encoded and truncated
+    const truncatedContent = contentText.trim().slice(0, 200);
+    ogImageUrl.searchParams.set('content', truncatedContent);
+    console.log('Setting content in URL:', truncatedContent);
+  } else {
+    console.log('No content to set in URL');
   }
-  
-  ogImageUrl.searchParams.set('author', authorName);
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
 
   return {
     metadataBase: new URL(baseUrl),
-    title: pageData.title,
-    description: contentText || 'No description available',
+    title: pageData.title || 'Untitled',
+    description: contentText.trim() || 'No description available',
     openGraph: {
-      title: pageData.title,
-      description: contentText || 'No description available',
+      title: pageData.title || 'Untitled',
+      description: contentText.trim() || 'No description available',
       type: 'article',
       url: `${baseUrl}/pages/${params.id}`,
       images: [{
         url: ogImageUrl.toString(),
         width: 1200,
         height: 630,
-        alt: pageData.title
+        alt: pageData.title || 'Untitled'
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: pageData.title,
-      description: contentText || 'No description available',
+      title: pageData.title || 'Untitled',
+      description: contentText.trim() || 'No description available',
       images: [ogImageUrl.toString()],
     },
   };
+}
+
+// Helper function to extract text from nodes
+function extractTextFromNodes(nodes) {
+  if (!Array.isArray(nodes)) {
+    console.error('Nodes is not an array:', nodes);
+    return '';
+  }
+
+  return nodes
+    .map(node => {
+      console.log('Processing node:', node);
+      
+      // If node has direct text
+      if (node.text) {
+        return node.text;
+      }
+      
+      // If node has children
+      if (node.children && Array.isArray(node.children)) {
+        return node.children
+          .map(child => {
+            console.log('Processing child:', child);
+            return child.text || '';
+          })
+          .filter(Boolean)
+          .join(' ');
+      }
+      
+      return '';
+    })
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
 
 const Page = async ({ params }) => {
