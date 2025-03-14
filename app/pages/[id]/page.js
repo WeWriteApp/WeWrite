@@ -82,16 +82,10 @@ export async function generateMetadata({ params }) {
   ogImageUrl.searchParams.set('title', pageData.title || 'Untitled');
   ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
   
-  // Only set content if we have it
-  if (contentText && contentText.trim()) {
-    // Ensure content is properly encoded and truncated
-    const truncatedContent = contentText.trim();
-    ogImageUrl.searchParams.set('content', truncatedContent);
-    console.log('Setting content in URL:', truncatedContent);
-  } else {
-    console.log('No content available');
-    // Don't set content parameter if there's no content
-  }
+  // Always set content, even if empty
+  const finalContent = contentText?.trim() || '';
+  ogImageUrl.searchParams.set('content', finalContent);
+  console.log('Setting content in URL:', finalContent || 'No content available');
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
 

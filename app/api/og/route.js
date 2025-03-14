@@ -7,19 +7,22 @@ export const dynamic = 'force-dynamic';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    console.log('Raw search params:', searchParams.toString());
     console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
     // Get the query parameters with fallbacks
     const title = searchParams.get('title') || 'Untitled Page';
-    const author = searchParams.get('author');
-    const content = searchParams.get('content');
+    const author = searchParams.get('author') || 'NULL';
+    const content = searchParams.get('content') || '';
 
-    console.log('Received params:', { title, author, content });
+    console.log('Processed params:', { title, author, content });
 
     // Truncate content to prevent overflow
-    const truncatedContent = content && content.trim()
+    const truncatedContent = content && content !== 'null' && content.trim()
       ? (content.length > 150 ? content.substring(0, 150) + '...' : content)
       : 'No content available';
+
+    console.log('Final content to display:', truncatedContent);
 
     return new ImageResponse(
       (
@@ -50,7 +53,7 @@ export async function GET(request) {
               fontWeight: 500,
             }}
           >
-            {author === 'NULL' || !author ? 'Anonymous' : `By ${author}`}
+            {author === 'NULL' || author === 'null' || !author ? 'Anonymous' : `By ${author}`}
           </div>
 
           {/* Title */}
