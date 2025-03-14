@@ -85,18 +85,6 @@ export async function generateMetadata({ params }) {
     contentText = '';
   }
 
-  // Prepare parameters
-  const title = pageData.title?.trim() || 'Untitled';
-  const author = (pageData.author?.displayName && pageData.author.displayName !== 'NULL') 
-    ? pageData.author.displayName.trim() 
-    : 'Anonymous';
-  const content = (contentText?.trim() || '').slice(0, 100);
-
-  // Create URL-safe parameters by encoding each segment separately
-  const safeTitle = encodeURIComponent(title).replace(/%20/g, '-');
-  const safeAuthor = encodeURIComponent(author).replace(/%20/g, '-');
-  const safeContent = encodeURIComponent(content).replace(/%20/g, '-');
-
   // Base URL for OpenGraph image
   const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
     ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
@@ -104,14 +92,31 @@ export async function generateMetadata({ params }) {
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
 
-  // Construct the OpenGraph image URL using path segments instead of query parameters
+  // Prepare parameters - ensure they're clean and properly formatted
+  const title = (pageData.title?.trim() || 'Untitled').replace(/[^\w\s-]/g, '');
+  const author = ((pageData.author?.displayName && pageData.author.displayName !== 'NULL') 
+    ? pageData.author.displayName.trim() 
+    : 'Anonymous').replace(/[^\w\s-]/g, '');
+  const content = (contentText?.trim() || '')
+    .slice(0, 100)
+    .replace(/[^\w\s-]/g, '');
+
+  // Create URL-safe parameters
+  const safeTitle = encodeURIComponent(title).replace(/%20/g, '-');
+  const safeAuthor = encodeURIComponent(author).replace(/%20/g, '-');
+  const safeContent = encodeURIComponent(content).replace(/%20/g, '-');
+
+  // Construct the OpenGraph image URL
   const ogImageUrl = `${baseUrl}/api/og/${safeTitle}/${safeAuthor}/${safeContent}`;
 
-  console.log('OpenGraph URL:', {
+  console.log('OpenGraph generation:', {
     baseUrl,
-    title: safeTitle,
-    author: safeAuthor,
-    content: safeContent,
+    rawTitle: title,
+    rawAuthor: author,
+    rawContent: content,
+    safeTitle,
+    safeAuthor,
+    safeContent,
     finalUrl: ogImageUrl
   });
 
@@ -124,7 +129,7 @@ export async function generateMetadata({ params }) {
       title,
       description: content || 'No description available',
       type: 'article',
-      url: new URL(`/pages/${params.id}`, baseUrl).toString(),
+      url: `${baseUrl}/pages/${params.id}`,
       images: [{
         url: ogImageUrl,
         width: 1200,
@@ -140,13 +145,7 @@ export async function generateMetadata({ params }) {
     },
   };
 
-  console.log('Generated metadata:', {
-    ...metadata,
-    openGraph: {
-      ...metadata.openGraph,
-      images: metadata.openGraph.images.map(img => ({ ...img, url: img.url }))
-    }
-  });
+  console.log('Generated metadata:', JSON.stringify(metadata, null, 2));
 
   return metadata;
 }

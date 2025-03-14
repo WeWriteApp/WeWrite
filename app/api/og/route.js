@@ -132,28 +132,33 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
+    console.log('Received request URL:', request.url);
     const url = new URL(request.url);
-    const pathSegments = url.pathname.split('/').filter(Boolean);
-    
-    // Remove 'api' and 'og' from the path segments
-    const [_, __, ...params] = pathSegments;
-    
-    // Extract parameters from path segments
-    const [titleSegment = '', authorSegment = '', ...contentSegments] = params;
-    
-    // Decode parameters and handle edge cases
-    const title = decodeURIComponent(titleSegment.replace(/-/g, ' ')) || 'Untitled Page';
-    const author = decodeURIComponent(authorSegment.replace(/-/g, ' ')) || 'Anonymous';
-    const content = contentSegments.length > 0 
-      ? decodeURIComponent(contentSegments.join('/').replace(/-/g, ' '))
-      : 'No content available';
-
-    console.log('Generating OG image with:', {
-      title,
-      author,
-      content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
+    console.log('Parsed URL:', {
+      pathname: url.pathname,
+      search: url.search,
+      hash: url.hash
     });
 
+    // Get the path segments after /api/og/
+    const segments = url.pathname.split('/').filter(Boolean);
+    console.log('URL segments:', segments);
+
+    // Extract title, author, and content from the segments
+    // Skip 'api' and 'og' segments
+    const [_, __, ...params] = segments;
+    console.log('Params after skipping api/og:', params);
+
+    // Extract and decode parameters
+    const title = params[0] ? decodeURIComponent(params[0].replace(/-/g, ' ')) : 'Untitled';
+    const author = params[1] ? decodeURIComponent(params[1].replace(/-/g, ' ')) : 'Anonymous';
+    const content = params.slice(2).length > 0 
+      ? decodeURIComponent(params.slice(2).join('/').replace(/-/g, ' '))
+      : 'No content available';
+
+    console.log('Decoded parameters:', { title, author, content });
+
+    // Generate the image
     return new ImageResponse(
       (
         <div
@@ -241,14 +246,13 @@ export async function GET(request) {
         emoji: 'twemoji',
         headers: {
           'content-type': 'image/png',
-          'cache-control': process.env.NODE_ENV === 'production'
-            ? 'public, max-age=3600, s-maxage=3600'
-            : 'no-cache, no-store',
+          'cache-control': 'public, max-age=0, must-revalidate',
         },
       }
     );
   } catch (e) {
-    console.error('Error generating image:', e);
+    console.error('Error in OpenGraph generation:', e);
+    console.error('Error stack:', e.stack);
     
     // Return a fallback error image
     return new ImageResponse(
