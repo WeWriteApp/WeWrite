@@ -132,14 +132,38 @@ export const getPageById = async (pageId) => {
 
     // Get the current version
     const currentVersionId = pageData.currentVersion;
+    if (!currentVersionId) {
+      console.error('No current version found for page:', pageId);
+      return { pageData, versionData: null };
+    }
+
     const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
     const versionSnap = await getDoc(versionRef);
     const versionData = versionSnap.exists() ? versionSnap.data() : null;
 
-    // Get the author data
-    const authorRef = doc(db, "users", pageData.userId);
-    const authorSnap = await getDoc(authorRef);
-    pageData.author = authorSnap.exists() ? authorSnap.data() : null;
+    if (!versionData) {
+      console.error('No version data found for version:', currentVersionId);
+    }
+
+    // Get the author data from users collection
+    if (pageData.userId) {
+      const userRef = doc(db, "users", pageData.userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        pageData.author = {
+          displayName: userData.displayName || userData.name,
+          // Explicitly do not include email
+        };
+      } else {
+        console.error('No user data found for userId:', pageData.userId);
+      }
+    } else {
+      console.error('No userId found for page:', pageId);
+    }
+
+    console.log('Fetched page data:', pageData);
+    console.log('Fetched version data:', versionData);
 
     return { pageData, versionData };
   } catch (e) {

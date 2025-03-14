@@ -17,19 +17,31 @@ export async function generateMetadata({ params }) {
   // Parse the content from versionData
   let contentText = '';
   try {
-    // Check if content is already a string or needs parsing
-    const content = typeof versionData?.content === 'string' 
-      ? JSON.parse(versionData.content)
-      : versionData?.content || { root: { children: [] } };
+    if (!versionData?.content) {
+      console.error('No content found in version data');
+    } else {
+      // Parse content if it's a string, otherwise use it directly
+      const parsedContent = typeof versionData.content === 'string' 
+        ? JSON.parse(versionData.content)
+        : versionData.content;
 
-    console.log('Parsed content:', content);
+      console.log('Parsed content:', parsedContent);
 
-    contentText = content?.root?.children
-      ?.map(node => {
-        console.log('Node:', node);
-        return node?.children?.map(child => child?.text || '').join('') || '';
-      })
-      .join(' ') || '';
+      if (parsedContent?.root?.children) {
+        contentText = parsedContent.root.children
+          .map(node => {
+            if (!node?.children) return '';
+            return node.children
+              .map(child => {
+                console.log('Processing child node:', child);
+                return child?.text || '';
+              })
+              .join('');
+          })
+          .filter(text => text) // Remove empty strings
+          .join(' ');
+      }
+    }
 
     console.log('Extracted text:', contentText);
   } catch (e) {
@@ -47,20 +59,24 @@ export async function generateMetadata({ params }) {
   // Create OpenGraph image URL with parameters
   const ogImageUrl = new URL('/api/og', baseUrl);
   ogImageUrl.searchParams.set('title', pageData.title);
-  ogImageUrl.searchParams.set('content', contentText || description || 'No content available');
+  
+  // Only set content if we actually have content
+  if (contentText) {
+    ogImageUrl.searchParams.set('content', contentText);
+  }
   
   // Get author name from the correct location in user data
-  const authorName = pageData.author?.displayName || pageData.author?.name || 'NULL';
+  const authorName = pageData.author?.displayName || 'NULL';
   console.log('Author name:', authorName);
   ogImageUrl.searchParams.set('author', authorName);
 
   return {
     metadataBase: new URL(baseUrl),
     title: pageData.title,
-    description,
+    description: contentText || 'No description available',
     openGraph: {
       title: pageData.title,
-      description,
+      description: contentText || 'No description available',
       type: 'article',
       url: `${baseUrl}/pages/${params.id}`,
       images: [{
@@ -73,7 +89,7 @@ export async function generateMetadata({ params }) {
     twitter: {
       card: 'summary_large_image',
       title: pageData.title,
-      description,
+      description: contentText || 'No description available',
       images: [ogImageUrl.toString()],
     },
   };
