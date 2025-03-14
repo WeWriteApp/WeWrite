@@ -1,11 +1,8 @@
 import { ImageResponse } from '@vercel/og';
 
+// Use the new route segment config format
 export const runtime = 'edge';
-
-// Disable the default middleware for this route
-export const config = {
-  matcher: '/api/og',
-};
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
@@ -89,8 +86,9 @@ export async function GET(request) {
       }
     );
 
-    // Add the bypass token header for Vercel preview deployments
-    response.headers.set('x-vercel-protection-bypass', process.env.VERCEL_PREVIEW_TOKEN || '');
+    // Add CORS headers to allow access from preview deployments
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET');
     
     return response;
   } catch (e) {

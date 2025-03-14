@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 export async function middleware(req) {
-  // Skip auth check for OpenGraph route
+  // Skip auth check for OpenGraph route and handle CORS
   if (req.nextUrl.pathname.startsWith('/api/og')) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    return response;
   }
 
   // Continue with normal auth flow for other routes
@@ -14,16 +18,18 @@ export async function middleware(req) {
   return res;
 }
 
+// Update matcher to exclude api/og route
 export const config = {
   matcher: [
     /*
      * Match all request paths except for:
+     * - api/og (OpenGraph route)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
      * - public files
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/og|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }; 
