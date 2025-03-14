@@ -12,15 +12,27 @@ export async function GET(request) {
 
     // Get the query parameters with fallbacks
     const title = searchParams.get('title') || 'Untitled Page';
-    const author = searchParams.get('author') || 'NULL';
-    const content = searchParams.get('content') || '';
+    const rawAuthor = searchParams.get('author');
+    const rawContent = searchParams.get('content');
 
-    console.log('Processed params:', { title, author, content });
+    console.log('Raw values:', { title, rawAuthor, rawContent });
+
+    // Process author - if null, undefined, or 'NULL', show NULL
+    const author = !rawAuthor || rawAuthor === 'null' || rawAuthor === 'NULL' 
+      ? 'NULL'
+      : rawAuthor;
+
+    // Process content - only show "No content available" if truly empty
+    const content = !rawContent || rawContent === 'null' || rawContent.trim() === '' 
+      ? 'No content available'
+      : rawContent;
+
+    console.log('Processed values:', { title, author, content });
 
     // Truncate content to prevent overflow
-    const truncatedContent = content && content !== 'null' && content.trim()
-      ? (content.length > 150 ? content.substring(0, 150) + '...' : content)
-      : 'No content available';
+    const truncatedContent = content.length > 150 
+      ? content.substring(0, 150) + '...' 
+      : content;
 
     console.log('Final content to display:', truncatedContent);
 
@@ -53,7 +65,7 @@ export async function GET(request) {
               fontWeight: 500,
             }}
           >
-            {author === 'NULL' || author === 'null' || !author ? 'Anonymous' : `By ${author}`}
+            {author === 'NULL' ? 'NULL' : `By ${author}`}
           </div>
 
           {/* Title */}
