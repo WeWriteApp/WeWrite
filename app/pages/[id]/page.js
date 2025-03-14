@@ -11,10 +11,18 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  // Get the first 200 characters of content for the description
-  const contentText = versionData?.content?.root?.children
-    ?.map(node => node?.children?.map(child => child?.text || '').join('') || '')
-    .join(' ') || '';
+  // Parse the content from versionData
+  let contentText = '';
+  try {
+    const parsedContent = JSON.parse(versionData?.content || '{"root":{"children":[]}}');
+    contentText = parsedContent?.root?.children
+      ?.map(node => node?.children?.map(child => child?.text || '').join('') || '')
+      .join(' ') || '';
+  } catch (e) {
+    console.error('Error parsing content:', e);
+    contentText = '';
+  }
+
   const description = contentText.slice(0, 200) + (contentText.length > 200 ? '...' : '');
 
   // Base URL for OpenGraph image
@@ -25,8 +33,9 @@ export async function generateMetadata({ params }) {
   // Create OpenGraph image URL with parameters
   const ogImageUrl = new URL('/api/og', baseUrl);
   ogImageUrl.searchParams.set('title', pageData.title);
-  ogImageUrl.searchParams.set('content', contentText);
-  ogImageUrl.searchParams.set('author', pageData.author?.name || pageData.author?.email || 'Anonymous');
+  ogImageUrl.searchParams.set('content', contentText || 'No content available');
+  // Never expose email, use NULL if no username
+  ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
 
   return {
     metadataBase: new URL(baseUrl),

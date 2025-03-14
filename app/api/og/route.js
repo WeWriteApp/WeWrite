@@ -10,7 +10,7 @@ export async function GET(request) {
 
     // Get the query parameters with fallbacks
     const title = searchParams.get('title') || 'Untitled Page';
-    const author = searchParams.get('author') || 'Anonymous';
+    const author = searchParams.get('author');
     const content = searchParams.get('content') || 'No content available';
 
     // Truncate content to prevent overflow
@@ -47,7 +47,7 @@ export async function GET(request) {
               fontWeight: 500,
             }}
           >
-            By {author}
+            {author === 'NULL' ? 'Anonymous' : `By ${author}`}
           </div>
 
           {/* Title */}
