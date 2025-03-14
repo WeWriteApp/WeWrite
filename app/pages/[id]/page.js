@@ -20,6 +20,7 @@ export async function generateMetadata({ params }) {
   try {
     if (!versionData?.content) {
       console.error('No content found in version data');
+      console.log('Version data:', versionData);
     } else {
       console.log('Raw content type:', typeof versionData.content);
       console.log('Raw content value:', versionData.content);
@@ -30,15 +31,15 @@ export async function generateMetadata({ params }) {
         if (typeof versionData.content === 'string') {
           try {
             parsedContent = JSON.parse(versionData.content);
-            console.log('Parsed string content:', parsedContent);
+            console.log('Successfully parsed content as JSON:', parsedContent);
           } catch (e) {
-            console.log('Using content directly as string');
+            console.log('Content is not JSON, using as plain text');
             contentText = versionData.content;
             parsedContent = null;
           }
         } else if (typeof versionData.content === 'object') {
           parsedContent = versionData.content;
-          console.log('Using content directly as object');
+          console.log('Content is already an object');
         }
 
         if (parsedContent) {
@@ -64,18 +65,20 @@ export async function generateMetadata({ params }) {
             // Try to extract text from the object itself
             contentText = extractTextFromObject(parsedContent);
           }
-        } else {
-          // If we couldn't parse the content, use it directly
-          contentText = String(versionData.content);
         }
       } catch (parseError) {
         console.error('Error parsing content:', parseError);
+        console.error('Parse error stack:', parseError.stack);
         // If all else fails, try to use the content directly
         contentText = String(versionData.content);
       }
     }
 
-    console.log('Final extracted text:', contentText);
+    console.log('Extracted content text:', {
+      text: contentText,
+      length: contentText?.length,
+      type: typeof contentText
+    });
   } catch (e) {
     console.error('Error processing content:', e);
     console.error('Error stack:', e.stack);
@@ -96,9 +99,16 @@ export async function generateMetadata({ params }) {
   
   // Always set content, even if empty
   const finalContent = contentText?.trim() || 'No content available';
-  ogImageUrl.searchParams.set('content', encodeURIComponent(finalContent));
-  console.log('Setting content in URL:', finalContent);
-  console.log('Encoded content in URL:', encodeURIComponent(finalContent));
+  const encodedContent = encodeURIComponent(finalContent);
+  ogImageUrl.searchParams.set('content', encodedContent);
+  
+  console.log('URL parameters:', {
+    title: pageData.title || 'Untitled',
+    author: pageData.author?.displayName || 'NULL',
+    rawContent: finalContent,
+    encodedContent,
+    encodedLength: encodedContent.length
+  });
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
 

@@ -8,14 +8,19 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     console.log('Raw search params:', searchParams.toString());
-    console.log('Search params:', Object.fromEntries(searchParams.entries()));
+    console.log('Raw search params entries:', Array.from(searchParams.entries()));
 
     // Get the query parameters with fallbacks
     const title = searchParams.get('title') || 'Untitled Page';
     const rawAuthor = searchParams.get('author');
     const rawContent = searchParams.get('content');
 
-    console.log('Raw values:', { title, rawAuthor, rawContent });
+    console.log('Raw values before processing:', {
+      title,
+      rawAuthor,
+      rawContent,
+      rawContentLength: rawContent?.length
+    });
 
     // Process author - if null, undefined, or 'NULL', show NULL
     const author = !rawAuthor || rawAuthor === 'null' || rawAuthor === 'NULL' 
@@ -23,18 +28,39 @@ export async function GET(request) {
       : rawAuthor;
 
     // Process content - only show "No content available" if truly empty or "null"
-    const content = !rawContent || rawContent === 'null' || rawContent === 'undefined' || rawContent.trim() === '' 
-      ? 'No content available'
-      : decodeURIComponent(rawContent);
+    let content;
+    if (!rawContent || rawContent === 'null' || rawContent === 'undefined' || rawContent.trim() === '') {
+      console.log('Content is empty or null, using fallback');
+      content = 'No content available';
+    } else {
+      try {
+        content = decodeURIComponent(rawContent);
+        console.log('Successfully decoded content:', content);
+      } catch (e) {
+        console.error('Error decoding content:', e);
+        console.log('Using raw content instead');
+        content = rawContent;
+      }
+    }
 
-    console.log('Processed values:', { title, author, content });
+    console.log('Processed values:', {
+      title,
+      author,
+      content,
+      contentLength: content.length
+    });
 
     // Truncate content to prevent overflow
     const truncatedContent = content.length > 150 
       ? content.substring(0, 150) + '...' 
       : content;
 
-    console.log('Final content to display:', truncatedContent);
+    console.log('Final values for display:', {
+      title,
+      author,
+      truncatedContent,
+      truncatedLength: truncatedContent.length
+    });
 
     return new ImageResponse(
       (
@@ -124,7 +150,7 @@ export async function GET(request) {
       }
     );
   } catch (e) {
-    console.error('Error generating image:', e);
+    console.error('Error in OpenGraph generation:', e);
     console.error('Error stack:', e.stack);
     return new Response(`Failed to generate image: ${e.message}`, {
       status: 500,
