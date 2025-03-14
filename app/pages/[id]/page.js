@@ -90,51 +90,65 @@ export async function generateMetadata({ params }) {
     ? `https://${process.env.VERCEL_URL}`
     : process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
-  // Create OpenGraph image URL with parameters
-  const ogImageUrl = new URL('/api/og', baseUrl);
-  
-  // Always set these parameters
-  ogImageUrl.searchParams.set('title', pageData.title || 'Untitled');
-  ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
-  
-  // Always set content, even if empty
-  const finalContent = contentText?.trim() || 'No content available';
-  const encodedContent = encodeURIComponent(finalContent);
-  ogImageUrl.searchParams.set('content', encodedContent);
-  
-  console.log('URL parameters:', {
-    title: pageData.title || 'Untitled',
-    author: pageData.author?.displayName || 'NULL',
-    rawContent: finalContent,
-    encodedContent,
-    encodedLength: encodedContent.length
+  // Prepare parameters
+  const title = pageData.title?.trim() || 'Untitled';
+  const author = pageData.author?.displayName?.trim() || 'Anonymous';
+  // Limit content to 100 characters for URL length
+  const content = (contentText?.trim() || '').slice(0, 100);
+
+  console.log('Pre-encoding values:', { title, author, content });
+
+  // Create path segments - use simpler encoding
+  const encodedTitle = encodeURIComponent(title);
+  const encodedAuthor = encodeURIComponent(author);
+  const encodedContent = encodeURIComponent(content);
+
+  // Create OpenGraph image URL with path segments
+  const ogImageUrl = `${baseUrl}/api/og/${encodedTitle}/${encodedAuthor}/${encodedContent}`;
+
+  console.log('OpenGraph URL components:', {
+    baseUrl,
+    title: encodedTitle,
+    author: encodedAuthor,
+    content: encodedContent,
+    finalUrl: ogImageUrl
   });
 
-  console.log('Final OpenGraph URL:', ogImageUrl.toString());
-
-  return {
+  // Create metadata with absolute URLs
+  const metadata = {
     metadataBase: new URL(baseUrl),
-    title: pageData.title || 'Untitled',
-    description: contentText.trim() || 'No description available',
+    title,
+    description: content || 'No description available',
     openGraph: {
-      title: pageData.title || 'Untitled',
-      description: contentText.trim() || 'No description available',
+      title,
+      description: content || 'No description available',
       type: 'article',
-      url: `${baseUrl}/pages/${params.id}`,
+      url: new URL(`/pages/${params.id}`, baseUrl).toString(),
       images: [{
-        url: ogImageUrl.toString(),
+        url: ogImageUrl,
         width: 1200,
         height: 630,
-        alt: pageData.title || 'Untitled'
+        alt: title,
+        type: 'image/png'
       }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: pageData.title || 'Untitled',
-      description: contentText.trim() || 'No description available',
-      images: [ogImageUrl.toString()],
+      title,
+      description: content || 'No description available',
+      images: [ogImageUrl],
     },
   };
+
+  console.log('Generated metadata:', {
+    ...metadata,
+    openGraph: {
+      ...metadata.openGraph,
+      images: metadata.openGraph.images.map(img => ({ ...img, url: img.url }))
+    }
+  });
+
+  return metadata;
 }
 
 // Helper function to extract text from nodes

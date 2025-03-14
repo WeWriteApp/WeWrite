@@ -4,65 +4,24 @@ import { ImageResponse } from '@vercel/og';
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
+// Allow caching for production, disable for development
+export const revalidate = process.env.NODE_ENV === 'production' ? 3600 : 0;
+
+async function generateImage(params) {
   try {
-    const { searchParams } = new URL(request.url);
-    console.log('Raw search params:', searchParams.toString());
-    console.log('Raw search params entries:', Array.from(searchParams.entries()));
+    const title = params.title || 'Untitled Page';
+    const author = params.author || 'Anonymous';
+    const content = params.content || '';
 
-    // Get the query parameters with fallbacks
-    const title = searchParams.get('title') || 'Untitled Page';
-    const rawAuthor = searchParams.get('author');
-    const rawContent = searchParams.get('content');
+    console.log('Generating image with:', { title, author, content });
 
-    console.log('Raw values before processing:', {
-      title,
-      rawAuthor,
-      rawContent,
-      rawContentLength: rawContent?.length
-    });
-
-    // Process author - if null, undefined, or 'NULL', show NULL
-    const author = !rawAuthor || rawAuthor === 'null' || rawAuthor === 'NULL' 
-      ? 'NULL'
-      : rawAuthor;
-
-    // Process content - only show "No content available" if truly empty or "null"
-    let content;
-    if (!rawContent || rawContent === 'null' || rawContent === 'undefined' || rawContent.trim() === '') {
-      console.log('Content is empty or null, using fallback');
-      content = 'No content available';
-    } else {
-      try {
-        content = decodeURIComponent(rawContent);
-        console.log('Successfully decoded content:', content);
-      } catch (e) {
-        console.error('Error decoding content:', e);
-        console.log('Using raw content instead');
-        content = rawContent;
-      }
-    }
-
-    console.log('Processed values:', {
-      title,
-      author,
-      content,
-      contentLength: content.length
-    });
-
-    // Truncate content to prevent overflow
+    // Truncate content if needed
     const truncatedContent = content.length > 150 
       ? content.substring(0, 150) + '...' 
       : content;
 
-    console.log('Final values for display:', {
-      title,
-      author,
-      truncatedContent,
-      truncatedLength: truncatedContent.length
-    });
-
-    return new ImageResponse(
+    // Create a complete image in one go
+    const image = new ImageResponse(
       (
         <div
           style={{
@@ -91,7 +50,7 @@ export async function GET(request) {
               fontWeight: 500,
             }}
           >
-            {author === 'NULL' ? 'NULL' : `By ${author}`}
+            {author === 'Anonymous' ? 'Anonymous' : `By ${author}`}
           </div>
 
           {/* Title */}
@@ -120,7 +79,7 @@ export async function GET(request) {
               backgroundColor: '#000000',
             }}
           >
-            {truncatedContent}
+            {truncatedContent || 'No content available'}
           </div>
 
           {/* WeWrite branding */}
@@ -143,17 +102,71 @@ export async function GET(request) {
         height: 630,
         // Add emoji support
         emoji: 'twemoji',
-        // Disable caching for development
         headers: {
-          'cache-control': 'no-cache, no-store',
+          'content-type': 'image/png',
+          'cache-control': process.env.NODE_ENV === 'production'
+            ? 'public, max-age=3600, s-maxage=3600'
+            : 'no-cache, no-store',
         },
       }
     );
+
+    return image;
   } catch (e) {
-    console.error('Error in OpenGraph generation:', e);
-    console.error('Error stack:', e.stack);
-    return new Response(`Failed to generate image: ${e.message}`, {
-      status: 500,
+    console.error('Error generating image:', e);
+    throw e;
+  }
+}
+
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    console.log('POST request body:', body);
+    return generateImage(body);
+  } catch (e) {
+    console.error('Error in POST handler:', e);
+    return new Response(`Failed to generate image: ${e.message}`, { status: 500 });
+  }
+}
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    console.log('Raw URL:', request.url);
+    console.log('Search params:', Object.fromEntries(searchParams.entries()));
+
+    const params = {
+      title: searchParams.get('title'),
+      author: searchParams.get('author'),
+      content: searchParams.get('content')
+    };
+
+    // Decode parameters and handle null values
+    Object.keys(params).forEach(key => {
+      if (params[key]) {
+        try {
+          params[key] = decodeURIComponent(params[key]);
+          if (params[key] === 'null') {
+            params[key] = '';
+          }
+        } catch (e) {
+          params[key] = '';
+        }
+      } else {
+        params[key] = '';
+      }
     });
+
+    console.log('Decoded params:', params);
+    const image = await generateImage(params);
+    return new Response(image.body, {
+      headers: {
+        ...image.headers,
+        'content-type': 'image/png',
+      },
+    });
+  } catch (e) {
+    console.error('Error in GET handler:', e);
+    return new Response(`Failed to generate image: ${e.message}`, { status: 500 });
   }
 } 
