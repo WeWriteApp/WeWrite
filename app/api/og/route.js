@@ -28,6 +28,7 @@ export async function GET(request) {
             flexDirection: 'column',
             backgroundColor: '#000000',
             padding: '40px 60px',
+            position: 'relative',
           }}
         >
           {/* Author badge */}
@@ -72,12 +73,24 @@ export async function GET(request) {
               opacity: 0.9,
               lineHeight: 1.5,
               maxWidth: '85%',
-              background: 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              backgroundColor: '#000000',
             }}
           >
             {truncatedContent}
+          </div>
+
+          {/* WeWrite branding */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '40px',
+              right: '60px',
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: 24,
+              fontWeight: 500,
+            }}
+          >
+            on WeWrite
           </div>
         </div>
       ),

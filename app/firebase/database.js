@@ -117,26 +117,34 @@ export const listenToPageById = (pageId, onPageUpdate) => {
 };
 
 export const getPageById = async (pageId) => {
-  // should get the page and versions
   try {
     const pageRef = doc(db, "pages", pageId);
-    const pageSnap = await getDoc(pageRef, { source: 'cache' });
+    const pageSnap = await getDoc(pageRef);
+    
+    if (!pageSnap.exists()) {
+      return { pageData: null, versionData: null };
+    }
+
     const pageData = {
       id: pageId,
       ...pageSnap.data()
-    }
-    // // get the current version
-    // const currentVersionId = pageData.currentVersion;
-    // const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
-    // const versionSnap = await getDoc(versionRef, { source: 'cache' });
-    // const versionData = versionSnap.data();
+    };
 
-    // // get links
-    // const links = extractLinksFromNodes(JSON.parse(versionData.content));
-    return { pageData };
+    // Get the current version
+    const currentVersionId = pageData.currentVersion;
+    const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
+    const versionSnap = await getDoc(versionRef);
+    const versionData = versionSnap.exists() ? versionSnap.data() : null;
+
+    // Get the author data
+    const authorRef = doc(db, "users", pageData.userId);
+    const authorSnap = await getDoc(authorRef);
+    pageData.author = authorSnap.exists() ? authorSnap.data() : null;
+
+    return { pageData, versionData };
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error('Error in getPageById:', e);
+    return { pageData: null, versionData: null };
   }
 }
 
