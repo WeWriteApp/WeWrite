@@ -131,42 +131,148 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    console.log('Raw URL:', request.url);
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
+
+    console.log('Request URL:', request.url);
     console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
-    const params = {
-      title: searchParams.get('title'),
-      author: searchParams.get('author'),
-      content: searchParams.get('content')
-    };
+    // Get and validate parameters
+    const title = searchParams.get('title') || 'Untitled Page';
+    const author = searchParams.get('author') || 'Anonymous';
+    const content = searchParams.get('content') || 'No content available';
 
-    // Decode parameters and handle null values
-    Object.keys(params).forEach(key => {
-      if (params[key]) {
-        try {
-          params[key] = decodeURIComponent(params[key]);
-          if (params[key] === 'null') {
-            params[key] = '';
-          }
-        } catch (e) {
-          params[key] = '';
-        }
-      } else {
-        params[key] = '';
+    console.log('Processing request with:', { title, author, content: content.substring(0, 50) });
+
+    // Generate the image
+    const image = new ImageResponse(
+      (
+        <div
+          style={{
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#000000',
+            padding: '40px 60px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              flex: 1,
+            }}
+          >
+            {/* Title */}
+            <div
+              style={{
+                fontSize: 60,
+                fontWeight: 800,
+                color: '#ffffff',
+                lineHeight: 1.2,
+                wordBreak: 'break-word',
+              }}
+            >
+              {title}
+            </div>
+
+            {/* Author */}
+            <div
+              style={{
+                fontSize: 30,
+                color: '#ffffff',
+                opacity: 0.8,
+              }}
+            >
+              By {author}
+            </div>
+
+            {/* Content */}
+            <div
+              style={{
+                fontSize: 36,
+                color: '#ffffff',
+                opacity: 0.9,
+                lineHeight: 1.5,
+                marginTop: 20,
+                wordBreak: 'break-word',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {content}
+            </div>
+          </div>
+
+          {/* WeWrite branding */}
+          <div
+            style={{
+              marginTop: 'auto',
+              color: '#ffffff',
+              opacity: 0.5,
+              fontSize: 24,
+              textAlign: 'right',
+            }}
+          >
+            on WeWrite
+          </div>
+        </div>
+      ),
+      {
+        width: 1200,
+        height: 630,
+        emoji: 'twemoji',
       }
-    });
+    );
 
-    console.log('Decoded params:', params);
-    const image = await generateImage(params);
+    // Return the image with appropriate headers
     return new Response(image.body, {
       headers: {
-        ...image.headers,
         'content-type': 'image/png',
+        'cache-control': process.env.NODE_ENV === 'production'
+          ? 'public, max-age=3600, s-maxage=3600'
+          : 'no-cache, no-store',
       },
     });
   } catch (e) {
-    console.error('Error in GET handler:', e);
-    return new Response(`Failed to generate image: ${e.message}`, { status: 500 });
+    console.error('Error generating image:', e.message);
+    console.error('Error stack:', e.stack);
+    
+    // Return a basic error image
+    const errorImage = new ImageResponse(
+      (
+        <div
+          style={{
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#000000',
+            padding: '40px',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ color: '#ff0000', fontSize: 48, marginBottom: 20 }}>
+            Error Generating Image
+          </div>
+          <div style={{ color: '#ffffff', fontSize: 24, textAlign: 'center', maxWidth: '80%', wordBreak: 'break-word' }}>
+            {e.message}
+          </div>
+        </div>
+      ),
+      {
+        width: 1200,
+        height: 630,
+      }
+    );
+
+    return new Response(errorImage.body, {
+      headers: {
+        'content-type': 'image/png',
+      },
+    });
   }
 } 

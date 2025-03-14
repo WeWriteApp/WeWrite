@@ -92,7 +92,6 @@ export async function generateMetadata({ params }) {
 
   // Prepare parameters
   const title = pageData.title?.trim() || 'Untitled';
-  // Fix author handling to prevent literal "NULL"
   const author = (pageData.author?.displayName && pageData.author.displayName !== 'NULL') 
     ? pageData.author.displayName.trim() 
     : 'Anonymous';
@@ -101,19 +100,18 @@ export async function generateMetadata({ params }) {
 
   console.log('Pre-encoding values:', { title, author, content });
 
-  // Create path segments - use simpler encoding and handle spaces
-  const encodedTitle = encodeURIComponent(title);
-  const encodedAuthor = encodeURIComponent(author);
-  const encodedContent = encodeURIComponent(content);
+  // Create the OpenGraph image URL with query parameters
+  const params = new URLSearchParams({
+    title: title,
+    author: author,
+    content: content,
+  });
 
-  // Create OpenGraph image URL with path segments - ensure no double slashes
-  const ogImageUrl = `${baseUrl}/api/og/${encodedTitle}/${encodedAuthor}/${encodedContent}`.replace(/([^:]\/)\/+/g, "$1");
+  const ogImageUrl = `${baseUrl}/api/og?${params.toString()}`;
 
-  console.log('OpenGraph URL components:', {
+  console.log('OpenGraph URL:', {
     baseUrl,
-    title: encodedTitle,
-    author: encodedAuthor,
-    content: encodedContent,
+    params: params.toString(),
     finalUrl: ogImageUrl
   });
 
