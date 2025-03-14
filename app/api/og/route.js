@@ -1,4 +1,5 @@
 import { ImageResponse } from '@vercel/og';
+import { NextResponse } from 'next/server';
 
 // Use the new route segment config format
 export const runtime = 'edge';
@@ -131,9 +132,7 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const url = new URL(request.url);
-    const searchParams = url.searchParams;
-
+    const { searchParams } = new URL(request.url);
     console.log('Request URL:', request.url);
     console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
@@ -145,7 +144,7 @@ export async function GET(request) {
     console.log('Processing request with:', { title, author, content: content.substring(0, 50) });
 
     // Generate the image
-    const image = new ImageResponse(
+    return new ImageResponse(
       (
         <div
           style={{
@@ -226,22 +225,12 @@ export async function GET(request) {
         emoji: 'twemoji',
       }
     );
-
-    // Return the image with appropriate headers
-    return new Response(image.body, {
-      headers: {
-        'content-type': 'image/png',
-        'cache-control': process.env.NODE_ENV === 'production'
-          ? 'public, max-age=3600, s-maxage=3600'
-          : 'no-cache, no-store',
-      },
-    });
   } catch (e) {
     console.error('Error generating image:', e.message);
     console.error('Error stack:', e.stack);
     
     // Return a basic error image
-    const errorImage = new ImageResponse(
+    return new ImageResponse(
       (
         <div
           style={{
@@ -268,11 +257,5 @@ export async function GET(request) {
         height: 630,
       }
     );
-
-    return new Response(errorImage.body, {
-      headers: {
-        'content-type': 'image/png',
-      },
-    });
   }
 } 

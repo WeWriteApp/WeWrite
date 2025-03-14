@@ -88,7 +88,9 @@ export async function generateMetadata({ params }) {
   // Base URL for OpenGraph image
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+    : process.env.NEXT_PUBLIC_VERCEL_URL 
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      : 'http://localhost:3000';
 
   // Prepare parameters
   const title = pageData.title?.trim() || 'Untitled';
@@ -101,18 +103,21 @@ export async function generateMetadata({ params }) {
   console.log('Pre-encoding values:', { title, author, content });
 
   // Create the OpenGraph image URL with query parameters
-  const searchParams = new URLSearchParams({
-    title: title,
-    author: author,
-    content: content,
-  });
+  const searchParams = new URLSearchParams();
+  searchParams.set('title', title);
+  searchParams.set('author', author);
+  searchParams.set('content', content);
 
   const ogImageUrl = `${baseUrl}/api/og?${searchParams.toString()}`;
 
   console.log('OpenGraph URL:', {
     baseUrl,
     params: searchParams.toString(),
-    finalUrl: ogImageUrl
+    finalUrl: ogImageUrl,
+    env: {
+      VERCEL_URL: process.env.VERCEL_URL,
+      NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
+    }
   });
 
   // Create metadata with absolute URLs
