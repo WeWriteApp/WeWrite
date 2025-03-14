@@ -5,22 +5,22 @@ export const revalidate = process.env.NODE_ENV === 'production' ? 3600 : 0;
 
 export async function GET(request, { params }) {
   try {
-    console.log('Received params:', params);
+    console.log('Raw params:', JSON.stringify(params));
 
     // Get parameters from the URL path segments
     const segments = params.params || [];
-    console.log('Raw segments:', segments);
+    console.log('Raw segments:', JSON.stringify(segments));
 
     const [titleSegment = '', authorSegment = '', ...contentSegments] = segments;
     
-    // Decode and validate each parameter
-    const title = decodeURIComponent(titleSegment || '') || 'Untitled Page';
-    const author = decodeURIComponent(authorSegment || '') || 'Anonymous';
+    // Decode and validate each parameter, handling edge cases
+    const title = decodeURIComponent(titleSegment || '').replace(/^NULL$/i, '') || 'Untitled Page';
+    const author = decodeURIComponent(authorSegment || '').replace(/^NULL$/i, '') || 'Anonymous';
     const content = contentSegments.length > 0 
-      ? decodeURIComponent(contentSegments.join('/'))
+      ? decodeURIComponent(contentSegments.join('/')).replace(/^NULL$/i, '')
       : 'No content available';
 
-    console.log('Decoded parameters:', {
+    console.log('Processed parameters:', {
       title,
       author,
       content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
@@ -43,7 +43,8 @@ export async function GET(request, { params }) {
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '20px'
+              gap: '20px',
+              flex: 1,
             }}
           >
             {/* Title */}
@@ -53,6 +54,7 @@ export async function GET(request, { params }) {
                 fontWeight: 800,
                 color: '#ffffff',
                 lineHeight: 1.2,
+                wordBreak: 'break-word',
               }}
             >
               {title}
@@ -77,6 +79,9 @@ export async function GET(request, { params }) {
                 opacity: 0.9,
                 lineHeight: 1.5,
                 marginTop: 20,
+                wordBreak: 'break-word',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {content}
@@ -86,12 +91,11 @@ export async function GET(request, { params }) {
           {/* WeWrite branding */}
           <div
             style={{
-              position: 'absolute',
-              bottom: '40px',
-              right: '60px',
+              marginTop: 'auto',
               color: '#ffffff',
               opacity: 0.5,
               fontSize: 24,
+              textAlign: 'right',
             }}
           >
             on WeWrite
@@ -114,7 +118,9 @@ export async function GET(request, { params }) {
       },
     });
   } catch (e) {
-    console.error('Error generating image:', e);
+    console.error('Error generating image:', e.message);
+    console.error('Error stack:', e.stack);
+    
     // Return a basic error image instead of text
     const errorImage = new ImageResponse(
       (
@@ -133,7 +139,7 @@ export async function GET(request, { params }) {
           <div style={{ color: '#ff0000', fontSize: 48, marginBottom: 20 }}>
             Error Generating Image
           </div>
-          <div style={{ color: '#ffffff', fontSize: 24, textAlign: 'center' }}>
+          <div style={{ color: '#ffffff', fontSize: 24, textAlign: 'center', maxWidth: '80%', wordBreak: 'break-word' }}>
             {e.message}
           </div>
         </div>

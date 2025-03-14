@@ -92,19 +92,22 @@ export async function generateMetadata({ params }) {
 
   // Prepare parameters
   const title = pageData.title?.trim() || 'Untitled';
-  const author = pageData.author?.displayName?.trim() || 'Anonymous';
+  // Fix author handling to prevent literal "NULL"
+  const author = (pageData.author?.displayName && pageData.author.displayName !== 'NULL') 
+    ? pageData.author.displayName.trim() 
+    : 'Anonymous';
   // Limit content to 100 characters for URL length
   const content = (contentText?.trim() || '').slice(0, 100);
 
   console.log('Pre-encoding values:', { title, author, content });
 
-  // Create path segments - use simpler encoding
+  // Create path segments - use simpler encoding and handle spaces
   const encodedTitle = encodeURIComponent(title);
   const encodedAuthor = encodeURIComponent(author);
   const encodedContent = encodeURIComponent(content);
 
-  // Create OpenGraph image URL with path segments
-  const ogImageUrl = `${baseUrl}/api/og/${encodedTitle}/${encodedAuthor}/${encodedContent}`;
+  // Create OpenGraph image URL with path segments - ensure no double slashes
+  const ogImageUrl = `${baseUrl}/api/og/${encodedTitle}/${encodedAuthor}/${encodedContent}`.replace(/([^:]\/)\/+/g, "$1");
 
   console.log('OpenGraph URL components:', {
     baseUrl,
