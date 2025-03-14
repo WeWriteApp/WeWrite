@@ -27,27 +27,38 @@ export async function generateMetadata({ params }) {
       try {
         // Handle different content formats
         if (typeof versionData.content === 'string') {
-          parsedContent = JSON.parse(versionData.content);
+          try {
+            parsedContent = JSON.parse(versionData.content);
+          } catch (e) {
+            console.log('Failed to parse content as JSON, using as string:', e);
+            contentText = versionData.content;
+            parsedContent = null;
+          }
         } else if (typeof versionData.content === 'object') {
           parsedContent = versionData.content;
         } else {
-          throw new Error('Content is neither string nor object');
+          console.error('Content is neither string nor object:', typeof versionData.content);
+          contentText = String(versionData.content);
+          parsedContent = null;
         }
 
-        console.log('Successfully parsed content:', JSON.stringify(parsedContent, null, 2));
+        if (parsedContent) {
+          console.log('Successfully parsed content:', JSON.stringify(parsedContent, null, 2));
 
-        // Extract text based on content structure
-        if (Array.isArray(parsedContent)) {
-          contentText = extractTextFromNodes(parsedContent);
-        } else if (parsedContent.root?.children) {
-          contentText = extractTextFromNodes(parsedContent.root.children);
-        } else {
-          console.error('Unrecognized content structure');
+          // Extract text based on content structure
+          if (Array.isArray(parsedContent)) {
+            contentText = extractTextFromNodes(parsedContent);
+          } else if (parsedContent.root?.children) {
+            contentText = extractTextFromNodes(parsedContent.root.children);
+          } else if (parsedContent.children) {
+            contentText = extractTextFromNodes(parsedContent.children);
+          } else {
+            console.error('Unrecognized content structure:', Object.keys(parsedContent));
+            contentText = JSON.stringify(parsedContent);
+          }
         }
-
       } catch (parseError) {
         console.error('Error parsing content:', parseError);
-        // If JSON parsing fails, try to use content directly
         contentText = String(versionData.content);
       }
     }
@@ -79,6 +90,7 @@ export async function generateMetadata({ params }) {
     console.log('Setting content in URL:', truncatedContent);
   } else {
     console.log('No content to set in URL');
+    ogImageUrl.searchParams.set('content', 'No content available');
   }
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
@@ -117,7 +129,7 @@ function extractTextFromNodes(nodes) {
 
   return nodes
     .map(node => {
-      console.log('Processing node:', node);
+      console.log('Processing node:', JSON.stringify(node));
       
       // If node has direct text
       if (node.text) {
@@ -128,8 +140,12 @@ function extractTextFromNodes(nodes) {
       if (node.children && Array.isArray(node.children)) {
         return node.children
           .map(child => {
-            console.log('Processing child:', child);
-            return child.text || '';
+            console.log('Processing child:', JSON.stringify(child));
+            if (child.text) return child.text;
+            if (child.children) {
+              return extractTextFromNodes(child.children);
+            }
+            return '';
           })
           .filter(Boolean)
           .join(' ');
