@@ -2,6 +2,11 @@ import { ImageResponse } from '@vercel/og';
 
 export const runtime = 'edge';
 
+// Disable the default middleware for this route
+export const config = {
+  matcher: '/api/og',
+};
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,7 +23,7 @@ export async function GET(request) {
     const words = content.split(' ').slice(0, 50);
     const truncatedContent = words.join(' ') + (words.length >= 50 ? '...' : '');
 
-    return new ImageResponse(
+    const response = new ImageResponse(
       (
         <div
           style={{
@@ -83,6 +88,11 @@ export async function GET(request) {
         height: 630,
       }
     );
+
+    // Add the bypass token header for Vercel preview deployments
+    response.headers.set('x-vercel-protection-bypass', process.env.VERCEL_PREVIEW_TOKEN || '');
+    
+    return response;
   } catch (e) {
     console.error(e);
     return new Response('Failed to generate image', { status: 500 });
