@@ -140,6 +140,8 @@ export const getPageById = async (pageId) => {
       return { pageData, versionData: null };
     }
 
+    console.log('Current version ID:', currentVersionId);
+
     // Get version data
     try {
       const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
@@ -152,6 +154,16 @@ export const getPageById = async (pageId) => {
 
       const versionData = versionSnap.data();
       console.log('Raw version data:', JSON.stringify(versionData, null, 2));
+
+      // If content is a string, try to parse it
+      if (typeof versionData.content === 'string') {
+        try {
+          versionData.content = JSON.parse(versionData.content);
+          console.log('Successfully parsed version content:', versionData.content);
+        } catch (e) {
+          console.log('Content is plain string, using as is:', versionData.content);
+        }
+      }
 
       if (!versionData.content) {
         console.error('No content in version data');

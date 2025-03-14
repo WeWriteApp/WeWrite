@@ -62,6 +62,8 @@ export async function generateMetadata({ params }) {
             contentText = extractTextFromNodes(parsedContent.children);
           } else if (parsedContent.text) {
             contentText = parsedContent.text;
+          } else if (typeof parsedContent === 'string') {
+            contentText = parsedContent;
           } else {
             console.error('Unrecognized content structure');
             contentText = JSON.stringify(parsedContent);
@@ -92,10 +94,14 @@ export async function generateMetadata({ params }) {
   ogImageUrl.searchParams.set('title', pageData.title || 'Untitled');
   ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
   
-  // Always set content
-  const finalContent = contentText?.trim() || 'No content available';
-  ogImageUrl.searchParams.set('content', finalContent);
-  console.log('Setting content in URL:', finalContent);
+  // Set content only if we have it
+  const finalContent = contentText?.trim();
+  if (finalContent) {
+    ogImageUrl.searchParams.set('content', finalContent);
+    console.log('Setting content in URL:', finalContent);
+  } else {
+    console.log('No content to set in URL');
+  }
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
 
