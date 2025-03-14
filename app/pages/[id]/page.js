@@ -101,17 +101,17 @@ export async function generateMetadata({ params }) {
   console.log('Pre-encoding values:', { title, author, content });
 
   // Create the OpenGraph image URL with query parameters
-  const params = new URLSearchParams({
+  const searchParams = new URLSearchParams({
     title: title,
     author: author,
     content: content,
   });
 
-  const ogImageUrl = `${baseUrl}/api/og?${params.toString()}`;
+  const ogImageUrl = `${baseUrl}/api/og?${searchParams.toString()}`;
 
   console.log('OpenGraph URL:', {
     baseUrl,
-    params: params.toString(),
+    params: searchParams.toString(),
     finalUrl: ogImageUrl
   });
 
