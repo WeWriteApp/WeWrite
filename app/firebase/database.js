@@ -136,6 +136,32 @@ export const getPageById = async (pageId) => {
     // Get the current version
     const currentVersionId = pageData.currentVersion;
     if (!currentVersionId) {
+      // If no current version, try to get the latest version
+      try {
+        const versionsRef = collection(db, "pages", pageId, "versions");
+        const versionsSnap = await getDocs(versionsRef);
+        if (!versionsSnap.empty) {
+          // Sort versions by createdAt and get the latest
+          const versions = versionsSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          const latestVersion = versions.sort((a, b) => 
+            new Date(b.createdAt) - new Date(a.createdAt)
+          )[0];
+          
+          // Update the page's currentVersion
+          await setDoc(pageRef, { currentVersion: latestVersion.id }, { merge: true });
+          pageData.currentVersion = latestVersion.id;
+          console.log('Found and set latest version:', latestVersion.id);
+          
+          // Return the version data directly
+          return { pageData, versionData: latestVersion };
+        }
+      } catch (e) {
+        console.error('Error getting latest version:', e);
+      }
+      
       console.error('No current version found for page:', pageId);
       return { pageData, versionData: null };
     }
@@ -158,15 +184,16 @@ export const getPageById = async (pageId) => {
       // If content is a string, try to parse it
       if (typeof versionData.content === 'string') {
         try {
-          versionData.content = JSON.parse(versionData.content);
-          console.log('Successfully parsed version content:', versionData.content);
+          const parsed = JSON.parse(versionData.content);
+          console.log('Successfully parsed version content:', parsed);
+          versionData.content = parsed;
         } catch (e) {
           console.log('Content is plain string, using as is:', versionData.content);
         }
-      }
-
-      if (!versionData.content) {
+      } else if (!versionData.content) {
         console.error('No content in version data');
+        // Try to get the content from the page data as fallback
+        versionData.content = pageData.content || '';
       }
 
       // ALWAYS set a default author object

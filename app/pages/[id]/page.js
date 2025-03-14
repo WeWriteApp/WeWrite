@@ -39,10 +39,6 @@ export async function generateMetadata({ params }) {
         } else if (typeof versionData.content === 'object') {
           parsedContent = versionData.content;
           console.log('Using content directly as object');
-        } else {
-          console.error('Content is neither string nor object:', typeof versionData.content);
-          contentText = String(versionData.content);
-          parsedContent = null;
         }
 
         if (parsedContent) {
@@ -65,12 +61,16 @@ export async function generateMetadata({ params }) {
           } else if (typeof parsedContent === 'string') {
             contentText = parsedContent;
           } else {
-            console.error('Unrecognized content structure');
-            contentText = JSON.stringify(parsedContent);
+            // Try to extract text from the object itself
+            contentText = extractTextFromObject(parsedContent);
           }
+        } else {
+          // If we couldn't parse the content, use it directly
+          contentText = String(versionData.content);
         }
       } catch (parseError) {
         console.error('Error parsing content:', parseError);
+        // If all else fails, try to use the content directly
         contentText = String(versionData.content);
       }
     }
@@ -94,14 +94,10 @@ export async function generateMetadata({ params }) {
   ogImageUrl.searchParams.set('title', pageData.title || 'Untitled');
   ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
   
-  // Set content only if we have it
-  const finalContent = contentText?.trim();
-  if (finalContent) {
-    ogImageUrl.searchParams.set('content', finalContent);
-    console.log('Setting content in URL:', finalContent);
-  } else {
-    console.log('No content to set in URL');
-  }
+  // Always set content, even if empty
+  const finalContent = contentText?.trim() || 'No content available';
+  ogImageUrl.searchParams.set('content', finalContent);
+  console.log('Setting content in URL:', finalContent);
 
   console.log('Final OpenGraph URL:', ogImageUrl.toString());
 
@@ -171,6 +167,38 @@ function extractTextFromNodes(nodes) {
     .filter(Boolean)
     .join(' ')
     .trim();
+}
+
+// Helper function to extract text from an object
+function extractTextFromObject(obj) {
+  if (!obj) return '';
+  
+  // If it's a string, return it
+  if (typeof obj === 'string') return obj;
+  
+  // If it's an array, process each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => extractTextFromObject(item)).filter(Boolean).join(' ');
+  }
+  
+  // If it's an object, look for common text properties
+  if (typeof obj === 'object') {
+    // Common properties that might contain text
+    const textProps = ['text', 'content', 'value', 'description'];
+    for (const prop of textProps) {
+      if (obj[prop] && typeof obj[prop] === 'string') {
+        return obj[prop];
+      }
+    }
+    
+    // If no text properties found, try all string values
+    return Object.values(obj)
+      .map(value => extractTextFromObject(value))
+      .filter(Boolean)
+      .join(' ');
+  }
+  
+  return '';
 }
 
 const Page = async ({ params }) => {
