@@ -100,12 +100,12 @@ export async function generateMetadata({ params }) {
   const content = (contentText?.trim() || '').slice(0, 100);
 
   // Create URL with parameters
-  const params = new URLSearchParams();
-  params.set('title', encodeURIComponent(title));
-  params.set('author', encodeURIComponent(author));
-  params.set('content', encodeURIComponent(content));
+  const urlParams = new URLSearchParams();
+  urlParams.set('title', encodeURIComponent(title));
+  urlParams.set('author', encodeURIComponent(author));
+  urlParams.set('content', encodeURIComponent(content));
 
-  const ogImageUrl = `${baseUrl}/api/og?${params.toString()}`;
+  const ogImageUrl = `${baseUrl}/api/og?${urlParams.toString()}`;
 
   console.log('OpenGraph URL:', {
     baseUrl,
