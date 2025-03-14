@@ -18,10 +18,15 @@ export async function generateMetadata({ params }) {
   const description = contentText.slice(0, 200) + (contentText.length > 200 ? '...' : '');
 
   // Base URL for OpenGraph image
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
   // Create OpenGraph image URL with parameters
-  const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(pageData.title)}&content=${encodeURIComponent(description)}&author=${encodeURIComponent(pageData.userName || 'Anonymous')}`;
+  const ogImageUrl = new URL('/api/og', baseUrl);
+  ogImageUrl.searchParams.set('title', pageData.title);
+  ogImageUrl.searchParams.set('content', description);
+  ogImageUrl.searchParams.set('author', pageData.userName || 'Anonymous');
 
   return {
     metadataBase: new URL(baseUrl),
@@ -33,7 +38,7 @@ export async function generateMetadata({ params }) {
       type: 'article',
       url: `${baseUrl}/pages/${params.id}`,
       images: [{
-        url: ogImageUrl,
+        url: ogImageUrl.toString(),
         width: 1200,
         height: 630,
         alt: pageData.title
@@ -43,7 +48,7 @@ export async function generateMetadata({ params }) {
       card: 'summary_large_image',
       title: pageData.title,
       description,
-      images: [ogImageUrl],
+      images: [ogImageUrl.toString()],
     },
   };
 }
