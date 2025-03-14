@@ -86,10 +86,10 @@ export async function generateMetadata({ params }) {
   }
 
   // Base URL for OpenGraph image
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_VERCEL_URL 
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+  const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
 
   // Prepare parameters
@@ -97,27 +97,22 @@ export async function generateMetadata({ params }) {
   const author = (pageData.author?.displayName && pageData.author.displayName !== 'NULL') 
     ? pageData.author.displayName.trim() 
     : 'Anonymous';
-  // Limit content to 100 characters for URL length
   const content = (contentText?.trim() || '').slice(0, 100);
 
-  console.log('Pre-encoding values:', { title, author, content });
+  // Create URL with parameters
+  const params = new URLSearchParams();
+  params.set('title', encodeURIComponent(title));
+  params.set('author', encodeURIComponent(author));
+  params.set('content', encodeURIComponent(content));
 
-  // Create the OpenGraph image URL with query parameters
-  const searchParams = new URLSearchParams();
-  searchParams.set('title', title);
-  searchParams.set('author', author);
-  searchParams.set('content', content);
-
-  const ogImageUrl = `${baseUrl}/api/og?${searchParams.toString()}`;
+  const ogImageUrl = `${baseUrl}/api/og?${params.toString()}`;
 
   console.log('OpenGraph URL:', {
     baseUrl,
-    params: searchParams.toString(),
-    finalUrl: ogImageUrl,
-    env: {
-      VERCEL_URL: process.env.VERCEL_URL,
-      NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
-    }
+    title,
+    author,
+    content,
+    finalUrl: ogImageUrl
   });
 
   // Create metadata with absolute URLs

@@ -136,14 +136,10 @@ export async function GET(request) {
     console.log('Request URL:', request.url);
     console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
-    // Get and validate parameters
     const title = searchParams.get('title') || 'Untitled Page';
     const author = searchParams.get('author') || 'Anonymous';
     const content = searchParams.get('content') || 'No content available';
 
-    console.log('Processing request with:', { title, author, content: content.substring(0, 50) });
-
-    // Generate the image
     return new ImageResponse(
       (
         <div
@@ -156,53 +152,41 @@ export async function GET(request) {
             padding: '40px 60px',
           }}
         >
+          {/* Title */}
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-              flex: 1,
+              fontSize: 60,
+              fontWeight: 800,
+              color: '#ffffff',
+              lineHeight: 1.2,
+              marginBottom: 20,
             }}
           >
-            {/* Title */}
-            <div
-              style={{
-                fontSize: 60,
-                fontWeight: 800,
-                color: '#ffffff',
-                lineHeight: 1.2,
-                wordBreak: 'break-word',
-              }}
-            >
-              {title}
-            </div>
+            {title}
+          </div>
 
-            {/* Author */}
-            <div
-              style={{
-                fontSize: 30,
-                color: '#ffffff',
-                opacity: 0.8,
-              }}
-            >
-              By {author}
-            </div>
+          {/* Author */}
+          <div
+            style={{
+              fontSize: 30,
+              color: '#ffffff',
+              opacity: 0.8,
+              marginBottom: 20,
+            }}
+          >
+            By {author}
+          </div>
 
-            {/* Content */}
-            <div
-              style={{
-                fontSize: 36,
-                color: '#ffffff',
-                opacity: 0.9,
-                lineHeight: 1.5,
-                marginTop: 20,
-                wordBreak: 'break-word',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {content}
-            </div>
+          {/* Content */}
+          <div
+            style={{
+              fontSize: 36,
+              color: '#ffffff',
+              opacity: 0.9,
+              lineHeight: 1.5,
+            }}
+          >
+            {content}
           </div>
 
           {/* WeWrite branding */}
@@ -222,14 +206,11 @@ export async function GET(request) {
       {
         width: 1200,
         height: 630,
-        emoji: 'twemoji',
       }
     );
   } catch (e) {
-    console.error('Error generating image:', e.message);
-    console.error('Error stack:', e.stack);
+    console.error('Error generating image:', e);
     
-    // Return a basic error image
     return new ImageResponse(
       (
         <div
@@ -244,11 +225,8 @@ export async function GET(request) {
             justifyContent: 'center',
           }}
         >
-          <div style={{ color: '#ff0000', fontSize: 48, marginBottom: 20 }}>
+          <div style={{ color: '#ff0000', fontSize: 48 }}>
             Error Generating Image
-          </div>
-          <div style={{ color: '#ffffff', fontSize: 24, textAlign: 'center', maxWidth: '80%', wordBreak: 'break-word' }}>
-            {e.message}
           </div>
         </div>
       ),
