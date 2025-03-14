@@ -85,13 +85,6 @@ export async function generateMetadata({ params }) {
     contentText = '';
   }
 
-  // Base URL for OpenGraph image
-  const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000';
-
   // Prepare parameters
   const title = pageData.title?.trim() || 'Untitled';
   const author = (pageData.author?.displayName && pageData.author.displayName !== 'NULL') 
@@ -99,19 +92,26 @@ export async function generateMetadata({ params }) {
     : 'Anonymous';
   const content = (contentText?.trim() || '').slice(0, 100);
 
-  // Create URL with parameters
-  const urlParams = new URLSearchParams();
-  urlParams.set('title', encodeURIComponent(title));
-  urlParams.set('author', encodeURIComponent(author));
-  urlParams.set('content', encodeURIComponent(content));
+  // Create URL-safe parameters by encoding each segment separately
+  const safeTitle = encodeURIComponent(title).replace(/%20/g, '-');
+  const safeAuthor = encodeURIComponent(author).replace(/%20/g, '-');
+  const safeContent = encodeURIComponent(content).replace(/%20/g, '-');
 
-  const ogImageUrl = `${baseUrl}/api/og?${urlParams.toString()}`;
+  // Base URL for OpenGraph image
+  const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000';
+
+  // Construct the OpenGraph image URL using path segments instead of query parameters
+  const ogImageUrl = `${baseUrl}/api/og/${safeTitle}/${safeAuthor}/${safeContent}`;
 
   console.log('OpenGraph URL:', {
     baseUrl,
-    title,
-    author,
-    content,
+    title: safeTitle,
+    author: safeAuthor,
+    content: safeContent,
     finalUrl: ogImageUrl
   });
 
@@ -130,7 +130,6 @@ export async function generateMetadata({ params }) {
         width: 1200,
         height: 630,
         alt: title,
-        type: 'image/png'
       }],
     },
     twitter: {

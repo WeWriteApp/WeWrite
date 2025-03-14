@@ -132,13 +132,27 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    console.log('Request URL:', request.url);
-    console.log('Search params:', Object.fromEntries(searchParams.entries()));
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+    
+    // Remove 'api' and 'og' from the path segments
+    const [_, __, ...params] = pathSegments;
+    
+    // Extract parameters from path segments
+    const [titleSegment = '', authorSegment = '', ...contentSegments] = params;
+    
+    // Decode parameters and handle edge cases
+    const title = decodeURIComponent(titleSegment.replace(/-/g, ' ')) || 'Untitled Page';
+    const author = decodeURIComponent(authorSegment.replace(/-/g, ' ')) || 'Anonymous';
+    const content = contentSegments.length > 0 
+      ? decodeURIComponent(contentSegments.join('/').replace(/-/g, ' '))
+      : 'No content available';
 
-    const title = searchParams.get('title') || 'Untitled Page';
-    const author = searchParams.get('author') || 'Anonymous';
-    const content = searchParams.get('content') || 'No content available';
+    console.log('Generating OG image with:', {
+      title,
+      author,
+      content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
+    });
 
     return new ImageResponse(
       (
@@ -152,38 +166,55 @@ export async function GET(request) {
             padding: '40px 60px',
           }}
         >
+          {/* Author badge */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '40px',
+              right: '60px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              padding: '8px 24px',
+              borderRadius: '100px',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: 28,
+              color: '#ffffff',
+              fontWeight: 500,
+            }}
+          >
+            {author === 'Anonymous' ? 'Anonymous' : `By ${author}`}
+          </div>
+
           {/* Title */}
           <div
             style={{
-              fontSize: 60,
+              fontSize: 72,
               fontWeight: 800,
               color: '#ffffff',
+              marginTop: 40,
+              marginBottom: 40,
               lineHeight: 1.2,
-              marginBottom: 20,
+              maxWidth: '80%',
+              wordBreak: 'break-word',
             }}
           >
             {title}
           </div>
 
-          {/* Author */}
-          <div
-            style={{
-              fontSize: 30,
-              color: '#ffffff',
-              opacity: 0.8,
-              marginBottom: 20,
-            }}
-          >
-            By {author}
-          </div>
-
-          {/* Content */}
+          {/* Content preview */}
           <div
             style={{
               fontSize: 36,
               color: '#ffffff',
               opacity: 0.9,
               lineHeight: 1.5,
+              maxWidth: '85%',
+              wordBreak: 'break-word',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
             {content}
@@ -192,11 +223,12 @@ export async function GET(request) {
           {/* WeWrite branding */}
           <div
             style={{
-              marginTop: 'auto',
-              color: '#ffffff',
-              opacity: 0.5,
+              position: 'absolute',
+              bottom: '40px',
+              right: '60px',
+              color: 'rgba(255, 255, 255, 0.5)',
               fontSize: 24,
-              textAlign: 'right',
+              fontWeight: 500,
             }}
           >
             on WeWrite
@@ -206,11 +238,19 @@ export async function GET(request) {
       {
         width: 1200,
         height: 630,
+        emoji: 'twemoji',
+        headers: {
+          'content-type': 'image/png',
+          'cache-control': process.env.NODE_ENV === 'production'
+            ? 'public, max-age=3600, s-maxage=3600'
+            : 'no-cache, no-store',
+        },
       }
     );
   } catch (e) {
     console.error('Error generating image:', e);
     
+    // Return a fallback error image
     return new ImageResponse(
       (
         <div
@@ -225,8 +265,11 @@ export async function GET(request) {
             justifyContent: 'center',
           }}
         >
-          <div style={{ color: '#ff0000', fontSize: 48 }}>
+          <div style={{ color: '#ff0000', fontSize: 48, marginBottom: 20 }}>
             Error Generating Image
+          </div>
+          <div style={{ color: '#ffffff', fontSize: 24, textAlign: 'center', maxWidth: '80%', wordBreak: 'break-word' }}>
+            {e.message}
           </div>
         </div>
       ),
