@@ -25,8 +25,8 @@ export async function generateMetadata({ params }) {
   // Create OpenGraph image URL with parameters
   const ogImageUrl = new URL('/api/og', baseUrl);
   ogImageUrl.searchParams.set('title', pageData.title);
-  ogImageUrl.searchParams.set('content', description);
-  ogImageUrl.searchParams.set('author', pageData.userName || 'Anonymous');
+  ogImageUrl.searchParams.set('content', contentText);
+  ogImageUrl.searchParams.set('author', pageData.author?.name || pageData.author?.email || 'Anonymous');
 
   return {
     metadataBase: new URL(baseUrl),

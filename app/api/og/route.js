@@ -14,8 +14,8 @@ export async function GET(request) {
     const content = searchParams.get('content') || 'No content available';
 
     // Truncate content to prevent overflow
-    const truncatedContent = content.length > 200 
-      ? content.substring(0, 200) + '...'
+    const truncatedContent = content.length > 150 
+      ? content.substring(0, 150) + '...'
       : content;
 
     return new ImageResponse(
@@ -37,12 +37,13 @@ export async function GET(request) {
               top: '40px',
               right: '60px',
               background: 'rgba(255, 255, 255, 0.1)',
-              padding: '8px 16px',
+              padding: '8px 24px',
               borderRadius: '100px',
               display: 'flex',
               alignItems: 'center',
-              fontSize: 24,
+              fontSize: 28,
               color: '#ffffff',
+              fontWeight: 500,
             }}
           >
             By {author}
@@ -52,24 +53,28 @@ export async function GET(request) {
           <div
             style={{
               fontSize: 72,
-              fontWeight: 600,
+              fontWeight: 800,
               color: '#ffffff',
               marginTop: 40,
-              marginBottom: 20,
+              marginBottom: 40,
               lineHeight: 1.2,
+              maxWidth: '80%',
             }}
           >
             {title}
           </div>
 
-          {/* Content with gradient fade */}
+          {/* Content preview */}
           <div
             style={{
-              fontSize: 32,
+              fontSize: 36,
               color: '#ffffff',
-              opacity: 0.8,
-              lineHeight: 1.4,
-              maxWidth: '90%',
+              opacity: 0.9,
+              lineHeight: 1.5,
+              maxWidth: '85%',
+              background: 'linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.8) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}
           >
             {truncatedContent}
