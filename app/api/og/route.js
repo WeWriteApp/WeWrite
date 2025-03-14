@@ -7,16 +7,19 @@ export const dynamic = 'force-dynamic';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    console.log('Search params:', Object.fromEntries(searchParams.entries()));
 
     // Get the query parameters with fallbacks
     const title = searchParams.get('title') || 'Untitled Page';
     const author = searchParams.get('author');
-    const content = searchParams.get('content') || 'No content available';
+    const content = searchParams.get('content');
+
+    console.log('Received params:', { title, author, content });
 
     // Truncate content to prevent overflow
-    const truncatedContent = content.length > 150 
-      ? content.substring(0, 150) + '...'
-      : content;
+    const truncatedContent = content && content !== 'No content available'
+      ? (content.length > 150 ? content.substring(0, 150) + '...' : content)
+      : 'No content available';
 
     return new ImageResponse(
       (
@@ -47,7 +50,7 @@ export async function GET(request) {
               fontWeight: 500,
             }}
           >
-            {author === 'NULL' ? 'Anonymous' : `By ${author}`}
+            {author === 'NULL' || !author ? 'Anonymous' : `By ${author}`}
           </div>
 
           {/* Title */}

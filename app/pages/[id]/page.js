@@ -4,6 +4,9 @@ import { getPageById } from "../../firebase/database";
 export async function generateMetadata({ params }) {
   const { pageData, versionData } = await getPageById(params.id);
 
+  console.log('Page Data:', pageData);
+  console.log('Version Data:', versionData);
+
   if (!pageData) {
     return {
       title: "Page Not Found",
@@ -14,10 +17,21 @@ export async function generateMetadata({ params }) {
   // Parse the content from versionData
   let contentText = '';
   try {
-    const parsedContent = JSON.parse(versionData?.content || '{"root":{"children":[]}}');
-    contentText = parsedContent?.root?.children
-      ?.map(node => node?.children?.map(child => child?.text || '').join('') || '')
+    // Check if content is already a string or needs parsing
+    const content = typeof versionData?.content === 'string' 
+      ? JSON.parse(versionData.content)
+      : versionData?.content || { root: { children: [] } };
+
+    console.log('Parsed content:', content);
+
+    contentText = content?.root?.children
+      ?.map(node => {
+        console.log('Node:', node);
+        return node?.children?.map(child => child?.text || '').join('') || '';
+      })
       .join(' ') || '';
+
+    console.log('Extracted text:', contentText);
   } catch (e) {
     console.error('Error parsing content:', e);
     contentText = '';
@@ -33,9 +47,12 @@ export async function generateMetadata({ params }) {
   // Create OpenGraph image URL with parameters
   const ogImageUrl = new URL('/api/og', baseUrl);
   ogImageUrl.searchParams.set('title', pageData.title);
-  ogImageUrl.searchParams.set('content', contentText || 'No content available');
-  // Never expose email, use NULL if no username
-  ogImageUrl.searchParams.set('author', pageData.author?.displayName || 'NULL');
+  ogImageUrl.searchParams.set('content', contentText || description || 'No content available');
+  
+  // Get author name from the correct location in user data
+  const authorName = pageData.author?.displayName || pageData.author?.name || 'NULL';
+  console.log('Author name:', authorName);
+  ogImageUrl.searchParams.set('author', authorName);
 
   return {
     metadataBase: new URL(baseUrl),
