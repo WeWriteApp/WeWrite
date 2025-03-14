@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 
-export async function middleware(req) {
-  // Skip auth check for OpenGraph route and handle CORS
-  if (req.nextUrl.pathname.startsWith('/api/og')) {
-    const response = NextResponse.next();
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-    return response;
-  }
+export const config = {
+  matcher: '/api/og/:path*'
+};
 
-  // Continue with normal flow for other routes
-  return NextResponse.next();
+export function middleware(request) {
+  const response = NextResponse.next();
+  
+  // Add CORS headers
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  
+  return response;
 }
 
 export const config = {
