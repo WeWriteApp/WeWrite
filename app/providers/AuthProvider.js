@@ -19,15 +19,23 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         console.log('User is logged in', user);
         getUserFromRTDB(user);
-
+        // Ensure we're on a protected route
+        if (window.location.pathname.includes('/auth/')) {
+          router.push('/');
+          router.refresh();
+        }
       } else {    
         setUser(null);
         setLoading(false);
+        // Redirect to login if on a protected route
+        if (!window.location.pathname.includes('/auth/')) {
+          router.push('/auth/login');
+        }
       }
     });
 
     return unsubscribe;
-  }, []);
+  }, [router]);
 
   const getUserFromRTDB =  (user) => {
     const db = getDatabase(app);

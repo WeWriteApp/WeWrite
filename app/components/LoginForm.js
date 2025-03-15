@@ -24,6 +24,7 @@ const LoginForm = () => {
       setError(response.message);
     } else {
       router.push("/");
+      router.refresh();
     }
   };
 
