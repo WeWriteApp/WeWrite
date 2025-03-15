@@ -1,8 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import { loginUser } from "../firebase/auth";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
+import { AuthContext } from "../providers/AuthProvider";
+import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,6 +13,14 @@ export default function LoginForm() {
     password: "",
   });
   const [error, setError] = useState(null);
+  const { user } = useContext(AuthContext);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
   const handleChange = (e) => {
     setFormData(prev => ({
@@ -27,7 +37,7 @@ export default function LoginForm() {
 
     try {
       const response = await loginUser(formData.email, formData.password);
-      if (response.code) { // Firebase error object has a code property
+      if (response.code) {
         setError(response.message);
       }
     } catch (error) {
