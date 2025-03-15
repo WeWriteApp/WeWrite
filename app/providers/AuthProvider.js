@@ -17,22 +17,31 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        console.log('User is logged in', user);
-        await getUserFromRTDB(user);
-        
-        // Only redirect if we're on an auth page
-        if (pathname?.includes('/auth/')) {
-          router.push('/');
+      try {
+        if (user) {
+          console.log('User is logged in', user);
+          await getUserFromRTDB(user);
+          
+          // Only redirect if we're on an auth page and not already navigating
+          if (pathname?.includes('/auth/')) {
+            setTimeout(() => {
+              router.push('/');
+            }, 0);
+          }
+        } else {    
+          setUser(null);
+          setLoading(false);
+          
+          // Only redirect to login if we're not already on an auth page and not already navigating
+          if (pathname && !pathname.includes('/auth/')) {
+            setTimeout(() => {
+              router.push('/auth/login');
+            }, 0);
+          }
         }
-      } else {    
-        setUser(null);
+      } catch (error) {
+        console.error('Auth state change error:', error);
         setLoading(false);
-        
-        // Only redirect to login if we're not already on an auth page
-        if (pathname && !pathname.includes('/auth/')) {
-          router.push('/auth/login');
-        }
       }
     });
 
