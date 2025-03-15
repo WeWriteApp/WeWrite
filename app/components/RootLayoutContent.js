@@ -19,6 +19,7 @@ export function RootLayoutContent({ children }) {
   // Handle navigation based on auth state
   useEffect(() => {
     let timeoutId = null;
+    let mounted = true;
     
     // Don't navigate if we're loading or missing essential info
     if (loading || !pathname || !router || isNavigating) return;
@@ -34,25 +35,40 @@ export function RootLayoutContent({ children }) {
       
       // Set a timeout to prevent infinite navigation
       timeoutId = setTimeout(() => {
-        setIsNavigating(false);
-        setNavigationError('Navigation timeout - please try refreshing the page');
+        if (mounted) {
+          setIsNavigating(false);
+          setNavigationError('Navigation timeout - please try refreshing the page');
+        }
       }, NAVIGATION_TIMEOUT);
 
       // Attempt navigation
-      router.push(path)
-        .catch(error => {
-          console.error('Navigation error:', error);
-          setNavigationError('Failed to navigate - please try refreshing the page');
-        })
-        .finally(() => {
-          setIsNavigating(false);
-          if (timeoutId) {
-            clearTimeout(timeoutId);
+      try {
+        router.push(path);
+        
+        // Since router.push() might not return a Promise in all cases,
+        // we'll set up a separate timeout to clear the navigation state
+        setTimeout(() => {
+          if (mounted) {
+            setIsNavigating(false);
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
           }
-        });
+        }, 100);
+      } catch (error) {
+        console.error('Navigation error:', error);
+        if (mounted) {
+          setIsNavigating(false);
+          setNavigationError('Failed to navigate - please try refreshing the page');
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      }
     }
 
     return () => {
+      mounted = false;
       if (timeoutId) {
         clearTimeout(timeoutId);
       }

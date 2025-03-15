@@ -6,6 +6,7 @@ import { ref, get, getDatabase, update } from "firebase/database";
 import app from "../firebase/config";
 
 const LOADING_TIMEOUT = 5000; // 5 seconds timeout for loading states
+const INITIAL_DELAY = 100; // Small delay before starting auth check
 
 export function useAuth() {
   const [user, setUser] = useState(null);
@@ -51,67 +52,78 @@ export function useAuth() {
   useEffect(() => {
     let mounted = true;
     let timeoutId = null;
-    
-    // Set initial loading state
-    setLoading(true);
-    setError(null);
+    let initTimeoutId = null;
 
-    // Set a timeout to prevent infinite loading
-    timeoutId = setTimeout(() => {
-      if (mounted && loading) {
-        setLoading(false);
-        setError('Auth state took too long to resolve');
-      }
-    }, LOADING_TIMEOUT);
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const initialize = () => {
       if (!mounted) return;
 
-      try {
-        if (firebaseUser) {
-          const userData = await getUserFromRTDB(firebaseUser);
-          if (mounted) {
-            setUser(userData);
-            setError(null);
+      setLoading(true);
+      setError(null);
+
+      // Set a timeout to prevent infinite loading
+      timeoutId = setTimeout(() => {
+        if (mounted && loading) {
+          setLoading(false);
+          setError('Auth state took too long to resolve');
+        }
+      }, LOADING_TIMEOUT);
+
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (!mounted) return;
+
+        try {
+          if (firebaseUser) {
+            const userData = await getUserFromRTDB(firebaseUser);
+            if (mounted) {
+              setUser(userData);
+              setError(null);
+            }
+          } else {
+            if (mounted) {
+              setUser(null);
+              setError(null);
+            }
           }
-        } else {
+        } catch (error) {
+          console.error('Auth state change error:', error);
           if (mounted) {
             setUser(null);
-            setError(null);
+            setError(error.message);
+          }
+        } finally {
+          if (mounted) {
+            setLoading(false);
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+            }
           }
         }
-      } catch (error) {
+      }, (error) => {
         console.error('Auth state change error:', error);
         if (mounted) {
-          setUser(null);
           setError(error.message);
-        }
-      } finally {
-        if (mounted) {
           setLoading(false);
           if (timeoutId) {
             clearTimeout(timeoutId);
           }
         }
-      }
-    }, (error) => {
-      console.error('Auth state change error:', error);
-      if (mounted) {
-        setError(error.message);
-        setLoading(false);
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-      }
-    });
+      });
 
-    // Cleanup function
+      return unsubscribe;
+    };
+
+    // Add a small delay before starting auth check
+    initTimeoutId = setTimeout(() => {
+      const unsubscribe = initialize();
+      if (!mounted) {
+        unsubscribe?.();
+      }
+    }, INITIAL_DELAY);
+
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      unsubscribe();
+      if (timeoutId) clearTimeout(timeoutId);
+      if (initTimeoutId) clearTimeout(initTimeoutId);
     };
   }, []);
 
