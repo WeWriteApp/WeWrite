@@ -3,10 +3,8 @@ import { useState } from "react";
 import { loginUser } from "../firebase/auth";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
-import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -31,10 +29,8 @@ export default function LoginForm() {
       const response = await loginUser(formData.email, formData.password);
       if (response.code) {
         setError(response.message);
-      } else {
-        // Successful login
-        router.push('/');
       }
+      // No need to navigate here - RootLayoutContent will handle it
     } catch (error) {
       setError(error.message || 'An error occurred during login');
     } finally {
