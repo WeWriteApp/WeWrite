@@ -82,8 +82,13 @@ export default function Sidebar({ isOpen, onClose }) {
   }, []);
 
   const handleLogout = async () => {
-    await logoutUser();
-    router.push('/auth/login');
+    try {
+      await logoutUser();
+      // Use window.location for more reliable navigation
+      window.location.href = '/auth/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const handleNavigation = (item) => {
@@ -120,7 +125,8 @@ export default function Sidebar({ isOpen, onClose }) {
   const handleItemClick = (e, href) => {
     if (!isOpen && !isMobile) {
       e.preventDefault();
-      router.push(href);
+      // Use window.location for more reliable navigation
+      window.location.href = href;
     }
   };
 

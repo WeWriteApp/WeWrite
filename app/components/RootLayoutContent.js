@@ -1,6 +1,6 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -12,7 +12,6 @@ const NAVIGATION_TIMEOUT = 3000; // 3 seconds timeout for navigation
 export function RootLayoutContent({ children }) {
   const { user, loading, error } = useContext(AuthContext);
   const pathname = usePathname();
-  const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
   const [navigationError, setNavigationError] = useState(null);
 
@@ -22,7 +21,7 @@ export function RootLayoutContent({ children }) {
     let mounted = true;
     
     // Don't navigate if we're loading or missing essential info
-    if (loading || !pathname || !router || isNavigating) return;
+    if (loading || !pathname || isNavigating) return;
 
     const isAuthPath = pathname.includes('/auth/');
     
@@ -41,20 +40,9 @@ export function RootLayoutContent({ children }) {
         }
       }, NAVIGATION_TIMEOUT);
 
-      // Attempt navigation
+      // Use window.location for more reliable navigation
       try {
-        router.push(path);
-        
-        // Since router.push() might not return a Promise in all cases,
-        // we'll set up a separate timeout to clear the navigation state
-        setTimeout(() => {
-          if (mounted) {
-            setIsNavigating(false);
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-            }
-          }
-        }, 100);
+        window.location.href = path;
       } catch (error) {
         console.error('Navigation error:', error);
         if (mounted) {
@@ -73,7 +61,7 @@ export function RootLayoutContent({ children }) {
         clearTimeout(timeoutId);
       }
     };
-  }, [user, loading, pathname, router, isNavigating]);
+  }, [user, loading, pathname, isNavigating]);
 
   // Show loading state
   if (loading || isNavigating) {
