@@ -1,4 +1,4 @@
-"use client";
+pages/0DO8ljYSnIG8viIgXHNo"use client";
 
 import { useEffect } from 'react';
 

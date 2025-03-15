@@ -20,6 +20,7 @@ import { Toaster } from "react-hot-toast";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useContext } from "react";
 import { AuthContext } from "./providers/AuthProvider";
+import { RootLayoutContent } from "./components/RootLayoutContent";
 
 const inter = Inter({ subsets: ["latin"] });
 
