@@ -1,3 +1,4 @@
+"use client";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./providers/AuthProvider";
@@ -16,6 +17,9 @@ import GestureProvider from "./providers/GestureProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "react-hot-toast";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useContext } from "react";
+import { AuthContext } from "./providers/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +27,32 @@ export const metadata = {
   title: "WeWrite",
   description: "Write together, grow together",
 };
+
+function RootLayoutContent({ children }) {
+  const { user, loading } = useContext(AuthContext);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (user && pathname?.includes('/auth/')) {
+        router.replace('/');
+      } else if (!user && pathname && !pathname.includes('/auth/')) {
+        router.replace('/auth/login');
+      }
+    }
+  }, [user, loading, pathname, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return children;
+}
 
 export default function RootLayout({ children }) {
   return (
@@ -43,15 +73,17 @@ export default function RootLayout({ children }) {
                         <CommunityProvider>
                           <PortfolioProvider>
                             <MobileProvider>
-                              <div className="flex flex-row">
-                                <div className="flex flex-col w-full">
-                                  {children}
+                              <RootLayoutContent>
+                                <div className="flex flex-row">
+                                  <div className="flex flex-col w-full">
+                                    {children}
+                                  </div>
                                 </div>
-                              </div>
-                              <Drawer />
-                              <Analytics />
-                              <SpeedInsights />
-                              <Toaster />
+                                <Drawer />
+                                <Analytics />
+                                <SpeedInsights />
+                                <Toaster />
+                              </RootLayoutContent>
                             </MobileProvider>
                           </PortfolioProvider>
                         </CommunityProvider>

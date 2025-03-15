@@ -1,10 +1,8 @@
 "use client";
-import { useState, useEffect, useContext } from "react";
+import { useState } from "react";
 import { loginUser } from "../firebase/auth";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
-import { AuthContext } from "../providers/AuthProvider";
-import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -13,18 +11,6 @@ export default function LoginForm() {
     password: "",
   });
   const [error, setError] = useState(null);
-  const { user, loading: authLoading } = useContext(AuthContext);
-  const router = useRouter();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && user && shouldRedirect) {
-      const timer = setTimeout(() => {
-        router.replace('/');
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [user, authLoading, shouldRedirect, router]);
 
   const handleChange = (e) => {
     setFormData(prev => ({
@@ -43,8 +29,6 @@ export default function LoginForm() {
       const response = await loginUser(formData.email, formData.password);
       if (response.code) {
         setError(response.message);
-      } else {
-        setShouldRedirect(true);
       }
     } catch (error) {
       setError(error.message || 'An error occurred during login');
@@ -52,14 +36,6 @@ export default function LoginForm() {
       setIsLoading(false);
     }
   };
-
-  if (authLoading) {
-    return (
-      <div className="w-full flex justify-center">
-        <Icon icon="ph:circle-notch" className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="w-full">
@@ -109,7 +85,7 @@ export default function LoginForm() {
 
         <button
           type="submit"
-          disabled={isLoading || authLoading}
+          disabled={isLoading}
           className="w-full flex justify-center items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
