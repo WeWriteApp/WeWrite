@@ -30,9 +30,7 @@ export default function SinglePageView({ params }) {
   useKeyboardShortcuts({
     isEditing,
     setIsEditing,
-    canEdit: user && page && user.uid === page.userId,
-    handleSave: () => {}, // This will be passed down to EditPage
-    isSaving: false
+    canEdit: user && page && user.uid === page.userId
   });
 
   useEffect(() => {

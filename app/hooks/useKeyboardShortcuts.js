@@ -6,8 +6,8 @@ export const useKeyboardShortcuts = ({
   isEditing,
   setIsEditing,
   canEdit,
-  handleSave,
-  isSaving
+  handleSave = null,
+  isSaving = false
 }) => {
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -17,7 +17,7 @@ export const useKeyboardShortcuts = ({
       }
 
       // Cmd/Ctrl + Enter to save (when editing)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && isEditing && !isSaving) {
+      if (handleSave && (e.metaKey || e.ctrlKey) && e.key === 'Enter' && isEditing && !isSaving) {
         e.preventDefault();
         handleSave();
       }
