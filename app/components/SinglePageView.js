@@ -26,13 +26,6 @@ export default function SinglePageView({ params }) {
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
 
-  // Use keyboard shortcuts
-  useKeyboardShortcuts({
-    isEditing,
-    setIsEditing,
-    canEdit: Boolean(user?.uid && page?.userId && user.uid === page.userId)
-  });
-
   useEffect(() => {
     // Setup listener for real-time updates
     const unsubscribe = listenToPageById(params.id, (data) => {
@@ -134,6 +127,14 @@ export default function SinglePageView({ params }) {
       </DashboardLayout>
     );
   }
+
+  // Only set up keyboard shortcuts after we know the page is loaded and public
+  useKeyboardShortcuts({
+    isEditing,
+    setIsEditing,
+    canEdit: Boolean(user?.uid && page?.userId && user.uid === page.userId)
+  });
+
   return (
     <DashboardLayout>
       <div className="p-2">
