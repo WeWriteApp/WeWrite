@@ -1,13 +1,6 @@
 "use client";
 import LoginForm from "../../components/LoginForm";
 
-export async function generateMetadata() {
-  return {
-    title: "Login to WeWrite",
-    description: "Login to your WeWrite account",
-  };
-}
-
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
