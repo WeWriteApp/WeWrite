@@ -77,9 +77,22 @@ export default function SinglePageView({ params }) {
       }
     });
 
-    // Cleanup listener when component unmounts
-    return () => unsubscribe();
-  }, [params.id, user]);
+    // Add keyboard event listener
+    const handleKeyPress = (e) => {
+      // Only enable edit mode if user is the owner and not already editing
+      if (e.key === 'Enter' && !isEditing && user && page && user.uid === page.userId) {
+        setIsEditing(true);
+      }
+    };
+
+    window.addEventListener('keypress', handleKeyPress);
+
+    // Cleanup listeners when component unmounts
+    return () => {
+      unsubscribe();
+      window.removeEventListener('keypress', handleKeyPress);
+    };
+  }, [params.id, user, page, isEditing]);
 
   if (!page) {
     return <Loader />;

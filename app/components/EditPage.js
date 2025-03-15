@@ -27,7 +27,21 @@ const EditPage = ({
     if (page.groupId) {
       setGroupId(page.groupId);
     }
-  }, []);
+
+    // Add keyboard event listener for Cmd+Enter
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !isSaving) {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [page.groupId, isSaving]);
 
   useEffect(() => {
     if (!groups) return;
@@ -54,7 +68,6 @@ const EditPage = ({
   }
 
   const handleSave = () => {
-
     if (!user) {
       console.log("User not authenticated");
       return;
@@ -69,14 +82,13 @@ const EditPage = ({
     // convert the editorState to JSON
     const editorStateJSON = JSON.stringify(editorState);
 
-    // // save the new version
+    // save the new version
     saveNewVersion(page.id, {
       content: editorStateJSON,
       userId: user.uid,
     })
       .then((result) => {
         if (result) {
-
           let updateTime = new Date().toISOString();
           // update the page content
           updateDoc("pages", page.id, {
