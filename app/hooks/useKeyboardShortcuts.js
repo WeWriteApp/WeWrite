@@ -13,6 +13,7 @@ export const useKeyboardShortcuts = ({
     const handleKeyPress = (e) => {
       // Enter to edit (when viewing)
       if (e.key === 'Enter' && !isEditing && canEdit) {
+        e.preventDefault();
         setIsEditing(true);
       }
 

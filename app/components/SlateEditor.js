@@ -54,6 +54,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   ]);
 
   const handleKeyDown = (event, editor) => {
+    // Prevent Enter key from creating new lines
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.key === "@") {
       event.preventDefault();
       const { selection } = editor;
@@ -66,7 +72,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
     if (event.key === "Escape") {
       setShowDropdown(false);
     }
-
   };
 
   const showDropdownMenu = () => {
