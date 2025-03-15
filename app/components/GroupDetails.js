@@ -34,7 +34,7 @@ const DeleteGroupButton = ({ group }) => {
     if (confirm("Are you sure you want to delete this group?")) {
       const groupRef = ref(rtdb, `groups/${group.id}`);
       set(groupRef, null);
-      router.push("/pages");
+      router.push("/");
     } 
   };
   if (!user || user.uid !== group.owner) return null;

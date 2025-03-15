@@ -25,7 +25,7 @@ const RegisterForm = () => {
       setError(response.message);
     } else {
       await addUsername(user.username);
-      router.push("/pages"); 
+      router.push("/"); 
     }
   };
 

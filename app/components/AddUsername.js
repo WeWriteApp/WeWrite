@@ -56,7 +56,7 @@ const AddUsername = () => {
         onClick={async() => {
           await addUsername(username);
           console.log("username added");
-          router.push("/pages");
+          router.push("/");
         }}
       >
         Add Username

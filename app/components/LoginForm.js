@@ -23,7 +23,7 @@ const LoginForm = () => {
     if (response.code) {
       setError(response.message);
     } else {
-      router.push("/pages");
+      router.push("/");
     }
   };
 
