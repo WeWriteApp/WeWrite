@@ -4,6 +4,7 @@ import {
   Transforms,
   Editor,
   Element as SlateElement,
+  Path,
 } from "slate";
 import { Editable, withReact, useSlate, useSelected, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
@@ -20,8 +21,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   useImperativeHandle(ref, () => ({
     focus: () => {
       ReactEditor.focus(editor);
-      // Move cursor to end of content
-      Transforms.select(editor, Editor.end(editor, []));
+      
+      // Find the last text node
+      const lastNode = editor.children[editor.children.length - 1];
+      if (lastNode) {
+        const lastTextNode = Editor.last(editor, lastNode[0]);
+        if (lastTextNode) {
+          const path = lastTextNode[1];
+          const offset = lastTextNode[0].text.length;
+          
+          // Set selection at the end of the last text node
+          Transforms.select(editor, { path, offset });
+        }
+      }
     }
   }));
 
