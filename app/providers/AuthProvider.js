@@ -1,19 +1,19 @@
 "use client";
 // an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from "react";
+import { useEffect, useState, createContext, useRef } from "react";
 import { auth } from "../firebase/auth";
 import app from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, get, getDatabase, update } from "firebase/database";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const pathname = usePathname();
+  const isInitialMount = useRef(true);
 
   const getUserFromRTDB = async (user) => {
     if (!user?.uid) return null;
@@ -57,8 +57,8 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             setLoading(false);
             
-            if (pathname?.includes('/auth/')) {
-              router.replace('/');
+            if (!isInitialMount.current && pathname?.includes('/auth/')) {
+              window.location.href = '/';
             }
           }
         } else {
@@ -66,8 +66,8 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
             setLoading(false);
             
-            if (pathname && !pathname.includes('/auth/')) {
-              router.replace('/auth/login');
+            if (!isInitialMount.current && pathname && !pathname.includes('/auth/')) {
+              window.location.href = '/auth/login';
             }
           }
         }
@@ -81,11 +81,15 @@ export const AuthProvider = ({ children }) => {
 
     const unsubscribe = onAuthStateChanged(auth, handleUser);
 
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+
     return () => {
       mounted = false;
       unsubscribe();
     };
-  }, [pathname, router]);
+  }, [pathname]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
