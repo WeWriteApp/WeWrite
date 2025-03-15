@@ -12,6 +12,7 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialLogin, setIsInitialLogin] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,16 +20,20 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         console.log('User is logged in', user);
         getUserFromRTDB(user);
-        // Redirect to /pages after successful login
-        router.push('/pages');
+        // Only redirect to /pages on initial login
+        if (isInitialLogin) {
+          router.push('/pages');
+          setIsInitialLogin(false);
+        }
       } else {    
         setUser(null);
         setLoading(false);
+        setIsInitialLogin(true);
       }
     });
 
     return unsubscribe;
-  }, [router]);
+  }, [router, isInitialLogin]);
 
   const getUserFromRTDB =  (user) => {
     const db = getDatabase(app);
