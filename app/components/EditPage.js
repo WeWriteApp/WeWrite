@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { saveNewVersion, updateDoc } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import { GroupsContext } from "../providers/GroupsProvider";
@@ -22,6 +22,7 @@ const EditPage = ({
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
   const { logError } = useLogging();
+  const editorRef = useRef(null);
 
   useEffect(() => {
     if (page.groupId) {
@@ -42,6 +43,13 @@ const EditPage = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [page.groupId, isSaving]);
+
+  useEffect(() => {
+    // Focus the editor when entering edit mode
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (!groups) return;
@@ -135,6 +143,7 @@ const EditPage = ({
 
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
       <SlateEditor
+        ref={editorRef}
         setEditorState={setEditorState}
         initialEditorState={JSON.parse(current)}
       />
@@ -149,7 +158,6 @@ const EditPage = ({
       <ReactSearchAutocomplete
         items={localGroups}
         onSelect={handleSelect}
-        autoFocus
         placeholder="Search for a group"
         className="searchbar"
         fuseOptions={{

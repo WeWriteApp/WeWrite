@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef } from "react";
+import React, { useState, useContext, useRef, forwardRef, useImperativeHandle } from "react";
 import {
   createEditor,
   Transforms,
@@ -11,11 +11,20 @@ import { DataContext } from "../providers/DataProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
 
-const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
+const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({});
-  const [editorRef, setEditorRef] = useState(null);
+  const editableRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      ReactEditor.focus(editor);
+      // Move cursor to end of content
+      Transforms.select(editor, Editor.end(editor, []));
+    }
+  }));
+
   const [initialValue, setInitialValue] = useState(initialEditorState || [
     {
       type: "paragraph",
@@ -86,16 +95,17 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
     <div className="border border-gray-300 p-4 relative">
       <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
         <Editable
-        renderLeaf={({ attributes, children, leaf }) => {
-          return (
-            <span
-              {...attributes}
-              style={{ fontWeight: leaf.bold ? 'bold' : 'normal' }}
-            >
-              {children}
-            </span>
-          )
-        }}
+          ref={editableRef}
+          renderLeaf={({ attributes, children, leaf }) => {
+            return (
+              <span
+                {...attributes}
+                style={{ fontWeight: leaf.bold ? 'bold' : 'normal' }}
+              >
+                {children}
+              </span>
+            )
+          }}
           renderElement={(props) => <Element {...props} />}
           onKeyDown={(event) => handleKeyDown(event, editor)}
           placeholder="Enter some text..."          
@@ -111,7 +121,9 @@ const SlateEditor = ({ initialEditorState = null, setEditorState }) => {
       </pre>
     </div>
   );
-};
+});
+
+SlateEditor.displayName = 'SlateEditor';
 
 function isUrl(string) {
   try {
