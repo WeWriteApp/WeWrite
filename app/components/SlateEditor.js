@@ -23,17 +23,23 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
       try {
         ReactEditor.focus(editor);
         
-        // Ensure we have content
+        // If there's no content, add an empty paragraph
         if (editor.children.length === 0) {
-          // If empty, insert an empty paragraph
           Transforms.insertNodes(editor, {
             type: 'paragraph',
             children: [{ text: '' }],
           });
         }
 
-        // Move selection to the end of the document
-        Transforms.select(editor, Editor.end(editor, []));
+        // Find the last text node
+        const lastNode = Editor.last(editor, []);
+        if (lastNode) {
+          const [node, path] = lastNode;
+          
+          // Create a new selection at the end of the last text node
+          const point = { path, offset: node.text.length };
+          Transforms.select(editor, point);
+        }
       } catch (error) {
         console.error('Error focusing editor:', error);
       }
