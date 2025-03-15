@@ -1,3 +1,4 @@
+"use client";
 import ComingSoonPage from "../components/ComingSoonPage";
 
 export async function generateMetadata() {

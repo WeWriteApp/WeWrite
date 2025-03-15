@@ -7,17 +7,22 @@ import { NavProvider } from "./providers/NavProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { DrawerProvider } from "./providers/DrawerProvider";
 import { CommunityProvider } from "./providers/CommunityProvider";
-import Drawer from "./components/Drawer";
+import { Drawer } from "./components/Drawer";
 import { GroupsProvider } from "./providers/GroupsProvider";
 import { ThemeProvider } from "./providers/ThemeProvider";
-import { GAProvider } from "./providers/GAProvider";
-import { LoggingProvider } from "./providers/LoggingProvider";
-import { GestureProvider } from "./providers/GestureProvider";
+import GAProvider from "./providers/GAProvider";
+import LoggingProvider from "./providers/LoggingProvider";
+import GestureProvider from "./providers/GestureProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const metadata = {
+  title: "WeWrite",
+  description: "Write together, grow together",
+};
 
 export default function RootLayout({ children }) {
   return (

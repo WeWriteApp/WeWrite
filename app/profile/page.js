@@ -1,3 +1,4 @@
+"use client";
 import DashboardLayout from "../DashboardLayout";
 import SettingsPage from "../components/BillingPage";
 

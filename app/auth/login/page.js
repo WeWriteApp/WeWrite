@@ -1,3 +1,4 @@
+"use client";
 import LoginForm from "../../components/LoginForm";
 
 export async function generateMetadata() {
@@ -15,6 +16,5 @@ const Login = () => {
     </div>
   );
 }
-
 
 export default Login;

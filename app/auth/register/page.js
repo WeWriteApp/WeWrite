@@ -1,3 +1,4 @@
+"use client";
 import RegisterForm from "../../components/RegisterForm";
 
 export async function generateMetadata() {
@@ -15,6 +16,5 @@ const Register = () => {
     </div>
   );
 }
-
 
 export default Register;
