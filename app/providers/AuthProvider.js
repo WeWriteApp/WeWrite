@@ -15,23 +15,28 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log('User is logged in', user);
-        // Only redirect if this is a new login (user was previously null)
-        if (!previousAuthState) {
-          router.push('/pages');
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          console.log('User is logged in', user);
+          // Only redirect if this is a new login (user was previously null)
+          if (!previousAuthState) {
+            router.push('/pages');
+          }
+          setPreviousAuthState(user);
+          getUserFromRTDB(user);
+        } else {    
+          setUser(null);
+          setLoading(false);
+          setPreviousAuthState(null);
         }
-        setPreviousAuthState(user);
-        getUserFromRTDB(user);
-      } else {    
-        setUser(null);
-        setLoading(false);
-        setPreviousAuthState(null);
-      }
-    });
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.error('Auth state change error:', error);
+      setLoading(false);
+    }
   }, [router]);
 
   const getUserFromRTDB = (user) => {
@@ -41,6 +46,17 @@ export const AuthProvider = ({ children }) => {
     
     onValue(dbRef, (snapshot) => {
       const data = snapshot.val();
+
+      if (!data) {
+        // Handle case where user data doesn't exist yet
+        setUser({
+          uid: user.uid,
+          email: user.email,
+          username: user.displayName || ''
+        });
+        setLoading(false);
+        return;
+      }
 
       if (!data.username && user.displayName) {
         let updates = {};
