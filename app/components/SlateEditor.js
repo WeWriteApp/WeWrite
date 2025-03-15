@@ -58,14 +58,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   ]);
 
   const handleKeyDown = (event, editor) => {
-    // Reset newline attempt counter after 2 seconds of no enter key presses
-    if (newlineTimerRef.current) {
-      clearTimeout(newlineTimerRef.current);
-    }
-    newlineTimerRef.current = setTimeout(() => {
-      newlineAttemptRef.current = 0;
-    }, 2000);
-
     // Handle enter key
     if (event.key === 'Enter') {
       // Allow newline with shift+enter
@@ -74,7 +66,11 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
         return;
       }
 
-      event.preventDefault();
+      // Prevent default behavior in a way that doesn't trigger the passive event warning
+      event.stopPropagation();
+      if (!event.defaultPrevented) {
+        event.preventDefault();
+      }
       
       // Increment newline attempt counter
       newlineAttemptRef.current++;
@@ -84,6 +80,15 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
         setShowToast(true);
         newlineAttemptRef.current = 0;
       }
+
+      // Reset counter after 2 seconds
+      if (newlineTimerRef.current) {
+        clearTimeout(newlineTimerRef.current);
+      }
+      newlineTimerRef.current = setTimeout(() => {
+        newlineAttemptRef.current = 0;
+      }, 2000);
+
       return;
     }
 
