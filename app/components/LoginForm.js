@@ -22,8 +22,6 @@ const LoginForm = () => {
     const response = await loginUser(user.email, user.password);
     if (response.code) {
       setError(response.message);
-    } else {
-      router.push("/pages");
     }
   };
 

@@ -19,7 +19,8 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         console.log('User is logged in', user);
         getUserFromRTDB(user);
-
+        // Redirect to /pages after successful login
+        router.push('/pages');
       } else {    
         setUser(null);
         setLoading(false);
@@ -27,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [router]);
 
   const getUserFromRTDB =  (user) => {
     const db = getDatabase(app);
