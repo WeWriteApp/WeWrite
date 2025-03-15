@@ -25,13 +25,14 @@ export function RootLayoutContent({ children }) {
     console.log('Attempting safe navigation to:', path);
     
     try {
-      if (typeof window !== 'undefined') {
-        // First try using the router
-        if (router && typeof router.replace === 'function') {
-          console.log('Using Next.js router for navigation');
+      if (typeof window !== 'undefined' && router) {
+        if (typeof router.push === 'function') {
+          console.log('Using Next.js router push for navigation');
+          await router.push(path);
+        } else if (typeof router.replace === 'function') {
+          console.log('Using Next.js router replace for navigation');
           await router.replace(path);
         } else {
-          // Fallback to window.location
           console.log('Falling back to window.location');
           window.location.href = path;
         }
@@ -72,72 +73,66 @@ export function RootLayoutContent({ children }) {
           pathname
         });
 
+        // Don't proceed if we're already navigating or loading
         if (isNavigating || loading) {
           console.log('Navigation skipped:', { isNavigating, loading });
           return;
         }
 
+        // Don't proceed if component is unmounted
         if (!mounted) {
           console.log('Navigation aborted: component unmounted');
           return;
         }
 
-        if (!loading) {
+        // Only proceed with navigation checks if we're not loading
+        if (!loading && pathname) {
           console.log('Checking navigation conditions:', {
             hasUser: !!user,
             pathname,
-            isAuthPath: pathname?.includes('/auth/'),
-            shouldRedirectToHome: !!user && pathname?.includes('/auth/'),
-            shouldRedirectToLogin: !user && pathname && !pathname.includes('/auth/')
+            isAuthPath: pathname.includes('/auth/'),
+            shouldRedirectToHome: !!user && pathname.includes('/auth/'),
+            shouldRedirectToLogin: !user && !pathname.includes('/auth/')
           });
 
-          if (user && pathname?.includes('/auth/')) {
+          // Handle authenticated user trying to access auth pages
+          if (user && pathname.includes('/auth/')) {
             console.log('Redirecting to home...');
             setIsNavigating(true);
             await safeNavigate('/');
-          } else if (!user && pathname && !pathname.includes('/auth/')) {
+          } 
+          // Handle unauthenticated user trying to access protected pages
+          else if (!user && !pathname.includes('/auth/')) {
             console.log('Redirecting to login...');
             setIsNavigating(true);
             await safeNavigate('/auth/login');
           }
         }
       } catch (error) {
-        console.error('Navigation error details:', {
-          error,
-          errorName: error.name,
-          errorMessage: error.message,
-          errorStack: error.stack,
-          navigationState: {
-            isNavigating,
-            loading,
-            pathname,
-            hasUser: !!user,
-            routerReady: !!router
-          }
-        });
+        console.error('Navigation error:', error);
       } finally {
         if (mounted) {
-          // Add a small delay before resetting navigation state
+          // Reset navigation state after a small delay
           navigationTimeout = setTimeout(() => {
             if (mounted) {
-              console.log('Resetting navigation state');
               setIsNavigating(false);
             }
-          }, 100);
+          }, 200);
         }
       }
     };
 
+    // Run navigation check
     handleNavigation();
 
+    // Cleanup
     return () => {
-      console.log('Navigation effect cleanup - unmounting');
       mounted = false;
       if (navigationTimeout) {
         clearTimeout(navigationTimeout);
       }
     };
-  }, [user, loading, pathname, safeNavigate]);
+  }, [user, loading, pathname, safeNavigate, router]);
 
   if (loading || isNavigating) {
     console.log('Rendering loading state:', { loading, isNavigating });
