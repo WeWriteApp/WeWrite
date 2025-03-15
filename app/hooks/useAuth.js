@@ -5,6 +5,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { ref, get, getDatabase, update } from "firebase/database";
 import app from "../firebase/config";
 
+const LOADING_TIMEOUT = 5000; // 5 seconds timeout for loading states
+
 export function useAuth() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,6 @@ export function useAuth() {
           data.username = user.displayName;
         } catch (updateError) {
           console.error('Error updating username:', updateError);
-          // Continue with existing data even if update fails
         }
       }
 
@@ -40,7 +41,6 @@ export function useAuth() {
       };
     } catch (error) {
       console.error('Error fetching user data:', error);
-      // Return basic user data if DB fetch fails
       return {
         uid: user.uid,
         email: user.email
@@ -50,13 +50,24 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId = null;
+    
+    // Set initial loading state
     setLoading(true);
     setError(null);
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (!mounted) return;
+    // Set a timeout to prevent infinite loading
+    timeoutId = setTimeout(() => {
+      if (mounted && loading) {
+        setLoading(false);
+        setError('Auth state took too long to resolve');
+      }
+    }, LOADING_TIMEOUT);
 
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!mounted) return;
+
+      try {
         if (firebaseUser) {
           const userData = await getUserFromRTDB(firebaseUser);
           if (mounted) {
@@ -78,6 +89,9 @@ export function useAuth() {
       } finally {
         if (mounted) {
           setLoading(false);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         }
       }
     }, (error) => {
@@ -85,11 +99,18 @@ export function useAuth() {
       if (mounted) {
         setError(error.message);
         setLoading(false);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
       }
     });
 
+    // Cleanup function
     return () => {
       mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       unsubscribe();
     };
   }, []);
