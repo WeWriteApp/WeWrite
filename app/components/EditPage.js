@@ -16,7 +16,14 @@ const EditPage = ({
   title,
   setTitle,
 }) => {
-  const [editorState, setEditorState] = useState(JSON.parse(current));
+  const [editorState, setEditorState] = useState(() => {
+    try {
+      return JSON.parse(current);
+    } catch (e) {
+      console.error("Failed to parse editor state:", e);
+      return null;
+    }
+  });
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
   const { user } = useContext(AuthContext);
@@ -29,16 +36,16 @@ const EditPage = ({
   useKeyboardShortcuts({
     isEditing,
     setIsEditing,
-    canEdit: true, // Already in edit mode
-    handleSave,
+    canEdit: false, // Disable "Enter to edit" in edit mode
+    handleSave: !isSaving ? handleSave : null, // Only allow save when not already saving
     isSaving
   });
 
   useEffect(() => {
-    if (page.groupId) {
+    if (page?.groupId) {
       setGroupId(page.groupId);
     }
-  }, [page.groupId]);
+  }, [page?.groupId]);
 
   useEffect(() => {
     // Focus the editor when entering edit mode
@@ -49,29 +56,26 @@ const EditPage = ({
 
   useEffect(() => {
     if (!groups) return;
-    if (groups.length > 0) {
-      if (user.groups) {
-        let arr = [];
-        Object.keys(user.groups).forEach((groupId) => {
-          const group = groups.find((g) => g.id === groupId);
-          if (group) {
-            arr.push({
-              id: groupId,
-              name: group.name,
-            });
-          }
-        })
-        setLocalGroups(arr);
-      }
+    if (groups.length > 0 && user?.groups) {
+      let arr = [];
+      Object.keys(user.groups).forEach((groupId) => {
+        const group = groups.find((g) => g.id === groupId);
+        if (group) {
+          arr.push({
+            id: groupId,
+            name: group.name,
+          });
+        }
+      });
+      setLocalGroups(arr);
     }
-  }, [groups]);
+  }, [groups, user?.groups]);
 
   const handleSelect = (item) => {
-    console.log("Selected item", item);
     setGroupId(item.id);
-  }
+  };
 
-  const handleSave = () => {
+  async function handleSave() {
     if (!user) {
       console.log("User not authenticated");
       return;
@@ -83,48 +87,49 @@ const EditPage = ({
     }
 
     setIsSaving(true);
-    // convert the editorState to JSON
-    const editorStateJSON = JSON.stringify(editorState);
+    try {
+      // convert the editorState to JSON
+      const editorStateJSON = JSON.stringify(editorState);
 
-    // save the new version
-    saveNewVersion(page.id, {
-      content: editorStateJSON,
-      userId: user.uid,
-    })
-      .then((result) => {
-        if (result) {
-          let updateTime = new Date().toISOString();
-          // update the page content
-          updateDoc("pages", page.id, {
-            title: title,
-            isPublic: page.isPublic,
-            groupId: groupId,
-            lastModified: updateTime,
-          });
-
-          setIsEditing(false);
-          setIsSaving(false);
-        } else {
-          console.log("Error saving new version");
-          setIsSaving(false);
-        }
-      })
-      .catch(async (error) => {
-        console.log("Error saving new version", error);
-        await logError(error, "EditPage.js");
-        setIsSaving(false);
+      // save the new version
+      const result = await saveNewVersion(page.id, {
+        content: editorStateJSON,
+        userId: user.uid,
       });
-  };
+
+      if (result) {
+        let updateTime = new Date().toISOString();
+        // update the page content
+        await updateDoc("pages", page.id, {
+          title: title,
+          isPublic: page.isPublic,
+          groupId: groupId,
+          lastModified: updateTime,
+        });
+
+        setIsEditing(false);
+      } else {
+        console.log("Error saving new version");
+      }
+    } catch (error) {
+      console.log("Error saving new version", error);
+      await logError(error, "EditPage.js");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   const removeGroup = () => {
     setGroupId(null);
-  }
+  };
 
   const handleCancel = () => {
-    // reset the editorState
-    setEditorState(page.content);
     setIsEditing(false);
   };
+
+  if (!editorState) {
+    return <div>Error loading editor state</div>;
+  }
 
   return (
     <div>
@@ -141,15 +146,15 @@ const EditPage = ({
       <SlateEditor
         ref={editorRef}
         setEditorState={setEditorState}
-        initialEditorState={JSON.parse(current)}
+        initialEditorState={editorState}
       />
       <div className="flex w-full h-1 bg-gray-200 my-4"></div>
 
       <label className="text-lg font-semibold">Group</label>
       <p className="text-sm text-gray-500">
-        {
-          groupId ? `This page belongs to a group ${groupId}` : "This page does not belong to any group"
-        }
+        {groupId
+          ? `This page belongs to a group ${groupId}`
+          : "This page does not belong to any group"}
       </p>
       <ReactSearchAutocomplete
         items={localGroups}
@@ -164,24 +169,22 @@ const EditPage = ({
         }}
       />
 
-      {
-        page.groupId && (
-          <div className="flex items-center gap-2 mt-4">
-            <button
-              className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
-              onClick={removeGroup}
-            >
-              Remove group
-            </button>
-          </div>
-        )
-      }
+      {page.groupId && (
+        <div className="flex items-center gap-2 mt-4">
+          <button
+            className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
+            onClick={removeGroup}
+          >
+            Remove group
+          </button>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mt-4">
         <button
           disabled={isSaving}
           className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
-          onClick={() => handleSave()}
+          onClick={handleSave}
         >
           {isSaving ? "Saving..." : "Save"}
         </button>
