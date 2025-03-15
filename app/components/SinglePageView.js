@@ -26,6 +26,27 @@ export default function SinglePageView({ params }) {
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
 
+  // Use keyboard shortcuts - moved back to top level
+  useKeyboardShortcuts({
+    isEditing,
+    setIsEditing,
+    // Only allow editing if:
+    // 1. Page is loaded (!isLoading)
+    // 2. Page exists (page !== null)
+    // 3. Page is public (isPublic)
+    // 4. Page isn't deleted (!isDeleted)
+    // 5. User owns the page
+    canEdit: Boolean(
+      !isLoading &&
+      page !== null &&
+      isPublic &&
+      !isDeleted &&
+      user?.uid &&
+      page?.userId &&
+      user.uid === page.userId
+    )
+  });
+
   useEffect(() => {
     // Setup listener for real-time updates
     const unsubscribe = listenToPageById(params.id, (data) => {
@@ -127,13 +148,6 @@ export default function SinglePageView({ params }) {
       </DashboardLayout>
     );
   }
-
-  // Only set up keyboard shortcuts after we know the page is loaded and public
-  useKeyboardShortcuts({
-    isEditing,
-    setIsEditing,
-    canEdit: Boolean(user?.uid && page?.userId && user.uid === page.userId)
-  });
 
   return (
     <DashboardLayout>
