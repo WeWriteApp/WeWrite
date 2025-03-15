@@ -137,8 +137,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* Navigation - Scrollable */}
-        <nav className="p-4 space-y-2 flex-grow overflow-y-auto">
+        {/* Navigation - Scrollable with padding bottom for user menu */}
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-20">
           {updatedMenuItems.map((item) => (
             <Link
               key={item.name}
@@ -168,9 +168,9 @@ const Sidebar = ({ isOpen, onClose }) => {
           ))}
         </nav>
 
-        {/* User menu - Sticky to bottom */}
+        {/* User menu - Fixed to bottom */}
         {user && (
-          <div className="border-t border-gray-200 p-4 shrink-0">
+          <div className="border-t border-gray-200 p-4 bg-background absolute bottom-0 left-0 right-0">
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
