@@ -17,9 +17,14 @@ export const createUser = async (email, password) => {
 export const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential;
+    // Return the user object on success
+    return { user: userCredential.user };
   } catch (error) {
-    return error;
+    // Return error object with code and message
+    return {
+      code: error.code,
+      message: error.message
+    };
   }
 }
 
