@@ -1,4 +1,3 @@
-"use client";
 import RegisterForm from "../../components/RegisterForm";
 
 export async function generateMetadata() {
@@ -8,13 +7,6 @@ export async function generateMetadata() {
   };
 }
 
-const Register = () => {
-  return (
-    <div className="container mx-auto md:max-w-lg md:mt-10">
-      <h1 className="text-2xl font-semibold mb-4">Register</h1>
-      <RegisterForm />
-    </div>
-  );
+export default function RegisterPage() {
+  return <RegisterForm />;
 }
-
-export default Register;

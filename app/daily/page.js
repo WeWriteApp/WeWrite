@@ -1,4 +1,3 @@
-"use client";
 import ComingSoonPage from "../components/ComingSoonPage";
 
 export async function generateMetadata() {
@@ -8,12 +7,12 @@ export async function generateMetadata() {
   };
 }
 
-export default function DailyNotesPage() {
+export default function DailyPage() {
   return (
     <ComingSoonPage
       title="Daily Notes Coming Soon"
-      description="Organize your thoughts with daily journal entries and notes."
-      icon="ph:notebook-fill"
+      description="Get daily writing prompts and track your daily writing progress."
+      icon="ph:note-fill"
     />
   );
 } 

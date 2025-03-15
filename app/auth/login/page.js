@@ -1,4 +1,3 @@
-"use client";
 import LoginForm from "../../components/LoginForm";
 
 export async function generateMetadata() {
@@ -8,13 +7,6 @@ export async function generateMetadata() {
   };
 }
 
-const Login = () => {
-  return (
-    <div className="container mx-auto px-2 md:max-w-lg md:mt-10">
-      <h1 className="text-2xl font-semibold mb-4 text-text">Login</h1>
-      <LoginForm />
-    </div>
-  );
+export default function LoginPage() {
+  return <LoginForm />;
 }
-
-export default Login;
