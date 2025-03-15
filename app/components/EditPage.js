@@ -6,6 +6,7 @@ import { GroupsContext } from "../providers/GroupsProvider";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
 const EditPage = ({
   isEditing,
@@ -24,25 +25,20 @@ const EditPage = ({
   const { logError } = useLogging();
   const editorRef = useRef(null);
 
+  // Use keyboard shortcuts
+  useKeyboardShortcuts({
+    isEditing,
+    setIsEditing,
+    canEdit: true, // Already in edit mode
+    handleSave,
+    isSaving
+  });
+
   useEffect(() => {
     if (page.groupId) {
       setGroupId(page.groupId);
     }
-
-    // Add keyboard event listener for Cmd+Enter
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !isSaving) {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [page.groupId, isSaving]);
+  }, [page.groupId]);
 
   useEffect(() => {
     // Focus the editor when entering edit mode

@@ -13,6 +13,7 @@ import ActionRow from "./PageActionRow";
 // import { checkLinkExistence } from "../utils/check-link-existence";
 import { listenToPageById } from "../firebase/database";
 import PledgeBar from "./PledgeBar";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -24,6 +25,15 @@ export default function SinglePageView({ params }) {
   const [groupId, setGroupId] = useState(null);
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
+
+  // Use keyboard shortcuts
+  useKeyboardShortcuts({
+    isEditing,
+    setIsEditing,
+    canEdit: user && page && user.uid === page.userId,
+    handleSave: () => {}, // This will be passed down to EditPage
+    isSaving: false
+  });
 
   useEffect(() => {
     // Setup listener for real-time updates
@@ -77,22 +87,8 @@ export default function SinglePageView({ params }) {
       }
     });
 
-    // Add keyboard event listener
-    const handleKeyPress = (e) => {
-      // Only enable edit mode if user is the owner and not already editing
-      if (e.key === 'Enter' && !isEditing && user && page && user.uid === page.userId) {
-        setIsEditing(true);
-      }
-    };
-
-    window.addEventListener('keypress', handleKeyPress);
-
-    // Cleanup listeners when component unmounts
-    return () => {
-      unsubscribe();
-      window.removeEventListener('keypress', handleKeyPress);
-    };
-  }, [params.id, user, page, isEditing]);
+    return () => unsubscribe();
+  }, [params.id, user]);
 
   if (!page) {
     return <Loader />;
