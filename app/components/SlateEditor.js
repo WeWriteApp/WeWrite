@@ -11,12 +11,16 @@ import { ReactEditor } from "slate-react";
 import { DataContext } from "../providers/DataProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
+import Toast from "./Toast";
 
 const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({});
+  const [showToast, setShowToast] = useState(false);
   const editableRef = useRef(null);
+  const newlineAttemptRef = useRef(0);
+  const newlineTimerRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -54,9 +58,32 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   ]);
 
   const handleKeyDown = (event, editor) => {
-    // Prevent Enter key from creating new lines
-    if (event.key === 'Enter' && !event.shiftKey) {
+    // Reset newline attempt counter after 2 seconds of no enter key presses
+    if (newlineTimerRef.current) {
+      clearTimeout(newlineTimerRef.current);
+    }
+    newlineTimerRef.current = setTimeout(() => {
+      newlineAttemptRef.current = 0;
+    }, 2000);
+
+    // Handle enter key
+    if (event.key === 'Enter') {
+      // Allow newline with shift+enter
+      if (event.shiftKey) {
+        newlineAttemptRef.current = 0;
+        return;
+      }
+
       event.preventDefault();
+      
+      // Increment newline attempt counter
+      newlineAttemptRef.current++;
+
+      // Show toast on multiple newline attempts
+      if (newlineAttemptRef.current >= 2) {
+        setShowToast(true);
+        newlineAttemptRef.current = 0;
+      }
       return;
     }
 
@@ -140,6 +167,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
 
       {showDropdown && (
         <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
+      )}
+
+      {showToast && (
+        <Toast
+          message="Use Shift+Enter to create a new line"
+          link={{ href: "/help/editor", text: "Learn more" }}
+          onClose={() => setShowToast(false)}
+        />
       )}
 
       <pre className="text-xs text-gray-500 mt-2">
