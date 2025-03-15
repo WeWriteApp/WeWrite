@@ -100,6 +100,16 @@ const Sidebar = ({ isOpen, onClose }) => {
         />
       )}
 
+      {/* Mobile menu trigger */}
+      {isMobile && !isOpen && (
+        <button
+          onClick={() => onClose(false)}
+          className="fixed top-4 left-4 p-2 bg-background rounded-lg shadow-lg z-40 hover:bg-gray-100 transition-colors duration-150"
+        >
+          <Icon icon="ph:list" className="text-2xl" />
+        </button>
+      )}
+
       {/* Sidebar */}
       <div className={`
         fixed top-0 left-0 h-screen bg-background z-50 flex flex-col

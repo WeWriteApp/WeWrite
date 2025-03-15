@@ -16,12 +16,11 @@ const SingleProfileView = ({ profile }) => {
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
-        <Link href="/pages">Back</Link>
         <h1 className="text-3xl font-semibold">{profile.username}</h1>
-          <div className="my-4">
-            <TypeaheadSearch userId={profile.uid} />
-          </div>
-          <PagesList profile={profile} />
+        <div className="my-4">
+          <TypeaheadSearch userId={profile.uid} />
+        </div>
+        <PagesList profile={profile} />
       </div>
     </ProfilePagesProvider>
   );

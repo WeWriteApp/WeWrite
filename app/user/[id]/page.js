@@ -1,5 +1,6 @@
 import SingleProfileView from "../../components/SingleProfileView";
 import { fetchProfileFromFirebase } from "../../firebase/rtdb";
+import DashboardLayout from "../../DashboardLayout";
 
 export async function generateMetadata({ params }) {
   const user = await fetchProfileFromFirebase(params.id);
@@ -19,9 +20,19 @@ export async function generateMetadata({ params }) {
 
 export default async function User({ params }) {
   const user = await fetchProfileFromFirebase(params.id);
+  
   // Ensure profile exists before rendering the component
   if (!user) {
-    return <div>Profile not found</div>;
+    return (
+      <DashboardLayout>
+        <div>Profile not found</div>
+      </DashboardLayout>
+    );
   }
-  return <SingleProfileView profile={user} />;
+  
+  return (
+    <DashboardLayout>
+      <SingleProfileView profile={user} />
+    </DashboardLayout>
+  );
 }
