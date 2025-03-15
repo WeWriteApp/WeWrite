@@ -35,7 +35,16 @@ async function testBigQueryConnection() {
   }
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get('q');
+
+  if (!query) {
+    return NextResponse.json({ results: [] });
+  }
+
   try {
     // If BigQuery is not initialized, return empty results
     if (!bigquery) {
@@ -53,8 +62,6 @@ export async function GET(request) {
     if (!isConnected) {
       throw new Error('Failed to connect to BigQuery');
     }
-
-    const { searchParams } = new URL(request.url);
 
     // Extract query parameters from the URL
     const userId = searchParams.get("userId");
