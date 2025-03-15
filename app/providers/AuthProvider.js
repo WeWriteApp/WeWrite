@@ -1,6 +1,6 @@
 "use client";
 // an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from "react";
+import { useEffect, useState, createContext, useCallback } from "react";
 import { auth } from "../firebase/auth";
 import  app  from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -15,38 +15,10 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          console.log('User is logged in', user);
-          await getUserFromRTDB(user);
-          
-          // Only redirect if we're on an auth page and not already navigating
-          if (pathname?.includes('/auth/')) {
-            setTimeout(() => {
-              router.push('/');
-            }, 0);
-          }
-        } else {    
-          setUser(null);
-          setLoading(false);
-          
-          // Only redirect to login if we're not already on an auth page and not already navigating
-          if (pathname && !pathname.includes('/auth/')) {
-            setTimeout(() => {
-              router.push('/auth/login');
-            }, 0);
-          }
-        }
-      } catch (error) {
-        console.error('Auth state change error:', error);
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [pathname]);
+  const handleNavigation = useCallback((path) => {
+    if (loading) return;
+    router.push(path);
+  }, [router, loading]);
 
   const getUserFromRTDB = async (user) => {
     const db = getDatabase(app);
@@ -69,16 +41,45 @@ export const AuthProvider = ({ children }) => {
         email: user.email,
         ...data
       });
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching user data:', error);
       setUser({
         uid: user.uid,
         email: user.email
       });
+    } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      try {
+        if (user) {
+          console.log('User is logged in', user);
+          await getUserFromRTDB(user);
+          
+          // Only redirect if we're on an auth page
+          if (pathname?.includes('/auth/')) {
+            handleNavigation('/');
+          }
+        } else {    
+          setUser(null);
+          setLoading(false);
+          
+          // Only redirect to login if we're not already on an auth page
+          if (pathname && !pathname.includes('/auth/')) {
+            handleNavigation('/auth/login');
+          }
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [pathname, handleNavigation]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
