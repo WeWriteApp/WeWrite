@@ -9,6 +9,7 @@ const {
     APP_ID
 } = process.env;
 const nextConfig = {
+    productionBrowserSourceMaps: true,  // Enable source maps in production
     env: {
         API_KEY,
         DOMAIN,
