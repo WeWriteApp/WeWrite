@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import { Analytics } from "@vercel/analytics/react";
@@ -21,8 +21,33 @@ export function RootLayoutContent({ children }) {
     routerReady: !!router
   });
 
+  const safeNavigate = useCallback(async (path) => {
+    console.log('Attempting safe navigation to:', path);
+    
+    try {
+      if (typeof window !== 'undefined') {
+        // First try using the router
+        if (router && typeof router.replace === 'function') {
+          console.log('Using Next.js router for navigation');
+          await router.replace(path);
+        } else {
+          // Fallback to window.location
+          console.log('Falling back to window.location');
+          window.location.href = path;
+        }
+      }
+    } catch (error) {
+      console.error('Safe navigation failed:', error);
+      // Final fallback
+      if (typeof window !== 'undefined') {
+        window.location.href = path;
+      }
+    }
+  }, [router]);
+
   useEffect(() => {
     let mounted = true;
+    let navigationTimeout;
 
     console.log('Navigation effect triggered:', {
       mounted,
@@ -35,6 +60,11 @@ export function RootLayoutContent({ children }) {
 
     const handleNavigation = async () => {
       try {
+        // Clear any existing navigation timeouts
+        if (navigationTimeout) {
+          clearTimeout(navigationTimeout);
+        }
+
         console.log('handleNavigation started:', {
           isNavigating,
           loading,
@@ -42,13 +72,11 @@ export function RootLayoutContent({ children }) {
           pathname
         });
 
-        // Don't navigate if we're already navigating or loading
         if (isNavigating || loading) {
           console.log('Navigation skipped:', { isNavigating, loading });
           return;
         }
 
-        // Only navigate if the component is still mounted
         if (!mounted) {
           console.log('Navigation aborted: component unmounted');
           return;
@@ -66,13 +94,11 @@ export function RootLayoutContent({ children }) {
           if (user && pathname?.includes('/auth/')) {
             console.log('Redirecting to home...');
             setIsNavigating(true);
-            await router.replace('/');
-            console.log('Home redirect complete');
+            await safeNavigate('/');
           } else if (!user && pathname && !pathname.includes('/auth/')) {
             console.log('Redirecting to login...');
             setIsNavigating(true);
-            await router.replace('/auth/login');
-            console.log('Login redirect complete');
+            await safeNavigate('/auth/login');
           }
         }
       } catch (error) {
@@ -91,8 +117,13 @@ export function RootLayoutContent({ children }) {
         });
       } finally {
         if (mounted) {
-          console.log('Resetting navigation state');
-          setIsNavigating(false);
+          // Add a small delay before resetting navigation state
+          navigationTimeout = setTimeout(() => {
+            if (mounted) {
+              console.log('Resetting navigation state');
+              setIsNavigating(false);
+            }
+          }, 100);
         }
       }
     };
@@ -102,10 +133,12 @@ export function RootLayoutContent({ children }) {
     return () => {
       console.log('Navigation effect cleanup - unmounting');
       mounted = false;
+      if (navigationTimeout) {
+        clearTimeout(navigationTimeout);
+      }
     };
-  }, [user, loading, pathname, router, isNavigating]);
+  }, [user, loading, pathname, safeNavigate]);
 
-  // Show loading state while navigating or loading auth state
   if (loading || isNavigating) {
     console.log('Rendering loading state:', { loading, isNavigating });
     return (
