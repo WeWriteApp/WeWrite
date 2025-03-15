@@ -1,46 +1,44 @@
 "use client";
 // an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from "react";
-import { auth } from "../firebase/auth";
-import  app  from "../firebase/config";
+import { useContext, createContext, useState, useEffect } from "react";
+import { auth, app } from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue, get, set, getDatabase,update } from "firebase/database";
 import { useRouter } from "next/navigation";
+import { getDatabase, ref, onValue, update } from "firebase/database";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isInitialLogin, setIsInitialLogin] = useState(true);
+  const [previousAuthState, setPreviousAuthState] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log('User is logged in', user);
-        getUserFromRTDB(user);
-        // Only redirect to /pages on initial login
-        if (isInitialLogin) {
+        // Only redirect if this is a new login (user was previously null)
+        if (!previousAuthState) {
           router.push('/pages');
-          setIsInitialLogin(false);
         }
+        setPreviousAuthState(user);
+        getUserFromRTDB(user);
       } else {    
         setUser(null);
         setLoading(false);
-        setIsInitialLogin(true);
+        setPreviousAuthState(null);
       }
     });
 
     return unsubscribe;
-  }, [router, isInitialLogin]);
+  }, [router]);
 
-  const getUserFromRTDB =  (user) => {
+  const getUserFromRTDB = (user) => {
     const db = getDatabase(app);
-
     let uid = user.uid;
     const dbRef = ref(db, `users/${uid}`);
-    // get the user from the database
+    
     onValue(dbRef, (snapshot) => {
       const data = snapshot.val();
 
@@ -64,7 +62,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
   }
-
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
