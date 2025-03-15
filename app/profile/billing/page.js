@@ -1,7 +1,5 @@
-"use client";
 import DashboardLayout from "../../DashboardLayout";
 import BillingPage from "../../components/BillingPage";
-
 
 export async function generateMetadata({ params }) {
   return {
@@ -10,8 +8,7 @@ export async function generateMetadata({ params }) {
   };
 }
 
-
-const Page = () => {  
+export default function BillingPageWrapper() {  
   return (
     <DashboardLayout>
       <div className="container mx-auto pt-10">
@@ -19,8 +16,4 @@ const Page = () => {
       </div>
     </DashboardLayout>
   );
-};
-
-
-
-export default Page;
+}
