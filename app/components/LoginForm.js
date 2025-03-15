@@ -1,12 +1,10 @@
 "use client";
 import { useState } from "react";
 import { loginUser } from "../firebase/auth";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 
 export default function LoginForm() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -29,18 +27,18 @@ export default function LoginForm() {
 
     try {
       const response = await loginUser(formData.email, formData.password);
-      if (response.code) {
+      if (response.code) { // Firebase error object has a code property
         setError(response.message);
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.message || 'An error occurred during login');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-foreground">
