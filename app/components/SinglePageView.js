@@ -30,7 +30,7 @@ export default function SinglePageView({ params }) {
   useKeyboardShortcuts({
     isEditing,
     setIsEditing,
-    canEdit: user && page && user.uid === page.userId
+    canEdit: Boolean(user?.uid && page?.userId && user.uid === page.userId)
   });
 
   useEffect(() => {
