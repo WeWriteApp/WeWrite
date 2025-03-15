@@ -1,14 +1,29 @@
 "use client";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import SearchInput from "../components/SearchInput";
 import DashboardLayout from "../DashboardLayout";
-import TypeaheadSearch from "../components/TypeaheadSearch";
 
 export default function SearchPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+
+  const handleSearch = (value) => {
+    setQuery(value);
+    router.push(`/search?q=${encodeURIComponent(value)}`);
+  };
+
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-semibold mb-8">Search</h1>
-        <div className="mb-8">
-          <TypeaheadSearch />
+      <div className="container mx-auto py-8">
+        <div className="w-full">
+          <SearchInput
+            value={query}
+            onChange={handleSearch}
+            placeholder="Search pages..."
+            className="w-full"
+          />
         </div>
       </div>
     </DashboardLayout>

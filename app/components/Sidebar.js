@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useContext, useState } from "react";
+import React, { useEffect, useContext, useState, useRef } from "react";
 import { MobileContext } from "../providers/MobileProvider";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { NavContext } from "../providers/NavProvider";
@@ -10,6 +10,7 @@ import Image from "next/image";
 import { logoutUser } from "../firebase/auth";
 import { useTheme } from "../providers/ThemeProvider";
 import ReactGA from 'react-ga4';
+import { cn } from "../lib/utils";
 
 const menuItems = [
   { name: 'Home', icon: 'ph:house-fill', href: '/' },
@@ -60,14 +61,25 @@ const menuItems = [
   }
 ];
 
-const Sidebar = ({ isOpen, onClose }) => {
-  const { isMobile } = useContext(MobileContext);
+export default function Sidebar({ isOpen, onClose }) {
+  const { isMobile, setIsMobile } = useContext(MobileContext);
   const { user } = useContext(AuthContext);
   const pathname = usePathname();
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const [showTooltip, setShowTooltip] = useState(null);
+  const tooltipTimeout = useRef(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -90,6 +102,28 @@ const Sidebar = ({ isOpen, onClose }) => {
     return item;
   });
 
+  const handleItemHover = (item) => {
+    if (!isOpen) {
+      tooltipTimeout.current = setTimeout(() => {
+        setShowTooltip(item);
+      }, 100);
+    }
+  };
+
+  const handleItemLeave = () => {
+    if (tooltipTimeout.current) {
+      clearTimeout(tooltipTimeout.current);
+    }
+    setShowTooltip(null);
+  };
+
+  const handleItemClick = (e, href) => {
+    if (!isOpen && !isMobile) {
+      e.preventDefault();
+      router.push(href);
+    }
+  };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -103,21 +137,19 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile menu trigger */}
       {isMobile && !isOpen && (
         <button
-          onClick={() => onClose(false)}
-          className="fixed top-4 left-4 p-2 bg-background rounded-lg shadow-lg z-40 hover:bg-gray-100 transition-colors duration-150"
+          onClick={onClose}
+          className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-background border border-border hover:bg-accent"
         >
-          <Icon icon="ph:list" className="text-2xl" />
+          <Icon icon="ph:list-bold" className="w-6 h-6" />
         </button>
       )}
 
       {/* Sidebar */}
-      <div className={`
-        fixed top-0 left-0 h-screen bg-background z-50 flex flex-col
-        transition-all duration-150 ease-in-out
-        ${isCollapsed ? 'w-16' : 'w-64'}
-        ${isMobile ? `transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}` : ''}
-        ${!isMobile ? 'relative translate-x-0 z-0' : ''}
-      `}>
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-40 flex flex-col bg-background border-r border-border transition-all duration-300",
+        isOpen ? "w-64" : "w-16",
+        isMobile && !isOpen && "-translate-x-full"
+      )}>
         {/* Logo and collapse button */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between shrink-0">
           <Link href="/" className="flex items-center space-x-2">
@@ -138,33 +170,28 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Navigation - Scrollable with padding bottom for user menu */}
-        <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-20">
+        <nav className="flex-1 overflow-y-auto pb-20">
           {updatedMenuItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.comingSoon ? item.href : item.href}
-              className={`
-                flex items-center space-x-3 p-2 rounded-lg w-full whitespace-nowrap
-                transition-colors duration-150
-                ${pathname === item.href ? 'bg-primary text-white' : 'hover:bg-gray-100'}
-                ${item.comingSoon ? 'opacity-50' : ''}
-              `}
-              onClick={(e) => {
-                handleNavigation(item);
-              }}
-            >
-              <Icon icon={item.icon} className="text-xl shrink-0" />
-              {!isCollapsed && (
-                <>
-                  <span className="truncate">{item.name}</span>
-                  {item.comingSoon && (
-                    <span className="ml-auto text-xs bg-gray-200 px-2 py-1 rounded shrink-0">
-                      Soon
-                    </span>
-                  )}
-                </>
+            <div key={item.href} className="relative">
+              <Link
+                href={item.href}
+                onClick={(e) => handleItemClick(e, item.href)}
+                onMouseEnter={() => handleItemHover(item)}
+                onMouseLeave={handleItemLeave}
+                className={cn(
+                  "flex items-center px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                  pathname === item.href && "text-foreground bg-accent"
+                )}
+              >
+                <Icon icon={item.icon} className="w-5 h-5 mr-2" />
+                {isOpen && <span>{item.name}</span>}
+              </Link>
+              {showTooltip === item && !isOpen && !isMobile && (
+                <div className="absolute left-16 top-2 z-50 px-2 py-1 text-sm bg-popover text-popover-foreground rounded shadow-lg">
+                  {item.name}
+                </div>
               )}
-            </Link>
+            </div>
           ))}
         </nav>
 
@@ -243,10 +270,10 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
           </div>
         )}
-      </div>
+      </aside>
     </>
   );
-};
+}
 
 const SidebarItem = ({ icon, text }) => {
   const { setSelectedTab, selectedTab } = useContext(NavContext);
@@ -263,5 +290,3 @@ const SidebarItem = ({ icon, text }) => {
     </div>
   );
 };
-
-export default Sidebar;

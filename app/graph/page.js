@@ -13,6 +13,7 @@ export default function GraphViewPage() {
       title="Graph View Coming Soon"
       description="Visualize connections between your pages in an interactive graph."
       icon="ph:graph-fill"
+      docsLink="0DO8ljYSnIG8viIgXHNo"
     />
   );
 } 

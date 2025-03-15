@@ -13,6 +13,7 @@ export default function ActivityPage() {
       title="Activity Feed Coming Soon"
       description="Track your writing progress, contributions, and interactions with other writers."
       icon="ph:activity-fill"
+      docsLink="Ayfgr1uNDjvDKGQDgoMm"
     />
   );
 } 

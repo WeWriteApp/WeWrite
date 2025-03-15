@@ -11,8 +11,7 @@ export async function generateMetadata({ params }) {
 export default function ProfilePage() {  
   return (
     <DashboardLayout>
-      <div className="container mx-auto pt-10">
-        <h1 className="text-2xl font-semibold">Settings</h1>
+      <div className="container mx-auto py-8">
         <SettingsPage />
       </div>
     </DashboardLayout>

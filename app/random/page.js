@@ -13,6 +13,7 @@ export default function RandomPage() {
       title="Random Page Coming Soon"
       description="Discover interesting pages through random exploration."
       icon="ph:dice-five-fill"
+      docsLink="eTVOLaHHSwp7scSf33YJ"
     />
   );
 } 

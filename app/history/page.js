@@ -13,6 +13,7 @@ export default function HistoryPage() {
       title="Page History Coming Soon"
       description="View and restore previous versions of your pages."
       icon="ph:clock-clockwise-fill"
+      docsLink="3AszVcuJkFh1FsvYmKM8"
     />
   );
 } 

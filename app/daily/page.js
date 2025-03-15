@@ -13,6 +13,7 @@ export default function DailyPage() {
       title="Daily Notes Coming Soon"
       description="Get daily writing prompts and track your daily writing progress."
       icon="ph:note-fill"
+      docsLink="4Shk4j8L7TaxeCjtClqs"
     />
   );
 } 
