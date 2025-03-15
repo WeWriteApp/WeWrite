@@ -5,7 +5,7 @@ import { auth } from "../firebase/auth";
 import  app  from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, get, set, getDatabase,update } from "firebase/database";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export const AuthContext = createContext();
 
@@ -13,48 +13,45 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         console.log('User is logged in', user);
-        getUserFromRTDB(user);
-        // Ensure we're on a protected route
-        if (window.location.pathname.includes('/auth/')) {
+        await getUserFromRTDB(user);
+        
+        // Only redirect if we're on an auth page
+        if (pathname?.includes('/auth/')) {
           router.push('/');
-          router.refresh();
         }
       } else {    
         setUser(null);
         setLoading(false);
-        // Redirect to login if on a protected route
-        if (!window.location.pathname.includes('/auth/')) {
+        
+        // Only redirect to login if we're not already on an auth page
+        if (pathname && !pathname.includes('/auth/')) {
           router.push('/auth/login');
         }
       }
     });
 
-    return unsubscribe;
-  }, [router]);
+    return () => unsubscribe();
+  }, [pathname]);
 
-  const getUserFromRTDB =  (user) => {
+  const getUserFromRTDB = async (user) => {
     const db = getDatabase(app);
-
-    let uid = user.uid;
+    const uid = user.uid;
     const dbRef = ref(db, `users/${uid}`);
-    // get the user from the database
-    onValue(dbRef, (snapshot) => {
-      const data = snapshot.val();
+
+    try {
+      const snapshot = await get(dbRef);
+      const data = snapshot.val() || {};
 
       if (!data.username && user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.displayName = user.displayName;
-      } else if (data.username !== user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
+        await update(ref(db), {
+          [`users/${uid}/username`]: user.displayName
+        });
         data.username = user.displayName;
       }
 
@@ -64,9 +61,15 @@ export const AuthProvider = ({ children }) => {
         ...data
       });
       setLoading(false);
-    });
-  }
-
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setUser({
+        uid: user.uid,
+        email: user.email
+      });
+      setLoading(false);
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
