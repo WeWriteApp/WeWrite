@@ -11,24 +11,31 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [previousAuthState, setPreviousAuthState] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
+    // Check if this is the first load
+    const isFirstLoad = !localStorage.getItem('hasLoadedBefore');
+    
     try {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user) {
           console.log('User is logged in', user);
-          // Only redirect if this is a new login (user was previously null)
-          if (!previousAuthState) {
+          
+          // Only redirect if this is the first load and we're not already on a specific page
+          if (isFirstLoad && window.location.pathname === '/') {
             router.push('/pages');
           }
-          setPreviousAuthState(user);
+          
+          // Mark that we've loaded before
+          localStorage.setItem('hasLoadedBefore', 'true');
+          
           getUserFromRTDB(user);
         } else {    
           setUser(null);
           setLoading(false);
-          setPreviousAuthState(null);
+          // Clear the load marker when user logs out
+          localStorage.removeItem('hasLoadedBefore');
         }
       });
 
