@@ -14,7 +14,7 @@ export function middleware(request) {
 
   // Redirect authenticated users away from auth pages
   if (isPublicPath && token) {
-    return NextResponse.redirect(new URL("/pages", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Redirect unauthenticated users to login

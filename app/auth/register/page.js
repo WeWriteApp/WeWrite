@@ -19,7 +19,7 @@ export default function RegisterPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (authUser) {
-      router.push("/pages");
+      router.push("/");
     }
   }, [authUser, router]);
 
