@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = 'force-dynamic';
-
 import { useContext, useEffect } from "react";
 import Header from "./components/Header";
 import AllPages from "./components/AllPages";
