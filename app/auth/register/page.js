@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createUser, addUsername } from "../../firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "../../providers/AuthProvider";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,6 +14,14 @@ export default function RegisterPage() {
     username: "",
   });
   const [error, setError] = useState(null);
+  const { user: authUser } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (authUser) {
+      router.push("/pages");
+    }
+  }, [authUser, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +30,7 @@ export default function RegisterPage() {
       setError(response.message);
     } else {
       await addUsername(user.username);
-      router.push("/pages");
+      // Router push will happen automatically via the useEffect above
     }
   };
 
@@ -30,8 +39,8 @@ export default function RegisterPage() {
       <div className="flex flex-col items-center justify-center min-h-[80vh]">
         <h1 className="text-3xl font-bold mb-8 text-text">Register</h1>
         
-        <form onSubmit={handleSubmit} className="w-full max-w-md">
-          <div className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
+          <div className="space-y-4">
             <div>
               <label className="block text-text font-medium mb-2">
                 Username
@@ -42,7 +51,8 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, username: e.target.value })}
                 placeholder="Enter your username"
                 required
-                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary"
+                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                autoComplete="username"
               />
             </div>
 
@@ -56,7 +66,8 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, email: e.target.value })}
                 placeholder="Enter your email"
                 required
-                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary"
+                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                autoComplete="email"
               />
             </div>
 
@@ -70,12 +81,13 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, password: e.target.value })}
                 placeholder="Enter your password"
                 required
-                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary"
+                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                autoComplete="new-password"
               />
             </div>
 
             {error && (
-              <p className="text-red-500 text-sm mt-2">
+              <p className="text-red-500 text-sm">
                 {error}
               </p>
             )}
@@ -83,12 +95,12 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={!user.email || !user.password || !user.username}
-              className="w-full bg-primary text-button-text p-3 rounded-md hover:bg-primary-hover transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-primary text-button-text p-3 rounded-md hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Register
             </button>
 
-            <p className="text-center mt-4 text-text">
+            <p className="text-center text-text">
               Already have an account?{" "}
               <Link href="/auth/login" className="text-primary hover:text-primary-hover transition-colors">
                 Login

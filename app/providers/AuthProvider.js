@@ -5,8 +5,17 @@ import { auth, app } from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
+import Cookies from 'js-cookie';
 
 export const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -14,45 +23,24 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    let isFirstLoad = false;
-    
-    // Check localStorage only after component mounts
-    if (typeof window !== 'undefined') {
-      isFirstLoad = !localStorage.getItem('hasLoadedBefore');
-    }
-    
-    try {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          console.log('User is logged in', user);
-          
-          // Only redirect if this is the first load and we're on the root path
-          if (isFirstLoad && typeof window !== 'undefined' && window.location.pathname === '/') {
-            router.push('/pages');
-          }
-          
-          // Mark that we've loaded before
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('hasLoadedBefore', 'true');
-          }
-          
-          getUserFromRTDB(user);
-        } else {    
-          setUser(null);
-          setLoading(false);
-          // Clear the load marker when user logs out
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('hasLoadedBefore');
-          }
-        }
-      });
-
-      return unsubscribe;
-    } catch (error) {
-      console.error('Auth state change error:', error);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in
+        setUser(user);
+        // Set session cookie
+        const token = await user.getIdToken();
+        Cookies.set('session', token, { expires: 7 }); // 7 days expiry
+      } else {
+        // User is signed out
+        setUser(null);
+        // Remove session cookie
+        Cookies.remove('session');
+      }
       setLoading(false);
-    }
-  }, [router]);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const getUserFromRTDB = (user) => {
     const db = getDatabase(app);
@@ -94,9 +82,14 @@ export const AuthProvider = ({ children }) => {
     });
   }
 
+  const value = {
+    user,
+    loading,
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
