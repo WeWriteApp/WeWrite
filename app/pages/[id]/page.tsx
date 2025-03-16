@@ -53,7 +53,6 @@ export default function Page({ params }: PageProps) {
         onPrivacyChange={(isPublic) => {
           // Handle privacy change
         }}
-        onBack={() => router.back()}
       />
       <SinglePageView params={params} />
     </>
