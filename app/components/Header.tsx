@@ -6,8 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import Link from "next/link";
 import Button from "./Button";
-import ThemeModal from "./ThemeModal";
-import { Sidebar } from "./ui/sidebar";
+import { Sidebar } from "@/components/ui/sidebar";
 
 export default function Header() {
   const router = useRouter();
@@ -15,7 +14,6 @@ export default function Header() {
   const isHomePage = pathname === "/";
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [themeModalOpen, setThemeModalOpen] = React.useState(false);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { user } = useAuth();
 
@@ -45,27 +43,33 @@ export default function Header() {
       <header className="fixed top-0 left-0 right-0 z-50 w-full">
         <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
-            {/* Mobile Menu Button (visible on mobile) */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            <div className="flex-1 flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
 
             {/* Logo/Title (centered) */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center justify-center">
               <Link href="/" className="flex items-center space-x-2">
                 <span className="font-bold">WeWrite</span>
               </Link>
             </div>
 
-            {/* Desktop Navigation (hidden on mobile) */}
-            <div className="hidden md:flex items-center space-x-3">
+            {/* Desktop Navigation (right-aligned) */}
+            <div className="flex-1 flex items-center justify-end">
               {user && (
-                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden md:flex"
+                  onClick={() => setSidebarOpen(true)}
+                >
                   Menu
                 </Button>
               )}
@@ -82,12 +86,7 @@ export default function Header() {
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onThemeClick={() => {
-          setSidebarOpen(false);
-          setThemeModalOpen(true);
-        }}
       />
-      <ThemeModal open={themeModalOpen} onOpenChange={setThemeModalOpen} />
     </>
   );
 } 
