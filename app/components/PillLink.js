@@ -1,11 +1,12 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { Lock, Globe } from "lucide-react";
 
 export const PillLink = ({ children, href, isPublic, groupId, className, isOwned }) => {
   // Only show lock for private pages (where isPublic is explicitly false)
   const showLock = href?.startsWith('/pages/') && isPublic === false;
+  const showGlobe = href?.startsWith('/pages/') && isPublic === true;
   
   return (
     <Link 
@@ -28,8 +29,11 @@ export const PillLink = ({ children, href, isPublic, groupId, className, isOwned
         ${className || ''}
       `}
     >
-      {showLock && <Icon icon="akar-icons:lock-on" className="mr-2 inline" />}
-      {children}
+      <div className="flex items-center gap-2">
+        {showLock && <Lock className="h-3 w-3" />}
+        {showGlobe && <Globe className="h-3 w-3" />}
+        {children}
+      </div>
     </Link>
   );
 }

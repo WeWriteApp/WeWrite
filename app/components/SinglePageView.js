@@ -14,6 +14,7 @@ import ActionRow from "./PageActionRow";
 import { listenToPageById } from "../firebase/database";
 import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { Lock } from "lucide-react";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -128,18 +129,18 @@ export default function SinglePageView({ params }) {
   if (isLoading) {
     return <Loader />;
   }
-  if (!isPublic) {
+  if (!isPublic && (!user || user.uid !== page.userId)) {
     return (
       <DashboardLayout>
-        <div>
+        <div className="p-4">
           <h1 className="text-2xl font-semibold text-text">
-            Sorry this page is private
+            {title}
           </h1>
           <div className="flex items-center gap-2 mt-4">
-            <Icon icon="akar-icons:warning" className="text-red-500" />
-            <span className="text-lg text-text">This page is private</span>
-            <Link href="/pages">
-              <button className="bg-background text-button-text px-4 py-2 rounded-full">
+            <Lock className="h-5 w-5 text-muted-foreground" />
+            <span className="text-lg text-muted-foreground">This page is private</span>
+            <Link href="/">
+              <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
                 Go back
               </button>
             </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, ChevronDown, Lock, Unlock, Moon, Sun, Link as LinkIcon } from 'lucide-react';
+import { ChevronLeft, ChevronDown, Lock, Unlock, Moon, Sun, Link as LinkIcon, Globe, Check } from 'lucide-react';
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -146,9 +146,9 @@ export default function PageHeader({
                 onClick={() => setShowPrivacyMenu(!showPrivacyMenu)}
               >
                 {currentPrivacy ? (
-                  <Lock className="h-4 w-4" />
+                  <Globe className="h-4 w-4" />
                 ) : (
-                  <Unlock className="h-4 w-4" />
+                  <Lock className="h-4 w-4" />
                 )}
               </button>
 
@@ -156,21 +156,23 @@ export default function PageHeader({
                 <div className="absolute top-full right-0 mt-2 p-2 bg-background/80 backdrop-blur-md border border-border rounded-lg shadow-lg min-w-[150px] z-50">
                   <button
                     onClick={() => handlePrivacyChange(false)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
-                      !currentPrivacy ? 'bg-accent text-accent-foreground' : ''
-                    }`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center justify-between gap-2`}
                   >
-                    <Lock className="h-4 w-4" />
-                    Private
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Private
+                    </div>
+                    {!currentPrivacy && <Check className="h-4 w-4" />}
                   </button>
                   <button
                     onClick={() => handlePrivacyChange(true)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
-                      currentPrivacy ? 'bg-accent text-accent-foreground' : ''
-                    }`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center justify-between gap-2`}
                   >
-                    <Unlock className="h-4 w-4" />
-                    Public
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Public
+                    </div>
+                    {currentPrivacy && <Check className="h-4 w-4" />}
                   </button>
                 </div>
               )}
