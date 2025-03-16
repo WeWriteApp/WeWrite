@@ -5,7 +5,6 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../firebase/config";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Box, Container, Flex, Text, Button, TextField } from '@radix-ui/themes';
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -24,66 +23,63 @@ export default function LoginPage() {
   };
 
   return (
-    <Container size="1">
-      <Flex direction="column" gap="4" justify="center" style={{ minHeight: '80vh' }}>
-        <Box mb="4">
-          <Text size="8" weight="bold" align="center">
-            Login
-          </Text>
-        </Box>
-
-        <form onSubmit={handleSubmit}>
-          <Flex direction="column" gap="4">
-            <Box>
-              <Text as="label" size="2" mb="2" weight="bold">
+    <div className="container mx-auto md:max-w-lg md:mt-10">
+      <div className="flex flex-col items-center justify-center min-h-[80vh]">
+        <h1 className="text-3xl font-bold mb-8 text-text">Login</h1>
+        
+        <form onSubmit={handleSubmit} className="w-full max-w-md">
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="block text-text font-medium mb-2">
                 Email
-              </Text>
-              <TextField
-                size="3"
+              </label>
+              <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
+                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary"
               />
-            </Box>
+            </div>
 
-            <Box>
-              <Text as="label" size="2" mb="2" weight="bold">
+            <div>
+              <label className="block text-text font-medium mb-2">
                 Password
-              </Text>
-              <TextField
-                size="3"
+              </label>
+              <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
+                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary"
               />
-            </Box>
+            </div>
 
             {error && (
-              <Text color="red" size="2">
+              <p className="text-red-500 text-sm mt-2">
                 {error}
-              </Text>
+              </p>
             )}
 
-            <Button type="submit" size="3">
+            <button
+              type="submit"
+              className="w-full bg-primary text-button-text p-3 rounded-md hover:bg-primary-hover transition-colors mt-4"
+            >
               Login
-            </Button>
+            </button>
 
-            <Flex justify="center" gap="2">
-              <Text size="2">Don't have an account?</Text>
-              <Link href="/auth/register">
-                <Text size="2" color="blue">
-                  Register
-                </Text>
+            <p className="text-center mt-4 text-text">
+              Don't have an account?{" "}
+              <Link href="/auth/register" className="text-primary hover:text-primary-hover transition-colors">
+                Register
               </Link>
-            </Flex>
-          </Flex>
+            </p>
+          </div>
         </form>
-      </Flex>
-    </Container>
+      </div>
+    </div>
   );
 }
 
