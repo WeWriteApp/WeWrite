@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { auth } from "@/firebase/config"
 import { signOut } from "firebase/auth"
 import { cn } from "@/lib/utils"
-import { Button } from "./button"
+import Button from "../Button"
 
 interface SidebarProps {
   isOpen: boolean
