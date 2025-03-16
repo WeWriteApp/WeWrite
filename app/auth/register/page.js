@@ -1,4 +1,4 @@
-import RegisterForm from "../../components/RegisterForm";
+import RegisterForm from "@/components/auth/RegisterForm";
 
 export async function generateMetadata() {
   return {
@@ -7,13 +7,12 @@ export async function generateMetadata() {
   };
 }
 
-const Register = () => {
+export default function Register() {
   return (
-    <div className="container mx-auto md:max-w-lg md:mt-10">
-      <h1 className="text-2xl font-semibold mb-4">Register</h1>
+    <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <RegisterForm />
     </div>
   );
-}export default Register;
+}
 
 
