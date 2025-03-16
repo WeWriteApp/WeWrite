@@ -101,7 +101,7 @@ export default function PageHeader({
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 ${isCollapsed ? 'h-12' : 'h-16'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-50 bg-background border-b border-border transition-all duration-300 ${isCollapsed ? 'h-12' : 'h-16'}`}>
         {/* Progress bar */}
         <div 
           className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300"
@@ -114,7 +114,7 @@ export default function PageHeader({
             {showBackButton && (
               <button
                 onClick={handleBack}
-                className={`rounded-full p-2 hover:bg-accent text-foreground transition-all duration-300 ${isCollapsed ? 'scale-75' : ''}`}
+                className={`rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300 ${isCollapsed ? 'scale-75' : ''}`}
                 aria-label="Go back"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -122,7 +122,7 @@ export default function PageHeader({
             )}
 
             <div className={`flex ${isCollapsed ? 'flex-row items-center gap-2' : 'flex-col'} transition-all duration-300`}>
-              <h1 className={`font-semibold text-foreground transition-all duration-300 ${isCollapsed ? 'text-sm' : 'text-lg'}`}>
+              <h1 className={`font-semibold text-foreground transition-all duration-300 ${isCollapsed ? 'text-sm' : 'text-xl'}`}>
                 {title}
               </h1>
               <div className="relative" ref={bylineRef}>
@@ -138,7 +138,7 @@ export default function PageHeader({
 
                 {/* Byline menu */}
                 {showBylineMenu && (
-                  <div className="absolute top-full left-0 mt-2 p-4 bg-background border rounded-lg shadow-lg min-w-[200px] z-50">
+                  <div className="absolute top-full left-0 mt-2 p-4 bg-popover border border-border rounded-lg shadow-lg min-w-[200px] z-50">
                     <div className="space-y-2">
                       <label className="block font-medium text-foreground">Myself:</label>
                       <button
@@ -146,7 +146,7 @@ export default function PageHeader({
                           onGroupChange?.(null);
                           setShowBylineMenu(false);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent/50 ${!currentGroupId ? 'bg-accent' : ''}`}
+                        className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground ${!currentGroupId ? 'bg-accent text-accent-foreground' : ''}`}
                       >
                         by {username}
                       </button>
@@ -162,8 +162,8 @@ export default function PageHeader({
                                   onGroupChange?.(group.id);
                                   setShowBylineMenu(false);
                                 }}
-                                className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent/50 ${
-                                  currentGroupId === group.id ? 'bg-accent' : ''
+                                className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground ${
+                                  currentGroupId === group.id ? 'bg-accent text-accent-foreground' : ''
                                 }`}
                               >
                                 in {group.name}
@@ -184,7 +184,7 @@ export default function PageHeader({
             {/* Privacy toggle */}
             <div className="relative" ref={privacyRef}>
               <button 
-                className="rounded-full p-2 hover:bg-accent text-foreground group"
+                className="rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300"
                 onClick={() => setShowPrivacyMenu(!showPrivacyMenu)}
               >
                 {currentPrivacy ? (
@@ -195,11 +195,11 @@ export default function PageHeader({
               </button>
 
               {showPrivacyMenu && (
-                <div className="absolute top-full right-0 mt-2 p-2 bg-background border rounded-lg shadow-lg min-w-[150px]">
+                <div className="absolute top-full right-0 mt-2 p-2 bg-popover border border-border rounded-lg shadow-lg min-w-[150px] z-50">
                   <button
                     onClick={() => handlePrivacyChange(false)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent/50 flex items-center gap-2 ${
-                      !currentPrivacy ? 'bg-accent' : ''
+                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
+                      !currentPrivacy ? 'bg-accent text-accent-foreground' : ''
                     }`}
                   >
                     <Lock className="h-4 w-4" />
@@ -207,8 +207,8 @@ export default function PageHeader({
                   </button>
                   <button
                     onClick={() => handlePrivacyChange(true)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent/50 flex items-center gap-2 ${
-                      currentPrivacy ? 'bg-accent' : ''
+                    className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${
+                      currentPrivacy ? 'bg-accent text-accent-foreground' : ''
                     }`}
                   >
                     <Unlock className="h-4 w-4" />
@@ -220,19 +220,19 @@ export default function PageHeader({
 
             {/* Copy link button */}
             <button
-              className="rounded-full p-2 hover:bg-accent text-foreground group relative"
+              className="rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300 relative"
               onClick={handleCopyLink}
               aria-label="Copy page link"
             >
               <LinkIcon className="h-4 w-4" />
-              <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full px-2 py-1 bg-background border rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full px-2 py-1 bg-popover border border-border rounded text-xs text-popover-foreground whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                 Copy page link
               </span>
             </button>
 
             {/* Theme toggle */}
             <button
-              className="rounded-full p-2 hover:bg-accent text-foreground group"
+              className="rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300"
               onClick={toggleTheme}
               aria-label="Toggle theme"
             >

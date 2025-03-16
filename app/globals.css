@@ -1,3 +1,21 @@
+/**
+ * Global Styles and Theme Configuration
+ * 
+ * IMPORTANT THEME HANDLING REQUIREMENTS:
+ * 1. All theme-specific colors MUST be defined as CSS variables here
+ * 2. Components should NOT use hardcoded colors - always use CSS variables
+ * 3. Theme changes are handled through the ThemeProvider (providers/ThemeProvider.js)
+ * 4. Dark/Light modes are toggled via CSS classes, not media queries
+ * 5. System theme preferences should NOT be accessed directly
+ * 
+ * CSS Variable Usage:
+ * - Background: var(--background-color)
+ * - Text: var(--text-color)
+ * - Primary: var(--primary-color)
+ * - Secondary: var(--secondary-color)
+ * - Borders: var(--border-color)
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
