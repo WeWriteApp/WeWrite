@@ -16,7 +16,7 @@ import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Lock } from "lucide-react";
 import Head from "next/head";
-import Header from "./Header";
+import PageHeader from "./PageHeader";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -111,7 +111,7 @@ export default function SinglePageView({ params }) {
         <Head>
           <title>Page Not Found - WeWrite</title>
         </Head>
-        <Header />
+        <PageHeader />
         <Loader />
       </>
     );
@@ -123,7 +123,7 @@ export default function SinglePageView({ params }) {
           <title>Deleted Page - WeWrite</title>
         </Head>
         <DashboardLayout>
-          <Header />
+          <PageHeader />
           <div>
             <h1 className="text-2xl font-semibold text-text">Page not found</h1>
             <div className="flex items-center gap-2 mt-4">
@@ -148,7 +148,7 @@ export default function SinglePageView({ params }) {
         <Head>
           <title>Loading... - WeWrite</title>
         </Head>
-        <Header />
+        <PageHeader />
         <Loader />
       </>
     );
@@ -160,7 +160,7 @@ export default function SinglePageView({ params }) {
           <title>Private Page - WeWrite</title>
         </Head>
         <DashboardLayout>
-          <Header />
+          <PageHeader />
           <div className="p-4">
             <h1 className="text-2xl font-semibold text-text">
               {title}
@@ -186,7 +186,7 @@ export default function SinglePageView({ params }) {
         <title>{title} - WeWrite</title>
       </Head>
       <DashboardLayout>
-        <Header />
+        <PageHeader />
         <div className="p-2">
           {isEditing ? (
             <EditPage

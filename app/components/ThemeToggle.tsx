@@ -3,28 +3,27 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Card } from "../ui/card";
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
+} from "@/components/ui/tooltip";
 
 export default function ThemeToggle() {
   const { setTheme, theme } = useTheme();
   const [open, setOpen] = React.useState(false);
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip open={!open}>
+    <TooltipProvider>
+      <Tooltip>
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
@@ -42,18 +41,16 @@ export default function ThemeToggle() {
           <TooltipContent>
             <p>Change theme</p>
           </TooltipContent>
-          <DropdownMenuContent asChild>
-            <Card>
-              <DropdownMenuItem onClick={() => setTheme("light")}>
-                Light
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")}>
-                Dark
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("system")}>
-                System
-              </DropdownMenuItem>
-            </Card>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setTheme("light")}>
+              Light
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme("dark")}>
+              Dark
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTheme("system")}>
+              System
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </Tooltip>
