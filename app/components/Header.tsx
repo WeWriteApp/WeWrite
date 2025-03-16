@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Menu, Plus } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
-import { auth } from "../firebase/config";
-import { signOut as firebaseSignOut } from "firebase/auth";
 import Link from "next/link";
 import Button from "./Button";
 import ThemeModal from "./ThemeModal";
@@ -38,15 +36,6 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await firebaseSignOut(auth);
-      router.push("/auth/login");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
-
   if (!isHomePage) {
     return null;
   }
@@ -66,8 +55,8 @@ export default function Header() {
               <Menu className="h-5 w-5" />
             </Button>
 
-            {/* Logo/Title (centered on mobile) */}
-            <div className="flex-1 flex items-center justify-center md:justify-start">
+            {/* Logo/Title (centered) */}
+            <div className="flex-1 flex items-center justify-center">
               <Link href="/" className="flex items-center space-x-2">
                 <span className="font-bold">WeWrite</span>
               </Link>
@@ -76,29 +65,11 @@ export default function Header() {
             {/* Desktop Navigation (hidden on mobile) */}
             <div className="hidden md:flex items-center space-x-3">
               {user && (
-                <Button variant="outline" size="sm" onClick={() => setSidebarOpen(true)}>
+                <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
                   Menu
                 </Button>
               )}
             </div>
-
-            {/* New Page Button (blue on mobile) */}
-            <Link href="/new">
-              <Button
-                variant="default"
-                size="icon"
-                className="md:hidden bg-blue-500 hover:bg-blue-600"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="hidden md:inline-flex"
-              >
-                New page
-              </Button>
-            </Link>
           </div>
           {/* Scroll Progress Bar */}
           <div 
