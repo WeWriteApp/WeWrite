@@ -5,17 +5,11 @@ import { LogOut, Plus } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import ThemeToggle from "./ThemeToggle";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { auth } from "../firebase/config";
 import { signOut as firebaseSignOut } from "firebase/auth";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import UserMenu from "@/components/UserMenu";
+import Button from "./Button";
+import { UserMenu } from "./ui/user-menu";
 
 export default function Header() {
   const router = useRouter();

@@ -10,8 +10,8 @@ import { updatePage } from "../firebase/database";
 import { useAuth } from '../providers/AuthProvider';
 import { useTheme } from 'next-themes';
 import ThemeToggle from "./ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { Button } from "@/components/ui/button";
+import { UserMenu } from "./ui/user-menu";
+import Button from "./Button";
 
 export interface PageHeaderProps {
   title: string;
