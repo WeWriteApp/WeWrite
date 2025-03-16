@@ -11,7 +11,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container">
+      <main>
         {children}
       </main>
     </div>

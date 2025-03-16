@@ -18,15 +18,19 @@ const SingleProfileView = ({ profile }) => {
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="mb-4">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-semibold">{profile.username}</h1>
+        <div className="flex items-center space-x-4 mb-4">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-semibold">{profile.username}</h1>
+        </div>
         <div className="my-4">
-          <TypeaheadSearch userId={profile.uid} />
+          <TypeaheadSearch 
+            userId={profile.uid} 
+            placeholder={`Search ${profile.username}'s pages...`}
+          />
         </div>
         <PagesList profile={profile} />
       </div>

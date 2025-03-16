@@ -183,6 +183,7 @@ export default function SinglePageView({ params }) {
           title={title} 
           username={page?.username || "[NULL]"} 
           userId={page?.userId}
+          isLoading={isLoading}
         />
         <div className="p-2">
           {isEditing ? (

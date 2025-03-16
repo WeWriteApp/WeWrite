@@ -28,6 +28,7 @@ const TypeaheadSearch = ({
   onSelect = null,
   setShowDropdown = null,
   userId = null,
+  placeholder = "Search..."
 }) => {
   const [search, setSearch] = useState("");
   const { user } = useContext(AuthContext);
@@ -118,7 +119,7 @@ const TypeaheadSearch = ({
       <div className="flex flex-col space-y-1">
         <input
           className="border border-gray-500 w-full p-2 text-lg bg-background text-text"
-          placeholder="Search..."
+          placeholder={placeholder}
           id="search"
           type="text"
           value={search}

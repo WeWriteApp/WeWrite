@@ -55,24 +55,19 @@ export default function Header() {
         <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex items-center flex-1">
-              <Link href="/" className="mr-6 flex items-center space-x-2">
+              <Link href="/" className="mr-4 flex items-center space-x-2">
                 <span className="font-bold">WeWrite</span>
               </Link>
             </div>
-            <div className="flex items-center space-x-6">
-              <Link href="/new">
-                <Button variant="secondary" size="sm">
-                  New page
-                </Button>
-              </Link>
+            <div className="flex items-center space-x-3">
               {user && (
                 <>
                   <Link href={`/user/${user.uid}`}>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="outline" size="sm">
                       Profile
                     </Button>
                   </Link>
-                  <Button variant="secondary" size="sm" onClick={handleLogout}>
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
                     Log out
                   </Button>
                 </>
@@ -85,6 +80,11 @@ export default function Header() {
               >
                 <Moon className="h-[1.2rem] w-[1.2rem]" />
               </Button>
+              <Link href="/new">
+                <Button variant="default" size="sm">
+                  New page
+                </Button>
+              </Link>
             </div>
           </div>
           {/* Scroll Progress Bar */}
