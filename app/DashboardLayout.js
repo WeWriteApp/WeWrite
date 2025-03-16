@@ -10,9 +10,11 @@ export default function DashboardLayout({ children }) {
   const { loading } = useContext(DataContext);
   
   return (
-    <div className="flex flex-col bg-background min-h-screen pb-40" data-theme={theme}>
+    <div className="min-h-screen bg-background" data-theme={theme}>
       <Loader show={loading} />
-      <div className="flex-1">{children}</div>
+      <div className="flex flex-col">
+        {children}
+      </div>
     </div>
   );
 }

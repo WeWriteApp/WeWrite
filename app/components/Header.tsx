@@ -51,13 +51,13 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full">
       <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
-        <div className={`container flex items-center h-full transition-all duration-200`}>
+        <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
           <div className="flex items-center flex-1">
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <span className="font-bold">WeWrite</span>
             </Link>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <Link href="/new">
               <Button variant="secondary" size="sm">
                 New page
@@ -65,7 +65,6 @@ export default function Header() {
             </Link>
             {user && (
               <Button variant="secondary" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
                 Log out
               </Button>
             )}
