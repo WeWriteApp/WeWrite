@@ -48,7 +48,7 @@ export default function RootLayout({
                                   {children}
                                 </div>
                               </div>
-                              <Drawer />
+                              <Drawer>{/* Drawer content */}</Drawer>
                               <Analytics />
                               <SpeedInsights />
                             </MobileProvider>
