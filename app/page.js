@@ -30,14 +30,12 @@ export default function Home() {
         <title>Home - WeWrite</title>
       </Head>
       <Header />
-      <main className="p-4">
+      <main className="container p-6 mt-20">
         <AddUsername />
         
-        <h1 className="text-2xl font-semibold text-text">Your Pages</h1>
-        <div className="flex items-center pb-2 md:align-middle md:justify-between md:flex-row flex-col">
-          <div className="md:w-1/2 w-full">
-            <TypeaheadSearch />
-          </div>
+        <h1 className="text-2xl font-semibold mb-6">Your Pages</h1>
+        <div className="w-full mb-6">
+          <TypeaheadSearch />
         </div>
         <AllPages />
 

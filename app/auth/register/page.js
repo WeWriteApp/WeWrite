@@ -54,8 +54,7 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, username: e.target.value })}
                 placeholder="Enter your username"
                 required
-                autoFocus
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary hover:border-primary transition-colors"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -70,7 +69,7 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, email: e.target.value })}
                 placeholder="Enter your email"
                 required
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary hover:border-primary transition-colors"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -85,7 +84,7 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, password: e.target.value })}
                 placeholder="Enter your password"
                 required
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary hover:border-primary transition-colors"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -97,14 +96,14 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors"
+              className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors"
             >
               Register
             </button>
 
             <div className="text-center text-sm">
               <span>Already have an account? </span>
-              <Link href="/auth/login" className="text-blue-500 hover:text-blue-600 transition-colors">
+              <Link href="/auth/login" className="text-primary hover:underline">
                 Login
               </Link>
             </div>
