@@ -1,57 +1,81 @@
 "use client";
+
 import { useState } from "react";
-import { loginUser } from "../firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Box, Container, Flex, Text, Button, TextField } from '@radix-ui/themes';
+import { auth } from "../firebase/config";
 
 const LoginForm = () => {
   const router = useRouter();
-  const [user, setUser] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
-
-  const handleChange = (e) => {
-    setUser({ ...user, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await loginUser(user.email, user.password);
-    if (response.code) {
-      setError(response.message);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/pages");
+    } catch (error) {
+      setError(error.message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        name="email"
-        value={user.email}
-        onChange={handleChange}
-        placeholder="Email"
-        autoComplete="off"
-        className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
-      />
-      <input
-        type="password"
-        name="password"
-        value={user.password}
-        onChange={handleChange}
-        placeholder="Password"
-        autoComplete="off"
-        className="border border-gray-300 rounded p-2 w-full bg-background text-text mt-2"
-      />
-      <button type="submit" className="bg-background text-button-text rounded p-2 w-full mt-2 border border-gray-300">
-        Login
-      </button>
-      {error && <p className="text-red-500 mt-2">{error}</p>}
+    <Container size="1">
+      <form onSubmit={handleSubmit}>
+        <Flex direction="column" gap="4">
+          <Box>
+            <Text as="label" size="2" mb="2" weight="bold">
+              Email
+            </Text>
+            <TextField
+              size="3"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+          </Box>
 
-      <p className="text-text mt-2">Don't have an account? <Link href="/auth/register" className="text-primary">Register</Link></p>
-    </form>
+          <Box>
+            <Text as="label" size="2" mb="2" weight="bold">
+              Password
+            </Text>
+            <TextField
+              size="3"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+          </Box>
+
+          {error && (
+            <Text color="red" size="2">
+              {error}
+            </Text>
+          )}
+
+          <Button type="submit" size="3">
+            Login
+          </Button>
+
+          <Flex justify="center" gap="2">
+            <Text size="2">Don't have an account?</Text>
+            <Link href="/auth/register">
+              <Text size="2" color="blue">
+                Register
+              </Text>
+            </Link>
+          </Flex>
+        </Flex>
+      </form>
+    </Container>
   );
 };
 

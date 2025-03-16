@@ -14,7 +14,6 @@ const Register = () => {
       <RegisterForm />
     </div>
   );
-}
+}export default Register;
 
 
-export default Register;
