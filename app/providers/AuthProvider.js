@@ -14,28 +14,36 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if this is the first load
-    const isFirstLoad = !localStorage.getItem('hasLoadedBefore');
+    let isFirstLoad = false;
+    
+    // Check localStorage only after component mounts
+    if (typeof window !== 'undefined') {
+      isFirstLoad = !localStorage.getItem('hasLoadedBefore');
+    }
     
     try {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user) {
           console.log('User is logged in', user);
           
-          // Only redirect if this is the first load and we're not already on a specific page
-          if (isFirstLoad && window.location.pathname === '/') {
+          // Only redirect if this is the first load and we're on the root path
+          if (isFirstLoad && typeof window !== 'undefined' && window.location.pathname === '/') {
             router.push('/pages');
           }
           
           // Mark that we've loaded before
-          localStorage.setItem('hasLoadedBefore', 'true');
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('hasLoadedBefore', 'true');
+          }
           
           getUserFromRTDB(user);
         } else {    
           setUser(null);
           setLoading(false);
           // Clear the load marker when user logs out
-          localStorage.removeItem('hasLoadedBefore');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('hasLoadedBefore');
+          }
         }
       });
 

@@ -8,23 +8,18 @@ export const MobileProvider = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (window.innerWidth < 768) {
-      setIsMobile(true);
-    }
-
-    window.addEventListener("resize", () => {
-      if (window.innerWidth < 768) {
-        setIsMobile(true);
-      }
-    });
-
-    return () => {
-      window.removeEventListener("resize", () => {
-        if (window.innerWidth < 768) {
-          setIsMobile(true);
-        }
-      });
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
     };
+
+    // Initial check
+    checkMobile();
+
+    // Add event listener
+    window.addEventListener("resize", checkMobile);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   return (
