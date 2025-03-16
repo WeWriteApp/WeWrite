@@ -1,4 +1,6 @@
-import RegisterForm from "@/components/auth/RegisterForm";
+"use client";
+
+import RegisterForm from "../../components/RegisterForm";
 
 export async function generateMetadata() {
   return {
