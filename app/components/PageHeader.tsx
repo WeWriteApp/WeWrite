@@ -50,7 +50,14 @@ export default function PageHeader({ title, username, userId }: PageHeaderProps)
                 {title || "Untitled"}
               </h1>
               <p className={`text-muted-foreground truncate transition-all ${isScrolled ? "text-sm" : "text-base"}`}>
-                by {username || "[NULL]"}
+                by{" "}
+                {userId ? (
+                  <Link href={`/profile/${userId}`} className="hover:underline">
+                    {username || "[NULL]"}
+                  </Link>
+                ) : (
+                  <span>{username || "[NULL]"}</span>
+                )}
               </p>
             </div>
           </div>

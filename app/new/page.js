@@ -16,7 +16,7 @@ const New = () => {
   return (
     <DashboardLayout>
       <PageHeader title="New page" />
-      <div className="container py-6">
+      <div className="py-6">
         <div className="w-full h-full flex flex-col space-y-4">
           <Form Page={Page} setPage={setPage} />
         </div>
