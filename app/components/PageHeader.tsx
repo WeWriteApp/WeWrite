@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, Moon } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import Link from "next/link";
 import Button from "./Button";
-import ThemeModal from "./ThemeModal";
 
 export interface PageHeaderProps {
   title?: string;
@@ -16,7 +15,6 @@ export interface PageHeaderProps {
 export default function PageHeader({ title, username, userId, isLoading = false }: PageHeaderProps) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [themeModalOpen, setThemeModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -72,26 +70,15 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                 </p>
               </div>
             </div>
-            <div className={`flex items-center space-x-4 transition-opacity duration-200 ${isScrolled ? "opacity-0 invisible" : ""}`}>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setThemeModalOpen(true)}
-                className={`h-9 w-9 transition-all ${isScrolled ? "scale-90" : ""}`}
-              >
-                <Moon className="h-[1.2rem] w-[1.2rem]" />
-              </Button>
-            </div>
           </div>
           {/* Scroll Progress Bar */}
           <div 
-            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-200"
+            className="absolute bottom-0 left-0 h-0.5 bg-blue-500 transition-all duration-200"
             style={{ width: `${scrollProgress}%` }}
           />
         </div>
       </header>
       <div className="h-20" /> {/* Spacer for fixed header */}
-      <ThemeModal open={themeModalOpen} onOpenChange={setThemeModalOpen} />
     </>
   );
 } 

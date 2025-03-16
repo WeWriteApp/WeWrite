@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../providers/AuthProvider";
 import Button from "../../components/Button";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function RegisterPage() {
     password: "",
     username: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const { user: authUser } = useAuth();
 
@@ -78,15 +80,28 @@ export default function RegisterPage() {
               <label htmlFor="password" className="block text-sm font-medium mb-2">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                value={user.password}
-                onChange={(e) => setUser({ ...user, password: e.target.value })}
-                placeholder="Enter your password"
-                required
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={user.password}
+                  onChange={(e) => setUser({ ...user, password: e.target.value })}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -95,13 +110,15 @@ export default function RegisterPage() {
               </p>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              variant="default"
-            >
-              Register
-            </Button>
+            <div className="w-full">
+              <Button
+                type="submit"
+                className="w-full"
+                variant="default"
+              >
+                Register
+              </Button>
+            </div>
 
             <div className="text-center text-sm">
               <span>Already have an account? </span>
