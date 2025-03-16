@@ -1,16 +1,15 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Lock, Globe } from "lucide-react";
+import { Lock } from "lucide-react";
 
 export const PillLink = ({ children, href, isPublic, groupId, className, isOwned }) => {
   // Only show lock for private pages (where isPublic is explicitly false)
-  const showLock = href?.startsWith('/pages/') && isPublic === false;
-  const showGlobe = href?.startsWith('/pages/') && isPublic === true;
+  const showLock = isPublic === false;
   
   return (
     <Link 
-      href={href} 
+      href={href?.replace('/pages/', '/')} 
       className={`
         relative
         my-1 px-3 py-1.5
@@ -31,7 +30,6 @@ export const PillLink = ({ children, href, isPublic, groupId, className, isOwned
     >
       <div className="flex items-center gap-2">
         {showLock && <Lock className="h-3 w-3" />}
-        {showGlobe && <Globe className="h-3 w-3" />}
         {children}
       </div>
     </Link>

@@ -5,14 +5,25 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import ThemeToggle from "./ThemeToggle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+import { auth } from "../firebase/config";
+import { signOut as firebaseSignOut } from "firebase/auth";
 
 export default function Header() {
   const router = useRouter();
-  const { signOut } = useAuth();
 
   const handleLogout = async () => {
-    await signOut();
-    router.push("/login");
+    try {
+      await firebaseSignOut(auth);
+      router.push("/auth/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
@@ -22,14 +33,35 @@ export default function Header() {
           <h1 className="font-semibold text-foreground text-lg">WeWrite</h1>
           
           <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <button
-              onClick={handleLogout}
-              className="rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300"
-              aria-label="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <ThemeToggle />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Change theme</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleLogout}
+                    className="rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300"
+                    aria-label="Log out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Log out</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </header>

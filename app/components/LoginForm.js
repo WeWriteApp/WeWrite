@@ -17,7 +17,7 @@ const LoginForm = () => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/pages");
+      router.push("/");
     } catch (error) {
       setError(error.message);
     }
