@@ -98,6 +98,7 @@ export default function RegisterPage() {
             <Button
               type="submit"
               className="w-full"
+              variant="default"
             >
               Register
             </Button>

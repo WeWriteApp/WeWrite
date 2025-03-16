@@ -62,11 +62,6 @@ export default function Header() {
             <div className="flex items-center space-x-3">
               {user && (
                 <>
-                  <Link href={`/user/${user.uid}`}>
-                    <Button variant="outline" size="sm">
-                      Profile
-                    </Button>
-                  </Link>
                   <Button variant="outline" size="sm" onClick={handleLogout}>
                     Log out
                   </Button>

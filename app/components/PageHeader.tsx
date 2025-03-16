@@ -45,7 +45,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className={`shrink-0 h-8 w-8 transition-opacity duration-200 ${isScrolled ? "opacity-0 invisible" : ""}`}
+                  className={`shrink-0 h-8 w-8 transition-all duration-200 ${isScrolled ? "hidden" : ""}`}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>

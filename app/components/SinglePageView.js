@@ -185,7 +185,7 @@ export default function SinglePageView({ params }) {
           userId={page?.userId}
           isLoading={isLoading}
         />
-        <div className="p-2">
+        <div className="p-2 pb-24">
           {isEditing ? (
             <EditPage
               isEditing={isEditing}
