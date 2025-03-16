@@ -286,6 +286,17 @@ export const getSubcollection = async (collectionName, docName, subcollectionNam
   }
 }
 
+export const updatePage = async (pageId, data) => {
+  try {
+    const pageRef = doc(db, "pages", pageId);
+    await setDoc(pageRef, { ...data, lastModified: new Date().toISOString() }, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("Error updating page:", e);
+    throw e;
+  }
+}
+
 function extractLinksFromNodes(nodes) {
   let links = [];
 
