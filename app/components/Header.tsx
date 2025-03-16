@@ -60,12 +60,10 @@ export default function Header() {
           <div className="flex items-center space-x-4">
             <Link href="/pages/new">
               <Button variant="secondary" size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Page
+                New Page
               </Button>
             </Link>
             <ThemeToggle />
-            <UserMenu />
           </div>
         </div>
         {/* Scroll Progress Bar */}

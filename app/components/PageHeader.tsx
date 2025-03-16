@@ -50,11 +50,9 @@ export default function PageHeader({ title, username, userId }: PageHeaderProps)
               <h1 className={`font-semibold truncate transition-all ${isScrolled ? "text-base" : "text-xl"}`}>
                 {title || "Untitled"}
               </h1>
-              {username && (
-                <p className={`text-muted-foreground truncate transition-all ${isScrolled ? "text-sm" : "text-base"}`}>
-                  by {username}
-                </p>
-              )}
+              <p className={`text-muted-foreground truncate transition-all ${isScrolled ? "text-sm" : "text-base"}`}>
+                by {username || "[NULL]"}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
