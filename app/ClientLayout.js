@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "./providers/AuthProvider";
 import { LoggingProvider } from "./providers/LoggingProvider";
 import { Drawer } from "./components/Drawer";
+import { DrawerProvider } from "./providers/DrawerProvider";
+import { MobileProvider } from "./providers/MobileProvider";
 
 export default function ClientLayout({ children }) {
   return (
@@ -16,11 +18,15 @@ export default function ClientLayout({ children }) {
     >
       <AuthProvider>
         <LoggingProvider>
-          <Drawer />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Toaster />
+          <MobileProvider>
+            <DrawerProvider>
+              <Drawer />
+              <main className="min-h-screen">
+                {children}
+              </main>
+              <Toaster />
+            </DrawerProvider>
+          </MobileProvider>
         </LoggingProvider>
       </AuthProvider>
     </ThemeProvider>
