@@ -9,7 +9,7 @@ const LoggingContext = createContext();
 export const useLogging = () => useContext(LoggingContext);
 
 // Logging Provider Component
-const LoggingProvider = ({ children }) => {
+export const LoggingProvider = ({ children }) => {
   // Function to log errors
   const logError = async (error, path) => {
     try {
@@ -48,5 +48,3 @@ const LoggingProvider = ({ children }) => {
     </LoggingContext.Provider>
   );
 };
-
-export default LoggingProvider;
