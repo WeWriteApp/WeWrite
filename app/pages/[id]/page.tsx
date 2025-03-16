@@ -4,6 +4,8 @@ import * as React from "react";
 import { PageHeader } from "../../components/PageHeader";
 import SinglePageView from "../../components/SinglePageView";
 import { getPageById } from "../../firebase/database";
+import { AuthContext } from "../../providers/AuthProvider";
+import { useRouter } from "next/navigation";
 
 interface PageProps {
   params: {
@@ -14,7 +16,7 @@ interface PageProps {
 interface PageData {
   id: string;
   title: string;
-  username: string;
+  userId: string;
   groupId: string | null;
   isPublic: boolean;
 }
@@ -22,6 +24,8 @@ interface PageData {
 export default function Page({ params }: PageProps) {
   const [page, setPage] = React.useState<PageData | null>(null);
   const [userGroups, setUserGroups] = React.useState<Array<{ id: string; name: string }>>([]);
+  const { user } = React.useContext(AuthContext);
+  const router = useRouter();
 
   React.useEffect(() => {
     const loadPage = async () => {
@@ -39,7 +43,7 @@ export default function Page({ params }: PageProps) {
     <>
       <PageHeader
         title={page.title}
-        username={page.username}
+        username={user?.username || 'Anonymous'}
         userGroups={userGroups}
         currentGroupId={page.groupId}
         onGroupChange={(groupId) => {
@@ -49,9 +53,7 @@ export default function Page({ params }: PageProps) {
         onPrivacyChange={(isPublic) => {
           // Handle privacy change
         }}
-        onBack={() => {
-          // Handle back navigation
-        }}
+        onBack={() => router.back()}
       />
       <SinglePageView params={params} />
     </>
