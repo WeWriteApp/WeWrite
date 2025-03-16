@@ -68,7 +68,7 @@ export default function Header() {
                 </>
               )}
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="icon" 
                 onClick={() => setThemeModalOpen(true)}
                 className="h-9 w-9"

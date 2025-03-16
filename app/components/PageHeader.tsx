@@ -41,7 +41,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
             <div className={`flex items-center min-w-0 ${isScrolled ? "space-x-3" : "space-x-6 flex-1"}`}>
               <Link href="/">
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="icon" 
                   className={`shrink-0 h-8 w-8 transition-all duration-200 ${isScrolled ? "hidden" : ""}`}
                 >
