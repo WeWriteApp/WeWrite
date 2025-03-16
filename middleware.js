@@ -7,6 +7,7 @@ export function middleware(request) {
   // Define public paths that don't require authentication
   const isPublicPath = path === "/auth/login" || 
                       path === "/auth/register" || 
+                      path === "/auth/forgot-password" ||
                       path.startsWith("/api/");
 
   // Get the token from the cookies

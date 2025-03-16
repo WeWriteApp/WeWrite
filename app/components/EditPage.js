@@ -7,6 +7,7 @@ import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { Icon } from "@tabler/icons-react";
 
 const EditPage = ({
   isEditing,
@@ -132,67 +133,88 @@ const EditPage = ({
   }
 
   return (
-    <div>
-      <label className="text-lg font-semibold text-text">Title</label>
-      <input
-        type="text"
-        defaultValue={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="border border-gray-200 p-2 text-3xl w-full bg-background text-text"
-        autoComplete="off"
-      />
-
-      <div className="flex w-full h-1 bg-gray-200 my-4"></div>
-      <SlateEditor
-        ref={editorRef}
-        setEditorState={setEditorState}
-        initialEditorState={editorState}
-      />
-      <div className="flex w-full h-1 bg-gray-200 my-4"></div>
-
-      <label className="text-lg font-semibold">Group</label>
-      <p className="text-sm text-gray-500">
-        {groupId
-          ? `This page belongs to a group ${groupId}`
-          : "This page does not belong to any group"}
-      </p>
-      <ReactSearchAutocomplete
-        items={localGroups}
-        onSelect={handleSelect}
-        placeholder="Search for a group"
-        className="searchbar"
-        fuseOptions={{
-          minMatchCharLength: 2,
-        }}
-        formatResult={(item) => {
-          return <div key={item.id}>{item.name}</div>;
-        }}
-      />
-
-      {page.groupId && (
-        <div className="flex items-center gap-2 mt-4">
-          <button
-            className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
-            onClick={removeGroup}
-          >
-            Remove group
-          </button>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground">Title</label>
+          <input
+            type="text"
+            defaultValue={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border-none focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg transition-all"
+            placeholder="Enter a title..."
+            autoComplete="off"
+          />
         </div>
-      )}
 
-      <div className="flex items-center gap-2 mt-4">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 to-background pointer-events-none h-[1px] -top-4" />
+          <SlateEditor
+            ref={editorRef}
+            setEditorState={setEditorState}
+            initialEditorState={editorState}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-6 bg-muted/10 rounded-xl p-6">
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Group Access</label>
+            <p className="text-sm text-muted-foreground/80">
+              {groupId
+                ? `This page belongs to group ${groupId}`
+                : "This page does not belong to any group"}
+            </p>
+          </div>
+          
+          <div className="relative">
+            <ReactSearchAutocomplete
+              items={localGroups}
+              onSelect={handleSelect}
+              placeholder="Search for a group..."
+              className="searchbar"
+              fuseOptions={{
+                minMatchCharLength: 2,
+              }}
+              formatResult={(item) => {
+                return <div key={item.id}>{item.name}</div>;
+              }}
+            />
+          </div>
+
+          {page.groupId && (
+            <button
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              onClick={removeGroup}
+            >
+              <Icon icon="lucide:x" className="w-4 h-4 mr-1" />
+              Remove group
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         <button
-          disabled={isSaving}
-          className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-200 transition-colors"
-          onClick={handleSave}
-        >
-          {isSaving ? "Saving..." : "Save"}
-        </button>
-        <button
-          className="bg-background text-button-text px-4 py-2"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           onClick={handleCancel}
         >
           Cancel
+        </button>
+        <button
+          disabled={isSaving}
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+          onClick={handleSave}
+        >
+          {isSaving ? (
+            <>
+              <Icon icon="lucide:loader-2" className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save changes'
+          )}
         </button>
       </div>
     </div>

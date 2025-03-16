@@ -131,7 +131,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   };
 
   return (
-    <div className="border border-gray-300 p-4 relative">
+    <div className="relative rounded-lg bg-background">
       <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
         <Editable
           ref={editableRef}
@@ -140,6 +140,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
               <span
                 {...attributes}
                 style={{ fontWeight: leaf.bold ? 'bold' : 'normal' }}
+                className="transition-colors"
               >
                 {children}
               </span>
@@ -147,7 +148,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
           }}
           renderElement={(props) => <Element {...props} />}
           onKeyDown={(event) => handleKeyDown(event, editor)}
-          placeholder="Enter some text..."          
+          placeholder="Start writing..."
+          className="min-h-[200px] px-4 py-3 prose prose-sm max-w-none prose-neutral dark:prose-invert prose-p:leading-7 prose-headings:font-semibold focus:outline-none"
         />
       </Slate>
 
@@ -155,9 +157,11 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
         <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
       )}
 
-      <pre className="text-xs text-gray-500 mt-2">
-        Press @ to mention a page
-      </pre>
+      <div className="absolute bottom-2 right-2">
+        <div className="text-xs text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm">
+          Press @ to mention a page
+        </div>
+      </div>
     </div>
   );
 });
