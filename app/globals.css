@@ -103,7 +103,7 @@ html body .page-content p {
 }
 
 .border-border {
-  @apply border-border;
+  border-color: hsl(var(--border));
 }
 
 /* Transitions */
