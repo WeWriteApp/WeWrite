@@ -16,7 +16,7 @@ const Button = ({
   const baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
   const variantClasses = {
     default: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-    secondary: "border border-input/40 bg-background hover:bg-accent hover:text-accent-foreground",
+    secondary: "border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900",
     ghost: "hover:bg-accent hover:text-accent-foreground",
     outline: "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground"
   }

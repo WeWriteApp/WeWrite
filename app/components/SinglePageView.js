@@ -188,7 +188,7 @@ export default function SinglePageView({ params }) {
       <DashboardLayout>
         <PageHeader 
           title={title} 
-          username={page?.username || page?.userId} 
+          username={page?.username || "[NULL]"} 
           userId={page?.userId}
         />
         <div className="p-2">
