@@ -18,7 +18,7 @@ import { Lock } from "lucide-react";
 import Head from "next/head";
 import PageHeader from "./PageHeader";
 import { getDatabase, ref, onValue } from "firebase/database";
-import { app } from "../firebase/firebaseConfig";
+import { app } from "../firebase/config";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
