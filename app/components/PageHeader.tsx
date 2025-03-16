@@ -3,7 +3,6 @@
 import * as React from "react";
 import { ChevronLeft, Moon } from 'lucide-react';
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Button from "./Button";
 import ThemeModal from "./ThemeModal";
 
@@ -40,24 +39,22 @@ export default function PageHeader({ title, username, userId, isLoading = false 
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full">
         <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
-          <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
-            <div className="flex items-center flex-1 min-w-0 space-x-6">
+          <div className={`container flex items-center h-full px-6 transition-all duration-200 ${isScrolled ? "justify-between" : ""}`}>
+            <div className={`flex items-center min-w-0 ${isScrolled ? "space-x-3" : "space-x-6 flex-1"}`}>
               <Link href="/">
-                <Button variant="secondary" size="sm" className="shrink-0">
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Back
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8">
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
               </Link>
-              <div className="flex-1 min-w-0">
-                <h1 className={`font-semibold truncate transition-all ${isScrolled ? "text-base" : "text-xl"}`}>
+              <div className={`min-w-0 ${isScrolled ? "flex items-center space-x-2" : ""}`}>
+                <h1 className={`font-semibold truncate transition-all ${isScrolled ? "text-sm" : "text-xl"}`}>
                   {isLoading ? (
                     <div className="h-6 w-48 bg-muted animate-pulse rounded"></div>
                   ) : (
                     title || "Untitled"
                   )}
                 </h1>
-                <p className={`text-muted-foreground truncate transition-all mt-1 ${isScrolled ? "text-sm" : "text-base"}`}>
-                  by{" "}
+                <p className={`text-muted-foreground truncate transition-all ${isScrolled ? "text-xs mt-0" : "text-base mt-1"}`}>
                   {isLoading ? (
                     <div className="inline-block h-4 w-24 bg-muted animate-pulse rounded"></div>
                   ) : userId ? (
@@ -75,7 +72,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setThemeModalOpen(true)}
-                className="h-9 w-9"
+                className={`h-9 w-9 transition-all ${isScrolled ? "scale-90" : ""}`}
               >
                 <Moon className="h-[1.2rem] w-[1.2rem]" />
               </Button>

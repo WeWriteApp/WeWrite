@@ -9,6 +9,8 @@ import {
   ProfilePagesProvider,
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
+import { ChevronLeft } from "lucide-react";
+import Button from "./Button";
 
 const SingleProfileView = ({ profile }) => {
   const [pageCount, setPageCount] = useState(0);
@@ -16,12 +18,17 @@ const SingleProfileView = ({ profile }) => {
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
-        <Link href="/pages">Back</Link>
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="mb-4">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        </Link>
         <h1 className="text-3xl font-semibold">{profile.username}</h1>
-          <div className="my-4">
-            <TypeaheadSearch userId={profile.uid} />
-          </div>
-          <PagesList profile={profile} />
+        <div className="my-4">
+          <TypeaheadSearch userId={profile.uid} />
+        </div>
+        <PagesList profile={profile} />
       </div>
     </ProfilePagesProvider>
   );

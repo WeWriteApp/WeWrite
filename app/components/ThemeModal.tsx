@@ -15,9 +15,9 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content className="max-w-sm">
-        <Dialog.Title>Choose Theme</Dialog.Title>
-        <div className="py-4">
+      <Dialog.Content className="fixed top-[72px] right-4 w-[200px] rounded-lg border bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <Dialog.Title className="text-sm font-medium mb-3">Choose Theme</Dialog.Title>
+        <div className="space-y-2">
           <RadioGroup.Root
             value={theme}
             onValueChange={(value) => {
@@ -25,21 +25,21 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
               onOpenChange(false);
             }}
           >
-            <div className="space-y-4">
-              <label className="flex items-center space-x-3 cursor-pointer">
+            <div className="space-y-2">
+              <label className="flex items-center space-x-3 cursor-pointer hover:bg-accent rounded-md p-1.5">
                 <RadioGroup.Item value="light" />
                 <Sun className="h-4 w-4" />
-                <span>Light</span>
+                <span className="text-sm">Light</span>
               </label>
-              <label className="flex items-center space-x-3 cursor-pointer">
+              <label className="flex items-center space-x-3 cursor-pointer hover:bg-accent rounded-md p-1.5">
                 <RadioGroup.Item value="dark" />
                 <Moon className="h-4 w-4" />
-                <span>Dark</span>
+                <span className="text-sm">Dark</span>
               </label>
-              <label className="flex items-center space-x-3 cursor-pointer">
+              <label className="flex items-center space-x-3 cursor-pointer hover:bg-accent rounded-md p-1.5">
                 <RadioGroup.Item value="system" />
                 <Laptop className="h-4 w-4" />
-                <span>System</span>
+                <span className="text-sm">System</span>
               </label>
             </div>
           </RadioGroup.Root>
