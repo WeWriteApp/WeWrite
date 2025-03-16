@@ -16,6 +16,9 @@ import LoggingProvider from "./providers/LoggingProvider";
 import GestureProvider from "./providers/GestureProvider";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Theme } from "@radix-ui/themes";
+import "@radix-ui/themes/styles.css";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }) {
@@ -37,15 +40,17 @@ export default function RootLayout({ children }) {
                     <CommunityProvider>
                       <PortfolioProvider>
                         <MobileProvider>
-                          <Header />
-                          <div className="flex flex-row">
-                            <div className="flex flex-col w-full">
-                              {children}
+                          <Theme>
+                            <Header />
+                            <div className="flex flex-row">
+                              <div className="flex flex-col w-full">
+                                {children}
+                              </div>
                             </div>
-                          </div>
-                          <Drawer />
-                          <Analytics />
-                          <SpeedInsights />
+                            <Drawer />
+                            <Analytics />
+                            <SpeedInsights />
+                          </Theme>
                         </MobileProvider>
                       </PortfolioProvider>
                     </CommunityProvider>

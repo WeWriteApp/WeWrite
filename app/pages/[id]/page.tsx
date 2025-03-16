@@ -1,55 +1,59 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { PageHeader } from "../../components/PageHeader"
-import { useTheme } from "../../providers/ThemeProvider"
-import { useParams } from "next/navigation"
+import * as React from "react";
+import { PageHeader } from "../../components/PageHeader";
+import SinglePageView from "../../components/SinglePageView";
+import { getPageById } from "../../firebase/database";
 
-interface Page {
-  id: string
-  title: string
-  content: string
-  userId: string
-  username: string
-  groupId: string | null
-  isPublic: boolean
+interface PageProps {
+  params: {
+    id: string;
+  };
 }
 
-export default function Page() {
-  const params = useParams()
-  const { theme } = useTheme()
-  const [page, setPage] = React.useState<Page | null>(null)
-  const [userGroups, setUserGroups] = React.useState([])
+interface PageData {
+  id: string;
+  title: string;
+  username: string;
+  groupId: string | null;
+  isPublic: boolean;
+}
 
-  // Fetch page data
+export default function Page({ params }: PageProps) {
+  const [page, setPage] = React.useState<PageData | null>(null);
+  const [userGroups, setUserGroups] = React.useState<Array<{ id: string; name: string }>>([]);
+
   React.useEffect(() => {
-    // TODO: Implement page fetching
-  }, [params.id])
+    const loadPage = async () => {
+      const { pageData } = await getPageById(params.id);
+      setPage(pageData as PageData);
+    };
+    loadPage();
+  }, [params.id]);
 
   if (!page) {
-    return <div>Loading...</div>
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <>
       <PageHeader
         title={page.title}
         username={page.username}
         userGroups={userGroups}
         currentGroupId={page.groupId}
         onGroupChange={(groupId) => {
-          // TODO: Implement group change
-          console.log("Change group to:", groupId)
+          // Handle group change
         }}
         isPublic={page.isPublic}
         onPrivacyChange={(isPublic) => {
-          // TODO: Implement privacy change
-          console.log("Change privacy to:", isPublic)
+          // Handle privacy change
+        }}
+        onBack={() => {
+          // Handle back navigation
         }}
       />
-      <main className="container mx-auto py-6">
-        {/* Page content will go here */}
-      </main>
-    </div>
-  )
+      <SinglePageView params={params} />
+    </>
+  );
 } 

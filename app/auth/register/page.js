@@ -1,13 +1,20 @@
-"use client";
-
 import RegisterForm from "../../components/RegisterForm";
 
-export default function Register() {
+export async function generateMetadata() {
+  return {
+    title: "Register to WeWrite",
+    description: "Register to your WeWrite account",
+  };
+}
+
+const Register = () => {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-24">
+    <div className="container mx-auto md:max-w-lg md:mt-10">
+      <h1 className="text-2xl font-semibold mb-4">Register</h1>
       <RegisterForm />
     </div>
   );
-}
+};
+export default Register;
 
 

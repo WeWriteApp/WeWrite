@@ -1,17 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ButtonProps } from "@/components/ui/button";
+import { ReactNode } from "react";
 
-interface LinkButtonProps extends ButtonProps {
+interface LinkButtonProps {
   href: string;
+  children: ReactNode;
+  className?: string;
 }
 
-export default function LinkButton({ href, ...props }: LinkButtonProps) {
+export default function LinkButton({ href, children, className = "" }: LinkButtonProps) {
   return (
-    <Link href={href} passHref>
-      <Button {...props} />
+    <Link
+      href={href}
+      className={`inline-flex items-center px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 ${className}`}
+    >
+      {children}
     </Link>
   );
 } 
