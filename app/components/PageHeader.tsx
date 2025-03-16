@@ -1,17 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "@/app/providers/ThemeProvider";
+import { useTheme } from "../providers/ThemeProvider";
 import { ChevronLeftIcon, DotsVerticalIcon, Share2Icon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
-import { Button } from "@/app/components/ui/Button";
-import { cn } from "@/app/lib/utils";
-import { 
+import { Button } from "./ui/Button";
+import { cn } from "../lib/utils";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger 
-} from "@/app/components/ui/DropdownMenu";
+  DropdownMenuTrigger,
+} from "./ui/DropdownMenu";
 
 interface PageHeaderProps {
   title: string;
