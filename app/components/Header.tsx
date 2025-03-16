@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { LogOut } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import ThemeToggle from "./ThemeToggle";
@@ -15,6 +16,7 @@ export default function Header() {
   const isHomePage = pathname === "/";
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+  const { user } = useAuth();
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -61,7 +63,15 @@ export default function Header() {
                 New page
               </Button>
             </Link>
-            <ThemeToggle />
+            {user && (
+              <Button variant="secondary" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </Button>
+            )}
+            <div className="ml-2">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
         {/* Scroll Progress Bar */}

@@ -17,6 +17,8 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Lock } from "lucide-react";
 import Head from "next/head";
 import PageHeader from "./PageHeader";
+import { getDatabase, ref, onValue } from "firebase/database";
+import { app } from "../firebase/firebaseConfig";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -52,46 +54,37 @@ export default function SinglePageView({ params }) {
 
   useEffect(() => {
     // Setup listener for real-time updates
-    const unsubscribe = listenToPageById(params.id, (data) => {
+    const unsubscribe = listenToPageById(params.id, async (data) => {
       if (data) {
         const { pageData, versionData, links } = data;
 
-        // Set state with the fetched data
-        setPage(pageData);
-        setEditorState(versionData.content);
-        setTitle(pageData.title);
+        // Get user data from Firebase Realtime Database
+        const db = getDatabase(app);
+        const userRef = ref(db, `users/${pageData.userId}`);
+        
+        onValue(userRef, (snapshot) => {
+          const userData = snapshot.val();
+          if (userData && userData.username) {
+            pageData.username = userData.username;
+          }
+          
+          // Set state with the fetched data
+          setPage(pageData);
+          setEditorState(versionData.content);
+          setTitle(pageData.title);
 
-        // Check and set groupId if it exists
-        if (pageData.groupId) {
-          setGroupId(pageData.groupId);
-        }
+          // Check and set groupId if it exists
+          if (pageData.groupId) {
+            setGroupId(pageData.groupId);
+          }
 
-        // Check if the current user is the owner or if the page is public
-        if (user && user.uid === pageData.userId) {
-          setIsPublic(true);
-        } else {
-          setIsPublic(pageData.isPublic);
-        }
-
-        // Check if links exist
-        // if (links.length > 0) {
-        //   checkLinkExistence(links).then((results) => {
-        //     // Process link existence results
-        //     for (let url in results) {
-        //       const exists = results[url];
-        //       if (!exists) {
-        //         // Update UI for invalid links (e.g., gray out and disable)
-        //         const linkElement = document.querySelector(`a[href="${url}"]`);
-        //         if (linkElement) {
-        //           linkElement.classList.remove("bg-blue-500");
-        //           linkElement.classList.add("bg-gray-500");
-        //           linkElement.disabled = true;
-        //           linkElement.style.cursor = "not-allowed"; // Disable click
-        //         }
-        //       }
-        //     }
-        //   });
-        // }
+          // Check if the current user is the owner or if the page is public
+          if (user && user.uid === pageData.userId) {
+            setIsPublic(true);
+          } else {
+            setIsPublic(pageData.isPublic);
+          }
+        });
 
         // Data has loaded
         setIsLoading(false);
