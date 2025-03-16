@@ -153,7 +153,7 @@ export default function PageHeader({
               </button>
 
               {showPrivacyMenu && (
-                <div className="absolute top-full right-0 mt-2 p-2 bg-popover border border-border rounded-lg shadow-lg min-w-[150px] z-50">
+                <div className="absolute top-full right-0 mt-2 p-2 bg-background/80 backdrop-blur-md border border-border rounded-lg shadow-lg min-w-[150px] z-50">
                   <button
                     onClick={() => handlePrivacyChange(false)}
                     className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-2 ${

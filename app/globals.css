@@ -35,25 +35,26 @@ html body .page-content p {
 /* styles/globals.css */
 :root {
   --background-color: #ffffff;
-  --light-background-color: #F9FAFB;
+  --light-background-color: #f5f5f5;
+  --primary-color: #0066FF;
+  --secondary-color: #6c757d;
   --text-color: #000000;
-  --primary-color: #1D4ED8;
-  --primary-hover: #2563EB;
-  --secondary-color: #64748B;
   --button-text: #000000;
-  --border-color: #64748B;
+  --button-hover: #333333;
+  --border-color: #e5e5e5;
+  --primary-hover: #0052cc;
 }
 
 *[data-theme='dark'] {
-  --background-color: #000;
-  --light-background-color: #1F2937;
-  --text-color: #F3F4F6;
-  --primary-color: #1D4ED8;
-  --primary-hover: #2563EB;
-  --secondary-color: #94A3B8;
+  --background-color: #000000;
+  --light-background-color: #1a1a1a;
+  --primary-color: #0066FF;
+  --secondary-color: #6c757d;
+  --text-color: #ffffff;
   --button-text: #ffffff;
-  --button-hover: #1D4ED8;
-  --border-color: #64748B;
+  --button-hover: #cccccc;
+  --border-color: #333333;
+  --primary-hover: #0052cc;
 }
 
 

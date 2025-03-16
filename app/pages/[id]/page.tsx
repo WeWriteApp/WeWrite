@@ -6,6 +6,8 @@ import SinglePageView from "../../components/SinglePageView";
 import { getPageById } from "../../firebase/database";
 import { AuthContext } from "../../providers/AuthProvider";
 import { useRouter } from "next/navigation";
+import { rtdb } from "../../firebase/rtdb";
+import { ref, get } from "firebase/database";
 
 interface PageProps {
   params: {
@@ -25,6 +27,7 @@ interface PageData {
 export default function Page({ params }: PageProps) {
   const [page, setPage] = React.useState<PageData | null>(null);
   const [userGroups, setUserGroups] = React.useState<Array<{ id: string; name: string }>>([]);
+  const [pageOwnerUsername, setPageOwnerUsername] = React.useState<string>('Anonymous');
   const { user } = React.useContext(AuthContext);
   const router = useRouter();
 
@@ -32,6 +35,16 @@ export default function Page({ params }: PageProps) {
     const loadPage = async () => {
       const { pageData } = await getPageById(params.id);
       setPage(pageData as PageData);
+
+      // Fetch page owner's username
+      if (pageData?.userId) {
+        const userRef = ref(rtdb, `users/${pageData.userId}`);
+        const userSnapshot = await get(userRef);
+        if (userSnapshot.exists()) {
+          const userData = userSnapshot.val();
+          setPageOwnerUsername(userData.username || 'Anonymous');
+        }
+      }
     };
     loadPage();
   }, [params.id]);
@@ -44,7 +57,7 @@ export default function Page({ params }: PageProps) {
     <>
       <PageHeader
         title={page.title}
-        username={page.username || 'Anonymous'}
+        username={pageOwnerUsername}
         userGroups={userGroups}
         currentGroupId={page.groupId}
         onGroupChange={(groupId) => {
