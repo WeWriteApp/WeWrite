@@ -5,6 +5,7 @@ import { createUser, addUsername } from "../../firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../providers/AuthProvider";
+import Button from "../../components/Button";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -94,16 +95,16 @@ export default function RegisterPage() {
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
-              className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors"
+              className="w-full"
             >
               Register
-            </button>
+            </Button>
 
             <div className="text-center text-sm">
               <span>Already have an account? </span>
-              <Link href="/auth/login" className="text-primary hover:underline">
+              <Link href="/auth/login" className="text-primary hover:underline font-medium">
                 Login
               </Link>
             </div>

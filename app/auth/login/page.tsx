@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../firebase/config";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Button from "../../components/Button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -71,16 +72,16 @@ export default function LoginPage() {
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors"
+              className="w-full"
             >
               Login
-            </button>
+            </Button>
 
             <div className="text-center text-sm">
               <span>Don't have an account? </span>
-              <Link href="/auth/register" className="text-primary hover:underline">
+              <Link href="/auth/register" className="text-primary hover:underline font-medium">
                 Register
               </Link>
             </div>
