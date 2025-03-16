@@ -7,6 +7,7 @@ import { LoggingProvider } from "./providers/LoggingProvider";
 import { Drawer } from "./components/Drawer";
 import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
+import { DataProvider } from "./providers/DataProvider";
 
 export default function ClientLayout({ children }) {
   return (
@@ -18,15 +19,17 @@ export default function ClientLayout({ children }) {
     >
       <AuthProvider>
         <LoggingProvider>
-          <MobileProvider>
-            <DrawerProvider>
-              <Drawer />
-              <main className="min-h-screen">
-                {children}
-              </main>
-              <Toaster />
-            </DrawerProvider>
-          </MobileProvider>
+          <DataProvider>
+            <MobileProvider>
+              <DrawerProvider>
+                <Drawer />
+                <main className="min-h-screen">
+                  {children}
+                </main>
+                <Toaster />
+              </DrawerProvider>
+            </MobileProvider>
+          </DataProvider>
         </LoggingProvider>
       </AuthProvider>
     </ThemeProvider>
