@@ -9,6 +9,7 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import { updatePage } from "../firebase/database";
 import { useAuth } from '../providers/AuthProvider';
 import { useTheme } from 'next-themes';
+import ThemeToggle from "./ThemeToggle";
 
 export interface PageHeaderProps {
   title: string;
@@ -31,7 +32,7 @@ export default function PageHeader({
   isPublic = false,
   onPrivacyChange,
   pageId,
-  showBackButton = false
+  showBackButton = true
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -231,17 +232,7 @@ export default function PageHeader({
             </button>
 
             {/* Theme toggle */}
-            <button
-              className="rounded-full p-2 hover:bg-accent text-foreground hover:text-accent-foreground transition-all duration-300"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
