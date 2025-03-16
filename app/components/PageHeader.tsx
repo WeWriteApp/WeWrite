@@ -4,14 +4,14 @@ import * as React from "react";
 import { useTheme } from "../providers/ThemeProvider";
 import { ChevronLeftIcon, DotsVerticalIcon, Share2Icon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
-import { Button } from "./ui/Button";
+import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "./ui/DropdownMenu";
+} from "./ui/dropdown-menu";
 
 interface PageHeaderProps {
   title: string;
