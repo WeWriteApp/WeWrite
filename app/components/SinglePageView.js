@@ -186,7 +186,11 @@ export default function SinglePageView({ params }) {
         <title>{title} - WeWrite</title>
       </Head>
       <DashboardLayout>
-        <PageHeader />
+        <PageHeader 
+          title={title} 
+          username={page?.username || page?.userId} 
+          userId={page?.userId}
+        />
         <div className="p-2">
           {isEditing ? (
             <EditPage

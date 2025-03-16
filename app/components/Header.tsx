@@ -52,24 +52,20 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full">
       <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
         <div className={`container flex items-center h-full transition-all duration-200`}>
-          <div className="mr-4 flex">
+          <div className="flex items-center flex-1">
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <span className="hidden font-bold sm:inline-block">WeWrite</span>
+              <span className="font-bold">WeWrite</span>
             </Link>
           </div>
-          <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-            <div className="w-full flex-1 md:w-auto md:flex-none">
-              <Link href="/pages/new">
-                <Button variant="secondary" size="sm" className="w-full md:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  <span className="flex items-center">Create Page</span>
-                </Button>
-              </Link>
-            </div>
-            <nav className="flex items-center space-x-2">
-              <ThemeToggle />
-              <UserMenu />
-            </nav>
+          <div className="flex items-center space-x-4">
+            <Link href="/pages/new">
+              <Button variant="secondary" size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Page
+              </Button>
+            </Link>
+            <ThemeToggle />
+            <UserMenu />
           </div>
         </div>
         {/* Scroll Progress Bar */}
