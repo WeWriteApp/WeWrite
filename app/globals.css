@@ -91,7 +91,7 @@ html body .page-content p {
 
 /* Custom utility classes */
 .bg-background {
-  @apply bg-background;
+  background-color: hsl(var(--background));
 }
 
 .text-text {
