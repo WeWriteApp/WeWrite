@@ -27,16 +27,16 @@ export default function ThemeToggle() {
           <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[150px]">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
+      <DropdownMenuContent align="end" className="w-[150px] bg-background border border-border">
+        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2 hover:bg-accent">
           <Sun className="h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
+        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2 hover:bg-accent">
           <Moon className="h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer flex items-center gap-2">
+        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer flex items-center gap-2 hover:bg-accent">
           <Laptop className="h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>

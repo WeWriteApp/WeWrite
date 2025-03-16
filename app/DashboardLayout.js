@@ -12,7 +12,7 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen bg-background" data-theme={theme}>
       <Loader show={loading} />
-      <div className="flex flex-col">
+      <div className="flex flex-col relative">
         {children}
       </div>
     </div>

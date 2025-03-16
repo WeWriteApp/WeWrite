@@ -16,8 +16,8 @@ const New = () => {
   return (
     <DashboardLayout>
       <PageHeader title="New page" />
-      <div className="py-6">
-        <div className="w-full h-full flex flex-col space-y-4">
+      <div className="container py-6">
+        <div className="max-w-3xl mx-auto">
           <Form Page={Page} setPage={setPage} />
         </div>
       </div>
@@ -59,26 +59,26 @@ const Form = ({ Page, setPage }) => {
 
   return (
     <form
-      className="w-full flex flex-col space-y-6"
+      className="space-y-6"
       onSubmit={(e) => e.preventDefault()}
     >
       <div className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium mb-1">Title</label>
+          <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
           <input
             id="title"
             type="text"
             value={Page.title}
             placeholder="Enter page title..."
             onChange={(e) => setPage({ ...Page, title: e.target.value })}
-            className="border border-gray-300 rounded-md p-2 w-full bg-background text-text"
+            className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             autoComplete="off"
           />
         </div>
         
         <div>
-          <label htmlFor="content" className="block text-sm font-medium mb-1">Content</label>
-          <div className="min-h-[300px] border border-gray-300 rounded-md p-2 bg-background">
+          <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
+          <div className="min-h-[300px] border border-input rounded-md bg-background">
             <SlateEditor setEditorState={setEditorState} />
           </div>
         </div>
@@ -89,24 +89,25 @@ const Form = ({ Page, setPage }) => {
             id="isPublic"
             checked={Page.isPublic}
             onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
+            className="h-4 w-4 text-primary border-input rounded focus:ring-primary"
             autoComplete="off"
           />
-          <label htmlFor="isPublic">Public</label>
+          <label htmlFor="isPublic" className="text-sm text-foreground">Public</label>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-4">
+      <div className="flex items-center gap-2">
         <button
           onClick={handleSave}
           disabled={!Page.title || !editorState || isSaving}
-          className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState || !Page.title ? "cursor-not-allowed opacity-70" : ""}`}
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"
         >
           {isSaving ? "Saving..." : "Save"}
         </button>
         <button
           onClick={() => router.push("/pages")}
-          className="bg-background text-button-text px-4 py-2"
+          className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
         >
           Cancel
         </button>
