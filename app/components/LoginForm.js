@@ -38,6 +38,8 @@ const LoginForm = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
+              autoFocus
+              className="hover:border-primary focus:border-primary transition-colors"
             />
           </Box>
 
@@ -52,6 +54,7 @@ const LoginForm = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
+              className="hover:border-primary focus:border-primary transition-colors"
             />
           </Box>
 
@@ -61,14 +64,14 @@ const LoginForm = () => {
             </Text>
           )}
 
-          <Button type="submit" size="3">
+          <Button type="submit" size="3" className="bg-primary text-primary-foreground hover:bg-primary/90">
             Login
           </Button>
 
           <Flex justify="center" gap="2">
             <Text size="2">Don't have an account?</Text>
             <Link href="/auth/register">
-              <Text size="2" color="blue">
+              <Text size="2" className="text-blue-500 hover:text-blue-600 transition-colors">
                 Register
               </Text>
             </Link>

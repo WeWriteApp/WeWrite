@@ -49,7 +49,7 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full">
       <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
         <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
           <div className="flex items-center flex-1">
@@ -64,9 +64,16 @@ export default function Header() {
               </Button>
             </Link>
             {user && (
-              <Button variant="secondary" size="sm" onClick={handleLogout}>
-                Log out
-              </Button>
+              <>
+                <Link href={`/users/${user.uid}`}>
+                  <Button variant="ghost" size="sm" className="hover:bg-accent">
+                    {user.email}
+                  </Button>
+                </Link>
+                <Button variant="secondary" size="sm" onClick={handleLogout}>
+                  Log out
+                </Button>
+              </>
             )}
             <div className="ml-2">
               <ThemeToggle />
