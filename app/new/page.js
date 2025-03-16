@@ -6,6 +6,7 @@ import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import ReactGA from 'react-ga4';
+import PageHeader from "../components/PageHeader";
 
 const New = () => {
   const [Page, setPage] = useState({
@@ -14,9 +15,9 @@ const New = () => {
   });
   return (
     <DashboardLayout>
-      <div className="w-full h-full flex flex-col space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold mb-4">New Page</h1>
+      <PageHeader title="New page" />
+      <div className="container py-6">
+        <div className="w-full h-full flex flex-col space-y-4">
           <Form Page={Page} setPage={setPage} />
         </div>
       </div>
@@ -58,35 +59,47 @@ const Form = ({ Page, setPage }) => {
 
   return (
     <form
-      className="w-full flex flex-col space-y-4"
+      className="w-full flex flex-col space-y-6"
       onSubmit={(e) => e.preventDefault()}
     >
-      <input
-        type="text"
-        value={Page.title}
-        placeholder="Title"
-        onChange={(e) => setPage({ ...Page, title: e.target.value })}
-        className="border border-gray-300 rounded p-2 w-full bg-background text-text"
-        autoComplete="off"
-      />
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          checked={Page.isPublic}
-          onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
-          autoComplete="off"
-        />
-        <label>Public</label>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium mb-1">Title</label>
+          <input
+            id="title"
+            type="text"
+            value={Page.title}
+            placeholder="Enter page title..."
+            onChange={(e) => setPage({ ...Page, title: e.target.value })}
+            className="border border-gray-300 rounded-md p-2 w-full bg-background text-text"
+            autoComplete="off"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="content" className="block text-sm font-medium mb-1">Content</label>
+          <div className="min-h-[300px] border border-gray-300 rounded-md p-2 bg-background">
+            <SlateEditor setEditorState={setEditorState} />
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="isPublic"
+            checked={Page.isPublic}
+            onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
+            autoComplete="off"
+          />
+          <label htmlFor="isPublic">Public</label>
+        </div>
       </div>
 
-      <SlateEditor setEditorState={setEditorState} />
-
-      <div className="flex w-full h-1 bg-gray-200 my-4"></div>
       <div className="flex items-center gap-2 mt-4">
         <button
           onClick={handleSave}
           disabled={!Page.title || !editorState || isSaving}
-          className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState ? "cursor-not-allowed" : ""}`}
+          className={`text-button-text bg-background rounded-lg border border-gray-500 px-4 py-2 hover:bg-gray-200 transition-colors ${!editorState || !Page.title ? "cursor-not-allowed opacity-70" : ""}`}
           type="submit"
         >
           {isSaving ? "Saving..." : "Save"}
@@ -98,10 +111,6 @@ const Form = ({ Page, setPage }) => {
           Cancel
         </button>
       </div>
-
-      <pre className="bg-gray-100 p-2 hidden">
-        
-      </pre>
     </form>
   );
 };

@@ -5,7 +5,6 @@ import { ChevronLeft } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
-import { UserMenu } from "./ui/user-menu";
 import Button from "./Button";
 
 export interface PageHeaderProps {
@@ -57,7 +56,6 @@ export default function PageHeader({ title, username, userId }: PageHeaderProps)
           </div>
           <div className="flex items-center space-x-4">
             <ThemeToggle />
-            <UserMenu />
           </div>
         </div>
         {/* Scroll Progress Bar */}

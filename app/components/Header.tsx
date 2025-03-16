@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { LogOut, Plus } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import ThemeToggle from "./ThemeToggle";
@@ -9,7 +8,6 @@ import { auth } from "../firebase/config";
 import { signOut as firebaseSignOut } from "firebase/auth";
 import Link from "next/link";
 import Button from "./Button";
-import { UserMenu } from "./ui/user-menu";
 
 export default function Header() {
   const router = useRouter();
@@ -58,9 +56,9 @@ export default function Header() {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/pages/new">
+            <Link href="/new">
               <Button variant="secondary" size="sm">
-                New Page
+                New page
               </Button>
             </Link>
             <ThemeToggle />
