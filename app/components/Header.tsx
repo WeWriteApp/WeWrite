@@ -15,6 +15,17 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const isHomePage = pathname === "/";
+  const [isScrolled, setIsScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 0);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -30,8 +41,8 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
+    <header className={`sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
+      <div className={`container flex items-center transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
         <div className="mr-4 flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <span className="hidden font-bold sm:inline-block">WeWrite</span>
@@ -40,9 +51,9 @@ export default function Header() {
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <div className="w-full flex-1 md:w-auto md:flex-none">
             <Link href="/pages/new">
-              <Button variant="default" size="sm" className="h-8 px-4">
+              <Button variant="default" size="sm" className="h-10 w-full md:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
-                Create Page
+                <span className="flex items-center">Create Page</span>
               </Button>
             </Link>
           </div>
