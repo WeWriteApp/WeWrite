@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PageHeader } from "../../components/PageHeader";
+import PageHeader from "../../components/PageHeader";
 import SinglePageView from "../../components/SinglePageView";
 import { getPageById } from "../../firebase/database";
 import { AuthContext } from "../../providers/AuthProvider";

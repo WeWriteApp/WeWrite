@@ -101,34 +101,34 @@ export default function PageHeader({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className={`fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300 ${isCollapsed ? 'h-12' : 'h-16'}`}>
         {/* Progress bar */}
         <div 
           className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300"
           style={{ width: `${scrollProgress}%` }}
         />
 
-        <div className="flex items-center h-16 px-4">
+        <div className={`flex items-center h-full px-4 transition-all duration-300`}>
           {/* Left section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             {showBackButton && (
               <button
                 onClick={handleBack}
-                className="rounded-full p-2 hover:bg-accent text-foreground"
+                className={`rounded-full p-2 hover:bg-accent text-foreground transition-all duration-300 ${isCollapsed ? 'scale-75' : ''}`}
                 aria-label="Go back"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
 
-            <div className="flex flex-col">
-              <h1 className="font-semibold text-foreground text-base">
+            <div className={`flex ${isCollapsed ? 'flex-row items-center gap-2' : 'flex-col'} transition-all duration-300`}>
+              <h1 className={`font-semibold text-foreground transition-all duration-300 ${isCollapsed ? 'text-sm' : 'text-lg'}`}>
                 {title}
               </h1>
               <div className="relative" ref={bylineRef}>
                 <button
                   onClick={() => setShowBylineMenu(!showBylineMenu)}
-                  className="text-sm text-muted-foreground hover:text-foreground"
+                  className={`text-muted-foreground hover:text-foreground transition-all duration-300 ${isCollapsed ? 'text-xs' : 'text-sm'}`}
                 >
                   {currentGroupId 
                     ? `in ${userGroups.find(g => g.id === currentGroupId)?.name}`
@@ -138,7 +138,7 @@ export default function PageHeader({
 
                 {/* Byline menu */}
                 {showBylineMenu && (
-                  <div className="absolute top-full left-0 mt-2 p-4 bg-background border rounded-lg shadow-lg min-w-[200px]">
+                  <div className="absolute top-full left-0 mt-2 p-4 bg-background border rounded-lg shadow-lg min-w-[200px] z-50">
                     <div className="space-y-2">
                       <label className="block font-medium text-foreground">Myself:</label>
                       <button
@@ -180,7 +180,7 @@ export default function PageHeader({
           </div>
 
           {/* Right section */}
-          <div className="flex items-center gap-2 ml-auto">
+          <div className={`flex items-center gap-2 ml-auto transition-opacity duration-300 ${isCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
             {/* Privacy toggle */}
             <div className="relative" ref={privacyRef}>
               <button 
@@ -246,7 +246,7 @@ export default function PageHeader({
         </div>
       </header>
       {/* Spacer to prevent content from being hidden under the header */}
-      <div className="h-16" />
+      <div className={`transition-all duration-300 ${isCollapsed ? 'h-12' : 'h-16'}`} />
     </>
   );
 } 
