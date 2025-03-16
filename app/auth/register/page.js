@@ -51,7 +51,7 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, username: e.target.value })}
                 placeholder="Enter your username"
                 required
-                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full p-3 rounded-md border border-border bg-light-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
                 autoComplete="username"
               />
             </div>
@@ -66,7 +66,7 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, email: e.target.value })}
                 placeholder="Enter your email"
                 required
-                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full p-3 rounded-md border border-border bg-light-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
                 autoComplete="email"
               />
             </div>
@@ -81,7 +81,7 @@ export default function RegisterPage() {
                 onChange={(e) => setUser({ ...user, password: e.target.value })}
                 placeholder="Enter your password"
                 required
-                className="w-full p-3 rounded-md border border-border bg-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full p-3 rounded-md border border-border bg-light-background text-text placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary"
                 autoComplete="new-password"
               />
             </div>
