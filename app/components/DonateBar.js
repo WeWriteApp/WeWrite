@@ -6,6 +6,7 @@ import { Tooltip } from "react-tooltip";
 import { useParams } from "next/navigation";
 import { DrawerContext } from "../providers/DrawerProvider";
 import SubscriptionsTable from "./SubscriptionsTable";
+import { X, Pencil, Eye, Check, Minus, Plus, DollarSign } from "lucide-react";
 
 const DonateBar = () => {
   const [donate, setDonate] = useState(0);
@@ -60,7 +61,7 @@ const DonateBar = () => {
                 removeSubscription(currentSubscription.id);
               }}
             >
-              <Icon icon="mdi:close" width="24" height="24" />
+              <X className="h-6 w-6" />
               <Tooltip id="Unsubscribe" place="top" />
             </button>
 
@@ -72,7 +73,7 @@ const DonateBar = () => {
               data-tooltip-content={"Edit Pledge Amount"}
               onClick={() => setSelected(<SubscriptionsTable />)}
             >
-              <Icon icon="mdi:pencil" width="24" height="24" />
+              <Pencil className="h-6 w-6" />
               <Tooltip id="Edit" place="top" />
             </button>
             {/* eye button to view pledge history */}
@@ -83,7 +84,7 @@ const DonateBar = () => {
               data-tooltip-content={"View Pledge History"}
               onClick={() => setSelected(<SubscriptionsTable />)}
             >
-              <Icon icon="mdi:eye" width="24" height="24" />
+              <Eye className="h-6 w-6" />
               <Tooltip id="View" place="top" />
             </button>
 
@@ -106,7 +107,7 @@ const DonateBar = () => {
               addSubscription(donate, id);
             }}
           >
-            <Icon icon="mdi:check" width="24" height="24" />
+            <Check className="h-6 w-6" />
             <Tooltip id="Confirm" place="top" />
           </button>
           <button
@@ -116,7 +117,7 @@ const DonateBar = () => {
             data-tooltip-content={"Cancel"}
             onClick={() => setIsConfirmed(false)}
           >
-            <Icon icon="mdi:close" width="24" height="24" />
+            <X className="h-6 w-6" />
             <Tooltip id="Cancel" place="top" />
           </button>
         </div>
@@ -129,7 +130,7 @@ const DonateBar = () => {
             data-tooltip-content={"Donate"}
             onClick={() => setIsConfirmed(true)}
           >
-            <Icon icon="mdi:cash" width="24" height="24" />
+            <DollarSign className="h-6 w-6" />
             <Tooltip id="Donate" place="top" />
           </button>
         </div>
@@ -143,7 +144,7 @@ const DonateBar = () => {
           data-tooltip-content={"Decrease"}
           onClick={() => setDonate(donate - 1)}
         >
-          <Icon icon="mdi:minus" width="24" height="24" />
+          <Minus className="h-6 w-6" />
           <Tooltip id="Decrease" place="top" />
         </button>
 
@@ -161,7 +162,7 @@ const DonateBar = () => {
           data-tooltip-content={"Increase"}
           onClick={() => setDonate(donate + 1)}
         >
-          <Icon icon="mdi:plus" width="24" height="24" />
+          <Plus className="h-6 w-6" />
           <Tooltip id="Increase" place="top" />
         </button>
       </div>

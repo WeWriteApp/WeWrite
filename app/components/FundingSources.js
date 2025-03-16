@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { Check, X } from "lucide-react";
 
 const FundingSources = () => {
   const { fundingSources } = useContext(PortfolioContext);
@@ -24,9 +24,9 @@ const FundingSources = () => {
       cell: (row) => (
         <div>
           {row.default ? (
-            <Icon icon="akar-icons:check" className="text-green-500" />
+            <Check className="h-5 w-5 text-green-500" />
           ) : (
-            <Icon icon="akar-icons:close" className="text-red-500" />
+            <X className="h-5 w-5 text-red-500" />
           )}
         </div>
       ),

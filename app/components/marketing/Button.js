@@ -1,5 +1,5 @@
 "use client";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 const Button = ({
@@ -11,12 +11,10 @@ const Button = ({
   return (
     <Link
       href={href}
-      className="bg-black text-white pl-4 pr-2 py-2 rounded-full inline-flex items-center text-md hover:bg-gray-800"
+      className="bg-white text-black px-6 py-3 rounded-full font-medium flex items-center gap-2 hover:bg-white/90 transition-colors"
     >
       {text}
-      <div className="ml-4 bg-white rounded-full p-1">
-        <Icon icon="akar-icons:arrow-right" className="text-black text-xl" />
-      </div>
+      <ArrowRight className="h-5 w-5" />
     </Link>
   );
 };

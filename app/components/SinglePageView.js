@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import DashboardLayout from "../DashboardLayout";
 import TextView from "./TextView";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { AlertTriangle } from "lucide-react";
 import { Loader } from "./Loader";
 import Link from "next/link";
 import { AuthContext } from "../providers/AuthProvider";
@@ -120,7 +120,7 @@ export default function SinglePageView({ params }) {
           <div>
             <h1 className="text-2xl font-semibold text-text">Page not found</h1>
             <div className="flex items-center gap-2 mt-4">
-              <Icon icon="akar-icons:warning" className="text-red-500" />
+              <AlertTriangle className="h-5 w-5 text-red-500" />
               <span className="text-lg text-text">
                 This page has been deleted
               </span>

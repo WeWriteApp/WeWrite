@@ -12,6 +12,7 @@ import { Input, NavbarItem } from "@nextui-org/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useContext, useEffect } from "react";
+import { Plus, Search, User, FileText } from "lucide-react";
 
 export default function Home() {
 
@@ -40,7 +41,7 @@ export default function Home() {
             <p className="font-bold">My pages</p>
             <Link href="/pages/new">
               <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-                <FontAwesomeIcon icon={faPlus} />
+                <Plus className="h-4 w-4" />
               </div>
             </Link>
           </div>
@@ -82,7 +83,7 @@ export default function Home() {
             <p className="font-bold">My groups</p>
             <Link href="/group/new">
               <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-                <FontAwesomeIcon icon={faPlus} />
+                <Plus className="h-4 w-4" />
               </div>
             </Link>
           </div>
@@ -97,11 +98,11 @@ export default function Home() {
                   <div className="font-medium mb-2">{group.name}</div>
                   <div className="flex gap-4 text-sm text-white/70">
                     <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faUser} />
+                      <User className="h-4 w-4" />
                       <span>{group.memberCount || 0}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faFile} />
+                      <FileText className="h-4 w-4" />
                       <span>{group.pageCount || 0}</span>
                     </div>
                   </div>

@@ -4,7 +4,7 @@ import { getBacklinks, extractPageIds } from '../utils/backlinks';
 import { db, rtdb } from '../firebase/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { ref, get, onValue } from 'firebase/database';
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { Loader2, Check, Users, ChevronRight, ChevronDown } from "lucide-react";
 import { liveReadersService } from '../services/LiveReadersService';
 import { pageStatsService } from '../services/PageStatsService';
 import { pledgeService } from '../services/PledgeService';
@@ -322,7 +322,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
     if (isLoadingBacklinks) {
       return (
         <div className="bg-background--light dark:bg-background rounded-2xl p-4 flex items-center justify-center">
-          <Icon icon="mdi:loading" className="w-5 h-5 text-text-secondary animate-spin" />
+          <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       );
     }
@@ -354,10 +354,11 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         <h2 className="text-lg font-medium text-text">About page</h2>
-        <Icon 
-          icon={isCollapsed ? "ph:caret-right-bold" : "ph:caret-down-bold"} 
-          className="w-5 h-5 text-text-secondary"
-        />
+        {isCollapsed ? (
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-muted-foreground" />
+        )}
       </div>
 
       <div className={`space-y-6 overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
@@ -390,7 +391,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
                   >
                     <User uid={user.uid} />
                     {selectedOwner === 'myself' && (
-                      <Icon icon="material-symbols:check" className="text-white ml-auto" />
+                      <Check className="h-5 w-5 text-white ml-auto" />
                     )}
                   </div>
                   {groups.length > 0 && (
@@ -407,11 +408,11 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
                             setShowOwnerMenu(false);
                           }}
                         >
-                          <Icon icon="material-symbols:group" className="text-text" />
+                          <Users className="h-5 w-5 text-foreground" />
                           <span className="text-text">{group.name}</span>
                           <span className="text-text-secondary ml-1">∾ {group.memberCount}</span>
                           {selectedOwner === `group-${group.id}` && (
-                            <Icon icon="material-symbols:check" className="text-white ml-auto" />
+                            <Check className="h-5 w-5 text-white ml-auto" />
                           )}
                         </div>
                       ))}
@@ -428,7 +429,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
           <h3 className="text-text-secondary mb-2">Related pages</h3>
           {isLoadingRelated ? (
             <div className="bg-background--light dark:bg-background rounded-2xl p-4 flex items-center justify-center">
-              <Icon icon="mdi:loading" className="w-5 h-5 text-text-secondary animate-spin" />
+              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
             </div>
           ) : relatedPages.length > 0 ? (
             <div className="flex flex-wrap gap-2">

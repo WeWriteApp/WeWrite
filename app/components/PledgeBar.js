@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { Check, ChevronRight, Minus, Plus } from "lucide-react";
 import { useParams } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import PledgeBarModal from "./PledgeBarModal";
@@ -122,7 +122,7 @@ const PledgeBar = () => {
                   <span className="font-medium text-gray-46">$</span>
                   <span>{label}</span>
                 </div>
-                {interval === value && <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />}
+                {interval === value && <Check className="h-6 w-6 text-blue-500" />}
               </div>
             ))}
             <div
@@ -140,9 +140,9 @@ const PledgeBar = () => {
                 <span className="font-medium text-gray-46">custom</span>
               </div>
               {customCheck ? (
-                <Icon icon="mdi:check" width="24" height="24" className="text-blue-500" />
+                <Check className="h-6 w-6 text-blue-500" />
               ) : (
-                <Icon icon="mdi:keyboard-arrow-right" width="24" height="24" />
+                <ChevronRight className="h-6 w-6" />
               )}
             </div>
           </div>
@@ -181,7 +181,12 @@ const PledgeBar = () => {
               onTouchStart={handleMouseDown}
               onTouchEnd={handleMouseUp}
             >
-              <Icon icon="mdi:minus" width="24" height="24" />
+              <button
+                onClick={() => handleAmountChange(-1)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <Minus className="h-6 w-6" />
+              </button>
             </div>
 
             <div
@@ -223,7 +228,12 @@ const PledgeBar = () => {
               onTouchStart={handleMouseDown}
               onTouchEnd={handleMouseUp}
             >
-              <Icon icon="mdi:plus" width="24" height="24" />
+              <button
+                onClick={() => handleAmountChange(1)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <Plus className="h-6 w-6" />
+              </button>
             </div>
           </div>
         </div>

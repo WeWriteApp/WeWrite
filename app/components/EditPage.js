@@ -7,7 +7,7 @@ import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { Icon } from "@tabler/icons-react";
+import { X, Loader2 } from "lucide-react";
 
 const EditPage = ({
   isEditing,
@@ -188,7 +188,7 @@ const EditPage = ({
               className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
               onClick={removeGroup}
             >
-              <Icon icon="lucide:x" className="w-4 h-4 mr-1" />
+              <X className="w-4 h-4 mr-1" />
               Remove group
             </button>
           )}
@@ -209,7 +209,7 @@ const EditPage = ({
         >
           {isSaving ? (
             <>
-              <Icon icon="lucide:loader-2" className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Saving...
             </>
           ) : (
