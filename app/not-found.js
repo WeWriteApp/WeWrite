@@ -12,7 +12,7 @@ export default function NotFound() {
       <p className="text-lg text-muted-foreground mb-8">Sorry, we couldn't find the page you're looking for.</p>
       <Link 
         href={user ? "/" : "/auth/login"} 
-        className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-lg transition-colors"
+        className="bg-primary text-white hover:bg-primary/90 px-6 py-3 rounded-lg transition-colors"
       >
         {user ? "Back to Home" : "Log in"}
       </Link>

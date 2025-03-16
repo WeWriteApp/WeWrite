@@ -15,6 +15,7 @@ import { listenToPageById } from "../firebase/database";
 import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Lock } from "lucide-react";
+import Head from "next/head";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -104,80 +105,109 @@ export default function SinglePageView({ params }) {
   }, [params.id, user]);
 
   if (!page) {
-    return <Loader />;
+    return (
+      <>
+        <Head>
+          <title>Page Not Found - WeWrite</title>
+        </Head>
+        <Loader />
+      </>
+    );
   }
   if (isDeleted) {
     return (
-      <DashboardLayout>
-        <div>
-          <h1 className="text-2xl font-semibold text-text">Page not found</h1>
-          <div className="flex items-center gap-2 mt-4">
-            <Icon icon="akar-icons:warning" className="text-red-500" />
-            <span className="text-lg text-text">
-              This page has been deleted
-            </span>
-            <Link href="/pages">
-              <button className="bg-background text-button-text px-4 py-2 rounded-full">
-                Go back
-              </button>
-            </Link>
+      <>
+        <Head>
+          <title>Deleted Page - WeWrite</title>
+        </Head>
+        <DashboardLayout>
+          <div>
+            <h1 className="text-2xl font-semibold text-text">Page not found</h1>
+            <div className="flex items-center gap-2 mt-4">
+              <Icon icon="akar-icons:warning" className="text-red-500" />
+              <span className="text-lg text-text">
+                This page has been deleted
+              </span>
+              <Link href="/pages">
+                <button className="bg-background text-button-text px-4 py-2 rounded-full">
+                  Go back
+                </button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </DashboardLayout>
+        </DashboardLayout>
+      </>
     );
   }
   if (isLoading) {
-    return <Loader />;
+    return (
+      <>
+        <Head>
+          <title>Loading... - WeWrite</title>
+        </Head>
+        <Loader />
+      </>
+    );
   }
   if (!isPublic && (!user || user.uid !== page.userId)) {
     return (
-      <DashboardLayout>
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            {title}
-          </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <Lock className="h-5 w-5 text-muted-foreground" />
-            <span className="text-lg text-muted-foreground">This page is private</span>
-            <Link href="/">
-              <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
-                Go back
-              </button>
-            </Link>
+      <>
+        <Head>
+          <title>Private Page - WeWrite</title>
+        </Head>
+        <DashboardLayout>
+          <div className="p-4">
+            <h1 className="text-2xl font-semibold text-text">
+              {title}
+            </h1>
+            <div className="flex items-center gap-2 mt-4">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <span className="text-lg text-muted-foreground">This page is private</span>
+              <Link href="/">
+                <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
+                  Go back
+                </button>
+              </Link>
+            </div>
           </div>
-        </div>
-      </DashboardLayout>
+        </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-2">
-        {isEditing ? (
-          <EditPage
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-            page={page}
-            title={title}
-            setTitle={setTitle}
-            current={editorState}
-          />
-        ) : (
-          <>
-            <TextView content={editorState} />
-            {user && user.uid === page.userId && (
-              <ActionRow
-                isEditing={isEditing}
-                setIsEditing={setIsEditing}
-                page={page}
-              />
-            )}
-          </>
-        )}
-      </div>
-      <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-        <PledgeBar />
-      </div>
-    </DashboardLayout>
+    <>
+      <Head>
+        <title>{title} - WeWrite</title>
+      </Head>
+      <DashboardLayout>
+        <div className="p-2">
+          {isEditing ? (
+            <EditPage
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              page={page}
+              title={title}
+              setTitle={setTitle}
+              current={editorState}
+            />
+          ) : (
+            <>
+              <TextView content={editorState} />
+              {user && user.uid === page.userId && (
+                <ActionRow
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                  page={page}
+                />
+              )}
+            </>
+          )}
+        </div>
+        <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
+          <PledgeBar />
+        </div>
+      </DashboardLayout>
+    </>
   );
 }

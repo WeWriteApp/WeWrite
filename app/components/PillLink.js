@@ -9,7 +9,7 @@ export const PillLink = ({ children, href, isPublic, groupId, className, isOwned
   
   return (
     <Link 
-      href={href?.replace('/pages/', '/')} 
+      href={href} 
       className={`
         relative
         my-1 px-3 py-1.5

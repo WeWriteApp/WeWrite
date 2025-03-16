@@ -8,6 +8,7 @@ import AddUsername from "./components/AddUsername";
 import TypeaheadSearch from "./components/TypeaheadSearch";
 import { AuthContext } from "./providers/AuthProvider";
 import { useRouter } from "next/navigation";
+import Head from "next/head";
 
 export default function Home() {
   const { user, loading } = useContext(AuthContext);
@@ -25,6 +26,9 @@ export default function Home() {
 
   return (
     <>
+      <Head>
+        <title>Home - WeWrite</title>
+      </Head>
       <Header />
       <main className="p-4">
         <AddUsername />
