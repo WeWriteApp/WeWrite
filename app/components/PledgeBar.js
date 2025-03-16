@@ -185,7 +185,7 @@ const PledgeBar = () => {
             </div>
 
             <div
-              className="flex justify-center items-center text-gray gap-1 text-[18px] z-10"
+              className="flex justify-center items-center text-foreground gap-1 text-[18px] z-10"
               onDoubleClick={() => !handleInteraction() && setInputVisible(true)}
             >
               $
@@ -193,7 +193,7 @@ const PledgeBar = () => {
                 <input
                   type="number"
                   ref={textRef}
-                  className="w-[80px] h-full focus-text text-center text-[24px]"
+                  className="w-[80px] h-full focus-text text-center text-[24px] text-foreground"
                   value={donateAmount}
                   onChange={(e) => {
                     if (!handleInteraction()) {
@@ -204,11 +204,11 @@ const PledgeBar = () => {
                   autoComplete="off"
                 />
               ) : (
-                <span className="text-[24px] font-normal text-white">
+                <span className="text-[24px] font-normal text-foreground">
                   {donateAmount.toFixed(2)}
                 </span>
               )}
-              /mo
+              <span className="text-foreground">/mo</span>
             </div>
 
             <div

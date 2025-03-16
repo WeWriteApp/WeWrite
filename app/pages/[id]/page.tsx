@@ -19,6 +19,7 @@ interface PageData {
   userId: string;
   groupId: string | null;
   isPublic: boolean;
+  username?: string;
 }
 
 export default function Page({ params }: PageProps) {
@@ -43,7 +44,7 @@ export default function Page({ params }: PageProps) {
     <>
       <PageHeader
         title={page.title}
-        username={user?.username || 'Anonymous'}
+        username={page.username || 'Anonymous'}
         userGroups={userGroups}
         currentGroupId={page.groupId}
         onGroupChange={(groupId) => {

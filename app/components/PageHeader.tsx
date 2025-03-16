@@ -123,59 +123,16 @@ export default function PageHeader({
             )}
 
             <div className={`flex ${isCollapsed ? 'flex-row items-center gap-2' : 'flex-col'} transition-all duration-300`}>
-              <h1 className={`font-semibold text-foreground transition-all duration-300 ${isCollapsed ? 'text-sm' : 'text-xl'}`}>
+              <h1 className={`font-semibold text-foreground transition-all duration-300 ${isCollapsed ? 'text-sm' : 'text-2xl'}`}>
                 {title}
               </h1>
-              <div className="relative" ref={bylineRef}>
-                <button
-                  onClick={() => setShowBylineMenu(!showBylineMenu)}
-                  className={`text-muted-foreground hover:text-foreground transition-all duration-300 ${isCollapsed ? 'text-xs' : 'text-sm'}`}
-                >
+              <div className="relative">
+                <span className={`text-muted-foreground transition-all duration-300 ${isCollapsed ? 'text-xs' : 'text-sm'}`}>
                   {currentGroupId 
                     ? `in ${userGroups.find(g => g.id === currentGroupId)?.name}`
                     : `by ${username}`
                   }
-                </button>
-
-                {/* Byline menu */}
-                {showBylineMenu && (
-                  <div className="absolute top-full left-0 mt-2 p-4 bg-popover border border-border rounded-lg shadow-lg min-w-[200px] z-50">
-                    <div className="space-y-2">
-                      <label className="block font-medium text-foreground">Myself:</label>
-                      <button
-                        onClick={() => {
-                          onGroupChange?.(null);
-                          setShowBylineMenu(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground ${!currentGroupId ? 'bg-accent text-accent-foreground' : ''}`}
-                      >
-                        by {username}
-                      </button>
-
-                      {userGroups.length > 0 && (
-                        <>
-                          <label className="block font-medium text-foreground mt-4">My groups:</label>
-                          <div className="space-y-1">
-                            {userGroups.map((group) => (
-                              <button
-                                key={group.id}
-                                onClick={() => {
-                                  onGroupChange?.(group.id);
-                                  setShowBylineMenu(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-md text-foreground hover:bg-accent hover:text-accent-foreground ${
-                                  currentGroupId === group.id ? 'bg-accent text-accent-foreground' : ''
-                                }`}
-                              >
-                                in {group.name}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+                </span>
               </div>
             </div>
           </div>

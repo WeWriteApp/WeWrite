@@ -163,28 +163,6 @@ export default function SinglePageView({ params }) {
           />
         ) : (
           <>
-            <h1 className="text-3xl mt-4 md:text-4xl font-semibold text-text fade-in">
-              {title}
-            </h1>
-            {groupId && (
-              <div
-                className="flex items-center gap-2 mt-4 fade-in"
-                style={{ animationDelay: "100ms" }}
-              >
-                <div className="flex flex-col text-text">
-                  <span>Belongs to</span>
-                  <GroupBadge groupId={groupId} />
-                </div>
-              </div>
-            )}
-            <div
-              className="flex space-x-1 my-4 fade-in"
-              style={{ animationDelay: "200ms" }}
-            >
-              <span className="text-text">Written by {"  "}</span>
-              <User uid={page.userId} />
-            </div>
-
             <TextView content={editorState} />
             {user && user.uid === page.userId && (
               <ActionRow
@@ -196,7 +174,7 @@ export default function SinglePageView({ params }) {
           </>
         )}
       </div>
-      <div className=" fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
+      <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
         <PledgeBar />
       </div>
     </DashboardLayout>

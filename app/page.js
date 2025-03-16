@@ -8,7 +8,7 @@ export default function Home() {
       <Header />
       <main className="p-4">
         <h1 className="text-2xl font-bold text-foreground">Welcome to WeWrite</h1>
-        <p className="mt-2 text-foreground">Testing page content</p>
+        <p className="mt-2 text-foreground">The social wiki where every page is a fundraiser</p>
       </main>
     </>
   );

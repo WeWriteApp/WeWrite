@@ -9,6 +9,7 @@ import AddUsername from "../components/AddUsername";
 import TypeaheadSearch from "../components/TypeaheadSearch";
 import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
+import Header from "./Header";
 
 const Dashboard = () => {
   const { user,loading } = useContext(AuthContext);
@@ -25,6 +26,7 @@ const Dashboard = () => {
   }
   return (
     <DashboardLayout>
+      <Header />
       <div>
         <AddUsername />
         
