@@ -23,9 +23,9 @@ export default function ThemeToggle() {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <TooltipProvider>
-        <Tooltip>
+    <TooltipProvider delayDuration={0}>
+      <Tooltip open={!open}>
+        <DropdownMenu open={open} onOpenChange={setOpen}>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
@@ -39,26 +39,24 @@ export default function ThemeToggle() {
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          {!open && (
-            <TooltipContent>
-              <p>Change theme</p>
-            </TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
-      <DropdownMenuContent asChild>
-        <Card>
-          <DropdownMenuItem onClick={() => setTheme("light")}>
-            Light
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("dark")}>
-            Dark
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setTheme("system")}>
-            System
-          </DropdownMenuItem>
-        </Card>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <TooltipContent>
+            <p>Change theme</p>
+          </TooltipContent>
+          <DropdownMenuContent asChild>
+            <Card>
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                System
+              </DropdownMenuItem>
+            </Card>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </Tooltip>
+    </TooltipProvider>
   );
 } 

@@ -16,7 +16,7 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/pages");
+      router.push("/");
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);

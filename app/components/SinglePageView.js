@@ -16,6 +16,7 @@ import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Lock } from "lucide-react";
 import Head from "next/head";
+import Header from "./Header";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -110,6 +111,7 @@ export default function SinglePageView({ params }) {
         <Head>
           <title>Page Not Found - WeWrite</title>
         </Head>
+        <Header />
         <Loader />
       </>
     );
@@ -121,6 +123,7 @@ export default function SinglePageView({ params }) {
           <title>Deleted Page - WeWrite</title>
         </Head>
         <DashboardLayout>
+          <Header />
           <div>
             <h1 className="text-2xl font-semibold text-text">Page not found</h1>
             <div className="flex items-center gap-2 mt-4">
@@ -128,7 +131,7 @@ export default function SinglePageView({ params }) {
               <span className="text-lg text-text">
                 This page has been deleted
               </span>
-              <Link href="/pages">
+              <Link href="/">
                 <button className="bg-background text-button-text px-4 py-2 rounded-full">
                   Go back
                 </button>
@@ -145,6 +148,7 @@ export default function SinglePageView({ params }) {
         <Head>
           <title>Loading... - WeWrite</title>
         </Head>
+        <Header />
         <Loader />
       </>
     );
@@ -156,6 +160,7 @@ export default function SinglePageView({ params }) {
           <title>Private Page - WeWrite</title>
         </Head>
         <DashboardLayout>
+          <Header />
           <div className="p-4">
             <h1 className="text-2xl font-semibold text-text">
               {title}
@@ -181,6 +186,7 @@ export default function SinglePageView({ params }) {
         <title>{title} - WeWrite</title>
       </Head>
       <DashboardLayout>
+        <Header />
         <div className="p-2">
           {isEditing ? (
             <EditPage
