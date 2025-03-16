@@ -10,7 +10,6 @@ import { NavProvider } from "./providers/NavProvider"
 import { PortfolioProvider } from "./providers/PortfolioProvider"
 import { DrawerProvider } from "./providers/DrawerProvider"
 import { CommunityProvider } from "./providers/CommunityProvider"
-import { Drawer } from "./components/Drawer"
 import { GroupsProvider } from "./providers/GroupsProvider"
 import { ThemeProvider } from "./providers/ThemeProvider"
 import GAProvider from "./providers/GAProvider"
@@ -32,36 +31,33 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
       <body className={inter.className}>
-        <LoggingProvider>
-          <GAProvider>
-            <ThemeProvider defaultTheme="dark" storageKey="wewrite-theme">
-              <GestureProvider>
-                <DrawerProvider>
-                  <AuthProvider>
-                    <DataProvider>
-                      <GroupsProvider>
-                        <CommunityProvider>
-                          <PortfolioProvider>
-                            <MobileProvider>
-                              <div className="flex flex-row">
-                                <div className="flex flex-col w-full">
-                                  {children}
-                                </div>
-                              </div>
-                              <Drawer>{/* Drawer content */}</Drawer>
-                              <Analytics />
-                              <SpeedInsights />
-                            </MobileProvider>
-                          </PortfolioProvider>
-                        </CommunityProvider>
-                      </GroupsProvider>
-                    </DataProvider>
-                  </AuthProvider>
-                </DrawerProvider>
-              </GestureProvider>
-            </ThemeProvider>
-          </GAProvider>
-        </LoggingProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <DataProvider>
+              <MobileProvider>
+                <NavProvider>
+                  <PortfolioProvider>
+                    <DrawerProvider>
+                      <CommunityProvider>
+                        <GroupsProvider>
+                          <GAProvider>
+                            <LoggingProvider>
+                              <GestureProvider>
+                                {children}
+                                <Analytics />
+                                <SpeedInsights />
+                              </GestureProvider>
+                            </LoggingProvider>
+                          </GAProvider>
+                        </GroupsProvider>
+                      </CommunityProvider>
+                    </DrawerProvider>
+                  </PortfolioProvider>
+                </NavProvider>
+              </MobileProvider>
+            </DataProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
