@@ -28,7 +28,17 @@ export default function ClientLayout({ children }) {
                   <main className="min-h-screen">
                     {children}
                   </main>
-                  <Toaster />
+                  <Toaster 
+                    position="top-center"
+                    toastOptions={{
+                      style: {
+                        background: 'var(--background)',
+                        color: 'var(--foreground)',
+                        border: '1px solid var(--border)',
+                      },
+                    }}
+                    className="z-[100]"
+                  />
                 </DrawerProvider>
               </MobileProvider>
             </PortfolioProvider>
