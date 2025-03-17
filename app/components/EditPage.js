@@ -18,11 +18,14 @@ const EditPage = ({
   setTitle,
 }) => {
   const [editorState, setEditorState] = useState(() => {
+    if (!current) {
+      return [{ type: "paragraph", children: [{ text: "" }] }];
+    }
     try {
       return JSON.parse(current);
     } catch (e) {
       console.error("Failed to parse editor state:", e);
-      return null;
+      return [{ type: "paragraph", children: [{ text: "" }] }];
     }
   });
   const [groupId, setGroupId] = useState(null);
@@ -30,7 +33,8 @@ const EditPage = ({
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
-  const { logError } = useLogging();
+  const logging = useLogging();
+  const logError = logging?.logError || console.error;
   const editorRef = useRef(null);
 
   // Use keyboard shortcuts
@@ -113,8 +117,12 @@ const EditPage = ({
         console.log("Error saving new version");
       }
     } catch (error) {
-      console.log("Error saving new version", error);
-      await logError(error, "EditPage.js");
+      console.error("Error saving new version:", error);
+      try {
+        await logError(error, "EditPage.js");
+      } catch (loggingError) {
+        console.error("Failed to log error:", loggingError);
+      }
     } finally {
       setIsSaving(false);
     }
