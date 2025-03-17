@@ -88,13 +88,12 @@ export default function LoginPage() {
               </p>
             )}
 
-            <Button
+            <button
               type="submit"
-              className="w-full px-4 py-2"
-              variant="default"
+              className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
             >
               Login
-            </Button>
+            </button>
 
             <div className="text-center text-sm space-y-2">
               <div>

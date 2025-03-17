@@ -39,8 +39,11 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold">Your Pages</h1>
           <Link href="/new">
-            <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="hover:bg-white/10 text-white"
+            >
               New page
             </Button>
           </Link>
