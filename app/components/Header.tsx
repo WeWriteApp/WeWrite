@@ -48,7 +48,7 @@ export default function Header() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden hover:bg-accent hover:text-accent-foreground"
+                  className="md:hidden"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <Menu className="h-5 w-5" />

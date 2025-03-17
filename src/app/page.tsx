@@ -40,8 +40,8 @@ export default function Home() {
           <div className="flex justify-between items-center">
             <p className="font-bold">My pages</p>
             <Link href="/pages/new">
-              <div className="flex items-center gap-[10px] px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
-                <Plus className="h-4 w-4" />
+              <div className="flex items-center px-[10px] py-[8px] border border-white/30 bg-white/10 hover:bg-white/25 hover:scale-101 active:scale-99 rounded-xl font-medium cursor-pointer">
+                New page
               </div>
             </Link>
           </div>

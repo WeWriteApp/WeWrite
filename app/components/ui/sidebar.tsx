@@ -69,7 +69,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   >
                     <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
                       {theme === option.value && (
-                        <div className="w-3 h-3 rounded-full bg-primary" />
+                        <div className="w-3 h-3 rounded-full bg-blue-500" />
                       )}
                     </div>
                     <Icon className="mr-2 h-4 w-4" />
