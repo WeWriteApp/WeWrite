@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full px-4 py-2"
               >
                 Send recovery link
               </Button>

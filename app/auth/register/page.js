@@ -110,15 +110,13 @@ export default function RegisterPage() {
               </p>
             )}
 
-            <div className="w-full">
-              <Button
-                type="submit"
-                className="w-full"
-                variant="default"
-              >
-                Register
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              className="w-full px-4 py-2"
+              variant="default"
+            >
+              Register
+            </Button>
 
             <div className="text-center text-sm">
               <span>Already have an account? </span>
