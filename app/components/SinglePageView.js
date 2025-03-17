@@ -1,16 +1,14 @@
 "use client";
 import React, { useEffect, useState, useContext } from "react";
 import DashboardLayout from "../DashboardLayout";
+import PublicLayout from "./layout/PublicLayout";
 import TextView from "./TextView";
 import { AlertTriangle } from "lucide-react";
 import { Loader } from "./Loader";
 import Link from "next/link";
 import { AuthContext } from "../providers/AuthProvider";
-import User from "./UserBadge";
-import GroupBadge from "./GroupBadge";
 import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
-// import { checkLinkExistence } from "../utils/check-link-existence";
 import { listenToPageById } from "../firebase/database";
 import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -99,122 +97,121 @@ export default function SinglePageView({ params }) {
     return () => unsubscribe();
   }, [params.id, user]);
 
+  const Layout = user ? DashboardLayout : PublicLayout;
+
   if (!page) {
     return (
-      <>
+      <Layout>
         <Head>
           <title>Page Not Found - WeWrite</title>
         </Head>
         <PageHeader />
         <Loader />
-      </>
+      </Layout>
     );
   }
+
   if (isDeleted) {
     return (
-      <>
+      <Layout>
         <Head>
           <title>Deleted Page - WeWrite</title>
         </Head>
-        <DashboardLayout>
-          <PageHeader />
-          <div>
-            <h1 className="text-2xl font-semibold text-text">Page not found</h1>
-            <div className="flex items-center gap-2 mt-4">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="text-lg text-text">
-                This page has been deleted
-              </span>
-              <Link href="/">
-                <button className="bg-background text-button-text px-4 py-2 rounded-full">
-                  Go back
-                </button>
-              </Link>
-            </div>
+        <PageHeader />
+        <div>
+          <h1 className="text-2xl font-semibold text-text">Page not found</h1>
+          <div className="flex items-center gap-2 mt-4">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <span className="text-lg text-text">
+              This page has been deleted
+            </span>
+            <Link href="/">
+              <button className="bg-background text-button-text px-4 py-2 rounded-full">
+                Go back
+              </button>
+            </Link>
           </div>
-        </DashboardLayout>
-      </>
+        </div>
+      </Layout>
     );
   }
+
   if (isLoading) {
     return (
-      <>
+      <Layout>
         <Head>
           <title>Loading... - WeWrite</title>
         </Head>
         <PageHeader />
         <Loader />
-      </>
+      </Layout>
     );
   }
+
   if (!isPublic && (!user || user.uid !== page.userId)) {
     return (
-      <>
+      <Layout>
         <Head>
           <title>Private Page - WeWrite</title>
         </Head>
-        <DashboardLayout>
-          <PageHeader />
-          <div className="p-4">
-            <h1 className="text-2xl font-semibold text-text">
-              {title}
-            </h1>
-            <div className="flex items-center gap-2 mt-4">
-              <Lock className="h-5 w-5 text-muted-foreground" />
-              <span className="text-lg text-muted-foreground">This page is private</span>
-              <Link href="/">
-                <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
-                  Go back
-                </button>
-              </Link>
-            </div>
+        <PageHeader />
+        <div className="p-4">
+          <h1 className="text-2xl font-semibold text-text">
+            {title}
+          </h1>
+          <div className="flex items-center gap-2 mt-4">
+            <Lock className="h-5 w-5 text-muted-foreground" />
+            <span className="text-lg text-muted-foreground">This page is private</span>
+            <Link href={user ? "/" : "/auth/login"}>
+              <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
+                {user ? "Go back" : "Log in"}
+              </button>
+            </Link>
           </div>
-        </DashboardLayout>
-      </>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <>
+    <Layout>
       <Head>
         <title>{title} - WeWrite</title>
       </Head>
-      <DashboardLayout>
-        <PageHeader 
-          title={title} 
-          username={page?.username || "[NULL]"} 
-          userId={page?.userId}
-          isLoading={isLoading}
-        />
-        <div className="p-2 pb-24">
-          {isEditing ? (
-            <LoggingProvider>
-              <EditPage
+      <PageHeader 
+        title={title} 
+        username={page?.username || "[NULL]"} 
+        userId={page?.userId}
+        isLoading={isLoading}
+      />
+      <div className="p-2 pb-24">
+        {isEditing ? (
+          <LoggingProvider>
+            <EditPage
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              page={page}
+              title={title}
+              setTitle={setTitle}
+              current={editorState}
+            />
+          </LoggingProvider>
+        ) : (
+          <>
+            <TextView content={editorState} />
+            {user && user.uid === page.userId && (
+              <ActionRow
                 isEditing={isEditing}
                 setIsEditing={setIsEditing}
                 page={page}
-                title={title}
-                setTitle={setTitle}
-                current={editorState}
               />
-            </LoggingProvider>
-          ) : (
-            <>
-              <TextView content={editorState} />
-              {user && user.uid === page.userId && (
-                <ActionRow
-                  isEditing={isEditing}
-                  setIsEditing={setIsEditing}
-                  page={page}
-                />
-              )}
-            </>
-          )}
-        </div>
-        <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-          <PledgeBar />
-        </div>
-      </DashboardLayout>
-    </>
+            )}
+          </>
+        )}
+      </div>
+      <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
+        <PledgeBar />
+      </div>
+    </Layout>
   );
 }

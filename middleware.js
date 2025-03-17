@@ -4,23 +4,33 @@ export function middleware(request) {
   // Get the pathname of the request
   const path = request.nextUrl.pathname;
 
-  // Define public paths that don't require authentication
+  // Define paths that are always public
   const isPublicPath = path === "/auth/login" || 
                       path === "/auth/register" || 
                       path === "/auth/forgot-password" ||
-                      path.startsWith("/api/");
+                      path.startsWith("/api/") ||
+                      path.startsWith("/pages/"); // Allow access to all pages
+
+  // Define paths that always require authentication
+  const requiresAuth = path === "/new" || 
+                      path === "/groups/new" ||
+                      path === "/" ||
+                      path.startsWith("/user/") ||
+                      path.startsWith("/dashboard");
 
   // Get the token from the cookies
   const token = request.cookies.get("session")?.value;
 
   // Redirect authenticated users away from auth pages
-  if (isPublicPath && token) {
+  if (path.startsWith("/auth/") && token) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Redirect unauthenticated users to login
-  if (!isPublicPath && !token) {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
+  // Only redirect to login for paths that explicitly require auth
+  if (requiresAuth && !token) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("from", path);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
