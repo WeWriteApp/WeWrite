@@ -103,6 +103,14 @@ export default function TestSearchPage() {
       <div>
         <h2 className="text-xl font-semibold mb-2">Troubleshooting Steps</h2>
         <ol className="list-decimal pl-5 space-y-2">
+          <li className="text-yellow-500 font-semibold">
+            Try using a different environment variable name:
+            <ol className="list-disc pl-5 space-y-1 mt-1 text-white font-normal">
+              <li>In Vercel, create a new environment variable named <code>GOOGLE_CLOUD_CREDENTIALS</code></li>
+              <li>Copy your Google Cloud key JSON to this new variable</li>
+              <li>Redeploy your application</li>
+            </ol>
+          </li>
           <li>Check that <code>GOOGLE_CLOUD_KEY_JSON</code> environment variable is set in Vercel</li>
           <li>Verify the JSON key format is correct (no line breaks, valid JSON)</li>
           <li>Make sure the service account has access to BigQuery</li>
@@ -113,7 +121,7 @@ export default function TestSearchPage() {
               <li>Go to a Base64 encoder website (like <a href="https://www.base64encode.org/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">base64encode.org</a>)</li>
               <li>Paste your entire Google Cloud key JSON</li>
               <li>Encode to Base64</li>
-              <li>Copy the Base64 string to your Vercel environment variable</li>
+              <li>Copy the Base64 string to your <code>GOOGLE_CLOUD_CREDENTIALS</code> variable</li>
               <li>Set a new environment variable <code>GOOGLE_CLOUD_KEY_BASE64</code> to <code>true</code></li>
               <li>Redeploy your application after updating the environment variables</li>
             </ol>

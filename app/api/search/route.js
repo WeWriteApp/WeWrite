@@ -4,20 +4,27 @@ import { BigQuery } from "@google-cloud/bigquery";
 let bigquery = null;
 
 // Only try to initialize BigQuery if we have credentials
-if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
+if (credentialsEnvVar) {
   try {
     console.log('Attempting to initialize BigQuery with credentials');
     
     // First try to handle it as regular JSON
-    let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+    let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
+    
+    // Check if it might be HTML content (bad response)
+    if (jsonString.includes('<!DOCTYPE') || jsonString.includes('<html')) {
+      console.error('Credentials appear to contain HTML content instead of JSON. Check environment variable configuration.');
+      throw new Error('Invalid credentials format: Contains HTML content');
+    }
     
     // Check if the string starts with eyJ - a common Base64 JSON start pattern
-    if (process.env.GOOGLE_CLOUD_KEY_JSON.startsWith('eyJ') || 
+    if (credentialsEnvVar.startsWith('eyJ') || 
         process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true') {
       console.log('Credentials appear to be Base64 encoded, attempting to decode');
       // Try to decode as Base64
       try {
-        const buffer = Buffer.from(process.env.GOOGLE_CLOUD_KEY_JSON, 'base64');
+        const buffer = Buffer.from(credentialsEnvVar, 'base64');
         jsonString = buffer.toString('utf-8');
         console.log('Successfully decoded Base64 credentials');
       } catch (decodeError) {
@@ -38,13 +45,14 @@ if (process.env.GOOGLE_CLOUD_KEY_JSON) {
     console.error("Error details:", {
       message: error.message,
       stack: error.stack,
-      credentialsProvided: !!process.env.GOOGLE_CLOUD_KEY_JSON,
-      credentialsLength: process.env.GOOGLE_CLOUD_KEY_JSON?.length,
-      credentialsStart: process.env.GOOGLE_CLOUD_KEY_JSON?.substring(0, 20) + '...'
+      credentialsProvided: !!credentialsEnvVar,
+      credentialsLength: credentialsEnvVar?.length,
+      credentialsStart: credentialsEnvVar?.substring(0, 20) + '...',
+      containsHTML: credentialsEnvVar?.includes('<!DOCTYPE') || credentialsEnvVar?.includes('<html')
     });
   }
 } else {
-  console.warn('GOOGLE_CLOUD_KEY_JSON environment variable is not set');
+  console.warn('No Google Cloud credentials found in environment variables');
 }
 
 // Test BigQuery connection

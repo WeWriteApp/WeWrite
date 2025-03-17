@@ -17,17 +17,31 @@ export async function GET(request) {
     let bigquery = null;
     
     // Try to initialize BigQuery
-    if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+    const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
+    if (credentialsEnvVar) {
       try {
-        let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+        let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
+        
+        // Check if it might be HTML content
+        if (jsonString.includes('<!DOCTYPE') || jsonString.includes('<html')) {
+          bigqueryStatus.error = {
+            message: "Credentials contain HTML content instead of JSON",
+            containsHTML: true
+          };
+          return NextResponse.json({
+            success: false,
+            bigqueryStatus,
+            message: "BigQuery not initialized: Credentials contain HTML"
+          });
+        }
         
         // Check if it might be Base64 encoded
-        const mightBeBase64 = process.env.GOOGLE_CLOUD_KEY_JSON.startsWith('eyJ') || 
-                              process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
+        const mightBeBase64 = credentialsEnvVar.startsWith('eyJ') || 
+                            process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
         
         if (mightBeBase64) {
           try {
-            const buffer = Buffer.from(process.env.GOOGLE_CLOUD_KEY_JSON, 'base64');
+            const buffer = Buffer.from(credentialsEnvVar, 'base64');
             jsonString = buffer.toString('utf-8');
           } catch (decodeError) {
             // Continue with original string if decoding fails

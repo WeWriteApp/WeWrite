@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic'; // This ensures the route isn't statical
 export async function GET() {
   try {
     // Check if the environment variable exists
-    const hasCredentials = !!process.env.GOOGLE_CLOUD_KEY_JSON;
+    const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
+    const hasCredentials = !!credentialsEnvVar;
     
     let bigquery = null;
     let isInitialized = false;
@@ -20,15 +21,15 @@ export async function GET() {
     if (hasCredentials) {
       try {
         // Try to parse the JSON string
-        let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+        let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
         
         // Check if it might be Base64 encoded
-        const mightBeBase64 = process.env.GOOGLE_CLOUD_KEY_JSON.startsWith('eyJ') || 
+        const mightBeBase64 = credentialsEnvVar.startsWith('eyJ') || 
                               process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
         
         if (mightBeBase64) {
           try {
-            const buffer = Buffer.from(process.env.GOOGLE_CLOUD_KEY_JSON, 'base64');
+            const buffer = Buffer.from(credentialsEnvVar, 'base64');
             jsonString = buffer.toString('utf-8');
           } catch (decodeError) {
             // Continue with original string if decoding fails
