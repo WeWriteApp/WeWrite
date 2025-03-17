@@ -13,7 +13,7 @@ export async function generateMetadata({ params }) {
 const Page = () => {  
   return (
     <DashboardLayout>
-      <div className="container mx-auto pt-10">
+      <div className="container mx-auto">
         <BillingPage />        
       </div>
     </DashboardLayout>

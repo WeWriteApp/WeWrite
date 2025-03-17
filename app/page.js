@@ -33,7 +33,7 @@ export default function Home() {
         <title>Home - WeWrite</title>
       </Head>
       <Header />
-      <main className="container p-6 mt-20">
+      <main className="container p-6">
         <AddUsername />
         
         <div className="flex items-center justify-between mb-6">
