@@ -41,9 +41,9 @@ export default function PageHeader({ title, username, userId, isLoading = false 
             <div className={`flex items-center min-w-0 ${isScrolled ? "space-x-3" : "space-x-6 flex-1"}`}>
               <Link href="/">
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="icon" 
-                  className={`shrink-0 h-8 w-8 transition-all duration-200 ${isScrolled ? "hidden" : ""}`}
+                  className="hover:bg-white/10 text-white h-8 w-8 shrink-0 transition-all duration-200"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
