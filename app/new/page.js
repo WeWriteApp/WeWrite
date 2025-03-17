@@ -1,5 +1,5 @@
 "use client";
-simport { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import SlateEditor from "../components/SlateEditor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
