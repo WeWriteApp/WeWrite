@@ -3,6 +3,17 @@
 import { initializeAnalytics } from '../firebase/config';
 import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
 
+// Add TypeScript declaration for gtag
+declare global {
+  interface Window {
+    gtag: (
+      command: string,
+      targetId: string,
+      config?: Record<string, any>
+    ) => void;
+  }
+}
+
 /**
  * Analytics Integration Module
  * 
