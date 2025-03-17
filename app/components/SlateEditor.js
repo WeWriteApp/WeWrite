@@ -133,34 +133,34 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   return (
     <div className="relative rounded-lg bg-background">
       <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
-        <Editable
-          ref={editableRef}
-          renderLeaf={({ attributes, children, leaf }) => {
-            return (
-              <span
-                {...attributes}
-                style={{ fontWeight: leaf.bold ? 'bold' : 'normal' }}
-                className="transition-colors"
-              >
-                {children}
-              </span>
-            )
-          }}
-          renderElement={(props) => <Element {...props} />}
-          onKeyDown={(event) => handleKeyDown(event, editor)}
-          placeholder="Start writing..."
-          className="min-h-[200px] px-4 py-3 prose prose-sm max-w-none prose-neutral dark:prose-invert prose-p:leading-7 prose-headings:font-semibold focus:outline-none"
-        />
+        <div className="relative">
+          <Editable
+            ref={editableRef}
+            renderLeaf={({ attributes, children, leaf }) => {
+              return (
+                <span
+                  {...attributes}
+                  style={{ fontWeight: leaf.bold ? 'bold' : 'normal' }}
+                  className="transition-colors"
+                >
+                  {children}
+                </span>
+              )
+            }}
+            renderElement={(props) => <Element {...props} />}
+            onKeyDown={(event) => handleKeyDown(event, editor)}
+            placeholder="Start writing..."
+            className="min-h-[200px] px-4 py-3 prose prose-sm max-w-none prose-neutral dark:prose-invert prose-p:leading-7 prose-headings:font-semibold focus:outline-none"
+          />
+
+          {showDropdown && (
+            <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
+          )}
+        </div>
       </Slate>
 
-      {showDropdown && (
-        <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
-      )}
-
-      <div className="absolute bottom-2 right-2">
-        <div className="text-xs text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm">
-          Press @ to mention a page
-        </div>
+      <div className="mt-4 text-xs text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm inline-block">
+        Press @ to mention a page
       </div>
     </div>
   );

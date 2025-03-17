@@ -49,7 +49,8 @@ const TopUsers = () => {
 
   return (
     <div className="mb-8">
-      <h2 className="text-2xl font-semibold mb-4 text-text">Top Users</h2>
+      <h2 className="text-2xl font-semibold mb-2 text-text">Leaderboard</h2>
+      <p className="text-sm text-gray-400 mb-4">These are the users who've written the most pages. More leaderboards coming soon!</p>
       <div className="flex flex-wrap">
         {users.map((user) => {
           const hasPages = user.pageCount > 0;

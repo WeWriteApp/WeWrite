@@ -71,6 +71,9 @@ const TypeaheadSearch = ({
 
         const data = await response.json();
         console.log('TypeaheadSearch API response:', data);
+        if (data.message) {
+          console.warn('Search API message:', data.message);
+        }
         setUserPages(data.userPages || []);
         setGroupPages(data.groupPages || []);
         setPublicPages(data.publicPages || []);

@@ -1,7 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { deletePage} from "../firebase/database";
-import Button from "./Button";
 
 const ActionRow = ({ isEditing, setIsEditing, page }) => {
   const router = useRouter();
@@ -10,30 +9,29 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
 
     if (!confirm) return;
     const result = await deletePage(page.id);
-    if (result === true) {
-      router.push("/");
+    if (result) {
+      router.push("/pages");
     } else {
-      console.error("Error deleting page:", result);
+      console.log("Error deleting page");
     }
   };
 
   return (
     <div className="flex items-center gap-2 mt-8 border-t border-gray-500 py-2 rounded-lg">
-      <Button
-        variant="ghost"
+      <button
+        className="bg-background text-button-text  px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
         onClick={() => setIsEditing(!isEditing)}
       >
         {isEditing ? "Cancel" : "Edit"}
-      </Button>
-      <Button
-        variant="ghost"
+      </button>
+      <button
         onClick={handleDelete}
-        className="hover:bg-red-700 hover:text-white"
+        className="bg-background border-gray-500 border text-button-text px-4 py-2 rounded-lg hover:bg-red-700 transition-colors hover:text-white"
       >
         Delete
-      </Button>
+      </button>
     </div>
   );
 };
 
-export default ActionRow;
+export default ActionRow

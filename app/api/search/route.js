@@ -44,8 +44,8 @@ export async function GET(request) {
         userPages: [], 
         groupPages: [], 
         publicPages: [],
-        message: "Search functionality temporarily unavailable" 
-      }, { status: 503 });
+        message: "Search functionality temporarily unavailable. Please ensure GOOGLE_CLOUD_KEY_JSON is configured." 
+      }, { status: 200 });
     }
 
     // Test BigQuery connection first

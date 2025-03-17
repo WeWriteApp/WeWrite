@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
+simport { useContext, useEffect, useState } from "react";
 import SlateEditor from "../components/SlateEditor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
@@ -7,23 +7,15 @@ import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
-import Button from "../components/Button";
 
 const New = () => {
-  const { user } = useContext(AuthContext);
   const [Page, setPage] = useState({
     title: "",
     isPublic: true,
   });
-  
   return (
     <DashboardLayout>
-      <PageHeader 
-        title="New page" 
-        username={user?.username || "Anonymous"} 
-        userId={user?.uid}
-        hideLink={true}
-      />
+      <PageHeader title="New page" />
       <div className="container py-6">
         <div className="max-w-3xl mx-auto">
           <Form Page={Page} setPage={setPage} />
@@ -36,34 +28,32 @@ const New = () => {
 const Form = ({ Page, setPage }) => {
   const router = useRouter();
   const [editorState, setEditorState] = useState();
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
-    if (!Page.title || Page.title.trim().length === 0) {
-      return;
-    }
+  let updateTime = new Date().toISOString();
 
+  const handleSave = async () => {
     setIsSaving(true);
     let data = {
       ...Page,
       content: JSON.stringify(editorState),
       userId: user.uid,
-      lastModified: new Date().toISOString(),
+      lastModified: updateTime,
     };
 
     const res = await createPage(data);
-    if (res && typeof res === 'string') {
+    if (res) {
       ReactGA.event({
         category: "Page",
         action: "Add new page",
         label: Page.title,
       });
       setIsSaving(false);
-      router.push(`/pages/${res}`);
+      router.push("/pages");
     } else {
       setIsSaving(false);
-      console.error("Error creating page:", res);
+      console.log("Error creating page");
     }
   };
 
@@ -107,20 +97,20 @@ const Form = ({ Page, setPage }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
+        <button
           onClick={handleSave}
-          disabled={!Page.title || isSaving}
-          variant="default"
-          className="w-full"
+          disabled={!Page.title || !editorState || isSaving}
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          type="submit"
         >
           {isSaving ? "Saving..." : "Save"}
-        </Button>
-        <Button
+        </button>
+        <button
           onClick={() => router.push("/pages")}
-          variant="ghost"
+          className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
         >
           Cancel
-        </Button>
+        </button>
       </div>
     </form>
   );

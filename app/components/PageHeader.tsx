@@ -1,24 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, Link2 } from 'lucide-react';
+import { ChevronLeft, Link as LinkIcon } from 'lucide-react';
 import Link from "next/link";
 import Button from "./Button";
 import { toast } from "sonner";
-import { usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 
 export interface PageHeaderProps {
   title?: string;
   username?: string;
   userId?: string;
   isLoading?: boolean;
-  hideLink?: boolean;
 }
 
-export default function PageHeader({ title, username, userId, isLoading = false, hideLink = false }: PageHeaderProps) {
+export default function PageHeader({ title, username, userId, isLoading = false }: PageHeaderProps) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const pathname = usePathname();
+  const params = useParams();
+
+  const copyLink = () => {
+    const url = `${window.location.origin}/pages/${params.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast("Link copied to clipboard", {
+        position: "bottom-center",
+        duration: 2000,
+      });
+    });
+  };
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -37,36 +46,21 @@ export default function PageHeader({ title, username, userId, isLoading = false,
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleCopyLink = async () => {
-    try {
-      const url = `${window.location.origin}${pathname}`;
-      await navigator.clipboard.writeText(url);
-      toast.success("Link copied!", {
-        position: "top-center",
-        duration: 2000,
-      });
-    } catch (err) {
-      toast.error("Failed to copy link");
-    }
-  };
-
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 w-full">
         <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-10" : "h-20"}`}>
           <div className={`container flex items-center h-full px-6 transition-all duration-200 ${isScrolled ? "justify-between" : ""}`}>
             <div className={`flex items-center min-w-0 ${isScrolled ? "space-x-3" : "space-x-6 flex-1"}`}>
-              {!isScrolled && (
-                <Link href="/">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="hover:bg-white/10 text-white h-8 w-8 shrink-0 transition-all duration-200"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
+              <Link href="/">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="hover:bg-white/10 text-white h-8 w-8 shrink-0 transition-all duration-200"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </Link>
               <div className={`min-w-0 ${isScrolled ? "flex items-center space-x-2 py-1.5" : ""}`}>
                 <h1 className={`font-semibold truncate transition-all ${isScrolled ? "text-sm" : "text-xl"}`}>
                   {isLoading ? (
@@ -81,22 +75,22 @@ export default function PageHeader({ title, username, userId, isLoading = false,
                     <div className="inline-block h-4 w-24 bg-muted animate-pulse rounded"></div>
                   ) : userId ? (
                     <Link href={`/user/${userId}`} className="hover:underline">
-                      {username}
+                      {username || "[NULL]"}
                     </Link>
                   ) : (
-                    <span>{username}</span>
+                    <span>{username || "[NULL]"}</span>
                   )}
                 </p>
               </div>
             </div>
-            {!isScrolled && !hideLink && (
+            {!isLoading && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-white/10 text-white h-8 w-8 shrink-0 transition-all duration-200"
-                onClick={handleCopyLink}
+                className="hover:bg-white/10 text-white h-8 w-8 shrink-0"
+                onClick={copyLink}
               >
-                <Link2 className="h-4 w-4" />
+                <LinkIcon className="h-4 w-4" />
               </Button>
             )}
           </div>

@@ -4,6 +4,7 @@ import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { PillLink } from "./PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import Link from "next/link";
 
 const AllPages = () => {
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  
@@ -24,9 +25,10 @@ const AllPages = () => {
   }
   return (
     <>
-    <div>
-      <ul className="space-x-1 flex flex-wrap">
+    <div className="relative">
+      <ul className="space-x-1 flex flex-wrap max-h-[120px] overflow-hidden">
         {pages.map((page, index) => {
+          if (index >= 6) return null;
           return (
             <li key={page.id}>
               <PillLink
@@ -40,17 +42,16 @@ const AllPages = () => {
           );
         })}
       </ul>
+      {pages.length > 6 && (
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      )}
     </div>
     <div className="flex justify-center mt-4">
         {
-          hasMorePages && (
-            <button
-              className="bg-primary text-white px-4 py-2 rounded-full"
-              onClick={() => loadMorePages(user.uid)}
-              disabled={isMoreLoading}
-            >
-              {isMoreLoading ? "Loading..." : "Load more"}
-            </button>
+          pages.length > 6 && (
+            <Link href={`/user/${user.uid}`} className="bg-primary text-white px-4 py-2 rounded-full">
+              View all
+            </Link>
           )
         }
       </div>
