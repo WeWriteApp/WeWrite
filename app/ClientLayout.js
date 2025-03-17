@@ -25,7 +25,7 @@ export default function ClientLayout({ children }) {
               <MobileProvider>
                 <DrawerProvider>
                   <Drawer />
-                  <main className="min-h-screen">
+                  <main className="min-h-screen bg-background">
                     {children}
                   </main>
                   <Toaster />
