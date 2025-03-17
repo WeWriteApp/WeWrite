@@ -19,6 +19,7 @@ import Head from "next/head";
 import PageHeader from "./PageHeader";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { app } from "../firebase/config";
+import { LoggingProvider } from "../providers/LoggingProvider";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -187,14 +188,16 @@ export default function SinglePageView({ params }) {
         />
         <div className="p-2 pb-24">
           {isEditing ? (
-            <EditPage
-              isEditing={isEditing}
-              setIsEditing={setIsEditing}
-              page={page}
-              title={title}
-              setTitle={setTitle}
-              current={editorState}
-            />
+            <LoggingProvider>
+              <EditPage
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                page={page}
+                title={title}
+                setTitle={setTitle}
+                current={editorState}
+              />
+            </LoggingProvider>
           ) : (
             <>
               <TextView content={editorState} />

@@ -26,7 +26,7 @@ const AllPages = () => {
   return (
     <>
     <div className="relative">
-      <ul className="space-x-1 flex flex-wrap max-h-[120px] overflow-hidden">
+      <ul className="space-x-1 flex flex-wrap max-h-[160px] overflow-hidden">
         {pages.map((page, index) => {
           if (index >= 6) return null;
           return (
