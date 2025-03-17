@@ -348,7 +348,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 transition-all duration-300">
+    <div className="bg-background rounded-2xl p-6 transition-all duration-300">
       <div 
         className="flex items-center gap-2 cursor-pointer mb-6"
         onClick={() => setIsCollapsed(!isCollapsed)}

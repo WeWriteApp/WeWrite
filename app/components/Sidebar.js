@@ -20,14 +20,14 @@ const Sidebar = () => {
   }
   return (
     <div
-      className={`flex flex-col h-full bg-gray-800 ${
+      className={`flex flex-col h-full bg-background ${
         !isMobile ? "w-64" : "w-0"
       } overflow-hidden -mt-4`}
     >
       <div className="flex items-center justify-center p-4">
         <Link
           href="/new"
-          className="bg-blue-400 flex flex-row w-full text-center justify-center align-middle p-2"
+          className="bg-primary flex flex-row w-full text-center justify-center align-middle p-2"
         >
           <p className="text-white">New Page</p>
         </Link>
@@ -48,7 +48,7 @@ const SidebarItem = ({ icon, text }) => {
     <div
       onClick={() => setSelectedTab(text)}
       className={`flex flex-row items-center space-x-2 p-2 text-sm cursor-pointer ${
-        selectedTab === text ? "bg-gray-700" : ""
+        selectedTab === text ? "bg-accent" : ""
       }`}
     >
       <Icon icon={icon} className="text-white" />

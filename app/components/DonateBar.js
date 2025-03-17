@@ -51,9 +51,9 @@ const DonateBar = () => {
     return (
       <>
         <div className="flex flex-col mt-8 fixed bottom-0 left-0 p-4 w-full align-items justify-center z-1">
-          <div className="flex gap-4 mx-auto bg-slate-50 p-4 rounded">
+          <div className="flex gap-4 mx-auto bg-background p-4 rounded">
             <button
-              className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
               data-tooltip-id="Unsubscribe"
               data-tooltip-place="top"
               data-tooltip-content={`Unsubscribe`}
@@ -67,7 +67,7 @@ const DonateBar = () => {
 
             {/* Edit button to view all subscriptions */}
             <button
-              className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
               data-tooltip-id="Edit"
               data-tooltip-place="top"
               data-tooltip-content={"Edit Pledge Amount"}
@@ -78,7 +78,7 @@ const DonateBar = () => {
             </button>
             {/* eye button to view pledge history */}
             <button
-              className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
               data-tooltip-id="View"
               data-tooltip-place="top"
               data-tooltip-content={"View Pledge History"}
@@ -97,9 +97,9 @@ const DonateBar = () => {
   return (
     <div className="flex flex-col mt-8 fixed bottom-0 left-0 p-4 w-full align-items justify-center z-1">
       {isConfirmed ? (
-        <div className="flex gap-4 mx-auto bg-slate-50 p-4 rounded">
+        <div className="flex gap-4 mx-auto bg-background p-4 rounded">
           <button
-            className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+            className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
             data-tooltip-id="Confirm"
             data-tooltip-place="top"
             data-tooltip-content={`Confirm ${donate}`}
@@ -111,7 +111,7 @@ const DonateBar = () => {
             <Tooltip id="Confirm" place="top" />
           </button>
           <button
-            className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+            className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
             data-tooltip-id="Cancel"
             data-tooltip-place="top"
             data-tooltip-content={"Cancel"}
@@ -122,9 +122,9 @@ const DonateBar = () => {
           </button>
         </div>
       ) : (
-        <div className="flex gap-4 mx-auto bg-slate-50 p-4 rounded">
+        <div className="flex gap-4 mx-auto bg-background p-4 rounded">
           <button
-            className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+            className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
             data-tooltip-id="Donate"
             data-tooltip-place="top"
             data-tooltip-content={"Donate"}
@@ -136,9 +136,9 @@ const DonateBar = () => {
         </div>
       )}
 
-      <div className="flex gap-4 mx-auto bg-slate-50 p-4 rounded">
+      <div className="flex gap-4 mx-auto bg-background p-4 rounded">
         <button
-          className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+          className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
           data-tooltip-id="Decrease"
           data-tooltip-place="top"
           data-tooltip-content={"Decrease"}
@@ -156,7 +156,7 @@ const DonateBar = () => {
 
         {/* Increase */}
         <button
-          className="bg-gray-100 text-gray-600 px-4 py-2 rounded hover:bg-gray-200"
+          className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
           data-tooltip-id="Increase"
           data-tooltip-place="top"
           data-tooltip-content={"Increase"}
