@@ -8,6 +8,8 @@ import {
   getDocs,
   deleteDoc,
   onSnapshot,
+  query,
+  where
 } from "firebase/firestore";
 
 import app from "./config";
@@ -316,4 +318,22 @@ function extractLinksFromNodes(nodes) {
   nodes.forEach(traverse);
 
   return links;
+}
+
+export const getUsernameByEmail = async (email) => {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const userData = querySnapshot.docs[0].data();
+      return userData.username || null;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error fetching username by email:", error);
+    return null;
+  }
 }
