@@ -5,7 +5,10 @@ import { useState, useEffect } from 'react';
 export default function TestSearchPage() {
   const [bigQueryStatus, setBigQueryStatus] = useState({loading: true, data: null, error: null});
   const [searchStatus, setSearchStatus] = useState({loading: true, data: null, error: null});
+  const [envStatus, setEnvStatus] = useState({loading: true, data: null, error: null});
+  const [hardcodedSearchStatus, setHardcodedSearchStatus] = useState({loading: false, data: null, error: null});
   const [searchTerm, setSearchTerm] = useState("test");
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
     const fetchBigQueryStatus = async () => {
@@ -22,7 +25,22 @@ export default function TestSearchPage() {
       }
     };
 
+    const fetchEnvStatus = async () => {
+      try {
+        const response = await fetch('/api/search-keys');
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${await response.text()}`);
+        }
+        const data = await response.json();
+        setEnvStatus({loading: false, data, error: null});
+      } catch (error) {
+        console.error("Error fetching environment status:", error);
+        setEnvStatus({loading: false, data: null, error: error.message});
+      }
+    };
+
     fetchBigQueryStatus();
+    fetchEnvStatus();
   }, []);
 
   const testSearch = async () => {
@@ -40,10 +58,46 @@ export default function TestSearchPage() {
     }
   };
 
+  const testHardcodedSearch = async () => {
+    setHardcodedSearchStatus({loading: true, data: null, error: null});
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('q', searchTerm);
+      if (userId) {
+        queryParams.append('userId', userId);
+      }
+      
+      const response = await fetch(`/api/search-file?${queryParams.toString()}`);
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${await response.text()}`);
+      }
+      const data = await response.json();
+      setHardcodedSearchStatus({loading: false, data, error: null});
+    } catch (error) {
+      console.error("Error testing hardcoded search:", error);
+      setHardcodedSearchStatus({loading: false, data: null, error: error.message});
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Search Diagnostics</h1>
       
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Environment Variables</h2>
+        {envStatus.loading ? (
+          <p>Loading environment status...</p>
+        ) : envStatus.error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p>Error: {envStatus.error}</p>
+          </div>
+        ) : (
+          <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+            <pre>{JSON.stringify(envStatus.data, null, 2)}</pre>
+          </div>
+        )}
+      </div>
+
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2">BigQuery Connection Status</h2>
         {bigQueryStatus.loading ? (
@@ -97,6 +151,51 @@ export default function TestSearchPage() {
           </div>
         ) : (
           <p>Click "Test Search" to run a test query</p>
+        )}
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Alternative Approach: Hardcoded Credentials</h2>
+        <p className="mb-2">
+          This approach uses credentials hardcoded in the API route file. 
+          <span className="text-red-500 font-bold"> You need to edit app/api/search-file/route.js to add your actual credentials.</span>
+        </p>
+        
+        <div className="flex flex-wrap gap-2 mb-4">
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            className="border p-2 rounded"
+            placeholder="Search term"
+          />
+          <input 
+            type="text" 
+            value={userId} 
+            onChange={(e) => setUserId(e.target.value)} 
+            className="border p-2 rounded"
+            placeholder="User ID (optional)"
+          />
+          <button 
+            onClick={testHardcodedSearch}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            Test Hardcoded Search
+          </button>
+        </div>
+        
+        {hardcodedSearchStatus.loading ? (
+          <p>Testing hardcoded search...</p>
+        ) : hardcodedSearchStatus.error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p>Error: {hardcodedSearchStatus.error}</p>
+          </div>
+        ) : hardcodedSearchStatus.data ? (
+          <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+            <pre>{JSON.stringify(hardcodedSearchStatus.data, null, 2)}</pre>
+          </div>
+        ) : (
+          <p>Click "Test Hardcoded Search" to test the hardcoded credentials approach</p>
         )}
       </div>
 
