@@ -7,8 +7,25 @@ let bigquery = null;
 if (process.env.GOOGLE_CLOUD_KEY_JSON) {
   try {
     console.log('Attempting to initialize BigQuery with credentials');
-    // Try to parse the JSON string, handling any special characters
-    const jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+    
+    // First try to handle it as regular JSON
+    let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+    
+    // Check if the string starts with eyJ - a common Base64 JSON start pattern
+    if (process.env.GOOGLE_CLOUD_KEY_JSON.startsWith('eyJ') || 
+        process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true') {
+      console.log('Credentials appear to be Base64 encoded, attempting to decode');
+      // Try to decode as Base64
+      try {
+        const buffer = Buffer.from(process.env.GOOGLE_CLOUD_KEY_JSON, 'base64');
+        jsonString = buffer.toString('utf-8');
+        console.log('Successfully decoded Base64 credentials');
+      } catch (decodeError) {
+        console.error('Failed to decode Base64:', decodeError);
+        // Continue with the original string if decoding fails
+      }
+    }
+    
     const credentials = JSON.parse(jsonString);
     console.log('Successfully parsed credentials JSON with project_id:', credentials.project_id);
     bigquery = new BigQuery({
@@ -22,7 +39,8 @@ if (process.env.GOOGLE_CLOUD_KEY_JSON) {
       message: error.message,
       stack: error.stack,
       credentialsProvided: !!process.env.GOOGLE_CLOUD_KEY_JSON,
-      credentialsLength: process.env.GOOGLE_CLOUD_KEY_JSON?.length
+      credentialsLength: process.env.GOOGLE_CLOUD_KEY_JSON?.length,
+      credentialsStart: process.env.GOOGLE_CLOUD_KEY_JSON?.substring(0, 20) + '...'
     });
   }
 } else {

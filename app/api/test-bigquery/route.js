@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 
-export async function GET(request) {
+export const dynamic = 'force-dynamic'; // This ensures the route isn't statically optimized
+
+export async function GET() {
   try {
     // Check if the environment variable exists
     const hasCredentials = !!process.env.GOOGLE_CLOUD_KEY_JSON;
@@ -18,7 +20,22 @@ export async function GET(request) {
     if (hasCredentials) {
       try {
         // Try to parse the JSON string
-        const jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+        let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+        
+        // Check if it might be Base64 encoded
+        const mightBeBase64 = process.env.GOOGLE_CLOUD_KEY_JSON.startsWith('eyJ') || 
+                              process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
+        
+        if (mightBeBase64) {
+          try {
+            const buffer = Buffer.from(process.env.GOOGLE_CLOUD_KEY_JSON, 'base64');
+            jsonString = buffer.toString('utf-8');
+          } catch (decodeError) {
+            // Continue with original string if decoding fails
+          }
+        }
+        
+        // Now try to parse the JSON
         const credentials = JSON.parse(jsonString);
         projectId = credentials.project_id;
         credentialsValid = true;
@@ -45,7 +62,7 @@ export async function GET(request) {
           connectionSuccess,
           error: {
             message: error.message,
-            stack: error.stack,
+            type: error.constructor.name
           }
         });
       }
@@ -66,7 +83,7 @@ export async function GET(request) {
       status: "error",
       error: {
         message: error.message,
-        stack: error.stack,
+        type: error.constructor.name
       }
     }, { status: 500 });
   }

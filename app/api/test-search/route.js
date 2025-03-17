@@ -19,7 +19,21 @@ export async function GET(request) {
     // Try to initialize BigQuery
     if (process.env.GOOGLE_CLOUD_KEY_JSON) {
       try {
-        const jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+        let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
+        
+        // Check if it might be Base64 encoded
+        const mightBeBase64 = process.env.GOOGLE_CLOUD_KEY_JSON.startsWith('eyJ') || 
+                              process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
+        
+        if (mightBeBase64) {
+          try {
+            const buffer = Buffer.from(process.env.GOOGLE_CLOUD_KEY_JSON, 'base64');
+            jsonString = buffer.toString('utf-8');
+          } catch (decodeError) {
+            // Continue with original string if decoding fails
+          }
+        }
+        
         const credentials = JSON.parse(jsonString);
         bigquery = new BigQuery({
           projectId: credentials.project_id,

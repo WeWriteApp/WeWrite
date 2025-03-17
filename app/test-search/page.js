@@ -107,6 +107,16 @@ export default function TestSearchPage() {
           <li>Verify the JSON key format is correct (no line breaks, valid JSON)</li>
           <li>Make sure the service account has access to BigQuery</li>
           <li>Confirm that the BigQuery dataset <code>wewrite-ccd82.pages_indexes.pages</code> exists</li>
+          <li className="text-green-500 font-semibold">
+            Try Base64 encoding your JSON key:
+            <ol className="list-disc pl-5 space-y-1 mt-1">
+              <li>Go to a Base64 encoder website (like <a href="https://www.base64encode.org/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">base64encode.org</a>)</li>
+              <li>Paste your entire Google Cloud key JSON</li>
+              <li>Encode to Base64</li>
+              <li>Copy the Base64 string to your Vercel environment variable</li>
+              <li>Set a new environment variable <code>GOOGLE_CLOUD_KEY_BASE64</code> to <code>true</code></li>
+            </ol>
+          </li>
         </ol>
       </div>
     </div>
