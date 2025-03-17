@@ -115,6 +115,7 @@ export default function TestSearchPage() {
               <li>Encode to Base64</li>
               <li>Copy the Base64 string to your Vercel environment variable</li>
               <li>Set a new environment variable <code>GOOGLE_CLOUD_KEY_BASE64</code> to <code>true</code></li>
+              <li>Redeploy your application after updating the environment variables</li>
             </ol>
           </li>
         </ol>
