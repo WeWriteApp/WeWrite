@@ -40,7 +40,7 @@ export default function PageHeader({ title, username, userId, isLoading = false,
   const handleCopyLink = () => {
     const url = `${window.location.origin}${pathname}`;
     navigator.clipboard.writeText(url).then(() => {
-      toast("Copied page link");
+      toast("Link copied!");
     });
   };
 
