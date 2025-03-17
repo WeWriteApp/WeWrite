@@ -11,8 +11,10 @@ import {
 } from "../providers/ProfilePageProvider";
 import { ChevronLeft } from "lucide-react";
 import Button from "./Button";
+import { useAuth } from "../providers/AuthProvider";
 
 const SingleProfileView = ({ profile }) => {
+  const { user } = useAuth();
   const [pageCount, setPageCount] = useState(0);
 
   return (
@@ -26,6 +28,19 @@ const SingleProfileView = ({ profile }) => {
           </Link>
           <h1 className="text-3xl font-semibold">{profile.username}</h1>
         </div>
+        
+        {!user && (
+          <div className="bg-primary/10 text-primary border border-primary/20 rounded-md p-4 mb-4">
+            <p>
+              You are viewing this profile as a guest. 
+              <Link href="/auth/login" className="ml-2 font-medium underline">
+                Log in
+              </Link> 
+              to interact with {profile.username}'s pages.
+            </p>
+          </div>
+        )}
+        
         <div className="my-4">
           <TypeaheadSearch 
             userId={profile.uid} 
@@ -39,6 +54,7 @@ const SingleProfileView = ({ profile }) => {
 };
 
 const PagesList = ({ profile }) => {
+  const { user } = useAuth();
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } =
     useContext(ProfilePagesContext);
 
@@ -86,10 +102,43 @@ const PagesList = ({ profile }) => {
     );
   }
 
+  // Filter to only show public pages for non-authenticated users
+  const visiblePages = user ? pages : pages.filter(page => page.isPublic);
+
+  if (visiblePages.length === 0) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
+          <div className="text-text text-xl mb-4">
+            {profile.username} has no public pages.
+          </div>
+          <div className="text-text/60 mb-6">
+            Log in to see more content.
+          </div>
+          <Link 
+            href="/auth/login" 
+            className="
+              inline-block
+              bg-[#0057FF]
+              text-white text-sm font-medium
+              px-6 py-2.5
+              rounded-full
+              hover:bg-[#0046CC]
+              transition-colors duration-200
+              shadow-[0_0_12px_rgba(0,87,255,0.4)]
+            "
+          >
+            Log in
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <ul className="space-x-1 flex flex-wrap">
-        {pages.map((page) => (
+        {visiblePages.map((page) => (
           <li key={page.id}>
             <PillLink
               groupId={page.groupId}
@@ -102,9 +151,21 @@ const PagesList = ({ profile }) => {
         ))}
       </ul>
 
+      {!user && pages.length !== visiblePages.length && (
+        <div className="mt-4 p-3 bg-background border border-border rounded-md text-center">
+          <p className="text-sm text-text/70">
+            {pages.length - visiblePages.length} private pages are hidden.{" "}
+            <Link href="/auth/login" className="text-primary underline">
+              Log in
+            </Link>{" "}
+            to see all pages.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-row justify-center">
-        {/* Load more button */}
-        {hasMorePages && !isMoreLoading && (
+        {/* Load more button - only show for authenticated users */}
+        {user && hasMorePages && !isMoreLoading && (
           <button onClick={loadMorePages} className="mt-4 bg-background text-text border border-border p-2 mx-auto">
             Load More Pages
           </button>

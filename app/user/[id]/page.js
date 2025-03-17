@@ -23,5 +23,7 @@ export default async function User({ params }) {
   if (!user) {
     return <div>Profile not found</div>;
   }
+  
+  // We don't need to check auth here since we're making this page accessible to all
   return <SingleProfileView profile={user} />;
 }

@@ -12,17 +12,19 @@ import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PillLink } from "./PillLink";
+import debounce from "lodash.debounce";
+import { useTheme } from "next-themes";
+
+// Define a simple Loader component directly in this file
+const Loader = () => {
+  return (
+    <div className="flex justify-center items-center p-4">
+      <div className="animate-spin h-5 w-5 border-2 border-gray-500 rounded-full border-t-transparent"></div>
+    </div>
+  );
+};
 
 const characterCount = 1;
-function debounce(func, delay) {
-  let timeout;
-  return (...args) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      func(...args);
-    }, delay);
-  };
-}
 
 const TypeaheadSearch = ({
   onSelect = null,
@@ -36,6 +38,7 @@ const TypeaheadSearch = ({
   const [groupPages, setGroupPages] = useState([]);
   const [publicPages, setPublicPages] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { theme } = useTheme();
 
   const fetchResults = useCallback(
     debounce(async (search, user) => {
@@ -142,7 +145,7 @@ const TypeaheadSearch = ({
       </div>
 
       <div
-        className={`mt-4 shadow-xl p-4 bg-background--light rounded-lg border border-border absolute w-full top-8 transition-all ${
+        className={`mt-4 shadow-xl p-4 rounded-lg border border-border absolute w-full top-8 transition-all bg-background ${
           search.length >= characterCount
             ? "opacity-100 z-50"
             : "opacity-0 -z-10"
@@ -249,9 +252,6 @@ const TypeaheadSearch = ({
                 )}
               </div>
             )}
-            {/* <div className="mt-2 border-t border-border pt-4 flex">
-              <NewPageButton title={search} />
-            </div> */}
           </>
         )}
       </div>
@@ -295,48 +295,6 @@ const SingleItemButton = ({ page, search, onSelect }) => {
   );
 };
 
-const NewPageButton = ({ title, redirect = true }) => {
-  const { isMobile } = useContext(MobileContext);
-  const router = useRouter();
-
-  const handleNewPage = () => {
-    alert("Creating new page with title: " + title);
-    if (redirect) {
-      // router.push('/pages/123');
-    } else {
-      //
-    }
-  };
-
-  useEffect(() => {
-    // monitor for cmd + enter
-    const handleKeyDown = (e) => {
-      if (e.key === "Enter" && e.metaKey) {
-        handleNewPage();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-  return (
-    <div className="flex flex-col">
-      {isMobile && (
-        <button onClick={handleNewPage} className="text-xs text-gray-400">
-          Tap to create
-        </button>
-      )}
-      {!isMobile && (
-        <button className="text-xs text-gray-400">
-          Press <span className="text-gray-500">cmd + enter</span> to create a
-          new page
-        </button>
-      )}
-    </div>
-  );
-};
-
 const highlightText = (text, searchTerm) => {
   if (!searchTerm) return text;
   const parts = text.split(new RegExp(`(${searchTerm})`, "gi"));
@@ -348,17 +306,6 @@ const highlightText = (text, searchTerm) => {
     ) : (
       part
     )
-  );
-};
-
-const Loader = () => {
-  return (
-    <div className="flex flex-col">
-      <Icon
-        icon="eos-icons:three-dots-loading"
-        className="text-3xl text-gray-500"
-      />
-    </div>
   );
 };
 

@@ -8,7 +8,7 @@ import { Sidebar } from "./ui/sidebar";
 import { useState } from "react";
 
 export default function AuthNav() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -17,36 +17,31 @@ export default function AuthNav() {
         // User is logged in - show sidebar toggle
         <div className="flex items-center">
           <Button
+            onClick={() => setSidebarOpen(true)}
             variant="ghost"
             size="icon"
-            className="hover:bg-accent text-foreground"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
+            aria-label="Menu"
+            className="mr-2"
           >
             <Menu className="h-5 w-5" />
           </Button>
+          
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         </div>
       ) : (
-        // User is not logged in - show login button
-        <div className="flex items-center">
-          <Link href="/auth/login">
-            <Button
-              variant="outline"
-              size="sm"
-              className="hover:bg-primary/90 hover:text-primary-foreground"
-            >
-              Start writing
+        // User is not logged in - show login/register
+        <div className="flex items-center space-x-4">
+          <Link href="/login">
+            <Button variant="outline">
+              Sign in
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button>
+              Get started
             </Button>
           </Link>
         </div>
-      )}
-
-      {/* Sidebar for logged-in users */}
-      {user && (
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
       )}
     </>
   );

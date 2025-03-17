@@ -71,7 +71,7 @@ async function testBigQueryConnection() {
     console.error('BigQuery connection test failed:', error);
     console.error('Connection error details:', {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     return false;
   }
@@ -79,14 +79,12 @@ async function testBigQueryConnection() {
 
 export async function GET(request) {
   try {
-    // If BigQuery is not initialized, return empty results
     if (!bigquery) {
-      console.warn('BigQuery not initialized - returning empty results');
-      return NextResponse.json({ 
-        userPages: [], 
-        groupPages: [], 
+      console.log('BigQuery client not initialized, returning empty results');
+      return NextResponse.json({
+        userPages: [],
+        groupPages: [],
         publicPages: [],
-        message: "Search functionality temporarily unavailable. Please ensure GOOGLE_CLOUD_KEY_JSON is configured.",
         error: {
           type: "bigquery_not_initialized",
           details: {
@@ -99,7 +97,16 @@ export async function GET(request) {
     // Test BigQuery connection first
     const isConnected = await testBigQueryConnection();
     if (!isConnected) {
-      throw new Error('Failed to connect to BigQuery');
+      console.log('BigQuery connection failed, returning empty results');
+      return NextResponse.json({
+        userPages: [],
+        groupPages: [],
+        publicPages: [],
+        error: {
+          type: "bigquery_connection_failed",
+          details: "Failed to connect to BigQuery"
+        }
+      }, { status: 200 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -302,16 +309,15 @@ export async function GET(request) {
     // Return formatted results
     return NextResponse.json({ userPages, groupPages, publicPages }, { status: 200 });
   } catch (error) {
-    console.error("Error querying BigQuery:", error);
-    return NextResponse.json(
-      { 
-        message: "Error querying data", 
-        error: error.message,
-        userPages: [],
-        groupPages: [],
-        publicPages: []
-      },
-      { status: 500 }
-    );
+    console.error('Error querying BigQuery:', error);
+    return NextResponse.json({
+      userPages: [],
+      groupPages: [],
+      publicPages: [],
+      error: {
+        message: error.message,
+        details: error.stack
+      }
+    }, { status: 200 });
   }
 }
