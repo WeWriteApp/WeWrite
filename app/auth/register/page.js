@@ -110,12 +110,13 @@ export default function RegisterPage() {
               </p>
             )}
 
-            <button
+            <Button
               type="submit"
-              className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+              className="w-full"
+              variant="default"
             >
               Register
-            </button>
+            </Button>
 
             <div className="text-center text-sm">
               <span>Already have an account? </span>
