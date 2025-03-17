@@ -6,16 +6,27 @@ let bigquery = null;
 // Only try to initialize BigQuery if we have credentials
 if (process.env.GOOGLE_CLOUD_KEY_JSON) {
   try {
+    console.log('Attempting to initialize BigQuery with credentials');
     // Try to parse the JSON string, handling any special characters
     const jsonString = process.env.GOOGLE_CLOUD_KEY_JSON.replace(/[\n\r\t]/g, '');
     const credentials = JSON.parse(jsonString);
+    console.log('Successfully parsed credentials JSON with project_id:', credentials.project_id);
     bigquery = new BigQuery({
       projectId: credentials.project_id,
       credentials,
     });
+    console.log('BigQuery client initialized successfully');
   } catch (error) {
     console.error("Failed to initialize BigQuery:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      credentialsProvided: !!process.env.GOOGLE_CLOUD_KEY_JSON,
+      credentialsLength: process.env.GOOGLE_CLOUD_KEY_JSON?.length
+    });
   }
+} else {
+  console.warn('GOOGLE_CLOUD_KEY_JSON environment variable is not set');
 }
 
 // Test BigQuery connection
@@ -26,11 +37,16 @@ async function testBigQueryConnection() {
   }
 
   try {
+    console.log('Testing BigQuery connection...');
     const [datasets] = await bigquery.getDatasets();
     console.log('BigQuery connection successful. Found datasets:', datasets.map(d => d.id));
     return true;
   } catch (error) {
     console.error('BigQuery connection test failed:', error);
+    console.error('Connection error details:', {
+      message: error.message,
+      stack: error.stack
+    });
     return false;
   }
 }
@@ -44,7 +60,13 @@ export async function GET(request) {
         userPages: [], 
         groupPages: [], 
         publicPages: [],
-        message: "Search functionality temporarily unavailable. Please ensure GOOGLE_CLOUD_KEY_JSON is configured." 
+        message: "Search functionality temporarily unavailable. Please ensure GOOGLE_CLOUD_KEY_JSON is configured.",
+        error: {
+          type: "bigquery_not_initialized",
+          details: {
+            envVarPresent: !!process.env.GOOGLE_CLOUD_KEY_JSON,
+          }
+        }
       }, { status: 200 });
     }
 

@@ -38,9 +38,10 @@ const Search = () => {
           groupIds = Object.keys(user.groups);
         }
 
-        const response = await fetch(
-          `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`
-        );
+        const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`;
+        console.log('Making API request to:', queryUrl);
+        
+        const response = await fetch(queryUrl);
         
         if (!response.ok) {
           console.error('Search API returned error:', response.status);
@@ -51,6 +52,13 @@ const Search = () => {
 
         const data = await response.json();
         console.log('Search API response:', data);
+        
+        // Check if we received an error message
+        if (data.error) {
+          console.error('Search API returned error object:', data.error);
+        }
+        
+        // Even if we have an error, continue with the empty arrays
         
         // Combine all pages and format them for ReactSearchAutocomplete
         const combinedPages = [
@@ -84,6 +92,7 @@ const Search = () => {
         setSearchResults(combinedPages);
       } catch (error) {
         console.error("Error fetching search results", error);
+        console.error("Error details:", error.message, error.stack);
         setSearchResults([]);
       } finally {
         setIsSearching(false);

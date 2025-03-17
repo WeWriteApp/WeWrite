@@ -62,33 +62,33 @@ const TypeaheadSearch = ({
           groupIds = Object.keys(user.groups);
         }
 
-        console.log('TypeaheadSearch - Making API request:', {
-          url: `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`,
-          selectedUserId,
-          groupIds
-        });
-
-        const response = await fetch(
-          `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`
-        );
-
+        const queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
+        console.log('Making API request to:', queryUrl);
+        
+        const response = await fetch(queryUrl);
+        
         if (!response.ok) {
-          console.error('Search API returned error:', response.status);
+          console.error('TypeaheadSearch - API returned error:', response.status);
           const errorText = await response.text();
           console.error('Error details:', errorText);
           throw new Error(`Search API error: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('TypeaheadSearch API response:', data);
-        if (data.message) {
-          console.warn('Search API message:', data.message);
+        console.log('TypeaheadSearch - API response:', data);
+        
+        // Check if we received an error message
+        if (data.error) {
+          console.error('TypeaheadSearch - API returned error object:', data.error);
         }
+        
+        // Continue with the arrays even if there's an error
         setUserPages(data.userPages || []);
         setGroupPages(data.groupPages || []);
         setPublicPages(data.publicPages || []);
       } catch (error) {
-        console.error("Error fetching search results", error);
+        console.error("TypeaheadSearch - Error fetching search results", error);
+        console.error("Error details:", error.message, error.stack);
         setUserPages([]);
         setGroupPages([]);
         setPublicPages([]);
@@ -96,7 +96,7 @@ const TypeaheadSearch = ({
         setIsSearching(false);
       }
     }, 500),
-    []
+    [userId]
   );
 
   useEffect(() => {
