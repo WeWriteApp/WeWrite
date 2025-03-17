@@ -39,15 +39,19 @@ const TypeaheadSearch = ({
 
   const fetchResults = useCallback(
     debounce(async (search, user) => {
-      if (!user && !userId) return;
+      if (!user && !userId) {
+        console.log('TypeaheadSearch - No user or userId provided, skipping search');
+        return;
+      }
 
       console.log('TypeaheadSearch - Fetching results for:', {
         search,
         searchLength: search?.length,
         searchTrimmed: search?.trim(),
         searchTrimmedLength: search?.trim()?.length,
-        userId: userId || user.uid,
-        groups: user?.groups
+        userId: userId || user?.uid,
+        groups: user?.groups,
+        characterCount
       });
 
       setIsSearching(true);
@@ -57,6 +61,12 @@ const TypeaheadSearch = ({
         if (user && user.groups) {
           groupIds = Object.keys(user.groups);
         }
+
+        console.log('TypeaheadSearch - Making API request:', {
+          url: `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`,
+          selectedUserId,
+          groupIds
+        });
 
         const response = await fetch(
           `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`
