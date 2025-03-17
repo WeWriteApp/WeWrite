@@ -44,14 +44,16 @@ export default function Header() {
         <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              )}
             </div>
 
             {/* Logo/Title (centered) */}
@@ -61,19 +63,8 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Desktop Navigation (right-aligned) */}
-            <div className="flex-1 flex items-center justify-end">
-              {user && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hidden md:flex"
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  Menu
-                </Button>
-              )}
-            </div>
+            {/* Empty div to maintain centering */}
+            <div className="flex-1" />
           </div>
           {/* Scroll Progress Bar */}
           <div 
