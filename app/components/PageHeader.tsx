@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, Link as LinkIcon } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import Link from "next/link";
 import Button from "./Button";
-import { toast } from "sonner";
-import { useParams } from "next/navigation";
 
 export interface PageHeaderProps {
   title?: string;
@@ -17,17 +15,6 @@ export interface PageHeaderProps {
 export default function PageHeader({ title, username, userId, isLoading = false }: PageHeaderProps) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const params = useParams();
-
-  const copyLink = () => {
-    const url = `${window.location.origin}/pages/${params.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      toast("Link copied to clipboard", {
-        position: "bottom-center",
-        duration: 2000,
-      });
-    });
-  };
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -83,16 +70,6 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                 </p>
               </div>
             </div>
-            {!isLoading && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hover:bg-white/10 text-white h-8 w-8 shrink-0"
-                onClick={copyLink}
-              >
-                <LinkIcon className="h-4 w-4" />
-              </Button>
-            )}
           </div>
           {/* Scroll Progress Bar */}
           <div 

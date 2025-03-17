@@ -42,9 +42,21 @@ const PagesList = ({ profile }) => {
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } =
     useContext(ProfilePagesContext);
 
-  if (!pages) return null;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-white/20 rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-white/20 rounded w-1/2 mx-auto"></div>
+            <div className="h-10 bg-white/20 rounded-full w-1/3 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (pages.length === 0) {
+  if (!pages || pages.length === 0) {
     return (
       <div className="flex justify-center py-8">
         <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
@@ -55,7 +67,7 @@ const PagesList = ({ profile }) => {
             Check back later!
           </div>
           <Link 
-            href="/pages" 
+            href="/" 
             className="
               inline-block
               bg-[#0057FF]
@@ -90,15 +102,15 @@ const PagesList = ({ profile }) => {
         ))}
       </ul>
 
-        <div className="flex flex-row justify-center">
-      {/* Load more button */}
-      {hasMorePages && !isMoreLoading && (
-        <button onClick={loadMorePages} className="mt-4 bg-background text-text border border-border p-2 mx-auto">
-          Load More Pages
-        </button>
-      )}
+      <div className="flex flex-row justify-center">
+        {/* Load more button */}
+        {hasMorePages && !isMoreLoading && (
+          <button onClick={loadMorePages} className="mt-4 bg-background text-text border border-border p-2 mx-auto">
+            Load More Pages
+          </button>
+        )}
 
-      {isMoreLoading && <p>Loading more...</p>}
+        {isMoreLoading && <p>Loading more...</p>}
       </div>
     </>
   );

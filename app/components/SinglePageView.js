@@ -208,11 +208,9 @@ export default function SinglePageView({ params }) {
             </>
           )}
         </div>
-        {!isEditing && (
-          <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-            <PledgeBar />
-          </div>
-        )}
+        <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
+          <PledgeBar />
+        </div>
       </DashboardLayout>
     </>
   );
