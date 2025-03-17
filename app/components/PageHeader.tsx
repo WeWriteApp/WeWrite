@@ -12,9 +12,10 @@ export interface PageHeaderProps {
   username?: string;
   userId?: string;
   isLoading?: boolean;
+  hideLink?: boolean;
 }
 
-export default function PageHeader({ title, username, userId, isLoading = false }: PageHeaderProps) {
+export default function PageHeader({ title, username, userId, isLoading = false, hideLink = false }: PageHeaderProps) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const pathname = usePathname();
@@ -72,15 +73,15 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                     <div className="inline-block h-4 w-24 bg-muted animate-pulse rounded"></div>
                   ) : userId ? (
                     <Link href={`/user/${userId}`} className="hover:underline">
-                      {username || "[NULL]"}
+                      {username}
                     </Link>
                   ) : (
-                    <span>{username || "[NULL]"}</span>
+                    <span>{username}</span>
                   )}
                 </p>
               </div>
             </div>
-            {!isScrolled && (
+            {!isScrolled && !hideLink && (
               <Button
                 variant="ghost"
                 size="icon"

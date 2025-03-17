@@ -7,15 +7,23 @@ import { AuthContext } from "../providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
+import Button from "../components/Button";
 
 const New = () => {
+  const { user } = useContext(AuthContext);
   const [Page, setPage] = useState({
     title: "",
     isPublic: true,
   });
+  
   return (
     <DashboardLayout>
-      <PageHeader title="New page" />
+      <PageHeader 
+        title="New page" 
+        username={user?.username || "Anonymous"} 
+        userId={user?.uid}
+        hideLink={true}
+      />
       <div className="container py-6">
         <div className="max-w-3xl mx-auto">
           <Form Page={Page} setPage={setPage} />
@@ -28,18 +36,20 @@ const New = () => {
 const Form = ({ Page, setPage }) => {
   const router = useRouter();
   const [editorState, setEditorState] = useState();
-  const { user, loading } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [isSaving, setIsSaving] = useState(false);
 
-  let updateTime = new Date().toISOString();
-
   const handleSave = async () => {
+    if (!Page.title || Page.title.trim().length === 0) {
+      return;
+    }
+
     setIsSaving(true);
     let data = {
       ...Page,
       content: JSON.stringify(editorState),
       userId: user.uid,
-      lastModified: updateTime,
+      lastModified: new Date().toISOString(),
     };
 
     const res = await createPage(data);
@@ -97,20 +107,20 @@ const Form = ({ Page, setPage }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
+        <Button
           onClick={handleSave}
-          disabled={!Page.title || !editorState || isSaving}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          type="submit"
+          disabled={!Page.title || isSaving}
+          variant="default"
+          className="w-full"
         >
           {isSaving ? "Saving..." : "Save"}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => router.push("/pages")}
-          className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
+          variant="ghost"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
