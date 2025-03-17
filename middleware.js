@@ -15,7 +15,6 @@ export function middleware(request) {
   const requiresAuth = path === "/new" || 
                       path === "/groups/new" ||
                       path === "/" ||
-                      path.startsWith("/user/") ||
                       path.startsWith("/dashboard");
 
   // Get the token from the cookies
