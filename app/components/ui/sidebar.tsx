@@ -3,9 +3,9 @@
 import * as React from "react"
 import { Sun, Moon, Laptop } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { auth } from "@/firebase/config"
+import { auth } from "../../firebase/config"
 import { signOut } from "firebase/auth"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import Button from "../Button"
 import { useTheme } from "next-themes"
 
@@ -38,7 +38,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 bg-background/80 backdrop-blur-sm z-50 transition-opacity",
+          "fixed inset-0 bg-black/60 backdrop-blur-md z-[100] transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -47,14 +47,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[250px] bg-background border-r z-50 transition-transform duration-200 ease-in-out",
+          "fixed top-0 left-0 bottom-0 w-[280px] bg-background/95 backdrop-blur-md border-r z-[101] transition-transform duration-300 ease-in-out shadow-xl h-[100vh] overflow-y-auto",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full p-4">
+        <div className="flex flex-col h-full p-6">
           <div className="flex-1">
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">Theme</h3>
+            <h2 className="text-xl font-bold mb-8 px-2 text-primary">WeWrite</h2>
+            <div className="mb-8">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
               {themeOptions.map((option) => {
                 const Icon = option.icon
                 return (
@@ -62,7 +63,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     key={option.value}
                     onClick={() => setTheme(option.value)}
                     className={cn(
-                      "flex items-center w-full px-2 py-2 text-sm rounded-md transition-colors",
+                      "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
                       "hover:bg-accent hover:text-accent-foreground",
                       theme === option.value && "bg-accent text-accent-foreground"
                     )}
@@ -79,13 +80,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               })}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            className="w-full justify-center text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={handleLogout}
-          >
-            Log out
-          </Button>
+          
+          {/* Logout button at bottom */}
+          <div className="mt-auto pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              className="w-full justify-center text-destructive hover:text-destructive hover:bg-destructive/10 py-3"
+              onClick={handleLogout}
+            >
+              Log out
+            </Button>
+          </div>
         </div>
       </div>
     </>

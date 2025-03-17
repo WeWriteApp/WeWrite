@@ -8,6 +8,7 @@ import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { X, Loader2 } from "lucide-react";
+import Button from "./Button";
 
 const EditPage = ({
   isEditing,
@@ -196,15 +197,14 @@ const EditPage = ({
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-border">
-        <button
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        <Button
+          variant="outline"
           onClick={handleCancel}
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           disabled={isSaving}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
           onClick={handleSave}
         >
           {isSaving ? (
@@ -215,7 +215,7 @@ const EditPage = ({
           ) : (
             'Save changes'
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

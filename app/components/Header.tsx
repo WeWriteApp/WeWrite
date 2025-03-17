@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Menu } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import Link from "next/link";
-import Button from "./Button";
-import { Sidebar } from "@/components/ui/sidebar";
+import AuthNav from "./AuthNav";
 
 export default function Header() {
   const router = useRouter();
@@ -14,8 +12,6 @@ export default function Header() {
   const isHomePage = pathname === "/";
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
-  const { user } = useAuth();
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -34,7 +30,8 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (!isHomePage) {
+  // Show header on home page and user profile pages
+  if (!isHomePage && !pathname.startsWith('/user/')) {
     return null;
   }
 
@@ -44,16 +41,8 @@ export default function Header() {
         <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
-              {user && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden hover:bg-white/10 text-white"
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              )}
+              {/* Auth navigation (sidebar toggle or login button) */}
+              <AuthNav />
             </div>
 
             {/* Logo/Title (centered) */}
@@ -74,10 +63,6 @@ export default function Header() {
         </div>
       </header>
       <div className="h-20" /> {/* Spacer for fixed header */}
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
     </>
   );
 } 

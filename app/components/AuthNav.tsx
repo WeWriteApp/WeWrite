@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "../providers/AuthProvider";
 import Button from "./Button";
 import { Menu } from "lucide-react";
-import { Sidebar } from "@/components/ui/sidebar";
+import { Sidebar } from "./ui/sidebar";
 import { useState } from "react";
 
 export default function AuthNav() {
@@ -19,8 +19,9 @@ export default function AuthNav() {
           <Button
             variant="ghost"
             size="icon"
-            className="hover:bg-white/10"
+            className="hover:bg-accent text-foreground"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </Button>

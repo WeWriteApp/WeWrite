@@ -184,7 +184,7 @@ export default function SinglePageView({ params }) {
         userId={page?.userId}
         isLoading={isLoading}
       />
-      <div className="p-2 pb-24">
+      <div className="p-2 pb-36">
         {isEditing ? (
           <LoggingProvider>
             <EditPage
@@ -209,9 +209,11 @@ export default function SinglePageView({ params }) {
           </>
         )}
       </div>
-      <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-        <PledgeBar />
-      </div>
+      {!isEditing && (
+        <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
+          <PledgeBar />
+        </div>
+      )}
     </Layout>
   );
 }
