@@ -53,17 +53,17 @@ const Form = ({ Page, setPage }) => {
     };
 
     const res = await createPage(data);
-    if (res) {
+    if (res && typeof res === 'string') {
       ReactGA.event({
         category: "Page",
         action: "Add new page",
         label: Page.title,
       });
       setIsSaving(false);
-      router.push("/pages");
+      router.push(`/pages/${res}`);
     } else {
       setIsSaving(false);
-      console.log("Error creating page");
+      console.error("Error creating page:", res);
     }
   };
 
