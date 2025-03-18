@@ -35,14 +35,14 @@ html body .page-content p {
 /* styles/globals.css */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 100%; /* Level 0 - Background */
+    --foreground: 222.2 84% 4.9%; /* Level 10 - Max contrast for text */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 215 20% 65%;
+    --primary-foreground: 222.2 84% 4.9%; /* Level 10 - Button text */
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
@@ -51,21 +51,21 @@ html body .page-content p {
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
+    --border: 215 20% 65%; /* Clearly visible border for light mode */
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 0 0% 40%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    --background: 0 0% 0%; /* Level 0 - Background */
+    --foreground: 0 0% 100%; /* Level 10 - Max contrast for text */
     --card: 0 0% 0%;
     --card-foreground: 0 0% 100%;
     --popover: 0 0% 0%;
     --popover-foreground: 0 0% 100%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 215 20% 40%;
+    --primary-foreground: 0 0% 100%; /* Level 10 - Button text */
     --secondary: 0 0% 5%;
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 5%;
@@ -74,9 +74,10 @@ html body .page-content p {
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
+    --border: 215 20% 40%; /* Clearly visible border for dark mode */
     --input: 0 0% 5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 0 0% 50%;
+    --radius: 0.5rem;
   }
 }
 
@@ -226,4 +227,136 @@ p {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
     linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
   backdrop-filter: blur(135.91409301757812px)
+}
+
+/* Create a new custom class for blue pill links */
+.pill-link-blue {
+  background-color: #0057FF;
+  color: white !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pill-link-blue:hover {
+  background-color: #0046CC;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Force borders on all button-like elements */
+button, 
+a[role="button"],
+.button, 
+[class*="pill"], 
+[class*="btn"] {
+  border: 1.5px solid hsl(var(--border)) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Make sure dark mode has proper contrast for buttons */
+.dark button,
+.dark a[role="button"],
+.dark .button,
+.dark [class*="pill"],
+.dark [class*="btn"] {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Ensure icons are centered in icon buttons */
+button[size="icon"],
+.btn-icon,
+[class*="button-icon"],
+a[role="button"][size="icon"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+button[size="icon"] > svg,
+.btn-icon > svg,
+[class*="button-icon"] > svg {
+  margin: auto !important;
+}
+
+/* Fix for invisible icons */
+svg {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: inherit;
+  height: 1em;
+  width: 1em;
+  display: inline-block;
+}
+
+/* Ensure Lucide icons are properly visible */
+.lucide,
+.lucide-icon,
+svg[data-lucide] {
+  color: currentColor;
+  height: 1.5rem;
+  width: 1.5rem;
+  stroke-width: 1.5;
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+}
+
+/* Enhanced visibility for icon buttons */
+button svg,
+.button svg,
+[role="button"] svg {
+  color: inherit;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  height: 1.5rem !important;
+  width: 1.5rem !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Special case for the Plus/Minus buttons in the payment slider */
+.action-button-gradient button svg {
+  stroke: var(--foreground);
+  stroke-width: 2.5;
+  height: 1.75rem !important;
+  width: 1.75rem !important;
+}
+
+/* Force all icons to be visible */
+svg.h-5, svg.h-6, svg.w-5, svg.w-6 {
+  height: 1.5rem !important;
+  width: 1.5rem !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure SVG icons are always visible */
+svg {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  stroke-width: inherit;
+}
+
+/* Fix for SVG inside button components */
+button svg, 
+[role="button"] svg,
+.button svg {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+/* Force proper sizing for SVGs in specific contexts */
+.h-4, .w-4, .h-5, .w-5, .h-6, .w-6 {
+  min-width: 1rem;
+  min-height: 1rem;
+  display: inline-flex !important; 
+  align-items: center;
+  justify-content: center;
 }

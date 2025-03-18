@@ -9,7 +9,6 @@ import {
   ProfilePagesProvider,
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
-import { ChevronLeft } from "lucide-react";
 import Button from "./Button";
 import { useAuth } from "../providers/AuthProvider";
 
@@ -23,7 +22,20 @@ const SingleProfileView = ({ profile }) => {
         <div className="flex items-center space-x-4 mb-4">
           <Link href="/">
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <ChevronLeft className="h-4 w-4" />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                width="24" 
+                height="24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="h-4 w-4"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
             </Button>
           </Link>
           <h1 className="text-3xl font-semibold">{profile.username}</h1>

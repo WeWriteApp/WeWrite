@@ -9,6 +9,7 @@ import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
+import { UnifiedAnalyticsProvider } from "./providers/UnifiedAnalyticsProvider";
 
 export default function ClientLayout({ children }) {
   return (
@@ -24,11 +25,13 @@ export default function ClientLayout({ children }) {
             <PortfolioProvider>
               <MobileProvider>
                 <DrawerProvider>
-                  <Drawer />
-                  <main className="min-h-screen bg-background">
-                    {children}
-                  </main>
-                  <Toaster />
+                  <UnifiedAnalyticsProvider>
+                    <Drawer />
+                    <main className="min-h-screen bg-background">
+                      {children}
+                    </main>
+                    <Toaster />
+                  </UnifiedAnalyticsProvider>
                 </DrawerProvider>
               </MobileProvider>
             </PortfolioProvider>

@@ -11,19 +11,17 @@ export const PillLink = ({ children, href, isPublic, groupId, className, isOwned
     <Link 
       href={href} 
       className={`
-        relative
         my-1 px-3 py-1.5
         inline-block whitespace-nowrap
-        bg-[#0057FF]
-        text-white text-sm font-medium
+        text-sm font-medium
         rounded-[12px]
-        before:content-['']
-        before:absolute before:inset-0
-        before:rounded-[12px]
-        before:border before:border-white/30
-        before:shadow-[inset_0_0_16px_rgba(255,255,255,0.3)]
-        hover:bg-[#0046CC]
         transition-colors duration-200
+        bg-[#0057FF]
+        border-[1.5px] border-[rgba(255,255,255,0.3)]
+        text-white
+        shadow-sm
+        hover:bg-[#0046CC]
+        hover:border-[rgba(255,255,255,0.5)]
         ${groupId ? 'opacity-90' : ''}
         ${className || ''}
       `}

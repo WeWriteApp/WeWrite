@@ -31,12 +31,12 @@ export default function AuthNav() {
       ) : (
         // User is not logged in - show login/register
         <div className="flex items-center space-x-4">
-          <Link href="/login">
+          <Link href="/auth/login">
             <Button variant="outline">
               Sign in
             </Button>
           </Link>
-          <Link href="/register">
+          <Link href="/auth/register">
             <Button>
               Get started
             </Button>

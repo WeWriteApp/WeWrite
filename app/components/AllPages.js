@@ -5,6 +5,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { PillLink } from "./PillLink";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Link from "next/link";
+import Button from "./Button";
 
 const AllPages = () => {
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  
@@ -43,8 +44,8 @@ const AllPages = () => {
     </div>
     <div className="flex justify-center mt-4">
         {pages.length > 0 && (
-          <Link href={`/user/${user.uid}`} className="bg-primary text-white px-4 py-2 rounded-full">
-            View all
+          <Link href={`/user/${user.uid}`}>
+            <Button type="primary" variant="default">View all</Button>
           </Link>
         )}
     </div>
