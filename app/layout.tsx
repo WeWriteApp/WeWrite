@@ -5,6 +5,8 @@ import { AuthProvider } from "@/providers/AuthProvider"
 import { AppProvider } from "@/providers/AppProvider"
 import { DataProvider } from "@/providers/DataProvider"
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import GAProvider from "@/providers/GAProvider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,8 +32,11 @@ export default function RootLayout({
           <AuthProvider>
             <AppProvider>
               <DataProvider>
-                {children}
-                <Analytics />
+                <GAProvider>
+                  {children}
+                  <Analytics debug={process.env.NODE_ENV === 'development'} />
+                  <SpeedInsights />
+                </GAProvider>
               </DataProvider>
             </AppProvider>
           </AuthProvider>
