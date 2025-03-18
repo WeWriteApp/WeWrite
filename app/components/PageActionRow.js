@@ -11,14 +11,14 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
     if (!confirm) return;
     const result = await deletePage(page.id);
     if (result) {
-      router.push("/pages");
+      router.push("/");
     } else {
       console.log("Error deleting page");
     }
   };
 
   return (
-    <div className="flex items-center gap-2 mt-8 border-t border-gray-500 py-2 rounded-lg">
+    <div className="flex items-center gap-2 mt-8 py-2 rounded-lg">
       <Button
         onClick={() => setIsEditing(!isEditing)}
       >

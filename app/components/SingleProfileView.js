@@ -11,6 +11,7 @@ import {
 } from "../providers/ProfilePageProvider";
 import Button from "./Button";
 import { useAuth } from "../providers/AuthProvider";
+import { Loader } from "lucide-react";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -74,10 +75,9 @@ const PagesList = ({ profile }) => {
     return (
       <div className="flex justify-center py-8">
         <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-white/20 rounded w-3/4 mx-auto"></div>
-            <div className="h-4 bg-white/20 rounded w-1/2 mx-auto"></div>
-            <div className="h-10 bg-white/20 rounded-full w-1/3 mx-auto"></div>
+          <div className="flex flex-col items-center justify-center space-y-6">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+            <div className="text-text/60">Loading pages...</div>
           </div>
         </div>
       </div>

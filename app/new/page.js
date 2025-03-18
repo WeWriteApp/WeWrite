@@ -50,7 +50,7 @@ const Form = ({ Page, setPage }) => {
         label: Page.title,
       });
       setIsSaving(false);
-      router.push("/pages");
+      router.push(`/pages/${res}`);
     } else {
       setIsSaving(false);
       console.log("Error creating page");

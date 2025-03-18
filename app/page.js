@@ -7,23 +7,28 @@ import TopUsers from "./components/TopUsers";
 import AddUsername from "./components/AddUsername";
 import TypeaheadSearch from "./components/TypeaheadSearch";
 import { AuthContext } from "./providers/AuthProvider";
+import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
 import Head from "next/head";
 import Link from "next/link";
 import Button from "./components/Button";
 import { Plus } from "lucide-react";
+import { ShimmerEffect } from "./components/ui/skeleton";
+import { Loader } from "lucide-react";
 
 export default function Home() {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
+  const { loading: dataLoading } = useContext(DataContext);
   const router = useRouter();
+  const isLoading = dataLoading || authLoading;
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       router.push("/auth/login");
     }
-  }, [user, loading]);
+  }, [user, authLoading]);
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return null;
   }
 
@@ -41,7 +46,14 @@ export default function Home() {
         </div>
         
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">Your Pages</h1>
+          {isLoading ? (
+            <div className="flex items-center space-x-2">
+              <Loader className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-lg text-muted-foreground">Loading your pages...</span>
+            </div>
+          ) : (
+            <h1 className="text-2xl font-semibold">Your Pages</h1>
+          )}
           <Link href="/new">
             <Button type="primary" variant="default">
               New page

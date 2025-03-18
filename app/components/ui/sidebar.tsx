@@ -124,10 +124,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Backdrop - increased z-index to be on top of everything */}
       <div
         className={cn(
-          "fixed inset-0 bg-black/60 backdrop-blur-md z-[999] transition-opacity duration-300",
+          "fixed inset-0 bg-black/60 backdrop-blur-md z-[999] transition-opacity duration-300 h-screen w-screen",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
+        aria-hidden="true"
       />
       
       {/* Sidebar */}
@@ -215,7 +216,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
-              Log out
+              <span className="text-destructive">Log out</span>
             </Button>
           </div>
         </div>
