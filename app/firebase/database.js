@@ -35,6 +35,11 @@ export const createPage = async (data) => {
       userId: data.userId,
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
+      // Add fundraising fields
+      totalPledged: 0,
+      pledgeCount: 0,
+      fundraisingEnabled: true,
+      fundraisingGoal: data.fundraisingGoal || 0,
     };
 
     const pageRef = await addDoc(collection(db, "pages"), pageData);
