@@ -36,21 +36,19 @@ export default function Home() {
       <main className="container p-6">
         <AddUsername />
         
+        <div className="w-full mb-6">
+          <TypeaheadSearch />
+        </div>
+        
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold">Your Pages</h1>
           <Link href="/new">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="hover:bg-white/10 text-white"
-            >
+            <Button type="primary" variant="default">
               New page
             </Button>
           </Link>
         </div>
-        <div className="w-full mb-6">
-          <TypeaheadSearch />
-        </div>
+        
         <AllPages />
 
         <TopUsers />
