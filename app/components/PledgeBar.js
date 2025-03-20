@@ -358,20 +358,24 @@ const PledgeBar = () => {
     );
   }
 
+  const handlePledgeInteraction = () => {
+    setShowSocialModal(true);
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
       {/* Main pledge bar */}
-      <div className="w-full bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 p-4">
-        <div className="text-center">
-          <p className="text-foreground/70 mb-4">Support this creator</p>
-          <Button 
-            onClick={() => setShowSocialModal(true)}
-            className="w-full"
-          >
-            Support Now
-          </Button>
-        </div>
-      </div>
+      <CompositionBar
+        value={pledges[0]?.amount || 0}
+        max={100}
+        onChange={() => {}}
+        disabled={false}
+        pledges={pledges}
+        subscriptionAmount={100}
+        onPledgeChange={handlePledgeInteraction}
+        onPledgeCustomAmount={handlePledgeInteraction}
+        onDeletePledge={() => {}}
+      />
 
       {/* Social Media Modal */}
       <SocialMediaModal 

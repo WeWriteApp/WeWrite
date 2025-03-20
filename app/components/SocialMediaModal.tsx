@@ -1,5 +1,7 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
+import { Button } from "./ui/button";
 import { Youtube, Instagram, Twitter } from "lucide-react";
 
 interface SocialMediaModalProps {
@@ -12,9 +14,9 @@ export function SocialMediaModal({ open, onOpenChange }: SocialMediaModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Payments Coming Soon!</DialogTitle>
+          <DialogTitle>Coming Soon!</DialogTitle>
           <DialogDescription>
-            We're still working on payments. Follow us for updates on our progress!
+            Donation functionality doesn't exist yet! Please follow us on social media for updates!
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
