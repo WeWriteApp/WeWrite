@@ -128,8 +128,23 @@ const Search = () => {
         onSearch={handleOnSearch}
         onSelect={handleOnSelect}
         autoFocus
-        className="w-full bg-background text-text searchbar"
+        className="w-full searchbar"
         placeholder="Search for a page"
+        styling={{
+          height: "44px",
+          border: "1px solid var(--input)",
+          borderRadius: "0.5rem",
+          backgroundColor: "var(--card)",
+          boxShadow: "none",
+          hoverBackgroundColor: "var(--muted)",
+          color: "var(--foreground)",
+          fontSize: "1rem",
+          iconColor: "var(--muted-foreground)",
+          lineColor: "var(--border)",
+          placeholderColor: "var(--muted-foreground)",
+          clearIconMargin: "3px 14px 0 0",
+          searchIconMargin: "0 0 0 12px"
+        }}
         fuseOptions={{ 
           minMatchCharLength: 2,
         }}
@@ -143,9 +158,9 @@ const Search = () => {
               className="max-w-full"
             >
               <div className="flex items-center justify-between gap-2 w-full">
-                <span className="truncate">{item.name}</span>
+                <span className="truncate text-foreground">{item.name}</span>
                 {item.section !== "Your Pages" && (
-                  <span className="text-xs opacity-75 whitespace-nowrap">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
                     by {item.username || "NULL"}
                   </span>
                 )}

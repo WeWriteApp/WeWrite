@@ -9,12 +9,12 @@ export function middleware(request) {
                       path === "/auth/register" || 
                       path === "/auth/forgot-password" ||
                       path.startsWith("/api/") ||
-                      path.startsWith("/pages/"); // Allow access to all pages
+                      path.startsWith("/pages/") ||
+                      path === "/"; // Allow access to home page
 
   // Define paths that always require authentication
   const requiresAuth = path === "/new" || 
                       path === "/groups/new" ||
-                      path === "/" ||
                       path.startsWith("/dashboard");
 
   // Get the token from the cookies

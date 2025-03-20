@@ -148,51 +148,14 @@ const EditPage = ({
           />
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 to-background pointer-events-none h-[1px] -top-4" />
-          <SlateEditor
-            ref={editorRef}
-            setEditorState={setEditorState}
-            initialEditorState={editorState}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-6 bg-muted/10 rounded-xl p-6">
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Group Access</label>
-            <p className="text-sm text-muted-foreground/80">
-              {groupId
-                ? `This page belongs to group ${groupId}`
-                : "This page does not belong to any group"}
-            </p>
-          </div>
-          
-          <div className="relative">
-            <ReactSearchAutocomplete
-              items={localGroups}
-              onSelect={handleSelect}
-              placeholder="Search for a group..."
-              className="searchbar"
-              fuseOptions={{
-                minMatchCharLength: 2,
-              }}
-              formatResult={(item) => {
-                return <div key={item.id}>{item.name}</div>;
-              }}
+        <div className="space-y-6 bg-muted/10 rounded-xl p-6">
+          <div className="space-y-4">
+            <SlateEditor
+              ref={editorRef}
+              initialEditorState={editorState}
+              setEditorState={setEditorState}
             />
           </div>
-
-          {page.groupId && (
-            <button
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              onClick={removeGroup}
-            >
-              <X className="w-4 h-4 mr-1" />
-              Remove group
-            </button>
-          )}
         </div>
       </div>
 

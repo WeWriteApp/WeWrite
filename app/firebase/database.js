@@ -210,12 +210,13 @@ export const getDocById = async (collectionName, docId) => {
   try {
     const docRef = doc(db, collectionName, docId);
     const docSnap = await getDoc(docRef);
-    // return the doc data
+    // return the doc snapshot directly, so we can use exists() and data() methods
     return docSnap;
   } catch (e) {
-    return e;
+    console.error("Error getting document:", e);
+    return null;
   }
-}
+};
 
 export const getCollection = async (collectionName) => {
   try {
@@ -327,18 +328,55 @@ function extractLinksFromNodes(nodes) {
 
 export const getUsernameByEmail = async (email) => {
   try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", email));
+    const q = query(collection(db, "users"), where("email", "==", email));
     const querySnapshot = await getDocs(q);
-    
     if (!querySnapshot.empty) {
       const userData = querySnapshot.docs[0].data();
       return userData.username || null;
     }
-    
     return null;
   } catch (error) {
-    console.error("Error fetching username by email:", error);
+    console.error("Error getting username by email:", error);
     return null;
   }
-}
+};
+
+// Get page statistics including active donors, monthly income, and total views
+export const getPageStats = async (pageId) => {
+  try {
+    // Get the page document
+    const pageDoc = await getPageById(pageId);
+    
+    if (!pageDoc || !pageDoc.pageData) {
+      return null;
+    }
+    
+    // Get pledges for this page to calculate active donors and monthly income
+    const pledgesQuery = query(collection(db, "pledges"), where("pageId", "==", pageId));
+    const pledgesSnapshot = await getDocs(pledgesQuery);
+    
+    const activeDonors = pledgesSnapshot.size;
+    let monthlyIncome = 0;
+    
+    pledgesSnapshot.forEach(doc => {
+      const pledgeData = doc.data();
+      monthlyIncome += pledgeData.amount || 0;
+    });
+    
+    // Get page views (stored in the page document or a related stats document)
+    const totalViews = pageDoc.pageData.viewCount || 0;
+    
+    return {
+      activeDonors,
+      monthlyIncome,
+      totalViews
+    };
+  } catch (error) {
+    console.error("Error getting page stats:", error);
+    return {
+      activeDonors: 0,
+      monthlyIncome: 0,
+      totalViews: 0
+    };
+  }
+};

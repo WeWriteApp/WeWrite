@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import { MobileContext } from "../providers/MobileProvider";
-import { Icon } from "@iconify/react";
+import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PillLink } from "./PillLink";
@@ -131,26 +131,30 @@ const TypeaheadSearch = ({
 
   if (!user) return null;
   return (
-    <div className="flex flex-col relative" id="typeahead-search">
+    <div className="flex flex-col" id="typeahead-search">
       <div className="flex flex-col space-y-1">
-        <input
-          className="border border-gray-500 w-full p-2 text-lg bg-background text-text"
-          placeholder={placeholder}
-          id="search"
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoComplete="off"
-        />
+        <div className="relative">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <input
+            className="w-full pl-10 pr-4 py-2.5 bg-card text-foreground rounded-lg border border-input focus:ring-2 focus:ring-ring focus:border-ring placeholder:text-muted-foreground"
+            placeholder={placeholder}
+            id="search"
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
       </div>
 
       <div
-        className={`mt-4 shadow-xl p-4 rounded-lg border border-border absolute w-full top-8 transition-all bg-background ${
+        className={`mt-2 space-y-1 transition-all ${
           search.length >= characterCount
-            ? "opacity-100 z-50"
-            : "opacity-0 -z-10"
-        }
-        `}
+            ? "opacity-100"
+            : "opacity-0"
+        }`}
       >
         {isSearching && search.length >= characterCount ? (
           <Loader />
@@ -158,98 +162,75 @@ const TypeaheadSearch = ({
           <>
             {userPages.length > 0 && (
               <div>
-                {search.length >= characterCount && (
-                  <h3 className="text-xs text-gray-400">
-                    {userId ? "" : "Your"}
-                    Pages
-                  </h3>
-                )}
-                {userPages.length === 0 && search.length >= characterCount ? (
-                  <p className="text-xs text-gray-400">No user pages found.</p>
-                ) : (
-                  <ul className="space-y-1 mt-2">
-                    {userPages.map((page) =>
-                      onSelect ? (
-                        <SingleItemButton
-                          page={page}
-                          search={search}
-                          onSelect={onSelect}
-                          key={page.id}
-                        />
-                      ) : (
-                        <SingleItemLink
-                          page={page}
-                          search={search}
-                          key={page.id}
-                        />
-                      )
-                    )}
-                  </ul>
+                {userPages.map((page) =>
+                  onSelect ? (
+                    <SingleItemButton
+                      page={page}
+                      search={search}
+                      onSelect={onSelect}
+                      key={page.id}
+                    />
+                  ) : (
+                    <SingleItemLink
+                      page={page}
+                      search={search}
+                      key={page.id}
+                    />
+                  )
                 )}
               </div>
             )}
 
             {groupPages.length > 0 && (
-              <div className="mt-2 border-t border-border pt-2">
-                {search.length >= characterCount && (
-                  <h3 className="text-xs text-gray-400">From Groups</h3>
-                )}
-                {groupPages.length === 0 && search.length >= characterCount ? (
-                  <p className="text-xs mt-2 text-gray-400">
-                    No group pages found.
-                  </p>
-                ) : (
-                  <ul className="space-y-1">
-                    {groupPages.map((page) =>
-                      onSelect ? (
-                        <SingleItemButton
-                          page={page}
-                          search={search}
-                          onSelect={onSelect}
-                          key={page.id}
-                        />
-                      ) : (
-                        <SingleItemLink
-                          page={page}
-                          search={search}
-                          key={page.id}
-                        />
-                      )
-                    )}
-                  </ul>
+              <div>
+                {groupPages.map((page) =>
+                  onSelect ? (
+                    <SingleItemButton
+                      page={page}
+                      search={search}
+                      onSelect={onSelect}
+                      key={page.id}
+                    />
+                  ) : (
+                    <SingleItemLink
+                      page={page}
+                      search={search}
+                      key={page.id}
+                    />
+                  )
                 )}
               </div>
             )}
 
             {publicPages.length > 0 && (
-              <div className="mt-2 border-t border-border pt-2">
-                {search.length >= characterCount && (
-                  <h3 className="text-xs text-gray-400">Public Pages</h3>
+              <div>
+                {publicPages.map((page) =>
+                  onSelect ? (
+                    <SingleItemButton
+                      page={page}
+                      search={search}
+                      onSelect={onSelect}
+                      key={page.id}
+                    />
+                  ) : (
+                    <SingleItemLink
+                      page={page}
+                      search={search}
+                      key={page.id}
+                    />
+                  )
                 )}
-                {publicPages.length === 0 && search.length >= characterCount ? (
-                  <p className="text-xs mt-2 text-gray-400">
-                    No public pages found.
-                  </p>
-                ) : (
-                  <ul className="space-y-1">
-                    {publicPages.map((page) =>
-                      onSelect ? (
-                        <SingleItemButton
-                          page={page}
-                          search={search}
-                          onSelect={onSelect}
-                          key={page.id}
-                        />
-                      ) : (
-                        <SingleItemLink
-                          page={page}
-                          search={search}
-                          key={page.id}
-                        />
-                      )
-                    )}
-                  </ul>
-                )}
+              </div>
+            )}
+
+            {search.length >= 2 && userPages.length === 0 && groupPages.length === 0 && publicPages.length === 0 && (
+              <div className="p-3">
+                <button
+                  onClick={() => onSelect({ id: 'new', title: search })}
+                  className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors text-center"
+                >
+                  Create new "{search}" page
+                </button>
               </div>
             )}
           </>
@@ -282,13 +263,15 @@ const SingleItemButton = ({ page, search, onSelect }) => {
   return (
     <button
       onClick={() => onSelect(page)}
-      className="flex items-center justify-between w-full text-sm hover:bg-background p-1 rounded"
+      className="flex items-center w-full px-4 py-3 text-foreground hover:bg-muted transition-colors"
       key={page.id}
     >
-      <span className="truncate">{highlightText(page.title, search)}</span>
+      <span className="flex-1 font-normal">
+        {highlightText(page.title, search)}
+      </span>
       {page.username !== 'NULL' && page.isPublic && (
-        <span className="text-xs text-gray-400 whitespace-nowrap">
-          by {page.username}
+        <span className="text-sm text-muted-foreground ml-2">
+          {page.groupId ? 'Group' : `by ${page.username}`}
         </span>
       )}
     </button>
@@ -300,7 +283,7 @@ const highlightText = (text, searchTerm) => {
   const parts = text.split(new RegExp(`(${searchTerm})`, "gi"));
   return parts.map((part, index) =>
     part.toLowerCase() === searchTerm.toLowerCase() ? (
-      <span key={index} className="bg-yellow-200 text-black">
+      <span key={index} className="text-primary">
         {part}
       </span>
     ) : (

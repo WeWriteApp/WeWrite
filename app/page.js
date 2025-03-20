@@ -6,6 +6,7 @@ import AllPages from "./components/AllPages";
 import TopUsers from "./components/TopUsers";
 import AddUsername from "./components/AddUsername";
 import TypeaheadSearch from "./components/TypeaheadSearch";
+import LoginBanner from "./components/LoginBanner";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
@@ -22,13 +23,7 @@ export default function Home() {
   const router = useRouter();
   const isLoading = dataLoading || authLoading;
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth/login");
-    }
-  }, [user, authLoading]);
-
-  if (authLoading || !user) {
+  if (authLoading) {
     return null;
   }
 
@@ -39,29 +34,33 @@ export default function Home() {
       </Head>
       <Header />
       <main className="container p-6">
-        <AddUsername />
+        {!user && <LoginBanner />}
+        
+        {user && <AddUsername />}
         
         <div className="w-full mb-6">
           <TypeaheadSearch />
         </div>
         
-        <div className="flex items-center justify-between mb-6">
-          {isLoading ? (
-            <div className="flex items-center space-x-2">
-              <Loader className="h-5 w-5 animate-spin text-primary" />
-              <span className="text-lg text-muted-foreground">Loading your pages...</span>
-            </div>
-          ) : (
-            <h1 className="text-2xl font-semibold">Your Pages</h1>
-          )}
-          <Link href="/new">
-            <Button type="primary" variant="default">
-              New page
-            </Button>
-          </Link>
-        </div>
+        {user && (
+          <div className="flex items-center justify-between mb-6">
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <Loader className="h-5 w-5 animate-spin text-primary" />
+                <span className="text-lg text-muted-foreground">Loading your pages...</span>
+              </div>
+            ) : (
+              <h1 className="text-2xl font-semibold">Your Pages</h1>
+            )}
+            <Link href="/new">
+              <Button type="primary" variant="default">
+                New page
+              </Button>
+            </Link>
+          </div>
+        )}
         
-        <AllPages />
+        {user && <AllPages />}
 
         <TopUsers />
       </main>

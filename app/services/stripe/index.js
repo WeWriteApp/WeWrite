@@ -1,1 +1,2 @@
-let publishableKey = 'pk_test_51PkWYPC7V9PEp1TBHDnqGAqkioZX3zKV2nnh7lvM0eEMeEo8dvxc1v7nfZ9evWaZQLx2ZZmIvtbNEMlwoN5pxvlJ000CoNzf5I';
+// Use environment variable for publishable key
+export const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;

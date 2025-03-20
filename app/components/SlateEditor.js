@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import {
   createEditor,
   Transforms,
@@ -11,6 +11,7 @@ import { ReactEditor } from "slate-react";
 import { DataContext } from "../providers/DataProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
+import { Search, X } from "lucide-react";
 
 const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
@@ -154,13 +155,17 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
       </Slate>
 
       {showDropdown && (
-        <DropdownMenu position={dropdownPosition} onSelect={handleSelection} showDropdown={showDropdown} />
+        <DropdownMenu 
+          position={dropdownPosition} 
+          onSelect={handleSelection} 
+          setShowDropdown={setShowDropdown} 
+        />
       )}
 
-      <div className="absolute bottom-2 right-2">
-        <div className="text-xs text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm">
+      <div className="mt-2 text-center">
+        <span className="text-xs text-muted-foreground/60 bg-background/80 px-2 py-1 rounded-md backdrop-blur-sm">
           Press @ to mention a page
-        </div>
+        </span>
       </div>
     </div>
   );
@@ -298,23 +303,83 @@ const isLinkActive = (editor) => {
 };
 
 
-const DropdownMenu = ({ position, onSelect,setShowDropdown }) => {
-  // if user clicks outside of the dropdown, hide it
+const DropdownMenu = ({ position, onSelect, setShowDropdown }) => {
+  const [displayText, setDisplayText] = useState("");
+  
+  const handleClose = () => {
+    setShowDropdown(false);
+  };
+  
+  useEffect(() => {
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  const handleDisplayTextChange = (e) => {
+    e.preventDefault(); // Prevent default behavior
+    setDisplayText(e.target.value);
+  };
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        background: "white",
-        border: "1px solid #ccc",
-        padding: "4px",
-        borderRadius: "4px",
-        zIndex: 1000,
-      }}
-    >
-      <TypeaheadSearch onSelect={onSelect} setShowDropdown={setShowDropdown} />
-    </div>
+    <>
+      {/* Backdrop overlay */}
+      <div
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[999] dark:bg-black/50"
+        onClick={handleClose}
+      />
+      {/* Modal */}
+      <div
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] bg-white dark:bg-zinc-800 rounded-xl shadow-xl z-[1000] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col divide-y divide-gray-200 dark:divide-gray-700">
+          {/* Display text section */}
+          <div className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Display text</h2>
+              <button
+                onClick={handleClose}
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="h-4 w-4 text-gray-400" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={displayText}
+              onChange={handleDisplayTextChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Tab') {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="Page"
+              className="w-full p-3 bg-gray-100 dark:bg-gray-700/50 text-gray-900 dark:text-white rounded-lg border-0 focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              autoFocus
+            />
+          </div>
+          
+          {/* Link destination section */}
+          <div className="p-4 space-y-2">
+            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Link destination</h2>
+            <div className="overflow-y-auto max-h-[40vh]">
+              <TypeaheadSearch 
+                onSelect={(page) => {
+                  onSelect({
+                    ...page,
+                    title: displayText || page.title
+                  });
+                }}
+                placeholder="Search pages..."
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 

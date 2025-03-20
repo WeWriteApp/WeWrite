@@ -71,11 +71,14 @@ export const getUserSubscription = async (userId) => {
 // Create a pledge from a user to a page
 export const createPledge = async (userId, pageId, pledgeAmount) => {
   try {
+    // Round to two decimal places for consistent currency handling
+    const roundedAmount = Math.round(Number(pledgeAmount) * 100) / 100;
+    
     // Create the pledge document
     const pledgeRef = doc(db, "users", userId, "pledges", pageId);
     await setDoc(pledgeRef, {
       pageId,
-      amount: pledgeAmount,
+      amount: roundedAmount,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -83,14 +86,14 @@ export const createPledge = async (userId, pageId, pledgeAmount) => {
     // Update the page's total pledged amount
     const pageRef = doc(db, "pages", pageId);
     await fsUpdateDoc(pageRef, {
-      totalPledged: fsUpdateDoc.increment(pledgeAmount),
+      totalPledged: fsUpdateDoc.increment(roundedAmount),
       pledgeCount: fsUpdateDoc.increment(1),
     });
 
     // Update user's total pledged amount
     const userSubscriptionRef = doc(db, "users", userId, "subscription", "current");
     await fsUpdateDoc(userSubscriptionRef, {
-      pledgedAmount: fsUpdateDoc.increment(pledgeAmount),
+      pledgedAmount: fsUpdateDoc.increment(roundedAmount),
     });
 
     return true;
@@ -103,13 +106,17 @@ export const createPledge = async (userId, pageId, pledgeAmount) => {
 // Update a pledge amount
 export const updatePledge = async (userId, pageId, newAmount, oldAmount) => {
   try {
+    // Round to two decimal places for consistent currency handling
+    const roundedNewAmount = Math.round(Number(newAmount) * 100) / 100;
+    const roundedOldAmount = Math.round(Number(oldAmount) * 100) / 100;
+    
     // Calculate the difference
-    const amountDifference = newAmount - oldAmount;
+    const amountDifference = roundedNewAmount - roundedOldAmount;
     
     // Update the pledge
     const pledgeRef = doc(db, "users", userId, "pledges", pageId);
     await fsUpdateDoc(pledgeRef, {
-      amount: newAmount,
+      amount: roundedNewAmount,
       updatedAt: serverTimestamp(),
     });
 
@@ -162,10 +169,10 @@ export const deletePledge = async (userId, pageId, pledgeAmount) => {
 // Get all pledges for a user
 export const getUserPledges = async (userId) => {
   try {
-    const pledgesRef = collection(db, "users", userId, "pledges");
-    const pledgesSnap = await getDocs(pledgesRef);
+    const pledgesCollectionRef = collection(db, "users", userId, "pledges");
+    const querySnapshot = await getDocs(pledgesCollectionRef);
     
-    return pledgesSnap.docs.map(doc => ({
+    return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
@@ -189,6 +196,31 @@ export const getPledge = async (userId, pageId) => {
   } catch (error) {
     console.error("Error getting pledge:", error);
     return null;
+  }
+};
+
+// Cancel a subscription (for both demo and real subscriptions)
+export const cancelSubscription = async (subscriptionId) => {
+  try {
+    // For real Stripe subscriptions, you would call your API route here
+    // For demo subscriptions, this is handled in the UI by updating the subscription document
+    
+    // Call the cancel-subscription API route
+    const response = await fetch('/api/cancel-subscription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        subscriptionId,
+      }),
+    });
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Error canceling subscription:", error);
+    throw error;
   }
 };
 

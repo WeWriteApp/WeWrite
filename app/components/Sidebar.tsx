@@ -1,12 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { X, LogOut } from "lucide-react"
+import { X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { auth } from "../../firebase/config"
+import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
-import { cn } from "../../lib/utils"
-import Button from "../Button"
+import { cn } from "../lib/utils"
+import Button from "./Button"
 import { useTheme } from "next-themes"
 
 interface SidebarProps {
@@ -100,31 +100,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   ]
 
-  // Force icon display
-  React.useEffect(() => {
-    const loadIcons = async () => {
-      // Force Lucide to initialize icons
-      const icons = document.querySelectorAll('.lucide, [data-lucide]');
-      icons.forEach(icon => {
-        // Ensure icon is visible
-        if (icon instanceof HTMLElement) {
-          icon.style.display = 'inline-block';
-          icon.style.color = 'currentColor';
-        }
-      });
-    };
-    
-    if (isOpen) {
-      loadIcons();
-    }
-  }, [isOpen]);
-
   return (
     <>
-      {/* Backdrop - increased z-index to be on top of everything */}
+      {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 bg-black/60 backdrop-blur-md z-[999] transition-opacity duration-300 h-screen w-screen",
+          "fixed inset-0 bg-black/60 z-[999] transition-opacity duration-300 min-h-screen w-screen",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -134,19 +115,55 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[280px] bg-background/95 backdrop-blur-md border-r z-[1000] transition-transform duration-300 ease-in-out shadow-xl h-[100vh] overflow-y-auto",
+          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-r border-border z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-primary">WeWrite</h2>
+            <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-accent"
+              className="h-8 w-8 rounded-full hover:bg-muted"
               aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          <div className="flex-1">
+            <div className="mb-8">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
+              {themeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setTheme(option.value)}
+                  className={cn(
+                    "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    theme === option.value && "bg-accent text-accent-foreground"
+                  )}
+                >
+                  <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
+                    {theme === option.value && (
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    )}
+                  </div>
+                  {option.icon}
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Account and Logout buttons at bottom */}
+          <div className="mt-auto pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-foreground hover:bg-accent mb-2"
+              onClick={() => router.push('/account')}
             >
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -158,46 +175,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 strokeWidth="2" 
                 strokeLinecap="round" 
                 strokeLinejoin="round" 
-                className="h-5 w-5 text-foreground"
+                className="h-5 w-5 mr-2"
               >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
               </svg>
+              <span>Account</span>
             </Button>
-          </div>
-          
-          <div className="flex-1">
-            <div className="mb-8">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
-              {themeOptions.map((option) => {
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => setTheme(option.value)}
-                    className={cn(
-                      "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
-                      "hover:bg-accent hover:text-accent-foreground",
-                      theme === option.value && "bg-accent text-accent-foreground"
-                    )}
-                  >
-                    <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
-                      {theme === option.value && (
-                        <div className="w-3 h-3 rounded-full bg-blue-500" />
-                      )}
-                    </div>
-                    {option.icon}
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          
-          {/* Logout button at bottom */}
-          <div className="mt-auto pt-4 border-t border-border">
             <Button
               variant="ghost"
-              className="w-full justify-center text-destructive hover:text-destructive hover:bg-destructive/10 py-3"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={handleLogout}
             >
               <svg 
@@ -216,7 +203,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
-              <span className="text-destructive">Log out</span>
+              <span>Log out</span>
             </Button>
           </div>
         </div>

@@ -16,8 +16,8 @@ const New = () => {
   return (
     <DashboardLayout>
       <PageHeader title="New page" />
-      <div className="container py-6">
-        <div className="max-w-3xl mx-auto">
+      <div className="container w-full py-6 px-4">
+        <div className="w-full">
           <Form Page={Page} setPage={setPage} />
         </div>
       </div>
@@ -59,11 +59,11 @@ const Form = ({ Page, setPage }) => {
 
   return (
     <form
-      className="space-y-6"
+      className="space-y-6 px-4 sm:px-6 md:px-8"
       onSubmit={(e) => e.preventDefault()}
     >
-      <div className="space-y-4">
-        <div>
+      <div className="space-y-6">
+        <div className="max-w-2xl">
           <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
           <input
             id="title"

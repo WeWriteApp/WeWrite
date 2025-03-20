@@ -18,6 +18,10 @@ const nextConfig = {
         MSNGR_ID,
         APP_ID
     },
+    output: 'standalone',
+    poweredByHeader: false,
+    reactStrictMode: true,
+    swcMinify: true,
     webpack(config) {
         config.resolve.fallback = {
             ...config.resolve.fallback,

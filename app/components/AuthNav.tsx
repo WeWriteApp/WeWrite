@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "../providers/AuthProvider";
 import Button from "./Button";
 import { Menu } from "lucide-react";
-import { Sidebar } from "./ui/sidebar";
+import { Sidebar } from "./Sidebar";
 import { useState } from "react";
 
 export default function AuthNav() {
@@ -13,7 +13,7 @@ export default function AuthNav() {
 
   return (
     <>
-      {user ? (
+      {user && (
         // User is logged in - show sidebar toggle
         <div className="flex items-center">
           <Button
@@ -27,20 +27,6 @@ export default function AuthNav() {
           </Button>
           
           <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        </div>
-      ) : (
-        // User is not logged in - show login/register
-        <div className="flex items-center space-x-4">
-          <Link href="/auth/login">
-            <Button variant="outline">
-              Sign in
-            </Button>
-          </Link>
-          <Link href="/auth/register">
-            <Button>
-              Get started
-            </Button>
-          </Link>
         </div>
       )}
     </>

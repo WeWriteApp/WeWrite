@@ -1,0 +1,8 @@
+{
+    "accessibility.signals.chatResponseReceived": {
+        "sound": "on"
+    },
+    "accessibility.signals.taskCompleted": {
+        "sound": "on"
+    }
+}

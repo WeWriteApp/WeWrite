@@ -148,14 +148,20 @@ export default function PageHeader({ title, username, userId, isLoading = false 
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Check if we're on a page that looks like /pages/[id]
-    if (pathname?.startsWith('/pages/')) {
-      // Use browser history to go back
-      window.history.back();
-    } else {
-      // Default to home page if not on a page
-      router.push('/');
+    // Check if we came from a user page or home
+    if (document.referrer.includes('/user/')) {
+      // Extract user ID from referrer and navigate to that user's page
+      const referrer = new URL(document.referrer);
+      const userPath = referrer.pathname.split('/');
+      if (userPath.length >= 3) {
+        const userId = userPath[2];
+        router.push(`/user/${userId}`);
+        return;
+      }
     }
+    
+    // Default to home page
+    router.push('/');
   };
 
   return (
@@ -170,7 +176,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                   variant="ghost" 
                   size="icon"
                   onClick={handleBackClick}
-                  className="hover:bg-white/10 text-white h-8 w-8 shrink-0 transition-all duration-200 my-auto"
+                  className="hover:bg-muted text-foreground h-8 w-8 shrink-0 transition-all duration-200 my-auto"
                 >
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
@@ -227,7 +233,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="hover:bg-white/10 text-white h-8 w-8 shrink-0 transition-all duration-200 my-auto"
+                  className="hover:bg-muted text-foreground h-8 w-8 shrink-0 transition-all duration-200 my-auto"
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent the document click from immediately hiding the tooltip
                     copyLinkToClipboard();

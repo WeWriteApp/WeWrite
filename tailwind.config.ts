@@ -16,6 +16,7 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
       backgroundImage: {
@@ -37,6 +38,7 @@ const config: Config = {
         'primary': 'var(--primary-color)',
         'secondary': 'var(--secondary-color)',
         'text': 'var(--text-color)',
+        'foreground': 'hsl(var(--foreground))',
         'button': 'var(--button-text)'
       },
       borderColor: {

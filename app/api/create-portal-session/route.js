@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { auth } from '@/app/firebase/auth';
-import { getUserSubscription } from '@/app/firebase/subscription';
+import { auth } from '../../firebase/auth';
+import { getUserSubscription } from '../../firebase/subscription';
 
 export async function POST(request) {
   try {
@@ -34,7 +34,7 @@ export async function POST(request) {
     // Create the portal session
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/account/subscription`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/account`,
     });
     
     return NextResponse.json({ url: session.url });

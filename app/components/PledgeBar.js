@@ -1,36 +1,46 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { Check, ChevronRight, Minus, Plus } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import { getUserSubscription, getPledge, createPledge, updatePledge } from "../firebase/subscription";
+import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
-import { Icon } from "@iconify/react";
-import { PillLink } from "./PillLink";
-
-const intervalOptions = [
-  { value: 0.01, label: '0.01' },
-  { value: 0.1, label: '0.10' },
-  { value: 1, label: '1.00' },
-  { value: 10, label: '10.00' },
-];
+import CompositionBar from "./CompositionBar";
+import ActionModal from "./ActionModal";
+import { createPortal } from "react-dom";
+import { Button } from '../ui/button';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
+  const router = useRouter();
+  const pathname = usePathname();
   const [subscription, setSubscription] = useState(null);
   const [donateAmount, setDonateAmount] = useState(0);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [customVisible, setCustomVisible] = useState(false);
-  const [customCheck, setCustomCheck] = useState(false);
-  const [interval, setInterval] = useState(1);
-  const [inputVisible, setInputVisible] = useState(false);
+  const [globalIncrement, setGlobalIncrement] = useState(1);
   const [isConfirmed, setIsConfirmed] = useState(true);
   const [loading, setLoading] = useState(true);
   const [maxedOut, setMaxedOut] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
+  const [customAmountValue, setCustomAmountValue] = useState('');
+  const [isOwnPage, setIsOwnPage] = useState(false);
+  const [showMaxedOutWarning, setShowMaxedOutWarning] = useState(false);
+  const [pageStats, setPageStats] = useState({
+    activeDonors: 0,
+    monthlyIncome: 0,
+    totalViews: 0
+  });
+  const [pageTitle, setPageTitle] = useState('');
+  const [pledges, setPledges] = useState([]);
+  const [isPageView, setIsPageView] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState(0);
 
-  const timerRef = useRef(null);
-  const textRef = useRef(null);
   const { id: pageId } = useParams();
+
+  // Detect if we're on a page view
+  useEffect(() => {
+    setIsPageView(pathname && pathname.includes('/pages/'));
+  }, [pathname]);
 
   // Load user subscription and pledge data
   useEffect(() => {
@@ -38,19 +48,60 @@ const PledgeBar = () => {
       if (!user || !pageId) return;
       
       try {
-        // Get subscription data
-        const userSubscription = await getUserSubscription(user.uid);
-        setSubscription(userSubscription);
+        // Get the page to check its owner
+        const pageDoc = await getDocById("pages", pageId);
         
-        // Get pledge for this page if exists
-        const pledge = await getPledge(user.uid, pageId);
-        if (pledge) {
-          setDonateAmount(pledge.amount);
+        if (pageDoc && pageDoc.exists()) {
+          setPageTitle(pageDoc.data().title || 'Untitled Page');
+          
+          if (pageDoc.data().userId === user.uid) {
+            setIsOwnPage(true);
+            
+            // Load page stats
+            const stats = await getPageStats(pageId);
+            setPageStats({
+              activeDonors: stats?.activeDonors || 0,
+              monthlyIncome: stats?.monthlyIncome || 0,
+              totalViews: stats?.totalViews || 0
+            });
+          } else {
+            // Get subscription data for donating
+            const userSubscription = await getUserSubscription(user.uid);
+            setSubscription(userSubscription);
+            
+            // Get pledge for this page if exists
+            const pledge = await getPledge(user.uid, pageId);
+            if (pledge) {
+              setDonateAmount(pledge.amount);
+              setSelectedAmount(pledge.amount);
+              
+              // Check if current pledge is already at subscription limit
+              const usedAmount = userSubscription?.pledgedAmount || 0;
+              const subscriptionAmount = userSubscription?.amount || 0;
+              const availableAmount = subscriptionAmount - usedAmount + pledge.amount;
+              
+              if (pledge.amount >= availableAmount || usedAmount >= subscriptionAmount) {
+                setMaxedOut(true);
+              }
+            } else {
+              // Default to $0 if no existing pledge
+              setDonateAmount(0);
+              setSelectedAmount(0);
+            }
+
+            // Create a single pledge object for CompositionBar
+            setPledges([{
+              id: pageId,
+              pageId: pageId,
+              title: pageDoc.data().title || 'Untitled Page',
+              amount: pledge?.amount || 0 // Default to 0 if no existing amount
+            }]);
+          }
         }
         
         setLoading(false);
       } catch (error) {
-        console.error("Error loading subscription data:", error);
+        console.error("Error loading data:", error);
         setLoading(false);
       }
     };
@@ -58,363 +109,332 @@ const PledgeBar = () => {
     loadData();
   }, [user, pageId]);
 
-  // Handle pledge amount change
-  const handleAmountChange = async (change) => {
-    if (!user || !subscription) return;
-    
-    const newAmount = donateAmount + (change * interval);
-    const usedAmount = subscription.pledgedAmount || 0;
-    const availableAmount = subscription.amount - usedAmount + donateAmount;
-    
-    if (newAmount >= 0 && newAmount <= availableAmount) {
-      setDonateAmount(newAmount);
+  // Set global increment (this could be loaded from user settings)
+  useEffect(() => {
+    // This could load the increment value from user settings
+    setGlobalIncrement(1);
+  }, []);
+
+  // Track changes to pledges for debugging
+  useEffect(() => {
+    if (pledges.length > 0) {
+      console.log("Pledges updated:", pledges.map(p => ({id: p.id, amount: p.amount})));
+      console.log("Current donate amount:", donateAmount);
       
-      // Check if pledged amount would max out subscription
-      if (newAmount > 0 && newAmount + usedAmount - donateAmount >= subscription.amount) {
-        setMaxedOut(true);
-      } else {
-        setMaxedOut(false);
+      // Ensure the amount is a valid number
+      if (isNaN(pledges[0].amount) || pledges[0].amount === null) {
+        const updatedPledges = pledges.map(p => ({
+          ...p,
+          amount: 0 // Default to 0 if amount is invalid
+        }));
+        setPledges(updatedPledges);
+        setSelectedAmount(0);
       }
     }
-  };
+  }, [pledges, donateAmount]);
 
-  const handleInteraction = () => {
+  const handlePledgeAmountChange = (pledgeId, change) => {
+    console.log("handlePledgeAmountChange called with pledgeId:", pledgeId, "change:", change, "globalIncrement:", globalIncrement);
+    
     if (!user) {
-      return true; // Block interaction for non-logged in users
+      console.log("No user, redirecting to login");
+      router.push('/auth/login');
+      return;
     }
     
-    if (!subscription || subscription.status !== 'active') {
-      return true; // Block interaction for users without active subscription
+    // Check if subscription exists and is active
+    console.log("Subscription status:", subscription?.status);
+    if (!subscription) {
+      console.log("No subscription, showing activation modal");
+      setShowActivationModal(true);
+      return;
     }
     
-    return false; // Allow interaction
+    if (subscription.status !== 'active') {
+      console.log("Subscription not active, showing activation modal");
+      setShowActivationModal(true);
+      return;
+    }
+    
+    // Find the current pledge
+    const currentPledge = pledges.find(p => p.id === pledgeId);
+    if (!currentPledge) {
+      console.error("Pledge not found for ID:", pledgeId);
+      return;
+    }
+    
+    // Calculate the new amount
+    const incrementValue = change * (globalIncrement || 1);
+    let newAmount = Math.max(0, Number(currentPledge.amount || 0) + incrementValue);
+    // Round to 2 decimal places
+    newAmount = Math.round(newAmount * 100) / 100;
+    
+    console.log("Calculating new amount:", {
+      currentAmount: currentPledge.amount,
+      change,
+      globalIncrement,
+      incrementValue,
+      newAmount
+    });
+    
+    // Check subscription limits
+    const totalPledged = subscription.pledgedAmount || 0;
+    const currentAmount = Number(currentPledge.amount || 0);
+    const otherPledgesAmount = totalPledged - currentAmount;
+    
+    // Don't allow amounts above available budget
+    if (newAmount + otherPledgesAmount > subscription.amount) {
+      console.log("Would exceed limit", {
+        newAmount,
+        otherPledgesAmount,
+        subscriptionAmount: subscription.amount,
+        total: newAmount + otherPledgesAmount
+      });
+      setShowMaxedOutWarning(true);
+      return;
+    }
+    
+    // Update pledges with the new amount
+    setShowMaxedOutWarning(false);
+    const updatedPledges = pledges.map(p => {
+      if (p.id === pledgeId) {
+        return { ...p, amount: newAmount };
+      }
+      return p;
+    });
+    
+    console.log("Updating pledges", {
+      before: pledges.map(p => ({id: p.id, amount: p.amount})),
+      after: updatedPledges.map(p => ({id: p.id, amount: p.amount}))
+    });
+    
+    setPledges(updatedPledges);
+    setDonateAmount(newAmount);
+    setSelectedAmount(newAmount);
+    setIsConfirmed(false);
   };
 
-  const handleMouseDown = () => {
-    if (!handleInteraction()) {
-      timerRef.current = setTimeout(() => setMenuVisible(true), 500);
+  const handlePledgeCustomAmount = (pledgeId) => {
+    const pledge = pledges.find(p => p.id === pledgeId);
+    if (pledge) {
+      setCustomAmountValue(pledge.amount.toString());
+      setShowCustomAmountModal(true);
     }
   };
 
-  const handleMouseUp = () => {
-    clearTimeout(timerRef.current);
-  };
-
-  const handleAdjustInterval = (newInterval) => {
-    if (!handleInteraction()) {
-      setInterval(newInterval);
-      setMenuVisible(false);
+  const handleSaveCustomAmount = () => {
+    const amount = parseFloat(customAmountValue);
+    if (!isNaN(amount) && amount >= 0) {
+      const totalPledged = subscription.pledgedAmount || 0;
+      const currentAmount = pledges[0].amount;
+      const otherPledgesAmount = totalPledged - currentAmount;
+      
+      // Don't allow amounts above available budget
+      if (amount + otherPledgesAmount > subscription.amount) {
+        setShowMaxedOutWarning(true);
+        setShowCustomAmountModal(false);
+        return;
+      }
+      
+      const updatedPledges = pledges.map(p => {
+        return { ...p, amount };
+      });
+      
+      setPledges(updatedPledges);
+      setDonateAmount(amount);
+      setSelectedAmount(amount);
+      setIsConfirmed(false);
     }
+    setShowCustomAmountModal(false);
   };
 
-  const handleClickOutside = (event) => {
-    if (textRef.current && !textRef.current.contains(event.target)) {
-      setInputVisible(false);
+  const handleActivateSubscription = () => {
+    // Use router to navigate to account page with subscription amount
+    if (selectedAmount > 0) {
+      router.push(`/account?subscription=${selectedAmount}`);
+    } else {
+      console.error("No amount selected for subscription");
     }
   };
   
-  // Save pledge changes
+  // Save pledge changes with debounce
+  useEffect(() => {
+    if (!isConfirmed && user && pageId && !isOwnPage) {
+      console.log("Scheduling pledge save with amount:", donateAmount);
+      const saveTimeout = setTimeout(() => {
+        savePledge();
+      }, 1000);
+      
+      return () => clearTimeout(saveTimeout);
+    }
+  }, [donateAmount, isConfirmed, user, pageId, isOwnPage]);
+  
   const savePledge = async () => {
-    if (!user || !pageId || donateAmount === 0) return;
+    if (!user || !pageId) return;
     
     try {
+      console.log(`Attempting to save pledge for page ${pageId} with amount ${donateAmount}`);
       const existingPledge = await getPledge(user.uid, pageId);
       
       if (existingPledge) {
+        console.log(`Updating existing pledge with ID ${existingPledge.id}`);
         // Update existing pledge
         await updatePledge(user.uid, pageId, donateAmount, existingPledge.amount);
       } else {
+        console.log(`Creating new pledge for page ${pageId}`);
         // Create new pledge
         await createPledge(user.uid, pageId, donateAmount);
+      }
+      
+      // After successful save, reload subscription data to reflect new pledge amounts
+      const updatedSubscription = await getUserSubscription(user.uid);
+      if (updatedSubscription) {
+        setSubscription(updatedSubscription);
       }
       
       setIsConfirmed(true);
     } catch (error) {
       console.error("Error saving pledge:", error);
+      
+      // If there was an error, try to recreate the pledge as a fallback
+      if (donateAmount > 0) {
+        try {
+          console.log("Attempting to recreate pledge after error");
+          await createPledge(user.uid, pageId, donateAmount);
+          setIsConfirmed(true);
+        } catch (secondError) {
+          console.error("Failed to recreate pledge:", secondError);
+        }
+      }
     }
   };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      clearTimeout(timerRef.current);
-    };
-  }, []);
-  
-  // When donateAmount changes, mark as unconfirmed until saved
-  useEffect(() => {
-    if (user && pageId) {
-      setIsConfirmed(false);
-    }
-  }, [donateAmount]);
-
-  const progressBarWidth = (value, total) => (total > 0 ? `${(value / total) * 100}%` : '0%');
-  
-  if (loading) {
+  // If this is the user's own page, show stats instead of pledge bar
+  if (isOwnPage) {
     return (
-      <div className="w-11/12 sm:max-w-[300px] mx-auto">
-        <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden opacity-50">
-          <div className="flex gap-2 justify-between p-2">
-            <div className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center">
-              <div className="text-foreground h-6 w-6" />
-            </div>
-            <div className="flex justify-center items-center text-foreground gap-1 text-[18px]">
-              <span className="text-[24px] font-normal text-foreground">Loading...</span>
-            </div>
-            <div className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center">
-              <div className="text-foreground h-6 w-6" />
-            </div>
+      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+        <div className="flex justify-around">
+          <div className="text-center">
+            <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
+            <p className="text-xs text-foreground/40">Active Donors</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
+            <p className="text-xs text-foreground/40">Monthly Income</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-foreground/60">{pageStats.totalViews}</p>
+            <p className="text-xs text-foreground/40">Views</p>
           </div>
         </div>
       </div>
     );
   }
-  
+
+  // If user isn't logged in, show login button
   if (!user) {
     return (
-      <div className="w-11/12 sm:max-w-[300px] mx-auto">
-        <PillLink href="/auth/login" className="w-full text-center">
-          Sign in to support this page
-        </PillLink>
+      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+        <div className="text-center">
+          <p className="text-foreground/70 mb-2">Login to support this creator</p>
+          <Link href="/auth/login">
+            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
+              Login
+            </button>
+          </Link>
+        </div>
       </div>
     );
   }
-  
-  if (!subscription || subscription.status !== 'active') {
+
+  // Loading state
+  if (loading) {
     return (
-      <div className="w-11/12 sm:max-w-[300px] mx-auto">
-        <PillLink href="/account/subscription" className="w-full text-center">
-          Subscribe to support this page
-        </PillLink>
+      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+        <div className="animate-pulse flex justify-center">
+          <div className="h-10 bg-foreground/10 rounded w-3/4"></div>
+        </div>
       </div>
     );
   }
-  
-  const usedAmount = subscription.pledgedAmount || 0;
-  const totalBudget = subscription.amount || 0;
-  const availableAmount = totalBudget - usedAmount + donateAmount;
 
   return (
-    <>
-      <div className="w-11/12 sm:max-w-[300px] mx-auto">
-        {maxedOut && (
-          <div className="mb-4 p-4 bg-orange-600 text-white rounded-xl">
-            <h3 className="font-semibold mb-2">Your budget is maxed out!</h3>
-            <p className="text-sm mb-4">Visit your budget page to add funds or adjust your pledges.</p>
-            <div className="flex gap-4">
-              <button 
-                className="flex-1 py-2 px-3 bg-orange-700 hover:bg-orange-800 rounded-lg transition-colors"
-                onClick={() => setMaxedOut(false)}
-              >
-                Dismiss
-              </button>
-              <Link 
-                href="/account/subscription"
-                className="flex-1 py-2 px-3 bg-white text-orange-600 hover:bg-gray-100 rounded-lg text-center transition-colors"
-              >
-                Add funds
-              </Link>
-            </div>
-          </div>
-        )}
-        
-        {customVisible && (
-          <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col adjust-box rounded-xl text-[17px] p-3 gap-3">
-            <div className="flex items-center justify-center">
-              <Icon
-                icon="mdi:close"
-                width="24"
-                height="24"
-                className="absolute left-3 rounded-full border-2 cursor-pointer active:text-blue-500"
-                onClick={() => {
-                  setCustomVisible(false);
-                  setCustomCheck(true);
-                }}
-              />
-              <h3 className="text-center text-[17px]">Custom pledge interval</h3>
-            </div>
-            <div className="flex flex-row border-2 border-blue-500 p-4 rounded-xl justify-between">
-              <div className="flex flex-row gap-2">
-                <span className="font-medium text-gray-46">$</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  autoFocus
-                  className="w-[100px] bg-transparent outline-none"
-                  value={interval}
-                  onChange={(e) => !handleInteraction() && setInterval(Number(e.target.value))}
-                  autoComplete="off"
-                />
-              </div>
-              <span className="font-medium text-gray-46">per month</span>
-            </div>
-          </div>
-        )}
+    <div className="w-full max-w-md mx-auto">
+      {/* Main pledge bar */}
+      <CompositionBar
+        value={donateAmount}
+        max={subscription?.amount || 100}
+        onChange={() => {}}
+        disabled={false}
+        pledges={pledges}
+        subscriptionAmount={subscription?.amount || 0}
+        onPledgeChange={handlePledgeAmountChange}
+        onPledgeCustomAmount={handlePledgeCustomAmount}
+        onDeletePledge={() => {}}
+      />
 
-        {menuVisible && (
-          <div className="sm:max-w-[300px] w-full z-10 mb-4 flex flex-col divide-y divide-gray-30 adjust-box rounded-xl text-[17px]">
-            <h3 className="p-3 text-center">+/- Increment Amount</h3>
-            {intervalOptions.map(({ value, label }) => (
-              <div
-                key={value}
-                className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
-                onClick={() => handleAdjustInterval(value)}
-              >
-                <div className="flex flex-row gap-2 text-[17px]">
-                  <span className="font-medium text-gray-46">$</span>
-                  <span>{label}</span>
-                </div>
-                {interval === value && <Check className="h-6 w-6 text-blue-500" />}
-              </div>
-            ))}
-            <div
-              className="p-3 cursor-pointer flex w-full justify-between active:bg-active-bar"
-              onClick={() => {
-                if (!handleInteraction()) {
-                  setCustomVisible(true);
-                  setMenuVisible(false);
-                }
-              }}
-            >
-              <div className="flex flex-row gap-2 text-[17px]">
-                <span className="font-medium text-gray-46">$</span>
-                <span>{`${interval}`}</span>
-                <span className="font-medium text-gray-46">custom</span>
-              </div>
-              {customCheck ? (
-                <Check className="h-6 w-6 text-blue-500" />
-              ) : (
-                <ChevronRight className="h-6 w-6" />
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="sm:max-w-[300px] w-full z-10 relative border-gradient overflow-hidden">
-          <div
-            className="h-full rounded-l-[21px] absolute bg-reactangle overflow-hidden"
-            style={{ width: progressBarWidth(usedAmount - donateAmount, totalBudget) }}
-          >
-            <div className="h-full left-[-25px] top-[-25px] flex gap-3 absolute">
-              {Array.from({ length: 30 }, (_, index) => (
-                <div key={index} className="w-[6px] h-[calc(100%+50px)] bg-reactangle rotate-45"></div>
-              ))}
-            </div>
-          </div>
-
-          <div
-            style={{
-              width: progressBarWidth(donateAmount, totalBudget),
-              left: progressBarWidth(usedAmount - donateAmount, totalBudget),
-            }}
-            className={`absolute h-full ${isConfirmed ? 'bg-active-bar active-bar' : 'bg-gray-bar'}`}
-          ></div>
-
-          <div className="flex gap-2 justify-between p-2">
-            <div
-              className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
-              onClick={() => handleAmountChange(-1)}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onTouchStart={handleMouseDown}
-              onTouchEnd={handleMouseUp}
-            >
-              <button
-                className="text-foreground hover:text-foreground/80 flex items-center justify-center w-full h-full"
-              >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  viewBox="0 0 24 24" 
-                  width="24" 
-                  height="24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="h-6 w-6 stroke-foreground"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-
-            <div
-              className="flex justify-center items-center text-foreground gap-1 text-[18px] z-10"
-              onDoubleClick={() => !handleInteraction() && setInputVisible(true)}
-            >
-              $
-              {inputVisible ? (
-                <input
-                  type="number"
-                  ref={textRef}
-                  className="w-[80px] h-full focus-text text-center text-[24px] text-foreground"
-                  value={donateAmount}
-                  onChange={(e) => {
-                    if (!handleInteraction()) {
-                      const value = Number(e.target.value);
-                      if (value <= availableAmount) setDonateAmount(value);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (donateAmount > 0) {
-                      savePledge();
-                    }
-                  }}
-                  autoComplete="off"
-                />
-              ) : (
-                <span className="text-[24px] font-normal text-foreground">
-                  {donateAmount.toFixed(2)}
-                </span>
-              )}
-              <span className="text-foreground">/mo</span>
-            </div>
-
-            <div
-              className="w-action-button h-action-button action-button-gradient p-[8px_8px] flex items-center justify-center cursor-pointer active:scale-95 duration-300 backdrop-blur-sm"
-              onClick={() => handleAmountChange(1)}
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onTouchStart={handleMouseDown}
-              onTouchEnd={handleMouseUp}
-            >
-              <button
-                className="text-foreground hover:text-foreground/80 flex items-center justify-center w-full h-full"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-6 w-6 stroke-foreground"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
+      {/* Warning message when exceeding budget */}
+      {showMaxedOutWarning && (
+        <div className="mt-2 p-2 bg-destructive/10 text-destructive text-xs rounded">
+          You've reached your subscription limit. Increase your subscription to pledge more.
         </div>
-        
-        {!isConfirmed && (
-          <div className="flex justify-center mt-2">
-            <button
-              onClick={savePledge}
-              className="px-4 py-1 text-sm bg-[#0057FF] hover:bg-[#0046CC] text-white rounded-full transition-colors"
-            >
-              Save Pledge
-            </button>
+      )}
+
+      {/* Activation modal - render with portal to ensure it's at the document root */}
+      {typeof document !== 'undefined' && createPortal(
+        <ActionModal
+          isOpen={showActivationModal}
+          onClose={() => setShowActivationModal(false)}
+          message="You need an active subscription to support creators. Would you like to activate your subscription now?"
+          primaryActionLabel="Go to Subscription"
+          primaryActionHref="/account"
+          secondaryActionLabel="Cancel"
+        />,
+        document.body
+      )}
+
+      {/* Custom Amount Modal */}
+      {typeof document !== 'undefined' && createPortal(
+        showCustomAmountModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+              <h3 className="text-lg font-medium mb-4">
+                Custom Pledge Amount
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg">$</span>
+                  <input
+                    type="number"
+                    value={customAmountValue}
+                    onChange={(e) => setCustomAmountValue(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 border rounded-md bg-background text-foreground text-lg"
+                    placeholder="Enter amount"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex justify-end space-x-3">
+                  <Button
+                    onClick={() => setShowCustomAmountModal(false)}
+                    variant="ghost"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveCustomAmount}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-    </>
+        ),
+        document.body
+      )}
+    </div>
   );
 };
 

@@ -5,6 +5,8 @@ import { auth, app } from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "../firebase/database";
 import Cookies from 'js-cookie';
 
 export const AuthContext = createContext();
@@ -26,10 +28,50 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User is signed in
-        setUser(user);
-        // Set session cookie
-        const token = await user.getIdToken();
-        Cookies.set('session', token, { expires: 7 }); // 7 days expiry
+        try {
+          // Get user data from Firestore
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            // Set user state with Firestore data
+            setUser({
+              uid: user.uid,
+              email: user.email,
+              username: userData.username || user.displayName || '',
+              ...userData
+            });
+            
+            // Log the user data for debugging
+            console.log("User data from Firestore:", userData);
+          } else {
+            // No user document, create default data
+            setUser({
+              uid: user.uid,
+              email: user.email,
+              username: user.displayName || '',
+            });
+            
+            // Create a user document if it doesn't exist
+            await setDoc(doc(db, "users", user.uid), {
+              email: user.email,
+              username: user.displayName || '',
+              createdAt: new Date().toISOString()
+            });
+          }
+          
+          // Set session cookie
+          const token = await user.getIdToken();
+          Cookies.set('session', token, { expires: 7 }); // 7 days expiry
+        } catch (error) {
+          console.error("Error loading user data:", error);
+          setUser({
+            uid: user.uid,
+            email: user.email,
+            username: user.displayName || '',
+          });
+        }
       } else {
         // User is signed out
         setUser(null);
@@ -41,46 +83,6 @@ export const AuthProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
-
-  const getUserFromRTDB = (user) => {
-    const db = getDatabase(app);
-    let uid = user.uid;
-    const dbRef = ref(db, `users/${uid}`);
-    
-    onValue(dbRef, (snapshot) => {
-      const data = snapshot.val();
-
-      if (!data) {
-        // Handle case where user data doesn't exist yet
-        setUser({
-          uid: user.uid,
-          email: user.email,
-          username: user.displayName || ''
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (!data.username && user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.displayName = user.displayName;
-      } else if (data.username !== user.displayName) {
-        let updates = {};
-        updates[`users/${uid}/username`] = user.displayName;
-        update(ref(db), updates);
-        data.username = user.displayName;
-      }
-
-      setUser({
-        uid: user.uid,
-        email: user.email,
-        ...data
-      });
-      setLoading(false);
-    });
-  }
 
   const value = {
     user,

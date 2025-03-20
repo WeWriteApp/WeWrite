@@ -27,6 +27,8 @@ export default function SinglePageView({ params }) {
   const [groupId, setGroupId] = useState(null);
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
+  const [scrollDirection, setScrollDirection] = useState("up");
+  const [lastScrollTop, setLastScrollTop] = useState(0);
 
   // Use keyboard shortcuts - moved back to top level
   useKeyboardShortcuts({
@@ -63,6 +65,25 @@ export default function SinglePageView({ params }) {
           const userData = snapshot.val();
           if (userData && userData.username) {
             pageData.username = userData.username;
+          } else {
+            // If username not found in realtime DB, we should try to get it from Firestore
+            // This is a fallback mechanism
+            import('../firebase/auth').then(({ getUserProfile }) => {
+              if (getUserProfile && pageData.userId) {
+                getUserProfile(pageData.userId).then(profile => {
+                  if (profile && profile.username) {
+                    pageData.username = profile.username;
+                  } else if (profile && profile.displayName) {
+                    pageData.username = profile.displayName;
+                  }
+                  
+                  // Set state with the fetched data including username
+                  setPage({...pageData});
+                }).catch(err => {
+                  console.error("Error fetching user profile:", err);
+                });
+              }
+            });
           }
           
           // Set state with the fetched data
@@ -94,6 +115,26 @@ export default function SinglePageView({ params }) {
 
     return () => unsubscribe();
   }, [params.id, user]);
+
+  // Add scroll event listener to detect scroll direction
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (currentScrollTop > lastScrollTop) {
+        // Scrolling down
+        setScrollDirection("down");
+      } else {
+        // Scrolling up
+        setScrollDirection("up");
+      }
+      
+      setLastScrollTop(currentScrollTop);
+    };
+    
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollTop]);
 
   const Layout = user ? DashboardLayout : PublicLayout;
 
@@ -237,8 +278,10 @@ export default function SinglePageView({ params }) {
         )}
       </div>
       {!isEditing && (
-        <div className="fixed bottom-0 pb-16 pt-4 w-full flex justify-center">
-          <PledgeBar />
+        <div className={`fixed left-0 right-0 w-full flex justify-center transition-transform duration-300 ease-in-out ${scrollDirection === "down" ? "translate-y-[200%]" : "translate-y-0"}`} style={{ bottom: '1rem' }}>
+          <div className="w-[95%] max-w-md mx-auto">
+            <PledgeBar />
+          </div>
         </div>
       )}
     </Layout>

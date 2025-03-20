@@ -11,35 +11,53 @@ import {
 } from "../providers/ProfilePageProvider";
 import Button from "./Button";
 import { useAuth } from "../providers/AuthProvider";
-import { Loader } from "lucide-react";
+import { Loader, Settings } from "lucide-react";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [pageCount, setPageCount] = useState(0);
+  
+  // Check if this profile belongs to the current user
+  const isCurrentUser = user && user.uid === profile.uid;
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
-        <div className="flex items-center space-x-4 mb-4">
-          <Link href="/">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                width="24" 
-                height="24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="h-4 w-4"
-              >
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 24 24" 
+                  width="24" 
+                  height="24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="h-4 w-4"
+                >
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </Button>
+            </Link>
+            <h1 className="text-3xl font-semibold">{profile.username}</h1>
+          </div>
+          
+          {/* Settings button - only visible for current user */}
+          {isCurrentUser && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9 rounded-full hover:bg-[rgba(255,255,255,0.1)]"
+              onClick={() => router.push('/account')}
+            >
+              <Settings className="h-5 w-5" />
             </Button>
-          </Link>
-          <h1 className="text-3xl font-semibold">{profile.username}</h1>
+          )}
         </div>
         
         {!user && (
