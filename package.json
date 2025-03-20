@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:safe": "./scripts/start-dev.sh",
     "build": "rm -rf .next && next build",
     "start": "next start",
     "lint": "next lint",

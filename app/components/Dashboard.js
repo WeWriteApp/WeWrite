@@ -12,31 +12,34 @@ import { useRouter } from "next/navigation";
 import Header from "./Header";
 
 const Dashboard = () => {
-  const { user,loading } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/auth/login");
     }
-  }, [user,loading]);
+  }, [user, loading]);
 
   if (loading || !user) {
     return null;
   }
+
   return (
     <DashboardLayout>
       <Header />
-      <div>
+      <div className="space-y-2">
         <AddUsername />
         
-        <h1 className="text-2xl font-semibold text-text">Your Pages</h1>
-        <div className="flex items-center pb-2 md:align-middle md:justify-between md:flex-row flex-col">
+        <h1 className="text-2xl font-semibold text-foreground">Your Pages</h1>
+        <div className="flex items-center md:align-middle md:justify-between md:flex-row flex-col">
           <div className="md:w-1/2 w-full">
             <TypeaheadSearch />
           </div>
         </div>
-        <AllPages />
+        <div className="mt-1">
+          <AllPages />
+        </div>
 
         {/* Commented out Groups section
         <div className="flex items-start pb-4 mb-- md:mb-0 md:align-middle md:justify-between md:flex-row justify-between">

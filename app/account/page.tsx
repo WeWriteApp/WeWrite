@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter } from 'lucide-react';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
@@ -25,6 +25,8 @@ import * as RadioGroup from '@radix-ui/react-radio-group';
 import PaymentModal from '../components/PaymentModal';
 import SubscriptionStatusCard from '../components/SubscriptionStatusCard';
 import { Button } from '../ui/button';
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface ExpandedSections {
   profile: boolean;
@@ -400,7 +402,7 @@ export default function AccountPage() {
   };
 
   const handleUsernameChange = async (newUsername: string) => {
-    if (!user || !newUsername.trim()) return;
+    if (!user || !newUsername) return;
     
     try {
       await addUsername(user.uid, newUsername);
@@ -686,156 +688,45 @@ export default function AccountPage() {
             </div>
           </section>
 
-          {/* Subscription Section */}
+          {/* OpenCollective Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Subscription</h3>
-            {subscription?.status === 'active' ? (
-              <div className="bg-background rounded-lg border border-border p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                  <span className="font-medium">Active Subscription</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Monthly Amount</span>
-                    <span className="font-medium">${subscription.amount}/mo</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Next Payment</span>
-                    <span className="text-sm">{timeUntilPayment}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-background rounded-lg border border-orange-500/30 p-4 bg-orange-500/[0.15]">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  <span className="font-medium text-orange-600">No Active Subscription</span>
-                </div>
-                <p className="text-sm text-orange-600/80 mb-4">Start a subscription to support creators and access premium features.</p>
-                <button
-                  onClick={() => setPaymentModalOpen(true)}
-                  className="w-full py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
-                >
-                  Start Subscription
-                </button>
-              </div>
-            )}
+            <h3 className="text-base font-medium mb-4">Support WeWrite</h3>
+            <Alert className="bg-primary/10 border-primary/20">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertTitle className="text-primary">Payments Coming Soon</AlertTitle>
+              <AlertDescription className="text-primary/90">
+                <p className="mb-4">We're working on implementing payments. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
+                <Button asChild className="bg-primary hover:bg-primary/90">
+                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer">
+                    Support on OpenCollective
+                  </a>
+                </Button>
+              </AlertDescription>
+            </Alert>
           </section>
 
-          {/* Increment Amount Section */}
+          {/* Social Media Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Increment Amount</h3>
-            <div className="space-y-4 bg-background rounded-lg border border-border p-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Choose how much to increment or decrement each pledge when using the plus and minus buttons.
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[0.1, 0.5, 1, 5].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => {
-                        setSelectedIncrementButton(amount);
-                        handleIncrementChange(amount);
-                      }}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        selectedIncrementButton === amount
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary hover:bg-secondary/80 text-foreground'
-                      }`}
-                    >
-                      ${amount}
-                    </button>
-                  ))}
-                </div>
-                
-                <button
-                  onClick={() => setShowCustomModal(true)}
-                  className={`w-full mt-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    customIncrementAmount 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-secondary hover:bg-secondary/80 text-foreground'
-                  }`}
-                >
-                  {customIncrementAmount 
-                    ? `Custom: $${parseFloat(customIncrementAmount).toFixed(2)}` 
-                    : 'Custom Amount'}
-                </button>
+            <h3 className="text-base font-medium mb-4">Follow Us</h3>
+            <div className="bg-background rounded-lg border border-border p-4">
+              <p className="text-sm text-foreground/80 mb-4">Follow us on social media for future updates and announcements.</p>
+              <div className="flex space-x-4">
+                <Button variant="outline" size="icon" asChild>
+                  <a href="https://youtube.com/@wewrite-app" target="_blank" rel="noopener noreferrer">
+                    <Youtube className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href="https://instagram.com/wewrite.app" target="_blank" rel="noopener noreferrer">
+                    <Instagram className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href="https://twitter.com/wewrite_app" target="_blank" rel="noopener noreferrer">
+                    <Twitter className="h-4 w-4" />
+                  </a>
+                </Button>
               </div>
-            </div>
-          </section>
-
-          {/* Pledges Section */}
-          <section className="mb-8">
-            <div>
-              <SpendingOverview total={pledges.reduce((total, pledge) => total + Number(pledge.amount), 0)} max={subscription?.amount || 0} />
-            </div>
-
-            <div className="space-y-4 mt-6">
-              {pledges.length > 0 ? (
-                <>
-                  <div className="pb-4 border-b border-border/70">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="text-lg font-semibold">My Pledges</div>
-                      <button
-                        onClick={handleSortPledges}
-                        className={`flex items-center text-sm px-2 py-1 rounded-md transition-colors ${
-                          needsSort 
-                            ? 'bg-primary/20 text-primary hover:bg-primary/30' 
-                            : 'text-primary hover:bg-primary/10'
-                        }`}
-                      >
-                        {needsSort ? 'Click to sort' : 'Sort'}
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          width="16" 
-                          height="16" 
-                          viewBox="0 0 24 24" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2" 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round"
-                          className={`ml-1 transition-transform duration-300 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
-                        >
-                          <path d="m6 9 6 6 6-6"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  {sortedPledges.map(pledge => (
-                    <div 
-                      key={pledge.id} 
-                      className="bg-background p-3 rounded-lg border border-border transition-all"
-                    >
-                      <CompositionBar
-                        value={pledge.amount}
-                        max={subscription?.amount || 0}
-                        onChange={() => {}}
-                        disabled={false}
-                        pledges={[pledge]}
-                        subscriptionAmount={subscription?.amount || 0}
-                        onPledgeChange={(id, change) => handlePledgeAmountChange(id, change)}
-                        onPledgeCustomAmount={handlePledgeCustomAmount}
-                        onDeletePledge={handleDeletePledge}
-                        showTitle={true}
-                        showRemoveButton={true}
-                      />
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div className="text-sm text-foreground/70 text-center py-4 bg-background p-4 rounded-lg border border-border">
-                  No pledges yet. Visit pages to make a pledge and support creators.
-                </div>
-              )}
             </div>
           </section>
         </div>

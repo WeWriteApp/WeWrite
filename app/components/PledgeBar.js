@@ -6,8 +6,13 @@ import { getUserSubscription, getPledge, createPledge, updatePledge } from "../f
 import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
 import CompositionBar from "./CompositionBar";
-import { SocialMediaModal } from "./SocialMediaModal";
+import dynamic from 'next/dynamic';
 import { Button } from '../ui/button';
+
+// Dynamically import SocialMediaModal with ssr disabled
+const SocialMediaModal = dynamic(() => import('./SocialMediaModal'), {
+  ssr: false,
+});
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
@@ -378,10 +383,12 @@ const PledgeBar = () => {
       />
 
       {/* Social Media Modal */}
-      <SocialMediaModal 
-        open={showSocialModal} 
-        onOpenChange={setShowSocialModal} 
-      />
+      {typeof window !== 'undefined' && (
+        <SocialMediaModal
+          open={showSocialModal}
+          onOpenChange={setShowSocialModal}
+        />
+      )}
     </div>
   );
 };
