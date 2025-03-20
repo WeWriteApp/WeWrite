@@ -6,8 +6,7 @@ import { getUserSubscription, getPledge, createPledge, updatePledge } from "../f
 import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
 import CompositionBar from "./CompositionBar";
-import ActionModal from "./ActionModal";
-import { createPortal } from "react-dom";
+import { SocialMediaModal } from "./SocialMediaModal";
 import { Button } from '../ui/button';
 
 const PledgeBar = () => {
@@ -34,6 +33,7 @@ const PledgeBar = () => {
   const [pledges, setPledges] = useState([]);
   const [isPageView, setIsPageView] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(0);
+  const [showSocialModal, setShowSocialModal] = useState(false);
 
   const { id: pageId } = useParams();
 
@@ -361,79 +361,23 @@ const PledgeBar = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       {/* Main pledge bar */}
-      <CompositionBar
-        value={donateAmount}
-        max={subscription?.amount || 100}
-        onChange={() => {}}
-        disabled={false}
-        pledges={pledges}
-        subscriptionAmount={subscription?.amount || 0}
-        onPledgeChange={handlePledgeAmountChange}
-        onPledgeCustomAmount={handlePledgeCustomAmount}
-        onDeletePledge={() => {}}
-      />
-
-      {/* Warning message when exceeding budget */}
-      {showMaxedOutWarning && (
-        <div className="mt-2 p-2 bg-destructive/10 text-destructive text-xs rounded">
-          You've reached your subscription limit. Increase your subscription to pledge more.
+      <div className="w-full bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 p-4">
+        <div className="text-center">
+          <p className="text-foreground/70 mb-4">Support this creator</p>
+          <Button 
+            onClick={() => setShowSocialModal(true)}
+            className="w-full"
+          >
+            Support Now
+          </Button>
         </div>
-      )}
+      </div>
 
-      {/* Activation modal - render with portal to ensure it's at the document root */}
-      {typeof document !== 'undefined' && createPortal(
-        <ActionModal
-          isOpen={showActivationModal}
-          onClose={() => setShowActivationModal(false)}
-          message="You need an active subscription to support creators. Would you like to activate your subscription now?"
-          primaryActionLabel="Go to Subscription"
-          primaryActionHref="/account"
-          secondaryActionLabel="Cancel"
-        />,
-        document.body
-      )}
-
-      {/* Custom Amount Modal */}
-      {typeof document !== 'undefined' && createPortal(
-        showCustomAmountModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-              <h3 className="text-lg font-medium mb-4">
-                Custom Pledge Amount
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">$</span>
-                  <input
-                    type="number"
-                    value={customAmountValue}
-                    onChange={(e) => setCustomAmountValue(e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2 border rounded-md bg-background text-foreground text-lg"
-                    placeholder="Enter amount"
-                    autoFocus
-                  />
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <Button
-                    onClick={() => setShowCustomAmountModal(false)}
-                    variant="ghost"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleSaveCustomAmount}
-                  >
-                    Save
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ),
-        document.body
-      )}
+      {/* Social Media Modal */}
+      <SocialMediaModal 
+        open={showSocialModal} 
+        onOpenChange={setShowSocialModal} 
+      />
     </div>
   );
 };
