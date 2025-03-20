@@ -6,13 +6,8 @@ import { getUserSubscription, getPledge, createPledge, updatePledge } from "../f
 import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
 import CompositionBar from "./CompositionBar";
-import dynamic from 'next/dynamic';
-import { Button } from '../ui/button';
-
-// Dynamically import SocialMediaModal with ssr disabled
-const SocialMediaModal = dynamic(() => import('./SocialMediaModal'), {
-  ssr: false,
-});
+import { Button } from './ui/button';
+import PledgeBarModal from './PledgeBarModal';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
@@ -59,9 +54,16 @@ const PledgeBar = () => {
         if (pageDoc && pageDoc.exists()) {
           setPageTitle(pageDoc.data().title || 'Untitled Page');
           
-          if (pageDoc.data().userId === user.uid) {
-            setIsOwnPage(true);
-            
+          // Set isOwnPage based on page ownership
+          const isOwner = pageDoc.data().userId === user.uid;
+          console.log("Checking page ownership:", { 
+            pageUserId: pageDoc.data().userId, 
+            currentUserId: user.uid,
+            isOwner 
+          });
+          setIsOwnPage(isOwner);
+          
+          if (isOwner) {
             // Load page stats
             const stats = await getPageStats(pageId);
             setPageStats({
@@ -317,7 +319,10 @@ const PledgeBar = () => {
   // If this is the user's own page, show stats instead of pledge bar
   if (isOwnPage) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+      <div 
+        className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6 cursor-pointer"
+        onClick={() => setShowActivationModal(true)}
+      >
         <div className="flex justify-around">
           <div className="text-center">
             <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
@@ -332,6 +337,13 @@ const PledgeBar = () => {
             <p className="text-xs text-foreground/40">Views</p>
           </div>
         </div>
+
+        {/* Pledge Modal for self view */}
+        <PledgeBarModal
+          isOpen={showActivationModal}
+          onClose={() => setShowActivationModal(false)}
+          isSignedIn={!!user}
+        />
       </div>
     );
   }
@@ -363,31 +375,50 @@ const PledgeBar = () => {
     );
   }
 
-  const handlePledgeInteraction = () => {
-    setShowSocialModal(true);
+  const handlePledgeInteraction = (pledgeId, change) => {
+    console.log("handlePledgeInteraction called", { isOwnPage, user, pledgeId, change });
+    
+    if (!user) {
+      setShowActivationModal(true);
+      return;
+    }
+
+    if (!subscription || subscription.status !== 'active') {
+      setShowActivationModal(true);
+      return;
+    }
+
+    // If we have an active subscription, handle the pledge change
+    handlePledgeAmountChange(pledgeId, change);
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full">
       {/* Main pledge bar */}
       <CompositionBar
         value={pledges[0]?.amount || 0}
-        max={100}
+        max={subscription?.amount || 100}
         onChange={() => {}}
         disabled={false}
         pledges={pledges}
-        subscriptionAmount={100}
+        subscriptionAmount={subscription?.amount || 0}
         onPledgeChange={handlePledgeInteraction}
-        onPledgeCustomAmount={handlePledgeInteraction}
+        onPledgeCustomAmount={handlePledgeCustomAmount}
         onDeletePledge={() => {}}
       />
 
-      {/* Social Media Modal */}
-      {typeof window !== 'undefined' && (
-        <SocialMediaModal
-          open={showSocialModal}
-          onOpenChange={setShowSocialModal}
-        />
+      {/* Pledge Modal */}
+      <PledgeBarModal
+        isOpen={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        isSignedIn={!!user}
+      />
+      
+      {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
+      {showCustomAmountModal && (
+        <div>
+          {/* Custom amount modal content */}
+        </div>
       )}
     </div>
   );
