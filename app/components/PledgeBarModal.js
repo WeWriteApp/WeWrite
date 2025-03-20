@@ -13,6 +13,7 @@ import {
 import { Button } from "./ui/button";
 import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
+import { DollarSign } from "lucide-react";
 
 const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
   const content = isSignedIn ? {
@@ -57,15 +58,17 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
         <div className="py-3">
           <Button 
             asChild 
-            className="w-full" 
+            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`} 
             size="lg"
-            variant="outline"
+            variant={isSignedIn ? "default" : "outline"}
           >
             <a 
               href={content.action.href}
               target={content.action.external ? "_blank" : undefined}
               rel={content.action.external ? "noopener noreferrer" : undefined}
+              className="flex items-center justify-center gap-2"
             >
+              {isSignedIn && <DollarSign className="h-4 w-4" />}
               {content.action.label}
             </a>
           </Button>
@@ -80,7 +83,15 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
                 key={link.platform}
                 variant="outline"
                 asChild
-                className="w-full justify-center"
+                className={`w-full justify-center ${
+                  link.platform === 'twitter' 
+                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white border-[#1DA1F2]' 
+                    : link.platform === 'youtube' 
+                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white border-[#FF0000]' 
+                    : link.platform === 'instagram' 
+                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white border-transparent' 
+                    : ''
+                }`}
               >
                 <a
                   href={link.url}

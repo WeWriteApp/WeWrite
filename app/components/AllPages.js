@@ -10,7 +10,7 @@ import { Loader, Plus } from "lucide-react";
 const PageSkeletons = ({ count = 8 }) => {
   return (
     <div className="relative">
-      <ul className="flex flex-wrap gap-2">
+      <ul className="flex flex-wrap gap-1">
         {Array(count).fill(0).map((_, index) => (
           <li key={`skeleton-${index}`}>
             <PillLinkSkeleton />
@@ -54,7 +54,7 @@ const AllPages = () => {
   return (
     <>
     <div className="relative">
-      <ul className="flex flex-wrap gap-2">
+      <ul className="flex flex-wrap gap-1">
         {pages.map((page) => (
           <li key={page.id}>
             <PillLink

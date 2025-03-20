@@ -6,13 +6,16 @@ interface SocialIconProps {
 }
 
 export function SocialIcon({ platform, className = "mr-2 h-4 w-4" }: SocialIconProps) {
+  // All icons will be white for better visibility against colored backgrounds
+  const iconClassName = `${className} text-white`;
+  
   switch (platform) {
     case 'twitter':
-      return <Twitter className={className} />;
+      return <Twitter className={iconClassName} />;
     case 'youtube':
-      return <Youtube className={className} />;
+      return <Youtube className={iconClassName} />;
     case 'instagram':
-      return <Instagram className={className} />;
+      return <Instagram className={iconClassName} />;
     default:
       return null;
   }

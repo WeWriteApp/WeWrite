@@ -1,6 +1,6 @@
 import {app} from './config';
 import { getAuth } from "firebase/auth";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail as firebaseUpdateEmail } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export const auth = getAuth(app);
@@ -71,5 +71,23 @@ export const getUserProfile = async (userId) => {
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return null;
+  }
+}
+
+export const updateEmail = async (user, newEmail) => {
+  try {
+    // Update the email in Firebase Authentication
+    await firebaseUpdateEmail(user, newEmail);
+    
+    // Update the email in Firestore users collection
+    const userDocRef = doc(db, 'users', user.uid);
+    await updateDoc(userDocRef, {
+      email: newEmail
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating email:", error);
+    return { success: false, error };
   }
 }

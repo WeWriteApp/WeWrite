@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign } from 'lucide-react';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
@@ -17,7 +17,7 @@ import {
 import { getDocById } from '../firebase/database';
 import { loadStripe } from '@stripe/stripe-js';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { addUsername } from '../firebase/auth';
+import { addUsername, updateEmail as updateFirebaseEmail } from '../firebase/auth';
 import { db } from '../firebase/database';
 import AccountDrawer from '../components/AccountDrawer';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,6 +27,7 @@ import SubscriptionStatusCard from '../components/SubscriptionStatusCard';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { socialLinks } from '../config/social-links';
 
 interface ExpandedSections {
   profile: boolean;
@@ -98,6 +99,7 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | null>(null);
   const [timeUntilPayment, setTimeUntilPayment] = useState('');
   const [pledges, setPledges] = useState<Pledge[]>([]);
@@ -409,6 +411,47 @@ export default function AccountPage() {
       setUsername(newUsername);
     } catch (error) {
       console.error('Error updating username:', error);
+      alert('Failed to update username. Please try again.');
+    }
+  };
+
+  const handleEmailChange = async () => {
+    if (!user) return;
+    
+    const newEmail = prompt("Enter new email address:", email);
+    if (!newEmail) return;
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+    
+    setEmailError('');
+    
+    try {
+      // Update email in Firebase Authentication
+      await updateFirebaseEmail(user, newEmail);
+      
+      // Update email in state
+      setEmail(newEmail);
+      
+      alert('Email updated successfully!');
+    } catch (error) {
+      console.error('Error updating email:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/requires-recent-login') {
+        setEmailError('For security reasons, please log out and log back in before changing your email.');
+        alert('For security reasons, please log out and log back in before changing your email.');
+      } else if (error.code === 'auth/email-already-in-use') {
+        setEmailError('This email is already in use by another account.');
+        alert('This email is already in use by another account.');
+      } else {
+        setEmailError('Failed to update email. Please try again.');
+        alert('Failed to update email. Please try again.');
+      }
     }
   };
 
@@ -682,7 +725,16 @@ export default function AccountPage() {
               <div>
                 <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
                 <div className="flex justify-between items-center">
-                  <p className="text-foreground">{email || 'No email set'}</p>
+                  <div>
+                    <p className="text-foreground">{email || 'No email set'}</p>
+                    {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
+                  </div>
+                  <button
+                    onClick={handleEmailChange}
+                    className="text-sm text-foreground/60 hover:text-foreground"
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             </div>
@@ -696,8 +748,9 @@ export default function AccountPage() {
               <AlertTitle className="text-primary">Payments Coming Soon</AlertTitle>
               <AlertDescription className="text-primary/90">
                 <p className="mb-4">We're working on implementing payments. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
-                <Button asChild className="bg-primary hover:bg-primary/90">
-                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer">
+                <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
                     Support on OpenCollective
                   </a>
                 </Button>
@@ -710,20 +763,50 @@ export default function AccountPage() {
             <h3 className="text-base font-medium mb-4">Follow Us</h3>
             <div className="bg-background rounded-lg border border-border p-4">
               <p className="text-sm text-foreground/80 mb-4">Follow us on social media for future updates and announcements.</p>
-              <div className="flex space-x-4">
-                <Button variant="outline" size="icon" asChild>
-                  <a href="https://youtube.com/@wewrite-app" target="_blank" rel="noopener noreferrer">
-                    <Youtube className="h-4 w-4" />
+              <div className="flex flex-col gap-2 w-full">
+                <Button
+                  variant="outline"
+                  asChild
+                  className={`w-full justify-center bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white border-[#1DA1F2]`}
+                >
+                  <a 
+                    href={socialLinks.find(link => link.platform === 'twitter')?.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    <Twitter className="h-4 w-4 text-white" />
+                    <span>Follow on X (Twitter)</span>
                   </a>
                 </Button>
-                <Button variant="outline" size="icon" asChild>
-                  <a href="https://instagram.com/wewrite.app" target="_blank" rel="noopener noreferrer">
-                    <Instagram className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  asChild
+                  className={`w-full justify-center bg-[#FF0000] hover:bg-[#FF0000]/90 text-white border-[#FF0000]`}
+                >
+                  <a 
+                    href={socialLinks.find(link => link.platform === 'youtube')?.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    <Youtube className="h-4 w-4 text-white" />
+                    <span>Subscribe on YouTube</span>
                   </a>
                 </Button>
-                <Button variant="outline" size="icon" asChild>
-                  <a href="https://twitter.com/wewrite_app" target="_blank" rel="noopener noreferrer">
-                    <Twitter className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  asChild
+                  className={`w-full justify-center bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white border-transparent`}
+                >
+                  <a 
+                    href={socialLinks.find(link => link.platform === 'instagram')?.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
+                    <Instagram className="h-4 w-4 text-white" />
+                    <span>Follow on Instagram</span>
                   </a>
                 </Button>
               </div>
