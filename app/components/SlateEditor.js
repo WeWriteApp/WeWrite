@@ -64,6 +64,49 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
     },
   ]);
 
+  // Set initial value when component mounts or when initialEditorState changes
+  useEffect(() => {
+    if (initialEditorState) {
+      // Filter out consecutive empty paragraphs from initialEditorState
+      let filteredContent = [];
+      
+      if (Array.isArray(initialEditorState)) {
+        let lastWasEmptyParagraph = false;
+        
+        initialEditorState.forEach(node => {
+          const isEmptyParagraph = 
+            node.type === 'paragraph' && 
+            (!node.children || 
+             node.children.length === 0 || 
+             (node.children.length === 1 && (!node.children[0].text || node.children[0].text.trim() === '')));
+          
+          // Only add empty paragraphs if the previous node wasn't an empty paragraph
+          if (isEmptyParagraph) {
+            if (!lastWasEmptyParagraph) {
+              filteredContent.push(node);
+              lastWasEmptyParagraph = true;
+            }
+          } else {
+            filteredContent.push(node);
+            lastWasEmptyParagraph = false;
+          }
+        });
+        
+        // Ensure we have at least one paragraph
+        if (filteredContent.length === 0) {
+          filteredContent = [{
+            type: 'paragraph',
+            children: [{ text: '' }]
+          }];
+        }
+        
+        setInitialValue(filteredContent);
+      } else {
+        setInitialValue(initialEditorState);
+      }
+    }
+  }, [initialEditorState]);
+
   // onchange handler
   const onChange = (newValue) => {
     setEditorState(newValue);
@@ -84,8 +127,46 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
       return;
     }
 
-    // Regular enter should create a newline
+    // Regular enter should create a newline, but prevent consecutive empty paragraphs
     if (event.key === 'Enter') {
+      const { selection } = editor;
+      
+      if (selection && Range.isCollapsed(selection)) {
+        const [node, path] = Editor.node(editor, selection);
+        const [parent] = Editor.parent(editor, path);
+        
+        // Check if current node is in a paragraph and is empty or only contains whitespace
+        const isEmptyParagraph = 
+          SlateElement.isElement(parent) && 
+          parent.type === 'paragraph' && 
+          Node.string(parent).trim() === '';
+        
+        // Check if previous node is also an empty paragraph
+        let prevNodeIsEmpty = false;
+        
+        if (path[0] > 0) {
+          const prevPath = [path[0] - 1];
+          
+          try {
+            const [prevNode] = Editor.node(editor, prevPath);
+            
+            if (SlateElement.isElement(prevNode) && 
+                prevNode.type === 'paragraph' && 
+                Node.string(prevNode).trim() === '') {
+              prevNodeIsEmpty = true;
+            }
+          } catch (e) {
+            // Path might not exist, ignore
+          }
+        }
+        
+        // If current paragraph is empty and previous paragraph is also empty, prevent new line
+        if (isEmptyParagraph && prevNodeIsEmpty) {
+          event.preventDefault();
+          return;
+        }
+      }
+      
       // Allow default behavior which creates a newline
       return;
     }

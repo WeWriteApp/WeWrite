@@ -396,7 +396,7 @@ export function PageInteractionButtons({ page, username }) {
       }
     }
     
-    // Create the initial content with a detailed formatted reply
+    // Create the initial content with a single paragraph
     const initialContent = [
       {
         type: "paragraph",
@@ -412,34 +412,20 @@ export function PageInteractionButtons({ page, username }) {
           {
             type: "link",
             url: `/profile/${page.userId}`,
-            displayText: username,
-            children: [{ text: username }]
+            displayText: page.username || "Anonymous",
+            children: [{ text: page.username || "Anonymous" }]
           }
         ]
-      },
-      { 
-        type: "paragraph", 
-        children: [{ text: "" }] 
-      },
-      ...(pageContentSummary ? [
-        {
-          type: "blockquote",
-          children: [{ text: pageContentSummary }]
-        },
-        { 
-          type: "paragraph", 
-          children: [{ text: "" }] 
-        }
-      ] : []),
-      {
-        type: "paragraph",
-        children: [{ text: "My thoughts on this:" }]
-      },
-      { 
-        type: "paragraph", 
-        children: [{ text: "" }] 
       }
     ];
+    
+    // Add blockquote if we have content summary
+    if (pageContentSummary) {
+      initialContent.push({
+        type: "blockquote",
+        children: [{ text: pageContentSummary }]
+      });
+    }
 
     // Navigate to the new page route with query parameters
     router.push(`/pages/new?title=${encodeURIComponent(newPageTitle)}&initialContent=${encodeURIComponent(JSON.stringify(initialContent))}`);

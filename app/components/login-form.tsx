@@ -29,12 +29,13 @@ export function LoginForm({
       const result = await loginUser(email, password)
       
       if (result.user) {
-        // Successful login
+        // Successful login - redirect to home page
         router.push("/")
+        router.refresh() // Force a refresh to update auth state
       } else {
         // Error handling
         const errorCode = result.code || ""
-        let errorMessage = "Failed to sign in. Please try again."
+        let errorMessage = result.message || "Failed to sign in. Please try again."
         
         if (errorCode.includes("user-not-found") || errorCode.includes("wrong-password")) {
           errorMessage = "Invalid email or password"
@@ -44,9 +45,9 @@ export function LoginForm({
         
         setError(errorMessage)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login error:", err)
-      setError("An unexpected error occurred. Please try again.")
+      setError(err?.message || "An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }

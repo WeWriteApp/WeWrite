@@ -190,11 +190,11 @@ export default function PageHeader({ title, username, userId, isLoading = false 
             {/* Center - Title and Author */}
             <div className="flex-1 flex justify-start items-center">
               <div className={`text-left space-y-0 transition-all duration-120 ${
-                isScrolled ? "max-w-[70vw]" : "max-w-full"
+                isScrolled ? "max-w-[70vw] flex flex-row items-center gap-2" : "max-w-full"
               }`}>
                 <h1 className={`font-semibold transition-all duration-120 ${
                   isScrolled 
-                    ? "text-sm whitespace-nowrap overflow-hidden text-ellipsis" 
+                    ? "text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[40vw]" 
                     : "text-xl line-clamp-3"
                 }`}>
                   {isLoading ? (
@@ -208,7 +208,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                 </h1>
                 <p className={`text-muted-foreground transition-all duration-120 ${
                   isScrolled 
-                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[60vw]" 
+                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block" 
                     : "text-sm mt-0.5 truncate"
                 }`}>
                   {isLoading ? (
@@ -218,13 +218,13 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                     </span>
                   ) : (
                     <>
-                      by{" "}
+                      {isScrolled ? "•" : "by"}{" "}
                       {userId ? (
                         <Link href={`/user/${userId}`} className="hover:underline">
-                          {username || "Anonymous"}
+                          <span data-component-name="PageHeader">{username || "Anonymous"}</span>
                         </Link>
                       ) : (
-                        <span>{username || "Anonymous"}</span>
+                        <span data-component-name="PageHeader">{username || "Anonymous"}</span>
                       )}
                     </>
                   )}
@@ -262,7 +262,9 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                           {/* Copy Link Option */}
                           <DropdownMenuItem onClick={copyLinkToClipboard}>
                             <div className="flex items-center gap-2">
-                              <Link2 className="h-4 w-4 stroke-current" />
+                              <div className="w-4 h-4 flex items-center justify-center">
+                                <Link2 className="h-4 w-4 stroke-current" />
+                              </div>
                               <span>Copy Link</span>
                             </div>
                           </DropdownMenuItem>
@@ -273,23 +275,25 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                           <DropdownMenuItem onClick={() => setShowParagraphModes(true)}>
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center gap-2">
-                                <svg 
-                                  xmlns="http://www.w3.org/2000/svg" 
-                                  viewBox="0 0 24 24" 
-                                  width="24" 
-                                  height="24" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  strokeWidth="2" 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  className="h-4 w-4"
-                                >
-                                  <path d="M21 10H3" />
-                                  <path d="M21 6H3" />
-                                  <path d="M21 14H3" />
-                                  <path d="M21 18H3" />
-                                </svg>
+                                <div className="w-4 h-4 flex items-center justify-center">
+                                  <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    viewBox="0 0 24 24" 
+                                    width="24" 
+                                    height="24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    className="h-4 w-4"
+                                  >
+                                    <path d="M21 10H3" />
+                                    <path d="M21 6H3" />
+                                    <path d="M21 14H3" />
+                                    <path d="M21 18H3" />
+                                  </svg>
+                                </div>
                                 <span>Paragraph Mode</span>
                               </div>
                               <ChevronRight className="h-4 w-4" />
@@ -321,7 +325,9 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                               e.preventDefault();
                               e.stopPropagation();
                               handleViewModeChange('wrapped');
+                              return false;
                             }}
+                            preventClose={true}
                           >
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 flex items-center justify-center">
@@ -337,7 +343,9 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                               e.preventDefault();
                               e.stopPropagation();
                               handleViewModeChange('default');
+                              return false;
                             }}
+                            preventClose={true}
                           >
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 flex items-center justify-center">
@@ -353,7 +361,9 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                               e.preventDefault();
                               e.stopPropagation();
                               handleViewModeChange('spaced');
+                              return false;
                             }}
+                            preventClose={true}
                           >
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 flex items-center justify-center">

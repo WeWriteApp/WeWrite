@@ -8,6 +8,11 @@ import { collection, addDoc } from "firebase/firestore";
 import PageHeader from "../../components/PageHeader";
 import Button from "../../components/Button";
 import { PillLink } from "../../components/PillLink";
+import dynamic from 'next/dynamic';
+import { useHotkeys } from "react-hotkeys-hook";
+
+// Import SlateEditor dynamically to avoid TypeScript errors with forwardRef
+const SlateEditor = dynamic(() => import('../../components/SlateEditor'), { ssr: false });
 
 export default function NewPage() {
   const router = useRouter();
@@ -15,7 +20,9 @@ export default function NewPage() {
   const { user } = useAuth();
   const [title, setTitle] = React.useState("");
   const [initialContent, setInitialContent] = React.useState<any>(null);
+  const [editorState, setEditorState] = React.useState<any>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+  const editorRef = React.useRef(null);
 
   // Check for query parameters when component mounts
   React.useEffect(() => {
@@ -30,11 +37,17 @@ export default function NewPage() {
       try {
         const decodedContent = JSON.parse(decodeURIComponent(contentParam));
         setInitialContent(decodedContent);
+        setEditorState(decodedContent);
       } catch (error) {
         console.error("Error parsing initial content:", error);
       }
     }
   }, [searchParams]);
+
+  // Add keyboard shortcut for submitting the form
+  useHotkeys('meta+enter', () => {
+    handleSubmit(new Event('submit') as any);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,9 +57,9 @@ export default function NewPage() {
     try {
       const doc = await addDoc(collection(db, "pages"), {
         title: title || "Untitled",
-        content: initialContent ? JSON.stringify(initialContent) : "",
+        content: editorState ? JSON.stringify(editorState) : "",
         userId: user.uid,
-        username: user.displayName || null,
+        username: user.displayName || user.email?.split('@')[0] || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -59,49 +72,9 @@ export default function NewPage() {
     }
   };
 
-  const renderInitialContent = () => {
-    if (!initialContent || !Array.isArray(initialContent)) return null;
-    
-    return (
-      <div className="border rounded-md bg-card p-4">
-        <h3 className="text-sm font-medium mb-2">Initial Content</h3>
-        <div className="text-sm space-y-2">
-          {initialContent.map((node, index) => {
-            if (node.type === "paragraph") {
-              return (
-                <div key={index} className="flex gap-1 items-start flex-wrap">
-                  {node.children?.map((child, childIndex) => {
-                    if (child.type === "link") {
-                      return (
-                        <PillLink 
-                          key={childIndex} 
-                          href={child.url || "#"}
-                          isPublic={true}
-                          groupId={null}
-                          className=""
-                          isOwned={true}
-                          byline={null}
-                          isLoading={false}
-                        >
-                          {child.displayText || child.children?.[0]?.text || "Link"}
-                        </PillLink>
-                      );
-                    }
-                    return <span key={childIndex}>{child.text}</span>;
-                  })}
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader title="New Page" />
+      <PageHeader title="New Page" username={user?.displayName || user?.email?.split('@')[0] || "Anonymous"} />
       <main className="container py-6">
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
           <div className="space-y-2">
@@ -118,7 +91,16 @@ export default function NewPage() {
             />
           </div>
           
-          {initialContent && renderInitialContent()}
+          <div className="border rounded-md bg-card p-4">
+            {initialContent && (
+              <SlateEditor 
+                // @ts-ignore - SlateEditor accepts these props but TypeScript doesn't recognize them with dynamic import
+                initialEditorState={initialContent} 
+                setEditorState={setEditorState}
+                ref={editorRef}
+              />
+            )}
+          </div>
           
           <Button
             type="submit"
