@@ -128,24 +128,28 @@ export const listenToPageById = (pageId, onPageUpdate) => {
 export const getPageById = async (pageId) => {
   // should get the page and versions
   try {
+    if (!pageId) {
+      console.error("getPageById called with empty pageId");
+      return { pageData: null, error: "Invalid page ID" };
+    }
+    
     const pageRef = doc(db, "pages", pageId);
-    const pageSnap = await getDoc(pageRef, { source: 'cache' });
+    const pageSnap = await getDoc(pageRef);
+    
+    if (!pageSnap.exists()) {
+      console.log(`Page with ID ${pageId} not found`);
+      return { pageData: null, error: "Page not found" };
+    }
+    
     const pageData = {
       id: pageId,
       ...pageSnap.data()
     }
-    // // get the current version
-    // const currentVersionId = pageData.currentVersion;
-    // const versionRef = doc(db, "pages", pageId, "versions", currentVersionId);
-    // const versionSnap = await getDoc(versionRef, { source: 'cache' });
-    // const versionData = versionSnap.data();
-
-    // // get links
-    // const links = extractLinksFromNodes(JSON.parse(versionData.content));
+    
     return { pageData };
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error("Error in getPageById:", e);
+    return { error: e.message, pageData: null };
   }
 }
 

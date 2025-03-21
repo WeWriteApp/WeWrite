@@ -361,8 +361,13 @@ export function PageInteractionButtons({ page, username }) {
   const [showAddToPageDialog, setShowAddToPageDialog] = useState(false);
   
   const handleReplyToPage = () => {
+    if (!page || !page.id) {
+      console.error("Cannot reply to page: page data is missing");
+      return;
+    }
+
     // Create a new page with title "Re: [original page title]"
-    const newPageTitle = `Re: ${page.title}`;
+    const newPageTitle = `Re: ${page.title || "Untitled"}`;
     
     // Get content from the page if available
     let pageContentSummary = "";
@@ -405,13 +410,13 @@ export function PageInteractionButtons({ page, username }) {
           {
             type: "link",
             url: `/pages/${page.id}`,
-            displayText: page.title,
-            children: [{ text: page.title }]
+            displayText: page.title || "Untitled",
+            children: [{ text: page.title || "Untitled" }]
           },
           { text: ` by ` },
           {
             type: "link",
-            url: `/profile/${page.userId}`,
+            url: `/profile/${page.userId || "anonymous"}`,
             displayText: page.username || "Anonymous",
             children: [{ text: page.username || "Anonymous" }]
           },
@@ -435,11 +440,17 @@ export function PageInteractionButtons({ page, username }) {
     }
 
     // Navigate to the new page route with query parameters
-    const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
-    const encodedTitle = encodeURIComponent(newPageTitle);
-    
-    console.log("Navigating to new page with content:", initialContent);
-    router.push(`/pages/new?title=${encodedTitle}&initialContent=${encodedContent}`);
+    try {
+      const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
+      const encodedTitle = encodeURIComponent(newPageTitle);
+      
+      console.log("Navigating to new page with title:", newPageTitle);
+      router.push(`/pages/new?title=${encodedTitle}&initialContent=${encodedContent}`);
+    } catch (error) {
+      console.error("Error navigating to new page:", error);
+      // Fallback with minimal parameters if encoding fails
+      router.push(`/pages/new?title=${encodeURIComponent(newPageTitle)}`);
+    }
   };
   
   return (

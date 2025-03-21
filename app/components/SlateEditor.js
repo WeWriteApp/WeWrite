@@ -67,45 +67,80 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
   // Set initial value when component mounts or when initialEditorState changes
   useEffect(() => {
     if (initialEditorState) {
-      // Filter out consecutive empty paragraphs from initialEditorState
-      let filteredContent = [];
+      // Make sure we have a valid initialEditorState
+      let validContent;
       
-      if (Array.isArray(initialEditorState)) {
-        let lastWasEmptyParagraph = false;
+      try {
+        // Handle string or object format
+        const contentToProcess = typeof initialEditorState === 'string' 
+          ? JSON.parse(initialEditorState) 
+          : initialEditorState;
         
-        initialEditorState.forEach(node => {
-          const isEmptyParagraph = 
-            node.type === 'paragraph' && 
-            (!node.children || 
-             node.children.length === 0 || 
-             (node.children.length === 1 && (!node.children[0].text || node.children[0].text.trim() === '')));
+        if (Array.isArray(contentToProcess)) {
+          // Filter out consecutive empty paragraphs
+          let lastWasEmptyParagraph = false;
+          let filteredContent = [];
           
-          // Only add empty paragraphs if the previous node wasn't an empty paragraph
-          if (isEmptyParagraph) {
-            if (!lastWasEmptyParagraph) {
-              filteredContent.push(node);
-              lastWasEmptyParagraph = true;
+          contentToProcess.forEach(node => {
+            // Validate node structure
+            if (!node || typeof node !== 'object') {
+              return; // Skip invalid nodes
             }
-          } else {
-            filteredContent.push(node);
-            lastWasEmptyParagraph = false;
-          }
-        });
-        
-        // Ensure we have at least one paragraph
-        if (filteredContent.length === 0) {
-          filteredContent = [{
+            
+            // Ensure node has type and children
+            const validNode = {
+              type: node.type || 'paragraph',
+              children: Array.isArray(node.children) ? node.children : [{ text: '' }]
+            };
+            
+            const isEmptyParagraph = 
+              validNode.type === 'paragraph' && 
+              (validNode.children.length === 0 || 
+               (validNode.children.length === 1 && 
+                (!validNode.children[0].text || validNode.children[0].text.trim() === '')));
+            
+            // Only add empty paragraphs if the previous node wasn't an empty paragraph
+            if (isEmptyParagraph) {
+              if (!lastWasEmptyParagraph) {
+                filteredContent.push(validNode);
+                lastWasEmptyParagraph = true;
+              }
+            } else {
+              filteredContent.push(validNode);
+              lastWasEmptyParagraph = false;
+            }
+          });
+          
+          validContent = filteredContent;
+        } else {
+          // If not an array, create a default paragraph
+          validContent = [{
             type: 'paragraph',
             children: [{ text: '' }]
           }];
         }
-        
-        setInitialValue(filteredContent);
-      } else {
-        setInitialValue(initialEditorState);
+      } catch (error) {
+        console.error('Error processing initialEditorState:', error);
+        validContent = [{
+          type: 'paragraph',
+          children: [{ text: '' }]
+        }];
+      }
+      
+      // Ensure we have at least one paragraph
+      if (!validContent || validContent.length === 0) {
+        validContent = [{
+          type: 'paragraph',
+          children: [{ text: '' }]
+        }];
+      }
+      
+      setInitialValue(validContent);
+      if (setEditorState) {
+        setEditorState(validContent);
       }
     }
-  }, [initialEditorState]);
+  }, [initialEditorState, setEditorState]);
 
   // onchange handler
   const onChange = (newValue) => {

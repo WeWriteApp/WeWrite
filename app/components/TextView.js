@@ -126,7 +126,7 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
                 <React.Fragment key={index}>
                   {/* Paragraph number */}
                   <motion.span 
-                    className="text-muted-foreground text-xs mx-0.5 select-none flex-shrink-0 inline-block"
+                    className="text-muted-foreground text-xs select-none flex-shrink-0 inline-block"
                     layout
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   >
@@ -144,7 +144,7 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
                   
                   {/* Add a small space between paragraphs */}
                   <motion.span 
-                    className="mx-0.5 inline-block"
+                    className="inline-block"
                     layout
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   >
@@ -212,7 +212,7 @@ const WrappedNode = ({ node, index }) => {
                 return (
                   <motion.code 
                     key={childIndex} 
-                    className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono"
+                    className="px-1 py-0.5 rounded bg-muted font-mono"
                     layout
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   >

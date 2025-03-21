@@ -26,20 +26,28 @@ export default function NewPage() {
 
   // Check for query parameters when component mounts
   React.useEffect(() => {
-    const titleParam = searchParams.get("title");
-    const contentParam = searchParams.get("initialContent");
-    
-    if (titleParam) {
-      setTitle(titleParam);
-    }
-    
-    if (contentParam) {
+    // Parse the initialContent from the URL if available
+    if (searchParams && searchParams.get("initialContent")) {
       try {
-        const decodedContent = JSON.parse(decodeURIComponent(contentParam));
-        setInitialContent(decodedContent);
-        setEditorState(decodedContent);
+        const parsedContent = JSON.parse(decodeURIComponent(searchParams.get("initialContent")));
+        setInitialContent(parsedContent);
       } catch (error) {
         console.error("Error parsing initial content:", error);
+        // If parsing fails, set a default empty paragraph
+        setInitialContent([{ type: "paragraph", children: [{ text: "" }] }]);
+      }
+    } else {
+      // Set default empty content if none provided
+      setInitialContent([{ type: "paragraph", children: [{ text: "" }] }]);
+    }
+
+    // Set the title from URL if available
+    if (searchParams && searchParams.get("title")) {
+      try {
+        setTitle(decodeURIComponent(searchParams.get("title")));
+      } catch (error) {
+        console.error("Error decoding title:", error);
+        setTitle("");
       }
     }
   }, [searchParams]);
@@ -55,10 +63,15 @@ export default function NewPage() {
 
     setIsLoading(true);
     try {
+      // Ensure we have content to save
+      const contentToSave = editorState ? JSON.stringify(editorState) : JSON.stringify([
+        { type: "paragraph", children: [{ text: "" }] }
+      ]);
+
       // Create the page document
       const doc = await addDoc(collection(db, "pages"), {
         title: title || "Untitled",
-        content: editorState ? JSON.stringify(editorState) : "",
+        content: contentToSave,
         userId: user.uid,
         username: user.username || user.displayName || user.email?.split('@')[0] || null,
         createdAt: new Date().toISOString(),
