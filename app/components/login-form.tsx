@@ -30,8 +30,8 @@ export function LoginForm({
       
       if (result.user) {
         // Successful login - redirect to home page
-        router.push("/")
-        router.refresh() // Force a refresh to update auth state
+        console.log("Login successful, redirecting...")
+        router.replace("/") // Use replace instead of push
       } else {
         // Error handling
         const errorCode = result.code || ""

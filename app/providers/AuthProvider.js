@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? "User logged in" : "User logged out");
+      
       if (user) {
         // User is signed in
         try {
@@ -64,22 +66,9 @@ export const AuthProvider = ({ children }) => {
           
           // Update user's last login timestamp
           const rtdbUserRef = ref(rtdb, `users/${user.uid}`);
-          onValue(rtdbUserRef, (snapshot) => {
-            const rtdbUserData = snapshot.val() || {};
-            
-            if (!rtdbUserData.username && user.displayName) {
-              // If no username in RTDB but we have a display name, update it
-              update(rtdbUserRef, {
-                displayName: user.displayName,
-                lastLogin: new Date().toISOString(),
-              });
-            } else {
-              // Just update last login
-              update(rtdbUserRef, {
-                lastLogin: new Date().toISOString(),
-              });
-            }
-          }, { onlyOnce: true });
+          update(rtdbUserRef, {
+            lastLogin: new Date().toISOString(),
+          });
           
           // Set session cookie
           const token = await user.getIdToken();
@@ -100,6 +89,7 @@ export const AuthProvider = ({ children }) => {
         Cookies.remove('session');
         Cookies.remove('authenticated');
       }
+      
       setLoading(false);
     });
 

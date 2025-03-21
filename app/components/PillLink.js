@@ -9,9 +9,9 @@ import { motion } from "framer-motion";
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-1.5 py-0.5 inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[24px]">
-      <Loader className="h-2 w-2 animate-spin text-primary" />
-      <span className="text-muted-foreground text-[10px]">Loading...</span>
+    <div className="my-0.5 px-2 py-0.5 inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[28px]">
+      <Loader className="h-3 w-3 animate-spin text-primary" />
+      <span className="text-muted-foreground text-xs">Loading...</span>
     </div>
   );
 };
@@ -66,9 +66,9 @@ export const PillLink = ({
     <Link 
       href={href} 
       className={`
-        my-0.5 px-1.5 py-0.5
+        my-0.5 px-2 py-0.5
         inline-flex items-center
-        text-[10px] font-medium
+        text-sm font-medium
         rounded-[8px]
         transition-colors duration-200
         shadow-sm
@@ -78,11 +78,11 @@ export const PillLink = ({
       `}
     >
       <motion.div 
-        className="flex items-center gap-0.5 flex-nowrap"
+        className="flex items-center gap-1 flex-nowrap"
         layout
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {showLock && <Lock className="h-2 w-2 flex-shrink-0" />}
+        {showLock && <Lock className="h-3 w-3 flex-shrink-0" />}
         <motion.div 
           className="flex flex-col min-w-0"
           layout
@@ -97,7 +97,7 @@ export const PillLink = ({
           </motion.span>
           {byline && (
             <motion.span 
-              className="text-[9px] opacity-75 leading-tight break-words"
+              className="text-xs opacity-75 leading-tight break-words"
               layout
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
