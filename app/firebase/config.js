@@ -28,7 +28,8 @@ const newConfig =  {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  // Use the GA measurement ID for Firebase Analytics to ensure events go to the same property
+  measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 // Debug config values (without sensitive data)
@@ -94,6 +95,64 @@ export const initializeAnalytics = async () => {
     console.error('Error initializing Firebase Analytics:', error);
   }
   return null;
+};
+
+/**
+ * Manually test Firebase Analytics by sending a test event
+ * This is useful for debugging Firebase Analytics integration
+ * 
+ * @returns {Promise<boolean>} - Whether the test was successful
+ */
+export const testFirebaseAnalytics = async () => {
+  console.log('🔥 Testing Firebase Analytics...');
+  
+  try {
+    // Check if analytics is supported
+    console.log('🔍 Checking if Firebase Analytics is supported...');
+    const supported = await isSupported();
+    console.log('🔍 Firebase Analytics supported:', supported);
+    
+    if (!supported) {
+      console.warn('⚠️ Firebase Analytics is not supported in this environment');
+      return false;
+    }
+    
+    // Get analytics instance
+    console.log('🔍 Getting Firebase Analytics instance...');
+    const analytics = getAnalytics(app);
+    
+    if (!analytics) {
+      console.warn('⚠️ Failed to get Firebase Analytics instance');
+      return false;
+    }
+    
+    // Log a test event
+    console.log('📊 Sending test event to Firebase Analytics...');
+    const eventData = {
+      test_id: Date.now(),
+      test_source: 'manual_test',
+      test_timestamp: new Date().toISOString(),
+      url: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
+    };
+    
+    logEvent(analytics, 'manual_test_event', eventData);
+    console.log('✅ Test event sent to Firebase Analytics with data:', eventData);
+    
+    // Also try a page_view event
+    console.log('📊 Sending page_view event to Firebase Analytics...');
+    logEvent(analytics, 'page_view', {
+      page_title: document.title || 'Test Page',
+      page_location: window.location.href,
+      page_path: window.location.pathname,
+      test: true
+    });
+    console.log('✅ page_view event sent to Firebase Analytics');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error testing Firebase Analytics:', error);
+    return false;
+  }
 };
 
 export default app;

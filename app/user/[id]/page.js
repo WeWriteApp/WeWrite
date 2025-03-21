@@ -1,29 +1,43 @@
 import SingleProfileView from "../../components/SingleProfileView";
-import { fetchProfileFromFirebase } from "../../firebase/rtdb";
+import { getDatabase, ref, get } from "firebase/database";
+import { app } from "../../firebase/config";
+
+// Revalidate the page every 5 seconds to get fresh data
+export const revalidate = 5;
 
 export async function generateMetadata({ params }) {
-  const user = await fetchProfileFromFirebase(params.id);
-
-  if (!user) {
+  const rtdb = getDatabase(app);
+  const profileRef = ref(rtdb, `users/${params.id}`);
+  const snapshot = await get(profileRef);
+  
+  if (!snapshot.exists()) {
     return {
       title: "Profile Not Found",
       description: "Profile not found"
     };
   } else {
+    const userData = snapshot.val();
     return {
-      title: user.username + " on WeWrite",
-      description: user.username,
+      title: (userData.username || userData.displayName) + " on WeWrite",
+      description: userData.username || userData.displayName,
     };
   }
 }
 
 export default async function User({ params }) {
-  const user = await fetchProfileFromFirebase(params.id);
-  // Ensure profile exists before rendering the component
-  if (!user) {
+  const rtdb = getDatabase(app);
+  const profileRef = ref(rtdb, `users/${params.id}`);
+  const snapshot = await get(profileRef);
+  
+  if (!snapshot.exists()) {
     return <div>Profile not found</div>;
   }
   
+  const userData = {
+    uid: params.id,
+    ...snapshot.val()
+  };
+  
   // We don't need to check auth here since we're making this page accessible to all
-  return <SingleProfileView profile={user} />;
+  return <SingleProfileView profile={userData} />;
 }

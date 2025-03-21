@@ -8,7 +8,8 @@ import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { X, Loader2 } from "lucide-react";
-import Button from "./Button";
+import { Button } from "./ui/button";
+import { usePage } from "../contexts/PageContext";
 
 const EditPage = ({
   isEditing,
@@ -18,6 +19,7 @@ const EditPage = ({
   title,
   setTitle,
 }) => {
+  const { setIsEditMode } = usePage();
   const [editorState, setEditorState] = useState(() => {
     try {
       return JSON.parse(current);
@@ -54,7 +56,15 @@ const EditPage = ({
     if (editorRef.current) {
       editorRef.current.focus();
     }
-  }, []);
+    
+    // Set edit mode in PageContext
+    setIsEditMode(true);
+    
+    // Cleanup when component unmounts
+    return () => {
+      setIsEditMode(false);
+    };
+  }, [setIsEditMode]);
 
   useEffect(() => {
     if (!groups) return;
@@ -129,27 +139,41 @@ const EditPage = ({
     setIsEditing(false);
   };
 
+  const handleInsertLink = () => {
+    // Simulate @ key press to trigger link editor
+    if (editorRef.current) {
+      editorRef.current.focus();
+      const atEvent = new KeyboardEvent('keydown', {
+        key: '@',
+        code: 'KeyAT',
+        keyCode: 50,
+        which: 50,
+        bubbles: true
+      });
+      document.activeElement.dispatchEvent(atEvent);
+    }
+  };
+
   if (!editorState) {
     return <div>Error loading editor state</div>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-8 pb-28">
       <div className="space-y-4">
         <div>
-          <label className="text-sm font-medium text-muted-foreground">Title</label>
           <input
             type="text"
             defaultValue={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border-none focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg transition-all"
+            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all"
             placeholder="Enter a title..."
             autoComplete="off"
           />
         </div>
 
-        <div className="space-y-6 bg-muted/10 rounded-xl p-6">
-          <div className="space-y-4">
+        <div className="space-y-6 rounded-xl">
+          <div className="space-y-0">
             <SlateEditor
               ref={editorRef}
               initialEditorState={editorState}
@@ -159,26 +183,41 @@ const EditPage = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-border">
+      <div>
         <Button
           variant="outline"
-          onClick={handleCancel}
+          onClick={handleInsertLink}
+          className="ml-auto flex"
         >
-          Cancel
+          Insert Link
         </Button>
-        <Button
-          disabled={isSaving}
-          onClick={handleSave}
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save changes'
-          )}
-        </Button>
+      </div>
+
+      {/* Sticky footer */}
+      <div className="fixed bottom-0 left-0 right-0 w-full bg-background/80 backdrop-blur-md border-t border-border py-4 px-4 z-50">
+        <div className="w-full flex items-center justify-end gap-3">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="bg-green-600 text-white hover:bg-green-700"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save'
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,13 @@
 "use client";
 // an auth provider that watches onAuthState change for firebase with a context provider
 import { useContext, createContext, useState, useEffect } from "react";
-import { auth, app } from "../firebase/config";
+import { auth } from "../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase/database";
+import { db } from "../firebase/config";
+import { rtdb } from "../firebase/rtdb";
 import Cookies from 'js-cookie';
 
 export const AuthContext = createContext();
@@ -61,9 +62,29 @@ export const AuthProvider = ({ children }) => {
             });
           }
           
+          // Update user's last login timestamp
+          const rtdbUserRef = ref(rtdb, `users/${user.uid}`);
+          onValue(rtdbUserRef, (snapshot) => {
+            const rtdbUserData = snapshot.val() || {};
+            
+            if (!rtdbUserData.username && user.displayName) {
+              // If no username in RTDB but we have a display name, update it
+              update(rtdbUserRef, {
+                displayName: user.displayName,
+                lastLogin: new Date().toISOString(),
+              });
+            } else {
+              // Just update last login
+              update(rtdbUserRef, {
+                lastLogin: new Date().toISOString(),
+              });
+            }
+          }, { onlyOnce: true });
+          
           // Set session cookie
           const token = await user.getIdToken();
           Cookies.set('session', token, { expires: 7 }); // 7 days expiry
+          Cookies.set('authenticated', 'true', { expires: 7 });
         } catch (error) {
           console.error("Error loading user data:", error);
           setUser({
@@ -77,6 +98,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         // Remove session cookie
         Cookies.remove('session');
+        Cookies.remove('authenticated');
       }
       setLoading(false);
     });

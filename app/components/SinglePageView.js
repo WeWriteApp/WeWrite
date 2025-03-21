@@ -16,19 +16,64 @@ import PageHeader from "./PageHeader";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { app } from "../firebase/config";
 import { LoggingProvider } from "../providers/LoggingProvider";
+import { PageProvider } from "../contexts/PageContext";
+import { LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { useRouter } from 'next/navigation';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogClose 
+} from './ui/dialog';
+import { Button } from './ui/button';
+import { Reply, Plus } from 'lucide-react';
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editorState, setEditorState] = useState(null);
+  const [editorState, setEditorState] = useState([]);
   const [isDeleted, setIsDeleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPublic, setIsPublic] = useState(false);
   const [groupId, setGroupId] = useState(null);
-  const { user } = useContext(AuthContext);
-  const [title, setTitle] = useState("");
   const [scrollDirection, setScrollDirection] = useState("up");
   const [lastScrollTop, setLastScrollTop] = useState(0);
+  const [lineViewMode, setLineViewMode] = useState('default');
+  const { user } = useContext(AuthContext);
+  const [title, setTitle] = useState("");
+
+  useEffect(() => {
+    const storedMode = localStorage.getItem('pageViewMode');
+    if (storedMode && ['wrapped', 'default', 'spaced'].includes(storedMode)) {
+      setLineViewMode(storedMode);
+    }
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'pageViewMode' && ['wrapped', 'default', 'spaced'].includes(e.newValue)) {
+        setLineViewMode(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const currentMode = localStorage.getItem('pageViewMode');
+      if (currentMode && currentMode !== lineViewMode && ['wrapped', 'default', 'spaced'].includes(currentMode)) {
+        setLineViewMode(currentMode);
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(intervalId);
+  }, [lineViewMode]);
 
   // Use keyboard shortcuts - moved back to top level
   useKeyboardShortcuts({
@@ -247,32 +292,55 @@ export default function SinglePageView({ params }) {
         <title>{title} - WeWrite</title>
       </Head>
       <PageHeader 
-        title={title} 
+        title={isEditing ? "Editing page" : title} 
         username={page?.username || "[NULL]"} 
         userId={page?.userId}
         isLoading={isLoading}
+        scrollDirection={scrollDirection}
       />
-      <div className="p-2 pb-36">
+      <div className="pb-36">
         {isEditing ? (
           <LoggingProvider>
-            <EditPage
-              isEditing={isEditing}
-              setIsEditing={setIsEditing}
-              page={page}
-              title={title}
-              setTitle={setTitle}
-              current={editorState}
-            />
+            <PageProvider>
+              <LineSettingsProvider>
+                <EditPage
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                  page={page}
+                  title={title}
+                  setTitle={setTitle}
+                  current={editorState}
+                />
+              </LineSettingsProvider>
+            </PageProvider>
           </LoggingProvider>
         ) : (
           <>
-            <TextView content={editorState} />
+            <div className="space-y-4 p-4">
+              <div className={`page-content ${lineViewMode === 'wrapped' ? 'text-sm' : ''}`}>
+                <PageProvider>
+                  <LineSettingsProvider>
+                    <TextView 
+                      content={editorState} 
+                      viewMode={lineViewMode}
+                    />
+                  </LineSettingsProvider>
+                </PageProvider>
+              </div>
+            </div>
             {user && user.uid === page.userId && (
-              <ActionRow
-                isEditing={isEditing}
-                setIsEditing={setIsEditing}
-                page={page}
-              />
+              <div className="mt-8 pt-4 border-t border-border">
+                <ActionRow
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                  page={page}
+                />
+              </div>
+            )}
+            {user && user.uid !== page.userId && (
+              <div className="mt-8 pt-4 border-t border-border">
+                <PageInteractionButtons page={page} username={page?.username || ""} />
+              </div>
             )}
           </>
         )}
@@ -285,5 +353,236 @@ export default function SinglePageView({ params }) {
         </div>
       )}
     </Layout>
+  );
+}
+
+export function PageInteractionButtons({ page, username }) {
+  const router = useRouter();
+  const [showAddToPageDialog, setShowAddToPageDialog] = useState(false);
+  
+  const handleReplyToPage = () => {
+    // Create a new page with title "Re: [original page title]"
+    const newPageTitle = `Re: ${page.title}`;
+    
+    // Get content from the page if available
+    let pageContentSummary = "";
+    if (page.content) {
+      try {
+        const parsedContent = typeof page.content === 'string' 
+          ? JSON.parse(page.content) 
+          : page.content;
+          
+        // Extract first paragraph or so for a summary
+        if (Array.isArray(parsedContent) && parsedContent.length > 0) {
+          const firstPara = parsedContent.find(node => 
+            node.type === 'paragraph' && 
+            node.children && 
+            node.children.some(child => child.text && child.text.trim().length > 0)
+          );
+          
+          if (firstPara) {
+            pageContentSummary = firstPara.children
+              .map(child => child.text || '')
+              .join('')
+              .slice(0, 100);
+              
+            if (pageContentSummary.length === 100) {
+              pageContentSummary += '...';
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing page content:", error);
+      }
+    }
+    
+    // Create the initial content with a detailed formatted reply
+    const initialContent = [
+      {
+        type: "paragraph",
+        children: [
+          { text: `This is a reply to ` },
+          {
+            type: "link",
+            url: `/pages/${page.id}`,
+            displayText: page.title,
+            children: [{ text: page.title }]
+          },
+          { text: ` by ` },
+          {
+            type: "link",
+            url: `/profile/${page.userId}`,
+            displayText: username,
+            children: [{ text: username }]
+          }
+        ]
+      },
+      { 
+        type: "paragraph", 
+        children: [{ text: "" }] 
+      },
+      ...(pageContentSummary ? [
+        {
+          type: "blockquote",
+          children: [{ text: pageContentSummary }]
+        },
+        { 
+          type: "paragraph", 
+          children: [{ text: "" }] 
+        }
+      ] : []),
+      {
+        type: "paragraph",
+        children: [{ text: "My thoughts on this:" }]
+      },
+      { 
+        type: "paragraph", 
+        children: [{ text: "" }] 
+      }
+    ];
+
+    // Navigate to the new page route with query parameters
+    router.push(`/pages/new?title=${encodeURIComponent(newPageTitle)}&initialContent=${encodeURIComponent(JSON.stringify(initialContent))}`);
+  };
+  
+  return (
+    <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 px-4 sm:px-0">
+      <Button
+        variant="outline"
+        onClick={handleReplyToPage}
+        className="w-full sm:w-auto flex items-center gap-2 justify-center"
+      >
+        <Reply className="h-4 w-4" />
+        Reply to page
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => setShowAddToPageDialog(true)}
+        className="w-full sm:w-auto flex items-center gap-2 justify-center"
+      >
+        <Plus className="h-4 w-4" />
+        Add to page
+      </Button>
+      
+      <AddToPageDialog 
+        open={showAddToPageDialog} 
+        onOpenChange={setShowAddToPageDialog}
+        pageToAdd={page}
+      />
+    </div>
+  );
+}
+
+function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useContext(AuthContext);
+  
+  // Search for pages that the user can edit
+  const handleSearch = async (query) => {
+    if (!query || query.length < 2 || !user) return;
+    
+    setIsLoading(true);
+    try {
+      // You'd need to implement this function in your firebase/database.js file
+      const pages = await getEditablePagesByUser(user.uid, query);
+      setSearchResults(pages || []);
+    } catch (error) {
+      console.error("Error searching for pages:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
+  // Handle adding the page to another page
+  const handleAddToPage = async (targetPage) => {
+    try {
+      // Create a new version of the target page with the added content
+      // You'd need to implement this function in your firebase/database.js file
+      await appendPageReference(targetPage.id, pageToAdd);
+      
+      // Close the dialog
+      onOpenChange(false);
+      
+      // Show success message
+      alert(`${pageToAdd.title} added to ${targetPage.title}`);
+    } catch (error) {
+      console.error("Error adding page reference:", error);
+    }
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add to page
+          </DialogTitle>
+          <DialogDescription>
+            Select a page to append "{pageToAdd?.title}" to the end of
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="flex items-center space-x-2 py-4">
+          <div className="grid flex-1 gap-2">
+            <label htmlFor="page-search" className="sr-only">Search</label>
+            <input
+              id="page-search"
+              placeholder="Search your pages..."
+              className="w-full px-3 py-2 border rounded-md bg-background"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            
+            <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+              {isLoading ? (
+                <div className="text-center py-4">
+                  <Loader className="h-4 w-4 animate-spin mx-auto" />
+                  <p className="text-sm text-muted-foreground mt-2">Searching...</p>
+                </div>
+              ) : searchResults.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {searchQuery.length > 1 ? "No pages found" : "Type to search"}
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {searchResults.map((page) => (
+                    <li
+                      key={page.id}
+                      className="flex items-center justify-between p-2 rounded hover:bg-accent cursor-pointer"
+                      onClick={() => handleAddToPage(page)}
+                    >
+                      <span className="truncate">{page.title}</span>
+                      <Button variant="ghost" size="sm">
+                        Add
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <DialogFooter className="sm:justify-start">
+          <DialogClose asChild>
+            <Button type="button" variant="secondary">
+              Cancel
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

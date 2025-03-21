@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
 import { cn } from "../lib/utils"
-import Button from "./Button"
+import { Button } from "./ui/button"
 import { useTheme } from "next-themes"
 
 interface SidebarProps {

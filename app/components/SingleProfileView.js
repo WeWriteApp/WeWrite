@@ -9,9 +9,9 @@ import {
   ProfilePagesProvider,
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
-import Button from "./Button";
 import { useAuth } from "../providers/AuthProvider";
-import { Loader, Settings } from "lucide-react";
+import { Loader, Settings, ChevronLeft } from "lucide-react";
+import { Button } from "./ui/button";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -24,40 +24,34 @@ const SingleProfileView = ({ profile }) => {
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center mb-4">
+          <div className="flex-1">
             <Link href="/">
               <Button variant="ghost" size="icon" className="h-8 w-8">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  viewBox="0 0 24 24" 
-                  width="24" 
-                  height="24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="h-4 w-4"
-                >
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
+                <ChevronLeft className="h-4 w-4" />
               </Button>
             </Link>
+          </div>
+          
+          {/* Centered title */}
+          <div className="flex items-center justify-center">
             <h1 className="text-3xl font-semibold">{profile.username}</h1>
           </div>
           
           {/* Settings button - only visible for current user */}
-          {isCurrentUser && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9 rounded-full hover:bg-[rgba(255,255,255,0.1)]"
-              onClick={() => router.push('/account')}
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-          )}
+          <div className="flex-1 flex justify-end">
+            {isCurrentUser && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 rounded-full hover:bg-[rgba(255,255,255,0.1)]"
+                onClick={() => router.push('/account')}
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
+            {!isCurrentUser && <div className="w-8" />}
+          </div>
         </div>
         
         {!user && (
@@ -86,8 +80,20 @@ const SingleProfileView = ({ profile }) => {
 
 const PagesList = ({ profile }) => {
   const { user } = useAuth();
-  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } =
-    useContext(ProfilePagesContext);
+  const { 
+    pages, 
+    privatePages,
+    loading, 
+    loadMorePages, 
+    isMoreLoading, 
+    isMorePrivateLoading,
+    hasMorePages,
+    hasMorePrivatePages,
+    activeTab,
+    setActiveTab
+  } = useContext(ProfilePagesContext);
+  
+  const isCurrentUser = user && user.uid === profile.uid;
 
   if (loading) {
     return (
@@ -102,7 +108,11 @@ const PagesList = ({ profile }) => {
     );
   }
 
-  if (!pages || pages.length === 0) {
+  // Only show public pages to non-owners
+  const visiblePages = isCurrentUser ? (activeTab === 'public' ? pages : privatePages) : pages;
+  const totalPages = isCurrentUser ? pages.length + privatePages.length : pages.length;
+
+  if (totalPages === 0) {
     return (
       <div className="flex justify-center py-8">
         <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
@@ -132,10 +142,7 @@ const PagesList = ({ profile }) => {
     );
   }
 
-  // Filter to only show public pages for non-authenticated users
-  const visiblePages = user ? pages : pages.filter(page => page.isPublic);
-
-  if (visiblePages.length === 0) {
+  if (!isCurrentUser && visiblePages.length === 0) {
     return (
       <div className="flex justify-center py-8">
         <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
@@ -165,8 +172,74 @@ const PagesList = ({ profile }) => {
     );
   }
 
+  if (isCurrentUser && activeTab === 'private' && privatePages.length === 0) {
+    return (
+      <>
+        {/* Tabs */}
+        <div className="flex border-b mb-4">
+          <button
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'public' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('public')}
+          >
+            Public Pages
+          </button>
+          <button
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'private' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('private')}
+          >
+            Private Pages
+          </button>
+        </div>
+        
+        <div className="flex justify-center py-8">
+          <div className="relative bg-background border-2 border-dashed border-white/20 rounded-[24px] p-8 max-w-md w-full text-center">
+            <div className="text-text text-xl mb-4">
+              You don't have any private pages.
+            </div>
+            <div className="text-text/60 mb-6">
+              Create a private page to get started.
+            </div>
+            <Link 
+              href="/new" 
+              className="
+                inline-block
+                bg-[#0057FF]
+                text-white text-sm font-medium
+                px-6 py-2.5
+                rounded-full
+                hover:bg-[#0046CC]
+                transition-colors duration-200
+                shadow-[0_0_12px_rgba(0,87,255,0.4)]
+              "
+            >
+              Create a page
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
+      {/* Show tabs only for the current user */}
+      {isCurrentUser && (
+        <div className="flex border-b mb-4">
+          <button
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'public' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('public')}
+          >
+            Public Pages
+          </button>
+          <button
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'private' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab('private')}
+          >
+            Private Pages
+          </button>
+        </div>
+      )}
+      
       <ul className="space-x-1 flex flex-wrap">
         {visiblePages.map((page) => (
           <li key={page.id}>
@@ -181,27 +254,27 @@ const PagesList = ({ profile }) => {
         ))}
       </ul>
 
-      {!user && pages.length !== visiblePages.length && (
-        <div className="mt-4 p-3 bg-background border border-border rounded-md text-center">
-          <p className="text-sm text-text/70">
-            {pages.length - visiblePages.length} private pages are hidden.{" "}
-            <Link href="/auth/login" className="text-primary underline">
-              Log in
-            </Link>{" "}
-            to see all pages.
-          </p>
-        </div>
-      )}
-
       <div className="flex flex-row justify-center">
-        {/* Load more button - only show for authenticated users */}
-        {user && hasMorePages && !isMoreLoading && (
-          <button onClick={loadMorePages} className="mt-4 bg-background text-text border border-border p-2 mx-auto">
+        {/* Load more button */}
+        {hasMorePages && activeTab === 'public' && !isMoreLoading && (
+          <Button onClick={loadMorePages} variant="outline" className="mt-4">
             Load More Pages
-          </button>
+          </Button>
+        )}
+        
+        {/* Load more private pages button */}
+        {isCurrentUser && hasMorePrivatePages && activeTab === 'private' && !isMorePrivateLoading && (
+          <Button onClick={loadMorePages} variant="outline" className="mt-4">
+            Load More Private Pages
+          </Button>
         )}
 
-        {isMoreLoading && <p>Loading more...</p>}
+        {isMoreLoading && (
+          <div className="mt-4 flex items-center gap-2">
+            <Loader className="h-4 w-4 animate-spin" />
+            <span>Loading more...</span>
+          </div>
+        )}
       </div>
     </>
   );

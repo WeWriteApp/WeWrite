@@ -9,9 +9,20 @@ import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
-import { UnifiedAnalyticsProvider } from "./providers/UnifiedAnalyticsProvider";
+import Footer from "./components/Footer";
+import { GADebugger } from "./utils/ga-debug";
+import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
+
+// Dynamically import WindsurfOverlay with no SSR
+const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), { 
+  ssr: false 
+});
 
 export default function ClientLayout({ children }) {
+  const pathname = usePathname();
+  const isAuthPage = pathname?.startsWith('/auth/');
+
   return (
     <ThemeProvider
       attribute="class"
@@ -25,13 +36,20 @@ export default function ClientLayout({ children }) {
             <PortfolioProvider>
               <MobileProvider>
                 <DrawerProvider>
-                  <UnifiedAnalyticsProvider>
-                    <Drawer />
-                    <main className="min-h-screen bg-background">
+                  <Drawer />
+                  <div className="flex flex-col min-h-screen bg-background pb-8">
+                    <main className="flex-grow">
                       {children}
                     </main>
-                    <Toaster />
-                  </UnifiedAnalyticsProvider>
+                    {!isAuthPage && <Footer />}
+                  </div>
+                  <Toaster />
+                  {process.env.NODE_ENV === 'development' && (
+                    <>
+                      {/* <GADebugger /> */}
+                      <WindsurfOverlay />
+                    </>
+                  )}
                 </DrawerProvider>
               </MobileProvider>
             </PortfolioProvider>
@@ -40,4 +58,4 @@ export default function ClientLayout({ children }) {
       </AuthProvider>
     </ThemeProvider>
   );
-} 
+}

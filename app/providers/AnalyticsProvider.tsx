@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import { initializeAnalytics } from '../firebase/config';
+import { logEvent } from 'firebase/analytics';
 
 interface AnalyticsProviderProps {
   children: ReactNode;
@@ -25,8 +26,8 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
           console.log('Firebase Analytics initialized successfully');
           // Check if we can track events
           try {
-            // @ts-ignore - logEvent might not be exposed directly
-            analytics.logEvent('analytics_debug', {
+            // Use imported logEvent function instead of analytics.logEvent
+            logEvent(analytics, 'analytics_debug', {
               debug_time: new Date().toISOString(),
               debug_source: 'analytics_provider'
             });
@@ -52,34 +53,15 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
     }
   }, []);
 
-  // Add some debugging UI in development
-  if (process.env.NODE_ENV === 'development') {
-    return (
-      <>
-        {children}
-        {/* Development-only debugging indicator */}
-        <div style={{ 
-          position: 'fixed', 
-          bottom: '10px', 
-          right: '10px', 
-          background: analyticsInitialized ? '#4caf50' : '#f44336', 
-          color: 'white', 
-          padding: '4px 8px', 
-          borderRadius: '4px',
-          fontSize: '12px',
-          zIndex: 9999,
-          opacity: 0.7
-        }}>
-          Analytics: {analyticsInitialized ? 'Initialized' : 'Failed'}
-          {analyticsError && (
-            <div style={{ fontSize: '10px', maxWidth: '200px', wordBreak: 'break-word' }}>
-              {analyticsError}
-            </div>
-          )}
-        </div>
-      </>
-    );
-  }
+  // Debug output for development
+  useEffect(() => {
+    console.log('Analytics: ' + (analyticsInitialized ? 'Initialized' : 'Not initialized'));
+    if (analyticsError) {
+      console.log('Event logging error:', analyticsError);
+    }
+  }, [analyticsInitialized, analyticsError]);
 
+  // We don't need to wrap children in a context provider
+  // since we're just initializing analytics at the app level
   return <>{children}</>;
-} 
+}

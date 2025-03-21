@@ -9,7 +9,9 @@ import {
   deleteDoc,
   onSnapshot,
   query,
-  where
+  where,
+  orderBy,
+  limit
 } from "firebase/firestore";
 
 import app from "./config";
@@ -164,6 +166,126 @@ export const getVersionsByPageId = async (pageId) => {
     return versions;    
   } catch (e) {
     return e;
+  }
+}
+
+export const getPageVersions = async (pageId, versionCount = 10) => {
+  try {
+    if (!pageId) {
+      console.error("getPageVersions called with invalid pageId:", pageId);
+      return [];
+    }
+    
+    const pageRef = doc(db, "pages", pageId);
+    const versionsRef = collection(pageRef, "versions");
+    
+    // First try to get all versions without ordering (to avoid index requirements)
+    try {
+      const versionsSnap = await getDocs(versionsRef);
+      
+      if (versionsSnap.empty) {
+        return [];
+      }
+      
+      // Convert the docs to an array of data objects
+      let versions = versionsSnap.docs.map((doc) => {
+        try {
+          const data = doc.data();
+          
+          // Handle different timestamp formats
+          let createdAt = new Date();
+          if (data.createdAt) {
+            if (typeof data.createdAt === 'object' && data.createdAt.toDate) {
+              createdAt = data.createdAt.toDate();
+            } else if (data.createdAt.seconds && data.createdAt.nanoseconds) {
+              // Firestore Timestamp format
+              createdAt = new Date(data.createdAt.seconds * 1000);
+            } else {
+              // String or number format
+              createdAt = new Date(data.createdAt);
+            }
+          }
+          
+          return {
+            id: doc.id,
+            ...data,
+            createdAt,
+            content: data.content || ""
+          };
+        } catch (err) {
+          console.error(`Error processing version doc ${doc.id}:`, err);
+          return null;
+        }
+      }).filter(version => version !== null);
+      
+      // Sort manually by createdAt in descending order
+      versions.sort((a, b) => {
+        const dateA = a.createdAt instanceof Date ? a.createdAt : new Date();
+        const dateB = b.createdAt instanceof Date ? b.createdAt : new Date();
+        return dateB - dateA;
+      });
+      
+      // Limit to the requested number
+      versions = versions.slice(0, versionCount);
+      
+      return versions;
+    } catch (innerError) {
+      console.error("Error with simple version fetch, falling back:", innerError);
+      
+      // Fallback to the original query (which might still fail if index doesn't exist)
+      try {
+        const versionsQuery = query(
+          versionsRef,
+          orderBy("createdAt", "desc"),
+          limit(versionCount)
+        );
+        
+        const versionsSnap = await getDocs(versionsQuery);
+        
+        if (versionsSnap.empty) {
+          return [];
+        }
+        
+        // add id of each version and convert timestamp strings to Date objects
+        const versions = versionsSnap.docs.map((doc) => {
+          try {
+            const data = doc.data();
+            
+            // Handle different timestamp formats
+            let createdAt = new Date();
+            if (data.createdAt) {
+              if (typeof data.createdAt === 'object' && data.createdAt.toDate) {
+                createdAt = data.createdAt.toDate();
+              } else if (data.createdAt.seconds && data.createdAt.nanoseconds) {
+                // Firestore Timestamp format
+                createdAt = new Date(data.createdAt.seconds * 1000);
+              } else {
+                // String or number format
+                createdAt = new Date(data.createdAt);
+              }
+            }
+            
+            return {
+              id: doc.id,
+              ...data,
+              createdAt,
+              content: data.content || ""
+            };
+          } catch (err) {
+            console.error(`Error processing version doc ${doc.id}:`, err);
+            return null;
+          }
+        }).filter(version => version !== null);
+        
+        return versions;
+      } catch (queryError) {
+        console.error("Error with fallback query:", queryError);
+        return [];
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching page versions:", e);
+    return [];
   }
 }
 
@@ -328,15 +450,15 @@ function extractLinksFromNodes(nodes) {
 
 export const getUsernameByEmail = async (email) => {
   try {
-    const q = query(collection(db, "users"), where("email", "==", email));
+    const q = query(collection(db, "users"), where("email", "==", email), limit(1));
     const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      const userData = querySnapshot.docs[0].data();
-      return userData.username || null;
+    if (querySnapshot.empty) {
+      return null;
     }
-    return null;
+    const userDoc = querySnapshot.docs[0];
+    return userDoc.data().username;
   } catch (error) {
-    console.error("Error getting username by email:", error);
+    console.error("Error getting username:", error);
     return null;
   }
 };
@@ -344,39 +466,121 @@ export const getUsernameByEmail = async (email) => {
 // Get page statistics including active donors, monthly income, and total views
 export const getPageStats = async (pageId) => {
   try {
-    // Get the page document
-    const pageDoc = await getPageById(pageId);
+    if (!pageId) return null;
     
-    if (!pageDoc || !pageDoc.pageData) {
+    const pageRef = doc(db, "pages", pageId);
+    const pageSnapshot = await getDoc(pageRef);
+    
+    if (!pageSnapshot.exists()) {
       return null;
     }
     
-    // Get pledges for this page to calculate active donors and monthly income
-    const pledgesQuery = query(collection(db, "pledges"), where("pageId", "==", pageId));
-    const pledgesSnapshot = await getDocs(pledgesQuery);
+    const pageData = pageSnapshot.data();
     
-    const activeDonors = pledgesSnapshot.size;
-    let monthlyIncome = 0;
-    
-    pledgesSnapshot.forEach(doc => {
-      const pledgeData = doc.data();
-      monthlyIncome += pledgeData.amount || 0;
-    });
-    
-    // Get page views (stored in the page document or a related stats document)
-    const totalViews = pageDoc.pageData.viewCount || 0;
-    
+    // Here we would fetch additional statistics from other subcollections
+    // For now, return the basic stats from the page document
     return {
-      activeDonors,
-      monthlyIncome,
-      totalViews
+      totalPledged: pageData.totalPledged || 0,
+      pledgeCount: pageData.pledgeCount || 0,
+      views: pageData.views || 0,
+      lastModified: pageData.lastModified,
+      // Add more stats as needed
     };
   } catch (error) {
     console.error("Error getting page stats:", error);
-    return {
-      activeDonors: 0,
-      monthlyIncome: 0,
-      totalViews: 0
+    return null;
+  }
+};
+
+// Get pages that the user has edit access to (they own)
+export const getEditablePagesByUser = async (userId, searchQuery = "") => {
+  try {
+    if (!userId) return [];
+    
+    let q = query(
+      collection(db, "pages"),
+      where("userId", "==", userId),
+      orderBy("title"),
+      limit(20)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    let pages = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (searchQuery === "" || 
+          data.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        pages.push({
+          id: doc.id,
+          ...data
+        });
+      }
+    });
+    
+    return pages;
+  } catch (error) {
+    console.error("Error getting editable pages:", error);
+    return [];
+  }
+};
+
+// Append a reference to a page at the end of another page's content
+export const appendPageReference = async (targetPageId, sourcePageData) => {
+  try {
+    if (!targetPageId || !sourcePageData) return false;
+    
+    // Get the current version of the target page
+    const { pageData, versionData } = await getPageById(targetPageId);
+    
+    if (!pageData || !versionData) {
+      throw new Error("Target page not found");
+    }
+    
+    // Parse the current content
+    let currentContent = [];
+    if (versionData.content) {
+      if (typeof versionData.content === 'string') {
+        try {
+          currentContent = JSON.parse(versionData.content);
+        } catch (e) {
+          currentContent = [{ type: "paragraph", children: [{ text: versionData.content }] }];
+        }
+      } else if (Array.isArray(versionData.content)) {
+        currentContent = versionData.content;
+      }
+    }
+    
+    // Create a reference paragraph to append
+    const referenceNode = {
+      type: "paragraph",
+      children: [
+        { text: "Referenced page: " },
+        {
+          type: "link",
+          url: `/pages/${sourcePageData.id}`,
+          displayText: sourcePageData.title,
+          children: [{ text: sourcePageData.title }]
+        }
+      ]
     };
+    
+    // Append the reference to the content
+    const newContent = [
+      ...currentContent,
+      { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
+      referenceNode
+    ];
+    
+    // Save the new version
+    await saveNewVersion(targetPageId, {
+      content: newContent,
+      userId: pageData.userId
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error appending page reference:", error);
+    return false;
   }
 };

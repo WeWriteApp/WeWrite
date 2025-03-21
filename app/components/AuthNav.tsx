@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "../providers/AuthProvider";
-import Button from "./Button";
+import { Button } from "./ui/button";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { useState } from "react";
@@ -18,10 +18,10 @@ export default function AuthNav() {
         <div className="flex items-center">
           <Button
             onClick={() => setSidebarOpen(true)}
-            variant="ghost"
+            variant="outline"
             size="icon"
             aria-label="Menu"
-            className="mr-2"
+            className="mr-2 transition-all duration-200"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -31,4 +31,4 @@ export default function AuthNav() {
       )}
     </>
   );
-} 
+}

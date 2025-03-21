@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
-import Button from "./Button";
+import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "./ui/dropdown-menu";
 
 export default function ThemeToggle() {
   const { setTheme, theme } = useTheme();
@@ -19,7 +19,7 @@ export default function ThemeToggle() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 relative"
+          className="h-9 w-9 relative transition-all duration-200 hover:bg-primary/10 hover:scale-110"
         >
           {/* Sun icon */}
           <svg 
@@ -65,7 +65,10 @@ export default function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[150px] bg-background border border-border">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2 hover:bg-accent">
+        <DropdownMenuItem 
+          onClick={() => setTheme("light")} 
+          className="cursor-pointer flex items-center gap-2 hover:bg-accent transition-colors duration-200 hover:scale-105"
+        >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             viewBox="0 0 24 24" 
@@ -90,7 +93,10 @@ export default function ThemeToggle() {
           </svg>
           <span>Light</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2 hover:bg-accent">
+        <DropdownMenuItem 
+          onClick={() => setTheme("dark")} 
+          className="cursor-pointer flex items-center gap-2 hover:bg-accent transition-colors duration-200 hover:scale-105"
+        >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             viewBox="0 0 24 24" 
@@ -107,7 +113,10 @@ export default function ThemeToggle() {
           </svg>
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer flex items-center gap-2 hover:bg-accent">
+        <DropdownMenuItem 
+          onClick={() => setTheme("system")} 
+          className="cursor-pointer flex items-center gap-2 hover:bg-accent transition-colors duration-200 hover:scale-105"
+        >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             viewBox="0 0 24 24" 

@@ -19,6 +19,41 @@ const config: Config = {
   darkMode: 'class', // Enable class-based dark mode
   theme: {
     extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
@@ -26,24 +61,20 @@ const config: Config = {
       },
       // Use CSS variables for theme-dependent colors
       backgroundColor: {
-        'background': 'var(--background-color)',
         'background-light': 'var(--light-background-color)',
-        'primary': 'var(--primary-color)',
-        'secondary': 'var(--secondary-color)',
+        'primary-custom': 'var(--primary-color)',
+        'secondary-custom': 'var(--secondary-color)',
         'reactangle': '#FFFFFF1F',
         'active-bar': '#0083FD',
         'gray-bar': '#FFFFFF5E'
       },
       textColor: {
-        'primary': 'var(--primary-color)',
-        'secondary': 'var(--secondary-color)',
-        'text': 'var(--text-color)',
-        'foreground': 'hsl(var(--foreground))',
+        'primary-custom': 'var(--primary-color)',
+        'secondary-custom': 'var(--secondary-color)',
         'button': 'var(--button-text)'
       },
       borderColor: {
-        'border': 'var(--border-color)',
-        'primary': 'var(--primary-color)',
+        'primary-custom': 'var(--primary-color)',
       },
       width: {
         'action-button': '50px',
@@ -53,21 +84,24 @@ const config: Config = {
         'fill': '-webkit-fill-available'
       },
       borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
         'pledge': '21px'
       },
       inset: {
-        '95': '95px'
-      },
-      colors: {
-        'gray': '#FFFFFF5E',
-        'gray-30': '#FFFFFF4D',
-        'gray-46': '#FFFFFF75'
-      },
-      fontFamily: {
-        Helvetica: ['Helvetica', 'sans-serif']
+        '1/10': '10%',
+        '2/10': '20%',
+        '3/10': '30%',
+        '4/10': '40%',
+        '6/10': '60%',
+        '7/10': '70%',
+        '8/10': '80%',
+        '9/10': '90%',
       },
     },
   },
   plugins: [],
 };
+
 export default config;

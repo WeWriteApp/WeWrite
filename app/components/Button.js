@@ -8,9 +8,9 @@ const Button = ({ children, onClick, disabled, type = "primary", variant = "defa
     bg-[#0057FF]
     border-[1.5px] border-[rgba(255,255,255,0.3)]
     text-white
-    text-sm
-    px-3 py-1.5
-    rounded-[12px]
+    text-base
+    px-4 py-2
+    rounded-[14px]
     hover:bg-[#0046CC]
     hover:border-[rgba(255,255,255,0.5)]
   `;

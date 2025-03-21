@@ -2,9 +2,21 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Button from "./Button";
-import { Loader } from "lucide-react";
+import { Button } from "./ui/button";
+import { Loader, Menu, Check, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import { Sheet, SheetTrigger } from "./ui/sheet";
+import { Sidebar } from "./ui/sidebar";
+import { PageMenu } from "./PageMenu";
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from "./ui/dropdown-menu";
+import { toast } from "./ui/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 export interface PageHeaderProps {
   title?: string;
@@ -20,6 +32,8 @@ export default function PageHeader({ title, username, userId, isLoading = false 
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [headerHeight, setHeaderHeight] = React.useState(0);
+  const [viewMode, setViewMode] = React.useState<'wrapped' | 'default' | 'spaced'>('default');
+  const [showParagraphModes, setShowParagraphModes] = React.useState(false);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const tooltipTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -110,39 +124,14 @@ export default function PageHeader({ title, username, userId, isLoading = false 
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
       
-      // Show tooltip and set timer to hide it
-      setShowTooltip(true);
-      
-      // Clear any existing timer
-      if (tooltipTimerRef.current) {
-        clearTimeout(tooltipTimerRef.current);
-      }
-      
-      // Set new timer to hide tooltip after 0.7 seconds
-      tooltipTimerRef.current = setTimeout(() => {
-        setShowTooltip(false);
-      }, 700);
+      // Show toast notification
+      toast({
+        title: "Link copied to clipboard!",
+        description: "You can now share this page with others.",
+        className: "bg-green-50 border-green-200 text-green-900",
+      });
     }
   };
-
-  // Add document click listener to dismiss tooltip
-  React.useEffect(() => {
-    const handleDocumentClick = () => {
-      if (showTooltip) {
-        setShowTooltip(false);
-      }
-    };
-    
-    document.addEventListener('click', handleDocumentClick);
-    
-    return () => {
-      document.removeEventListener('click', handleDocumentClick);
-      // Clean up tooltip timer
-      if (tooltipTimerRef.current) {
-        clearTimeout(tooltipTimerRef.current);
-      }
-    };
-  }, [showTooltip]);
 
   // Function to handle back button click
   const handleBackClick = (e: React.MouseEvent) => {
@@ -164,38 +153,50 @@ export default function PageHeader({ title, username, userId, isLoading = false 
     router.push('/');
   };
 
+  const handleViewModeChange = (mode: 'wrapped' | 'default' | 'spaced') => {
+    setViewMode(mode);
+    // Implement additional logic for changing view mode here
+    // For example, update localStorage, dispatch context events, etc.
+    localStorage.setItem('pageViewMode', mode);
+  };
+
   return (
     <>
-      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-50 w-full">
-        <div className={`relative border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-200 ${isScrolled ? "py-1" : "py-2"}`}>
-          <div className={`container flex items-center px-4 transition-all duration-200 ${isScrolled ? "justify-between" : ""}`}>
-            <div className={`flex items-center min-w-0 ${isScrolled ? "space-x-3" : "space-x-4 flex-1"}`}>
-              {/* Only show back button in expanded state */}
-              {!isScrolled && (
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={handleBackClick}
-                  className="hover:bg-muted text-foreground h-8 w-8 shrink-0 transition-all duration-200 my-auto"
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    viewBox="0 0 24 24" 
-                    width="24" 
-                    height="24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className="h-4 w-4"
-                  >
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                  </svg>
-                </Button>
-              )}
-              <div className={`min-w-0 ${isScrolled ? "flex items-center space-x-2 py-1" : "py-1"}`}>
-                <h1 className={`font-semibold line-clamp-3 transition-all ${isScrolled ? "text-sm" : "text-xl"}`}>
+      <header
+        ref={headerRef}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-120 ${
+          isScrolled
+            ? "bg-background/80 backdrop-blur-sm shadow-sm"
+            : "bg-background"
+        }`}
+      >
+        <div className="relative mx-auto px-4 md:px-6">
+          <div className={`flex items-center justify-between ${isScrolled ? "py-2" : "py-4"}`}>
+            {/* Left Side - Back Button */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`md:mr-2 text-foreground transition-opacity duration-120 ${
+                  isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+                onClick={handleBackClick}
+                title="Go back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Center - Title and Author */}
+            <div className="flex-1 flex justify-start items-center">
+              <div className={`text-left space-y-0 transition-all duration-120 ${
+                isScrolled ? "max-w-[70vw]" : "max-w-full"
+              }`}>
+                <h1 className={`font-semibold transition-all duration-120 ${
+                  isScrolled 
+                    ? "text-sm whitespace-nowrap overflow-hidden text-ellipsis" 
+                    : "text-xl line-clamp-3"
+                }`}>
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <Loader className="h-4 w-4 animate-spin" />
@@ -205,7 +206,11 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                     title || "Untitled"
                   )}
                 </h1>
-                <p className={`text-muted-foreground truncate transition-all ${isScrolled ? "text-xs mt-0" : "text-sm mt-0.5"}`}>
+                <p className={`text-muted-foreground transition-all duration-120 ${
+                  isScrolled 
+                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[60vw]" 
+                    : "text-sm mt-0.5 truncate"
+                }`}>
                   {isLoading ? (
                     <span className="inline-flex items-center">
                       <Loader className="h-3 w-3 animate-spin mr-1" />
@@ -227,50 +232,147 @@ export default function PageHeader({ title, username, userId, isLoading = false 
               </div>
             </div>
             
-            {/* Link copy button - only in expanded state */}
-            {!isScrolled && (
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hover:bg-muted text-foreground h-8 w-8 shrink-0 transition-all duration-200 my-auto"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent the document click from immediately hiding the tooltip
-                    copyLinkToClipboard();
-                  }}
-                  title="Copy link to clipboard"
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    viewBox="0 0 24 24" 
-                    width="24" 
-                    height="24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className="h-4 w-4"
-                  >
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                  </svg>
-                </Button>
-                
-                {/* Animated tooltip */}
-                <div 
-                  className={`absolute right-0 top-full mt-1 px-2 py-1 bg-green-500 text-white text-xs rounded shadow-md whitespace-nowrap z-50 transition-all duration-200 origin-top-right ${
-                    showTooltip ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-                  }`}
-                >
-                  Link copied to clipboard!
-                </div>
+            {/* Right Side - Combined Menu Controls */}
+            <div className="flex items-center gap-2">
+              {/* Combined Menu Button */}
+              <div className={`relative transition-opacity duration-120 ${
+                isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="text-foreground h-8 w-8 shrink-0 transition-all duration-120 my-auto"
+                      title="Page options"
+                    >
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[180px]">
+                    <AnimatePresence mode="wait" initial={false}>
+                      {!showParagraphModes ? (
+                        <motion.div
+                          key="main-menu"
+                          initial={{ x: -20, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          exit={{ x: -20, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {/* Copy Link Option */}
+                          <DropdownMenuItem onClick={copyLinkToClipboard}>
+                            <div className="flex items-center gap-2">
+                              <Link2 className="h-4 w-4 stroke-current" />
+                              <span>Copy Link</span>
+                            </div>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {/* Paragraph Mode Option */}
+                          <DropdownMenuItem onClick={() => setShowParagraphModes(true)}>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2">
+                                <svg 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  viewBox="0 0 24 24" 
+                                  width="24" 
+                                  height="24" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  strokeWidth="2" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  className="h-4 w-4"
+                                >
+                                  <path d="M21 10H3" />
+                                  <path d="M21 6H3" />
+                                  <path d="M21 14H3" />
+                                  <path d="M21 18H3" />
+                                </svg>
+                                <span>Paragraph Mode</span>
+                              </div>
+                              <ChevronRight className="h-4 w-4" />
+                            </div>
+                          </DropdownMenuItem>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="paragraph-modes"
+                          initial={{ x: 20, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          exit={{ x: 20, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {/* Back to main menu */}
+                          <DropdownMenuItem onClick={() => setShowParagraphModes(false)}>
+                            <div className="flex items-center gap-2">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span>Back</span>
+                            </div>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator />
+                          
+                          {/* Paragraph Mode Options */}
+                          <DropdownMenuItem 
+                            className={viewMode === 'wrapped' ? 'bg-accent/50' : ''} 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewModeChange('wrapped');
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 flex items-center justify-center">
+                                {viewMode === 'wrapped' && <Check className="h-4 w-4" />}
+                              </div>
+                              <span>Wrapped</span>
+                            </div>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            className={viewMode === 'default' ? 'bg-accent/50' : ''} 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewModeChange('default');
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 flex items-center justify-center">
+                                {viewMode === 'default' && <Check className="h-4 w-4" />}
+                              </div>
+                              <span>Default</span>
+                            </div>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            className={viewMode === 'spaced' ? 'bg-accent/50' : ''} 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewModeChange('spaced');
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 flex items-center justify-center">
+                                {viewMode === 'spaced' && <Check className="h-4 w-4" />}
+                              </div>
+                              <span>Spaced</span>
+                            </div>
+                          </DropdownMenuItem>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            )}
+            </div>
           </div>
           {/* Scroll Progress Bar */}
           <div 
-            className="absolute bottom-0 left-0 h-0.5 bg-blue-500 transition-all duration-200"
+            className="absolute bottom-0 left-0 h-0.5 bg-blue-500 transition-all duration-120"
             style={{ width: `${scrollProgress}%` }}
           />
         </div>
@@ -282,4 +384,4 @@ export default function PageHeader({ title, username, userId, isLoading = false 
       /> {/* Dynamic spacer for fixed header with explicit min-height */}
     </>
   );
-} 
+}

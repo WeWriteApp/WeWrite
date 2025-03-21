@@ -1,16 +1,17 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock, Loader } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
-import { Loader } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useAuth } from "../providers/AuthProvider";
+import { motion } from "framer-motion";
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-1 px-3 py-1.5 inline-flex items-center gap-2 whitespace-nowrap text-sm font-medium rounded-[12px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[38px]">
-      <Loader className="h-3 w-3 animate-spin text-primary" />
-      <span className="text-muted-foreground">Loading...</span>
+    <div className="my-0.5 px-1.5 py-0.5 inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[24px]">
+      <Loader className="h-2 w-2 animate-spin text-primary" />
+      <span className="text-muted-foreground text-[10px]">Loading...</span>
     </div>
   );
 };
@@ -23,8 +24,10 @@ export const PillLink = ({
   className, 
   isOwned,
   byline,
-  isLoading
+  isLoading,
+  variant = "primary"
 }) => {
+  const { user } = useAuth();
   // Only show lock for private pages (where isPublic is explicitly false)
   const showLock = isPublic === false;
   const { theme } = useTheme();
@@ -34,30 +37,75 @@ export const PillLink = ({
     return <PillLinkSkeleton />;
   }
   
+  // Determine styles based on variant
+  let variantStyles = "";
+  
+  if (variant === "primary") {
+    variantStyles = `
+      bg-[#0057FF] text-white
+      border-[1.5px] border-[rgba(255,255,255,0.2)]
+      hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)]
+    `;
+  } else if (variant === "secondary") {
+    variantStyles = `
+      bg-accent/50 text-foreground
+      border-[1.5px] border-border/40
+      hover:bg-accent/70 hover:border-border
+    `;
+  }
+  
+  // Extract page ID from href to check if user is the owner
+  const pageId = href.split('/').pop();
+  const pageOwnerId = groupId?.split('_')[0];
+  const isCurrentUserOwner = user && pageOwnerId === user.uid;
+  
+  // Determine what title to display
+  const displayTitle = (isPublic === false && !isCurrentUserOwner) ? "Private Page" : children;
+  
   return (
     <Link 
       href={href} 
       className={`
-        my-1 px-3 py-1
-        inline-block whitespace-nowrap
-        text-sm font-medium
-        rounded-[12px]
+        my-0.5 px-1.5 py-0.5
+        inline-flex items-center
+        text-[10px] font-medium
+        rounded-[8px]
         transition-colors duration-200
-        bg-[#0057FF] text-white
-        border-[1.5px] border-[rgba(255,255,255,0.2)]
-        hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)]
         shadow-sm
+        ${variantStyles}
         ${groupId ? 'opacity-90' : ''}
         ${className || ''}
       `}
     >
-      <div className="flex items-center gap-1.5">
-        {showLock && <Lock className="h-3 w-3" />}
-        <div className="flex flex-col">
-          <span className="leading-tight">{children}</span>
-          {byline && <span className="text-xs opacity-75 leading-tight">{byline}</span>}
-        </div>
-      </div>
+      <motion.div 
+        className="flex items-center gap-0.5 flex-nowrap"
+        layout
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        {showLock && <Lock className="h-2 w-2 flex-shrink-0" />}
+        <motion.div 
+          className="flex flex-col min-w-0"
+          layout
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          <motion.span 
+            className="leading-tight whitespace-normal break-words"
+            layout
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            {displayTitle}
+          </motion.span>
+          {byline && (
+            <motion.span 
+              className="text-[9px] opacity-75 leading-tight break-words"
+              layout
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              {byline}
+            </motion.span>
+          )}
+        </motion.div>
+      </motion.div>
     </Link>
   );
 }

@@ -58,7 +58,7 @@ html body .page-content p {
   }
 
   .dark {
-    --background: 0 0% 0%; /* Level 0 - Background */
+    --background: 0 0% 0%; /* Pure black background for dark mode */
     --foreground: 0 0% 100%; /* Level 10 - Max contrast for text */
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -83,10 +83,11 @@ html body .page-content p {
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-text;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
@@ -100,11 +101,21 @@ html body .page-content p {
 }
 
 .text-button-text {
-  @apply text-foreground;
+  color: hsl(var(--foreground));
 }
 
 .border-border {
   border-color: hsl(var(--border));
+}
+
+/* Hide scrollbars for carousel elements */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }
 
 /* Transitions */
@@ -418,4 +429,27 @@ button svg,
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--primary-color/20);
+}
+
+/* Custom card styles */
+.card-hover {
+  border: 1px solid rgba(var(--border-color), 0.4);
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.card-hover:hover {
+  background-color: rgba(var(--accent-color), 0.05);
+}
+
+/* Light mode card hover */
+@media (prefers-color-scheme: light) {
+  .card-hover:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* Dark mode card hover */
+.dark .card-hover:hover {
+  background-color: rgba(var(--accent-color), 0.1);
 }

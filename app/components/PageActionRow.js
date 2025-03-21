@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { deletePage} from "../firebase/database";
-import Button from "./Button";
+import { Button } from "./ui/button";
 
 const ActionRow = ({ isEditing, setIsEditing, page }) => {
   const router = useRouter();
@@ -20,6 +20,7 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   return (
     <div className="flex items-center gap-2 mt-8 py-2 rounded-lg">
       <Button
+        variant="outline"
         onClick={() => setIsEditing(!isEditing)}
       >
         {isEditing ? "Cancel" : "Edit"}

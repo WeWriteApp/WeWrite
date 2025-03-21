@@ -14,6 +14,7 @@ import Link from "next/link";
 import { PillLink } from "./PillLink";
 import debounce from "lodash.debounce";
 import { useTheme } from "next-themes";
+import { Input } from "./ui/input";
 
 // Define a simple Loader component directly in this file
 const Loader = () => {
@@ -28,9 +29,11 @@ const characterCount = 1;
 
 const TypeaheadSearch = ({
   onSelect = null,
-  setShowDropdown = null,
+  setShowResults = null,
   userId = null,
-  placeholder = "Search..."
+  placeholder = "Search...",
+  radioSelection = false,
+  selectedId = null
 }) => {
   const [search, setSearch] = useState("");
   const { user } = useContext(AuthContext);
@@ -125,27 +128,39 @@ const TypeaheadSearch = ({
   useEffect(() => {
     if (onSelect) {
       // make the input active when the user starts typing
-      document.getElementById("search").focus();
+      const searchElement = document.getElementById("search-input");
+      if (searchElement) {
+        searchElement.focus();
+      }
     }
   }, [onSelect]);
+
+  const handleInputChange = (e) => {
+    setSearch(e.target.value);
+  };
 
   if (!user) return null;
   return (
     <div className="flex flex-col" id="typeahead-search">
       <div className="flex flex-col space-y-1">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <input
-            className="w-full pl-10 pr-4 py-2.5 bg-card text-foreground rounded-lg border border-input focus:ring-2 focus:ring-ring focus:border-ring placeholder:text-muted-foreground"
-            placeholder={placeholder}
-            id="search"
+        <div className="relative w-full">
+          <Input
+            id="search-input"
             type="text"
+            placeholder={placeholder}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleInputChange}
+            onFocus={() => setShowResults && setShowResults(true)}
+            className="w-full pr-10"
             autoComplete="off"
           />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            {isSearching ? (
+              <Loader />
+            ) : (
+              <Search className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
         </div>
       </div>
 
@@ -168,6 +183,8 @@ const TypeaheadSearch = ({
                       page={page}
                       search={search}
                       onSelect={onSelect}
+                      radioSelection={radioSelection}
+                      isSelected={selectedId === page.id}
                       key={page.id}
                     />
                   ) : (
@@ -189,6 +206,8 @@ const TypeaheadSearch = ({
                       page={page}
                       search={search}
                       onSelect={onSelect}
+                      radioSelection={radioSelection}
+                      isSelected={selectedId === page.id}
                       key={page.id}
                     />
                   ) : (
@@ -210,6 +229,8 @@ const TypeaheadSearch = ({
                       page={page}
                       search={search}
                       onSelect={onSelect}
+                      radioSelection={radioSelection}
+                      isSelected={selectedId === page.id}
                       key={page.id}
                     />
                   ) : (
@@ -259,18 +280,44 @@ const SingleItemLink = ({ page, search }) => {
   );
 };
 
-const SingleItemButton = ({ page, search, onSelect }) => {
+const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSelected = false }) => {
+  if (radioSelection) {
+    return (
+      <div 
+        className="flex items-center space-x-2 p-2 rounded hover:bg-accent/50 cursor-pointer"
+        onClick={() => onSelect(page)}
+      >
+        <input 
+          type="radio" 
+          id={`page-${page.id}`} 
+          name="page" 
+          className="h-4 w-4 text-primary border-muted-foreground"
+          checked={isSelected}
+          onChange={() => onSelect(page)}
+        />
+        <label htmlFor={`page-${page.id}`} className="text-sm cursor-pointer flex-1">
+          {highlightText(page.title, search)}
+        </label>
+        {page.username !== 'NULL' && page.isPublic && (
+          <span className="text-xs opacity-75 whitespace-nowrap">
+            {page.groupId ? 'Group' : `by ${page.username}`}
+          </span>
+        )}
+      </div>
+    );
+  }
+  
   return (
     <button
       onClick={() => onSelect(page)}
-      className="flex items-center w-full px-4 py-3 text-foreground hover:bg-muted transition-colors"
+      className="inline-flex mr-2 my-1 px-3 py-1.5 items-center gap-1 whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors w-full justify-between"
       key={page.id}
     >
-      <span className="flex-1 font-normal">
+      <span className="truncate">
         {highlightText(page.title, search)}
       </span>
       {page.username !== 'NULL' && page.isPublic && (
-        <span className="text-sm text-muted-foreground ml-2">
+        <span className="text-xs opacity-75 whitespace-nowrap">
           {page.groupId ? 'Group' : `by ${page.username}`}
         </span>
       )}

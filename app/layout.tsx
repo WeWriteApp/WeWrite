@@ -7,6 +7,11 @@ import { DataProvider } from "@/providers/DataProvider"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import GAProvider from "@/providers/GAProvider"
+import { AnalyticsProvider } from "@/providers/AnalyticsProvider"
+import dynamic from "next/dynamic"
+import { Toaster } from "@/components/ui/toaster"
+
+const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -32,16 +37,21 @@ export default function RootLayout({
           <AuthProvider>
             <AppProvider>
               <DataProvider>
-                <GAProvider>
-                  {children}
-                  <Analytics debug={process.env.NODE_ENV === 'development'} />
-                  <SpeedInsights />
-                </GAProvider>
+                <AnalyticsProvider>
+                  <GAProvider>
+                    <ClientLayout>
+                      {children}
+                    </ClientLayout>
+                    <Analytics debug={process.env.NODE_ENV === 'development'} />
+                    <SpeedInsights />
+                    <Toaster />
+                  </GAProvider>
+                </AnalyticsProvider>
               </DataProvider>
             </AppProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
-  )
-} 
+  );
+}

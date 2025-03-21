@@ -22,9 +22,15 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         handleSave();
       }
+      
+      // ESC to cancel edit mode
+      if (e.key === 'Escape' && isEditing) {
+        e.preventDefault();
+        setIsEditing(false);
+      }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isEditing, canEdit, handleSave, isSaving, setIsEditing]);
-}; 
+};

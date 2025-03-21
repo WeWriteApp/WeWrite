@@ -12,12 +12,74 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
 import { BracketNode, BracketTriggerPlugin } from "./BracketTriggerPlugin";
+import { toast } from "../components/ui/use-toast";
 
 const theme = {
 };
 
 function onError(error) {
   console.error(error);
+}
+
+// Plugin to limit consecutive newlines
+function NewlineRestrictionPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    // Register a listener for keydown events
+    const removeListener = editor.registerCommand(
+      'keydown',
+      (event) => {
+        // Check if the key pressed is Enter
+        if (event.key === 'Enter') {
+          // Get the editor state
+          let hasConsecutiveNewlines = false;
+          
+          editor.getEditorState().read(() => {
+            const selection = $getSelection();
+            if (selection) {
+              const textContent = $getRoot().getTextContent();
+              const currentPosition = selection.anchor.offset;
+              
+              // Check if there's already a newline at the current position
+              if (textContent[currentPosition - 1] === '\n' && textContent[currentPosition] === '\n') {
+                hasConsecutiveNewlines = true;
+              }
+            }
+          });
+          
+          if (hasConsecutiveNewlines) {
+            // Prevent the default behavior (adding another newline)
+            event.preventDefault();
+            
+            // Show a toast notification
+            toast({
+              title: "Newline limit reached",
+              description: "You can only use one newline at a time. Read more about paragraph formatting.",
+              action: (
+                <a 
+                  href="/pages/LAN5SCiBX67EGALQGe28" 
+                  className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium transition-colors hover:bg-secondary focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  Read more
+                </a>
+              ),
+            });
+            
+            return true;
+          }
+        }
+        return false;
+      },
+      COMMAND_PRIORITY_EDITOR
+    );
+    
+    return () => {
+      removeListener();
+    };
+  }, [editor]);
+  
+  return null;
 }
 
 function Editor({ initialEditorState, setEditorState }) {
@@ -51,6 +113,7 @@ function Editor({ initialEditorState, setEditorState }) {
       <CustomLinkPlugin />
       <MyOnChangePlugin onChange={onChange} initialEditorState={initialEditorState} />
       <BracketTriggerPlugin />
+      <NewlineRestrictionPlugin />
     </LexicalComposer>
 
     </>

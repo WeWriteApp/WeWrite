@@ -213,7 +213,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
                   // Ensure we're collecting page titles for data science team
                   send_page_view: false, // We'll track manually to include titles
                 });
-                console.log('Google Analytics initialized with ID: ${GA_MEASUREMENT_ID}');
+                console.log(\`Google Analytics initialized with ID: \${GA_MEASUREMENT_ID}\`);
               `,
             }}
           />

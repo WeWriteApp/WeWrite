@@ -54,8 +54,21 @@ class Analytics {
     if (this.debug) console.log('Setting up analytics...');
     
     // Setup Google Analytics
-    this.gaAvailable = !!this.gaId && typeof window !== 'undefined' && 'gtag' in window;
-    if (this.debug) console.log('Google Analytics available:', this.gaAvailable);
+    this.gaAvailable = !!this.gaId && typeof window !== 'undefined';
+    
+    // Check if gtag is available after a short delay to allow scripts to load
+    if (this.gaId && typeof window !== 'undefined') {
+      setTimeout(() => {
+        this.gaAvailable = 'gtag' in window;
+        if (this.debug) {
+          console.log('Google Analytics ID:', this.gaId);
+          console.log('Google Analytics available (after delay):', this.gaAvailable);
+          console.log('window.gtag exists:', 'gtag' in window);
+        }
+      }, 1000);
+    }
+    
+    if (this.debug) console.log('Google Analytics available (initial):', this.gaAvailable);
     
     // Setup Firebase Analytics
     try {
@@ -93,8 +106,24 @@ class Analytics {
     };
     
     // Track in Google Analytics
-    if (this.gaAvailable && window.gtag && this.gaId) {
+    if (this.gaId && typeof window !== 'undefined') {
       try {
+        // Check if gtag is available
+        if (!('gtag' in window)) {
+          if (this.debug) console.warn('Google Analytics gtag not available yet');
+          // Try again after a short delay
+          setTimeout(() => {
+            if ('gtag' in window) {
+              window.gtag('config', this.gaId!, pageData);
+              if (this.debug) console.log('Google Analytics pageview tracked with delay:', pageData.page_title);
+              this.gaAvailable = true;
+            } else {
+              if (this.debug) console.error('Google Analytics gtag still not available after delay');
+            }
+          }, 1000);
+          return;
+        }
+        
         window.gtag('config', this.gaId, pageData);
         if (this.debug) console.log('Google Analytics pageview tracked with title:', pageData.page_title);
       } catch (e) {
@@ -127,8 +156,29 @@ class Analytics {
     }
     
     // Track in Google Analytics
-    if (this.gaAvailable && window.gtag) {
+    if (this.gaId && typeof window !== 'undefined') {
       try {
+        // Check if gtag is available
+        if (!('gtag' in window)) {
+          if (this.debug) console.warn('Google Analytics gtag not available yet for event tracking');
+          // Try again after a short delay
+          setTimeout(() => {
+            if ('gtag' in window) {
+              window.gtag('event', event.action, {
+                event_category: event.category,
+                event_label: event.label,
+                value: event.value,
+                ...event,
+              });
+              if (this.debug) console.log('Google Analytics event tracked with delay');
+              this.gaAvailable = true;
+            } else {
+              if (this.debug) console.error('Google Analytics gtag still not available after delay for event');
+            }
+          }, 1000);
+          return;
+        }
+        
         window.gtag('event', event.action, {
           event_category: event.category,
           event_label: event.label,
