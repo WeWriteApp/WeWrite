@@ -393,33 +393,35 @@ const PledgeBar = () => {
   };
 
   return (
-    <div className="w-full">
-      {/* Main pledge bar */}
-      <CompositionBar
-        value={pledges[0]?.amount || 0}
-        max={subscription?.amount || 100}
-        onChange={() => {}}
-        disabled={false}
-        pledges={pledges}
-        subscriptionAmount={subscription?.amount || 0}
-        onPledgeChange={handlePledgeInteraction}
-        onPledgeCustomAmount={handlePledgeCustomAmount}
-        onDeletePledge={() => {}}
-      />
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
+      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+        {/* Main pledge bar */}
+        <CompositionBar
+          value={pledges[0]?.amount || 0}
+          max={subscription?.amount || 100}
+          onChange={() => {}}
+          disabled={false}
+          pledges={pledges}
+          subscriptionAmount={subscription?.amount || 0}
+          onPledgeChange={handlePledgeInteraction}
+          onPledgeCustomAmount={handlePledgeCustomAmount}
+          onDeletePledge={() => {}}
+        />
 
-      {/* Pledge Modal */}
-      <PledgeBarModal
-        isOpen={showActivationModal}
-        onClose={() => setShowActivationModal(false)}
-        isSignedIn={!!user}
-      />
-      
-      {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
-      {showCustomAmountModal && (
-        <div>
-          {/* Custom amount modal content */}
-        </div>
-      )}
+        {/* Pledge Modal */}
+        <PledgeBarModal
+          isOpen={showActivationModal}
+          onClose={() => setShowActivationModal(false)}
+          isSignedIn={!!user}
+        />
+        
+        {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
+        {showCustomAmountModal && (
+          <div>
+            {/* Custom amount modal content */}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -45,7 +45,7 @@ export default function Footer({ className = "" }) {
   ];
   
   return (
-    <footer className={`w-full py-4 px-4 border-t backdrop-blur-sm ${className}`}>
+    <footer className={`w-full py-4 px-4 border-t backdrop-blur-sm mb-16 ${className}`}>
       <div className="container mx-auto flex flex-col items-center">
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-4">
           {footerLinks.map((link, index) => (

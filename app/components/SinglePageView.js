@@ -414,7 +414,8 @@ export function PageInteractionButtons({ page, username }) {
             url: `/profile/${page.userId}`,
             displayText: page.username || "Anonymous",
             children: [{ text: page.username || "Anonymous" }]
-          }
+          },
+          { text: "." }
         ]
       }
     ];
@@ -425,10 +426,20 @@ export function PageInteractionButtons({ page, username }) {
         type: "blockquote",
         children: [{ text: pageContentSummary }]
       });
+      
+      // Add an empty paragraph after the blockquote
+      initialContent.push({
+        type: "paragraph",
+        children: [{ text: "" }]
+      });
     }
 
     // Navigate to the new page route with query parameters
-    router.push(`/pages/new?title=${encodeURIComponent(newPageTitle)}&initialContent=${encodeURIComponent(JSON.stringify(initialContent))}`);
+    const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
+    const encodedTitle = encodeURIComponent(newPageTitle);
+    
+    console.log("Navigating to new page with content:", initialContent);
+    router.push(`/pages/new?title=${encodedTitle}&initialContent=${encodedContent}`);
   };
   
   return (

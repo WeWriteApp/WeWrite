@@ -55,18 +55,24 @@ export default function NewPage() {
 
     setIsLoading(true);
     try {
+      // Create the page document
       const doc = await addDoc(collection(db, "pages"), {
         title: title || "Untitled",
         content: editorState ? JSON.stringify(editorState) : "",
         userId: user.uid,
-        username: user.displayName || user.email?.split('@')[0] || null,
+        username: user.username || user.displayName || user.email?.split('@')[0] || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        isPublic: true, // Default to public
       });
       
-      router.push(`/pages/${doc.id}`);
+      console.log("Page created successfully with ID:", doc.id);
+      
+      // Redirect to the newly created page
+      router.replace(`/pages/${doc.id}`);
     } catch (error) {
       console.error("Error creating page:", error);
+      alert("Failed to create page. Please try again.");
     } finally {
       setIsLoading(false);
     }

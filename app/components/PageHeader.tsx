@@ -254,9 +254,9 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                       {!showParagraphModes ? (
                         <motion.div
                           key="main-menu"
-                          initial={{ x: -20, opacity: 0 }}
+                          initial={{ x: 0, opacity: 1 }}
                           animate={{ x: 0, opacity: 1 }}
-                          exit={{ x: -20, opacity: 0 }}
+                          exit={{ x: -100, opacity: 0 }}
                           transition={{ duration: 0.2 }}
                         >
                           {/* Copy Link Option */}
@@ -272,7 +272,15 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                           <DropdownMenuSeparator />
                           
                           {/* Paragraph Mode Option */}
-                          <DropdownMenuItem onClick={() => setShowParagraphModes(true)}>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowParagraphModes(true);
+                              return false;
+                            }}
+                            preventClose={true}
+                          >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center gap-2">
                                 <div className="w-4 h-4 flex items-center justify-center">
@@ -303,13 +311,21 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                       ) : (
                         <motion.div
                           key="paragraph-modes"
-                          initial={{ x: 20, opacity: 0 }}
+                          initial={{ x: 100, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
-                          exit={{ x: 20, opacity: 0 }}
+                          exit={{ x: 100, opacity: 0 }}
                           transition={{ duration: 0.2 }}
                         >
                           {/* Back to main menu */}
-                          <DropdownMenuItem onClick={() => setShowParagraphModes(false)}>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowParagraphModes(false);
+                              return false;
+                            }}
+                            preventClose={true}
+                          >
                             <div className="flex items-center gap-2">
                               <ChevronLeft className="h-4 w-4" />
                               <span>Back</span>
