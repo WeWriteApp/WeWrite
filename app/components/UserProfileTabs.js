@@ -49,16 +49,20 @@ function PageList({ pageList, emptyMessage }) {
   }
   
   return (
-    <div className="flex flex-col gap-2 mt-4 w-full max-w-[600px] mx-auto">
-      {pageList.map((page) => (
-        <Link 
-          key={page.id}
-          href={`/pages/${page.id}`}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-full transition-colors w-full text-center"
-        >
-          {page.title || "Untitled"}
-        </Link>
-      ))}
+    <div className="relative">
+      <div className="flex flex-wrap gap-2 justify-start items-start content-start mt-4">
+        {pageList.map((page) => (
+          <div key={page.id} className="flex-none">
+            <Link 
+              href={`/pages/${page.id}`}
+              className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full font-medium text-sm transition-colors"
+            >
+              {page.title || "Untitled"}
+            </Link>
+          </div>
+        ))}
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
     </div>
   );
 }

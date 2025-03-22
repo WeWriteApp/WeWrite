@@ -43,6 +43,10 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
   // Determine if we're on the activity page by checking props or using pathname
   const isInActivityPage = isActivityPage || typeof window !== "undefined" && window.location.pathname === "/activity";
+  // Also check if we're in a user profile (determined by having userId passed and not being in activity page)
+  const isInUserProfile = userId && !isInActivityPage;
+  // Use grid layout in activity page or user profile
+  const useGridLayout = isInActivityPage || isInUserProfile;
 
   return (
     <div className="space-y-4">
@@ -51,8 +55,8 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           <Clock className="h-4 w-4" />
           <h2 className="text-lg font-semibold">Recent activity</h2>
         </div>
-        {/* Only show carousel controls on homepage, not on /activity page */}
-        {!isInActivityPage && (
+        {/* Only show carousel controls on homepage (not activity page or user profile) */}
+        {!useGridLayout && (
           <div className="hidden md:flex items-center gap-2">
             <Button 
               variant="outline" 
@@ -76,7 +80,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
       </div>
 
-      {/* Mobile view: vertical stack */}
+      {/* Mobile view: always vertical stack */}
       <div className="md:hidden space-y-3">
         {loading && (
           <>
@@ -119,13 +123,16 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
       </div>
 
-      {/* Desktop view: horizontal carousel */}
+      {/* Desktop view: grid layout for activity page & user profile, carousel for homepage */}
       <div className="hidden md:block">
         {loading && (
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className={`${useGridLayout ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : 'flex gap-3 overflow-x-auto pb-2'}`}>
             <ActivitySkeleton />
             <ActivitySkeleton />
             <ActivitySkeleton />
+            {useGridLayout && <ActivitySkeleton />}
+            {useGridLayout && <ActivitySkeleton />}
+            {useGridLayout && <ActivitySkeleton />}
           </div>
         )}
 
@@ -156,8 +163,12 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
         {!loading && !error && activities.length > 0 && (
           <div 
-            ref={carouselRef}
-            className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar"
+            ref={useGridLayout ? null : carouselRef}
+            className={`${
+              useGridLayout 
+                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
+                : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar'
+            }`}
           >
             {activities.map((activity, index) => (
               <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
@@ -166,7 +177,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
       </div>
 
-      {showViewAll && !loading && !error && activities.length > 0 && (
+      {showViewAll && !loading && !error && activities.length > 0 && !isInActivityPage && (
         <div className="flex justify-center">
           <Link href="/activity">
             <Button variant="outline" className="rounded-full">
