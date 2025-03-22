@@ -31,10 +31,17 @@ export function LoginForm({
       if (result.user) {
         // Successful login - redirect to home page
         console.log("Login successful, redirecting...")
-        // Wait a moment for auth state to propagate
+        
+        // Increase timeout to allow auth state to fully propagate
+        // and ensure cookies are properly set
+        localStorage.setItem('authRedirectPending', 'true')
+        
         setTimeout(() => {
+          localStorage.removeItem('authRedirectPending')
           router.push("/")
-        }, 500)
+          // Force a refresh of the page to ensure auth state is recognized
+          router.refresh()
+        }, 1500)
       } else {
         // Error handling
         const errorCode = result.code || ""

@@ -27,17 +27,68 @@ export default function Home() {
 
   // Redirect to login page if user is not logged in
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login');
-    }
+    const checkAuth = async () => {
+      // First check cookies for auth state
+      const isAuthenticated = document.cookie.includes('authenticated=true');
+      const persistedAuthState = localStorage.getItem('authState');
+      
+      console.log("Home page auth check:", { 
+        authLoading, 
+        user: !!user, 
+        cookieAuth: isAuthenticated,
+        persistedAuth: persistedAuthState === 'authenticated'
+      });
+      
+      // If auth is still loading, wait
+      if (authLoading) return;
+      
+      // If we have a cookie or localStorage indicating auth, but no user yet,
+      // wait a bit longer as Firebase might still be initializing
+      if ((isAuthenticated || persistedAuthState === 'authenticated') && !user) {
+        console.log("Auth indicators found but user not loaded yet, waiting...");
+        // Don't redirect immediately, give a chance for auth to complete
+        return;
+      }
+      
+      // If definitely not authenticated, redirect
+      if (!authLoading && !user && !isAuthenticated && persistedAuthState !== 'authenticated') {
+        console.log("No auth detected, redirecting to login");
+        router.push('/auth/login');
+      }
+    };
+    
+    checkAuth();
+    
+    // Set up a timer to check again in case of race conditions
+    const timer = setTimeout(checkAuth, 1000);
+    return () => clearTimeout(timer);
   }, [user, authLoading, router]);
 
+  // Display a loading state instead of nothing
   if (authLoading) {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader className="animate-spin h-8 w-8 text-primary"/>
+      </div>
+    );
   }
 
-  // Don't render anything while redirecting
+  // Don't render anything while redirecting if no user
   if (!user) {
+    // Check if we have indicators of auth in progress
+    const isAuthenticated = document.cookie.includes('authenticated=true');
+    const persistedAuthState = localStorage.getItem('authState');
+    
+    if (isAuthenticated || persistedAuthState === 'authenticated') {
+      // Show loading if we have some indication auth might be in progress
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader className="animate-spin h-8 w-8 text-primary"/>
+        </div>
+      );
+    }
+    
+    // Otherwise show nothing while redirecting
     return null;
   }
 

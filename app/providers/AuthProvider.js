@@ -25,12 +25,33 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Check for pending redirects on component mount
   useEffect(() => {
+    const hasPendingRedirect = localStorage.getItem('authRedirectPending') === 'true';
+    
+    if (hasPendingRedirect && auth.currentUser) {
+      console.log('Found pending redirect with authenticated user, handling now...');
+      localStorage.removeItem('authRedirectPending');
+      router.push('/');
+      router.refresh();
+    }
+  }, [router]);
+
+  useEffect(() => {
+    console.log("Setting up auth state listener");
+    // Add persistent state flag to detect auth changes across page loads
+    const persistedAuthState = localStorage.getItem('authState');
+    if (persistedAuthState === 'authenticated' && !user) {
+      console.log("Found persisted auth state, waiting for full auth...");
+    }
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user ? "User logged in" : "User logged out");
       
       if (user) {
         // User is signed in
+        localStorage.setItem('authState', 'authenticated');
+        
         try {
           // Get user data from Firestore
           const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -84,6 +105,7 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         // User is signed out
+        localStorage.removeItem('authState');
         setUser(null);
         // Remove session cookie
         Cookies.remove('session');
@@ -93,8 +115,11 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      console.log("Cleaning up auth state listener");
+      unsubscribe();
+    };
+  }, [router]);
 
   const value = {
     user,
