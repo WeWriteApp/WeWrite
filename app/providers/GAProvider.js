@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import ReactGA from 'react-ga4';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { initializeGA, trackPageView } from '@/utils/ga';
+import { initializeGA, trackPageView } from '../utils/ga';
 
 export default function GAProvider({ children }) {
   const pathname = usePathname();
