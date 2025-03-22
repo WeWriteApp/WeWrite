@@ -82,12 +82,12 @@ export const PillLink = ({
     >
       <div className="flex items-center gap-1.5 flex-nowrap">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <div className="flex flex-col min-w-0">
-          <span className="leading-tight whitespace-normal break-words">
+        <div className="flex flex-col min-w-0 max-w-full">
+          <span className="leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
             {displayTitle}
           </span>
           {byline && (
-            <span className="text-xs opacity-75 leading-tight break-words">
+            <span className="text-xs opacity-75 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
               {byline}
             </span>
           )}

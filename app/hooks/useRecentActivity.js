@@ -5,7 +5,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 
-const useRecentActivity = (limitCount = 10) => {
+const useRecentActivity = (limitCount = 10, filterUserId = null) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -41,13 +41,35 @@ const useRecentActivity = (limitCount = 10) => {
         let pagesQuery;
         
         try {
-          // Always only get public pages for the activity feed
-          pagesQuery = query(
-            collection(db, "pages"),
-            where("isPublic", "==", true),
-            orderBy("lastModified", "desc"),
-            limit(limitCount * 2) // Fetch more than needed to account for filtering
-          );
+          // If filtering by user, get all their pages (public and private if current user matches)
+          if (filterUserId) {
+            if (user && user.uid === filterUserId) {
+              // User is viewing their own profile, show all their pages
+              pagesQuery = query(
+                collection(db, "pages"),
+                where("userId", "==", filterUserId),
+                orderBy("lastModified", "desc"),
+                limit(limitCount * 2)
+              );
+            } else {
+              // User is viewing someone else's profile, only show public pages
+              pagesQuery = query(
+                collection(db, "pages"),
+                where("userId", "==", filterUserId),
+                where("isPublic", "==", true),
+                orderBy("lastModified", "desc"),
+                limit(limitCount * 2)
+              );
+            }
+          } else {
+            // No user filter, show public pages for everyone
+            pagesQuery = query(
+              collection(db, "pages"),
+              where("isPublic", "==", true),
+              orderBy("lastModified", "desc"),
+              limit(limitCount * 2)
+            );
+          }
           
           const pagesSnapshot = await getDocs(pagesQuery);
           
@@ -80,6 +102,11 @@ const useRecentActivity = (limitCount = 10) => {
               
               // Skip if content is identical
               if (currentVersion.content === previousVersion.content) {
+                return null;
+              }
+              
+              // If filtering by user, make sure this version was created by that user
+              if (filterUserId && currentVersion.userId !== filterUserId) {
                 return null;
               }
               
@@ -145,7 +172,7 @@ const useRecentActivity = (limitCount = 10) => {
     };
     
     fetchRecentActivity();
-  }, [user, limitCount]);
+  }, [user, limitCount, filterUserId]);
   
   return { activities, loading, error };
 };

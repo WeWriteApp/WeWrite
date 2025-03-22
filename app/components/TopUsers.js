@@ -229,7 +229,7 @@ const TopUsers = () => {
           )}
           
           {!loading && !error && allTimeUsers.length > 0 && (
-            <Table>
+            <Table className="table-compact">
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>

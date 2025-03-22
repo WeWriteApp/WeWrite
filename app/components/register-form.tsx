@@ -69,14 +69,14 @@ export function RegisterForm({
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-white">Create your account</h1>
-        <p className="text-balance text-sm text-white/70">
+        <h1 className="text-2xl font-bold text-white !text-white">Create your account</h1>
+        <p className="text-balance text-sm text-white/70 !text-white/70">
           Enter your information below to create your account
         </p>
       </div>
       <div className="grid gap-6">
         <div className="grid gap-2">
-          <Label htmlFor="username" className="text-white">Username</Label>
+          <Label htmlFor="username" className="text-white !text-white">Username</Label>
           <Input 
             id="username" 
             type="text" 
@@ -84,11 +84,12 @@ export function RegisterForm({
             required 
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
+            style={{color: 'white'}}
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-white">Email</Label>
+          <Label htmlFor="email" className="text-white !text-white">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -96,11 +97,12 @@ export function RegisterForm({
             required 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
+            style={{color: 'white'}}
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password" className="text-white">Password</Label>
+          <Label htmlFor="password" className="text-white !text-white">Password</Label>
           <Input 
             id="password" 
             type="password" 
@@ -108,7 +110,8 @@ export function RegisterForm({
             required 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
+            style={{color: 'white'}}
           />
         </div>
         
@@ -126,9 +129,9 @@ export function RegisterForm({
           {isLoading ? "Creating account..." : "Create account"}
         </Button>
       </div>
-      <div className="text-center text-sm text-white/80">
+      <div className="text-center text-sm text-white/80 !text-white/80">
         Already have an account?{" "}
-        <Link href="/auth/login" className="underline underline-offset-4 text-white hover:text-white/90">
+        <Link href="/auth/login" className="underline underline-offset-4 text-white !text-white hover:text-white/90">
           Sign in
         </Link>
       </div>

@@ -63,14 +63,14 @@ export function LoginForm({
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-white">Log into your account</h1>
-        <p className="text-balance text-sm text-white/70">
+        <h1 className="text-2xl font-bold text-white !text-white">Log into your account</h1>
+        <p className="text-balance text-sm text-white/70 !text-white/70">
           Enter your email below to login to your account
         </p>
       </div>
       <div className="grid gap-6">
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-white">Email</Label>
+          <Label htmlFor="email" className="text-white !text-white">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -79,15 +79,16 @@ export function LoginForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={1}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
+            style={{color: 'white'}}
           />
         </div>
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-white">Password</Label>
+            <Label htmlFor="password" className="text-white !text-white">Password</Label>
             <Link
               href="/auth/forgot-password"
-              className="ml-auto text-sm underline-offset-4 hover:underline text-white/80"
+              className="ml-auto text-sm underline-offset-4 hover:underline text-white/80 !text-white/80"
               tabIndex={3} 
             >
               Forgot your password?
@@ -101,7 +102,8 @@ export function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={2} 
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
+            style={{color: 'white'}}
           />
         </div>
         
@@ -120,9 +122,9 @@ export function LoginForm({
           {isLoading ? "Signing in..." : "Login"}
         </Button>
       </div>
-      <div className="text-center text-sm text-white/80">
+      <div className="text-center text-sm text-white/80 !text-white/80">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/register" className="underline underline-offset-4 text-white hover:text-white/90" tabIndex={5}>
+        <Link href="/auth/register" className="underline underline-offset-4 text-white !text-white hover:text-white/90" tabIndex={5}>
           Sign up
         </Link>
       </div>

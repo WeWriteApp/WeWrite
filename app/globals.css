@@ -51,7 +51,7 @@ html body .page-content p {
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 215 20% 65%; /* Clearly visible border for light mode */
+    --border: 215 20% 85%; /* Lighter, more subtle border for light mode */
     --input: 214.3 31.8% 91.4%;
     --ring: 0 0% 40%;
     --radius: 0.5rem;
@@ -74,7 +74,7 @@ html body .page-content p {
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    --border: 217.2 32.6% 25%; /* Slightly lighter border for dark mode */
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
     --radius: 0.5rem;
@@ -88,6 +88,17 @@ html body .page-content p {
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 }
 
@@ -211,7 +222,7 @@ p {
 .border-gradient {
   border: 1px solid;
   border-radius: 21px;
-  border-color: #FFFFFF5E;
+  border-color: #FFFFFF30;
   background-color: #FFFFFF2B;
   box-shadow: 0px 4px 74px 0px #00000033;
   backdrop-filter: blur(40px);
@@ -259,7 +270,7 @@ a[role="button"],
 .button, 
 [class*="pill"], 
 [class*="btn"] {
-  border: 1.5px solid hsl(var(--border)) !important;
+  border: 1px solid hsl(var(--border)) !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }
 
@@ -452,4 +463,30 @@ button svg,
 /* Dark mode card hover */
 .dark .card-hover:hover {
   background-color: rgba(var(--accent-color), 0.1);
+}
+
+.glass-card {
+  border: 1px solid;
+  border-radius: 16px;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Compact table styles */
+.table-compact th {
+  height: 2.5rem; /* Reduced from 3rem (h-12) */
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.table-compact td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }

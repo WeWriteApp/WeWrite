@@ -638,3 +638,83 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
     return false;
   }
 };
+
+// Add a new function to fetch only page metadata (title, lastModified, etc.)
+export async function getPageMetadata(pageId) {
+  try {
+    const { doc, getDoc } = await import('firebase/firestore');
+    const pageRef = doc(db, 'pages', pageId);
+    const pageSnapshot = await getDoc(pageRef);
+    
+    if (!pageSnapshot.exists()) {
+      return null;
+    }
+    
+    return {
+      id: pageSnapshot.id,
+      ...pageSnapshot.data()
+    };
+  } catch (error) {
+    console.error('Error fetching page metadata:', error);
+    throw error;
+  }
+}
+
+// Add a function to cache and retrieve page titles
+const pageTitleCache = new Map();
+
+export async function getCachedPageTitle(pageId) {
+  // Check if title is in cache
+  if (pageTitleCache.has(pageId)) {
+    return pageTitleCache.get(pageId);
+  }
+  
+  try {
+    const metadata = await getPageMetadata(pageId);
+    const title = metadata?.title || 'Untitled';
+    
+    // Cache the title
+    pageTitleCache.set(pageId, title);
+    
+    return title;
+  } catch (error) {
+    console.error('Error fetching page title:', error);
+    return 'Untitled';
+  }
+}
+
+// Function to prefetch and cache multiple page titles at once
+export async function prefetchPageTitles(pageIds) {
+  if (!pageIds || pageIds.length === 0) return;
+  
+  try {
+    const { getDocs, query, collection, where } = await import('firebase/firestore');
+    
+    // Filter out IDs that are already cached
+    const uncachedIds = pageIds.filter(id => !pageTitleCache.has(id));
+    
+    if (uncachedIds.length === 0) return;
+    
+    // Batch fetch pages in chunks of 10 (Firestore limit for 'in' queries)
+    const batchSize = 10;
+    for (let i = 0; i < uncachedIds.length; i += batchSize) {
+      const batch = uncachedIds.slice(i, i + batchSize);
+      
+      // Create a query for this batch
+      const q = query(
+        collection(db, 'pages'),
+        where('__name__', 'in', batch)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      // Cache each page title
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        pageTitleCache.set(doc.id, data.title || 'Untitled');
+      });
+    }
+  } catch (error) {
+    console.error('Error prefetching page titles:', error);
+  }
+}

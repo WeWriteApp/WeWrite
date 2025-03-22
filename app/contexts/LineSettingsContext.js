@@ -4,22 +4,31 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Available line modes
 export const LINE_MODES = {
-  SPACED: 'spaced',  // Space between paragraphs
-  DEFAULT: 'default', // Normal spacing and layout
-  WRAPPED: 'wrapped' // Wrap paragraphs with dense layout
+  NORMAL: 'normal',  // Space between paragraphs (formerly SPACED)
+  DENSE: 'dense' // Dense layout with minimal spacing (formerly WRAPPED)
 };
 
 const LineSettingsContext = createContext();
 
 export function LineSettingsProvider({ children, isEditMode = false }) {
-  // Default to 'default' mode, but try to load from localStorage if available
-  const [lineMode, setLineMode] = useState(LINE_MODES.DEFAULT);
+  // Default to 'normal' mode, but try to load from localStorage if available
+  const [lineMode, setLineMode] = useState(LINE_MODES.NORMAL);
   
   // Load setting from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedMode = localStorage.getItem('lineMode');
-      if (savedMode && Object.values(LINE_MODES).includes(savedMode)) {
+      // Handle migration from old mode names
+      if (savedMode === 'default') {
+        setLineMode(LINE_MODES.NORMAL);
+        localStorage.setItem('lineMode', LINE_MODES.NORMAL);
+      } else if (savedMode === 'wrapped') {
+        setLineMode(LINE_MODES.DENSE);
+        localStorage.setItem('lineMode', LINE_MODES.DENSE);
+      } else if (savedMode === 'spaced') {
+        setLineMode(LINE_MODES.NORMAL);
+        localStorage.setItem('lineMode', LINE_MODES.NORMAL);
+      } else if (savedMode && Object.values(LINE_MODES).includes(savedMode)) {
         setLineMode(savedMode);
       }
     }

@@ -24,8 +24,8 @@ const ActivitySkeleton = () => {
   );
 };
 
-const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false }) => {
-  const { activities, loading, error } = useRecentActivity(limit);
+const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
+  const { activities, loading, error } = useRecentActivity(limit, userId);
   const { user } = useContext(AuthContext);
   const carouselRef = useRef(null);
 
@@ -99,153 +99,80 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false 
               <p>{error.message || "There was a problem fetching recent activity"}</p>
             </div>
             {error.details && (
-              <p className="text-xs text-amber-500 dark:text-amber-300 ml-6">
-                {error.details}
-              </p>
+              <p className="text-xs opacity-80">{error.details}</p>
             )}
           </div>
         )}
 
         {!loading && !error && activities.length === 0 && (
-          <div className="p-3 text-sm text-muted-foreground bg-muted/30 rounded-lg">
-            <p>No recent activity found</p>
+          <div className="text-center p-6 text-muted-foreground">
+            <p>No recent activity to show</p>
           </div>
         )}
 
         {!loading && !error && activities.length > 0 && (
-          <div className="space-y-3 w-full">
-            {activities.slice(0, 4).map((activity, index) => (
+          <div className="space-y-3">
+            {activities.map((activity, index) => (
               <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
             ))}
-            
-            {showViewAll && (
-              <div className="flex justify-center mt-4">
-                <Link href="/activity">
-                  <Button variant="outline" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    View more
-                  </Button>
-                </Link>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Desktop view: horizontal carousel for homepage, grid layout for activity page */}
-      {isInActivityPage ? (
-        // Grid layout for activity page
-        <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading && (
-            <>
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-            </>
-          )}
+      {/* Desktop view: horizontal carousel */}
+      <div className="hidden md:block">
+        {loading && (
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            <ActivitySkeleton />
+            <ActivitySkeleton />
+            <ActivitySkeleton />
+          </div>
+        )}
 
-          {!loading && error && !user && (
-            <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg col-span-full">
-              <Info className="h-4 w-4 flex-shrink-0" />
-              <p>Sign in to see recent activity from all pages</p>
+        {!loading && error && !user && (
+          <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
+            <Info className="h-4 w-4" />
+            <p>Sign in to see recent activity from all pages</p>
+          </div>
+        )}
+
+        {!loading && error && user && (
+          <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <p>{error.message || "There was a problem fetching recent activity"}</p>
             </div>
-          )}
+            {error.details && (
+              <p className="text-xs opacity-80">{error.details}</p>
+            )}
+          </div>
+        )}
 
-          {!loading && error && user && (
-            <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg col-span-full">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                <p>{error.message || "There was a problem fetching recent activity"}</p>
-              </div>
-              {error.details && (
-                <p className="text-xs text-amber-500 dark:text-amber-300 ml-6">
-                  {error.details}
-                </p>
-              )}
-            </div>
-          )}
+        {!loading && !error && activities.length === 0 && (
+          <div className="text-center p-6 text-muted-foreground">
+            <p>No recent activity to show</p>
+          </div>
+        )}
 
-          {!loading && !error && activities.length === 0 && (
-            <div className="p-4 text-sm text-muted-foreground bg-muted/30 rounded-lg col-span-full">
-              <p>No recent activity found</p>
-            </div>
-          )}
+        {!loading && !error && activities.length > 0 && (
+          <div 
+            ref={carouselRef}
+            className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar"
+          >
+            {activities.map((activity, index) => (
+              <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
+            ))}
+          </div>
+        )}
+      </div>
 
-          {!loading && !error && activities.length > 0 && (
-            <>
-              {activities.map((activity, index) => (
-                <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
-              ))}
-            </>
-          )}
-        </div>
-      ) : (
-        // Carousel for homepage
-        <div 
-          ref={carouselRef}
-          className="hidden md:flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
-        >
-          {loading && (
-            <>
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-              <ActivitySkeleton />
-            </>
-          )}
-
-          {!loading && error && !user && (
-            <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg min-w-[300px]">
-              <Info className="h-4 w-4 flex-shrink-0" />
-              <p>Sign in to see recent activity from all pages</p>
-            </div>
-          )}
-
-          {!loading && error && user && (
-            <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg min-w-[300px]">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                <p>{error.message || "There was a problem fetching recent activity"}</p>
-              </div>
-              {error.details && (
-                <p className="text-xs text-amber-500 dark:text-amber-300 ml-6">
-                  {error.details}
-                </p>
-              )}
-            </div>
-          )}
-
-          {!loading && !error && activities.length === 0 && (
-            <div className="p-4 text-sm text-muted-foreground bg-muted/30 rounded-lg min-w-[300px]">
-              <p>No recent activity found</p>
-            </div>
-          )}
-
-          {!loading && !error && activities.length > 0 && (
-            <>
-              {activities.map((activity, index) => (
-                <div 
-                  key={`${activity.pageId}-${index}`} 
-                  className="min-w-[280px] md:min-w-[300px] lg:min-w-[350px] max-w-[400px] flex-shrink-0"
-                >
-                  <ActivityCard activity={activity} isCarousel={true} />
-                </div>
-              ))}
-              {showViewAll && (
-                <div className="min-w-[200px] flex-shrink-0 flex items-center justify-center">
-                  <Link href="/activity">
-                    <Button variant="outline" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      View all
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </>
-          )}
+      {showViewAll && !loading && !error && activities.length > 0 && (
+        <div className="flex justify-center">
+          <Link href="/activity">
+            <Button variant="outline" className="rounded-full">
+              View all activity
+            </Button>
+          </Link>
         </div>
       )}
     </div>

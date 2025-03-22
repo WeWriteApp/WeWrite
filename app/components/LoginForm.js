@@ -25,10 +25,16 @@ const LoginForm = () => {
 
   return (
     <Container size="1">
+      <div className="flex flex-col items-center gap-2 text-center mb-6">
+        <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+        <p className="text-balance text-sm text-white !important">
+          Enter your email below to login to your account
+        </p>
+      </div>
       <form onSubmit={handleSubmit}>
         <Flex direction="column" gap="4">
           <Box>
-            <Text as="label" size="2" mb="2" weight="bold">
+            <Text as="label" size="2" mb="2" weight="bold" className="text-white !important">
               Email
             </Text>
             <TextField
@@ -38,11 +44,12 @@ const LoginForm = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               required
+              className="text-white !important bg-white/10 border-white/20 placeholder:text-white/50"
             />
           </Box>
 
           <Box>
-            <Text as="label" size="2" mb="2" weight="bold">
+            <Text as="label" size="2" mb="2" weight="bold" className="text-white !important">
               Password
             </Text>
             <TextField
@@ -52,11 +59,12 @@ const LoginForm = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
+              className="text-white !important bg-white/10 border-white/20 placeholder:text-white/50"
             />
           </Box>
 
           {error && (
-            <Text color="red" size="2">
+            <Text className="text-sm font-medium text-red-400 !important">
               {error}
             </Text>
           )}
@@ -65,15 +73,15 @@ const LoginForm = () => {
             type="submit" 
             size="3" 
             variant="solid" 
-            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
+            className="w-full bg-white text-blue-950 hover:bg-white/90"
           >
             Login
           </Button>
 
-          <Flex justify="center" gap="2">
-            <Text size="2">Don't have an account?</Text>
+          <Flex justify="center" gap="2" className="text-center text-sm text-white/80 !important">
+            <Text>Don't have an account?</Text>
             <Link href="/auth/register">
-              <Text size="2" color="blue">
+              <Text className="underline underline-offset-4 text-white !important hover:text-white/90">
                 Register
               </Text>
             </Link>

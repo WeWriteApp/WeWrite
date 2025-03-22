@@ -18,18 +18,18 @@ const ActionRow = ({ isEditing, setIsEditing, page }) => {
   };
 
   return (
-    <div className="flex items-center justify-end gap-3 mt-8 py-2 rounded-lg">
+    <div className="flex items-center justify-end gap-4 mt-8 py-4 px-3 rounded-lg">
       <Button
         variant="outline"
         onClick={() => setIsEditing(!isEditing)}
-        className="px-4 py-2"
+        className="px-8 py-2.5 h-auto"
       >
         {isEditing ? "Cancel" : "Edit"}
       </Button>
       <Button
         variant="destructive"
         onClick={handleDelete}
-        className="px-4 py-2"
+        className="px-8 py-2.5 h-auto"
       >
         Delete
       </Button>

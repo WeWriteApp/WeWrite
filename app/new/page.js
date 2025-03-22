@@ -4,7 +4,7 @@ import SlateEditor from "../components/SlateEditor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
 
@@ -13,25 +13,61 @@ const New = () => {
     title: "",
     isPublic: true,
   });
+  const searchParams = useSearchParams();
+  const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
+  
   return (
     <DashboardLayout>
-      <PageHeader title="New page" />
+      <PageHeader title={isReply ? "Replying to page" : "New page"} />
       <div className="container w-full py-6 px-4">
         <div className="w-full">
-          <Form Page={Page} setPage={setPage} />
+          <Form Page={Page} setPage={setPage} isReply={isReply} />
         </div>
       </div>
     </DashboardLayout>
   );
 };
 
-const Form = ({ Page, setPage }) => {
+const Form = ({ Page, setPage, isReply }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [editorState, setEditorState] = useState();
   const { user, loading } = useContext(AuthContext);
   const [isSaving, setIsSaving] = useState(false);
+  const [initialContent, setInitialContent] = useState(null);
 
   let updateTime = new Date().toISOString();
+
+  // Get initial title and content from URL parameters
+  useEffect(() => {
+    const titleParam = searchParams.get('title');
+    const contentParam = searchParams.get('initialContent');
+    
+    if (titleParam) {
+      try {
+        const decodedTitle = decodeURIComponent(titleParam);
+        setPage(prev => ({ ...prev, title: decodedTitle }));
+      } catch (error) {
+        console.error("Error decoding title parameter:", error);
+      }
+    }
+    
+    if (contentParam) {
+      try {
+        const decodedContent = decodeURIComponent(contentParam);
+        const parsedContent = JSON.parse(decodedContent);
+        console.log("Setting initial content:", parsedContent);
+        setInitialContent(parsedContent);
+        
+        // Also set the editor state to ensure it's properly initialized
+        if (setEditorState) {
+          setEditorState(parsedContent);
+        }
+      } catch (error) {
+        console.error("Error parsing initial content:", error);
+      }
+    }
+  }, [searchParams, setPage, setEditorState]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -39,7 +75,9 @@ const Form = ({ Page, setPage }) => {
       ...Page,
       content: JSON.stringify(editorState),
       userId: user.uid,
+      username: user?.displayName || user?.email?.split('@')[0] || 'Anonymous',
       lastModified: updateTime,
+      isReply: isReply || false, // Add flag to indicate this is a reply page
     };
 
     const res = await createPage(data);
@@ -79,7 +117,7 @@ const Form = ({ Page, setPage }) => {
         <div>
           <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
           <div className="min-h-[300px] border border-input rounded-md bg-background">
-            <SlateEditor setEditorState={setEditorState} />
+            <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
           </div>
         </div>
         

@@ -10,6 +10,24 @@ import { Twitter, Heart, Map, Info, MessageSquare } from 'lucide-react';
  */
 export default function Footer({ className = "" }) {
   const currentYear = new Date().getFullYear();
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  
+  // Blacklist of paths where the footer should not be shown
+  const footerBlacklist = [
+    '/auth',
+    '/auth/',
+    '/auth/login',
+    '/auth/signup',
+    '/auth/reset-password'
+  ];
+  
+  // Check if current path is in the blacklist
+  const shouldShowFooter = !footerBlacklist.some(path => pathname.startsWith(path));
+  
+  // If path is in blacklist, don't render the footer
+  if (!shouldShowFooter) {
+    return null;
+  }
   
   const footerLinks = [
     { 
@@ -45,7 +63,7 @@ export default function Footer({ className = "" }) {
   ];
   
   return (
-    <footer className={`w-full py-4 px-4 border-t backdrop-blur-sm mb-16 ${className}`}>
+    <footer className={`w-full py-4 px-4 border-t backdrop-blur-sm ${className}`}>
       <div className="container mx-auto flex flex-col items-center">
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-4">
           {footerLinks.map((link, index) => (

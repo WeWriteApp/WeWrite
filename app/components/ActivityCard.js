@@ -28,7 +28,7 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
     <Link 
       href={`/pages/${activity.pageId}`}
       className={interactiveCard(
-        "max-w-md h-full", 
+        "w-full md:max-w-[400px] h-full", 
         isCarousel && "h-full flex flex-col"
       )}
     >

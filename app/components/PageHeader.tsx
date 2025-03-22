@@ -32,11 +32,36 @@ export default function PageHeader({ title, username, userId, isLoading = false 
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [headerHeight, setHeaderHeight] = React.useState(0);
-  const [viewMode, setViewMode] = React.useState<'wrapped' | 'default' | 'spaced'>('default');
+  const [viewMode, setViewMode] = React.useState<'dense' | 'normal'>('normal');
   const [showParagraphModes, setShowParagraphModes] = React.useState(false);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const tooltipTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize viewMode from localStorage
+  React.useEffect(() => {
+    const storedMode = localStorage.getItem('pageViewMode');
+    if (storedMode && ['dense', 'spaced', 'normal'].includes(storedMode)) {
+      // Handle migration from 'spaced' to 'normal'
+      const newMode = storedMode === 'spaced' ? 'normal' : storedMode;
+      setViewMode(newMode as 'dense' | 'normal');
+      if (storedMode === 'spaced') {
+        localStorage.setItem('pageViewMode', 'normal');
+      }
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'pageViewMode' && ['dense', 'spaced', 'normal'].includes(e.newValue || '')) {
+        const newMode = e.newValue === 'spaced' ? 'normal' : e.newValue;
+        setViewMode(newMode as 'dense' | 'normal');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Calculate and update header height when component mounts or when title/isScrolled changes
   React.useEffect(() => {
@@ -126,9 +151,10 @@ export default function PageHeader({ title, username, userId, isLoading = false 
       
       // Show toast notification
       toast({
-        title: "Link copied to clipboard!",
-        description: "You can now share this page with others.",
-        className: "bg-green-50 border-green-200 text-green-900",
+        title: "Link copied",
+        description: "Page link copied to clipboard",
+        variant: "success",
+        duration: 2000,
       });
     }
   };
@@ -153,7 +179,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
     router.push('/');
   };
 
-  const handleViewModeChange = (mode: 'wrapped' | 'default' | 'spaced') => {
+  const handleViewModeChange = (mode: 'dense' | 'normal') => {
     setViewMode(mode);
     // Implement additional logic for changing view mode here
     // For example, update localStorage, dispatch context events, etc.
@@ -167,11 +193,11 @@ export default function PageHeader({ title, username, userId, isLoading = false 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-120 ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
-            : "bg-background"
+            : "bg-background border-b border-border/40"
         }`}
       >
-        <div className="relative mx-auto px-4 md:px-6">
-          <div className={`flex items-center justify-between ${isScrolled ? "py-2" : "py-4"}`}>
+        <div className="relative mx-auto px-2 md:px-4">
+          <div className="flex items-center justify-between py-1">
             {/* Left Side - Back Button */}
             <div className="flex items-center gap-2">
               <Button
@@ -190,12 +216,12 @@ export default function PageHeader({ title, username, userId, isLoading = false 
             {/* Center - Title and Author */}
             <div className="flex-1 flex justify-start items-center ml-4">
               <div className={`text-left space-y-0 transition-all duration-120 ${
-                isScrolled ? "max-w-[70vw] flex flex-row items-center gap-2" : "max-w-full"
+                isScrolled ? "max-w-[85vw] flex flex-row items-center gap-2" : "max-w-full"
               }`}>
                 <h1 className={`font-semibold transition-all duration-120 ${
                   isScrolled 
-                    ? "text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-[40vw]" 
-                    : "text-xl line-clamp-3"
+                    ? "text-base truncate max-w-[70vw]" 
+                    : "text-2xl mb-0.5"
                 }`}>
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
@@ -243,7 +269,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                     <Button
                       variant="outline"
                       size="icon"
-                      className="text-foreground h-8 w-8 shrink-0 transition-all duration-120 my-auto"
+                      className="text-foreground h-10 w-10 shrink-0 transition-all duration-120 my-auto"
                       title="Page options"
                     >
                       <Menu className="h-4 w-4" />
@@ -336,56 +362,38 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                           
                           {/* Paragraph Mode Options */}
                           <DropdownMenuItem 
-                            className={viewMode === 'wrapped' ? 'bg-accent/50' : ''} 
+                            className={viewMode === 'dense' ? 'bg-accent/50' : ''} 
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleViewModeChange('wrapped');
+                              handleViewModeChange('dense');
                               return false;
                             }}
                             preventClose={true}
                           >
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 flex items-center justify-center">
-                                {viewMode === 'wrapped' && <Check className="h-4 w-4" />}
+                                {viewMode === 'dense' && <Check className="h-4 w-4" />}
                               </div>
-                              <span>Wrapped</span>
+                              <span>Dense</span>
                             </div>
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem 
-                            className={viewMode === 'default' ? 'bg-accent/50' : ''} 
+                            className={viewMode === 'normal' ? 'bg-accent/50' : ''} 
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleViewModeChange('default');
+                              handleViewModeChange('normal');
                               return false;
                             }}
                             preventClose={true}
                           >
                             <div className="flex items-center gap-2">
                               <div className="w-4 h-4 flex items-center justify-center">
-                                {viewMode === 'default' && <Check className="h-4 w-4" />}
+                                {viewMode === 'normal' && <Check className="h-4 w-4" />}
                               </div>
-                              <span>Default</span>
-                            </div>
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem 
-                            className={viewMode === 'spaced' ? 'bg-accent/50' : ''} 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleViewModeChange('spaced');
-                              return false;
-                            }}
-                            preventClose={true}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 flex items-center justify-center">
-                                {viewMode === 'spaced' && <Check className="h-4 w-4" />}
-                              </div>
-                              <span>Spaced</span>
+                              <span>Normal</span>
                             </div>
                           </DropdownMenuItem>
                         </motion.div>

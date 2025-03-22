@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { PillLink } from './PillLink';
-import { getBacklinks, extractPageIds } from '../utils/backlinks';
 import { db, rtdb } from '../firebase/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { ref, get, onValue } from 'firebase/database';
@@ -66,32 +65,16 @@ const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
   </div>
 );
 
-const BacklinkItem = ({ page }) => {
-  return (
-    <PillLink 
-      href={`/pages/${page.id}`}
-      className="transition-opacity"
-    >
-      {page.title}
-    </PillLink>
-  );
-};
-
 const PageMetadata = ({ page, hidePageOwner = false }) => {
   const { user } = useContext(AuthContext);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [backlinks, setBacklinks] = useState([]);
-  const [backlinkPages, setBacklinkPages] = useState([]);
   const [relatedPages, setRelatedPages] = useState([]);
-  const [linkedPageIds, setLinkedPageIds] = useState(new Set());
-  const [isLoadingBacklinks, setIsLoadingBacklinks] = useState(true);
   const [isLoadingRelated, setIsLoadingRelated] = useState(true);
-  const [showBacklinksContext, setShowBacklinksContext] = useState(false);
+  const [showOwnerMenu, setShowOwnerMenu] = useState(false);
+  const ownerMenuRef = useRef(null);
   const [selectedOwner, setSelectedOwner] = useState('myself');
   const [groups, setGroups] = useState([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
-  const [showOwnerMenu, setShowOwnerMenu] = useState(false);
-  const ownerMenuRef = useRef(null);
   
   // Add click outside handler
   useEffect(() => {
@@ -277,76 +260,6 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
     }
   }, [page.userId, page.id]);
 
-  // Fetch backlinks
-  useEffect(() => {
-    const fetchBacklinks = async () => {
-      setIsLoadingBacklinks(true);
-      const firestore = db();
-      if (!firestore) {
-        console.warn('Firestore not initialized');
-        setIsLoadingBacklinks(false);
-        return;
-      }
-
-      try {
-        const backlinksData = await getBacklinks(page.id);
-        setBacklinks(backlinksData);
-
-        // Extract page IDs from content
-        const contentIds = extractPageIds(page.content || '');
-        setLinkedPageIds(new Set(contentIds));
-
-        // Fetch page data for backlinks
-        const pagesRef = collection(firestore, 'pages');
-        const backlinkPages = await Promise.all(
-          backlinksData.map(async (backlink) => {
-            const docRef = doc(firestore, 'pages', backlink.pageId);
-            const docSnap = await getDoc(docRef);
-            return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
-          })
-        );
-
-        setBacklinkPages(backlinkPages.filter(Boolean));
-      } catch (error) {
-        console.error('Error fetching backlinks:', error);
-      }
-      setIsLoadingBacklinks(false);
-    };
-
-    if (page.id) {
-      fetchBacklinks();
-    }
-  }, [page.id, page.content]);
-
-  const renderBacklinks = () => {
-    if (isLoadingBacklinks) {
-      return (
-        <div className="bg-background--light dark:bg-background rounded-2xl p-4 flex items-center justify-center">
-          <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-        </div>
-      );
-    }
-
-    if (backlinkPages.length === 0) {
-      return (
-        <div className="bg-background--light dark:bg-background rounded-2xl p-4">
-          <span className="text-text-secondary">No other pages link to this one</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex flex-wrap gap-2">
-        {backlinkPages.map(page => (
-          <BacklinkItem 
-            key={page.id} 
-            page={page}
-          />
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="bg-background rounded-2xl p-6 transition-all duration-300">
       <div 
@@ -437,7 +350,6 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
                 <PillLink 
                   key={page.id} 
                   href={`/pages/${page.id}`}
-                  className={linkedPageIds.has(page.id) ? "opacity-50" : ""}
                 >
                   {page.title}
                 </PillLink>
@@ -448,12 +360,6 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
               <span className="text-text-secondary">No related pages found</span>
             </div>
           )}
-        </div>
-
-        {/* Backlinks */}
-        <div>
-          <h3 className="text-text-secondary mb-2">Backlinks</h3>
-          {renderBacklinks()}
         </div>
 
         {/* Stats Grid */}

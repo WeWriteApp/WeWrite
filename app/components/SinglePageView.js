@@ -41,21 +41,22 @@ export default function SinglePageView({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPublic, setIsPublic] = useState(false);
   const [groupId, setGroupId] = useState(null);
-  const [scrollDirection, setScrollDirection] = useState("up");
-  const [lastScrollTop, setLastScrollTop] = useState(0);
-  const [lineViewMode, setLineViewMode] = useState('default');
+  const [lineViewMode, setLineViewMode] = useState('normal');
+  const [scrollDirection, setScrollDirection] = useState('none');
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
 
   useEffect(() => {
     const storedMode = localStorage.getItem('pageViewMode');
-    if (storedMode && ['wrapped', 'default', 'spaced'].includes(storedMode)) {
+    if (storedMode && ['dense', 'spaced', 'normal'].includes(storedMode)) {
       setLineViewMode(storedMode);
     }
 
     const handleStorageChange = (e) => {
-      if (e.key === 'pageViewMode' && ['wrapped', 'default', 'spaced'].includes(e.newValue)) {
+      if (e.key === 'pageViewMode' && ['dense', 'spaced', 'normal'].includes(e.newValue)) {
         setLineViewMode(e.newValue);
       }
     };
@@ -70,13 +71,38 @@ export default function SinglePageView({ params }) {
   useEffect(() => {
     const intervalId = setInterval(() => {
       const currentMode = localStorage.getItem('pageViewMode');
-      if (currentMode && currentMode !== lineViewMode && ['wrapped', 'default', 'spaced'].includes(currentMode)) {
+      if (currentMode && currentMode !== lineViewMode && ['dense', 'spaced', 'normal'].includes(currentMode)) {
         setLineViewMode(currentMode);
       }
     }, 1000); // Check every second
 
     return () => clearInterval(intervalId);
   }, [lineViewMode]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Determine scroll direction
+      if (currentScrollY > lastScrollY) {
+        setScrollDirection('down');
+      } else if (currentScrollY < lastScrollY) {
+        setScrollDirection('up');
+      }
+      
+      // Update last scroll position
+      setLastScrollY(currentScrollY);
+      
+      // Set scrolled state
+      setIsScrolled(currentScrollY > 0);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY]);
 
   // Use keyboard shortcuts - moved back to top level
   useKeyboardShortcuts({
@@ -171,26 +197,6 @@ export default function SinglePageView({ params }) {
 
     return () => unsubscribe();
   }, [params.id, user]);
-
-  // Add scroll event listener to detect scroll direction
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      
-      if (currentScrollTop > lastScrollTop) {
-        // Scrolling down
-        setScrollDirection("down");
-      } else {
-        // Scrolling up
-        setScrollDirection("up");
-      }
-      
-      setLastScrollTop(currentScrollTop);
-    };
-    
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollTop]);
 
   const Layout = user ? DashboardLayout : PublicLayout;
 
@@ -370,7 +376,7 @@ export default function SinglePageView({ params }) {
         isLoading={isLoading}
         scrollDirection={scrollDirection}
       />
-      <div className="pb-36">
+      <div className="pb-24 px-2 sm:px-4 md:px-6">
         {isEditing ? (
           <LoggingProvider>
             <PageProvider>
@@ -388,8 +394,8 @@ export default function SinglePageView({ params }) {
           </LoggingProvider>
         ) : (
           <>
-            <div className="space-y-4 p-4">
-              <div className={`page-content ${lineViewMode === 'wrapped' ? 'text-sm max-w-full break-words' : ''}`}>
+            <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
+              <div className={`page-content ${lineViewMode === 'dense' ? 'max-w-full break-words' : ''}`}>
                 <PageProvider>
                   <LineSettingsProvider>
                     <TextView 
@@ -414,11 +420,6 @@ export default function SinglePageView({ params }) {
                 <PageInteractionButtons page={page} username={page?.username || ""} />
               </div>
             )}
-            
-            {/* Backlinks Section */}
-            <div className="mt-8 pt-4 border-t border-border">
-              <BacklinksSection pageId={page?.id} />
-            </div>
           </>
         )}
       </div>
@@ -444,8 +445,8 @@ export function PageInteractionButtons({ page, username }) {
       return;
     }
 
-    // Create a new page with title "Re: [original page title]"
-    const newPageTitle = `Re: ${page.title || "Untitled"}`;
+    // Create a new page with title "Re: "[original page title]""
+    const newPageTitle = `Re: "${page.title || "Untitled"}"`;
     
     // Get content from the page if available
     let pageContentSummary = "";
@@ -484,7 +485,7 @@ export function PageInteractionButtons({ page, username }) {
       {
         type: "paragraph",
         children: [
-          { text: `This is a reply to ` },
+          { text: `Reply to ` },
           {
             type: "link",
             href: `/pages/${page.id}`,
@@ -494,9 +495,8 @@ export function PageInteractionButtons({ page, username }) {
           {
             type: "link",
             href: `/profile/${page.userId || "anonymous"}`,
-            children: [{ text: page.username || "Anonymous" }]
-          },
-          { text: "." }
+            children: [{ text: page.username || page.author || "Anonymous" }]
+          }
         ]
       }
     ];
@@ -521,11 +521,11 @@ export function PageInteractionButtons({ page, username }) {
       const encodedTitle = encodeURIComponent(newPageTitle);
       
       console.log("Navigating to new page with title:", newPageTitle);
-      router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}`);
+      router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}&isReply=true`);
     } catch (error) {
       console.error("Error navigating to new page:", error);
       // Fallback with minimal parameters if encoding fails
-      router.push(`/new?title=${encodeURIComponent(newPageTitle)}`);
+      router.push(`/new?title=${encodeURIComponent(newPageTitle)}&isReply=true`);
     }
   };
   
@@ -534,7 +534,7 @@ export function PageInteractionButtons({ page, username }) {
       <Button
         variant="outline"
         onClick={handleReplyToPage}
-        className="w-full sm:w-auto flex items-center gap-2 justify-center"
+        className="w-full sm:w-[140px] h-10 flex items-center gap-2 justify-center"
       >
         <Reply className="h-4 w-4" />
         Reply to page
@@ -542,7 +542,7 @@ export function PageInteractionButtons({ page, username }) {
       <Button
         variant="outline"
         onClick={() => setShowAddToPageDialog(true)}
-        className="w-full sm:w-auto flex items-center gap-2 justify-center"
+        className="w-full sm:w-[140px] h-10 flex items-center gap-2 justify-center"
       >
         <Plus className="h-4 w-4" />
         Add to page
@@ -720,125 +720,5 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function BacklinksSection({ pageId }) {
-  const [backlinks, setBacklinks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!pageId) return;
-
-    // Get database reference
-    const db = getDatabase(app);
-    const pagesRef = ref(db, 'pages');
-
-    // Listen for pages that might link to this page
-    const unsubscribe = onValue(pagesRef, (snapshot) => {
-      setLoading(true);
-      const allPages = snapshot.val() || {};
-      const linkedPages = [];
-
-      // Check each page to see if it links to the current page
-      Object.entries(allPages).forEach(([id, pageData]) => {
-        if (id === pageId) return; // Skip the current page
-
-        // Check if the page content contains a link to the current page
-        let hasLink = false;
-        try {
-          const content = typeof pageData.content === 'string' 
-            ? JSON.parse(pageData.content) 
-            : pageData.content;
-
-          // Search for links in the content
-          if (Array.isArray(content)) {
-            for (const node of content) {
-              if (node.type === 'paragraph' && node.children) {
-                for (const child of node.children) {
-                  if (child.type === 'link' && child.href) {
-                    // Check if the link points to this page
-                    if (child.href.includes(`/pages/${pageId}`)) {
-                      hasLink = true;
-                      break;
-                    }
-                  }
-                }
-                if (hasLink) break;
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error parsing page content:", error);
-        }
-
-        // If this page links to the current page, add it to the list
-        if (hasLink) {
-          linkedPages.push({
-            id,
-            title: pageData.title || 'Untitled',
-            username: pageData.username || 'Anonymous',
-            userId: pageData.userId
-          });
-        }
-      });
-
-      setBacklinks(linkedPages);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [pageId]);
-
-  if (loading) {
-    return (
-      <div className="py-6 px-4">
-        <h3 className="text-lg font-medium mb-4">Backlinks</h3>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader className="h-4 w-4 animate-spin" />
-          <span>Loading backlinks...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (backlinks.length === 0) {
-    return (
-      <div className="py-6 px-4">
-        <h3 className="text-lg font-medium mb-4">Backlinks</h3>
-        <div className="bg-card/50 border border-border/40 rounded-lg p-6 text-center">
-          <LinkIcon className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
-          <p className="text-muted-foreground">No pages link to this page yet.</p>
-          <p className="text-xs text-muted-foreground mt-2">When other pages link to this one, they'll appear here.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="py-6 px-4">
-      <h3 className="text-lg font-medium mb-4">Backlinks</h3>
-      <div className="space-y-2">
-        {backlinks.map(page => (
-          <div key={page.id} className="group relative">
-            <Link 
-              href={`/pages/${page.id}`}
-              className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/30 transition-colors"
-            >
-              <div className="flex-1">
-                <div className="font-medium">{page.title}</div>
-                <div className="text-sm text-muted-foreground">by {page.username}</div>
-              </div>
-            </Link>
-            <div className="absolute invisible group-hover:visible bg-background border border-border shadow-md rounded-md p-2 z-10 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64">
-              <div className="text-sm">
-                <div className="font-medium">{page.title}</div>
-                <div className="text-xs text-muted-foreground">This page links to the current page</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

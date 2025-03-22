@@ -13,13 +13,12 @@ import { ReactEditor } from "slate-react";
 import { DataContext } from "../providers/DataProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon, Settings } from "lucide-react";
+import { Search, X, Link as LinkIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
-import { LineSettingsMenu } from './LineSettingsMenu';
 import { motion } from "framer-motion";
 
-const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, ref) => {
+const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({});
@@ -57,16 +56,36 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
     }
   }));
 
-  const [initialValue, setInitialValue] = useState(initialEditorState || [
+  const [initialValue, setInitialValue] = useState(initialEditorState || initialContent || [
     {
       type: "paragraph",
       children: [{ text: "" }],
     },
   ]);
 
-  // Set initial value when component mounts or when initialEditorState changes
+  // Set initial value when component mounts or when initialEditorState or initialContent changes
   useEffect(() => {
-    if (initialEditorState) {
+    console.log("SlateEditor initialContent:", initialContent);
+    console.log("SlateEditor initialEditorState:", initialEditorState);
+    
+    if (initialContent) {
+      // Process initialContent first as it takes priority
+      try {
+        const contentToProcess = typeof initialContent === 'string' 
+          ? JSON.parse(initialContent) 
+          : initialContent;
+        
+        if (Array.isArray(contentToProcess) && contentToProcess.length > 0) {
+          console.log("Setting editor value from initialContent:", contentToProcess);
+          setInitialValue(contentToProcess);
+          if (setEditorState) {
+            setEditorState(contentToProcess);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing initialContent:', error);
+      }
+    } else if (initialEditorState) {
       // Make sure we have a valid initialEditorState
       let validContent;
       
@@ -135,12 +154,13 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
         }];
       }
       
+      console.log("Setting editor value from initialEditorState:", validContent);
       setInitialValue(validContent);
       if (setEditorState) {
         setEditorState(validContent);
       }
     }
-  }, [initialEditorState, setEditorState]);
+  }, [initialEditorState, initialContent, setEditorState]);
 
   // onchange handler
   const onChange = (newValue) => {
@@ -399,9 +419,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, setEditorState }, r
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
       >
-        <div className="absolute top-0 right-0 z-10 p-2">
-          <LineSettingsMenu />
-        </div>
         <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
           <div className="flex">
             <div className="flex-grow">
@@ -673,11 +690,14 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   <div className="flex items-center justify-between">
                     <h2 className="text-sm font-medium">Display Text</h2>
                     <button 
-                      onClick={resetDisplayText}
+                      type="button"
+                      onClick={() => {
+                        setLinkText(initialText || "");
+                      }}
                       className="p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground"
                       title="Reset to page title"
                     >
-                      <Settings className="h-3 w-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </div>
                   <input
@@ -773,13 +793,13 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
   // Get styles based on line mode
   const getLineModeStyles = () => {
     switch(lineMode) {
-      case LINE_MODES.SPACED:
-        return 'space-y-8';
+      case LINE_MODES.NORMAL:
+        return 'space-y-4'; 
       case LINE_MODES.WRAPPED:
         return 'space-y-1';
       case LINE_MODES.DEFAULT:
       default:
-        return 'space-y-0'; // No spacing between paragraphs
+        return 'space-y-0'; 
     }
   };
 
@@ -806,7 +826,7 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
   return (
     <motion.div 
-      className={`p-4 ${getLineModeStyles()} w-full`}
+      className={`p-2 ${getLineModeStyles()} w-full`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}

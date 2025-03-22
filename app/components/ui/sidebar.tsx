@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
@@ -6,6 +6,7 @@ import { Button } from './button';
 import { Switch } from './switch';
 import { Label } from './label';
 import { SheetContent, SheetHeader, SheetTitle, SheetClose } from './sheet';
+import { AuthContext } from '../../providers/AuthProvider';
 
 interface SidebarProps {
   className?: string;
@@ -14,6 +15,7 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
+  const { user } = useContext(AuthContext);
 
   const handleLogout = () => {
     // Logic to handle logout
@@ -118,10 +120,15 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
 
         {/* Account Actions */}
-        <div className="p-4 border-t space-y-3">
+        <div className="mt-auto pt-4 border-t border-border" data-component-name="Sidebar">
+          {user && (
+            <div className="px-4 pb-2 text-sm text-muted-foreground">
+              Signed in as <span className="font-medium text-foreground">{user.username || user.email || 'Anonymous'}</span>
+            </div>
+          )}
           <Button
             variant="outline"
-            className="w-full justify-start gap-2"
+            className="w-full justify-start gap-2 mb-2"
             onClick={() => router.push('/account')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -133,15 +140,15 @@ export function Sidebar({ className }: SidebarProps) {
           
           <Button
             variant="outline"
-            className="w-full justify-start gap-2"
+            className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={handleLogout}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-destructive">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
-            Log out
+            <span data-component-name="Sidebar">Log out</span>
           </Button>
         </div>
       </div>

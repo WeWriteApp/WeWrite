@@ -12,8 +12,44 @@ import { getPageById } from "@/firebase/database";
 import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 
+/**
+ * TextView Component - Renders text content with different paragraph modes
+ * 
+ * PARAGRAPH MODES REQUIREMENTS:
+ * 
+ * 1. Normal Mode:
+ *    - Paragraph numbers create indentation (like traditional documents)
+ *    - Numbers positioned to the left of the text
+ *    - Creates a clear indent for each paragraph
+ *    - Standard text size (1rem/16px)
+ *    - Proper spacing between paragraphs
+ * 
+ * 2. Dense Mode:
+ *    - NO line breaks between paragraphs
+ *    - Text wraps continuously as if newline characters were temporarily deleted
+ *    - Paragraph numbers are inserted inline within the continuous text
+ *    - Standard text size (1rem/16px)
+ *    - Only a small space separates one paragraph from the next
+ *    - Resembles Bible verses with continuous text flow
+ * 
+ * IMPLEMENTATION NOTES:
+ * - Both modes use the same paragraph number style (text-muted-foreground)
+ * - Both modes use the same text size (1rem/16px)
+ * - Dense mode is implemented directly in RenderContent for a truly continuous flow
+ * - Normal mode uses ParagraphNode component with proper spacing and indentation
+ * - Animations are applied to both modes for smooth transitions
+ */
+
 // Cache for page titles to avoid redundant API calls
 const pageTitleCache = new Map();
+
+// Animation constants for consistent behavior across modes
+const ANIMATION_CONSTANTS = {
+  PARAGRAPH_LOADING_DELAY: 30, // ms between each paragraph appearance
+  SPRING_STIFFNESS: 500,
+  SPRING_DAMPING: 30,
+  SPRING_MASS: 1
+};
 
 // Function to extract page ID from URL
 const extractPageId = (url) => {
@@ -45,12 +81,25 @@ const getPageTitle = async (pageId) => {
   return null;
 };
 
-const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
+const TextView = ({ content, isSearch = false, viewMode = 'normal' }) => {
   const [parsedContents, setParsedContents] = useState(null);
   const [language, setLanguage] = useState(null);
   const { lineMode } = useLineSettings();
   const [loadedParagraphs, setLoadedParagraphs] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 0);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   useEffect(() => {
     let contents;
@@ -81,7 +130,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
       
       // Create a staggered loading effect
       const totalNodes = paragraphNodes.length;
-      const loadingDelay = 30; // ms between each paragraph appearance
+      const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
       
       if (totalNodes > 0) {
         const newLoadedParagraphs = [];
@@ -106,11 +155,10 @@ const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
 
   const getViewModeStyles = () => {
     switch(viewMode) {
-      case 'spaced':
-        return 'space-y-8';
-      case 'wrapped':
-        return 'space-y-1';
-      case 'default':
+      case 'normal':
+        return 'space-y-6'; 
+      case 'dense':
+        return 'space-y-0'; 
       default:
         return 'space-y-4';
     }
@@ -118,7 +166,11 @@ const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
 
   return (
     <motion.div 
-      className={`flex flex-col ${getViewModeStyles()} px-3 md:px-4 w-full`}
+      className={`flex flex-col ${getViewModeStyles()} w-full text-left ${viewMode === 'normal' ? 'items-start' : ''} ${
+        isScrolled 
+          ? 'px-2 sm:px-3 md:px-4 max-w-full transition-all duration-200 ease-in-out' 
+          : 'px-3 md:px-4 transition-all duration-200 ease-in-out'
+      }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
@@ -134,7 +186,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
   );
 };
 
-export const RenderContent = ({ contents, language, viewMode = 'default', loadedParagraphs }) => {
+export const RenderContent = ({ contents, language, viewMode = 'normal', loadedParagraphs }) => {
   // Try to use the page context, but provide a fallback if it's not available
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
@@ -146,45 +198,93 @@ export const RenderContent = ({ contents, language, viewMode = 'default', loaded
     return <div>No content to display</div>;
   }
   
-  // Special handling for wrapped mode
-  if (viewMode === 'wrapped') {
+  /**
+   * Dense Mode Implementation
+   * 
+   * This mode renders all paragraphs in a single continuous flow with:
+   * - No line breaks between paragraphs
+   * - Paragraph numbers inline with the text
+   * - Text that wraps continuously as if newline characters were deleted
+   * - Same text size as normal mode (1rem/16px)
+   * - Only a small space separates one paragraph from the next
+   * 
+   * This creates a Bible verse style layout where text flows continuously
+   * with paragraph numbers serving as the only visual separator.
+   */
+  if (viewMode === 'dense') {
     return (
       <div className="relative">
         {Array.isArray(contents) && (
-          <div className="flex flex-wrap">
-            {/* Single flowing chunk of text with paragraph numbers interspersed */}
-            <div className="flex flex-wrap items-baseline">
+          <div className="prose max-w-full">
+            <p className="text-foreground leading-normal text-base">
               {contents.map((node, index) => (
                 <React.Fragment key={index}>
-                  {/* Paragraph number */}
-                  <span className="text-muted-foreground text-xs select-none flex-shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-background/50 border border-border/30 mr-2">
-                    {index + 1}
-                  </span>
-                  
-                  {/* Paragraph content with hover highlight */}
-                  <div className="group inline-flex flex-wrap items-baseline hover:bg-muted/30 rounded transition-colors">
-                    <WrappedNode node={node} index={index} />
-                  </div>
+                  {loadedParagraphs.includes(index) && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ 
+                        duration: 0.2,
+                        delay: index * 0.03
+                      }}
+                      className="inline"
+                    >
+                      {/* Only add a space if this isn't the first paragraph */}
+                      {index > 0 && ' '}
+                      
+                      {/* Paragraph number */}
+                      <span className="text-muted-foreground text-xs select-none">
+                        {index + 1}
+                      </span>{'\u00A0'}
+                      
+                      {/* Paragraph content without any breaks */}
+                      {node.children && node.children.map((child, childIndex) => {
+                        if (child.type === 'link') {
+                          return <LinkNode key={childIndex} node={child} />;
+                        } else if (child.text) {
+                          let className = '';
+                          if (child.bold) className += ' font-bold';
+                          if (child.italic) className += ' italic';
+                          if (child.underline) className += ' underline';
+                          
+                          if (child.code) {
+                            return (
+                              <code key={childIndex} className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono">
+                                {child.text}
+                              </code>
+                            );
+                          }
+                          
+                          return (
+                            <span key={childIndex} className={className || undefined}>
+                              {child.text}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })}
+                    </motion.span>
+                  )}
                 </React.Fragment>
               ))}
-            </div>
+            </p>
           </div>
         )}
       </div>
     );
   }
   
-  // For default and spaced modes
+  // For normal mode
   // If it's an array, map through and render each node
   if (Array.isArray(contents)) {
     return (
-      <>
+      <div className="w-full text-left">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
             {loadedParagraphs.includes(index) && renderNode(node, viewMode, index)}
           </React.Fragment>
         ))}
-      </>
+      </div>
     );
   }
   
@@ -192,141 +292,42 @@ export const RenderContent = ({ contents, language, viewMode = 'default', loaded
   return renderNode(contents, viewMode, 0);
 };
 
-// Component for wrapped mode nodes
-const WrappedNode = ({ node, index }) => {
-  if (!node) return null;
-  
-  // Handle paragraph nodes
-  if (node.type === nodeTypes.PARAGRAPH) {
-    if (node.children && Array.isArray(node.children)) {
-      return (
-        <span className="inline-flex flex-wrap items-baseline w-full max-w-full break-words">
-          {node.children.map((child, childIndex) => {
-            if (child.type === 'link') {
-              return (
-                <span key={childIndex} className="inline-block">
-                  <LinkNode node={child} />
-                </span>
-              );
-            } else if (child.text) {
-              let className = '';
-              if (child.bold) className += ' font-bold';
-              if (child.italic) className += ' italic';
-              if (child.underline) className += ' underline';
-              
-              if (child.code) {
-                return (
-                  <code key={childIndex} className="px-1 py-0.5 rounded bg-muted font-mono break-all">
-                    {child.text}
-                  </code>
-                );
-              }
-              
-              // Split text by spaces to handle each word individually
-              const words = child.text.split(/(\s+)/);
-              return (
-                <React.Fragment key={childIndex}>
-                  {words.map((word, wordIndex) => {
-                    // For spaces, render them directly
-                    if (/^\s+$/.test(word)) {
-                      return (
-                        <span key={`${childIndex}-${wordIndex}`} className="whitespace-pre">
-                          {word}
-                        </span>
-                      );
-                    }
-                    // For actual words, apply styling
-                    return (
-                      <span key={`${childIndex}-${wordIndex}`} className={`${className || ''} inline-block break-words`}>
-                        {word}
-                      </span>
-                    );
-                  })}
-                </React.Fragment>
-              );
-            }
-            return null;
-          })}
-        </span>
-      );
-    } else if (node.content) {
-      // Split content by spaces if it's a string
-      if (typeof node.content === 'string') {
-        const words = node.content.split(/(\s+)/);
-        return (
-          <span className="inline-flex flex-wrap items-baseline w-full max-w-full break-words">
-            {words.map((word, wordIndex) => {
-              if (/^\s+$/.test(word)) {
-                return (
-                  <span key={wordIndex} className="whitespace-pre">
-                    {word}
-                  </span>
-                );
-              }
-              return (
-                <span key={wordIndex} className="inline-block break-words">
-                  {word}
-                </span>
-              );
-            })}
-          </span>
-        );
-      }
-      return <span>{node.content}</span>;
-    }
-  }
-  
-  // For other node types, just return the content
-  return <span>{node.content || ''}</span>;
-};
-
 // Render content based on node type
 const renderNode = (node, viewMode, index) => {
   if (!node) return null;
-  
-  switch (node.type) {
-    case nodeTypes.PARAGRAPH:
-      return <ParagraphNode node={node} viewMode={viewMode} index={index} />;
-    case nodeTypes.CODE_BLOCK:
-      return <CodeBlockNode node={node} index={index} />;
-    case nodeTypes.HEADING:
-      return <HeadingNode node={node} index={index} />;
-    case nodeTypes.LIST:
-      return <ListNode node={node} index={index} />;
-    case nodeTypes.LINK:
-      return <LinkNode node={node} index={index} />;
-    default:
-      // For any other node type, render as plain text
-      if (node.content) {
-        return (
-          <div className="relative group">
-            <span className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none">
-              {index + 1}
-            </span>
-            <div>{node.content}</div>
-          </div>
-        );
-      }
-      return null;
+
+  // Only use ParagraphNode for normal mode
+  if (viewMode === 'normal') {
+    switch (node.type) {
+      case nodeTypes.PARAGRAPH:
+        return <ParagraphNode key={index} node={node} viewMode={viewMode} index={index} />;
+      case nodeTypes.CODE_BLOCK:
+        return <CodeBlockNode key={index} node={node} index={index} />;
+      case nodeTypes.HEADING:
+        return <HeadingNode key={index} node={node} index={index} />;
+      case nodeTypes.LIST:
+        return <ListNode key={index} node={node} index={index} />;
+      default:
+        return null;
+    }
   }
+  
+  // For any other modes, we'll handle them in RenderContent directly
+  return null;
 };
 
 // Define the missing node components
-const ParagraphNode = ({ node, viewMode = 'default', index = 0 }) => {
+const ParagraphNode = ({ node, viewMode = 'normal', index = 0 }) => {
   const paragraphRef = useRef(null);
   const { lineMode } = useLineSettings();
   const [lineHovered, setLineHovered] = useState(false);
   
-  // Determine spacing based on view mode
-  const spacingClasses = {
-    'default': 'mb-3',
-    'spaced': 'mb-6 max-w-3xl mx-auto',
-    'wrapped': 'mb-0'
-  };
-  
-  // Get the appropriate spacing class
-  const spacingClass = spacingClasses[viewMode] || spacingClasses['default'];
-  
+  // Define consistent text size for all modes
+  const TEXT_SIZE = "text-base"; // 1rem (16px) for all modes
+
+  // Only used for normal mode now
+  const spacingClass = 'mb-2';
+
   // Helper function to render child nodes
   const renderChild = (child, i) => {
     if (child.type === 'link') {
@@ -356,7 +357,29 @@ const ParagraphNode = ({ node, viewMode = 'default', index = 0 }) => {
     }
     return null;
   };
+
+  /**
+   * Normal Mode Implementation
+   * 
+   * This mode renders paragraphs with:
+   * - Paragraph numbers positioned to the left of the text
+   * - Numbers aligned with the first line of paragraph text
+   * - Clear indentation for each paragraph
+   * - Proper spacing between paragraphs
+   * - Standard text size (1rem/16px)
+   * 
+   * This creates a traditional document layout with clear paragraph
+   * separation and consistent indentation.
+   */
   
+  // Consistent paragraph number style for both modes
+  const renderParagraphNumber = (index) => (
+    <span className="text-muted-foreground text-xs select-none">
+      {index + 1}
+    </span>
+  );
+
+  // Normal mode with motion animations
   return (
     <motion.div 
       className={`group relative ${spacingClass}`}
@@ -364,32 +387,35 @@ const ParagraphNode = ({ node, viewMode = 'default', index = 0 }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 500, 
-        damping: 30,
-        mass: 1
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
+        mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
-      {/* Paragraph number */}
-      <motion.div 
-        className="absolute left-0 top-0 flex items-center justify-center"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
-          delay: 0.05,
-          type: "spring", 
-          stiffness: 500, 
-          damping: 30 
-        }}
-      >
-        <span className="text-muted-foreground text-xs select-none inline-flex items-center justify-center h-5 w-5 rounded-full bg-background/50 border border-border/30 mr-2">
-          {index + 1}
-        </span>
-      </motion.div>
-      
-      {/* Paragraph content with left padding for the number */}
-      <p className={`pl-8 ${viewMode === 'wrapped' ? 'whitespace-normal break-words' : ''}`}>
-        {node.children && node.children.map((child, i) => renderChild(child, i))}
-      </p>
+      {/* Normal mode - paragraph numbers create indentation */}
+      <div className="flex items-start">
+        {/* Paragraph number - aligned with first line of text */}
+        <motion.div
+          className="flex-shrink-0 w-6 text-right pr-1 pt-[0.25rem]"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ 
+            delay: 0.05,
+            type: "spring", 
+            stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+            damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
+          }}
+        >
+          {renderParagraphNumber(index)}
+        </motion.div>
+        
+        {/* Paragraph content */}
+        <div className="flex-1">
+          <p className={`text-left ${TEXT_SIZE}`}>
+            {node.children && node.children.map((child, i) => renderChild(child, i))}
+          </p>
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -405,9 +431,9 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 500, 
-        damping: 30,
-        mass: 1
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
+        mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
       <motion.span 
@@ -417,8 +443,8 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
         transition={{ 
           delay: 0.05,
           type: "spring", 
-          stiffness: 500, 
-          damping: 30 
+          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+          damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
         }}
       >
         {index + 1}
@@ -459,9 +485,9 @@ const HeadingNode = ({ node, index = 0 }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 500, 
-        damping: 30,
-        mass: 1
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
+        mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
       <motion.span 
@@ -471,8 +497,8 @@ const HeadingNode = ({ node, index = 0 }) => {
         transition={{ 
           delay: 0.05,
           type: "spring", 
-          stiffness: 500, 
-          damping: 30 
+          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+          damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
         }}
       >
         {index + 1}
@@ -499,9 +525,9 @@ const ListNode = ({ node, index = 0 }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 500, 
-        damping: 30,
-        mass: 1
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
+        mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
       <motion.span 
@@ -511,8 +537,8 @@ const ListNode = ({ node, index = 0 }) => {
         transition={{ 
           delay: 0.05,
           type: "spring", 
-          stiffness: 500, 
-          damping: 30 
+          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+          damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
         }}
       >
         {index + 1}

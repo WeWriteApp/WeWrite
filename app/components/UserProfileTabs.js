@@ -5,12 +5,12 @@ import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
 import { User, Clock, FileText, Lock, Plus, Loader } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
-import { getUserPages } from "../firebase/database";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../providers/ProfilePageProvider";
 import RecentActivity from "./RecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import usePages from "../hooks/usePages";
 
 // Wrapper component for animated tabs content
 function AnimatedTabsContent({ children, activeTab }) {
@@ -49,15 +49,15 @@ function PageList({ pageList, emptyMessage }) {
   }
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+    <div className="flex flex-col gap-2 mt-4 w-full max-w-[600px] mx-auto">
       {pageList.map((page) => (
-        <PillLink
+        <Link 
           key={page.id}
           href={`/pages/${page.id}`}
-          label={page.title || "Untitled"}
-          description={page.description || "No description"}
-          icon={<FileText className="h-4 w-4" />}
-        />
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-full transition-colors w-full text-center"
+        >
+          {page.title || "Untitled"}
+        </Link>
       ))}
     </div>
   );
@@ -75,20 +75,26 @@ function BioSection() {
 }
 
 export default function UserProfileTabs({ profile }) {
-  const [activeTab, setActiveTab] = useState("bio");
-  const [pages, setPages] = useState([]);
-  const [privatePages, setPrivatePages] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasMorePages, setHasMorePages] = useState(true);
-  const [hasMorePrivatePages, setHasMorePrivatePages] = useState(true);
-  const [isMoreLoading, setIsMoreLoading] = useState(false);
-  const [isMorePrivateLoading, setIsMorePrivateLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("activity");
   const { user } = useContext(AuthContext);
-  
   const isCurrentUser = user && profile && user.uid === profile.uid;
   
+  // Use the usePages hook to get the user's pages
+  const {
+    pages,
+    privatePages,
+    loading: isLoading,
+    error,
+    hasMorePages,
+    hasMorePrivatePages,
+    isMoreLoading,
+    isMorePrivateLoading,
+    fetchMorePages,
+    fetchMorePrivatePages
+  } = usePages(profile?.uid, true, user?.uid);
+  
   // Determine which tabs to show
-  const visibleTabs = ["bio", "activity", "pages"];
+  const visibleTabs = ["activity", "bio", "pages"];
   if (isCurrentUser) {
     visibleTabs.push("private");
   }
@@ -96,107 +102,47 @@ export default function UserProfileTabs({ profile }) {
   // Handle tab changes
   const handleTabChange = (newTab) => setActiveTab(newTab);
   
-  // Load user pages
-  useEffect(() => {
-    const loadPages = async () => {
-      if (!profile) return;
-      
-      try {
-        setIsLoading(true);
-        const publicPages = await getUserPages(profile.uid, 0, 10, false);
-        setPages(publicPages);
-        setHasMorePages(publicPages.length === 10);
-        
-        if (isCurrentUser) {
-          const privatePages = await getUserPages(profile.uid, 0, 10, true);
-          setPrivatePages(privatePages);
-          setHasMorePrivatePages(privatePages.length === 10);
-        }
-      } catch (error) {
-        console.error("Error loading pages:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadPages();
-  }, [profile, isCurrentUser]);
-  
   // Load more pages
-  const loadMorePages = async () => {
-    if (!profile || isMoreLoading) return;
-    
-    try {
-      setIsMoreLoading(true);
-      const morePages = await getUserPages(profile.uid, pages.length, 10, false);
-      setPages([...pages, ...morePages]);
-      setHasMorePages(morePages.length === 10);
-    } catch (error) {
-      console.error("Error loading more pages:", error);
-    } finally {
-      setIsMoreLoading(false);
-    }
+  const loadMorePages = () => {
+    fetchMorePages();
   };
   
   // Load more private pages
-  const loadMorePrivatePages = async () => {
-    if (!profile || !isCurrentUser || isMorePrivateLoading) return;
-    
-    try {
-      setIsMorePrivateLoading(true);
-      const morePrivatePages = await getUserPages(profile.uid, privatePages.length, 10, true);
-      setPrivatePages([...privatePages, ...morePrivatePages]);
-      setHasMorePrivatePages(morePrivatePages.length === 10);
-    } catch (error) {
-      console.error("Error loading more private pages:", error);
-    } finally {
-      setIsMorePrivateLoading(false);
-    }
+  const loadMorePrivatePages = () => {
+    fetchMorePrivatePages();
   };
-  
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  
+
   return (
-    <div className="w-full">
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="w-full h-auto bg-transparent border-b border-border/40 rounded-none p-0 justify-start overflow-x-auto hide-scrollbar">
-          {visibleTabs.map((tab) => (
-            <TabsTrigger 
-              key={tab} 
-              value={tab}
-              className="px-4 py-3 font-medium text-sm relative whitespace-nowrap data-[state=active]:text-primary data-[state=active]:font-semibold"
-            >
-              <div className="flex items-center gap-1.5">
-                {tab === "bio" && <User className="h-4 w-4" />}
-                {tab === "activity" && <Clock className="h-4 w-4" />}
-                {tab === "pages" && <FileText className="h-4 w-4" />}
-                {tab === "private" && <Lock className="h-4 w-4" />}
-                
-                {tab === "bio" && "Bio"}
-                {tab === "activity" && "Activity"}
-                {tab === "pages" && `Pages (${pages ? pages.length : 0})`}
-                {tab === "private" && `Private (${privatePages ? privatePages.length : 0})`}
-              </div>
+    <div className="mt-6">
+      <Tabs defaultValue="activity" onValueChange={handleTabChange}>
+        <TabsList className="grid grid-cols-3 sm:grid-cols-4">
+          <TabsTrigger value="activity" className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            <span className="hidden sm:inline">Activity</span>
+          </TabsTrigger>
+          
+          <TabsTrigger value="bio" className="flex items-center gap-1">
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">Bio</span>
+          </TabsTrigger>
+          
+          <TabsTrigger value="pages" className="flex items-center gap-1">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Pages</span>
+          </TabsTrigger>
+          
+          {isCurrentUser && (
+            <TabsTrigger value="private" className="flex items-center gap-1">
+              <Lock className="h-4 w-4" />
+              <span className="hidden sm:inline">Private</span>
             </TabsTrigger>
-          ))}
+          )}
         </TabsList>
         
-        <div className="overflow-hidden mt-4">
-          <TabsContent value="bio" className="mt-0">
-            <AnimatedTabsContent activeTab={activeTab}>
-              <BioSection />
-            </AnimatedTabsContent>
-          </TabsContent>
-          
+        <div className="mt-4">
           <TabsContent value="activity" className="mt-0">
             <AnimatedTabsContent activeTab={activeTab}>
-              <RecentActivity limit={10} showViewAll={false} />
+              <RecentActivity limit={10} showViewAll={false} userId={profile?.uid} />
               <div className="flex justify-center mt-4">
                 <Button 
                   variant="outline" 
@@ -209,51 +155,75 @@ export default function UserProfileTabs({ profile }) {
             </AnimatedTabsContent>
           </TabsContent>
           
+          <TabsContent value="bio" className="mt-0">
+            <AnimatedTabsContent activeTab={activeTab}>
+              <BioSection />
+            </AnimatedTabsContent>
+          </TabsContent>
+          
           <TabsContent value="pages" className="mt-0">
             <AnimatedTabsContent activeTab={activeTab}>
-              <PageList pageList={pages} emptyMessage="No pages yet" />
-              {hasMorePages && (
-                <div className="flex justify-center mt-4">
-                  <Button 
-                    variant="outline" 
-                    className="rounded-full"
-                    onClick={loadMorePages}
-                    disabled={isMoreLoading}
-                  >
-                    {isMoreLoading ? (
-                      <Loader className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
-                    )}
-                    Load more
-                  </Button>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
+              ) : (
+                <>
+                  <PageList pageList={pages} emptyMessage="No public pages yet" />
+                  {hasMorePages && (
+                    <div className="flex justify-center mt-4">
+                      <Button 
+                        variant="outline" 
+                        className="rounded-full"
+                        onClick={loadMorePages}
+                        disabled={isMoreLoading}
+                      >
+                        {isMoreLoading ? (
+                          <Loader className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-2" />
+                        )}
+                        Load more
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </AnimatedTabsContent>
           </TabsContent>
           
-          <TabsContent value="private" className="mt-0">
-            <AnimatedTabsContent activeTab={activeTab}>
-              <PageList pageList={privatePages} emptyMessage="No private pages" />
-              {hasMorePrivatePages && (
-                <div className="flex justify-center mt-4">
-                  <Button 
-                    variant="outline" 
-                    className="rounded-full"
-                    onClick={loadMorePrivatePages}
-                    disabled={isMorePrivateLoading}
-                  >
-                    {isMorePrivateLoading ? (
-                      <Loader className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
+          {isCurrentUser && (
+            <TabsContent value="private" className="mt-0">
+              <AnimatedTabsContent activeTab={activeTab}>
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <PageList pageList={privatePages} emptyMessage="No private pages yet" />
+                    {hasMorePrivatePages && (
+                      <div className="flex justify-center mt-4">
+                        <Button 
+                          variant="outline" 
+                          className="rounded-full"
+                          onClick={loadMorePrivatePages}
+                          disabled={isMorePrivateLoading}
+                        >
+                          {isMorePrivateLoading ? (
+                            <Loader className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Plus className="h-4 w-4 mr-2" />
+                          )}
+                          Load more
+                        </Button>
+                      </div>
                     )}
-                    Load more
-                  </Button>
-                </div>
-              )}
-            </AnimatedTabsContent>
-          </TabsContent>
+                  </>
+                )}
+              </AnimatedTabsContent>
+            </TabsContent>
+          )}
         </div>
       </Tabs>
     </div>
