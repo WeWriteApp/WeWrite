@@ -188,7 +188,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
             </div>
 
             {/* Center - Title and Author */}
-            <div className="flex-1 flex justify-start items-center">
+            <div className="flex-1 flex justify-start items-center ml-4">
               <div className={`text-left space-y-0 transition-all duration-120 ${
                 isScrolled ? "max-w-[70vw] flex flex-row items-center gap-2" : "max-w-full"
               }`}>
@@ -233,7 +233,7 @@ export default function PageHeader({ title, username, userId, isLoading = false 
             </div>
             
             {/* Right Side - Combined Menu Controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-4">
               {/* Combined Menu Button */}
               <div className={`relative transition-opacity duration-120 ${
                 isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"

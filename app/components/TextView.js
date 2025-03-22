@@ -117,33 +117,21 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
         {Array.isArray(contents) && (
           <div className="flex flex-wrap">
             {/* Single flowing chunk of text with paragraph numbers interspersed */}
-            <motion.div 
-              className="flex flex-wrap items-baseline" 
-              layout
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            >
+            <div className="flex flex-wrap items-baseline">
               {contents.map((node, index) => (
                 <React.Fragment key={index}>
                   {/* Paragraph number */}
-                  <motion.span 
-                    className="text-muted-foreground text-xs select-none flex-shrink-0 inline-block"
-                    layout
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  >
+                  <span className="text-muted-foreground text-xs select-none flex-shrink-0 inline-block">
                     {index + 1}
-                  </motion.span>
+                  </span>
                   
                   {/* Paragraph content with hover highlight */}
-                  <motion.div 
-                    className="group inline-flex flex-wrap items-baseline hover:bg-muted/30 rounded transition-colors"
-                    layout
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  >
+                  <div className="group inline-flex flex-wrap items-baseline hover:bg-muted/30 rounded transition-colors">
                     <WrappedNode node={node} index={index} />
-                  </motion.div>
+                  </div>
                 </React.Fragment>
               ))}
-            </motion.div>
+            </div>
           </div>
         )}
       </div>
@@ -176,22 +164,13 @@ const WrappedNode = ({ node, index }) => {
   if (node.type === nodeTypes.PARAGRAPH) {
     if (node.children && Array.isArray(node.children)) {
       return (
-        <motion.span 
-          className="inline-flex flex-wrap items-baseline"
-          layout
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
+        <span className="inline-flex flex-wrap items-baseline">
           {node.children.map((child, childIndex) => {
             if (child.type === 'link') {
               return (
-                <motion.span 
-                  key={childIndex}
-                  className="inline-block"
-                  layout
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                >
+                <span key={childIndex} className="inline-block">
                   <LinkNode node={child} />
-                </motion.span>
+                </span>
               );
             } else if (child.text) {
               let className = '';
@@ -201,14 +180,9 @@ const WrappedNode = ({ node, index }) => {
               
               if (child.code) {
                 return (
-                  <motion.code 
-                    key={childIndex} 
-                    className="px-1 py-0.5 rounded bg-muted font-mono"
-                    layout
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  >
+                  <code key={childIndex} className="px-1 py-0.5 rounded bg-muted font-mono">
                     {child.text}
-                  </motion.code>
+                  </code>
                 );
               }
               
@@ -220,26 +194,16 @@ const WrappedNode = ({ node, index }) => {
                     // For spaces, render them directly
                     if (/^\s+$/.test(word)) {
                       return (
-                        <motion.span 
-                          key={`${childIndex}-${wordIndex}`} 
-                          className="whitespace-pre"
-                          layout
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        >
+                        <span key={`${childIndex}-${wordIndex}`} className="whitespace-pre">
                           {word}
-                        </motion.span>
+                        </span>
                       );
                     }
                     // For actual words, apply styling
                     return (
-                      <motion.span 
-                        key={`${childIndex}-${wordIndex}`} 
-                        className={`${className || ''} inline-block`}
-                        layout
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                      >
+                      <span key={`${childIndex}-${wordIndex}`} className={`${className || ''} inline-block`}>
                         {word}
-                      </motion.span>
+                      </span>
                     );
                   })}
                 </React.Fragment>
@@ -247,46 +211,32 @@ const WrappedNode = ({ node, index }) => {
             }
             return null;
           })}
-        </motion.span>
+        </span>
       );
     } else if (node.content) {
       // Split content by spaces if it's a string
       if (typeof node.content === 'string') {
         const words = node.content.split(/(\s+)/);
         return (
-          <motion.span 
-            className="inline-flex flex-wrap items-baseline"
-            layout
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
+          <span className="inline-flex flex-wrap items-baseline">
             {words.map((word, wordIndex) => {
               if (/^\s+$/.test(word)) {
                 return (
-                  <motion.span 
-                    key={wordIndex} 
-                    className="whitespace-pre"
-                    layout
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  >
+                  <span key={wordIndex} className="whitespace-pre">
                     {word}
-                  </motion.span>
+                  </span>
                 );
               }
               return (
-                <motion.span 
-                  key={wordIndex} 
-                  className="inline-block"
-                  layout
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                >
+                <span key={wordIndex} className="inline-block">
                   {word}
-                </motion.span>
+                </span>
               );
             })}
-          </motion.span>
+          </span>
         );
       }
-      return <motion.span layout>{node.content}</motion.span>;
+      return <span>{node.content}</span>;
     }
   }
   
@@ -520,27 +470,19 @@ const LinkNode = ({ node, index }) => {
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
     return (
-      <motion.span 
-        className="inline-block"
-        layout
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
+      <span className="inline-block">
         <InternalLinkWithTitle pageId={pageId} href={href} displayText={node.displayText || node.text} />
-      </motion.span>
+      </span>
     );
   }
   
   // For external links, use the PillLink component
   return (
-    <motion.span 
-      className="inline-block"
-      layout
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-    >
+    <span className="inline-block">
       <PillLink href={href} isPublic={true} className="inline">
         {node.displayText || node.text || node.content || href}
       </PillLink>
-    </motion.span>
+    </span>
   );
 };
 

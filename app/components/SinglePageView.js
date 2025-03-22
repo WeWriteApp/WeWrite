@@ -634,15 +634,20 @@ function BacklinksSection({ pageId }) {
 
           // Search for links in the content
           if (Array.isArray(content)) {
-            content.forEach(node => {
+            for (const node of content) {
               if (node.type === 'paragraph' && node.children) {
-                node.children.forEach(child => {
-                  if (child.type === 'link' && child.href && child.href.includes(pageId)) {
-                    hasLink = true;
+                for (const child of node.children) {
+                  if (child.type === 'link' && child.href) {
+                    // Check if the link points to this page
+                    if (child.href.includes(`/pages/${pageId}`)) {
+                      hasLink = true;
+                      break;
+                    }
                   }
-                });
+                }
+                if (hasLink) break;
               }
-            });
+            }
           }
         } catch (error) {
           console.error("Error parsing page content:", error);
