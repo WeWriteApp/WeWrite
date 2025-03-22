@@ -604,7 +604,7 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
         { text: "Referenced page: " },
         {
           type: "link",
-          url: `/pages/${sourcePageData.id}`,
+          href: `/pages/${sourcePageData.id}`,
           displayText: sourcePageData.title,
           children: [{ text: sourcePageData.title }]
         }
