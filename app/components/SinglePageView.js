@@ -30,6 +30,8 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { Reply, Plus } from 'lucide-react';
+import { LinkIcon } from 'lucide-react';
+import { useToast } from './ui/use-toast';
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -42,6 +44,7 @@ export default function SinglePageView({ params }) {
   const [scrollDirection, setScrollDirection] = useState("up");
   const [lastScrollTop, setLastScrollTop] = useState(0);
   const [lineViewMode, setLineViewMode] = useState('default');
+  const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
   const [title, setTitle] = useState("");
 
@@ -99,7 +102,15 @@ export default function SinglePageView({ params }) {
   useEffect(() => {
     // Setup listener for real-time updates
     const unsubscribe = listenToPageById(params.id, async (data) => {
-      if (data) {
+      if (data && data.error) {
+        // Handle access denied or other errors
+        setIsLoading(false);
+        setPage(null);
+        setError(data.error);
+        return;
+      }
+      
+      if (data && data.pageData) {
         const { pageData, versionData, links } = data;
 
         // Get user data from Firebase Realtime Database
@@ -156,7 +167,7 @@ export default function SinglePageView({ params }) {
         setPage(null);
         setIsLoading(false);
       }
-    });
+    }, user?.uid); // Pass the user ID for access control
 
     return () => unsubscribe();
   }, [params.id, user]);
@@ -190,7 +201,26 @@ export default function SinglePageView({ params }) {
           <title>Page Not Found - WeWrite</title>
         </Head>
         <PageHeader />
-        <Loader />
+        <div className="min-h-[400px] w-full">
+          {isLoading ? (
+            <Loader />
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-4 rounded-lg max-w-md">
+                <h2 className="text-xl font-medium mb-2">Access Error</h2>
+                <p>{error}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <h2 className="text-xl font-medium mb-2">Page Not Found</h2>
+              <p className="text-muted-foreground mb-4">The page you're looking for doesn't exist or has been removed.</p>
+              <Link href="/">
+                <Button variant="outline">Return Home</Button>
+              </Link>
+            </div>
+          )}
+        </div>
       </Layout>
     );
   }
@@ -243,6 +273,48 @@ export default function SinglePageView({ params }) {
         </Head>
         <PageHeader />
         <Loader />
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <Head>
+          <title>Error - WeWrite</title>
+        </Head>
+        <PageHeader />
+        <div className="p-4">
+          <h1 className="text-2xl font-semibold text-text">
+            Error
+          </h1>
+          <div className="flex items-center gap-2 mt-4">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              viewBox="0 0 24 24" 
+              width="24" 
+              height="24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="h-5 w-5 text-red-500"
+            >
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span className="text-lg text-text">
+              {error}
+            </span>
+            <Link href="/">
+              <button className="bg-background text-button-text px-4 py-2 rounded-full">
+                Go back
+              </button>
+            </Link>
+          </div>
+        </div>
       </Layout>
     );
   }
@@ -363,6 +435,7 @@ export default function SinglePageView({ params }) {
 
 export function PageInteractionButtons({ page, username }) {
   const router = useRouter();
+  const { user } = useContext(AuthContext);
   const [showAddToPageDialog, setShowAddToPageDialog] = useState(false);
   
   const handleReplyToPage = () => {
@@ -381,7 +454,7 @@ export function PageInteractionButtons({ page, username }) {
         const parsedContent = typeof page.content === 'string' 
           ? JSON.parse(page.content) 
           : page.content;
-          
+
         // Extract first paragraph or so for a summary
         if (Array.isArray(parsedContent) && parsedContent.length > 0) {
           const firstPara = parsedContent.find(node => 
@@ -406,10 +479,6 @@ export function PageInteractionButtons({ page, username }) {
       }
     }
     
-    // Get the current user's username from auth context
-    const { user } = useContext(AuthContext);
-    const currentUsername = user?.username || (user?.displayName || '');
-    
     // Create the initial content with a single paragraph
     const initialContent = [
       {
@@ -418,14 +487,14 @@ export function PageInteractionButtons({ page, username }) {
           { text: `This is a reply to ` },
           {
             type: "link",
-            url: `/pages/${page.id}`,
+            href: `/pages/${page.id}`,
             displayText: page.title || "Untitled",
             children: [{ text: page.title || "Untitled" }]
           },
           { text: ` by ` },
           {
             type: "link",
-            url: `/profile/${page.userId || "anonymous"}`,
+            href: `/profile/${page.userId || "anonymous"}`,
             displayText: page.username || "Anonymous",
             children: [{ text: page.username || "Anonymous" }]
           },
@@ -494,19 +563,58 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
+  const searchInputRef = useRef(null);
+  const { toast } = useToast();
+  
+  // Focus search input when dialog opens
+  useEffect(() => {
+    if (open && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current.focus();
+      }, 100);
+    }
+  }, [open]);
+  
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery('');
+      setSearchResults([]);
+      setError(null);
+    }
+  }, [open]);
   
   // Search for pages that the user can edit
   const handleSearch = async (query) => {
-    if (!query || query.length < 2 || !user) return;
+    if (!user) {
+      setError("You must be logged in to search for pages");
+      return;
+    }
     
     setIsLoading(true);
+    setError(null);
+    
     try {
-      // You'd need to implement this function in your firebase/database.js file
+      // Clear results if query is empty
+      if (!query || query.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+      
       const pages = await getEditablePagesByUser(user.uid, query);
-      setSearchResults(pages || []);
+      
+      // Filter out the current page from results
+      const filteredPages = pages.filter(page => page.id !== pageToAdd?.id);
+      setSearchResults(filteredPages || []);
+      
+      if (filteredPages.length === 0 && query.length >= 2) {
+        console.log("No pages found matching query:", query);
+      }
     } catch (error) {
       console.error("Error searching for pages:", error);
+      setError("Failed to search for pages. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -519,22 +627,30 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, user]);
   
   // Handle adding the page to another page
   const handleAddToPage = async (targetPage) => {
     try {
+      setIsLoading(true);
+      
       // Create a new version of the target page with the added content
-      // You'd need to implement this function in your firebase/database.js file
       await appendPageReference(targetPage.id, pageToAdd);
       
       // Close the dialog
       onOpenChange(false);
       
       // Show success message
-      alert(`${pageToAdd.title} added to ${targetPage.title}`);
+      toast({
+        title: "Success!",
+        description: `"${pageToAdd.title}" added to "${targetPage.title}"`,
+        status: "success",
+      });
     } catch (error) {
       console.error("Error adding page reference:", error);
+      setError("Failed to add page. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -560,6 +676,7 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
               className="w-full px-3 py-2 border rounded-md bg-background"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              ref={searchInputRef}
             />
             
             <div className="max-h-60 overflow-y-auto border rounded-md p-2">
@@ -567,6 +684,10 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
                 <div className="text-center py-4">
                   <Loader className="h-4 w-4 animate-spin mx-auto" />
                   <p className="text-sm text-muted-foreground mt-2">Searching...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-red-500">{error}</p>
                 </div>
               ) : searchResults.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
@@ -673,8 +794,8 @@ function BacklinksSection({ pageId }) {
 
   if (loading) {
     return (
-      <div className="py-4">
-        <h3 className="text-lg font-medium mb-3">Backlinks</h3>
+      <div className="py-6 px-4">
+        <h3 className="text-lg font-medium mb-4">Backlinks</h3>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader className="h-4 w-4 animate-spin" />
           <span>Loading backlinks...</span>
@@ -685,16 +806,20 @@ function BacklinksSection({ pageId }) {
 
   if (backlinks.length === 0) {
     return (
-      <div className="py-4">
-        <h3 className="text-lg font-medium mb-3">Backlinks</h3>
-        <p className="text-muted-foreground">No pages link to this page yet.</p>
+      <div className="py-6 px-4">
+        <h3 className="text-lg font-medium mb-4">Backlinks</h3>
+        <div className="bg-card/50 border border-border/40 rounded-lg p-6 text-center">
+          <LinkIcon className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
+          <p className="text-muted-foreground">No pages link to this page yet.</p>
+          <p className="text-xs text-muted-foreground mt-2">When other pages link to this one, they'll appear here.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="py-4">
-      <h3 className="text-lg font-medium mb-3">Backlinks</h3>
+    <div className="py-6 px-4">
+      <h3 className="text-lg font-medium mb-4">Backlinks</h3>
       <div className="space-y-2">
         {backlinks.map(page => (
           <div key={page.id} className="group relative">

@@ -10,7 +10,7 @@ import { AuthContext } from "../providers/AuthProvider";
 
 const ActivitySkeleton = () => {
   return (
-    <div className="p-3 border border-border/40 rounded-lg animate-pulse min-w-[300px] md:min-w-[350px] lg:min-w-[400px]">
+    <div className="p-3 border border-border/40 rounded-lg animate-pulse w-full md:max-w-[400px]">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <div className="h-6 w-24 bg-muted rounded"></div>
@@ -93,9 +93,16 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false 
         )}
 
         {!loading && error && user && (
-          <div className="flex items-center gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-            <AlertTriangle className="h-4 w-4" />
-            <p>There was a problem fetching recent activity</p>
+          <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <p>{error.message || "There was a problem fetching recent activity"}</p>
+            </div>
+            {error.details && (
+              <p className="text-xs text-amber-500 dark:text-amber-300 ml-6">
+                {error.details}
+              </p>
+            )}
           </div>
         )}
 
@@ -106,7 +113,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false 
         )}
 
         {!loading && !error && activities.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             {activities.slice(0, 4).map((activity, index) => (
               <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
             ))}
@@ -148,9 +155,16 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false 
           )}
 
           {!loading && error && user && (
-            <div className="flex items-center gap-2 p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg col-span-full">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <p>There was a problem fetching recent activity</p>
+            <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg col-span-full">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                <p>{error.message || "There was a problem fetching recent activity"}</p>
+              </div>
+              {error.details && (
+                <p className="text-xs text-amber-500 dark:text-amber-300 ml-6">
+                  {error.details}
+                </p>
+              )}
             </div>
           )}
 
@@ -191,9 +205,16 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false 
           )}
 
           {!loading && error && user && (
-            <div className="flex items-center gap-2 p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg min-w-[300px]">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <p>There was a problem fetching recent activity</p>
+            <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg min-w-[300px]">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                <p>{error.message || "There was a problem fetching recent activity"}</p>
+              </div>
+              {error.details && (
+                <p className="text-xs text-amber-500 dark:text-amber-300 ml-6">
+                  {error.details}
+                </p>
+              )}
             </div>
           )}
 
@@ -208,7 +229,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false 
               {activities.map((activity, index) => (
                 <div 
                   key={`${activity.pageId}-${index}`} 
-                  className="min-w-[220px] md:min-w-[250px] lg:min-w-[280px] flex-shrink-0"
+                  className="min-w-[280px] md:min-w-[300px] lg:min-w-[350px] max-w-[400px] flex-shrink-0"
                 >
                   <ActivityCard activity={activity} isCarousel={true} />
                 </div>

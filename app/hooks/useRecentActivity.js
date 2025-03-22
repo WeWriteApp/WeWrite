@@ -41,22 +41,13 @@ const useRecentActivity = (limitCount = 10) => {
         let pagesQuery;
         
         try {
-          if (user) {
-            // If user is logged in, get all pages they have access to
-            pagesQuery = query(
-              collection(db, "pages"),
-              orderBy("lastModified", "desc"),
-              limit(limitCount * 2) // Fetch more than needed to account for filtering
-            );
-          } else {
-            // If user is not logged in, only get public pages
-            pagesQuery = query(
-              collection(db, "pages"),
-              where("isPublic", "==", true),
-              orderBy("lastModified", "desc"),
-              limit(limitCount * 2) // Fetch more than needed to account for filtering
-            );
-          }
+          // Always only get public pages for the activity feed
+          pagesQuery = query(
+            collection(db, "pages"),
+            where("isPublic", "==", true),
+            orderBy("lastModified", "desc"),
+            limit(limitCount * 2) // Fetch more than needed to account for filtering
+          );
           
           const pagesSnapshot = await getDocs(pagesQuery);
           
@@ -130,7 +121,11 @@ const useRecentActivity = (limitCount = 10) => {
           setActivities(validActivities);
         } catch (err) {
           console.error("Error with Firestore query:", err);
-          setError(err);
+          setError({
+            message: "Failed to fetch recent activity",
+            details: err.message || "Unknown database error",
+            code: err.code || "unknown"
+          });
           
           // For logged-out users, provide empty array instead of showing error
           if (!user) {
@@ -139,7 +134,11 @@ const useRecentActivity = (limitCount = 10) => {
         }
       } catch (err) {
         console.error("Error in fetchRecentActivity:", err);
-        setError(err);
+        setError({
+          message: "Failed to process recent activity data",
+          details: err.message || "Unknown error",
+          code: err.code || "unknown"
+        });
       } finally {
         setLoading(false);
       }

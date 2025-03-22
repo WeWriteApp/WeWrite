@@ -18,6 +18,37 @@ import { app } from "./config";
 
 export const db = getFirestore(app);
 
+// Utility function to check if a user has access to a page
+export const checkPageAccess = (pageData, userId) => {
+  // If page doesn't exist, no one has access
+  if (!pageData) {
+    return {
+      hasAccess: false,
+      error: "Page not found"
+    };
+  }
+  
+  // Public pages are accessible to everyone
+  if (pageData.isPublic) {
+    return {
+      hasAccess: true
+    };
+  }
+  
+  // Private pages are only accessible to their owners
+  if (userId && pageData.userId === userId) {
+    return {
+      hasAccess: true
+    };
+  }
+  
+  // Otherwise, access is denied
+  return {
+    hasAccess: false,
+    error: "Access denied: This page is private and can only be viewed by its owner"
+  };
+};
+
 export const createDoc = async (collectionName, data) => {
   try {
     const docRef = await addDoc(collection(db, collectionName), data);
@@ -65,7 +96,7 @@ export const createPage = async (data) => {
   }
 }
 
-export const listenToPageById = (pageId, onPageUpdate) => {
+export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   try {
     // Reference to the page document
     const pageRef = doc(db, "pages", pageId);
@@ -81,6 +112,13 @@ export const listenToPageById = (pageId, onPageUpdate) => {
           ...pageSnap.data()
         };
 
+        // Check access permissions
+        const accessCheck = checkPageAccess(pageData, userId);
+        if (!accessCheck.hasAccess) {
+          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+          onPageUpdate({ error: accessCheck.error });
+          return;
+        }
 
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
@@ -108,7 +146,7 @@ export const listenToPageById = (pageId, onPageUpdate) => {
         });
       } else {
         // If page document doesn't exist
-        onPageUpdate(null);
+        onPageUpdate({ error: "Page not found" });
       }
     });
 
@@ -121,11 +159,12 @@ export const listenToPageById = (pageId, onPageUpdate) => {
     };
   } catch (e) {
     console.error("Error in listenToPageById:", e);
-    return e;
+    onPageUpdate({ error: e.message });
+    return () => {};
   }
 };
 
-export const getPageById = async (pageId) => {
+export const getPageById = async (pageId, userId = null) => {
   // should get the page and versions
   try {
     if (!pageId) {
@@ -144,6 +183,13 @@ export const getPageById = async (pageId) => {
     const pageData = {
       id: pageId,
       ...pageSnap.data()
+    };
+    
+    // Check access permissions
+    const accessCheck = checkPageAccess(pageData, userId);
+    if (!accessCheck.hasAccess) {
+      console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+      return { pageData: null, error: accessCheck.error };
     }
     
     return { pageData };
@@ -501,20 +547,26 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
   try {
     if (!userId) return [];
     
-    let q = query(
+    // First get all pages by the user
+    const q = query(
       collection(db, "pages"),
       where("userId", "==", userId),
-      orderBy("title"),
-      limit(20)
+      orderBy("lastModified", "desc"), // Sort by most recently modified
+      limit(50) // Increase limit to find more results
     );
     
     const querySnapshot = await getDocs(q);
     let pages = [];
     
+    // Client-side filtering for more flexible search
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      if (searchQuery === "" || 
-          data.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      // Convert both title and search query to lowercase for case-insensitive search
+      const normalizedTitle = data.title.toLowerCase();
+      const normalizedQuery = searchQuery.toLowerCase();
+      
+      // Check if the title contains the search query
+      if (searchQuery === "" || normalizedTitle.includes(normalizedQuery)) {
         pages.push({
           id: doc.id,
           ...data
@@ -522,6 +574,7 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
       }
     });
     
+    console.log(`Found ${pages.length} pages matching query "${searchQuery}"`);
     return pages;
   } catch (error) {
     console.error("Error getting editable pages:", error);
@@ -535,23 +588,23 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
     if (!targetPageId || !sourcePageData) return false;
     
     // Get the current version of the target page
-    const { pageData, versionData } = await getPageById(targetPageId);
+    const { pageData } = await getPageById(targetPageId);
     
-    if (!pageData || !versionData) {
+    if (!pageData) {
       throw new Error("Target page not found");
     }
     
-    // Parse the current content
+    // Get the current content from the page data
     let currentContent = [];
-    if (versionData.content) {
-      if (typeof versionData.content === 'string') {
+    if (pageData.content) {
+      if (typeof pageData.content === 'string') {
         try {
-          currentContent = JSON.parse(versionData.content);
+          currentContent = JSON.parse(pageData.content);
         } catch (e) {
-          currentContent = [{ type: "paragraph", children: [{ text: versionData.content }] }];
+          currentContent = [{ type: "paragraph", children: [{ text: pageData.content }] }];
         }
-      } else if (Array.isArray(versionData.content)) {
-        currentContent = versionData.content;
+      } else if (Array.isArray(pageData.content)) {
+        currentContent = pageData.content;
       }
     }
     
@@ -576,10 +629,10 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
       referenceNode
     ];
     
-    // Save the new version
-    await saveNewVersion(targetPageId, {
-      content: newContent,
-      userId: pageData.userId
+    // Update the page with the new content
+    await updatePage(targetPageId, {
+      content: JSON.stringify(newContent),
+      lastModified: new Date().toISOString()
     });
     
     return true;

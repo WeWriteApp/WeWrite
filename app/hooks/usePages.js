@@ -4,7 +4,7 @@ import { collection, query, where, orderBy, onSnapshot, limit, startAfter } from
 
 const limitCount = 25;
 
-const usePages = (userId, includePrivate = true) => {
+const usePages = (userId, includePrivate = true, currentUserId = null) => {
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState([]);
   const [privatePages, setPrivatePages] = useState([]);
@@ -15,12 +15,16 @@ const usePages = (userId, includePrivate = true) => {
   const [hasMorePages, setHasMorePages] = useState(true);
   const [hasMorePrivatePages, setHasMorePrivatePages] = useState(true);
   const [activeTab, setActiveTab] = useState('public');
+  const [error, setError] = useState(null);
 
   const fetchInitialPages = () => {
     let pagesQuery;
     
-    if (includePrivate) {
-      // Get all pages for the user
+    // Check if the current user is the owner of the pages
+    const isOwner = currentUserId && userId === currentUserId;
+    
+    if (includePrivate && isOwner) {
+      // Get all pages for the user (both public and private) if the current user is the owner
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -28,7 +32,7 @@ const usePages = (userId, includePrivate = true) => {
         limit(limitCount)
       );
     } else {
-      // Get only public pages
+      // Get only public pages if the current user is not the owner
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -39,6 +43,7 @@ const usePages = (userId, includePrivate = true) => {
     }
 
     setLoading(true);
+    setError(null);
 
     const unsubscribe = onSnapshot(pagesQuery, (snapshot) => {
       const pagesArray = [];
@@ -46,9 +51,11 @@ const usePages = (userId, includePrivate = true) => {
 
       snapshot.forEach((doc) => {
         const pageData = { id: doc.id, ...doc.data() };
+        
+        // Only include private pages if the current user is the owner
         if (pageData.isPublic) {
           pagesArray.push(pageData);
-        } else {
+        } else if (isOwner) {
           privateArray.push(pageData);
         }
       });
@@ -75,6 +82,10 @@ const usePages = (userId, includePrivate = true) => {
       }
 
       setLoading(false);
+    }, (err) => {
+      console.error("Error fetching pages:", err);
+      setError("Failed to load pages. Please try again later.");
+      setLoading(false);
     });
 
     return unsubscribe;
@@ -84,6 +95,8 @@ const usePages = (userId, includePrivate = true) => {
     if (!paginationStartDoc) return;
     
     let moreQuery;
+    // Check if the current user is the owner of the pages
+    const isOwner = currentUserId && userId === currentUserId;
     
     if (activeTab === 'public') {
       moreQuery = query(
@@ -99,31 +112,33 @@ const usePages = (userId, includePrivate = true) => {
       
       onSnapshot(moreQuery, (snapshot) => {
         const newPagesArray = [];
-  
+        
         snapshot.forEach((doc) => {
           const pageData = { id: doc.id, ...doc.data() };
           if (pageData.isPublic) {
             newPagesArray.push(pageData);
           }
         });
-  
-        // Append new pages to existing pages
-        setPages(prevPages => [...prevPages, ...newPagesArray]);
-  
-        if (newPagesArray.length < limitCount) {
+        
+        setPages((prevPages) => [...prevPages, ...newPagesArray]);
+        
+        if (snapshot.docs.length < limitCount) {
           setHasMorePages(false);
-        } else {
-          setHasMorePages(true);
         }
-  
+        
         if (snapshot.docs.length > 0) {
           const lastDoc = snapshot.docs[snapshot.docs.length - 1];
           setLastPageKey(lastDoc);
         }
-  
+        
+        setIsMoreLoading(false);
+      }, (err) => {
+        console.error("Error fetching more pages:", err);
+        setError("Failed to load more pages. Please try again later.");
         setIsMoreLoading(false);
       });
-    } else {
+    } else if (activeTab === 'private' && isOwner) {
+      // Only fetch private pages if the current user is the owner
       moreQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -136,29 +151,30 @@ const usePages = (userId, includePrivate = true) => {
       setIsMorePrivateLoading(true);
       
       onSnapshot(moreQuery, (snapshot) => {
-        const newPrivatePagesArray = [];
-  
+        const newPrivateArray = [];
+        
         snapshot.forEach((doc) => {
           const pageData = { id: doc.id, ...doc.data() };
           if (!pageData.isPublic) {
-            newPrivatePagesArray.push(pageData);
+            newPrivateArray.push(pageData);
           }
         });
-  
-        // Append new pages to existing private pages
-        setPrivatePages(prevPages => [...prevPages, ...newPrivatePagesArray]);
-  
-        if (newPrivatePagesArray.length < limitCount) {
+        
+        setPrivatePages((prevPages) => [...prevPages, ...newPrivateArray]);
+        
+        if (snapshot.docs.length < limitCount) {
           setHasMorePrivatePages(false);
-        } else {
-          setHasMorePrivatePages(true);
         }
-  
+        
         if (snapshot.docs.length > 0) {
           const lastDoc = snapshot.docs[snapshot.docs.length - 1];
           setLastPrivatePageKey(lastDoc);
         }
-  
+        
+        setIsMorePrivateLoading(false);
+      }, (err) => {
+        console.error("Error fetching more private pages:", err);
+        setError("Failed to load more private pages. Please try again later.");
         setIsMorePrivateLoading(false);
       });
     }
@@ -197,7 +213,8 @@ const usePages = (userId, includePrivate = true) => {
     hasMorePages,
     hasMorePrivatePages,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    error
   };
 };
 

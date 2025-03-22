@@ -9,9 +9,9 @@ import { motion } from "framer-motion";
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[32px]">
-      <Loader className="h-3.5 w-3.5 animate-spin text-primary" />
-      <span className="text-muted-foreground text-xs">Loading...</span>
+    <div className="my-0.5 px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[32px] min-w-[100px]">
+      <ShimmerEffect className="h-3.5 w-3.5 rounded-full" />
+      <ShimmerEffect className="h-4 w-16 rounded-md" />
     </div>
   );
 };
@@ -25,7 +25,8 @@ export const PillLink = ({
   isOwned,
   byline,
   isLoading,
-  variant = "primary"
+  variant = "primary",
+  label
 }) => {
   const { user } = useAuth();
   // Only show lock for private pages (where isPublic is explicitly false)
@@ -59,8 +60,10 @@ export const PillLink = ({
   const pageOwnerId = groupId?.split('_')[0];
   const isCurrentUserOwner = user && pageOwnerId === user.uid;
   
-  // Determine what title to display
-  const displayTitle = (isPublic === false && !isCurrentUserOwner) ? "Private Page" : children;
+  // Determine what title to display - use label prop if provided, otherwise use children
+  const displayTitle = (isPublic === false && !isCurrentUserOwner) 
+    ? "Private Page" 
+    : (label || children);
   
   return (
     <Link 
@@ -77,35 +80,19 @@ export const PillLink = ({
         ${className || ''}
       `}
     >
-      <motion.div 
-        className="flex items-center gap-1.5 flex-nowrap"
-        layout
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
+      <div className="flex items-center gap-1.5 flex-nowrap">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <motion.div 
-          className="flex flex-col min-w-0"
-          layout
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
-          <motion.span 
-            className="leading-tight whitespace-normal break-words"
-            layout
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
+        <div className="flex flex-col min-w-0">
+          <span className="leading-tight whitespace-normal break-words">
             {displayTitle}
-          </motion.span>
+          </span>
           {byline && (
-            <motion.span 
-              className="text-xs opacity-75 leading-tight break-words"
-              layout
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            >
+            <span className="text-xs opacity-75 leading-tight break-words">
               {byline}
-            </motion.span>
+            </span>
           )}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </Link>
   );
 }
