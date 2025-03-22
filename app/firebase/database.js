@@ -62,9 +62,15 @@ export const createDoc = async (collectionName, data) => {
 
 export const createPage = async (data) => {
   try {
+    // Validate required fields to prevent empty path errors
+    if (!data || !data.userId) {
+      console.error("Cannot create page: Missing required user ID");
+      return null;
+    }
+
     const pageData = {
-      title: data.title,
-      isPublic: data.isPublic,
+      title: data.title || "Untitled",
+      isPublic: data.isPublic !== undefined ? data.isPublic : true,
       userId: data.userId,
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
@@ -76,23 +82,25 @@ export const createPage = async (data) => {
     };
 
     const pageRef = await addDoc(collection(db, "pages"), pageData);
+    
+    // Ensure we have content before creating a version
     const versionData = {
-      content: data.content,
+      content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
       createdAt: new Date().toISOString(),
       userId: data.userId
     };
 
     // create a subcollection for versions
-    const version = await addDoc(collection(pageRef, "versions"), versionData);
+    const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
     
     // take the version id and add it as the currentVersion on the page
-    await setDoc(pageRef, { currentVersion: version.id }, { merge: true });
+    await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
 
     return pageRef.id;
 
   } catch (e) {
-    console.log('error', e);
-    return e;
+    console.error('Error creating page:', e);
+    return null;
   }
 }
 
