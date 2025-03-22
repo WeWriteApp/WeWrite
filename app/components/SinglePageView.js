@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
 import TextView from "./TextView";
@@ -389,7 +389,7 @@ export default function SinglePageView({ params }) {
         ) : (
           <>
             <div className="space-y-4 p-4">
-              <div className={`page-content ${lineViewMode === 'wrapped' ? 'text-sm' : ''}`}>
+              <div className={`page-content ${lineViewMode === 'wrapped' ? 'text-sm max-w-full break-words' : ''}`}>
                 <PageProvider>
                   <LineSettingsProvider>
                     <TextView 
