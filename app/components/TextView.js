@@ -1,14 +1,14 @@
 import React from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { usePage } from "@/contexts/PageContext";
+import { usePage } from "../contexts/PageContext";
 import { duotoneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { cx } from "class-variance-authority";
-import { getLanguages } from "@/utils/common";
-import { nodeTypes } from "@/utils/constants";
+import { getLanguages } from "../utils/common";
+import { nodeTypes } from "../utils/constants";
 import { PillLink } from "./PillLink";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
-import { getPageById } from "@/firebase/database";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { getPageById } from "../firebase/database";
 import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 
@@ -203,9 +203,9 @@ export const RenderContent = ({ contents, language, viewMode = 'normal', loadedP
    * 
    * This mode renders all paragraphs in a single continuous flow with:
    * - No line breaks between paragraphs
-   * - Paragraph numbers inline with the text
-   * - Text that wraps continuously as if newline characters were deleted
-   * - Same text size as normal mode (1rem/16px)
+   * - Text wraps continuously as if newline characters were deleted
+   * - Paragraph numbers are inserted inline within the continuous text
+   * - Standard text size (1rem/16px)
    * - Only a small space separates one paragraph from the next
    * 
    * This creates a Bible verse style layout where text flows continuously
