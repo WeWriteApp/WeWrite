@@ -383,38 +383,59 @@ function isUrl(string) {
 }
 
 const withInlines = (editor) => {
-  const { insertData, insertText, isInline, isElementReadOnly, isSelectable } =
-    editor;
+  const { insertData, insertText, isInline, normalizeNode } = editor
 
-  // make paragraph and link elements inline
-  editor.isInline = (element) => {
-    return element.type === "link" || isInline(element);
-  };
+  editor.isInline = element => {
+    return ['link'].includes(element.type) || isInline(element)
+  }
 
-  editor.isElementReadOnly = (element) => {
-    return element.type === "link" || isElementReadOnly(element);
-  };
-
-  editor.insertText = (text) => {
+  editor.insertText = text => {
     if (text && isUrl(text)) {
-      wrapLink(editor, text);
+      wrapLink(editor, text)
     } else {
-      insertText(text);
+      insertText(text)
     }
-  };
+  }
 
-  editor.insertData = (data) => {
-    const text = data.getData("text/plain");
-
+  editor.insertData = data => {
+    const text = data.getData('text/plain')
     if (text && isUrl(text)) {
-      wrapLink(editor, text);
+      wrapLink(editor, text)
     } else {
-      insertData(data);
+      insertData(data)
     }
-  };
+  }
 
-  return editor;
-};
+  // Add custom normalizer to ensure links have valid url properties
+  editor.normalizeNode = entry => {
+    const [node, path] = entry;
+
+    // Check if the element is a link
+    if (SlateElement.isElement(node) && node.type === 'link') {
+      // Ensure link has a url property
+      if (!node.url) {
+        // If no URL, convert to normal text or provide a default
+        if (node.href) {
+          // Handle legacy href attribute
+          Transforms.setNodes(
+            editor,
+            { url: node.href },
+            { at: path }
+          );
+        } else {
+          // Remove the link formatting if no URL available
+          Transforms.unwrapNodes(editor, { at: path });
+        }
+        return; // Return early as we've handled this node
+      }
+    }
+
+    // Fall back to the original normalizeNode
+    normalizeNode(entry);
+  }
+
+  return editor
+}
 
 const wrapLink = (editor, url) => {
   if (isLinkActive(editor)) {
@@ -423,16 +444,16 @@ const wrapLink = (editor, url) => {
 
   const { selection } = editor;
   const isCollapsed = selection && Range.isCollapsed(selection);
-  const link = {
+  const linkElement = {
     type: "link",
     url,
     children: isCollapsed ? [{ text: url }] : [],
   };
 
   if (isCollapsed) {
-    Transforms.insertNodes(editor, link);
+    Transforms.insertNodes(editor, linkElement);
   } else {
-    Transforms.wrapNodes(editor, link, { split: true });
+    Transforms.wrapNodes(editor, linkElement, { split: true });
     Transforms.collapse(editor, { edge: "end" });
   }
 };
@@ -505,6 +526,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const [searchActive, setSearchActive] = useState(false);
   const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
+  const [externalUrl, setExternalUrl] = useState("");
+  const [isNewPageCreating, setIsNewPageCreating] = useState(false);
+  const { user } = useContext(AuthContext);
   
   const handleClose = () => {
     setShowLinkEditor(false);
@@ -522,23 +546,58 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     setDisplayText(e.target.value);
   };
 
+  const handleExternalUrlChange = (e) => {
+    setExternalUrl(e.target.value);
+  };
+
   const resetDisplayText = () => {
     setDisplayText(pageTitle);
   };
 
   const handleSave = (page) => {
-    setSelectedPageId(page.id);
-    setPageTitle(page.title); // Save the original page title
+    console.log("LinkEditor - handleSave:", page);
     
-    // If display text is empty or not yet set, use the page title
-    if (!displayText) {
-      setDisplayText(page.title);
+    // Handle newly created page
+    if (page.id) {
+      setSelectedPageId(page.id);
+      setPageTitle(page.title); // Save the original page title
+      
+      // If display text is empty or not yet set, use the page title
+      if (!displayText || displayText === initialText) {
+        setDisplayText(page.title);
+      }
+      
+      const pageLink = {
+        ...page,
+        url: `/pages/${page.id}`,
+        displayText: displayText || page.title
+      };
+      
+      console.log("Selecting page link:", pageLink);
+      onSelect(pageLink);
+      
+      // Close the editor if we have a valid page
+      handleClose();
+    } else {
+      console.error("Invalid page data:", page);
+    }
+  };
+
+  const handleExternalSubmit = () => {
+    if (!externalUrl) return;
+    
+    let finalUrl = externalUrl;
+    // Add https:// if not present and not a relative URL
+    if (!finalUrl.startsWith('/') && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://' + finalUrl;
     }
     
     onSelect({
-      ...page,
-      displayText: displayText || page.title
+      url: finalUrl,
+      displayText: displayText || finalUrl
     });
+    
+    handleClose();
   };
 
   return (
@@ -659,10 +718,20 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   <h2 className="text-sm font-medium">URL</h2>
                   <input
                     type="url"
+                    value={externalUrl}
+                    onChange={handleExternalUrlChange}
                     placeholder="https://example.com"
                     className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
                   />
                 </div>
+                
+                <button
+                  onClick={handleExternalSubmit}
+                  disabled={!externalUrl}
+                  className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add External Link
+                </button>
               </div>
             </>
           )}

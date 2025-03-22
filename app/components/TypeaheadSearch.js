@@ -247,7 +247,46 @@ const TypeaheadSearch = ({
             {search.length >= 2 && userPages.length === 0 && groupPages.length === 0 && publicPages.length === 0 && (
               <div className="p-3">
                 <button
-                  onClick={() => onSelect({ id: 'new', title: search })}
+                  onClick={() => {
+                    // Indicate that we're creating a new page
+                    setIsSearching(true);
+                    
+                    // Use the createPage function to actually create a page in Firebase
+                    import('../firebase/database').then(async ({ createPage }) => {
+                      try {
+                        // Create a proper page with the search term as the title
+                        const newPageData = {
+                          title: search,
+                          isPublic: true,
+                          userId: user.uid,
+                          content: JSON.stringify([
+                            { type: "paragraph", children: [{ text: "" }] }
+                          ])
+                        };
+                        
+                        // Actually create the page in the database
+                        const newPageId = await createPage(newPageData);
+                        
+                        if (newPageId) {
+                          console.log("Created new page:", newPageId, "with title:", search);
+                          
+                          // Return the newly created page with proper ID and title
+                          onSelect({ 
+                            id: newPageId, 
+                            title: search,
+                            isPublic: true,
+                            userId: user.uid,
+                          });
+                        } else {
+                          console.error("Failed to create new page");
+                        }
+                      } catch (error) {
+                        console.error("Error creating new page:", error);
+                      } finally {
+                        setIsSearching(false);
+                      }
+                    });
+                  }}
                   className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors text-center"
                 >
                   Create new "{search}" page
