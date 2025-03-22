@@ -34,8 +34,33 @@ const PledgeBar = () => {
   const [isPageView, setIsPageView] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(0);
   const [showSocialModal, setShowSocialModal] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   const { id: pageId } = useParams();
+
+  // Handle scroll events to hide/show the pledge bar
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down - hide the bar
+        setVisible(false);
+      } else {
+        // Scrolling up - show the bar
+        setVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY]);
 
   // Detect if we're on a page view
   useEffect(() => {
@@ -393,35 +418,37 @@ const PledgeBar = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
-      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
-        {/* Main pledge bar */}
-        <CompositionBar
-          value={pledges[0]?.amount || 0}
-          max={subscription?.amount || 100}
-          onChange={() => {}}
-          disabled={false}
-          pledges={pledges}
-          subscriptionAmount={subscription?.amount || 0}
-          onPledgeChange={handlePledgeInteraction}
-          onPledgeCustomAmount={handlePledgeCustomAmount}
-          onDeletePledge={() => {}}
-        />
+    <div 
+      className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 transition-transform duration-300 ${
+        visible ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
+      <CompositionBar
+        value={pledges[0]?.amount || 0}
+        max={subscription?.amount || 100}
+        onChange={() => {}}
+        disabled={false}
+        pledges={pledges}
+        subscriptionAmount={subscription?.amount || 0}
+        onPledgeChange={handlePledgeInteraction}
+        onPledgeCustomAmount={handlePledgeCustomAmount}
+        onDeletePledge={() => {}}
+        className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6"
+      />
 
-        {/* Pledge Modal */}
-        <PledgeBarModal
-          isOpen={showActivationModal}
-          onClose={() => setShowActivationModal(false)}
-          isSignedIn={!!user}
-        />
-        
-        {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
-        {showCustomAmountModal && (
-          <div>
-            {/* Custom amount modal content */}
-          </div>
-        )}
-      </div>
+      {/* Pledge Modal */}
+      <PledgeBarModal
+        isOpen={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        isSignedIn={!!user}
+      />
+      
+      {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
+      {showCustomAmountModal && (
+        <div>
+          {/* Custom amount modal content */}
+        </div>
+      )}
     </div>
   );
 };

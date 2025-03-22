@@ -14,7 +14,8 @@ const CompositionBar = ({
   onPledgeCustomAmount,
   onDeletePledge,
   showTitle = false,
-  showRemoveButton = false
+  showRemoveButton = false,
+  className
 }) => {
   const [showSubscriptionLimitModal, setShowSubscriptionLimitModal] = useState(false);
   const [activePledgeId, setActivePledgeId] = useState(null);
@@ -54,7 +55,7 @@ const CompositionBar = ({
   });
 
   return (
-    <div className="w-full">
+    <div className={cn("w-full relative", className)}>
       <div className="w-full flex flex-col gap-4">
         {pledges.map((pledge) => {
           const pledgeAmount = Number(pledge.amount || 0);

@@ -85,6 +85,9 @@ export default function Footer({ className = "" }) {
         <div className="text-xs text-white/70">
           Made with coffee and agápē from New York City, USA
         </div>
+        
+        {/* Add extra padding to ensure content isn't covered by pledge bar */}
+        <div className="h-20"></div>
       </div>
     </footer>
   );
