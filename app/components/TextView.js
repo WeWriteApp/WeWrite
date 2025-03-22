@@ -121,7 +121,7 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
               {contents.map((node, index) => (
                 <React.Fragment key={index}>
                   {/* Paragraph number */}
-                  <span className="text-muted-foreground text-xs select-none flex-shrink-0 inline-block">
+                  <span className="text-muted-foreground text-xs select-none flex-shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-background/50 border border-border/30 mr-1">
                     {index + 1}
                   </span>
                   

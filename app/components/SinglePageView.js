@@ -351,7 +351,7 @@ export default function SinglePageView({ params }) {
         )}
       </div>
       {!isEditing && (
-        <div className={`fixed left-0 right-0 w-full flex justify-center transition-transform duration-300 ease-in-out ${scrollDirection === "down" ? "translate-y-[200%]" : "translate-y-0"}`} style={{ bottom: '1rem' }}>
+        <div className={`fixed left-0 right-0 w-full flex justify-center transition-transform duration-300 ease-in-out z-50 ${scrollDirection === "down" ? "translate-y-[200%]" : "translate-y-0"}`} style={{ bottom: '1rem' }}>
           <div className="w-[95%] max-w-md mx-auto">
             <PledgeBar />
           </div>
