@@ -1,5 +1,5 @@
-import { useState, useEffect, useContext } from "react";
-import { collection, query, orderBy, limit, getDocs, where, getDoc, doc } from "firebase/firestore";
+import { useState, useEffect, useContext, useCallback } from "react";
+import { collection, query, orderBy, limit, getDocs, where, getDoc, doc, startAfter } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
@@ -10,6 +10,9 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Helper function to get username from Firebase Realtime Database
   const getUsernameById = async (userId) => {
@@ -76,8 +79,16 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
           if (pagesSnapshot.empty) {
             setActivities([]);
             setLoading(false);
+            setHasMore(false);
             return;
           }
+          
+          // Store the last document for pagination
+          const lastDoc = pagesSnapshot.docs[pagesSnapshot.docs.length - 1];
+          setLastVisible(lastDoc);
+          
+          // Check if there might be more results
+          setHasMore(pagesSnapshot.docs.length >= limitCount);
           
           // Process each page to get its recent activity
           const activitiesPromises = pagesSnapshot.docs.map(async (doc) => {
@@ -146,6 +157,9 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
             .slice(0, limitCount);
           
           setActivities(validActivities);
+          
+          // Update hasMore based on the number of valid activities
+          setHasMore(validActivities.length >= limitCount && pagesSnapshot.docs.length > validActivities.length);
         } catch (err) {
           console.error("Error with Firestore query:", err);
           setError({
@@ -173,8 +187,140 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
     
     fetchRecentActivity();
   }, [user, limitCount, filterUserId]);
-  
-  return { activities, loading, error };
+
+  // Function to load more activities
+  const loadMore = useCallback(async () => {
+    if (!lastVisible || loadingMore) return;
+    
+    try {
+      setLoadingMore(true);
+      
+      // Create query with startAfter
+      let moreQuery;
+      
+      if (filterUserId) {
+        if (user && user.uid === filterUserId) {
+          // User's own profile
+          moreQuery = query(
+            collection(db, "pages"),
+            where("userId", "==", filterUserId),
+            orderBy("lastModified", "desc"),
+            startAfter(lastVisible),
+            limit(limitCount * 2)
+          );
+        } else {
+          // Someone else's profile
+          moreQuery = query(
+            collection(db, "pages"),
+            where("userId", "==", filterUserId),
+            where("isPublic", "==", true),
+            orderBy("lastModified", "desc"),
+            startAfter(lastVisible),
+            limit(limitCount * 2)
+          );
+        }
+      } else {
+        // No user filter
+        moreQuery = query(
+          collection(db, "pages"),
+          where("isPublic", "==", true),
+          orderBy("lastModified", "desc"),
+          startAfter(lastVisible),
+          limit(limitCount * 2)
+        );
+      }
+      
+      const moreSnapshot = await getDocs(moreQuery);
+      
+      if (moreSnapshot.empty) {
+        setHasMore(false);
+        setLoadingMore(false);
+        return;
+      }
+      
+      // Store the last document for pagination
+      const lastDoc = moreSnapshot.docs[moreSnapshot.docs.length - 1];
+      setLastVisible(lastDoc);
+      
+      // Process each page to get its recent activity
+      const activitiesPromises = moreSnapshot.docs.map(async (doc) => {
+        const pageData = { id: doc.id, ...doc.data() };
+        
+        try {
+          // Get the two most recent versions of this page
+          const versions = await getPageVersions(pageData.id, 2);
+          
+          if (!versions || versions.length < 2) {
+            return null;
+          }
+          
+          const currentVersion = versions[0];
+          const previousVersion = versions[1];
+          
+          // Skip if we don't have content to compare or if there are no changes
+          if (!currentVersion.content || !previousVersion.content) {
+            return null;
+          }
+          
+          // Skip if content is identical
+          if (currentVersion.content === previousVersion.content) {
+            return null;
+          }
+          
+          // If filtering by user, make sure this version was created by that user
+          if (filterUserId && currentVersion.userId !== filterUserId) {
+            return null;
+          }
+          
+          // Get the user who made the edit
+          let username = null;
+          let userId = null;
+          
+          // Try to get username from the version data first
+          if (currentVersion.userId) {
+            userId = currentVersion.userId;
+            // If we have userId, try to fetch username from the database
+            username = await getUsernameById(currentVersion.userId);
+          }
+          
+          return {
+            pageId: pageData.id,
+            pageName: pageData.title || "Untitled Page",
+            timestamp: currentVersion.createdAt,
+            currentContent: currentVersion.content || "",
+            previousContent: previousVersion.content || "",
+            username: username,
+            userId: userId,
+            isPublic: pageData.isPublic || false,
+          };
+        } catch (err) {
+          console.error("Error processing page versions:", err);
+          return null;
+        }
+      });
+      
+      // Wait for all promises to resolve
+      const moreActivityResults = await Promise.all(activitiesPromises);
+      
+      // Filter out null results and limit to requested count
+      const validMoreActivities = moreActivityResults
+        .filter(activity => activity !== null)
+        .slice(0, limitCount);
+      
+      // Add new activities to the existing ones
+      setActivities(prevActivities => [...prevActivities, ...validMoreActivities]);
+      
+      // Update hasMore based on the number of valid activities
+      setHasMore(validMoreActivities.length >= limitCount && moreSnapshot.docs.length > validMoreActivities.length);
+      
+    } catch (err) {
+      console.error("Error loading more activities:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [lastVisible, loadingMore, limitCount, filterUserId, user]);
+
+  return { activities, loading, error, hasMore, loadingMore, loadMore };
 };
 
 export default useRecentActivity;

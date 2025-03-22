@@ -11,6 +11,7 @@ import {
 import { Editable, withReact, useSlate, useSelected, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
 import { DataContext } from "../providers/DataProvider";
+import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
 import { Search, X, Link as LinkIcon } from "lucide-react";
@@ -209,25 +210,39 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     try {
       // First try to use the editor selection if provided
       if (editor && editorSelection) {
-        const domSelection = ReactEditor.toDOMRange(editor, editorSelection);
-        if (domSelection) {
-          const rect = domSelection.getBoundingClientRect();
-        
-          setLinkEditorPosition({
-            top: rect.bottom + window.pageYOffset,
-            left: rect.left + window.pageXOffset,
-          });
-        
-          setShowLinkEditor(true);
-          setSelectedLinkElement(null);
-          setSelectedLinkPath(null);
-          return;
+        try {
+          const domSelection = ReactEditor.toDOMRange(editor, editorSelection);
+          if (domSelection) {
+            const rect = domSelection.getBoundingClientRect();
+          
+            setLinkEditorPosition({
+              top: rect.bottom + window.pageYOffset,
+              left: rect.left + window.pageXOffset,
+            });
+          
+            setShowLinkEditor(true);
+            setSelectedLinkElement(null);
+            setSelectedLinkPath(null);
+            return;
+          }
+        } catch (editorError) {
+          console.warn("Error getting DOM range from editor selection:", editorError);
+          // Continue to fallback method
         }
       }
       
       // Fall back to window.getSelection()
       const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
+      if (!selection || selection.rangeCount === 0) {
+        console.warn("No selection available");
+        // Position the link editor in the center as a fallback
+        setLinkEditorPosition({
+          top: window.innerHeight / 2,
+          left: window.innerWidth / 2,
+        });
+        setShowLinkEditor(true);
+        return;
+      }
     
       const range = selection.getRangeAt(0).cloneRange();
       const rect = range.getBoundingClientRect();
@@ -528,7 +543,17 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   const [isNewPageCreating, setIsNewPageCreating] = useState(false);
-  const { user } = useContext(AuthContext);
+  
+  // Safely access AuthContext with error handling
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user;
+  
+  // Add error handling for missing auth context
+  useEffect(() => {
+    if (!authContext) {
+      console.warn("AuthContext is not available in LinkEditor");
+    }
+  }, [authContext]);
   
   const handleClose = () => {
     setShowLinkEditor(false);

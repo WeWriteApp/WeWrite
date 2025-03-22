@@ -36,12 +36,20 @@ const TypeaheadSearch = ({
   selectedId = null
 }) => {
   const [search, setSearch] = useState("");
-  const { user } = useContext(AuthContext);
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user;
   const [userPages, setUserPages] = useState([]);
   const [groupPages, setGroupPages] = useState([]);
   const [publicPages, setPublicPages] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const { theme } = useTheme();
+
+  // Add error handling for missing auth context
+  useEffect(() => {
+    if (!authContext) {
+      console.warn("AuthContext is not available in TypeaheadSearch");
+    }
+  }, [authContext]);
 
   const fetchResults = useCallback(
     debounce(async (search, user) => {
@@ -254,6 +262,13 @@ const TypeaheadSearch = ({
                     // Use the createPage function to actually create a page in Firebase
                     import('../firebase/database').then(async ({ createPage }) => {
                       try {
+                        // Check if user exists before accessing uid
+                        if (!user) {
+                          console.error("User is not authenticated");
+                          setIsSearching(false);
+                          return;
+                        }
+                        
                         // Create a proper page with the search term as the title
                         const newPageData = {
                           title: search,

@@ -234,7 +234,7 @@ export default function LeaderboardPage() {
           </div>
         ) : (
           <>
-            <Table>
+            <Table className="table-compact">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 px-2">Rank</TableHead>

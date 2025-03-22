@@ -25,7 +25,7 @@ const ActivitySkeleton = () => {
 };
 
 const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
-  const { activities, loading, error } = useRecentActivity(limit, userId);
+  const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(limit, userId);
   const { user } = useContext(AuthContext);
   const carouselRef = useRef(null);
 
@@ -184,6 +184,25 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
               View all activity
             </Button>
           </Link>
+        </div>
+      )}
+
+      {/* Show load more button if there are more activities to load */}
+      {hasMore && !loading && !error && activities.length > 0 && (isInActivityPage || isInUserProfile) && (
+        <div className="flex justify-center mt-4">
+          <Button 
+            variant="outline" 
+            className="rounded-full"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              <PulseLoader size={8} color="currentColor" className="mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            Load more
+          </Button>
         </div>
       )}
     </div>
