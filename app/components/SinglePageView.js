@@ -488,14 +488,12 @@ export function PageInteractionButtons({ page, username }) {
           {
             type: "link",
             href: `/pages/${page.id}`,
-            displayText: page.title || "Untitled",
             children: [{ text: page.title || "Untitled" }]
           },
           { text: ` by ` },
           {
             type: "link",
             href: `/profile/${page.userId || "anonymous"}`,
-            displayText: page.username || "Anonymous",
             children: [{ text: page.username || "Anonymous" }]
           },
           { text: "." }
@@ -523,11 +521,11 @@ export function PageInteractionButtons({ page, username }) {
       const encodedTitle = encodeURIComponent(newPageTitle);
       
       console.log("Navigating to new page with title:", newPageTitle);
-      router.push(`/pages/new?title=${encodedTitle}&initialContent=${encodedContent}`);
+      router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}`);
     } catch (error) {
       console.error("Error navigating to new page:", error);
       // Fallback with minimal parameters if encoding fails
-      router.push(`/pages/new?title=${encodeURIComponent(newPageTitle)}`);
+      router.push(`/new?title=${encodeURIComponent(newPageTitle)}`);
     }
   };
   
