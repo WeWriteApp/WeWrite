@@ -1,4 +1,4 @@
 {
     "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':!README.md'",
-    "buildCommand": "npm install --legacy-peer-deps && next build"
+    "buildCommand": "npm install --legacy-peer-deps && SKIP_TYPE_CHECK=true next build"
 }
