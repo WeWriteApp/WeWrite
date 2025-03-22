@@ -480,7 +480,7 @@ export function PageInteractionButtons({ page, username }) {
       }
     }
     
-    // Create the initial content with a single paragraph
+    // Create the initial content with a single paragraph and properly formatted links
     const initialContent = [
       {
         type: "paragraph",
@@ -488,15 +488,16 @@ export function PageInteractionButtons({ page, username }) {
           { text: `Reply to ` },
           {
             type: "link",
-            href: `/pages/${page.id}`,
+            url: `/pages/${page.id}`,
             children: [{ text: page.title || "Untitled" }]
           },
           { text: ` by ` },
           {
             type: "link",
-            href: `/profile/${page.userId || "anonymous"}`,
+            url: `/profile/${page.userId || "anonymous"}`,
             children: [{ text: page.username || page.author || "Anonymous" }]
-          }
+          },
+          { text: "" }
         ]
       }
     ];
@@ -513,14 +514,26 @@ export function PageInteractionButtons({ page, username }) {
         type: "paragraph",
         children: [{ text: "" }]
       });
+    } else {
+      // If no content summary, add an empty line
+      initialContent.push({
+        type: "paragraph",
+        children: [{ text: "" }]
+      });
     }
+
+    // Add another empty paragraph for user to start typing
+    initialContent.push({
+      type: "paragraph",
+      children: [{ text: "" }]
+    });
 
     // Navigate to the new page route with query parameters
     try {
       const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
       const encodedTitle = encodeURIComponent(newPageTitle);
       
-      console.log("Navigating to new page with title:", newPageTitle);
+      console.log("Navigating to new page with pre-filled content:", initialContent);
       router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}&isReply=true`);
     } catch (error) {
       console.error("Error navigating to new page:", error);
