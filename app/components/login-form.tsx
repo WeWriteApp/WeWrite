@@ -31,7 +31,10 @@ export function LoginForm({
       if (result.user) {
         // Successful login - redirect to home page
         console.log("Login successful, redirecting...")
-        router.replace("/") // Use replace instead of push
+        // Wait a moment for auth state to propagate
+        setTimeout(() => {
+          router.push("/")
+        }, 500)
       } else {
         // Error handling
         const errorCode = result.code || ""

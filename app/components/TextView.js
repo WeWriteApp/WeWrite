@@ -141,15 +141,6 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
                   >
                     <WrappedNode node={node} index={index} />
                   </motion.div>
-                  
-                  {/* Add a small space between paragraphs */}
-                  <motion.span 
-                    className="inline-block"
-                    layout
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  >
-                    {" "}
-                  </motion.span>
                 </React.Fragment>
               ))}
             </motion.div>

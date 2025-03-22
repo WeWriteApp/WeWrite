@@ -57,6 +57,24 @@ export default function NewPage() {
     handleSubmit(new Event('submit') as any);
   });
 
+  // Add keyboard shortcut for saving
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        // Trigger form submission
+        const submitButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (submitButton && !submitButton.disabled) {
+          submitButton.click();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -68,12 +86,15 @@ export default function NewPage() {
         { type: "paragraph", children: [{ text: "" }] }
       ]);
 
+      // Get the user's username
+      const username = user.username || user.displayName || "";
+
       // Create the page document
       const doc = await addDoc(collection(db, "pages"), {
         title: title || "Untitled",
         content: contentToSave,
         userId: user.uid,
-        username: user.username || user.displayName || user.email?.split('@')[0] || null,
+        username: username, // Use the username directly
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         isPublic: true, // Default to public
@@ -93,7 +114,14 @@ export default function NewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PageHeader title="New Page" username={user?.displayName || user?.email?.split('@')[0] || "Anonymous"} />
+      <header className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Create New Page</h1>
+          <p className="text-muted-foreground">
+            Write something interesting...
+          </p>
+        </div>
+      </header>
       <main className="container py-6">
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
           <div className="space-y-2">

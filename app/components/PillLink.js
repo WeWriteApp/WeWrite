@@ -9,8 +9,8 @@ import { motion } from "framer-motion";
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-2 py-0.5 inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[28px]">
-      <Loader className="h-3 w-3 animate-spin text-primary" />
+    <div className="my-0.5 px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[32px]">
+      <Loader className="h-3.5 w-3.5 animate-spin text-primary" />
       <span className="text-muted-foreground text-xs">Loading...</span>
     </div>
   );
@@ -66,7 +66,7 @@ export const PillLink = ({
     <Link 
       href={href} 
       className={`
-        my-0.5 px-2 py-0.5
+        my-0.5 px-2.5 py-1
         inline-flex items-center
         text-sm font-medium
         rounded-[8px]
@@ -78,11 +78,11 @@ export const PillLink = ({
       `}
     >
       <motion.div 
-        className="flex items-center gap-1 flex-nowrap"
+        className="flex items-center gap-1.5 flex-nowrap"
         layout
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {showLock && <Lock className="h-3 w-3 flex-shrink-0" />}
+        {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
         <motion.div 
           className="flex flex-col min-w-0"
           layout

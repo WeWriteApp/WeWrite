@@ -342,6 +342,11 @@ export default function SinglePageView({ params }) {
                 <PageInteractionButtons page={page} username={page?.username || ""} />
               </div>
             )}
+            
+            {/* Backlinks Section */}
+            <div className="mt-8 pt-4 border-t border-border">
+              <BacklinksSection pageId={page?.id} />
+            </div>
           </>
         )}
       </div>
@@ -400,6 +405,10 @@ export function PageInteractionButtons({ page, username }) {
         console.error("Error parsing page content:", error);
       }
     }
+    
+    // Get the current user's username from auth context
+    const { user } = useContext(AuthContext);
+    const currentUsername = user?.username || (user?.displayName || '');
     
     // Create the initial content with a single paragraph
     const initialContent = [
@@ -592,5 +601,116 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function BacklinksSection({ pageId }) {
+  const [backlinks, setBacklinks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!pageId) return;
+
+    // Get database reference
+    const db = getDatabase(app);
+    const pagesRef = ref(db, 'pages');
+
+    // Listen for pages that might link to this page
+    const unsubscribe = onValue(pagesRef, (snapshot) => {
+      setLoading(true);
+      const allPages = snapshot.val() || {};
+      const linkedPages = [];
+
+      // Check each page to see if it links to the current page
+      Object.entries(allPages).forEach(([id, pageData]) => {
+        if (id === pageId) return; // Skip the current page
+
+        // Check if the page content contains a link to the current page
+        let hasLink = false;
+        try {
+          const content = typeof pageData.content === 'string' 
+            ? JSON.parse(pageData.content) 
+            : pageData.content;
+
+          // Search for links in the content
+          if (Array.isArray(content)) {
+            content.forEach(node => {
+              if (node.type === 'paragraph' && node.children) {
+                node.children.forEach(child => {
+                  if (child.type === 'link' && child.href && child.href.includes(pageId)) {
+                    hasLink = true;
+                  }
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing page content:", error);
+        }
+
+        // If this page links to the current page, add it to the list
+        if (hasLink) {
+          linkedPages.push({
+            id,
+            title: pageData.title || 'Untitled',
+            username: pageData.username || 'Anonymous',
+            userId: pageData.userId
+          });
+        }
+      });
+
+      setBacklinks(linkedPages);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [pageId]);
+
+  if (loading) {
+    return (
+      <div className="py-4">
+        <h3 className="text-lg font-medium mb-3">Backlinks</h3>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader className="h-4 w-4 animate-spin" />
+          <span>Loading backlinks...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (backlinks.length === 0) {
+    return (
+      <div className="py-4">
+        <h3 className="text-lg font-medium mb-3">Backlinks</h3>
+        <p className="text-muted-foreground">No pages link to this page yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-4">
+      <h3 className="text-lg font-medium mb-3">Backlinks</h3>
+      <div className="space-y-2">
+        {backlinks.map(page => (
+          <div key={page.id} className="group relative">
+            <Link 
+              href={`/pages/${page.id}`}
+              className="flex items-center gap-2 p-2 rounded-md hover:bg-accent/30 transition-colors"
+            >
+              <div className="flex-1">
+                <div className="font-medium">{page.title}</div>
+                <div className="text-sm text-muted-foreground">by {page.username}</div>
+              </div>
+            </Link>
+            <div className="absolute invisible group-hover:visible bg-background border border-border shadow-md rounded-md p-2 z-10 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64">
+              <div className="text-sm">
+                <div className="font-medium">{page.title}</div>
+                <div className="text-xs text-muted-foreground">This page links to the current page</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
