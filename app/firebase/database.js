@@ -97,107 +97,96 @@ export const createPage = async (data) => {
 }
 
 export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
-  try {
-    // Reference to the page document
-    const pageRef = doc(db, "pages", pageId);
+  // Validate pageId
+  if (!pageId) {
+    console.error("listenToPageById called with empty pageId");
+    onPageUpdate({ error: "Invalid page ID" });
+    return () => {};
+  }
 
-    // Declare unsubscribeVersion outside of the inner onSnapshot callback
-    let unsubscribeVersion = null;
-
-    // Listener for the page document
-    const unsubscribePage = onSnapshot(pageRef, { includeMetadataChanges: true }, async (pageSnap) => {
-      if (pageSnap.exists()) {
-        const pageData = {
-          id: pageId,
-          ...pageSnap.data()
-        };
-
-        // Check access permissions
-        const accessCheck = checkPageAccess(pageData, userId);
-        if (!accessCheck.hasAccess) {
-          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-          onPageUpdate({ error: accessCheck.error });
-          return;
-        }
-
-        // Get the current version ID
-        const currentVersionId = pageData.currentVersion;
-
-        // Log the version subcollection path
-        const versionCollectionRef = collection(db, "pages", pageId, "versions");
-        const versionRef = doc(versionCollectionRef, currentVersionId);
-
-        // If there's an existing unsubscribeVersion listener, remove it before setting a new one
-        if (unsubscribeVersion) {
-          unsubscribeVersion();
-        }
-
-        // Listener for the version document
-        unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
-          if (versionSnap.exists()) {
-            const versionData = versionSnap.data();
-
-            // Extract links
-            const links = extractLinksFromNodes(JSON.parse(versionData.content));
-
-            // Send updated page and version data
-            onPageUpdate({ pageData, versionData, links });
-          } 
-        });
-      } else {
-        // If page document doesn't exist
-        onPageUpdate({ error: "Page not found" });
+  // Get reference to the page document
+  const pageRef = doc(db, "pages", pageId);
+  
+  // Variables to store unsubscribe functions
+  let unsubscribeVersion = null;
+  
+  // Listen for changes to the page document
+  const unsubscribe = onSnapshot(pageRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const pageData = { id: docSnap.id, ...docSnap.data() };
+      
+      // Check access permissions
+      const accessCheck = checkPageAccess(pageData, userId);
+      if (!accessCheck.hasAccess) {
+        console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+        onPageUpdate({ error: accessCheck.error });
+        return;
       }
-    });
 
-    // Return the unsubscribe functions for cleanup
-    return () => {
-      unsubscribePage();
+      // Get the current version ID
+      const currentVersionId = pageData.currentVersion;
+
+      // Log the version subcollection path
+      const versionCollectionRef = collection(db, "pages", pageId, "versions");
+      const versionRef = doc(versionCollectionRef, currentVersionId);
+
+      // If there's an existing unsubscribeVersion listener, remove it before setting a new one
       if (unsubscribeVersion) {
         unsubscribeVersion();
       }
-    };
-  } catch (e) {
-    console.error("Error in listenToPageById:", e);
-    onPageUpdate({ error: e.message });
-    return () => {};
-  }
+
+      // Listener for the version document
+      unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
+        if (versionSnap.exists()) {
+          const versionData = versionSnap.data();
+
+          // Extract links
+          const links = extractLinksFromNodes(JSON.parse(versionData.content));
+
+          // Send updated page and version data
+          onPageUpdate({ pageData, versionData, links });
+        } 
+      });
+    } else {
+      // If page document doesn't exist
+      onPageUpdate({ error: "Page not found" });
+    }
+  });
+
+  // Return the unsubscribe functions for cleanup
+  return () => {
+    unsubscribe();
+    if (unsubscribeVersion) {
+      unsubscribeVersion();
+    }
+  };
 };
 
 export const getPageById = async (pageId, userId = null) => {
-  // should get the page and versions
   try {
-    if (!pageId) {
-      console.error("getPageById called with empty pageId");
-      return { pageData: null, error: "Invalid page ID" };
-    }
+    const docRef = doc(db, "pages", pageId);
+    const docSnap = await getDoc(docRef);
     
-    const pageRef = doc(db, "pages", pageId);
-    const pageSnap = await getDoc(pageRef);
-    
-    if (!pageSnap.exists()) {
-      console.log(`Page with ID ${pageId} not found`);
+    if (docSnap.exists()) {
+      const pageData = { id: docSnap.id, ...docSnap.data() };
+      
+      // Check if user has access to this page
+      const accessCheck = checkPageAccess(pageData, userId);
+      if (!accessCheck.hasAccess) {
+        console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+        return { pageData: null, error: accessCheck.error };
+      }
+      
+      return { pageData, error: null };
+    } else {
+      console.error(`Page ${pageId} not found`);
       return { pageData: null, error: "Page not found" };
     }
-    
-    const pageData = {
-      id: pageId,
-      ...pageSnap.data()
-    };
-    
-    // Check access permissions
-    const accessCheck = checkPageAccess(pageData, userId);
-    if (!accessCheck.hasAccess) {
-      console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-      return { pageData: null, error: accessCheck.error };
-    }
-    
-    return { pageData };
-  } catch (e) {
-    console.error("Error in getPageById:", e);
-    return { error: e.message, pageData: null };
+  } catch (error) {
+    console.error(`Error getting page ${pageId}:`, error);
+    return { pageData: null, error: error.message || "Error retrieving page" };
   }
-}
+};
 
 export const getVersionsByPageId = async (pageId) => {
   try {

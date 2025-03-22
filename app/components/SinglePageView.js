@@ -106,7 +106,7 @@ export default function SinglePageView({ params }) {
         // Handle access denied or other errors
         setIsLoading(false);
         setPage(null);
-        setError(data.error);
+        setError(typeof data.error === 'object' ? data.error.error : data.error);
         return;
       }
       
