@@ -49,25 +49,61 @@ const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
   const [parsedContents, setParsedContents] = useState(null);
   const [language, setLanguage] = useState(null);
   const { lineMode } = useLineSettings();
-  
+  const [loadedParagraphs, setLoadedParagraphs] = useState([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   useEffect(() => {
-    if (content) {
-      try {
-        let parsedData = content;
+    let contents;
+    try {
+      contents = typeof content === "string" ? JSON.parse(content) : content;
+    } catch (e) {
+      console.error("Error parsing content:", e);
+      contents = [];
+    }
+    
+    setParsedContents(contents || []);
+    
+    // Reset loaded paragraphs and initial load state when content changes
+    setLoadedParagraphs([]);
+    setIsInitialLoad(true);
+  }, [content]);
+
+  // Staggered loading animation effect
+  useEffect(() => {
+    if (parsedContents && isInitialLoad) {
+      // Count the number of paragraph-like nodes
+      const paragraphNodes = parsedContents.filter(node => 
+        node.type === nodeTypes.PARAGRAPH || 
+        node.type === nodeTypes.HEADING || 
+        node.type === nodeTypes.CODE_BLOCK ||
+        node.type === nodeTypes.LIST
+      );
+      
+      // Create a staggered loading effect
+      const totalNodes = paragraphNodes.length;
+      const loadingDelay = 30; // ms between each paragraph appearance
+      
+      if (totalNodes > 0) {
+        const newLoadedParagraphs = [];
         
-        // If the content is a string, try to parse it as JSON
-        if (typeof content === "string") {
-          parsedData = JSON.parse(content);
+        // Schedule each paragraph to appear with a staggered delay
+        for (let i = 0; i < totalNodes; i++) {
+          setTimeout(() => {
+            setLoadedParagraphs(prev => [...prev, i]);
+          }, i * loadingDelay);
         }
         
-        setParsedContents(parsedData);
-      } catch (error) {
-        console.error("Error parsing content:", error);
-        setParsedContents([{ type: "paragraph", children: [{ text: "Error parsing content" }] }]);
+        // Mark initial load as complete after all paragraphs are loaded
+        setTimeout(() => {
+          setIsInitialLoad(false);
+          setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
+        }, totalNodes * loadingDelay + 100);
+      } else {
+        setIsInitialLoad(false);
       }
     }
-  }, [content]);
-  
+  }, [parsedContents, isInitialLoad]);
+
   const getViewModeStyles = () => {
     switch(viewMode) {
       case 'spaced':
@@ -92,13 +128,13 @@ const TextView = ({ content, isSearch = false, viewMode = 'default' }) => {
       )}
       
       {parsedContents && (
-        <RenderContent contents={parsedContents} language={language} viewMode={viewMode} />
+        <RenderContent contents={parsedContents} language={language} viewMode={viewMode} loadedParagraphs={loadedParagraphs} />
       )}
     </motion.div>
   );
 };
 
-export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
+export const RenderContent = ({ contents, language, viewMode = 'default', loadedParagraphs }) => {
   // Try to use the page context, but provide a fallback if it's not available
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
@@ -121,7 +157,7 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
               {contents.map((node, index) => (
                 <React.Fragment key={index}>
                   {/* Paragraph number */}
-                  <span className="text-muted-foreground text-xs select-none flex-shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-background/50 border border-border/30 mr-1">
+                  <span className="text-muted-foreground text-xs select-none flex-shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full bg-background/50 border border-border/30 mr-2">
                     {index + 1}
                   </span>
                   
@@ -145,7 +181,7 @@ export const RenderContent = ({ contents, language, viewMode = 'default' }) => {
       <>
         {contents.map((node, index) => (
           <React.Fragment key={index}>
-            {renderNode(node, viewMode, index)}
+            {loadedParagraphs.includes(index) && renderNode(node, viewMode, index)}
           </React.Fragment>
         ))}
       </>
@@ -164,7 +200,7 @@ const WrappedNode = ({ node, index }) => {
   if (node.type === nodeTypes.PARAGRAPH) {
     if (node.children && Array.isArray(node.children)) {
       return (
-        <span className="inline-flex flex-wrap items-baseline">
+        <span className="inline-flex flex-wrap items-baseline w-full max-w-full break-words">
           {node.children.map((child, childIndex) => {
             if (child.type === 'link') {
               return (
@@ -180,7 +216,7 @@ const WrappedNode = ({ node, index }) => {
               
               if (child.code) {
                 return (
-                  <code key={childIndex} className="px-1 py-0.5 rounded bg-muted font-mono">
+                  <code key={childIndex} className="px-1 py-0.5 rounded bg-muted font-mono break-all">
                     {child.text}
                   </code>
                 );
@@ -201,7 +237,7 @@ const WrappedNode = ({ node, index }) => {
                     }
                     // For actual words, apply styling
                     return (
-                      <span key={`${childIndex}-${wordIndex}`} className={`${className || ''} inline-block`}>
+                      <span key={`${childIndex}-${wordIndex}`} className={`${className || ''} inline-block break-words`}>
                         {word}
                       </span>
                     );
@@ -218,7 +254,7 @@ const WrappedNode = ({ node, index }) => {
       if (typeof node.content === 'string') {
         const words = node.content.split(/(\s+)/);
         return (
-          <span className="inline-flex flex-wrap items-baseline">
+          <span className="inline-flex flex-wrap items-baseline w-full max-w-full break-words">
             {words.map((word, wordIndex) => {
               if (/^\s+$/.test(word)) {
                 return (
@@ -228,7 +264,7 @@ const WrappedNode = ({ node, index }) => {
                 );
               }
               return (
-                <span key={wordIndex} className="inline-block">
+                <span key={wordIndex} className="inline-block break-words">
                   {word}
                 </span>
               );
@@ -276,119 +312,84 @@ const renderNode = (node, viewMode, index) => {
 };
 
 // Define the missing node components
-const ParagraphNode = ({ node, index = 0, viewMode = 'default', isHighlighted = false }) => {
+const ParagraphNode = ({ node, viewMode = 'default', index = 0 }) => {
   const paragraphRef = useRef(null);
   const { lineMode } = useLineSettings();
   const [lineHovered, setLineHovered] = useState(false);
   
-  // Get view mode specific styles
-  const getViewModeStyles = () => {
-    switch(viewMode) {
-      case 'spaced':
-        return 'my-4'; 
-      case 'wrapped':
-        return 'my-0.5'; 
-      case 'default':
-      default:
-        return 'my-0 pl-6'; 
-    }
+  // Determine spacing based on view mode
+  const spacingClasses = {
+    'default': 'mb-3',
+    'spaced': 'mb-6 max-w-3xl mx-auto',
+    'wrapped': 'mb-0'
   };
   
-  // Set up scroll-based spring animation
-  const { scrollY } = useScroll();
-  const springConfig = { stiffness: 800, damping: 30 };
-  const ySpring = useSpring(scrollY, springConfig);
+  // Get the appropriate spacing class
+  const spacingClass = spacingClasses[viewMode] || spacingClasses['default'];
   
-  // Create a transform effect based on the paragraph's position
-  const y = useTransform(
-    ySpring,
-    [0, 500, 1000], // Scroll range to watch (3 values)
-    [0, 0, 0],      // Default values (3 values)
-    (value) => {
-      // Only calculate if we have a ref
-      if (!paragraphRef.current) return 0;
+  // Helper function to render child nodes
+  const renderChild = (child, i) => {
+    if (child.type === 'link') {
+      return <LinkNode key={i} node={child} />;
+    } else if (child.text) {
+      let className = '';
+      if (child.bold) className += ' font-bold';
+      if (child.italic) className += ' italic';
+      if (child.underline) className += ' underline';
       
-      // Get the element's position relative to viewport
-      const rect = paragraphRef.current.getBoundingClientRect();
-      const viewportPosition = rect.top;
+      if (child.code) {
+        return (
+          <code 
+            key={i} 
+            className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono"
+          >
+            {child.text}
+          </code>
+        );
+      }
       
-      // Calculate a spring effect based on viewport position
-      // The closer to the center of the viewport, the less effect
-      const viewportHeight = window.innerHeight;
-      const viewportCenter = viewportHeight / 2;
-      const distanceFromCenter = Math.abs(viewportPosition - viewportCenter);
-      const normalizedDistance = Math.min(distanceFromCenter / viewportCenter, 1);
-      
-      // Apply a subtle spring effect (max 5px displacement)
-      return normalizedDistance * 5 * (viewportPosition < viewportCenter ? -1 : 1);
-    }
-  );
-  
-  // Handle rendering of paragraph content
-  const renderParagraphContent = () => {
-    if (node.children && Array.isArray(node.children)) {
-      return node.children.map((child, childIndex) => {
-        if (child.type === 'link') {
-          return <LinkNode key={childIndex} node={child} />;
-        } else if (child.text) {
-          let className = '';
-          if (child.bold) className += ' font-bold';
-          if (child.italic) className += ' italic';
-          if (child.underline) className += ' underline';
-          
-          if (child.code) {
-            return (
-              <code 
-                key={childIndex} 
-                className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono"
-              >
-                {child.text}
-              </code>
-            );
-          }
-          
-          return (
-            <span key={childIndex} className={className || undefined}>
-              {child.text}
-            </span>
-          );
-        }
-        return null;
-      });
-    } else if (node.content) {
-      return node.content;
+      return (
+        <span key={i} className={className || undefined}>
+          {child.text}
+        </span>
+      );
     }
     return null;
   };
   
   return (
     <motion.div 
-      ref={paragraphRef}
-      className={`relative group ${getViewModeStyles()} ${isHighlighted ? 'bg-accent/20' : ''}`}
-      style={{ y }}
-      onMouseEnter={() => setLineHovered(true)}
-      onMouseLeave={() => setLineHovered(false)}
-      layout
+      className={`group relative ${spacingClass}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ 
         type: "spring", 
-        stiffness: 300, 
-        damping: 30 
+        stiffness: 500, 
+        damping: 30,
+        mass: 1
       }}
     >
-      <motion.span 
-        className={`absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none px-1.5 py-0.5 rounded-full ${lineHovered ? 'bg-muted/30 opacity-100' : 'opacity-60'}`}
-        layout
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      >
-        {index + 1}
-      </motion.span>
+      {/* Paragraph number */}
       <motion.div 
-        className={`${lineHovered ? 'bg-muted/20 rounded' : ''}`}
-        layout
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="absolute left-0 top-0 flex items-center justify-center"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          delay: 0.05,
+          type: "spring", 
+          stiffness: 500, 
+          damping: 30 
+        }}
       >
-        {renderParagraphContent()}
+        <span className="text-muted-foreground text-xs select-none inline-flex items-center justify-center h-5 w-5 rounded-full bg-background/50 border border-border/30 mr-2">
+          {index + 1}
+        </span>
       </motion.div>
+      
+      {/* Paragraph content with left padding for the number */}
+      <p className={`pl-8 ${viewMode === 'wrapped' ? 'whitespace-normal break-words' : ''}`}>
+        {node.children && node.children.map((child, i) => renderChild(child, i))}
+      </p>
     </motion.div>
   );
 };
@@ -398,10 +399,30 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
   const codeLanguage = language || node.language || 'javascript';
   
   return (
-    <div className="relative my-4 group">
-      <span className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none">
+    <motion.div 
+      className="relative my-4 group"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 500, 
+        damping: 30,
+        mass: 1
+      }}
+    >
+      <motion.span 
+        className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          delay: 0.05,
+          type: "spring", 
+          stiffness: 500, 
+          damping: 30 
+        }}
+      >
         {index + 1}
-      </span>
+      </motion.span>
       <SyntaxHighlighter
         language={codeLanguage}
         style={duotoneDark}
@@ -414,7 +435,7 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
       >
         {node.content || (node.children && node.children.map(child => child.text).join('\n')) || ''}
       </SyntaxHighlighter>
-    </div>
+    </motion.div>
   );
 };
 
@@ -432,34 +453,82 @@ const HeadingNode = ({ node, index = 0 }) => {
   };
   
   return (
-    <div className="relative group">
-      <span className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none">
+    <motion.div
+      className="relative"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 500, 
+        damping: 30,
+        mass: 1
+      }}
+    >
+      <motion.span 
+        className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          delay: 0.05,
+          type: "spring", 
+          stiffness: 500, 
+          damping: 30 
+        }}
+      >
         {index + 1}
-      </span>
-      <HeadingTag className={headingClasses[level]}>
-        {node.content || (node.children && node.children.map(child => child.text).join('')) || ''}
+      </motion.span>
+      <HeadingTag className={headingClasses[level] || headingClasses[1]}>
+        {node.children && node.children.map((child, i) => (
+          <span key={i} className={child.bold ? 'font-bold' : child.italic ? 'italic' : ''}>
+            {child.text}
+          </span>
+        ))}
       </HeadingTag>
-    </div>
+    </motion.div>
   );
 };
 
 const ListNode = ({ node, index = 0 }) => {
-  const isOrdered = node.ordered || false;
-  const ListTag = isOrdered ? 'ol' : 'ul';
+  const ListTag = node.listType === 'ordered' ? 'ol' : 'ul';
+  const listClasses = node.listType === 'ordered' ? 'list-decimal' : 'list-disc';
   
   return (
-    <div className="relative my-4 group">
-      <span className="absolute -left-6 top-0 text-muted-foreground text-xs select-none">
+    <motion.div
+      className="relative my-4 pl-8"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 500, 
+        damping: 30,
+        mass: 1
+      }}
+    >
+      <motion.span 
+        className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          delay: 0.05,
+          type: "spring", 
+          stiffness: 500, 
+          damping: 30 
+        }}
+      >
         {index + 1}
-      </span>
-      <ListTag className={isOrdered ? 'list-decimal pl-5' : 'list-disc pl-5'}>
+      </motion.span>
+      <ListTag className={`ml-5 ${listClasses}`}>
         {node.children && node.children.map((item, i) => (
           <li key={i} className="my-1">
-            {item.content || (item.children && item.children.map(child => child.text).join('')) || ''}
+            {item.children && item.children.map((child, j) => (
+              <span key={j} className={child.bold ? 'font-bold' : child.italic ? 'italic' : ''}>
+                {child.text}
+              </span>
+            ))}
           </li>
         ))}
       </ListTag>
-    </div>
+    </motion.div>
   );
 };
 
