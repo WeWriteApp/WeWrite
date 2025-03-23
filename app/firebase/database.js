@@ -15,11 +15,13 @@ import {
 } from "firebase/firestore";
 
 import { app } from "./config";
+import { rtdb } from "./rtdb";
+import { get, ref } from "firebase/database";
 
 export const db = getFirestore(app);
 
 // Utility function to check if a user has access to a page
-export const checkPageAccess = (pageData, userId) => {
+export const checkPageAccess = async (pageData, userId) => {
   // If page doesn't exist, no one has access
   if (!pageData) {
     return {
@@ -35,17 +37,38 @@ export const checkPageAccess = (pageData, userId) => {
     };
   }
   
-  // Private pages are only accessible to their owners
+  // Private pages are accessible to their owners
   if (userId && pageData.userId === userId) {
     return {
       hasAccess: true
     };
   }
   
+  // Check if the page belongs to a group and if the user is a member of that group
+  if (userId && pageData.groupId) {
+    try {
+      const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
+      const groupSnapshot = await get(groupRef);
+      
+      if (groupSnapshot.exists()) {
+        const groupData = groupSnapshot.val();
+        
+        // Check if the user is a member of the group
+        if (groupData.members && groupData.members[userId]) {
+          return {
+            hasAccess: true
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error checking group membership:", error);
+    }
+  }
+  
   // Otherwise, access is denied
   return {
     hasAccess: false,
-    error: "Access denied: This page is private and can only be viewed by its owner"
+    error: "Access denied: This page is private and can only be viewed by its owner or group members"
   };
 };
 
@@ -119,42 +142,47 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   let unsubscribeVersion = null;
   
   // Listen for changes to the page document
-  const unsubscribe = onSnapshot(pageRef, (docSnap) => {
+  const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
       
-      // Check access permissions
-      const accessCheck = checkPageAccess(pageData, userId);
-      if (!accessCheck.hasAccess) {
-        console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-        onPageUpdate({ error: accessCheck.error });
-        return;
+      // Check access permissions (now async)
+      try {
+        const accessCheck = await checkPageAccess(pageData, userId);
+        if (!accessCheck.hasAccess) {
+          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+          onPageUpdate({ error: accessCheck.error });
+          return;
+        }
+
+        // Get the current version ID
+        const currentVersionId = pageData.currentVersion;
+
+        // Log the version subcollection path
+        const versionCollectionRef = collection(db, "pages", pageId, "versions");
+        const versionRef = doc(versionCollectionRef, currentVersionId);
+
+        // If there's an existing unsubscribeVersion listener, remove it before setting a new one
+        if (unsubscribeVersion) {
+          unsubscribeVersion();
+        }
+
+        // Listener for the version document
+        unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
+          if (versionSnap.exists()) {
+            const versionData = versionSnap.data();
+
+            // Extract links
+            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+
+            // Send updated page and version data
+            onPageUpdate({ pageData, versionData, links });
+          } 
+        });
+      } catch (error) {
+        console.error("Error checking page access:", error);
+        onPageUpdate({ error: "Error checking page access" });
       }
-
-      // Get the current version ID
-      const currentVersionId = pageData.currentVersion;
-
-      // Log the version subcollection path
-      const versionCollectionRef = collection(db, "pages", pageId, "versions");
-      const versionRef = doc(versionCollectionRef, currentVersionId);
-
-      // If there's an existing unsubscribeVersion listener, remove it before setting a new one
-      if (unsubscribeVersion) {
-        unsubscribeVersion();
-      }
-
-      // Listener for the version document
-      unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
-        if (versionSnap.exists()) {
-          const versionData = versionSnap.data();
-
-          // Extract links
-          const links = extractLinksFromNodes(JSON.parse(versionData.content));
-
-          // Send updated page and version data
-          onPageUpdate({ pageData, versionData, links });
-        } 
-      });
     } else {
       // If page document doesn't exist
       onPageUpdate({ error: "Page not found" });
@@ -172,27 +200,50 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
 
 export const getPageById = async (pageId, userId = null) => {
   try {
-    const docRef = doc(db, "pages", pageId);
-    const docSnap = await getDoc(docRef);
-    
+    // Validate pageId
+    if (!pageId) {
+      console.error("getPageById called with empty pageId");
+      return { pageData: null, error: "Invalid page ID" };
+    }
+
+    // Get the page document
+    const pageRef = doc(db, "pages", pageId);
+    const docSnap = await getDoc(pageRef);
+
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
       
       // Check if user has access to this page
-      const accessCheck = checkPageAccess(pageData, userId);
+      const accessCheck = await checkPageAccess(pageData, userId);
       if (!accessCheck.hasAccess) {
         console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
         return { pageData: null, error: accessCheck.error };
       }
-      
-      return { pageData, error: null };
+
+      // Get the current version ID
+      const currentVersionId = pageData.currentVersion;
+
+      // Get the version document
+      const versionCollectionRef = collection(db, "pages", pageId, "versions");
+      const versionRef = doc(versionCollectionRef, currentVersionId);
+      const versionSnap = await getDoc(versionRef);
+
+      if (versionSnap.exists()) {
+        const versionData = versionSnap.data();
+        
+        // Extract links
+        const links = extractLinksFromNodes(JSON.parse(versionData.content));
+        
+        return { pageData, versionData, links };
+      } else {
+        return { pageData: null, error: "Version not found" };
+      }
     } else {
-      console.error(`Page ${pageId} not found`);
       return { pageData: null, error: "Page not found" };
     }
   } catch (error) {
-    console.error(`Error getting page ${pageId}:`, error);
-    return { pageData: null, error: error.message || "Error retrieving page" };
+    console.error("Error fetching page:", error);
+    return { pageData: null, error: "Error fetching page" };
   }
 };
 
@@ -539,103 +590,99 @@ export const getPageStats = async (pageId) => {
   }
 };
 
-// Get pages that the user has edit access to (they own)
+// Get pages that the user has edit access to (they own or are in groups they belong to)
 export const getEditablePagesByUser = async (userId, searchQuery = "") => {
   try {
     if (!userId) return [];
     
-    // First get all pages by the user
-    const q = query(
-      collection(db, "pages"),
-      where("userId", "==", userId),
-      orderBy("lastModified", "desc"), // Sort by most recently modified
-      limit(50) // Increase limit to find more results
-    );
-    
-    const querySnapshot = await getDocs(q);
     let pages = [];
     
-    // Client-side filtering for more flexible search
-    querySnapshot.forEach((doc) => {
+    // First get all pages owned by the user
+    const userPagesQuery = query(
+      collection(db, "pages"),
+      where("userId", "==", userId),
+      orderBy("lastModified", "desc"),
+      limit(50)
+    );
+    
+    const userPagesSnapshot = await getDocs(userPagesQuery);
+    
+    // Add user's own pages to the result
+    userPagesSnapshot.forEach((doc) => {
       const data = doc.data();
-      // Convert both title and search query to lowercase for case-insensitive search
-      const normalizedTitle = data.title.toLowerCase();
-      const normalizedQuery = searchQuery.toLowerCase();
-      
-      // Check if the title contains the search query
-      if (searchQuery === "" || normalizedTitle.includes(normalizedQuery)) {
-        pages.push({
-          id: doc.id,
-          ...data
-        });
-      }
+      pages.push({
+        id: doc.id,
+        ...data
+      });
     });
     
-    console.log(`Found ${pages.length} pages matching query "${searchQuery}"`);
+    // Get all groups the user is a member of
+    const groupsRef = ref(rtdb, 'groups');
+    const groupsSnapshot = await get(groupsRef);
+    
+    if (groupsSnapshot.exists()) {
+      const groups = groupsSnapshot.val();
+      
+      // Find groups where user is a member
+      const userGroups = Object.entries(groups)
+        .filter(([_, groupData]) => 
+          groupData.members && groupData.members[userId]
+        )
+        .map(([groupId, groupData]) => ({
+          id: groupId,
+          ...groupData
+        }));
+      
+      // For each group, get all pages
+      for (const group of userGroups) {
+        if (group.pages) {
+          // Get detailed page data for each page in the group
+          const groupPageIds = Object.keys(group.pages);
+          
+          for (const pageId of groupPageIds) {
+            // Check if we already have this page (user might own pages in their groups)
+            if (!pages.some(p => p.id === pageId)) {
+              // Get the page data from Firestore
+              const pageRef = doc(db, "pages", pageId);
+              const pageSnap = await getDoc(pageRef);
+              
+              if (pageSnap.exists()) {
+                const pageData = pageSnap.data();
+                pages.push({
+                  id: pageId,
+                  ...pageData,
+                  // Add group information
+                  groupId: group.id,
+                  groupName: group.name
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Sort all pages by last modified date
+    pages.sort((a, b) => {
+      const dateA = new Date(a.lastModified || a.createdAt || 0);
+      const dateB = new Date(b.lastModified || b.createdAt || 0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    // Client-side filtering for search
+    if (searchQuery) {
+      const normalizedQuery = searchQuery.toLowerCase();
+      pages = pages.filter(page => {
+        const normalizedTitle = page.title.toLowerCase();
+        return normalizedTitle.includes(normalizedQuery);
+      });
+    }
+    
+    console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
     return pages;
   } catch (error) {
     console.error("Error getting editable pages:", error);
     return [];
-  }
-};
-
-// Append a reference to a page at the end of another page's content
-export const appendPageReference = async (targetPageId, sourcePageData) => {
-  try {
-    if (!targetPageId || !sourcePageData) return false;
-    
-    // Get the current version of the target page
-    const { pageData } = await getPageById(targetPageId);
-    
-    if (!pageData) {
-      throw new Error("Target page not found");
-    }
-    
-    // Get the current content from the page data
-    let currentContent = [];
-    if (pageData.content) {
-      if (typeof pageData.content === 'string') {
-        try {
-          currentContent = JSON.parse(pageData.content);
-        } catch (e) {
-          currentContent = [{ type: "paragraph", children: [{ text: pageData.content }] }];
-        }
-      } else if (Array.isArray(pageData.content)) {
-        currentContent = pageData.content;
-      }
-    }
-    
-    // Create a reference paragraph to append
-    const referenceNode = {
-      type: "paragraph",
-      children: [
-        { text: "Referenced page: " },
-        {
-          type: "link",
-          href: `/pages/${sourcePageData.id}`,
-          displayText: sourcePageData.title,
-          children: [{ text: sourcePageData.title }]
-        }
-      ]
-    };
-    
-    // Append the reference to the content
-    const newContent = [
-      ...currentContent,
-      { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
-      referenceNode
-    ];
-    
-    // Update the page with the new content
-    await updatePage(targetPageId, {
-      content: JSON.stringify(newContent),
-      lastModified: new Date().toISOString()
-    });
-    
-    return true;
-  } catch (error) {
-    console.error("Error appending page reference:", error);
-    return false;
   }
 };
 
@@ -735,3 +782,63 @@ export async function prefetchPageTitles(pageIds) {
     console.error('Error prefetching page titles:', error);
   }
 }
+
+// Append a reference to a page at the end of another page's content
+export const appendPageReference = async (targetPageId, sourcePageData) => {
+  try {
+    if (!targetPageId || !sourcePageData) return false;
+    
+    // Get the current version of the target page
+    const { pageData } = await getPageById(targetPageId);
+    
+    if (!pageData) {
+      throw new Error("Target page not found");
+    }
+    
+    // Get the current content from the page data
+    let currentContent = [];
+    if (pageData.content) {
+      if (typeof pageData.content === 'string') {
+        try {
+          currentContent = JSON.parse(pageData.content);
+        } catch (e) {
+          currentContent = [{ type: "paragraph", children: [{ text: pageData.content }] }];
+        }
+      } else if (Array.isArray(pageData.content)) {
+        currentContent = pageData.content;
+      }
+    }
+    
+    // Create a reference paragraph to append
+    const referenceNode = {
+      type: "paragraph",
+      children: [
+        { text: "Referenced page: " },
+        {
+          type: "link",
+          href: `/pages/${sourcePageData.id}`,
+          displayText: sourcePageData.title,
+          children: [{ text: sourcePageData.title }]
+        }
+      ]
+    };
+    
+    // Append the reference to the content
+    const newContent = [
+      ...currentContent,
+      { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
+      referenceNode
+    ];
+    
+    // Update the page with the new content
+    await updatePage(targetPageId, {
+      content: JSON.stringify(newContent),
+      lastModified: new Date().toISOString()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error appending page reference:", error);
+    return false;
+  }
+};
