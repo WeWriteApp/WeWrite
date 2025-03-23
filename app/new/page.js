@@ -15,11 +15,16 @@ const New = () => {
   });
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
+  const { user } = useContext(AuthContext);
+  const username = user?.displayName || user?.email?.split('@')[0] || 'Anonymous';
   
   return (
     <DashboardLayout>
       <PageHeader title={isReply ? "Replying to page" : "New page"} />
       <div className="container w-full py-6 px-4">
+        <div className="flex items-center mb-6 text-sm text-muted-foreground">
+          by {username}
+        </div>
         <div className="w-full">
           <Form Page={Page} setPage={setPage} isReply={isReply} />
         </div>
