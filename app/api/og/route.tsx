@@ -3,7 +3,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { extractTextContent } from '../../utils/generateTextDiff';
 
-export const runtime = 'edge';
+// Set to nodejs runtime instead of edge if having issues with edge runtime
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
   try {
@@ -148,27 +149,31 @@ export async function GET(request: Request) {
     
     // Extract text content from page content
     let contentText = '';
-    let contentHtml = '';
+    let links = [];
+    
     try {
       if (page.content) {
         contentText = extractTextContent(page.content);
         
-        // Attempt to identify any links in the content for highlighting
-        const contentObj = typeof page.content === 'string' ? JSON.parse(page.content) : page.content;
-        
-        // Find nodes that might contain links
-        const links = [];
-        const processNode = (node) => {
-          if (node.type === 'link' || (node.url && node.text)) {
-            links.push(node);
+        // Attempt to extract links from the content
+        try {
+          const contentObj = typeof page.content === 'string' ? JSON.parse(page.content) : page.content;
+          
+          // Simple function to extract links from content
+          const extractLinks = (node) => {
+            if (node.type === 'link' && node.url) {
+              links.push(node.url);
+            }
+            if (node.children) {
+              node.children.forEach(extractLinks);
+            }
+          };
+          
+          if (Array.isArray(contentObj)) {
+            contentObj.forEach(extractLinks);
           }
-          if (node.children) {
-            node.children.forEach(processNode);
-          }
-        };
-        
-        if (Array.isArray(contentObj)) {
-          contentObj.forEach(processNode);
+        } catch (linkError) {
+          console.error('Error extracting links:', linkError);
         }
       }
     } catch (error) {
@@ -184,13 +189,50 @@ export async function GET(request: Request) {
     const pledgeCount = page.pledgeCount || 0;
     const sponsorText = pledgeCount === 1 ? '1 sponsor' : `${pledgeCount} sponsors`;
 
-    // Process content text to highlight links (simplified)
-    // In reality, this is complex without proper parsing
-    // For now, we'll just format the text
-    let displayContent = contentText;
-    if (displayContent.length > 280) {
-      displayContent = displayContent.substring(0, 277) + '...';
+    // Format content text with | for newlines and wrap links in quotes
+    let formattedContent = contentText
+      // Replace newlines with | symbol
+      .replace(/\n+/g, ' | ')
+      // Ensure consistent spacing
+      .replace(/\s+/g, ' ')
+      .trim();
+      
+    // Truncate if too long
+    if (formattedContent.length > 280) {
+      formattedContent = formattedContent.substring(0, 277) + '...';
     }
+    
+    // Split content by spaces to process words
+    const words = formattedContent.split(' ');
+    
+    // Process words to wrap links in quotes and handle | symbols
+    const processedWords = words.map(word => {
+      // If it's a pipe symbol for newline, return as is
+      if (word === '|') {
+        return word;
+      }
+      
+      // Check if word is likely a link
+      const isLikelyLink = 
+        word.startsWith('http') || 
+        word.includes('.com') || 
+        word.includes('.org') || 
+        word.includes('.net') ||
+        word.includes('.io') ||
+        word.includes('@');
+      
+      // Known links from content
+      const isKnownLink = links.some(link => word.includes(link));
+      
+      if (isLikelyLink || isKnownLink) {
+        return `"${word}"`;
+      }
+      
+      return word;
+    });
+    
+    // Join words back together
+    const displayContent = processedWords.join(' ');
 
     return new ImageResponse(
       (
@@ -202,7 +244,7 @@ export async function GET(request: Request) {
             display: 'flex',
             flexDirection: 'column',
             padding: '50px',
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: 'system-ui, sans-serif',
           }}
         >
           <div
@@ -265,26 +307,25 @@ export async function GET(request: Request) {
               maxWidth: '90%',
             }}
           >
-            {displayContent.split(' ').map((word, i) => {
-              // This is a very simplistic way to "highlight" words that might be links
-              // In a real implementation, we'd need proper parsing of Slate nodes
-              const isLikelyLink = word.startsWith('http') || 
-                                 word.includes('.com') || 
-                                 word.includes('.org') ||
-                                 word.includes('@');
+            {displayContent.split(' ').map((part, i) => {
+              if (part === '|') {
+                return <br key={`br-${i}`} />;
+              }
+              
+              const isQuoted = part.startsWith('"') && part.endsWith('"');
               
               return (
                 <span
                   key={i}
                   style={{
-                    color: isLikelyLink ? '#4285f4' : 'white',
-                    backgroundColor: isLikelyLink ? 'rgba(66, 133, 244, 0.1)' : 'transparent',
-                    padding: isLikelyLink ? '2px 8px' : '0',
-                    borderRadius: isLikelyLink ? '4px' : '0',
+                    color: isQuoted ? '#4285f4' : 'white',
+                    backgroundColor: isQuoted ? 'rgba(66, 133, 244, 0.1)' : 'transparent',
+                    padding: isQuoted ? '2px 8px' : '0',
+                    borderRadius: isQuoted ? '4px' : '0',
                     marginRight: '8px',
                   }}
                 >
-                  {word}
+                  {isQuoted ? part.substring(1, part.length - 1) : part}
                 </span>
               );
             })}
@@ -306,28 +347,10 @@ export async function GET(request: Request) {
       {
         width: 1200,
         height: 630,
-        fonts: [
-          {
-            name: 'Inter',
-            data: await fetch(
-              new URL('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap', import.meta.url)
-            ).then((res) => res.arrayBuffer()),
-            weight: 400,
-            style: 'normal',
-          },
-          {
-            name: 'Inter',
-            data: await fetch(
-              new URL('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap', import.meta.url)
-            ).then((res) => res.arrayBuffer()),
-            weight: 700,
-            style: 'normal',
-          },
-        ],
       },
     );
   } catch (e) {
     console.error(e);
-    return new Response('Failed to generate OG image', { status: 500 });
+    return new Response(`Failed to generate OG image: ${e.message}`, { status: 500 });
   }
 }
