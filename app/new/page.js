@@ -20,11 +20,8 @@ const New = () => {
   
   return (
     <DashboardLayout>
-      <PageHeader title={isReply ? "Replying to page" : "New page"} />
+      <PageHeader title={isReply ? "Replying to page" : "New page"} username={username} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
-        <div className="flex items-center mb-6 text-sm text-muted-foreground">
-          by {username}
-        </div>
         <div className="w-full">
           <Form Page={Page} setPage={setPage} isReply={isReply} />
         </div>
