@@ -1,9 +1,8 @@
 import { ImageResponse } from 'next/og';
-import { getPageMetadata } from '../../firebase/database';
- 
+
 // Route segment config
 export const runtime = 'edge';
- 
+
 // Image metadata
 export const alt = 'WeWrite Page';
 export const size = {
@@ -11,34 +10,11 @@ export const size = {
   height: 630,
 };
 
-// Define types for page data
-type PageMetadata = {
-  id: string;
-  title?: string;
-  username?: string;
-  content?: any;
-  createdAt?: string;
-  lastModified?: string;
-  isPublic?: boolean;
-  description?: string;
-};
-
 // Font loading needs to be done directly here for the edge runtime
 export default async function Image({ params }: { params: { id: string } }) {
-  // Get page data - with simple error handling
-  let title = 'WeWrite Page';
-  let author = 'Anonymous';
-  
-  try {
-    const pageData = await getPageMetadata(params.id) as PageMetadata | null;
-    if (pageData) {
-      title = pageData.title || 'Untitled Page';
-      author = pageData.username || 'Anonymous';
-    }
-  } catch (error) {
-    console.error('Error fetching page data for OG image:', error);
-  }
- 
+  // We'll use just the page ID since Firebase access is problematic in edge runtime
+  const pageId = params.id;
+
   return new ImageResponse(
     (
       <div
@@ -64,7 +40,7 @@ export default async function Image({ params }: { params: { id: string } }) {
               flexWrap: 'wrap',
             }}
           >
-            {title}
+            WeWrite Page
           </div>
           <div
             style={{
@@ -76,10 +52,10 @@ export default async function Image({ params }: { params: { id: string } }) {
               display: 'inline-block',
             }}
           >
-            By {author}
+            ID: {pageId}
           </div>
         </div>
-        
+
         <div
           style={{
             color: 'white',
