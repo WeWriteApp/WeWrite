@@ -35,13 +35,9 @@ export async function generateMetadata(
   // Generate a good description using our utility
   const description = createPageDescription(metadata);
   
-  // Constructing the absolute URL for the API-based OG image
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000';
-    
-  // Use the dynamic API-generated OG image instead of file-based
-  const imageUrl = `${baseUrl}/api/og?id=${params.id}`;
+  // Instead of constructing a dynamic URL, use a relative path
+  // This avoids static build errors with request.url in the API
+  const imageUrl = `/api/og?id=${params.id}`;
   
   return {
     title: metadata.title || 'Untitled Page',

@@ -2,6 +2,9 @@ import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getPageMetadata } from '../../firebase/database';
 
+// Export dynamic to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export const runtime = 'nodejs'; // Use Node.js runtime instead of edge
 
 // Define a default image in case of any errors
@@ -19,7 +22,7 @@ const generateDefaultImage = (pageId?: string) => {
           padding: '80px',
         }}
       >
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
               color: 'white',
@@ -54,6 +57,7 @@ const generateDefaultImage = (pageId?: string) => {
             color: 'white',
             opacity: 0.8,
             fontSize: '24px',
+            display: 'flex',
           }}
         >
           WeWrite • Collaborative Writing Platform
@@ -78,10 +82,6 @@ export async function GET(request: NextRequest) {
       return generateDefaultImage();
     }
 
-    // Try to fetch page data
-    let title = 'WeWrite Page';
-    let author = 'Anonymous';
-    
     // Define the correct type
     type PageMetadata = {
       id: string;
@@ -94,6 +94,10 @@ export async function GET(request: NextRequest) {
       description?: string;
     };
 
+    // Try to fetch page data
+    let title = 'WeWrite Page';
+    let author = 'Anonymous';
+    
     try {
       const pageData = await getPageMetadata(pageId) as PageMetadata | null;
       if (pageData) {
@@ -119,7 +123,7 @@ export async function GET(request: NextRequest) {
             padding: '80px',
           }}
         >
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
                 color: 'white',
@@ -152,6 +156,7 @@ export async function GET(request: NextRequest) {
               color: 'white',
               opacity: 0.8,
               fontSize: '24px',
+              display: 'flex',
             }}
           >
             WeWrite • Collaborative Writing Platform
