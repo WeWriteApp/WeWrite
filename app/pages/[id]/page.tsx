@@ -1,19 +1,20 @@
+"use client";
+
+import SinglePageView from "../../components/SinglePageView";
 import { Metadata, ResolvingMetadata } from 'next';
 import { getPageMetadata } from '../../firebase/database';
-import { createPageDescription } from '../../../utils/textExtraction';
-import ClientPage from './client-page';
+import { extractTextContent } from '../../utils/generateTextDiff';
 
 // Define type for the page metadata
 type PageMetadata = {
   id: string;
   title?: string;
-  username?: string;
-  content?: any;
+  content?: string;
   userId?: string;
+  username?: string;
   createdAt?: string;
   lastModified?: string;
   isPublic?: boolean;
-  description?: string;
 };
 
 // Generate metadata including OpenGraph for each page
@@ -21,52 +22,65 @@ export async function generateMetadata(
   { params }: { params: { id: string } },
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  // Get page metadata from Firestore
-  const metadata = await getPageMetadata(params.id) as PageMetadata | null;
+  // Get the page ID from the params
+  const id = params.id;
   
-  // If page not found, return default metadata
-  if (!metadata) {
+  try {
+    // Fetch page metadata from Firebase
+    const pageData = await getPageMetadata(id) as PageMetadata | null;
+    
+    if (!pageData) {
+      return {
+        title: 'Page Not Found',
+        description: 'The requested page could not be found',
+      };
+    }
+    
+    // Extract text content for the description
+    let description = 'No content available';
+    try {
+      if (pageData.content) {
+        const textContent = extractTextContent(pageData.content);
+        description = textContent.substring(0, 200) + (textContent.length > 200 ? '...' : '');
+      }
+    } catch (error) {
+      console.error('Error extracting text content:', error);
+    }
+    
+    // Create OpenGraph metadata
     return {
-      title: 'Page Not Found',
-      description: 'This page could not be found.',
-    };
-  }
-
-  // Generate a good description using our utility
-  const description = createPageDescription(metadata);
-  
-  // Use the static image from public directory
-  // Construct an absolute URL to ensure it works on all platforms
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000';
-  
-  const imageUrl = `${baseUrl}/images/og-image.png`;
-  
-  return {
-    title: metadata.title || 'Untitled Page',
-    description,
-    openGraph: {
-      title: metadata.title || 'Untitled Page',
-      description,
-      images: [
-        {
-          url: imageUrl,
+      title: pageData.title || 'Untitled Page',
+      description: description,
+      openGraph: {
+        title: pageData.title || 'Untitled Page',
+        description: description,
+        images: [{
+          url: `/api/og?id=${id}`,
           width: 1200,
           height: 630,
-          alt: metadata.title || 'WeWrite Page',
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: metadata.title || 'Untitled Page',
-      description,
-      images: [imageUrl],
-    },
-  };
+          alt: pageData.title || 'Untitled Page',
+        }],
+        type: 'article',
+        publishedTime: pageData.createdAt,
+        modifiedTime: pageData.lastModified,
+        authors: [pageData.username || 'Anonymous'],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: pageData.title || 'Untitled Page',
+        description: description,
+        images: [`/api/og?id=${id}`],
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return {
+      title: 'WeWrite',
+      description: 'Write together',
+    };
+  }
 }
 
 export default function Page({ params }: { params: { id: string } }) {
-  return <ClientPage params={params} />;
+  return <SinglePageView params={params} />;
 }
