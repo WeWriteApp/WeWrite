@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Twitter, Heart, Map, Info, MessageSquare } from 'lucide-react';
+import { Twitter, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
 
 /**
  * Footer component for the application.
@@ -10,30 +10,18 @@ import { Twitter, Heart, Map, Info, MessageSquare } from 'lucide-react';
  */
 export default function Footer({ className = "" }) {
   const currentYear = new Date().getFullYear();
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-  
-  // Blacklist of paths where the footer should not be shown
-  const footerBlacklist = [
-    '/auth',
-    '/auth/',
-    '/auth/login',
-    '/auth/signup',
-    '/auth/reset-password'
-  ];
-  
-  // Check if current path is in the blacklist
-  const shouldShowFooter = !footerBlacklist.some(path => pathname.startsWith(path));
-  
-  // If path is in blacklist, don't render the footer
-  if (!shouldShowFooter) {
-    return null;
-  }
   
   const footerLinks = [
     { 
       href: "https://x.com/WeWriteApp", 
       label: "X", 
       icon: <Twitter className="h-3 w-3" />,
+      external: true 
+    },
+    { 
+      href: "https://github.com/WeWriteApp/WeWrite", 
+      label: "GitHub", 
+      icon: <Github className="h-3 w-3" />,
       external: true 
     },
     { 
@@ -72,9 +60,9 @@ export default function Footer({ className = "" }) {
               href={link.href} 
               target={link.external ? "_blank" : undefined} 
               rel={link.external ? "noopener noreferrer" : undefined}
-              className="text-sm text-white/80 hover:text-white transition-colors flex items-center gap-1.5 group"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 group"
             >
-              <span className="text-white/80 group-hover:text-white transition-colors">
+              <span className="text-muted-foreground group-hover:text-foreground transition-colors">
                 {link.icon}
               </span>
               <span>{link.label}</span>
@@ -82,8 +70,8 @@ export default function Footer({ className = "" }) {
           ))}
         </div>
         
-        <div className="text-xs text-white/70">
-          Made with coffee and agápē from New York City, USA
+        <div className="text-xs text-muted-foreground">
+          Made with agápē in New York City
         </div>
         
         {/* Add extra padding to ensure content isn't covered by pledge bar */}

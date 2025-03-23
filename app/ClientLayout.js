@@ -41,7 +41,8 @@ export default function ClientLayout({ children }) {
                     <main className="flex-grow">
                       {children}
                     </main>
-                    {!isAuthPage && <Footer />}
+                    {/* Always show footer except on auth pages */}
+                    {isAuthPage ? null : <Footer />}
                   </div>
                   <Toaster />
                   {process.env.NODE_ENV === 'development' && (

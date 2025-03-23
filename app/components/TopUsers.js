@@ -191,9 +191,9 @@ const TopUsers = () => {
             <h2 className="text-lg font-semibold">Top users</h2>
           </div>
           <Link href="/leaderboard">
-            <Button variant="outline" size="sm" className="gap-1 text-xs">
+            <Button variant="outline" size="sm">
               View all
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>
         </div>

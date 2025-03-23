@@ -7,6 +7,7 @@ import { formatRelativeTime } from "../utils/formatRelativeTime";
 import { generateSimpleDiff, generateTextDiff } from "../utils/generateTextDiff";
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 /**
  * ActivityCard component displays a single activity card
@@ -24,6 +25,9 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
     activity.previousContent
   );
 
+  // For newly created pages, adjust the display text
+  const isNewPage = activity.isNewPage;
+
   return (
     <Link 
       href={`/pages/${activity.pageId}`}
@@ -38,7 +42,7 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
             {activity.pageName || "Untitled page"}
           </PillLink>
           <span className="text-xs text-muted-foreground">
-            edited by {" "}
+            {isNewPage ? "created by" : "edited by"} {" "}
             <Link 
               href={`/user/${activity.userId}`} 
               className="hover:underline text-primary"
@@ -83,9 +87,31 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
         </div>
 
         <div className="flex-shrink-0 text-xs font-medium flex items-center ml-1">
-          {added > 0 ? <span className="text-green-600 dark:text-green-400">+{added}</span> : null}
+          {added > 0 ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-green-600 dark:text-green-400">+{added}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{added} characters added to page</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
           {added > 0 && removed > 0 ? <span className="mx-1">•</span> : null}
-          {removed > 0 ? <span className="text-red-600 dark:text-red-400">-{removed}</span> : null}
+          {removed > 0 ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-red-600 dark:text-red-400">-{removed}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{removed} characters deleted from page</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
         </div>
       </div>
     </Link>

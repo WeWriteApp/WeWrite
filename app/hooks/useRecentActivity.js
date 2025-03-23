@@ -98,12 +98,45 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
               // Get the two most recent versions of this page
               const versions = await getPageVersions(pageData.id, 2);
               
-              if (!versions || versions.length < 2) {
-                // Need at least 2 versions to show a diff
+              if (!versions || versions.length === 0) {
+                // No versions found
                 return null;
               }
               
               const currentVersion = versions[0];
+              
+              // Handle newly created pages (only one version)
+              if (versions.length === 1) {
+                // If filtering by user, make sure this version was created by that user
+                if (filterUserId && currentVersion.userId !== filterUserId) {
+                  return null;
+                }
+                
+                // Get the user who made the edit
+                let username = null;
+                let userId = null;
+                
+                // Try to get username from the version data first
+                if (currentVersion.userId) {
+                  userId = currentVersion.userId;
+                  // If we have userId, try to fetch username from the database
+                  username = await getUsernameById(currentVersion.userId);
+                }
+                
+                return {
+                  pageId: pageData.id,
+                  pageName: pageData.title || "Untitled Page",
+                  timestamp: currentVersion.createdAt,
+                  currentContent: currentVersion.content || "",
+                  previousContent: "", // Empty string for new pages
+                  username: username,
+                  userId: userId,
+                  isPublic: pageData.isPublic || false,
+                  isNewPage: true, // Flag to indicate this is a new page
+                };
+              }
+              
+              // For pages with multiple versions
               const previousVersion = versions[1];
               
               // Skip if we don't have content to compare or if there are no changes
@@ -250,11 +283,45 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
           // Get the two most recent versions of this page
           const versions = await getPageVersions(pageData.id, 2);
           
-          if (!versions || versions.length < 2) {
+          if (!versions || versions.length === 0) {
+            // No versions found
             return null;
           }
           
           const currentVersion = versions[0];
+          
+          // Handle newly created pages (only one version)
+          if (versions.length === 1) {
+            // If filtering by user, make sure this version was created by that user
+            if (filterUserId && currentVersion.userId !== filterUserId) {
+              return null;
+            }
+            
+            // Get the user who made the edit
+            let username = null;
+            let userId = null;
+            
+            // Try to get username from the version data first
+            if (currentVersion.userId) {
+              userId = currentVersion.userId;
+              // If we have userId, try to fetch username from the database
+              username = await getUsernameById(currentVersion.userId);
+            }
+            
+            return {
+              pageId: pageData.id,
+              pageName: pageData.title || "Untitled Page",
+              timestamp: currentVersion.createdAt,
+              currentContent: currentVersion.content || "",
+              previousContent: "", // Empty string for new pages
+              username: username,
+              userId: userId,
+              isPublic: pageData.isPublic || false,
+              isNewPage: true, // Flag to indicate this is a new page
+            };
+          }
+          
+          // For pages with multiple versions
           const previousVersion = versions[1];
           
           // Skip if we don't have content to compare or if there are no changes

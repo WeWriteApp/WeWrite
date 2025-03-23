@@ -52,7 +52,7 @@ const AllPages = () => {
           <div className="text-muted-foreground mb-6">
             Create your first page to start writing
           </div>
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link href="/new" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Create a page

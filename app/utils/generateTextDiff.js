@@ -12,9 +12,37 @@ export function generateTextDiff(currentContent, previousContent) {
   
   try {
     // Check for missing content
-    if (!currentContent || !previousContent) {
-      console.log("Missing content for diff:", { currentContent, previousContent });
+    if (!currentContent) {
+      console.log("Missing current content for diff");
       return defaultReturn;
+    }
+    
+    // Handle case for new pages (no previous content)
+    if (!previousContent || previousContent === "") {
+      // Extract text from current content
+      const currentText = extractTextContent(currentContent);
+      
+      // If text is empty or too short
+      if (!currentText || !currentText.trim() || currentText.length < 3) {
+        console.log("Current text too short for new page diff");
+        return { added: currentText.length, removed: 0, preview: null };
+      }
+      
+      // For new pages, show the first part of content as added text
+      const previewText = currentText.substring(0, Math.min(50, currentText.length));
+      const remainingText = currentText.length > 50 ? currentText.substring(50, Math.min(70, currentText.length)) : "";
+      
+      return {
+        added: currentText.length,
+        removed: 0,
+        preview: {
+          beforeContext: "",
+          highlightedText: previewText,
+          afterContext: remainingText,
+          isNew: true,
+          isRemoved: false
+        }
+      };
     }
     
     // Extract text from both contents

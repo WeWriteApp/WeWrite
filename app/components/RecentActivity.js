@@ -60,7 +60,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           <div className="hidden md:flex items-center gap-2">
             <Button 
               variant="outline" 
-              size="icon" 
+              size="sm"
               onClick={scrollLeft}
               disabled={loading || error}
               className="h-8 w-8"
@@ -69,7 +69,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
             </Button>
             <Button 
               variant="outline" 
-              size="icon" 
+              size="sm"
               onClick={scrollRight}
               disabled={loading || error}
               className="h-8 w-8"
@@ -180,7 +180,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
       {showViewAll && !loading && !error && activities.length > 0 && !isInActivityPage && (
         <div className="flex justify-center">
           <Link href="/activity">
-            <Button variant="outline" className="rounded-full">
+            <Button variant="outline" size="sm">
               View all activity
             </Button>
           </Link>
@@ -191,8 +191,8 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
       {hasMore && !loading && !error && activities.length > 0 && (isInActivityPage || isInUserProfile) && (
         <div className="flex justify-center mt-4">
           <Button 
-            variant="outline" 
-            className="rounded-full"
+            variant="outline"
+            size="sm"
             onClick={loadMore}
             disabled={loadingMore}
           >
