@@ -13,6 +13,7 @@ type PageMetadata = {
   createdAt?: string;
   lastModified?: string;
   isPublic?: boolean;
+  description?: string;
 };
 
 // Generate metadata including OpenGraph for each page
@@ -20,63 +21,46 @@ export async function generateMetadata(
   { params }: { params: { id: string } },
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  // Get the page ID from the params
-  const id = params.id;
+  // Get page metadata from Firestore
+  const metadata = await getPageMetadata(params.id) as PageMetadata | null;
   
-  try {
-    // Fetch page metadata from Firebase
-    const pageData = await getPageMetadata(id) as PageMetadata | null;
-    
-    if (!pageData) {
-      return {
-        title: 'Page Not Found',
-        description: 'The requested page could not be found',
-      };
-    }
-    
-    // Extract text content for the description
-    let description = 'No content available';
-    try {
-      if (pageData.content) {
-        const textContent = extractTextContent(pageData.content);
-        description = textContent.substring(0, 200) + (textContent.length > 200 ? '...' : '');
-      }
-    } catch (error) {
-      console.error('Error extracting text content:', error);
-    }
-    
-    // Create OpenGraph metadata
+  // If page not found, return default metadata
+  if (!metadata) {
     return {
-      title: pageData.title || 'Untitled Page',
-      description: description,
-      openGraph: {
-        title: pageData.title || 'Untitled Page',
-        description: description,
-        images: [{
-          url: `/api/og?id=${id}`,
-          width: 1200,
-          height: 630,
-          alt: pageData.title || 'Untitled Page',
-        }],
-        type: 'article',
-        publishedTime: pageData.createdAt,
-        modifiedTime: pageData.lastModified,
-        authors: [pageData.username || 'Anonymous'],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: pageData.title || 'Untitled Page',
-        description: description,
-        images: [`/api/og?id=${id}`],
-      },
-    };
-  } catch (error) {
-    console.error('Error generating metadata:', error);
-    return {
-      title: 'WeWrite',
-      description: 'Write together',
+      title: 'Page Not Found',
+      description: 'This page could not be found.',
     };
   }
+
+  // Constructing the absolute URL
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000';
+    
+  // Use a static fallback image for now until the dynamic OG generation is fixed
+  const imageUrl = `${baseUrl}/opengraph-image.png`;
+  
+  return {
+    title: metadata.title || 'Untitled Page',
+    description: metadata.description || `A WeWrite page by ${metadata.username || 'Anonymous'}`,
+    openGraph: {
+      title: metadata.title || 'Untitled Page',
+      description: metadata.description || `A WeWrite page by ${metadata.username || 'Anonymous'}`,
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: metadata.title || 'Untitled Page',
+      description: metadata.description || `A WeWrite page by ${metadata.username || 'Anonymous'}`,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default function Page({ params }: { params: { id: string } }) {
