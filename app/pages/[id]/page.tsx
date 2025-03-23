@@ -1,9 +1,7 @@
-"use client";
-
-import SinglePageView from "../../components/SinglePageView";
 import { Metadata, ResolvingMetadata } from 'next';
 import { getPageMetadata } from '../../firebase/database';
 import { extractTextContent } from '../../utils/generateTextDiff';
+import ClientPage from "./client-page";
 
 // Define type for the page metadata
 type PageMetadata = {
@@ -82,5 +80,5 @@ export async function generateMetadata(
 }
 
 export default function Page({ params }: { params: { id: string } }) {
-  return <SinglePageView params={params} />;
+  return <ClientPage params={params} />;
 }
