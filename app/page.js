@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import Header from "./components/Header";
 import AllPages from "./components/AllPages";
 import TopUsers from "./components/TopUsers";
@@ -17,6 +17,7 @@ import { Button } from "./components/ui/button";
 import { Plus, FileText, Loader } from "lucide-react";
 import { ShimmerEffect } from "./components/ui/skeleton";
 import { useTheme } from "next-themes";
+import LandingPage from "./components/landing/LandingPage";
 
 export default function Home() {
   const { user, loading: authLoading } = useContext(AuthContext);
@@ -24,8 +25,9 @@ export default function Home() {
   const router = useRouter();
   const isLoading = dataLoading || authLoading;
   const { theme } = useTheme();
+  const [showLanding, setShowLanding] = useState(true);
 
-  // Redirect to login page if user is not logged in
+  // Check authentication state
   useEffect(() => {
     const checkAuth = async () => {
       // First check cookies for auth state
@@ -50,10 +52,9 @@ export default function Home() {
         return;
       }
       
-      // If definitely not authenticated, redirect
-      if (!authLoading && !user && !isAuthenticated && persistedAuthState !== 'authenticated') {
-        console.log("No auth detected, redirecting to login");
-        router.push('/auth/login');
+      // If user is authenticated, show dashboard
+      if (user) {
+        setShowLanding(false);
       }
     };
     
@@ -64,7 +65,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [user, authLoading, router]);
 
-  // Display a loading state instead of nothing
+  // Display a loading state while checking authentication
   if (authLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -73,25 +74,12 @@ export default function Home() {
     );
   }
 
-  // Don't render anything while redirecting if no user
+  // Show landing page for logged-out users
   if (!user) {
-    // Check if we have indicators of auth in progress
-    const isAuthenticated = document.cookie.includes('authenticated=true');
-    const persistedAuthState = localStorage.getItem('authState');
-    
-    if (isAuthenticated || persistedAuthState === 'authenticated') {
-      // Show loading if we have some indication auth might be in progress
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <Loader className="animate-spin h-8 w-8 text-primary"/>
-        </div>
-      );
-    }
-    
-    // Otherwise show nothing while redirecting
-    return null;
+    return <LandingPage />;
   }
 
+  // Show dashboard for logged-in users
   return (
     <>
       <Head>
