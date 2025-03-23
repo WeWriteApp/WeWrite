@@ -3,6 +3,7 @@ import { ImageResponse } from 'next/og';
 // Set Edge runtime
 export const runtime = 'edge';
 
+// Set the content type and cache headers
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -71,13 +72,17 @@ export async function GET(request: Request) {
         {
           width: 1200,
           height: 630,
+          // Add explicit content type and cache headers
+          headers: {
+            'content-type': 'image/png',
+            'cache-control': 'public, immutable, no-transform, max-age=31536000',
+          },
         },
       );
     }
 
     // For Edge runtime, we'll use a simplified approach without Firebase
     // This will be a static demo of the OG image with the page ID
-    // In production, you would use a serverless function to fetch data from Firebase
     
     // Mock data based on the page ID
     const title = `Page ${pageId.substring(0, 8)}...`;
@@ -163,7 +168,7 @@ export async function GET(request: Request) {
                 border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             >
-              {sponsorCount} {Number(sponsorCount) === 1 ? 'sponsor' : 'sponsors'}
+              {Number(sponsorCount) === 1 ? '1 sponsor' : `${sponsorCount} sponsors`}
             </div>
           </div>
         </div>
@@ -171,10 +176,20 @@ export async function GET(request: Request) {
       {
         width: 1200,
         height: 630,
+        // Add explicit content type and cache headers
+        headers: {
+          'content-type': 'image/png',
+          'cache-control': 'public, immutable, no-transform, max-age=31536000',
+        },
       },
     );
   } catch (e) {
     console.error(e);
-    return new Response('Failed to generate OG image', { status: 500 });
+    return new Response('Failed to generate OG image', { 
+      status: 500,
+      headers: {
+        'content-type': 'text/plain',
+      },
+    });
   }
 }
