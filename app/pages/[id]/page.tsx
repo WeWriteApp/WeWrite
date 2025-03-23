@@ -34,21 +34,35 @@ export async function generateMetadata(
 
   // Generate a good description using our utility
   const description = createPageDescription(metadata);
-
+  
+  // Constructing the absolute URL for the API-based OG image
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : process.env.NEXT_PUBLIC_HOST || 'http://localhost:3000';
+    
+  // Use the dynamic API-generated OG image instead of file-based
+  const imageUrl = `${baseUrl}/api/og?id=${params.id}`;
+  
   return {
     title: metadata.title || 'Untitled Page',
     description,
     openGraph: {
       title: metadata.title || 'Untitled Page',
       description,
-      // Images will be automatically handled by the file-based convention
-      // Do not specify a URL here as Next.js will handle it
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: metadata.title || 'WeWrite Page',
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: metadata.title || 'Untitled Page',
       description,
-      // Images will be automatically handled by the file-based convention
+      images: [imageUrl],
     },
   };
 }
