@@ -91,8 +91,8 @@ export async function GET(request: Request) {
 
     // Sample content with links for the demo
     const contentWithLinks = `
-      Body content <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">link</span> blah blah text from body
-      content blah blah <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">another link</span> content blah blah
+      Body content <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">link</span> blah blah text from body, 
+      content blah blah <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">another link</span> content blah blah, 
       <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">another link</span> blahhhh blahhhh blahhhh blahhhh
     `;
 
