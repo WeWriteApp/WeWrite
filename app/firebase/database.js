@@ -642,7 +642,7 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
 // Add a new function to fetch only page metadata (title, lastModified, etc.)
 export async function getPageMetadata(pageId) {
   try {
-    const { doc, getDoc } = await import('firebase/firestore');
+    const { doc, getDoc, collection, query, orderBy, limit, getDocs } = await import('firebase/firestore');
     const pageRef = doc(db, 'pages', pageId);
     const pageSnapshot = await getDoc(pageRef);
     
@@ -650,10 +650,27 @@ export async function getPageMetadata(pageId) {
       return null;
     }
     
-    return {
+    const pageData = {
       id: pageSnapshot.id,
       ...pageSnapshot.data()
     };
+    
+    // If we have a currentVersion, fetch it to get the content for OG image
+    if (pageData.currentVersion) {
+      try {
+        const versionsRef = collection(db, 'pages', pageId, 'versions');
+        const versionDoc = doc(versionsRef, pageData.currentVersion);
+        const versionSnapshot = await getDoc(versionDoc);
+        
+        if (versionSnapshot.exists()) {
+          pageData.content = versionSnapshot.data().content;
+        }
+      } catch (versionError) {
+        console.error('Error fetching page content for OG image:', versionError);
+      }
+    }
+    
+    return pageData;
   } catch (error) {
     console.error('Error fetching page metadata:', error);
     throw error;
