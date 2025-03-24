@@ -3,21 +3,23 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import { rtdb } from '../firebase/rtdb';
-import { onValue, ref } from "firebase/database";
+import { onValue, ref, get } from "firebase/database";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { ChevronRight, Users, FileText, Plus } from "lucide-react";
+import { ChevronRight, Users, FileText, Plus, Crown } from "lucide-react";
 import { useMediaQuery } from "../hooks/use-media-query";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 interface Group {
   id: string;
   name: string;
   description?: string;
-  members?: Record<string, boolean>;
+  members?: Record<string, { role: string; joinedAt: string }>;
   pages?: Record<string, boolean>;
   owner?: string;
+  ownerUsername?: string;
 }
 
 export default function MyGroups() {
@@ -33,7 +35,7 @@ export default function MyGroups() {
     const fetchGroups = () => {
       const groupsRef = ref(rtdb, 'groups');
       
-      return onValue(groupsRef, (snapshot) => {
+      return onValue(groupsRef, async (snapshot) => {
         if (!snapshot.exists()) {
           setGroups([]);
           setLoading(false);
@@ -43,21 +45,34 @@ export default function MyGroups() {
         const allGroups = snapshot.val();
         const userGroups: Group[] = [];
         
+        // Get all users to find owner usernames
+        const usersRef = ref(rtdb, 'users');
+        const usersSnapshot = await get(usersRef);
+        const usersData = usersSnapshot.exists() ? usersSnapshot.val() : {};
+        
         Object.keys(allGroups).forEach(groupId => {
           const group = allGroups[groupId];
           
           // Check if user is a member or owner
-          const isMember = group.members && group.members[user.uid];
+          const isMember = group.members && Object.keys(group.members).some(
+            memberId => memberId === user.uid && group.members[memberId].role === 'member'
+          );
           const isOwner = group.owner === user.uid;
           
           if (isMember || isOwner) {
+            // Get owner username
+            const ownerUsername = group.owner && usersData[group.owner] 
+              ? usersData[group.owner].username 
+              : 'Unknown';
+              
             userGroups.push({
               id: groupId,
               name: group.name,
               description: group.description,
               members: group.members,
               pages: group.pages,
-              owner: group.owner
+              owner: group.owner,
+              ownerUsername
             });
           }
         });
@@ -72,7 +87,7 @@ export default function MyGroups() {
   }, [user?.uid]);
   
   // Function to get member count
-  const getMemberCount = (members?: Record<string, boolean>) => {
+  const getMemberCount = (members?: Record<string, { role: string; joinedAt: string }>) => {
     return members ? Object.keys(members).length : 0;
   };
   
@@ -165,15 +180,38 @@ export default function MyGroups() {
                   <CardTitle className="text-lg">{group.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="pb-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="flex items-center">
-                      <Users className="h-3 w-3 mr-1" />
-                      {getMemberCount(group.members)}
-                    </Badge>
-                    <Badge variant="outline" className="flex items-center">
-                      <FileText className="h-3 w-3 mr-1" />
-                      {getPageCount(group.pages)}
-                    </Badge>
+                  <div className="flex items-center text-sm text-muted-foreground mb-2">
+                    <Crown className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                    <span>{group.ownerUsername}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="ml-1 text-sm">{getMemberCount(group.members)}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{getMemberCount(group.members)} members</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="ml-1 text-sm">{getPageCount(group.pages)}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{getPageCount(group.pages)} pages</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>
@@ -200,15 +238,38 @@ export default function MyGroups() {
                   <CardTitle className="text-lg">{group.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="flex items-center">
-                      <Users className="h-3 w-3 mr-1" />
-                      {getMemberCount(group.members)}
-                    </Badge>
-                    <Badge variant="outline" className="flex items-center">
-                      <FileText className="h-3 w-3 mr-1" />
-                      {getPageCount(group.pages)}
-                    </Badge>
+                  <div className="flex items-center text-sm text-muted-foreground mb-2">
+                    <Crown className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                    <span>{group.ownerUsername}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="ml-1 text-sm">{getMemberCount(group.members)}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{getMemberCount(group.members)} members</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="ml-1 text-sm">{getPageCount(group.pages)}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{getPageCount(group.pages)} pages</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>

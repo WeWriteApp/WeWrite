@@ -11,6 +11,7 @@ import GAProvider from "./providers/GAProvider"
 import { AnalyticsProvider } from "./providers/AnalyticsProvider"
 import dynamic from "next/dynamic"
 import { Toaster } from "./components/ui/toaster"
+import { ToastProvider } from "./providers/ToastProvider"
 
 const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
@@ -40,12 +41,14 @@ export default function RootLayout({
               <DataProvider>
                 <AnalyticsProvider>
                   <GAProvider>
-                    <ClientLayout>
-                      {children}
-                    </ClientLayout>
-                    <Analytics debug={process.env.NODE_ENV === 'development'} />
-                    <SpeedInsights />
-                    <Toaster />
+                    <ToastProvider>
+                      <ClientLayout>
+                        {children}
+                      </ClientLayout>
+                      <Analytics debug={process.env.NODE_ENV === 'development'} />
+                      <SpeedInsights />
+                      <Toaster />
+                    </ToastProvider>
                   </GAProvider>
                 </AnalyticsProvider>
               </DataProvider>

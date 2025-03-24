@@ -7,7 +7,7 @@ import { cn } from "../lib/utils"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { loginUser } from "../firebase/auth"
 
 export function LoginForm({
@@ -19,6 +19,15 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFormValid, setIsFormValid] = useState(false)
+
+  // Validate form inputs
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const isEmailValid = emailRegex.test(email)
+    const isPasswordValid = password.length >= 6
+    setIsFormValid(isEmailValid && isPasswordValid)
+  }, [email, password])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,16 +74,16 @@ export function LoginForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-6", className)} 
+      className={cn("flex flex-col gap-3 sm:gap-6", className)} 
       {...props} 
       onSubmit={handleSubmit}
     >
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Log in</h1>
+      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Log in</h1>
       </div>
-      <div className="grid gap-6">
-        <div className="grid gap-2">
-          <Label htmlFor="email" className="text-foreground">Email</Label>
+      <div className="grid gap-3 sm:gap-6">
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -83,20 +92,11 @@ export function LoginForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={1}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
           />
         </div>
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-foreground">Password</Label>
-            <Link
-              href="/auth/forgot-password"
-              className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
-              tabIndex={3} 
-            >
-              Forgot your password?
-            </Link>
-          </div>
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="password" className="text-foreground text-sm">Password</Label>
           <Input 
             id="password" 
             type="password" 
@@ -105,26 +105,39 @@ export function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={2} 
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
           />
+          <div className="flex justify-end">
+            <Link
+              href="/auth/forgot-password"
+              className="text-xs sm:text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
+              tabIndex={3} 
+            >
+              Forgot your password?
+            </Link>
+          </div>
         </div>
         
         {error && (
-          <div className="text-sm font-medium text-destructive">
+          <div className="text-xs sm:text-sm font-medium text-destructive">
             {error}
           </div>
         )}
         
         <Button 
           type="submit" 
-          className="w-full" 
-          disabled={isLoading} 
+          className={cn(
+            "w-full transition-all",
+            !isFormValid && !isLoading ? 
+              "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
+          )}
+          disabled={isLoading || !isFormValid} 
           tabIndex={4}
         >
           {isLoading ? "Signing in..." : "Login"}
         </Button>
       </div>
-      <div className="text-center text-sm text-muted-foreground">
+      <div className="text-center text-xs sm:text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link href="/auth/register" className="underline underline-offset-4 text-foreground hover:text-foreground/90" tabIndex={5}>
           Sign up

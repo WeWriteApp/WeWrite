@@ -23,6 +23,7 @@ export function RegisterForm({
   const [username, setUsername] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isFormValid, setIsFormValid] = useState(false)
   
   // Username validation states
   const [isChecking, setIsChecking] = useState(false)
@@ -58,6 +59,16 @@ export function RegisterForm({
     
     return () => debouncedCheck.cancel()
   }, [username])
+
+  // Validate form inputs
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const isEmailValid = emailRegex.test(email)
+    const isPasswordValid = password.length >= 6
+    const isUsernameValid = username.length >= 3 && isAvailable
+    
+    setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid)
+  }, [email, password, username, isAvailable])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,16 +120,16 @@ export function RegisterForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-6", className)} 
+      className={cn("flex flex-col gap-3 sm:gap-6", className)} 
       {...props} 
       onSubmit={handleSubmit}
     >
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Create account</h1>
+      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Create account</h1>
       </div>
-      <div className="grid gap-6">
-        <div className="grid gap-2">
-          <Label htmlFor="username" className="text-foreground">Username</Label>
+      <div className="grid gap-3 sm:gap-6">
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="username" className="text-foreground text-sm">Username</Label>
           <div className="relative">
             <Input 
               id="username" 
@@ -128,31 +139,31 @@ export function RegisterForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               tabIndex={1}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10 h-9 sm:h-10"
             />
             {username && username.length >= 3 && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 {isChecking ? (
-                  <div className="h-6 w-6 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
+                  <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
                 ) : (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className={cn(
-                          "flex items-center justify-center h-6 w-6 rounded-full",
+                          "flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full",
                           isAvailable 
                             ? "bg-green-500" 
                             : "bg-red-500"
                         )}>
                           {isAvailable ? (
-                            <Check className="h-4 w-4 text-white stroke-[3]" />
+                            <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white stroke-[3]" />
                           ) : (
-                            <X className="h-4 w-4 text-white stroke-[3]" />
+                            <X className="h-3 w-3 sm:h-4 sm:w-4 text-white stroke-[3]" />
                           )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{validationMessage}</p>
+                        <p className="text-xs sm:text-sm">{validationMessage}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -164,8 +175,8 @@ export function RegisterForm({
             <p className="text-xs text-muted-foreground">Username must be at least 3 characters</p>
           )}
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="email" className="text-foreground">Email</Label>
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -174,11 +185,11 @@ export function RegisterForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={2}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
           />
         </div>
-        <div className="grid gap-2">
-          <Label htmlFor="password" className="text-foreground">Password</Label>
+        <div className="grid gap-1 sm:gap-2">
+          <Label htmlFor="password" className="text-foreground text-sm">Password</Label>
           <Input 
             id="password" 
             type="password" 
@@ -186,34 +197,37 @@ export function RegisterForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={3}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
           />
         </div>
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3">
-            <p className="text-sm text-red-400">{error}</p>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-2 sm:p-3">
+            <p className="text-xs sm:text-sm text-red-400">{error}</p>
           </div>
         )}
         <Button 
-          disabled={isLoading || (username && !isAvailable)} 
-          className="bg-white hover:bg-white/90 text-black !text-black"
+          disabled={isLoading || !isFormValid} 
+          className={cn(
+            "w-full transition-all",
+            !isFormValid && !isLoading ? 
+              "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : 
+              "bg-white hover:bg-white/90 text-black !text-black"
+          )}
           tabIndex={4}
           type="submit"
         >
           {isLoading ? "Creating account..." : "Create account"}
         </Button>
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link 
-              href="/auth/login" 
-              className="text-foreground underline-offset-4 hover:underline"
-              tabIndex={5}
-            >
-              Log in
-            </Link>
-          </p>
-        </div>
+      </div>
+      <div className="text-center text-xs sm:text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link 
+          href="/auth/login" 
+          className="underline underline-offset-4 text-foreground hover:text-foreground/90"
+          tabIndex={5}
+        >
+          Log in
+        </Link>
       </div>
     </form>
   )

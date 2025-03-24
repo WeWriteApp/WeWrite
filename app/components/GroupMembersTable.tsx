@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
-import { MoreHorizontal, Trash2, UserPlus, Check, X } from "lucide-react";
+import { MoreHorizontal, Trash2, UserPlus, Check, X, LogOut } from "lucide-react";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -18,6 +18,8 @@ import {
   DropdownMenuTrigger 
 } from "./ui/dropdown-menu";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "./ui/table";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface Member {
   id: string;
@@ -39,6 +41,7 @@ interface GroupMembersTableProps {
 
 export default function GroupMembersTable({ groupId, members, isOwner }: GroupMembersTableProps) {
   const { user } = useContext(AuthContext);
+  const router = useRouter();
   const [membersList, setMembersList] = useState<Member[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,54 +53,47 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
   // Fetch member details
   useEffect(() => {
     if (!members) return;
-
+    
     const fetchMemberDetails = async () => {
-      const membersData: Member[] = [];
+      const usersRef = ref(rtdb, 'users');
+      const usersSnapshot = await get(usersRef);
       
-      for (const [uid, memberData] of Object.entries(members)) {
-        const userRef = ref(rtdb, `users/${uid}`);
-        const snapshot = await get(userRef);
-        const userData = snapshot.val();
+      if (!usersSnapshot.exists()) return;
+      
+      const usersData = usersSnapshot.val();
+      const membersArray: Member[] = [];
+      const usersArray: User[] = [];
+      
+      // First collect all users
+      Object.keys(usersData).forEach(userId => {
+        usersArray.push({
+          id: userId,
+          username: usersData[userId].username || 'Unknown User'
+        });
+      });
+      
+      // Then map members with their details
+      Object.keys(members).forEach(memberId => {
+        const memberData = members[memberId];
+        const userData = usersData[memberId];
         
         if (userData) {
-          membersData.push({
-            id: uid,
+          membersArray.push({
+            id: memberId,
             username: userData.username || 'Unknown User',
             role: memberData.role,
             joinedAt: memberData.joinedAt
           });
         }
-      }
+      });
       
-      setMembersList(membersData);
+      setMembersList(membersArray);
+      setUsers(usersArray);
     };
     
     fetchMemberDetails();
   }, [members]);
-
-  // Fetch all users for the add member dialog
-  useEffect(() => {
-    const usersRef = ref(rtdb, 'users');
-    
-    return onValue(usersRef, (snapshot) => {
-      if (!snapshot.exists()) return;
-      
-      const usersData: User[] = [];
-      snapshot.forEach((childSnapshot) => {
-        const userData = childSnapshot.val();
-        // Don't include users who are already members
-        if (!members[childSnapshot.key!]) {
-          usersData.push({
-            id: childSnapshot.key!,
-            username: userData.username || 'Unknown User'
-          });
-        }
-      });
-      
-      setUsers(usersData);
-    });
-  }, [members]);
-
+  
   // Filter users based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -120,9 +116,30 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
       
       const membersRef = ref(rtdb, `groups/${groupId}/members`);
       await set(membersRef, updatedMembers);
+      toast.success("Member removed successfully");
     } catch (error) {
       console.error("Error removing member:", error);
-      alert("Failed to remove member. Please try again.");
+      toast.error("Failed to remove member. Please try again.");
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!user?.uid) return;
+    if (!confirm("Are you sure you want to leave this group?")) return;
+    
+    try {
+      const updatedMembers = { ...members };
+      delete updatedMembers[user.uid];
+      
+      const membersRef = ref(rtdb, `groups/${groupId}/members`);
+      await set(membersRef, updatedMembers);
+      toast.success("You have left the group");
+      
+      // Redirect to groups page
+      router.push("/groups");
+    } catch (error) {
+      console.error("Error leaving group:", error);
+      toast.error("Failed to leave group. Please try again.");
     }
   };
 
@@ -145,9 +162,10 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
       setIsDialogOpen(false);
       setSearchTerm('');
       setSelectedUser(null);
+      toast.success("Member added successfully");
     } catch (error) {
       console.error("Error adding member:", error);
-      alert("Failed to add member. Please try again.");
+      toast.error("Failed to add member. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -157,71 +175,84 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Members ({membersList.length})</h3>
-        {isOwner && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="flex items-center gap-1">
-                <UserPlus className="h-4 w-4" />
-                <span>Add Member</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Member to Group</DialogTitle>
-                <DialogDescription>
-                  Search for a user by username to add them to this group.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    placeholder="Search by username..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      if (e.target.value.length > 2) {
-                        const filtered = users.filter(u => 
-                          u.username.toLowerCase().includes(e.target.value.toLowerCase()) && 
-                          !membersList.some(m => m.id === u.id)
-                        );
-                        setFilteredUsers(filtered);
-                      } else {
-                        setFilteredUsers([]);
-                      }
-                    }}
-                  />
-                </div>
-                {filteredUsers.length > 0 ? (
-                  <div className="max-h-[200px] overflow-y-auto border rounded-md">
-                    {filteredUsers.map(user => (
-                      <div 
-                        key={user.id}
-                        className={`p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center ${selectedUser?.id === user.id ? 'bg-gray-100' : ''}`}
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        <span>{user.username}</span>
-                        {selectedUser?.id === user.id && <Check className="h-4 w-4 text-green-500" />}
-                      </div>
-                    ))}
-                  </div>
-                ) : searchTerm.length > 2 ? (
-                  <p className="text-sm text-gray-500">No users found</p>
-                ) : null}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button 
-                  onClick={handleAddMember} 
-                  disabled={!selectedUser || isLoading}
-                >
-                  {isLoading ? 'Adding...' : 'Add Member'}
+        <div className="flex gap-2">
+          {!isOwner && user?.uid && members[user.uid] && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLeaveGroup}
+              className="flex items-center gap-1 text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Leave Group</span>
+            </Button>
+          )}
+          {isOwner && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="flex items-center gap-1">
+                  <UserPlus className="h-4 w-4" />
+                  <span>Add Member</span>
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Member to Group</DialogTitle>
+                  <DialogDescription>
+                    Search for a user by username to add them to this group.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      placeholder="Search by username..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (e.target.value.length > 2) {
+                          const filtered = users.filter(u => 
+                            u.username.toLowerCase().includes(e.target.value.toLowerCase()) && 
+                            !membersList.some(m => m.id === u.id)
+                          );
+                          setFilteredUsers(filtered);
+                        } else {
+                          setFilteredUsers([]);
+                        }
+                      }}
+                    />
+                  </div>
+                  {filteredUsers.length > 0 ? (
+                    <div className="max-h-[200px] overflow-y-auto border rounded-md">
+                      {filteredUsers.map(user => (
+                        <div 
+                          key={user.id}
+                          className={`p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center ${selectedUser?.id === user.id ? 'bg-gray-100' : ''}`}
+                          onClick={() => setSelectedUser(user)}
+                        >
+                          <span>{user.username}</span>
+                          {selectedUser?.id === user.id && <Check className="h-4 w-4 text-green-500" />}
+                        </div>
+                      ))}
+                    </div>
+                  ) : searchTerm.length > 2 ? (
+                    <p className="text-sm text-gray-500">No users found</p>
+                  ) : null}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                  <Button 
+                    onClick={handleAddMember} 
+                    disabled={!selectedUser || isLoading}
+                  >
+                    {isLoading ? 'Adding...' : 'Add Member'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       <div className="rounded-md border">

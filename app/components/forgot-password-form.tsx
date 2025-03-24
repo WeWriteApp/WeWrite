@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -18,7 +18,15 @@ export function ForgotPasswordForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
   const router = useRouter();
+
+  // Validate form inputs
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = emailRegex.test(email);
+    setIsFormValid(isEmailValid);
+  }, [email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,20 +45,20 @@ export function ForgotPasswordForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-6", className)}
+      className={cn("flex flex-col gap-3 sm:gap-6", className)}
       onSubmit={handleSubmit}
       {...props}
     >
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Reset Password</h1>
-        <p className="text-balance text-sm text-muted-foreground">
+      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Reset Password</h1>
+        <p className="text-balance text-xs sm:text-sm text-muted-foreground">
           Enter your email address and we'll send you a link to reset your password
         </p>
       </div>
       
       {success ? (
-        <div className="space-y-4">
-          <div className="bg-green-500/20 p-4 rounded-md text-green-600 dark:text-green-200 text-sm">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-green-500/20 p-2 sm:p-4 rounded-md text-green-600 dark:text-green-200 text-xs sm:text-sm">
             Reset link sent! Check your email for instructions to reset your password.
           </div>
           <Button 
@@ -61,9 +69,9 @@ export function ForgotPasswordForm({
           </Button>
         </div>
       ) : (
-        <div className="grid gap-6">
-          <div className="grid gap-2">
-            <Label htmlFor="email" className="text-foreground">Email</Label>
+        <div className="grid gap-3 sm:gap-6">
+          <div className="grid gap-1 sm:gap-2">
+            <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
             <Input 
               id="email" 
               type="email" 
@@ -71,25 +79,29 @@ export function ForgotPasswordForm({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
             />
           </div>
           
           {error && (
-            <div className="text-sm font-medium text-destructive">
+            <div className="text-xs sm:text-sm font-medium text-destructive">
               {error}
             </div>
           )}
           
           <Button 
             type="submit" 
-            className="w-full" 
-            disabled={isLoading}
+            className={cn(
+              "w-full transition-all",
+              !isFormValid && !isLoading ? 
+                "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
+            )}
+            disabled={isLoading || !isFormValid}
           >
             {isLoading ? "Sending..." : "Send Reset Link"}
           </Button>
           
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="text-center text-xs sm:text-sm text-muted-foreground">
             Remember your password?{" "}
             <Link 
               href="/auth/login" 
