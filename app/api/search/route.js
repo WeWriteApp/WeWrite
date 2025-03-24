@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 
+// Add export for dynamic route handling to prevent static build errors
+export const dynamic = 'force-dynamic';
+
 let bigquery = null;
 
 // Only try to initialize BigQuery if we have credentials

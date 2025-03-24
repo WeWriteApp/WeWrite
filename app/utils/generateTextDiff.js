@@ -219,7 +219,7 @@ function findCommonPointAfterDiff(shorterText, longerText, diffStartIndex) {
  * @param {string|object} contentJsonString - JSON string or object of editor content
  * @returns {string} Extracted text content
  */
-function extractTextContent(contentJsonString) {
+export function extractTextContent(contentJsonString) {
   try {
     if (!contentJsonString) return '';
     

@@ -8,6 +8,7 @@ import AddUsername from "./components/AddUsername";
 import TypeaheadSearch from "./components/TypeaheadSearch";
 import LoginBanner from "./components/LoginBanner";
 import RecentActivity from "./components/RecentActivity";
+import MyGroups from "./components/MyGroups";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
@@ -88,6 +89,8 @@ export default function Home() {
         <div className="w-full mb-6">
           <TypeaheadSearch />
         </div>
+        
+        <MyGroups />
         
         <RecentActivity />
         

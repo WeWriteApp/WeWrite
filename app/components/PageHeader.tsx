@@ -23,9 +23,18 @@ export interface PageHeaderProps {
   username?: string;
   userId?: string;
   isLoading?: boolean;
+  groupId?: string;
+  groupName?: string;
 }
 
-export default function PageHeader({ title, username, userId, isLoading = false }: PageHeaderProps) {
+export default function PageHeader({ 
+  title, 
+  username, 
+  userId, 
+  isLoading = false,
+  groupId,
+  groupName
+}: PageHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = React.useState(false);
@@ -244,13 +253,22 @@ export default function PageHeader({ title, username, userId, isLoading = false 
                     </span>
                   ) : (
                     <>
-                      {isScrolled ? "•" : "by"}{" "}
-                      {userId ? (
-                        <Link href={`/user/${userId}`} className="hover:underline">
-                          <span data-component-name="PageHeader">{username || "Anonymous"}</span>
+                      {isScrolled ? "•" : ""}{" "}
+                      {groupId && groupName ? (
+                        <Link href={`/groups/${groupId}`} className="hover:underline">
+                          <span data-component-name="PageHeader">in {groupName}</span>
                         </Link>
                       ) : (
-                        <span data-component-name="PageHeader">{username || "Anonymous"}</span>
+                        <>
+                          {isScrolled ? "" : "by"}{" "}
+                          {userId ? (
+                            <Link href={`/user/${userId}`} className="hover:underline">
+                              <span data-component-name="PageHeader">{username || "Anonymous"}</span>
+                            </Link>
+                          ) : (
+                            <span data-component-name="PageHeader">{username || "Anonymous"}</span>
+                          )}
+                        </>
                       )}
                     </>
                   )}

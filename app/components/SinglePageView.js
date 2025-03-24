@@ -41,6 +41,7 @@ export default function SinglePageView({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isPublic, setIsPublic] = useState(false);
   const [groupId, setGroupId] = useState(null);
+  const [groupName, setGroupName] = useState(null);
   const [lineViewMode, setLineViewMode] = useState('normal');
   const [scrollDirection, setScrollDirection] = useState('none');
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -176,6 +177,15 @@ export default function SinglePageView({ params }) {
           // Check and set groupId if it exists
           if (pageData.groupId) {
             setGroupId(pageData.groupId);
+            
+            // Get group data to fetch the group name
+            const groupRef = ref(db, `groups/${pageData.groupId}`);
+            onValue(groupRef, (groupSnapshot) => {
+              const groupData = groupSnapshot.val();
+              if (groupData && groupData.name) {
+                setGroupName(groupData.name);
+              }
+            });
           }
 
           // Check if the current user is the owner or if the page is public
@@ -375,6 +385,8 @@ export default function SinglePageView({ params }) {
         userId={page?.userId}
         isLoading={isLoading}
         scrollDirection={scrollDirection}
+        groupId={groupId}
+        groupName={groupName}
       />
       <div className="pb-24 px-2 sm:px-4 md:px-6">
         {isEditing ? (
