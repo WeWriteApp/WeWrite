@@ -2,6 +2,7 @@
 
 import { initializeAnalytics } from '../firebase/config';
 import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
+import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
 /**
  * Analytics Integration Module
@@ -16,6 +17,9 @@ import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
  * 
  * IMPORTANT: Page titles are included in all page view events to make data
  * analysis easier since our URLs use UUIDs which aren't human-readable.
+ * 
+ * NOTE: This module is being gradually replaced by the analytics-service.ts
+ * implementation, but is maintained for backward compatibility.
  */
 
 // Interfaces
@@ -28,6 +32,16 @@ interface TrackingEvent {
   page_uuid?: string;  // Original UUID from URL for reference
   [key: string]: any;
 }
+
+// Add GA_INITIALIZED to Window interface if not already defined
+declare global {
+  interface Window {
+    GA_INITIALIZED?: boolean;
+  }
+}
+
+// Define gtag as a global function if not already defined
+declare let gtag: (command: string, targetId: string, config?: Record<string, any>) => void;
 
 // Singleton instance of the analytics service
 let analyticsInstance: Analytics | null = null;
@@ -50,144 +64,117 @@ class Analytics {
    * Initialize analytics providers
    * This sets up both Google Analytics and Firebase Analytics if available
    */
-  private async setupAnalytics() {
-    if (this.debug) console.log('Setting up analytics...');
-    
-    // Setup Google Analytics
-    this.gaAvailable = !!this.gaId && typeof window !== 'undefined';
-    
-    // Check if gtag is available after a short delay to allow scripts to load
-    if (this.gaId && typeof window !== 'undefined') {
-      setTimeout(() => {
-        this.gaAvailable = 'gtag' in window;
-        if (this.debug) {
-          console.log('Google Analytics ID:', this.gaId);
-          console.log('Google Analytics available (after delay):', this.gaAvailable);
-          console.log('window.gtag exists:', 'gtag' in window);
+  private async setupAnalytics(): Promise<void> {
+    // Check if Google Analytics is available
+    if (this.gaId) {
+      this.gaAvailable = true;
+      if (this.debug) console.log('Google Analytics ID available');
+    } else {
+      if (this.debug) console.log('Google Analytics ID not available');
+    }
+
+    // Check if Firebase Analytics is available
+    if (this.fbMeasurementId) {
+      try {
+        this.firebaseAnalytics = await initializeAnalytics();
+        if (this.firebaseAnalytics) {
+          this.fbAvailable = true;
+          if (this.debug) console.log('Firebase Analytics initialized');
         }
-      }, 1000);
-    }
-    
-    if (this.debug) console.log('Google Analytics available (initial):', this.gaAvailable);
-    
-    // Setup Firebase Analytics
-    try {
-      this.firebaseAnalytics = await initializeAnalytics();
-      this.fbAvailable = !!this.firebaseAnalytics;
-      if (this.debug) console.log('Firebase Analytics available:', this.fbAvailable);
-    } catch (error) {
-      if (this.debug) console.error('Error initializing Firebase Analytics:', error);
-      this.fbAvailable = false;
-    }
-    
-    if (this.debug) {
-      console.log('Analytics setup complete.');
-      console.log('- Google Analytics:', this.gaAvailable ? 'Ready' : 'Not available');
-      console.log('- Firebase Analytics:', this.fbAvailable ? 'Ready' : 'Not available');
+      } catch (e) {
+        console.error('Error initializing Firebase Analytics:', e);
+      }
+    } else {
+      if (this.debug) console.log('Firebase Analytics ID not available');
     }
   }
 
   /**
-   * Track page view with title
+   * Track a page view
    * 
-   * @param url - The URL of the page being viewed
-   * @param title - The title of the page (important for data science team)
-   * @param pageId - Optional UUID of the page (from URL) for reference
+   * @param path - The page path
+   * @param title - The page title (important for data analysis)
    */
-  public pageView(url: string, title?: string, pageId?: string) {
-    if (this.debug) console.log(`Tracking pageview: ${url}${title ? ` (${title})` : ''}`);
-    
-    // Extract page data for analytics
-    const pageData = {
-      page_path: url,
-      page_title: title || this.getPageTitleFromDOM(), // Fallback to DOM title if not provided
-      page_uuid: pageId || this.extractPageIdFromUrl(url),
-      timestamp: new Date().toISOString()
-    };
+  public pageView(path: string, title?: string): void {
+    if (typeof window === 'undefined') return;
+
+    // Get page title if not provided
+    const pageTitle = title || document.title || 'WeWrite';
     
     // Track in Google Analytics
-    if (this.gaId && typeof window !== 'undefined') {
+    if (this.gaAvailable && window.gtag) {
       try {
-        // Check if gtag is available
-        if (!('gtag' in window)) {
-          if (this.debug) console.warn('Google Analytics gtag not available yet');
-          // Try again after a short delay
-          setTimeout(() => {
-            if ('gtag' in window) {
-              window.gtag('config', this.gaId!, pageData);
-              if (this.debug) console.log('Google Analytics pageview tracked with delay:', pageData.page_title);
-              this.gaAvailable = true;
-            } else {
-              if (this.debug) console.error('Google Analytics gtag still not available after delay');
-            }
-          }, 1000);
-          return;
-        }
+        window.gtag('config', this.gaId as string, {
+          page_path: path,
+          page_title: pageTitle,
+          page_location: window.location.href
+        });
         
-        window.gtag('config', this.gaId, pageData);
-        if (this.debug) console.log('Google Analytics pageview tracked with title:', pageData.page_title);
+        if (this.debug) console.log('Google Analytics page view tracked:', pageTitle);
       } catch (e) {
-        if (this.debug) console.error('Error tracking Google Analytics pageview:', e);
+        console.error('Error tracking Google Analytics page view:', e);
       }
     }
     
     // Track in Firebase Analytics
     if (this.fbAvailable && this.firebaseAnalytics) {
       try {
-        firebaseLogEvent(this.firebaseAnalytics, 'page_view', pageData);
-        if (this.debug) console.log('Firebase Analytics pageview tracked with title:', pageData.page_title);
+        firebaseLogEvent(this.firebaseAnalytics, ANALYTICS_EVENTS.PAGE_VIEW, {
+          page_path: path,
+          page_title: pageTitle,
+          page_location: window.location.href
+        });
+        
+        if (this.debug) console.log('Firebase Analytics page view tracked:', pageTitle);
       } catch (e) {
-        if (this.debug) console.error('Error tracking Firebase Analytics pageview:', e);
+        console.error('Error tracking Firebase Analytics page view:', e);
       }
     }
   }
 
   /**
-   * Track custom event
+   * Track a custom event
    * 
-   * @param event - The event details to track
+   * @param event - The event to track
    */
-  public event(event: TrackingEvent) {
-    if (this.debug) console.log(`Tracking event: ${event.action}`, event);
+  public event(event: TrackingEvent): void {
+    if (typeof window === 'undefined') return;
     
-    // Ensure page title is included if possible
+    // Ensure we have a page title
     if (!event.page_title) {
-      event.page_title = this.getPageTitleFromDOM();
+      event.page_title = document.title || 'WeWrite';
     }
     
     // Track in Google Analytics
-    if (this.gaId && typeof window !== 'undefined') {
+    if (this.gaAvailable && window.gtag) {
       try {
-        // Check if gtag is available
-        if (!('gtag' in window)) {
-          if (this.debug) console.warn('Google Analytics gtag not available yet for event tracking');
-          // Try again after a short delay
-          setTimeout(() => {
-            if ('gtag' in window) {
-              window.gtag('event', event.action, {
-                event_category: event.category,
-                event_label: event.label,
-                value: event.value,
-                ...event,
-              });
-              if (this.debug) console.log('Google Analytics event tracked with delay');
-              this.gaAvailable = true;
-            } else {
-              if (this.debug) console.error('Google Analytics gtag still not available after delay for event');
-            }
-          }, 1000);
-          return;
-        }
+        // Use a timeout to ensure GA is ready
+        setTimeout(() => {
+          try {
+            window.gtag('event', event.action, {
+              event_category: event.category,
+              event_label: event.label,
+              value: event.value,
+              ...event
+            });
+            
+            if (this.debug) console.log('Google Analytics event tracked with delay');
+          } catch (e) {
+            console.error('Error tracking delayed Google Analytics event:', e);
+          }
+        }, 500);
         
+        // Also try immediately in case GA is already ready
         window.gtag('event', event.action, {
           event_category: event.category,
           event_label: event.label,
           value: event.value,
-          ...event,
+          ...event
         });
+        
         if (this.debug) console.log('Google Analytics event tracked');
       } catch (e) {
-        if (this.debug) console.error('Error tracking Google Analytics event:', e);
+        console.error('Error tracking Google Analytics event:', e);
       }
     }
     
@@ -198,48 +185,47 @@ class Analytics {
           event_category: event.category,
           event_label: event.label,
           value: event.value,
-          ...event,
+          ...event
         });
+        
         if (this.debug) console.log('Firebase Analytics event tracked');
       } catch (e) {
-        if (this.debug) console.error('Error tracking Firebase Analytics event:', e);
+        console.error('Error tracking Firebase Analytics event:', e);
       }
     }
   }
-
+  
   /**
-   * Get page debug status
+   * Helper method to track authentication events
    */
-  public debugStatus() {
-    return {
-      gaAvailable: this.gaAvailable,
-      fbAvailable: this.fbAvailable,
-      gaId: this.gaId?.substring(0, 2) + '...',
-      fbMeasurementId: this.fbMeasurementId?.substring(0, 2) + '...',
-    };
+  public trackAuthEvent(action: string, params: Partial<TrackingEvent> = {}): void {
+    this.event({
+      category: EVENT_CATEGORIES.AUTH,
+      action,
+      ...params
+    });
   }
-
+  
   /**
-   * Helper method to get the current page title from the DOM
-   * This ensures we always have a title even if not passed explicitly
+   * Helper method to track content events
    */
-  private getPageTitleFromDOM(): string {
-    if (typeof document !== 'undefined') {
-      return document.title || 'Unknown Page';
-    }
-    return 'Unknown Page';
+  public trackContentEvent(action: string, params: Partial<TrackingEvent> = {}): void {
+    this.event({
+      category: EVENT_CATEGORIES.CONTENT,
+      action,
+      ...params
+    });
   }
-
+  
   /**
-   * Helper method to extract page ID from URL if present
-   * This helps associate analytics data with specific pages
+   * Helper method to track interaction events
    */
-  private extractPageIdFromUrl(url: string): string | undefined {
-    // Extract page ID from URLs like /pages/[id] or /user/[id]
-    const pageMatch = url.match(/\/pages\/([^/?#]+)/);
-    const userMatch = url.match(/\/user\/([^/?#]+)/);
-    
-    return pageMatch?.[1] || userMatch?.[1];
+  public trackInteractionEvent(action: string, params: Partial<TrackingEvent> = {}): void {
+    this.event({
+      category: EVENT_CATEGORIES.INTERACTION,
+      action,
+      ...params
+    });
   }
 }
 
@@ -248,10 +234,11 @@ class Analytics {
  * This ensures we only initialize analytics once
  */
 export const getAnalyticsInstance = (): Analytics => {
-  if (!analyticsInstance) {
+  if (!analyticsInstance && typeof window !== 'undefined') {
     analyticsInstance = new Analytics();
   }
-  return analyticsInstance;
+  
+  return analyticsInstance as Analytics;
 };
 
 /**
@@ -260,4 +247,7 @@ export const getAnalyticsInstance = (): Analytics => {
  */
 export const useAnalytics = () => {
   return getAnalyticsInstance();
-}; 
+};
+
+// Export event constants for convenience
+export { ANALYTICS_EVENTS, EVENT_CATEGORIES };

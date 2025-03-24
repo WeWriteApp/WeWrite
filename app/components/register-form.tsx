@@ -7,8 +7,11 @@ import { cn } from "../lib/utils"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
-import { useState } from "react"
-import { createUser, addUsername } from "../firebase/auth"
+import { useState, useEffect } from "react"
+import { createUser, addUsername, checkUsernameAvailability } from "../firebase/auth"
+import { Check, X } from "lucide-react"
+import { debounce } from "lodash"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 
 export function RegisterForm({
   className,
@@ -20,11 +23,53 @@ export function RegisterForm({
   const [username, setUsername] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Username validation states
+  const [isChecking, setIsChecking] = useState(false)
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
+  const [validationMessage, setValidationMessage] = useState<string>("")
+
+  // Function to check username availability
+  const checkUsername = async (username: string) => {
+    if (!username || username.length < 3) {
+      setIsAvailable(null)
+      setValidationMessage("")
+      return
+    }
+
+    setIsChecking(true)
+    const result = await checkUsernameAvailability(username)
+    setIsAvailable(result.isAvailable)
+    setValidationMessage(result.message)
+    setIsChecking(false)
+  }
+
+  // Debounce the username check to avoid too many requests
+  const debouncedCheck = debounce(checkUsername, 500)
+
+  // Check username availability when username changes
+  useEffect(() => {
+    if (username) {
+      debouncedCheck(username)
+    } else {
+      setIsAvailable(null)
+      setValidationMessage("")
+    }
+    
+    return () => debouncedCheck.cancel()
+  }, [username])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
+    
+    // Validate username availability before submission
+    if (username && !isAvailable) {
+      setError(validationMessage || "Please choose a different username")
+      setIsLoading(false)
+      return
+    }
     
     try {
       const result = await createUser(email, password)
@@ -69,24 +114,56 @@ export function RegisterForm({
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-white !text-white">Create your account</h1>
-        <p className="text-balance text-sm text-white/70 !text-white/70">
-          Enter your information below to create your account
-        </p>
+        <h1 className="text-2xl font-bold text-white !text-white">Create account</h1>
       </div>
       <div className="grid gap-6">
         <div className="grid gap-2">
           <Label htmlFor="username" className="text-white !text-white">Username</Label>
-          <Input 
-            id="username" 
-            type="text" 
-            placeholder="yourusername" 
-            required 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
-            style={{color: 'white'}}
-          />
+          <div className="relative">
+            <Input 
+              id="username" 
+              type="text" 
+              placeholder="thomaspaine" 
+              required 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              tabIndex={1}
+              className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white pr-10"
+              style={{color: 'white'}}
+            />
+            {username && username.length >= 3 && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                {isChecking ? (
+                  <div className="h-6 w-6 rounded-full border-2 border-white/30 border-t-transparent animate-spin"></div>
+                ) : (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className={cn(
+                          "flex items-center justify-center h-6 w-6 rounded-full",
+                          isAvailable 
+                            ? "bg-green-500" 
+                            : "bg-red-500"
+                        )}>
+                          {isAvailable ? (
+                            <Check className="h-4 w-4 text-white stroke-[3]" />
+                          ) : (
+                            <X className="h-4 w-4 text-white stroke-[3]" />
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p>{validationMessage}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            )}
+          </div>
+          {username && username.length < 3 && (
+            <p className="text-xs text-white/70">Username must be at least 3 characters</p>
+          )}
         </div>
         <div className="grid gap-2">
           <Label htmlFor="email" className="text-white !text-white">Email</Label>
@@ -97,6 +174,7 @@ export function RegisterForm({
             required 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            tabIndex={2}
             className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
             style={{color: 'white'}}
           />
@@ -106,34 +184,39 @@ export function RegisterForm({
           <Input 
             id="password" 
             type="password" 
-            placeholder="••••••••"
             required 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            tabIndex={3}
             className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
             style={{color: 'white'}}
           />
         </div>
-        
         {error && (
-          <div className="text-sm font-medium text-red-400">
-            {error}
+          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-3">
+            <p className="text-sm text-red-400">{error}</p>
           </div>
         )}
-        
         <Button 
-          type="submit" 
-          className="w-full bg-white text-blue-950 hover:bg-white/90" 
-          disabled={isLoading}
+          disabled={isLoading || (username && !isAvailable)} 
+          className="bg-white hover:bg-white/90 text-black !text-black"
+          tabIndex={4}
+          type="submit"
         >
           {isLoading ? "Creating account..." : "Create account"}
         </Button>
-      </div>
-      <div className="text-center text-sm text-white/80 !text-white/80">
-        Already have an account?{" "}
-        <Link href="/auth/login" className="underline underline-offset-4 text-white !text-white hover:text-white/90">
-          Sign in
-        </Link>
+        <div className="text-center">
+          <p className="text-sm text-white/70">
+            Already have an account?{" "}
+            <Link 
+              href="/auth/login" 
+              className="text-white underline-offset-4 hover:underline"
+              tabIndex={5}
+            >
+              Log in
+            </Link>
+          </p>
+        </div>
       </div>
     </form>
   )

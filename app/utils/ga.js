@@ -13,7 +13,9 @@ import ReactGA from 'react-ga4';
  */
 export const trackPageView = (path, title) => {
   if (typeof window === 'undefined' || !window.GA_INITIALIZED) {
-    console.warn('Google Analytics not initialized for page view tracking');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Google Analytics not initialized for page view tracking');
+    }
     return;
   }
 
@@ -43,7 +45,9 @@ export const trackPageView = (path, title) => {
  */
 export const trackEvent = ({ category, action, label, value, nonInteraction = false }) => {
   if (typeof window === 'undefined' || !window.GA_INITIALIZED) {
-    console.warn('Google Analytics not initialized for event tracking');
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Google Analytics not initialized for event tracking');
+    }
     return;
   }
 
@@ -57,34 +61,31 @@ export const trackEvent = ({ category, action, label, value, nonInteraction = fa
     });
 
     if (process.env.NODE_ENV === 'development') {
-      console.log('GA event sent:', { category, action, label, value });
+      console.log('GA event tracked:', { category, action, label, value });
     }
   } catch (error) {
-    console.error('Error sending GA event:', error);
+    console.error('Error tracking GA event:', error);
   }
 };
 
 /**
- * Initialize Google Analytics manually if needed
- * This is a backup in case the automatic initialization in GAProvider fails
+ * Initialize Google Analytics
+ * @returns {boolean} - Whether initialization was successful
  */
 export const initializeGA = () => {
-  if (typeof window === 'undefined') return;
-  
-  const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-  
-  if (!GA_TRACKING_ID) {
-    console.warn('Missing Google Analytics Measurement ID in .env.local');
-    return;
-  }
-  
-  if (window.GA_INITIALIZED) {
-    console.log('Google Analytics already initialized');
-    return;
-  }
-  
   try {
-    console.log('Manually initializing Google Analytics with ID:', GA_TRACKING_ID);
+    const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    
+    if (!GA_TRACKING_ID) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Missing Google Analytics Measurement ID');
+      }
+      return false;
+    }
+    
+    if (window.GA_INITIALIZED) {
+      return true;
+    }
     
     ReactGA.initialize(GA_TRACKING_ID, {
       gaOptions: {
@@ -96,12 +97,12 @@ export const initializeGA = () => {
     window.GA_INITIALIZED = true;
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('Google Analytics manually initialized successfully');
+      console.log('Google Analytics initialized successfully');
     }
     
     return true;
   } catch (error) {
-    console.error('Error manually initializing Google Analytics:', error);
+    console.error('Error initializing Google Analytics:', error);
     return false;
   }
 };

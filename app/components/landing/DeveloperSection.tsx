@@ -1,69 +1,116 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "../ui/button";
-import { Github, Code } from "lucide-react";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Code, Server, Palette, Zap, Users } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import Link from 'next/link';
+import Image from 'next/image';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Separator } from "../../components/ui/separator";
 
-export function DeveloperSection() {
-  return (
-    <section className="w-full py-12 md:py-24 bg-blue-950/30">
-      <div className="container px-4 md:px-6">
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-12 items-center">
-          <div className="flex flex-col justify-center space-y-4">
-            <div className="inline-block rounded-lg bg-blue-600/10 px-3 py-1 text-sm text-blue-500">
-              <Code className="mr-1 h-4 w-4 inline-block" />
-              Open Source
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
-                Are you a developer?
-              </h2>
-              <p className="max-w-[600px] text-gray-300 md:text-xl">
-                We're open source and we'd love your contributions! If you write about your contributions on WeWrite, we can set up a recurring payment to you according to the quality of your work!
-              </p>
-            </div>
-            <div>
-              <Link href="https://github.com/your-repo" target="_blank" rel="noopener noreferrer">
-                <Button className="bg-white text-black hover:bg-white/90">
-                  <Github className="mr-2 h-4 w-4" />
-                  Visit GitHub Project
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <div className="flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-[500px] overflow-hidden rounded-xl bg-gradient-to-br from-blue-950 to-blue-900 p-8 shadow-xl">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                  <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                </div>
-                <pre className="font-mono text-sm text-gray-300 overflow-x-auto">
-                  <code>{`// Example contribution
-function improveReadingExperience() {
-  // Add new view mode
-  const viewModes = [
-    'wrapped',
-    'default', 
-    'spaced'
+export const DeveloperSection = () => {
+  const techStack = [
+    {
+      icon: <Code className="h-8 w-8 text-primary" />,
+      title: "Next.js & TypeScript",
+      description: "Built with Next.js 14 and TypeScript for type-safe, performant web applications."
+    },
+    {
+      icon: <Server className="h-8 w-8 text-primary" />,
+      title: "Firebase Backend",
+      description: "Powered by Firebase for authentication, real-time database, and secure storage."
+    },
+    {
+      icon: <Palette className="h-8 w-8 text-primary" />,
+      title: "Modern UI Libraries",
+      description: "Using Shadcn UI, Radix, and NextUI components for a beautiful, accessible interface."
+    },
+    {
+      icon: <Zap className="h-8 w-8 text-primary" />,
+      title: "Framer Motion",
+      description: "Smooth animations and transitions powered by Framer Motion."
+    },
+    {
+      icon: <Users className="h-8 w-8 text-primary" />,
+      title: "Collaborative Editing",
+      description: "Real-time collaboration with conflict resolution and version tracking."
+    }
   ];
-  
-  // Apply user preference
-  applyViewMode(
-    localStorage.getItem('pageViewMode') 
-    || 'default'
-  );
-  
-  // Return enhanced experience
-  return "Better reading for everyone!";
-}`}</code>
-                </pre>
-              </div>
+
+  return (
+    <section className="py-20 bg-gradient-to-b from-background to-background/95">
+      <div className="container mx-auto px-6">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Built with Modern Technology</h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            WeWrite is powered by the latest web technologies for a fast, reliable experience
+          </p>
+        </motion.div>
+
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          {techStack.map((tech, index) => (
+            <div key={index} className="bg-card border border-border/40 rounded-lg p-6 shadow-sm">
+              <div className="mb-4">{tech.icon}</div>
+              <h3 className="text-xl font-semibold mb-2">{tech.title}</h3>
+              <p className="text-muted-foreground">{tech.description}</p>
             </div>
-          </div>
-        </div>
+          ))}
+        </motion.div>
+
+        <motion.div 
+          className="mt-12 relative rounded-lg overflow-hidden shadow-xl"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 z-10"></div>
+          <Image
+            src="/images/tech-stack.png"
+            alt="WeWrite Technology Stack"
+            width={1200}
+            height={600}
+            className="w-full h-auto relative z-0"
+          />
+        </motion.div>
+
+        <Separator className="my-12 max-w-2xl mx-auto opacity-50" />
+
+        <motion.div 
+          className="text-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <h3 className="text-2xl font-bold mb-4">Ready to get started?</h3>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Join thousands of writers, teams, and content creators who are already using WeWrite to streamline their workflow.
+          </p>
+          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+            <Link href="/auth/register">Create Your Free Account</Link>
+          </Button>
+        </motion.div>
       </div>
     </section>
   );
-}
+};

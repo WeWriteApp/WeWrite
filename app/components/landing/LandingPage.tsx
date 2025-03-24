@@ -1,118 +1,247 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "../ui/button";
-import { Github, Twitter, Instagram, Mail } from "lucide-react";
-import { useTheme } from "next-themes";
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Button } from '../../components/ui/button';
+import { ArrowRight, Menu, X } from 'lucide-react';
+import { Hero } from './Hero';
+import { FeatureSection } from './FeatureSection';
+import { DeveloperSection } from './DeveloperSection';
+import { motion } from 'framer-motion';
+import { Separator } from "../../components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "../../components/ui/sheet";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "../../components/ui/navigation-menu";
 
-// Landing page components
-import { Hero } from "./Hero";
-import { FeatureSection } from "./FeatureSection";
-import { FaqSection } from "./FaqSection";
-import { DeveloperSection } from "./DeveloperSection";
+const sectionVariants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1]
+    }
+  }
+};
 
-export default function LandingPage() {
-  const router = useRouter();
-  const { setTheme } = useTheme();
-  
-  // Force dark mode for landing page
+const LandingPage = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+
   useEffect(() => {
-    setTheme("dark");
-  }, [setTheme]);
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Smooth scroll function for anchor links
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    
+    // Extract the id from the href
+    const targetId = href.replace('#', '');
+    const targetElement = document.getElementById(targetId);
+    
+    if (targetElement) {
+      // Get the header height to offset the scroll position
+      const headerHeight = 80; // Approximate header height in pixels
+      const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
+      
+      // Smooth scroll to the target position
+      window.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth'
+      });
+      
+      // Update URL without scrolling
+      window.history.pushState(null, '', href);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-6 md:gap-10">
-            <Link href="/" className="flex items-center space-x-2">
-              <span className="font-bold text-xl">WeWrite</span>
-            </Link>
+    <div className="min-h-screen bg-background">
+      {/* Desktop Header */}
+      <header 
+        className={`fixed top-0 left-0 right-0 w-full border-b z-50 transition-all duration-200 hidden md:block ${
+          isScrolled 
+            ? 'border-border/10 py-3 bg-background/80 backdrop-blur-xl shadow-md' 
+            : 'border-transparent py-4 bg-background/70 backdrop-blur-lg'
+        }`}
+      >
+        <div className="container mx-auto flex justify-between items-center px-6">
+          <div className="flex items-center">
+            <h1 
+              className="text-2xl font-bold text-primary cursor-pointer" 
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              WeWrite
+            </h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex gap-4">
-              <Link href="https://github.com/your-repo" target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                  <Github className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="https://twitter.com/your-account" target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                  <Twitter className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="https://instagram.com/your-account" target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                  <Instagram className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="mailto:contact@example.com" target="_blank" rel="noopener noreferrer">
-                <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                  <Mail className="h-5 w-5" />
-                </Button>
-              </Link>
+          
+          <div className="flex items-center space-x-4">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <a 
+                    href="#features" 
+                    onClick={(e) => scrollToSection(e, '#features')}
+                    className={navigationMenuTriggerStyle()}
+                  >
+                    Features
+                  </a>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <a 
+                    href="#about" 
+                    onClick={(e) => scrollToSection(e, '#about')}
+                    className={navigationMenuTriggerStyle()}
+                  >
+                    About
+                  </a>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+            
+            <div className="flex items-center space-x-4">
+              <Button variant="secondary" asChild>
+                <Link href="/auth/login">Sign In</Link>
+              </Button>
+              <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Link href="/auth/register">Create Account</Link>
+              </Button>
             </div>
-            <Link href="/auth/login">
-              <Button variant="outline" className="text-white border-white/20 hover:bg-white/10">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/auth/register">
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                Sign Up
-              </Button>
-            </Link>
           </div>
         </div>
       </header>
-
-      {/* Main Content */}
-      <main className="flex-1">
-        <Hero />
-        <FeatureSection />
-        <FaqSection />
-        <DeveloperSection />
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border/40 bg-black py-6">
-        <div className="container flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-white/60">© WeWrite, {new Date().getFullYear()}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="https://tiktok.com" className="text-sm text-blue-500 hover:underline">TikTok</Link>
-            <Link href="https://youtube.com" className="text-sm text-blue-500 hover:underline">YouTube</Link>
-            <Link href="https://instagram.com" className="text-sm text-blue-500 hover:underline">Instagram</Link>
-            <Link href="mailto:contact@example.com" className="text-sm text-blue-500 hover:underline">Email</Link>
-          </div>
-          <div className="md:hidden flex gap-4">
-            <Link href="https://github.com/your-repo" target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                <Github className="h-5 w-5" />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
+        {/* Top Header with Logo and Buttons */}
+        <div className={`w-full border-b transition-all duration-200 ${
+          isScrolled 
+            ? 'border-border/10 py-2 bg-background/90 backdrop-blur-xl shadow-sm' 
+            : 'border-transparent py-3 bg-background/80 backdrop-blur-lg'
+          }`}
+        >
+          <div className="container mx-auto flex justify-between items-center px-4">
+            <div className="flex items-center">
+              <h1 
+                className="text-xl font-bold text-primary cursor-pointer" 
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                WeWrite
+              </h1>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button variant="secondary" size="sm" asChild>
+                <Link href="/auth/login">Sign In</Link>
               </Button>
-            </Link>
-            <Link href="https://twitter.com/your-account" target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                <Twitter className="h-5 w-5" />
+              <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Link href="/auth/register">Create Account</Link>
               </Button>
-            </Link>
-            <Link href="https://instagram.com/your-account" target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                <Instagram className="h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="mailto:contact@example.com" target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="icon" className="text-white hover:text-white/80">
-                <Mail className="h-5 w-5" />
-              </Button>
-            </Link>
+            </div>
           </div>
         </div>
-      </footer>
+        
+        {/* Bottom Subheader with Scrollable Links */}
+        <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-center space-x-8 px-4 min-w-max mx-auto">
+            <a 
+              href="#features" 
+              onClick={(e) => scrollToSection(e, '#features')}
+              className="text-sm font-medium whitespace-nowrap transition-colors hover:text-primary"
+            >
+              Features
+            </a>
+            <a 
+              href="#about" 
+              onClick={(e) => scrollToSection(e, '#about')}
+              className="text-sm font-medium whitespace-nowrap transition-colors hover:text-primary"
+            >
+              About
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <main className="pt-32 md:pt-16">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
+          <Hero />
+        </motion.div>
+        
+        <motion.section 
+          id="features"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
+          <FeatureSection />
+        </motion.section>
+        
+        <motion.section 
+          id="about"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
+          <DeveloperSection />
+        </motion.section>
+      </main>
+
+      <motion.footer 
+        className="border-t border-border/40 py-8 px-6 bg-background"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={sectionVariants}
+      >
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0">
+              <p className="text-sm text-muted-foreground"> 2025 WeWrite. All rights reserved.</p>
+            </div>
+            <div className="flex space-x-6">
+              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
+                Terms of Service
+              </Link>
+              <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground">
+                Contact
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.footer>
     </div>
   );
-}
+};
+
+export default LandingPage;

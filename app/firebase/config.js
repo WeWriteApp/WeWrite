@@ -55,38 +55,23 @@ export const db = getFirestore(app);
  * This function handles:
  * 1. Checking if analytics is supported in the current environment
  * 2. Initializing analytics if supported
- * 3. Logging a test event to verify it's working
- * 4. Handling errors gracefully
- * 
- * Important: We include page titles with analytics events to make data
- * analysis easier for the data science team since our URLs use UUIDs.
  * 
  * @returns Firebase Analytics instance or null if not supported/initialization failed
  */
 export const initializeAnalytics = async () => {
   try {
-    console.log('Checking analytics support...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Checking analytics support...');
+    }
+    
     const supported = await isSupported();
-    console.log('Analytics supported:', supported);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analytics supported:', supported);
+    }
     
     if (supported) {
       const analytics = getAnalytics(app);
-      
-      // Test event logging
-      if (analytics) {
-        try {
-          // Log initial event with timestamp for verification
-          logEvent(analytics, 'analytics_initialized', {
-            timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV || 'unknown',
-            url: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
-          });
-          console.log('Analytics initialized successfully with test event');
-        } catch (error) {
-          console.error('Error logging test analytics event:', error);
-        }
-      }
-      
       return analytics;
     } else {
       console.warn('Firebase Analytics is not supported in this environment');
@@ -101,10 +86,12 @@ export const initializeAnalytics = async () => {
  * Manually test Firebase Analytics by sending a test event
  * This is useful for debugging Firebase Analytics integration
  * 
- * @returns {Promise<boolean>} - Whether the test was successful
+ * @returns {Promise<void>}
  */
 export const testFirebaseAnalytics = async () => {
-  console.log('🔥 Testing Firebase Analytics...');
+  if (process.env.NODE_ENV !== 'development') {
+    return; // Only run in development
+  }
   
   try {
     // Check if analytics is supported
@@ -114,7 +101,7 @@ export const testFirebaseAnalytics = async () => {
     
     if (!supported) {
       console.warn('⚠️ Firebase Analytics is not supported in this environment');
-      return false;
+      return;
     }
     
     // Get analytics instance
@@ -123,35 +110,20 @@ export const testFirebaseAnalytics = async () => {
     
     if (!analytics) {
       console.warn('⚠️ Failed to get Firebase Analytics instance');
-      return false;
+      return;
     }
     
-    // Log a test event
-    console.log('📊 Sending test event to Firebase Analytics...');
-    const eventData = {
-      test_id: Date.now(),
-      test_source: 'manual_test',
-      test_timestamp: new Date().toISOString(),
-      url: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
-    };
-    
-    logEvent(analytics, 'manual_test_event', eventData);
-    console.log('✅ Test event sent to Firebase Analytics with data:', eventData);
-    
-    // Also try a page_view event
+    // Log a test page view (this is for manual testing only)
     console.log('📊 Sending page_view event to Firebase Analytics...');
     logEvent(analytics, 'page_view', {
-      page_title: document.title || 'Test Page',
+      page_title: document.title,
       page_location: window.location.href,
-      page_path: window.location.pathname,
-      test: true
+      page_path: window.location.pathname
     });
     console.log('✅ page_view event sent to Firebase Analytics');
     
-    return true;
   } catch (error) {
     console.error('❌ Error testing Firebase Analytics:', error);
-    return false;
   }
 };
 

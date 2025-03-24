@@ -21,7 +21,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const handleLogout = async () => {
     try {
       await signOut(auth)
-      router.push("/auth/login")
+      router.push("/")
     } catch (error) {
       console.error("Error signing out:", error)
     }
@@ -210,4 +210,4 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
     </>
   )
-} 
+}

@@ -9,7 +9,6 @@ import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
-import Footer from "./components/Footer";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -41,8 +40,6 @@ export default function ClientLayout({ children }) {
                     <main className="flex-grow">
                       {children}
                     </main>
-                    {/* Always show footer except on auth pages */}
-                    {isAuthPage ? null : <Footer />}
                   </div>
                   <Toaster />
                   {process.env.NODE_ENV === 'development' && (

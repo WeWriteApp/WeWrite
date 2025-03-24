@@ -1,57 +1,76 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "../ui/button";
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Button } from '../../components/ui/button';
+import { motion } from 'framer-motion';
 
-export function Hero() {
+export const Hero = () => {
   return (
-    <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-black">
-      <div className="container px-4 md:px-6">
-        <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
-          <div className="flex flex-col justify-center space-y-4">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                WeWrite
-              </h1>
-              <p className="max-w-[600px] text-gray-300 md:text-xl">
-                A social notes app where every page is a fundraiser. Monetize your ideas!
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Link href="/auth/register">
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  Start writing
-                </Button>
-              </Link>
-              <Link href="#features">
-                <Button variant="outline" className="border-white/20 hover:bg-white/10">
-                  Learn more
-                </Button>
-              </Link>
-            </div>
+    <section className="relative overflow-hidden bg-gradient-to-b from-background to-background/95 py-20">
+      {/* No background elements */}
+      
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="flex flex-col lg:flex-row items-center gap-12">
+          <div className="flex-1 text-center lg:text-left">
+            <motion.h1 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              Write, share, earn.
+            </motion.h1>
+            
+            <motion.p 
+              className="text-xl md:text-2xl text-muted-foreground mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              WeWrite is a social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
+            </motion.p>
+            
+            <motion.div 
+              className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Button size="default" variant="outline" asChild>
+                <Link href="/auth/login">
+                  Sign In
+                </Link>
+              </Button>
+              <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white px-4" asChild>
+                <Link href="/auth/register">
+                  Create Account
+                </Link>
+              </Button>
+            </motion.div>
           </div>
-          <div className="flex items-center justify-center">
-            <div className="relative w-full max-w-[500px] aspect-[4/3] overflow-hidden rounded-xl bg-blue-950/30">
-              {/* Fallback div in case image is missing */}
-              <div className="absolute inset-0 flex items-center justify-center text-blue-500 font-bold text-xl">
-                WeWrite App
-              </div>
-              <Image
+          
+          <motion.div 
+            className="flex-1"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7 }}
+          >
+            <div className="relative w-full max-w-md mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 rounded-lg z-10"></div>
+              <Image 
                 src="/images/hero-image.png"
-                alt="WeWrite App Screenshot"
-                fill
-                className="object-cover"
+                alt="WeWrite App Interface"
+                width={600}
+                height={600}
+                className="relative z-0 rounded-lg shadow-xl"
                 priority
-                onError={(e) => {
-                  // Hide the image on error
-                  e.currentTarget.style.display = 'none';
-                }}
               />
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
   );
-}
+};

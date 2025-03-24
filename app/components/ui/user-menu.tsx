@@ -22,7 +22,7 @@ export function UserMenu() {
   const handleLogout = async () => {
     try {
       await firebaseSignOut(auth)
-      router.push("/auth/login")
+      router.push("/")
     } catch (error) {
       console.error("Error signing out:", error)
     }
@@ -51,4 +51,4 @@ export function UserMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   )
-} 
+}

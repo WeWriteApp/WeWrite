@@ -9,6 +9,7 @@
  */
 
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   content: [
@@ -101,7 +102,20 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
-};
+  plugins: [
+    plugin(function({ addUtilities }) {
+      addUtilities({
+        '.scrollbar-hide': {
+          /* Firefox */
+          'scrollbar-width': 'none',
+          /* Safari and Chrome */
+          '&::-webkit-scrollbar': {
+            display: 'none'
+          }
+        }
+      })
+    })
+  ],
+}
 
 export default config;

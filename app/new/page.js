@@ -7,6 +7,8 @@ import { AuthContext } from "../providers/AuthProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
+import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
+import { CONTENT_EVENTS } from "../constants/analytics-events";
 
 const New = () => {
   const [Page, setPage] = useState({
@@ -29,12 +31,13 @@ const New = () => {
 };
 
 const Form = ({ Page, setPage, isReply }) => {
+  const { user, loading } = useContext(AuthContext);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editorState, setEditorState] = useState();
-  const { user, loading } = useContext(AuthContext);
   const [isSaving, setIsSaving] = useState(false);
   const [initialContent, setInitialContent] = useState(null);
+  const analytics = useWeWriteAnalytics();
 
   let updateTime = new Date().toISOString();
 
@@ -69,9 +72,18 @@ const Form = ({ Page, setPage, isReply }) => {
     }
   }, [searchParams, setPage, setEditorState]);
 
-  const handleSave = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setIsSaving(true);
-    let data = {
+    setError(null);
+
+    if (!Page.title) {
+      setError("Please add a title");
+      setIsSaving(false);
+      return;
+    }
+
+    const data = {
       ...Page,
       content: JSON.stringify(editorState),
       userId: user.uid,
@@ -82,11 +94,20 @@ const Form = ({ Page, setPage, isReply }) => {
 
     const res = await createPage(data);
     if (res) {
+      // Track with existing ReactGA for backward compatibility
       ReactGA.event({
         category: "Page",
         action: "Add new page",
         label: Page.title,
       });
+      
+      // Track with new analytics system
+      analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+        label: Page.title,
+        page_id: res,
+        is_reply: !!isReply,
+      });
+      
       setIsSaving(false);
       router.push(`/pages/${res}`);
     } else {
@@ -98,7 +119,7 @@ const Form = ({ Page, setPage, isReply }) => {
   return (
     <form
       className="space-y-6 px-4 sm:px-6 md:px-8"
-      onSubmit={(e) => e.preventDefault()}
+      onSubmit={handleSubmit}
     >
       <div className="space-y-6">
         <div className="max-w-2xl">
@@ -136,7 +157,6 @@ const Form = ({ Page, setPage, isReply }) => {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={handleSave}
           disabled={!Page.title || !editorState || isSaving}
           className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"

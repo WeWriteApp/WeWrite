@@ -45,11 +45,33 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
     try {
       const url = pathname + searchParams.toString();
       
+      // Get the current page title
+      let pageTitle = document.title;
+      
+      // For specific routes, we can set more descriptive titles
+      if (pathname === '/') {
+        pageTitle = 'WeWrite - Home';
+      } else if (pathname.startsWith('/auth/login')) {
+        pageTitle = 'WeWrite - Login';
+      } else if (pathname.startsWith('/auth/register')) {
+        pageTitle = 'WeWrite - Register';
+      } else if (pathname.startsWith('/pages/')) {
+        // For content pages, try to get a more specific title
+        const contentTitle = document.querySelector('h1')?.textContent;
+        if (contentTitle) {
+          pageTitle = `WeWrite - ${contentTitle}`;
+        } else {
+          pageTitle = 'WeWrite - Content Page';
+        }
+      }
+      
       window.gtag('config', GA_MEASUREMENT_ID, {
         page_path: url,
+        page_title: pageTitle,
+        page_location: window.location.href
       });
       
-      console.log('Google Analytics pageview tracked:', url);
+      console.log('Google Analytics pageview tracked:', url, 'with title:', pageTitle);
       setInitialized(true);
     } catch (err) {
       console.error('Error tracking pageview:', err);
@@ -88,6 +110,7 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
             gtag('js', new Date());
             gtag('config', '${GA_MEASUREMENT_ID}', {
               page_path: window.location.pathname,
+              send_page_view: false
             });
             console.log('Google Analytics config initialized');
           `,
@@ -100,22 +123,16 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
           position: 'fixed', 
           bottom: '40px', 
           right: '10px', 
-          background: initialized ? '#4caf50' : '#f44336', 
-          color: 'white', 
+          background: initialized ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)', 
           padding: '4px 8px', 
           borderRadius: '4px',
-          fontSize: '12px',
+          fontSize: '10px',
           zIndex: 9999,
-          opacity: 0.7
+          pointerEvents: 'none'
         }}>
-          GA: {initialized ? 'Initialized' : 'Failed'}
-          {error && (
-            <div style={{ fontSize: '10px', maxWidth: '200px', wordBreak: 'break-word' }}>
-              {error}
-            </div>
-          )}
+          GA: {initialized ? '✓' : '✗'} {error ? `(${error})` : ''}
         </div>
       )}
     </>
   );
-} 
+}

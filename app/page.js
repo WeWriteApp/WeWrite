@@ -11,7 +11,6 @@ import RecentActivity from "./components/RecentActivity";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
-import Head from "next/head";
 import Link from "next/link";
 import { Button } from "./components/ui/button";
 import { Plus, FileText, Loader } from "lucide-react";
@@ -82,9 +81,6 @@ export default function Home() {
   // Show dashboard for logged-in users
   return (
     <>
-      <Head>
-        <title>Home - WeWrite</title>
-      </Head>
       <Header />
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />

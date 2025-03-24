@@ -1,7 +1,7 @@
 import {app} from './config';
 import { getAuth } from "firebase/auth";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail as firebaseUpdateEmail } from 'firebase/auth';
-import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 export const auth = getAuth(app);
 const db = getFirestore(app);
@@ -90,5 +90,29 @@ export const updateEmail = async (user, newEmail) => {
   } catch (error) {
     console.error("Error updating email:", error);
     return { success: false, error };
+  }
+}
+
+export const checkUsernameAvailability = async (username) => {
+  try {
+    if (!username || username.length < 3) {
+      return { isAvailable: false, message: "Username must be at least 3 characters" };
+    }
+    
+    // Check if username contains only alphanumeric characters and underscores
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return { isAvailable: false, message: "Username can only contain letters, numbers, and underscores" };
+    }
+    
+    const userDoc = doc(db, 'usernames', username.toLowerCase());
+    const docSnap = await getDoc(userDoc);
+    
+    return { 
+      isAvailable: !docSnap.exists(),
+      message: docSnap.exists() ? "Username already taken" : "Username is available"
+    };
+  } catch (error) {
+    console.error("Error checking username availability:", error);
+    return { isAvailable: false, message: "Error checking username" };
   }
 }

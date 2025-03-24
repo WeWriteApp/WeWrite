@@ -1,131 +1,148 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "../ui/button";
+import React from 'react';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { Check } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
 
-interface FeatureProps {
-  title: string;
-  description: string;
-  linkText: string;
-  linkHref: string;
-  imageSrc: string;
-  imageAlt: string;
-  reverse?: boolean;
-}
-
-function Feature({
-  title,
-  description,
-  linkText,
-  linkHref,
-  imageSrc,
-  imageAlt,
-  reverse = false
-}: FeatureProps) {
-  return (
-    <div className={`grid gap-6 items-center ${reverse ? 'lg:grid-cols-[400px_1fr]' : 'lg:grid-cols-[1fr_400px]'} lg:gap-12`}>
-      {/* Image - conditionally ordered based on reverse prop */}
-      <div className={`flex items-center justify-center ${reverse ? 'lg:order-1' : 'lg:order-2'}`}>
-        <div className="relative w-full max-w-[400px] aspect-[4/3] overflow-hidden rounded-xl bg-blue-950/30">
-          {/* Fallback div in case image is missing */}
-          <div className="absolute inset-0 flex items-center justify-center text-blue-500 font-bold">
-            {title}
-          </div>
-          <Image
-            src={imageSrc}
-            alt={imageAlt}
-            fill
-            className="object-cover"
-            onError={(e) => {
-              // Hide the image on error
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        </div>
-      </div>
-      
-      {/* Content - conditionally ordered based on reverse prop */}
-      <div className={`flex flex-col justify-center space-y-4 ${reverse ? 'lg:order-2' : 'lg:order-1'}`}>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl">{title}</h2>
-          <p className="max-w-[600px] text-gray-300 md:text-lg">{description}</p>
-        </div>
-        <div>
-          <Link href={linkHref}>
-            <Button variant="link" className="p-0 text-blue-500 hover:text-blue-400">
-              {linkText}
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function FeatureSection() {
-  // Feature data - currently blank placeholders as requested
-  const features: FeatureProps[] = [
+export const FeatureSection = () => {
+  const features = [
     {
-      title: "Every page is a fundraiser",
-      description: "Readers donate a small slice of their monthly budget to your pages, giving you a sustainable income.",
-      linkText: "Read on WeWrite",
-      linkHref: "/auth/register",
-      imageSrc: "/images/feature-1.png",
-      imageAlt: "Fundraiser feature illustration"
+      title: "Multiple View Modes",
+      description: "Choose between Wrapped, Default, and Spaced reading modes to customize your reading experience.",
+      image: "/images/feature-1.png",
+      points: [
+        "Wrapped mode for compact viewing",
+        "Default mode with standard spacing",
+        "Spaced mode for enhanced readability"
+      ]
     },
     {
-      title: "Social and active",
-      description: "See everyone else's public pages and all the activities of how the pages change over time.",
-      linkText: "Read on WeWrite",
-      linkHref: "/auth/register",
-      imageSrc: "/images/feature-2.png",
-      imageAlt: "Social feature illustration",
-      reverse: true
+      title: "Real-time Collaboration",
+      description: "Work together with your team in real-time with our collaborative editing features.",
+      image: "/images/feature-2.png",
+      points: [
+        "See who's editing in real-time",
+        "Track changes with version history",
+        "Comment and discuss within documents"
+      ]
     },
     {
-      title: "Versioned over time",
-      description: "Each page has version history, the idea is that more donations will inspire the writer to make more improvements.",
-      linkText: "Read on WeWrite",
-      linkHref: "/auth/register",
-      imageSrc: "/images/feature-3.png",
-      imageAlt: "Version history feature illustration"
+      title: "Recent Activity Tracking",
+      description: "Stay updated with recent changes across your documents and team contributions.",
+      image: "/images/feature-3.png",
+      points: [
+        "View recent edits with text previews",
+        "See who made changes and when",
+        "Track activity across all your pages"
+      ]
     },
     {
-      title: "Beautiful reading experience",
-      description: "Choose from multiple view modes including Wrapped, Default, and Spaced to customize your reading experience.",
-      linkText: "Read on WeWrite",
-      linkHref: "/auth/register",
-      imageSrc: "/images/feature-4.png",
-      imageAlt: "Reading experience feature illustration",
-      reverse: true
+      title: "Smart Paragraph Modes",
+      description: "Choose between different paragraph display styles for optimal reading experience.",
+      image: "/images/feature-4.png",
+      points: [
+        "Normal mode with traditional indentation",
+        "Dense mode for continuous reading",
+        "Smooth animations between modes"
+      ]
     },
     {
-      title: "Connect your ideas",
-      description: "Link pages together to create a network of interconnected ideas, making it easier for readers to explore your content.",
-      linkText: "Read on WeWrite",
-      linkHref: "/auth/register",
-      imageSrc: "/images/feature-5.png",
-      imageAlt: "Connected ideas feature illustration"
+      title: "Beautiful UI Experience",
+      description: "Enjoy a clean, modern interface designed for both productivity and aesthetics.",
+      image: "/images/feature-5.png",
+      points: [
+        "Dark and light theme support",
+        "Responsive design for all devices",
+        "Subtle animations for better feedback"
+      ]
     }
   ];
 
   return (
-    <section className="w-full py-12 md:py-24 bg-black" id="features">
-      <div className="container px-4 md:px-6 space-y-16">
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Features</h2>
-          <p className="mx-auto max-w-[700px] text-gray-300 md:text-xl">
-            Discover how WeWrite helps you create, share, and monetize your content.
-          </p>
+    <section className="py-20 bg-background">
+      <div className="container mx-auto px-6">
+        <div className="text-center mb-16">
+          <motion.h2 
+            className="text-3xl md:text-4xl font-bold mb-4"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            Powerful Features for Modern Writing
+          </motion.h2>
+          <motion.p 
+            className="text-xl text-muted-foreground max-w-3xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            WeWrite combines powerful editing capabilities with a beautiful, intuitive interface
+          </motion.p>
         </div>
-        
-        <div className="space-y-20">
+
+        <div className="space-y-24">
           {features.map((feature, index) => (
-            <Feature key={index} {...feature} />
+            <motion.div 
+              key={index}
+              className={`flex flex-col ${index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-12`}
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+            >
+              <div className="flex-1">
+                <Card>
+                  <CardHeader>
+                    <Badge className="w-fit mb-2" variant="secondary">{`Feature ${index + 1}`}</Badge>
+                    <CardTitle className="text-2xl">{feature.title}</CardTitle>
+                    <CardDescription className="text-lg">{feature.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Separator className="my-4" />
+                    <ul className="space-y-3">
+                      {feature.points.map((point, i) => (
+                        <li key={i} className="flex items-start">
+                          <Check className="h-5 w-5 text-primary mr-2 mt-0.5" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="flex-1">
+                <Card className="overflow-hidden border-border/40">
+                  <CardContent className="p-0">
+                    <div className="relative rounded-lg overflow-hidden shadow-lg">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 z-10"></div>
+                      <Image
+                        src={feature.image}
+                        alt={feature.title}
+                        width={600}
+                        height={400}
+                        className="w-full h-auto relative z-0"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
     </section>
   );
-}
+};
