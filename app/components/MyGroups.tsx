@@ -159,36 +159,25 @@ export default function MyGroups() {
       {isMobile ? (
         <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide">
           {displayGroups.map((group) => (
-            <Card key={group.id} className="min-w-[250px] hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{group.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-2">
-                {group.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                    {group.description}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="flex items-center">
-                    <Users className="h-3 w-3 mr-1" />
-                    {getMemberCount(group.members)}
-                  </Badge>
-                  <Badge variant="outline" className="flex items-center">
-                    <FileText className="h-3 w-3 mr-1" />
-                    {getPageCount(group.pages)}
-                  </Badge>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="ghost" size="sm" asChild className="ml-auto">
-                  <Link href={`/groups/${group.id}`} className="flex items-center">
-                    View
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+            <Link key={group.id} href={`/groups/${group.id}`} className="block min-w-[250px]">
+              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">{group.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="flex items-center">
+                      <Users className="h-3 w-3 mr-1" />
+                      {getMemberCount(group.members)}
+                    </Badge>
+                    <Badge variant="outline" className="flex items-center">
+                      <FileText className="h-3 w-3 mr-1" />
+                      {getPageCount(group.pages)}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
           
           {groups.length > 4 && (
@@ -205,36 +194,25 @@ export default function MyGroups() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {displayGroups.map((group) => (
-            <Card key={group.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{group.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-2">
-                {group.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                    {group.description}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="flex items-center">
-                    <Users className="h-3 w-3 mr-1" />
-                    {getMemberCount(group.members)}
-                  </Badge>
-                  <Badge variant="outline" className="flex items-center">
-                    <FileText className="h-3 w-3 mr-1" />
-                    {getPageCount(group.pages)}
-                  </Badge>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="ghost" size="sm" asChild className="ml-auto">
-                  <Link href={`/groups/${group.id}`} className="flex items-center">
-                    View
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+            <Link key={group.id} href={`/groups/${group.id}`} className="block">
+              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg">{group.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="flex items-center">
+                      <Users className="h-3 w-3 mr-1" />
+                      {getMemberCount(group.members)}
+                    </Badge>
+                    <Badge variant="outline" className="flex items-center">
+                      <FileText className="h-3 w-3 mr-1" />
+                      {getPageCount(group.pages)}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

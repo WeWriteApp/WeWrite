@@ -3,18 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Loader, Menu, Check, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
+import { Loader, ChevronLeft } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Sheet, SheetTrigger } from "./ui/sheet";
 import { Sidebar } from "./ui/sidebar";
 import { PageMenu } from "./PageMenu";
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem,
-  DropdownMenuSeparator
-} from "./ui/dropdown-menu";
 import { toast } from "./ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -41,36 +34,9 @@ export default function PageHeader({
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [headerHeight, setHeaderHeight] = React.useState(0);
-  const [viewMode, setViewMode] = React.useState<'dense' | 'normal'>('normal');
-  const [showParagraphModes, setShowParagraphModes] = React.useState(false);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const tooltipTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  // Initialize viewMode from localStorage
-  React.useEffect(() => {
-    const storedMode = localStorage.getItem('pageViewMode');
-    if (storedMode && ['dense', 'spaced', 'normal'].includes(storedMode)) {
-      // Handle migration from 'spaced' to 'normal'
-      const newMode = storedMode === 'spaced' ? 'normal' : storedMode;
-      setViewMode(newMode as 'dense' | 'normal');
-      if (storedMode === 'spaced') {
-        localStorage.setItem('pageViewMode', 'normal');
-      }
-    }
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'pageViewMode' && ['dense', 'spaced', 'normal'].includes(e.newValue || '')) {
-        const newMode = e.newValue === 'spaced' ? 'normal' : e.newValue;
-        setViewMode(newMode as 'dense' | 'normal');
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
 
   // Calculate and update header height when component mounts or when title/isScrolled changes
   React.useEffect(() => {
@@ -154,20 +120,6 @@ export default function PageHeader({
     };
   }, []);
 
-  const copyLinkToClipboard = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-      
-      // Show toast notification
-      toast({
-        title: "Link copied",
-        description: "Page link copied to clipboard",
-        variant: "success",
-        duration: 2000,
-      });
-    }
-  };
-
   // Function to handle back button click
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -186,13 +138,6 @@ export default function PageHeader({
     
     // Default to home page
     router.push('/');
-  };
-
-  const handleViewModeChange = (mode: 'dense' | 'normal') => {
-    setViewMode(mode);
-    // Implement additional logic for changing view mode here
-    // For example, update localStorage, dispatch context events, etc.
-    localStorage.setItem('pageViewMode', mode);
   };
 
   return (
@@ -273,152 +218,6 @@ export default function PageHeader({
                     </>
                   )}
                 </p>
-              </div>
-            </div>
-            
-            {/* Right Side - Combined Menu Controls */}
-            <div className="flex items-center gap-2 ml-4">
-              {/* Combined Menu Button */}
-              <div className={`relative transition-opacity duration-120 ${
-                isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
-              }`}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="text-foreground h-10 w-10 shrink-0 transition-all duration-120 my-auto"
-                      title="Page options"
-                    >
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[180px]">
-                    <AnimatePresence mode="wait" initial={false}>
-                      {!showParagraphModes ? (
-                        <motion.div
-                          key="main-menu"
-                          initial={{ x: 0, opacity: 1 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          exit={{ x: -100, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          {/* Copy Link Option */}
-                          <DropdownMenuItem onClick={copyLinkToClipboard}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 flex items-center justify-center">
-                                <Link2 className="h-4 w-4 stroke-current" />
-                              </div>
-                              <span>Copy Link</span>
-                            </div>
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuSeparator />
-                          
-                          {/* Paragraph Mode Option */}
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowParagraphModes(true);
-                              return false;
-                            }}
-                            preventClose={true}
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 flex items-center justify-center">
-                                  <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    viewBox="0 0 24 24" 
-                                    width="24" 
-                                    height="24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round" 
-                                    className="h-4 w-4"
-                                  >
-                                    <path d="M21 10H3" />
-                                    <path d="M21 6H3" />
-                                    <path d="M21 14H3" />
-                                    <path d="M21 18H3" />
-                                  </svg>
-                                </div>
-                                <span>Paragraph Mode</span>
-                              </div>
-                              <ChevronRight className="h-4 w-4" />
-                            </div>
-                          </DropdownMenuItem>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="paragraph-modes"
-                          initial={{ x: 100, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          exit={{ x: 100, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          {/* Back to main menu */}
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowParagraphModes(false);
-                              return false;
-                            }}
-                            preventClose={true}
-                          >
-                            <div className="flex items-center gap-2">
-                              <ChevronLeft className="h-4 w-4" />
-                              <span>Back</span>
-                            </div>
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuSeparator />
-                          
-                          {/* Paragraph Mode Options */}
-                          <DropdownMenuItem 
-                            className={viewMode === 'dense' ? 'bg-accent/50' : ''} 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleViewModeChange('dense');
-                              return false;
-                            }}
-                            preventClose={true}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 flex items-center justify-center">
-                                {viewMode === 'dense' && <Check className="h-4 w-4" />}
-                              </div>
-                              <span>Dense</span>
-                            </div>
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem 
-                            className={viewMode === 'normal' ? 'bg-accent/50' : ''} 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleViewModeChange('normal');
-                              return false;
-                            }}
-                            preventClose={true}
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 flex items-center justify-center">
-                                {viewMode === 'normal' && <Check className="h-4 w-4" />}
-                              </div>
-                              <span>Normal</span>
-                            </div>
-                          </DropdownMenuItem>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </div>
           </div>

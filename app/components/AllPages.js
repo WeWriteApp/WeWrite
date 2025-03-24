@@ -39,7 +39,7 @@ const AllPages = () => {
     <PageList
       pages={formattedPages}
       mode="wrapped"
-      showCreateButton={true}
+      showCreateButton={false}
       createButtonHref="/new"
       createButtonText="Create a page"
       showViewAll={true}

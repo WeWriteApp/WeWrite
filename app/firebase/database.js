@@ -842,3 +842,66 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
     return false;
   }
 };
+
+// Search for users by username or email
+export const searchUsers = async (searchQuery, limit = 10) => {
+  if (!searchQuery || searchQuery.trim().length < 2) {
+    return [];
+  }
+
+  try {
+    const usersRef = collection(db, "users");
+    
+    // Search by username (case insensitive)
+    const usernameQuery = query(
+      usersRef,
+      where("usernameLower", ">=", searchQuery.toLowerCase()),
+      where("usernameLower", "<=", searchQuery.toLowerCase() + "\uf8ff"),
+      limit(limit)
+    );
+    
+    // Search by email (case insensitive)
+    const emailQuery = query(
+      usersRef,
+      where("email", ">=", searchQuery.toLowerCase()),
+      where("email", "<=", searchQuery.toLowerCase() + "\uf8ff"),
+      limit(limit)
+    );
+    
+    // Execute both queries
+    const [usernameResults, emailResults] = await Promise.all([
+      getDocs(usernameQuery),
+      getDocs(emailQuery)
+    ]);
+    
+    // Combine and deduplicate results
+    const results = new Map();
+    
+    usernameResults.forEach(doc => {
+      const userData = doc.data();
+      results.set(doc.id, {
+        id: doc.id,
+        username: userData.username || "Anonymous",
+        email: userData.email || "",
+        photoURL: userData.photoURL || null
+      });
+    });
+    
+    emailResults.forEach(doc => {
+      if (!results.has(doc.id)) {
+        const userData = doc.data();
+        results.set(doc.id, {
+          id: doc.id,
+          username: userData.username || "Anonymous",
+          email: userData.email || "",
+          photoURL: userData.photoURL || null
+        });
+      }
+    });
+    
+    return Array.from(results.values());
+  } catch (error) {
+    console.error("Error searching users:", error);
+    return [];
+  }
+};

@@ -114,11 +114,11 @@ export function RegisterForm({
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-white !text-white">Create account</h1>
+        <h1 className="text-2xl font-bold text-foreground">Create account</h1>
       </div>
       <div className="grid gap-6">
         <div className="grid gap-2">
-          <Label htmlFor="username" className="text-white !text-white">Username</Label>
+          <Label htmlFor="username" className="text-foreground">Username</Label>
           <div className="relative">
             <Input 
               id="username" 
@@ -128,13 +128,12 @@ export function RegisterForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               tabIndex={1}
-              className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white pr-10"
-              style={{color: 'white'}}
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10"
             />
             {username && username.length >= 3 && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 {isChecking ? (
-                  <div className="h-6 w-6 rounded-full border-2 border-white/30 border-t-transparent animate-spin"></div>
+                  <div className="h-6 w-6 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
                 ) : (
                   <TooltipProvider>
                     <Tooltip>
@@ -152,7 +151,7 @@ export function RegisterForm({
                           )}
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent side="right">
+                      <TooltipContent>
                         <p>{validationMessage}</p>
                       </TooltipContent>
                     </Tooltip>
@@ -162,11 +161,11 @@ export function RegisterForm({
             )}
           </div>
           {username && username.length < 3 && (
-            <p className="text-xs text-white/70">Username must be at least 3 characters</p>
+            <p className="text-xs text-muted-foreground">Username must be at least 3 characters</p>
           )}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-white !text-white">Email</Label>
+          <Label htmlFor="email" className="text-foreground">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -175,12 +174,11 @@ export function RegisterForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={2}
-            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
-            style={{color: 'white'}}
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password" className="text-white !text-white">Password</Label>
+          <Label htmlFor="password" className="text-foreground">Password</Label>
           <Input 
             id="password" 
             type="password" 
@@ -188,8 +186,7 @@ export function RegisterForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={3}
-            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
-            style={{color: 'white'}}
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
           />
         </div>
         {error && (
@@ -206,11 +203,11 @@ export function RegisterForm({
           {isLoading ? "Creating account..." : "Create account"}
         </Button>
         <div className="text-center">
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link 
               href="/auth/login" 
-              className="text-white underline-offset-4 hover:underline"
+              className="text-foreground underline-offset-4 hover:underline"
               tabIndex={5}
             >
               Log in

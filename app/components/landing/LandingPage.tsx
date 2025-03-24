@@ -87,16 +87,14 @@ const LandingPage = () => {
         }`}
       >
         <div className="container mx-auto flex justify-between items-center px-6">
-          <div className="flex items-center">
+          <div className="flex items-center space-x-6">
             <h1 
               className="text-2xl font-bold text-primary cursor-pointer" 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               WeWrite
             </h1>
-          </div>
-          
-          <div className="flex items-center space-x-4">
+            
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
@@ -119,15 +117,15 @@ const LandingPage = () => {
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="secondary" asChild>
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/auth/register">Create Account</Link>
-              </Button>
-            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <Button variant="secondary" asChild>
+              <Link href="/auth/login">Sign In</Link>
+            </Button>
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+              <Link href="/auth/register">Create Account</Link>
+            </Button>
           </div>
         </div>
       </header>

@@ -18,7 +18,7 @@ const New = () => {
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
   const { user } = useContext(AuthContext);
-  const username = user?.displayName || user?.email?.split('@')[0] || 'Anonymous';
+  const username = user?.displayName || (user?.username) || 'Anonymous';
   
   return (
     <DashboardLayout>
@@ -89,7 +89,7 @@ const Form = ({ Page, setPage, isReply }) => {
       ...Page,
       content: JSON.stringify(editorState),
       userId: user.uid,
-      username: user?.displayName || user?.email?.split('@')[0] || 'Anonymous',
+      username: user?.displayName || (user?.username) || 'Anonymous',
       lastModified: updateTime,
       isReply: isReply || false, // Add flag to indicate this is a reply page
     };

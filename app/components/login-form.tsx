@@ -70,11 +70,11 @@ export function LoginForm({
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold text-white !text-white">Log in</h1>
+        <h1 className="text-2xl font-bold text-foreground">Log in</h1>
       </div>
       <div className="grid gap-6">
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-white !text-white">Email</Label>
+          <Label htmlFor="email" className="text-foreground">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -83,16 +83,15 @@ export function LoginForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={1}
-            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
-            style={{color: 'white'}}
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
           />
         </div>
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-white !text-white">Password</Label>
+            <Label htmlFor="password" className="text-foreground">Password</Label>
             <Link
               href="/auth/forgot-password"
-              className="ml-auto text-sm underline-offset-4 hover:underline text-white/80 !text-white/80"
+              className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
               tabIndex={3} 
             >
               Forgot your password?
@@ -106,29 +105,28 @@ export function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={2} 
-            className="bg-white/10 border-white/20 text-white !text-white placeholder:text-white/50 [&>*]:text-white"
-            style={{color: 'white'}}
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground"
           />
         </div>
         
         {error && (
-          <div className="text-sm font-medium text-red-400">
+          <div className="text-sm font-medium text-destructive">
             {error}
           </div>
         )}
         
         <Button 
           type="submit" 
-          className="w-full bg-white text-blue-950 hover:bg-white/90" 
+          className="w-full" 
           disabled={isLoading} 
           tabIndex={4}
         >
           {isLoading ? "Signing in..." : "Login"}
         </Button>
       </div>
-      <div className="text-center text-sm text-white/80 !text-white/80">
+      <div className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/register" className="underline underline-offset-4 text-white !text-white hover:text-white/90" tabIndex={5}>
+        <Link href="/auth/register" className="underline underline-offset-4 text-foreground hover:text-foreground/90" tabIndex={5}>
           Sign up
         </Link>
       </div>

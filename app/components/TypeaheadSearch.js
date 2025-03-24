@@ -43,6 +43,7 @@ const TypeaheadSearch = ({
   const [publicPages, setPublicPages] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const { theme } = useTheme();
+  const router = useRouter();
 
   // Add error handling for missing auth context
   useEffect(() => {
@@ -79,7 +80,21 @@ const TypeaheadSearch = ({
         const queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
         console.log('Making API request to:', queryUrl);
         
-        const response = await fetch(queryUrl);
+        // Add timeout to prevent infinite loading
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(queryUrl, { 
+          signal: controller.signal 
+        }).catch(error => {
+          if (error.name === 'AbortError') {
+            console.error('Search request timed out after 10 seconds');
+            throw new Error('Search request timed out');
+          }
+          throw error;
+        });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
           console.error('TypeaheadSearch - API returned error:', response.status);
@@ -113,20 +128,23 @@ const TypeaheadSearch = ({
     [userId]
   );
 
+  const resetSearchResults = () => {
+    setUserPages([]);
+    setGroupPages([]);
+    setPublicPages([]);
+    setIsSearching(false);
+  };
+
   useEffect(() => {
     if (!search) {
-      setUserPages([]);
-      setGroupPages([]);
-      setPublicPages([]);
+      resetSearchResults();
       return;
     }
     if (!user) return;
 
     // if search less than minimum characters, don't make request
     if (search.length < characterCount || !search.trim()) {
-      setUserPages([]);
-      setGroupPages([]);
-      setPublicPages([]);
+      resetSearchResults();
       return;
     }
 
@@ -292,6 +310,9 @@ const TypeaheadSearch = ({
                             isPublic: true,
                             userId: user.uid,
                           });
+                          
+                          // Redirect to the edit view of the newly created page
+                          router.push(`/pages/${newPageId}?edit=true`);
                         } else {
                           console.error("Failed to create new page");
                         }

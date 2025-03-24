@@ -81,7 +81,7 @@ const getPageTitle = async (pageId) => {
   return null;
 };
 
-const TextView = ({ content, isSearch = false, viewMode = 'normal' }) => {
+const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete }) => {
   const [parsedContents, setParsedContents] = useState(null);
   const [language, setLanguage] = useState(null);
   const { lineMode } = useLineSettings();
@@ -146,12 +146,22 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal' }) => {
         setTimeout(() => {
           setIsInitialLoad(false);
           setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
+          
+          // Call onRenderComplete callback when all paragraphs are loaded
+          if (onRenderComplete && typeof onRenderComplete === 'function') {
+            onRenderComplete();
+          }
         }, totalNodes * loadingDelay + 100);
       } else {
         setIsInitialLoad(false);
+        
+        // If there are no paragraphs, call onRenderComplete immediately
+        if (onRenderComplete && typeof onRenderComplete === 'function') {
+          onRenderComplete();
+        }
       }
     }
-  }, [parsedContents, isInitialLoad]);
+  }, [parsedContents, isInitialLoad, onRenderComplete]);
 
   const getViewModeStyles = () => {
     switch(viewMode) {
@@ -180,7 +190,12 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal' }) => {
       )}
       
       {parsedContents && (
-        <RenderContent contents={parsedContents} language={language} viewMode={viewMode} loadedParagraphs={loadedParagraphs} />
+        <RenderContent 
+          contents={parsedContents} 
+          language={language} 
+          viewMode={viewMode} 
+          loadedParagraphs={loadedParagraphs} 
+        />
       )}
     </motion.div>
   );

@@ -18,6 +18,7 @@ import { Plus, FileText, Loader } from "lucide-react";
 import { ShimmerEffect } from "./components/ui/skeleton";
 import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/LandingPage";
+import { FloatingActionButton } from "./components/ui/floating-action-button";
 
 export default function Home() {
   const { user, loading: authLoading } = useContext(AuthContext);
@@ -90,10 +91,7 @@ export default function Home() {
           <TypeaheadSearch />
         </div>
         
-        <MyGroups />
-        
-        <RecentActivity />
-        
+        {/* 1. My Pages */}
         <div className="flex items-center justify-between mb-6">
           {isLoading ? (
             <div className="flex items-center space-x-2">
@@ -115,8 +113,17 @@ export default function Home() {
         </div>
         
         <AllPages />
-
+        
+        {/* 2. Recent Activity */}
+        <RecentActivity />
+        
+        {/* 3. My Groups */}
+        <MyGroups />
+        
+        {/* 4. Top Users */}
         <TopUsers />
+        
+        <FloatingActionButton href="/new" />
       </main>
     </>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { ThemeProvider } from "./providers/ThemeProvider";
-import { Toaster } from "sonner";
 import { AuthProvider } from "./providers/AuthProvider";
 import { LoggingProvider } from "./providers/LoggingProvider";
 import { Drawer } from "./components/Drawer";
@@ -9,6 +8,7 @@ import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
+import { RecentPagesProvider } from "./contexts/RecentPagesContext";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -33,23 +33,24 @@ export default function ClientLayout({ children }) {
         <LoggingProvider>
           <DataProvider>
             <PortfolioProvider>
-              <MobileProvider>
-                <DrawerProvider>
-                  <Drawer />
-                  <div className="flex flex-col min-h-screen bg-background pb-8">
-                    <main className="flex-grow">
-                      {children}
-                    </main>
-                  </div>
-                  <Toaster />
-                  {process.env.NODE_ENV === 'development' && (
-                    <>
-                      {/* <GADebugger /> */}
-                      <WindsurfOverlay />
-                    </>
-                  )}
-                </DrawerProvider>
-              </MobileProvider>
+              <RecentPagesProvider>
+                <MobileProvider>
+                  <DrawerProvider>
+                    <Drawer />
+                    <div className="flex flex-col min-h-screen bg-background pb-8">
+                      <main className="flex-grow">
+                        {children}
+                      </main>
+                    </div>
+                    {process.env.NODE_ENV === 'development' && (
+                      <>
+                        {/* <GADebugger /> */}
+                        <WindsurfOverlay />
+                      </>
+                    )}
+                  </DrawerProvider>
+                </MobileProvider>
+              </RecentPagesProvider>
             </PortfolioProvider>
           </DataProvider>
         </LoggingProvider>

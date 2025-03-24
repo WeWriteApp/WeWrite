@@ -5,8 +5,6 @@ import { rtdb } from '../firebase/rtdb';
 import { onValue, ref, set, get } from "firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import { Button } from "./ui/button";
-import { DataTable } from "./ui/data-table";
-import { ColumnDef } from "@tanstack/react-table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -19,6 +17,7 @@ import {
   DropdownMenuLabel, 
   DropdownMenuTrigger 
 } from "./ui/dropdown-menu";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "./ui/table";
 
 interface Member {
   id: string;
@@ -154,143 +153,134 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
     }
   };
 
-  const columns: ColumnDef<Member>[] = [
-    {
-      accessorKey: "username",
-      header: "Username",
-      cell: ({ row }) => <div>{row.original.username}</div>,
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => (
-        <Badge variant={row.original.role === "owner" ? "default" : "outline"}>
-          {row.original.role.charAt(0).toUpperCase() + row.original.role.slice(1)}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "joinedAt",
-      header: "Joined",
-      cell: ({ row }) => (
-        <div className="text-sm text-muted-foreground">
-          {new Date(row.original.joinedAt).toLocaleDateString()}
-        </div>
-      ),
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => {
-        const member = row.original;
-        
-        // Don't show actions for owner or if current user is not the owner
-        if (member.role === "owner" || !isOwner) {
-          return null;
-        }
-        
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => handleRemoveMember(member.id)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Remove member
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Members</h2>
+        <h3 className="text-lg font-medium">Members ({membersList.length})</h3>
         {isOwner && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-1">
                 <UserPlus className="h-4 w-4" />
-                Add Member
+                <span>Add Member</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add a new member</DialogTitle>
+                <DialogTitle>Add Member to Group</DialogTitle>
                 <DialogDescription>
-                  Search for a user to add to this group. Members can view and edit all pages in the group.
+                  Search for a user by username to add them to this group.
                 </DialogDescription>
               </DialogHeader>
-              
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
                   <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
                     placeholder="Search by username..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (e.target.value.length > 2) {
+                        const filtered = users.filter(u => 
+                          u.username.toLowerCase().includes(e.target.value.toLowerCase()) && 
+                          !membersList.some(m => m.id === u.id)
+                        );
+                        setFilteredUsers(filtered);
+                      } else {
+                        setFilteredUsers([]);
+                      }
+                    }}
                   />
                 </div>
-                
-                {searchTerm.trim() !== '' && (
+                {filteredUsers.length > 0 ? (
                   <div className="max-h-[200px] overflow-y-auto border rounded-md">
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map(user => (
-                        <div
-                          key={user.id}
-                          className={`p-2 cursor-pointer hover:bg-muted flex justify-between items-center ${
-                            selectedUser?.id === user.id ? 'bg-muted' : ''
-                          }`}
-                          onClick={() => setSelectedUser(user)}
-                        >
-                          <span>{user.username}</span>
-                          {selectedUser?.id === user.id && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-2 text-muted-foreground">No users found</div>
-                    )}
+                    {filteredUsers.map(user => (
+                      <div 
+                        key={user.id}
+                        className={`p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center ${selectedUser?.id === user.id ? 'bg-gray-100' : ''}`}
+                        onClick={() => setSelectedUser(user)}
+                      >
+                        <span>{user.username}</span>
+                        {selectedUser?.id === user.id && <Check className="h-4 w-4 text-green-500" />}
+                      </div>
+                    ))}
                   </div>
-                )}
+                ) : searchTerm.length > 2 ? (
+                  <p className="text-sm text-gray-500">No users found</p>
+                ) : null}
               </div>
-              
               <DialogFooter>
-                <Button variant="outline" onClick={() => {
-                  setIsDialogOpen(false);
-                  setSearchTerm('');
-                  setSelectedUser(null);
-                }}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button 
                   onClick={handleAddMember} 
                   disabled={!selectedUser || isLoading}
                 >
-                  {isLoading ? "Adding..." : "Add Member"}
+                  {isLoading ? 'Adding...' : 'Add Member'}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
       </div>
-      
-      <DataTable
-        columns={columns}
-        data={membersList}
-      />
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Username</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Joined</TableHead>
+              {isOwner && <TableHead className="w-[80px]">Actions</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {membersList.length > 0 ? (
+              membersList.map(member => (
+                <TableRow key={member.id}>
+                  <TableCell>{member.username}</TableCell>
+                  <TableCell>
+                    <Badge variant={member.role === 'owner' ? 'default' : 'secondary'}>
+                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(member.joinedAt).toLocaleDateString()}</TableCell>
+                  {isOwner && (
+                    <TableCell>
+                      {member.role !== 'owner' && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleRemoveMember(member.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={isOwner ? 4 : 3} className="h-24 text-center">
+                  No members found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
