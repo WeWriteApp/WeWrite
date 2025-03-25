@@ -77,7 +77,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-auto">
       {/* Desktop Header */}
       <header 
         className={`fixed top-0 left-0 right-0 w-full border-b z-50 transition-all duration-200 hidden md:block ${

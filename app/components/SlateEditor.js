@@ -20,6 +20,45 @@ import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/L
 import { motion } from "framer-motion";
 import "../styles/shake-animation.css";
 
+/**
+ * SlateEditor Component
+ * 
+ * A rich text editor component built with Slate.js that supports:
+ * - Text formatting (bold, italic, etc.)
+ * - Links with URL validation
+ * - Typeahead search for mentions and references
+ * - Paragraph modes for different display styles (Normal and Dense)
+ * - Initial content loading for new pages and replies
+ * 
+ * Paragraph Mode Options:
+ * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
+ *    - Numbers positioned to the left of the text
+ *    - Clear indent for each paragraph
+ *    - Proper spacing between paragraphs
+ *    - Standard text size (1rem/16px)
+ * 
+ * 2. Dense Mode: Collapses all paragraphs for a more comfortable reading experience
+ *    - NO line breaks between paragraphs
+ *    - Text wraps continuously as if newline characters were temporarily deleted
+ *    - Paragraph numbers inserted inline within the continuous text
+ *    - Only a small space separates paragraphs
+ *    - Standard text size (1rem/16px)
+ * 
+ * The component handles two types of initial content:
+ * 1. initialEditorState: Used for loading existing content
+ * 2. initialContent: Used primarily for replies, which takes precedence over initialEditorState
+ * 
+ * For the Reply to Page functionality, this component ensures that:
+ * - The initialContent from URL parameters is properly parsed and displayed
+ * - Links to the original page are properly formatted with 'url' attributes
+ * - The editor is auto-focused after content initialization
+ * - Content is only initialized once to prevent re-initialization issues
+ * 
+ * @param {Object} initialEditorState - The initial state to load into the editor (for existing content)
+ * @param {Object} initialContent - The initial content to load (takes precedence, used for replies)
+ * @param {Function} setEditorState - Function to update the parent component's state with editor changes
+ * @param {Ref} ref - Reference to access editor methods from parent components
+ */
 const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showLinkEditor, setShowLinkEditor] = useState(false);
@@ -30,6 +69,13 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const editableRef = useRef(null);
   const [lineCount, setLineCount] = useState(0);
   const [contentInitialized, setContentInitialized] = useState(false);
+
+  const [initialValue, setInitialValue] = useState(initialContent || initialEditorState || [
+    {
+      type: "paragraph",
+      children: [{ text: "" }],
+    },
+  ]);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -62,29 +108,47 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   // Use initialContent as the priority content source if available
   useEffect(() => {
     if (initialContent && !contentInitialized) {
-      console.log("Setting editor content from initialContent:", initialContent);
+      console.log("SlateEditor received initialContent:", JSON.stringify(initialContent, null, 2));
+      
       try {
         // Use initialContent as the priority source
+        console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
         setInitialValue(initialContent);
         
         // Also set the editor state if the callback is provided
         if (setEditorState) {
+          console.log("Setting editorState from initialContent");
           setEditorState(initialContent);
+          
+          // Force update the editor with the initialContent
+          editor.children = initialContent;
+          editor.onChange();
         }
         
+        // Set content as initialized to prevent re-initialization
         setContentInitialized(true);
+        
+        // Focus the editor after setting content
+        setTimeout(() => {
+          try {
+            ReactEditor.focus(editor);
+          } catch (error) {
+            console.error("Error focusing editor after content initialization:", error);
+          }
+        }, 100);
       } catch (error) {
         console.error("Error setting editor content from initialContent:", error);
       }
     }
-  }, [initialContent, setEditorState, contentInitialized]);
+  }, [initialContent, setEditorState, contentInitialized, editor]);
 
-  const [initialValue, setInitialValue] = useState(initialContent || initialEditorState || [
-    {
-      type: "paragraph",
-      children: [{ text: "" }],
-    },
-  ]);
+  // Make sure initialValue is properly set from initialContent
+  useEffect(() => {
+    if (initialContent && initialValue.length === 1 && initialValue[0].children[0].text === "") {
+      console.log("Setting initialValue from initialContent in secondary effect");
+      setInitialValue(initialContent);
+    }
+  }, [initialContent, initialValue]);
 
   // onchange handler
   const onChange = (newValue) => {
@@ -811,12 +875,11 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
   const getLineModeStyles = () => {
     switch(lineMode) {
       case LINE_MODES.NORMAL:
-        return 'space-y-4'; 
-      case LINE_MODES.WRAPPED:
-        return 'space-y-1';
-      case LINE_MODES.DEFAULT:
+        return 'space-y-4'; // Traditional document style with proper paragraph spacing
+      case LINE_MODES.DENSE:
+        return 'space-y-0'; // Bible verse style with minimal spacing between paragraphs
       default:
-        return 'space-y-0'; 
+        return 'space-y-2'; // Fallback spacing if mode is undefined
     }
   };
 

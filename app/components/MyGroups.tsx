@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { ChevronRight, Users, FileText, Plus } from "lucide-react";
+import { ChevronRight, Users, FileText, Plus, Lock } from "lucide-react";
 import { useMediaQuery } from "../hooks/use-media-query";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
@@ -20,9 +20,10 @@ interface Group {
   pages?: Record<string, boolean>;
   owner?: string;
   ownerUsername?: string;
+  isPublic?: boolean;
 }
 
-export default function MyGroups() {
+export default function MyGroups({ profileUserId }: { profileUserId?: string }) {
   const { user } = useContext(AuthContext);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,21 +60,36 @@ export default function MyGroups() {
           );
           const isOwner = group.owner === user.uid;
           
-          if (isMember || isOwner) {
-            // Get owner username
-            const ownerUsername = group.owner && usersData[group.owner] 
-              ? usersData[group.owner].username 
-              : 'Unknown';
-              
-            userGroups.push({
-              id: groupId,
-              name: group.name,
-              description: group.description,
-              members: group.members,
-              pages: group.pages,
-              owner: group.owner,
-              ownerUsername
-            });
+          if (profileUserId) {
+            if (group.isPublic) {
+              userGroups.push({
+                id: groupId,
+                name: group.name,
+                description: group.description,
+                members: group.members,
+                pages: group.pages,
+                owner: group.owner,
+                ownerUsername: group.owner && usersData[group.owner] 
+                  ? usersData[group.owner].username 
+                  : 'Unknown',
+                isPublic: group.isPublic || false
+              });
+            }
+          } else {
+            if (isMember || isOwner) {
+              userGroups.push({
+                id: groupId,
+                name: group.name,
+                description: group.description,
+                members: group.members,
+                pages: group.pages,
+                owner: group.owner,
+                ownerUsername: group.owner && usersData[group.owner] 
+                  ? usersData[group.owner].username 
+                  : 'Unknown',
+                isPublic: group.isPublic || false
+              });
+            }
           }
         });
         
@@ -84,7 +100,7 @@ export default function MyGroups() {
     
     const unsubscribe = fetchGroups();
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.uid, profileUserId]);
   
   // Function to get member count
   const getMemberCount = (members?: Record<string, { role: string; joinedAt: string }>) => {
@@ -177,7 +193,10 @@ export default function MyGroups() {
             <Link key={group.id} href={`/groups/${group.id}`} className="block min-w-[250px]">
               <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{group.name}</CardTitle>
+                  <CardTitle className="text-lg flex items-center">
+                    {!group.isPublic && <Lock className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+                    {group.name}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pb-2">
                   <div className="flex items-center text-sm text-muted-foreground mb-2">
@@ -234,7 +253,10 @@ export default function MyGroups() {
             <Link key={group.id} href={`/groups/${group.id}`} className="block">
               <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{group.name}</CardTitle>
+                  <CardTitle className="text-lg flex items-center">
+                    {!group.isPublic && <Lock className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+                    {group.name}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center text-sm text-muted-foreground mb-2">

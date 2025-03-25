@@ -8,7 +8,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Sheet, SheetTrigger } from "./ui/sheet";
 import { Sidebar } from "./ui/sidebar";
 import { PageMenu } from "./PageMenu";
-import { toast } from "./ui/use-toast";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface PageHeaderProps {
@@ -208,7 +208,7 @@ export default function PageHeader({
                           {isScrolled ? "" : "by"}{" "}
                           {userId ? (
                             <Link href={`/user/${userId}`} className="hover:underline">
-                              <span data-component-name="PageHeader">{username || "Anonymous"}</span>
+                              <span data-component-name="PageHeader">{username || userId}</span>
                             </Link>
                           ) : (
                             <span data-component-name="PageHeader">{username || "Anonymous"}</span>

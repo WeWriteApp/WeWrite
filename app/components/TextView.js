@@ -25,12 +25,12 @@ import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform 
  *    - Proper spacing between paragraphs
  * 
  * 2. Dense Mode:
+ *    - Collapses all paragraphs for a more comfortable reading experience
  *    - NO line breaks between paragraphs
  *    - Text wraps continuously as if newline characters were temporarily deleted
  *    - Paragraph numbers are inserted inline within the continuous text
  *    - Standard text size (1rem/16px)
  *    - Only a small space separates one paragraph from the next
- *    - Resembles Bible verses with continuous text flow
  * 
  * IMPLEMENTATION NOTES:
  * - Both modes use the same paragraph number style (text-muted-foreground)
@@ -88,6 +88,9 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const [loadedParagraphs, setLoadedParagraphs] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Use lineMode from context as the primary mode
+  const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -164,22 +167,20 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   }, [parsedContents, isInitialLoad, onRenderComplete]);
 
   const getViewModeStyles = () => {
-    switch(viewMode) {
-      case 'normal':
-        return 'space-y-6'; 
-      case 'dense':
-        return 'space-y-0'; 
-      default:
-        return 'space-y-4';
+    // Use the effective mode for styling
+    if (effectiveMode === LINE_MODES.DENSE) {
+      return 'space-y-0'; // No spacing between paragraphs for dense mode
+    } else {
+      return 'space-y-6'; // Normal spacing between paragraphs
     }
   };
 
   return (
     <motion.div 
-      className={`flex flex-col ${getViewModeStyles()} w-full text-left ${viewMode === 'normal' ? 'items-start' : ''} ${
-        isScrolled 
-          ? 'px-2 sm:px-3 md:px-4 max-w-full transition-all duration-200 ease-in-out' 
-          : 'px-3 md:px-4 transition-all duration-200 ease-in-out'
+      className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
+        effectiveMode === LINE_MODES.NORMAL ? 'items-start' : ''
+      } ${
+        isScrolled ? 'pb-16' : ''
       }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -193,110 +194,110 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         <RenderContent 
           contents={parsedContents} 
           language={language} 
-          viewMode={viewMode} 
-          loadedParagraphs={loadedParagraphs} 
+          loadedParagraphs={loadedParagraphs}
+          effectiveMode={effectiveMode}
         />
       )}
     </motion.div>
   );
 };
 
-export const RenderContent = ({ contents, language, viewMode = 'normal', loadedParagraphs }) => {
+export const RenderContent = ({ contents, language, loadedParagraphs, effectiveMode }) => {
   // Try to use the page context, but provide a fallback if it's not available
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
   
-  // Use the language from props or from context
-  const contentLanguage = language || (pageContext && pageContext.language) || null;
-  
-  if (!contents) {
-    return <div>No content to display</div>;
-  }
-  
+  // Use the provided effectiveMode or fall back to lineMode from context
+  const mode = effectiveMode || lineMode || LINE_MODES.NORMAL;
+
+  if (!contents) return null;
+
   /**
-   * Dense Mode Implementation
+   * DENSE MODE IMPLEMENTATION
    * 
-   * This mode renders all paragraphs in a single continuous flow with:
-   * - No line breaks between paragraphs
-   * - Text wraps continuously as if newline characters were deleted
+   * Bible verse style with continuous text flow:
+   * - NO line breaks between paragraphs
+   * - Text wraps continuously as if newline characters were temporarily deleted
    * - Paragraph numbers are inserted inline within the continuous text
    * - Standard text size (1rem/16px)
    * - Only a small space separates one paragraph from the next
-   * 
-   * This creates a Bible verse style layout where text flows continuously
-   * with paragraph numbers serving as the only visual separator.
    */
-  if (viewMode === 'dense') {
-    return (
-      <div className="relative">
-        {Array.isArray(contents) && (
+  if (mode === LINE_MODES.DENSE) {
+    // For array of nodes (multiple paragraphs)
+    if (Array.isArray(contents)) {
+      return (
+        <div className="relative">
           <div className="prose max-w-full">
             <p className="text-foreground leading-normal text-base">
-              {contents.map((node, index) => (
-                <React.Fragment key={index}>
-                  {loadedParagraphs.includes(index) && (
-                    <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ 
-                        duration: 0.2,
-                        delay: index * 0.03
-                      }}
-                      className="inline"
-                    >
-                      {/* Only add a space if this isn't the first paragraph */}
-                      {index > 0 && ' '}
-                      
-                      {/* Paragraph number */}
-                      <span className="text-muted-foreground text-xs select-none">
-                        {index + 1}
-                      </span>{'\u00A0'}
-                      
-                      {/* Paragraph content without any breaks */}
-                      {node.children && node.children.map((child, childIndex) => {
-                        if (child.type === 'link') {
-                          return <LinkNode key={childIndex} node={child} />;
-                        } else if (child.text) {
-                          let className = '';
-                          if (child.bold) className += ' font-bold';
-                          if (child.italic) className += ' italic';
-                          if (child.underline) className += ' underline';
-                          
-                          if (child.code) {
-                            return (
-                              <code key={childIndex} className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono">
-                                {child.text}
-                              </code>
-                            );
-                          }
-                          
+              {contents.map((node, index) => {
+                if (!loadedParagraphs.includes(index)) return null;
+                
+                // Only process paragraph nodes
+                if (node.type !== nodeTypes.PARAGRAPH) return null;
+                
+                return (
+                  <React.Fragment key={index}>
+                    {/* Only add a space if this isn't the first paragraph */}
+                    {index > 0 && ' '}
+                    
+                    {/* Paragraph number */}
+                    <span className="text-muted-foreground text-xs select-none">
+                      {index + 1}
+                    </span>{'\u00A0'}
+                    
+                    {/* Paragraph content without any breaks */}
+                    {node.children && node.children.map((child, childIndex) => {
+                      if (child.type === 'link') {
+                        return <LinkNode key={childIndex} node={child} />;
+                      } else if (child.text) {
+                        let className = '';
+                        if (child.bold) className += ' font-bold';
+                        if (child.italic) className += ' italic';
+                        if (child.underline) className += ' underline';
+                        
+                        if (child.code) {
                           return (
-                            <span key={childIndex} className={className || undefined}>
+                            <code key={childIndex} className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono">
                               {child.text}
-                            </span>
+                            </code>
                           );
                         }
-                        return null;
-                      })}
-                    </motion.span>
-                  )}
-                </React.Fragment>
-              ))}
+                        
+                        return (
+                          <span key={childIndex} className={className || undefined}>
+                            {child.text}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </React.Fragment>
+                );
+              })}
             </p>
           </div>
-        )}
-      </div>
-    );
+        </div>
+      );
+    }
   }
   
-  // For normal mode
+  /**
+   * NORMAL MODE IMPLEMENTATION
+   * 
+   * Traditional document style:
+   * - Paragraph numbers create indentation
+   * - Numbers positioned to the left of the text
+   * - Clear indent for each paragraph
+   * - Standard text size (1rem/16px)
+   * - Proper spacing between paragraphs
+   */
   // If it's an array, map through and render each node
   if (Array.isArray(contents)) {
     return (
       <div className="w-full text-left">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
-            {loadedParagraphs.includes(index) && renderNode(node, viewMode, index)}
+            {loadedParagraphs.includes(index) && renderNode(node, mode, index)}
           </React.Fragment>
         ))}
       </div>
@@ -304,18 +305,18 @@ export const RenderContent = ({ contents, language, viewMode = 'normal', loadedP
   }
   
   // If it's a single node, render it directly
-  return renderNode(contents, viewMode, 0);
+  return renderNode(contents, mode, 0);
 };
 
 // Render content based on node type
-const renderNode = (node, viewMode, index) => {
+const renderNode = (node, mode, index) => {
   if (!node) return null;
 
   // Only use ParagraphNode for normal mode
-  if (viewMode === 'normal') {
+  if (mode === LINE_MODES.NORMAL) {
     switch (node.type) {
       case nodeTypes.PARAGRAPH:
-        return <ParagraphNode key={index} node={node} viewMode={viewMode} index={index} />;
+        return <ParagraphNode key={index} node={node} effectiveMode={mode} index={index} />;
       case nodeTypes.CODE_BLOCK:
         return <CodeBlockNode key={index} node={node} index={index} />;
       case nodeTypes.HEADING:
@@ -331,10 +332,22 @@ const renderNode = (node, viewMode, index) => {
   return null;
 };
 
-// Define the missing node components
-const ParagraphNode = ({ node, viewMode = 'normal', index = 0 }) => {
-  const paragraphRef = useRef(null);
+/**
+ * ParagraphNode - Renders a paragraph in NORMAL mode
+ * 
+ * Features:
+ * - Paragraph numbers create indentation (traditional document style)
+ * - Numbers positioned to the left of the text
+ * - Clear indent for each paragraph
+ * - Standard text size (1rem/16px)
+ * - Proper spacing between paragraphs
+ */
+const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
   const { lineMode } = useLineSettings();
+  // Use lineMode from context if available, otherwise fall back to effectiveMode prop
+  const mode = lineMode || (effectiveMode === 'dense' ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
+  
+  const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
   
   // Define consistent text size for all modes
@@ -373,20 +386,6 @@ const ParagraphNode = ({ node, viewMode = 'normal', index = 0 }) => {
     return null;
   };
 
-  /**
-   * Normal Mode Implementation
-   * 
-   * This mode renders paragraphs with:
-   * - Paragraph numbers positioned to the left of the text
-   * - Numbers aligned with the first line of paragraph text
-   * - Clear indentation for each paragraph
-   * - Proper spacing between paragraphs
-   * - Standard text size (1rem/16px)
-   * 
-   * This creates a traditional document layout with clear paragraph
-   * separation and consistent indentation.
-   */
-  
   // Consistent paragraph number style for both modes
   const renderParagraphNumber = (index) => (
     <span className="text-muted-foreground text-xs select-none">
@@ -397,6 +396,7 @@ const ParagraphNode = ({ node, viewMode = 'normal', index = 0 }) => {
   // Normal mode with motion animations
   return (
     <motion.div 
+      ref={paragraphRef}
       className={`group relative ${spacingClass}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}

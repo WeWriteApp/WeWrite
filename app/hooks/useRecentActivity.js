@@ -34,6 +34,42 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
     }
   };
 
+  // Helper function to check if a page belongs to a private group
+  // and if the current user is a member of that group
+  const checkPageGroupAccess = async (pageData) => {
+    try {
+      // If page doesn't belong to a group, it's accessible
+      if (!pageData.groupId) return true;
+      
+      // Get the group data
+      const rtdb = getDatabase();
+      const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
+      const snapshot = await get(groupRef);
+      
+      if (!snapshot.exists()) return true; // Group doesn't exist, allow access
+      
+      const groupData = snapshot.val();
+      
+      // If group is public, allow access
+      if (groupData.isPublic) return true;
+      
+      // If user is not logged in, deny access to private group content
+      if (!user) return false;
+      
+      // If user is the group owner, allow access
+      if (groupData.owner === user.uid) return true;
+      
+      // If user is a group member, allow access
+      if (groupData.members && groupData.members[user.uid]) return true;
+      
+      // Otherwise, deny access to private group content
+      return false;
+    } catch (err) {
+      console.error("Error checking group access:", err);
+      return false; // Default to denying access on error
+    }
+  };
+
   useEffect(() => {
     const fetchRecentActivity = async () => {
       try {
@@ -93,6 +129,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
           // Process each page to get its recent activity
           const activitiesPromises = pagesSnapshot.docs.map(async (doc) => {
             const pageData = { id: doc.id, ...doc.data() };
+            
+            // Check if the page belongs to a private group and if the user has access
+            const hasAccess = await checkPageGroupAccess(pageData);
+            if (!hasAccess) return null;
             
             try {
               // Get the two most recent versions of this page
@@ -278,6 +318,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
       // Process each page to get its recent activity
       const activitiesPromises = moreSnapshot.docs.map(async (doc) => {
         const pageData = { id: doc.id, ...doc.data() };
+        
+        // Check if the page belongs to a private group and if the user has access
+        const hasAccess = await checkPageGroupAccess(pageData);
+        if (!hasAccess) return null;
         
         try {
           // Get the two most recent versions of this page

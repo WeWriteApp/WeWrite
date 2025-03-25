@@ -1,39 +1,37 @@
 "use client";
-import React, { useEffect, useState, useContext, useRef } from "react";
+import React, { useEffect, useState, useContext, useRef, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { getDatabase, ref, onValue, update } from "firebase/database";
+import { app } from "../firebase/config";
+import { listenToPageById, getPageVersions } from "../firebase/database";
+import { AuthContext } from "../providers/AuthProvider";
+import { DataContext } from "../providers/DataProvider";
+import { createEditor } from "slate";
+import { withHistory } from "slate-history";
+import { Slate, Editable, withReact } from "slate-react";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
-import TextView from "./TextView";
-import { useRouter } from "next/navigation";
-import { getDatabase, ref, onValue, set, update, remove } from "firebase/database";
-import { app } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
-import { useToast } from "../components/ui/use-toast";
-import { RecentPagesContext } from "../contexts/RecentPagesContext";
-import { 
-  Loader, 
-  Share, 
-  Copy, 
-  Lock, 
-  Unlock, 
-  Edit, 
-  Check, 
-  X, 
-  Plus, 
-  MoreHorizontal, 
-  Trash2, 
-  Link2, 
-  Reply 
-} from "lucide-react";
-import Link from "next/link";
-import { listenToPageById } from "../firebase/database";
-import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import Head from "next/head";
 import PageHeader from "./PageHeader";
 import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
-import { LoggingProvider } from "../providers/LoggingProvider";
+import Link from "next/link";
+import Head from "next/head";
+import { Button } from "./ui/button";
+import { EditorContent } from "./SlateEditor";
+import TextView from "./TextView";
+import { 
+  Loader, 
+  Lock, 
+  Unlock, 
+  AlertTriangle,
+  ChevronUp,
+  ChevronDown
+} from "lucide-react";
+import { toast } from "sonner";
+import { RecentPagesContext } from "../contexts/RecentPagesContext";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../contexts/PageContext";
-import { LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { useLineSettings, LINE_MODES } from "../contexts/LineSettingsContext";
 import { 
   Dialog, 
   DialogContent, 
@@ -43,10 +41,6 @@ import {
   DialogTitle,
   DialogClose 
 } from './ui/dialog';
-import { Button } from './ui/button';
-import { Switch } from './ui/switch';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { Label } from './ui/label';
 import { 
   Command, 
   CommandEmpty, 
@@ -56,8 +50,25 @@ import {
   CommandList 
 } from './ui/command';
 import EditPage from "./EditPage";
-import ActionRow from "./PageActionRow";
 
+/**
+ * SinglePageView Component
+ * 
+ * This component is responsible for displaying a single page with all its content and interactive elements.
+ * It handles:
+ * - Loading and displaying page content
+ * - Editing functionality for page owners
+ * - Page visibility controls (public/private)
+ * - Keyboard shortcuts for navigation and editing
+ * - Page interactions through the PageFooter component
+ * 
+ * The component uses several context providers:
+ * - PageProvider: For sharing page data with child components
+ * 
+ * This component has been refactored to use the PageFooter component which contains
+ * the PageActions component for all page interactions, replacing the previous
+ * PageInteractionButtons and ActionRow components.
+ */
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -67,7 +78,8 @@ export default function SinglePageView({ params }) {
   const [isPublic, setIsPublic] = useState(false);
   const [groupId, setGroupId] = useState(null);
   const [groupName, setGroupName] = useState(null);
-  const [lineViewMode, setLineViewMode] = useState('normal');
+  const [groupIsPrivate, setGroupIsPrivate] = useState(false);
+  const [hasGroupAccess, setHasGroupAccess] = useState(true);
   const [scrollDirection, setScrollDirection] = useState('none');
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -76,37 +88,7 @@ export default function SinglePageView({ params }) {
   const [title, setTitle] = useState(null);
   const { user } = useContext(AuthContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const storedMode = localStorage.getItem('pageViewMode');
-    if (storedMode && ['dense', 'spaced', 'normal'].includes(storedMode)) {
-      setLineViewMode(storedMode);
-    }
-
-    const handleStorageChange = (e) => {
-      if (e.key === 'pageViewMode' && ['dense', 'spaced', 'normal'].includes(e.newValue)) {
-        setLineViewMode(e.newValue);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const currentMode = localStorage.getItem('pageViewMode');
-      if (currentMode && currentMode !== lineViewMode && ['dense', 'spaced', 'normal'].includes(currentMode)) {
-        setLineViewMode(currentMode);
-      }
-    }, 1000); // Check every second
-
-    return () => clearInterval(intervalId);
-  }, [lineViewMode]);
+  const { lineMode } = useLineSettings();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -155,86 +137,94 @@ export default function SinglePageView({ params }) {
   });
 
   useEffect(() => {
-    // Setup listener for real-time updates
-    const unsubscribe = listenToPageById(params.id, async (data) => {
-      if (data && data.error) {
-        // Handle access denied or other errors
+    if (!params?.id) return;
+
+    const unsubscribe = listenToPageById(params.id, (data) => {
+      if (!data) {
         setIsLoading(false);
-        setPage(null);
-        setError(typeof data.error === 'object' ? data.error.error : data.error);
+        setIsDeleted(true);
         return;
       }
+
+      // Check if data has the expected structure
+      if (data.error) {
+        setError(typeof data.error === 'object' ? data.error.message : data.error);
+        setIsLoading(false);
+        return;
+      }
+
+      // Extract page data from the response
+      const pageData = data.pageData || data;
       
-      if (data && data.pageData) {
-        const { pageData, versionData, links } = data;
+      if (!pageData) {
+        setIsLoading(false);
+        setIsDeleted(true);
+        return;
+      }
 
-        // Get user data from Firebase Realtime Database
-        const db = getDatabase(app);
-        const userRef = ref(db, `users/${pageData.userId}`);
+      setPage(pageData);
+      setIsPublic(pageData.isPublic || false);
+      setGroupId(pageData.groupId || null);
+      setTitle(pageData.title || "Untitled");
+      
+      // If we have version data, set the editor state
+      if (data.versionData && data.versionData.content) {
+        setEditorState(data.versionData.content);
+      }
+      
+      // Add to recent pages
+      if (addRecentPage) {
+        addRecentPage({
+          id: params.id,
+          title: pageData.title || "Untitled",
+          isPublic: pageData.isPublic || false,
+          userId: pageData.userId,
+          groupId: pageData.groupId,
+          lastAccessed: new Date().toISOString()
+        });
+      }
+
+      // If the page belongs to a group, check group access
+      if (pageData.groupId) {
+        const rtdb = getDatabase();
+        const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
         
-        onValue(userRef, (snapshot) => {
-          const userData = snapshot.val();
-          if (userData && userData.username) {
-            pageData.username = userData.username;
-          } else {
-            // If username not found in realtime DB, we should try to get it from Firestore
-            // This is a fallback mechanism
-            import('../firebase/auth').then(({ getUserProfile }) => {
-              if (getUserProfile && pageData.userId) {
-                getUserProfile(pageData.userId).then(profile => {
-                  if (profile && profile.username) {
-                    pageData.username = profile.username;
-                  } else if (profile && profile.displayName) {
-                    pageData.username = profile.displayName;
-                  }
-                  
-                  // Set state with the fetched data including username
-                  setPage({...pageData});
-                }).catch(err => {
-                  console.error("Error fetching user profile:", err);
-                });
-              }
-            });
-          }
-          
-          // Set state with the fetched data
-          setPage(pageData);
-          setEditorState(versionData.content);
-          setTitle(pageData.title);
-
-          // Check and set groupId if it exists
-          if (pageData.groupId) {
-            setGroupId(pageData.groupId);
+        onValue(groupRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const groupData = snapshot.val();
+            setGroupName(groupData.name || "Unknown Group");
             
-            // Get group data to fetch the group name
-            const groupRef = ref(db, `groups/${pageData.groupId}`);
-            onValue(groupRef, (groupSnapshot) => {
-              const groupData = groupSnapshot.val();
-              if (groupData && groupData.name) {
-                setGroupName(groupData.name);
+            // Check if group is private
+            const isPrivate = !groupData.isPublic;
+            setGroupIsPrivate(isPrivate);
+            
+            if (isPrivate) {
+              // Check if user has access to this private group
+              let userHasAccess = false;
+              
+              // If user is logged in
+              if (user) {
+                // User is the group owner
+                if (groupData.owner === user.uid) {
+                  userHasAccess = true;
+                }
+                // User is a group member
+                else if (groupData.members && groupData.members[user.uid]) {
+                  userHasAccess = true;
+                }
               }
-            });
-          }
-
-          // Check if the current user is the owner or if the page is public
-          if (user && user.uid === pageData.userId) {
-            setIsPublic(true);
-          } else {
-            setIsPublic(pageData.isPublic);
+              
+              setHasGroupAccess(userHasAccess);
+            }
           }
         });
-
-        // Data has loaded
-        setIsLoading(false);
-      } else {
-        // Handle case where the page doesn't exist or was deleted
-        setPage(null);
-        setIsLoading(false);
       }
-    }, user?.uid); // Pass the user ID for access control
+
+      setIsLoading(false);
+    }, user?.uid);
 
     return () => unsubscribe();
-  }, [params.id, user]);
+  }, [params?.id, user, addRecentPage]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
@@ -265,17 +255,44 @@ export default function SinglePageView({ params }) {
     }
   };
 
-  const handleViewModeChange = (value) => {
-    setLineViewMode(value);
-    localStorage.setItem('pageViewMode', value);
-  };
-
   // Function to handle when page content is fully rendered
   const handlePageFullyRendered = () => {
     setPageFullyRendered(true);
   };
 
   const Layout = user ? DashboardLayout : PublicLayout;
+
+  // If the page is deleted, show a message
+  if (isDeleted) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <h1 className="text-2xl font-bold mb-4">Page not found</h1>
+          <p className="text-muted-foreground mb-6">This page may have been deleted or never existed.</p>
+          <Link href="/">
+            <Button>Go Home</Button>
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  // If the page belongs to a private group and user doesn't have access
+  if (groupIsPrivate && !hasGroupAccess) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-12">
+          <Lock className="h-12 w-12 text-muted-foreground mb-4" />
+          <h1 className="text-2xl font-bold mb-4">Private Group Content</h1>
+          <p className="text-muted-foreground mb-2">This page belongs to a private group.</p>
+          <p className="text-muted-foreground mb-6">You need to be a member of the group to access this content.</p>
+          <Link href="/">
+            <Button>Go Home</Button>
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!page) {
     return (
@@ -303,46 +320,6 @@ export default function SinglePageView({ params }) {
               </Link>
             </div>
           )}
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isDeleted) {
-    return (
-      <Layout>
-        <Head>
-          <title>Deleted Page - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <div>
-          <h1 className="text-2xl font-semibold text-text">Page not found</h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              width="24" 
-              height="24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="h-5 w-5 text-red-500"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-            <span className="text-lg text-text">
-              This page has been deleted
-            </span>
-            <Link href="/">
-              <button className="bg-background text-button-text px-4 py-2 rounded-full">
-                Go back
-              </button>
-            </Link>
-          </div>
         </div>
       </Layout>
     );
@@ -448,7 +425,7 @@ export default function SinglePageView({ params }) {
       </Head>
       <PageHeader 
         title={isEditing ? "Editing page" : title} 
-        username={page?.username || "[NULL]"} 
+        username={page?.username || "Anonymous"} 
         userId={page?.userId}
         isLoading={isLoading}
         scrollDirection={scrollDirection}
@@ -457,32 +434,26 @@ export default function SinglePageView({ params }) {
       />
       <div className="pb-24 px-2 sm:px-4 md:px-6">
         {isEditing ? (
-          <LoggingProvider>
-            <PageProvider>
-              <LineSettingsProvider>
-                <EditPage
-                  isEditing={isEditing}
-                  setIsEditing={setIsEditing}
-                  page={page}
-                  title={title}
-                  setTitle={setTitle}
-                  current={editorState}
-                />
-              </LineSettingsProvider>
-            </PageProvider>
-          </LoggingProvider>
+          <PageProvider>
+            <EditPage
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              page={page}
+              title={title}
+              setTitle={setTitle}
+              current={editorState}
+            />
+          </PageProvider>
         ) : (
           <>
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
-              <div className={`page-content ${lineViewMode === 'dense' ? 'max-w-full break-words' : ''}`}>
+              <div className={`page-content ${lineMode === LINE_MODES.DENSE ? 'max-w-full break-words' : ''}`}>
                 <PageProvider>
-                  <LineSettingsProvider>
-                    <TextView 
-                      content={editorState} 
-                      viewMode={lineViewMode}
-                      onRenderComplete={handlePageFullyRendered}
-                    />
-                  </LineSettingsProvider>
+                  <TextView 
+                    content={editorState} 
+                    viewMode={lineMode}
+                    onRenderComplete={handlePageFullyRendered}
+                  />
                 </PageProvider>
               </div>
             </div>
@@ -490,18 +461,9 @@ export default function SinglePageView({ params }) {
             {/* Page Controls - Only show after content is fully rendered */}
             {pageFullyRendered && (
               <div className="mt-8 flex flex-col gap-4">
-                {user && user.uid === page.userId && (
+                {user && user.uid === page.userId && !isEditing && (
                   <div className="mt-8">
-                    <ActionRow
-                      isEditing={isEditing}
-                      setIsEditing={setIsEditing}
-                      page={page}
-                    />
-                  </div>
-                )}
-                {user && user.uid !== page.userId && (
-                  <div className="mt-8">
-                    <PageInteractionButtons page={page} username={page?.username || ""} />
+                    {/* ActionRow removed - now using PageFooter with PageActions instead */}
                   </div>
                 )}
               </div>
@@ -509,212 +471,16 @@ export default function SinglePageView({ params }) {
           </>
         )}
       </div>
-      <PageFooter 
-        page={page}
-        isOwner={user?.uid === page?.userId}
-        isEditing={isEditing}
-        setIsEditing={setIsEditing}
-      />
+      <PageProvider>
+        <PageFooter 
+          page={page}
+          isOwner={user?.uid === page?.userId}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+        />
+      </PageProvider>
       <SiteFooter />
     </Layout>
-  );
-}
-
-export function PageInteractionButtons({ page, username }) {
-  const router = useRouter();
-  const { user } = useContext(AuthContext);
-  const [showAddToPageDialog, setShowAddToPageDialog] = useState(false);
-  const { toast } = useToast();
-  const [lineViewMode, setLineViewMode] = useState("normal");
-  
-  const handleViewModeChange = (value) => {
-    setLineViewMode(value);
-    localStorage.setItem("lineViewMode", value);
-    // Trigger re-render of the page content
-    window.dispatchEvent(new Event("viewModeChanged"));
-  };
-  
-  const handleCopyLink = () => {
-    const pageUrl = `${window.location.origin}/pages/${page.id}`;
-    navigator.clipboard.writeText(pageUrl).then(() => {
-      toast({
-        title: "Link copied",
-        description: "Page link has been copied to clipboard",
-      });
-    }).catch(err => {
-      console.error('Failed to copy link:', err);
-      toast({
-        title: "Failed to copy link",
-        description: "Please try again",
-        variant: "destructive"
-      });
-    });
-  };
-  
-  const handleReplyToPage = () => {
-    if (!page || !page.id) {
-      console.error("Cannot reply to page: page data is missing");
-      return;
-    }
-
-    // Create a new page with title "Re: "[original page title]""
-    const newPageTitle = `Re: "${page.title || "Untitled"}"`;
-    
-    // Get content from the page if available
-    let pageContentSummary = "";
-    if (page.content) {
-      try {
-        const parsedContent = typeof page.content === 'string' 
-          ? JSON.parse(page.content) 
-          : page.content;
-
-        // Extract first paragraph or so for a summary
-        if (Array.isArray(parsedContent) && parsedContent.length > 0) {
-          const firstPara = parsedContent.find(node => 
-            node.type === 'paragraph' && 
-            node.children && 
-            node.children.some(child => child.text && child.text.trim().length > 0)
-          );
-          
-          if (firstPara) {
-            pageContentSummary = firstPara.children
-              .map(child => child.text || '')
-              .join('')
-              .slice(0, 100);
-              
-            if (pageContentSummary.length === 100) {
-              pageContentSummary += '...';
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error parsing page content:", error);
-      }
-    }
-    
-    // Create the initial content with a single paragraph and properly formatted links
-    const initialContent = [
-      {
-        type: "paragraph",
-        children: [
-          { text: `Reply to ` },
-          {
-            type: "link",
-            url: `/pages/${page.id}`,
-            children: [{ text: page.title || "Untitled" }]
-          },
-          { text: ` by ` },
-          {
-            type: "link",
-            url: `/profile/${page.userId || "anonymous"}`,
-            children: [{ text: page.username || page.author || "Anonymous" }]
-          },
-          { text: "" }
-        ]
-      }
-    ];
-    
-    // Add blockquote if we have content summary
-    if (pageContentSummary) {
-      initialContent.push({
-        type: "blockquote",
-        children: [{ text: pageContentSummary }]
-      });
-      
-      // Add an empty paragraph after the blockquote
-      initialContent.push({
-        type: "paragraph",
-        children: [{ text: "" }]
-      });
-    } else {
-      // If no content summary, add an empty line
-      initialContent.push({
-        type: "paragraph",
-        children: [{ text: "" }]
-      });
-    }
-
-    // Add another empty paragraph for user to start typing
-    initialContent.push({
-      type: "paragraph",
-      children: [{ text: "" }]
-    });
-
-    // Navigate to the new page route with query parameters
-    try {
-      const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
-      const encodedTitle = encodeURIComponent(newPageTitle);
-      
-      console.log("Navigating to new page with pre-filled content:", initialContent);
-      router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}&isReply=true`);
-    } catch (error) {
-      console.error("Error navigating to new page:", error);
-      // Fallback with minimal parameters if encoding fails
-      router.push(`/new?title=${encodeURIComponent(newPageTitle)}&isReply=true`);
-    }
-  };
-  
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col sm:flex-row gap-2 px-4 sm:px-0">
-        {/* Copy Link Button */}
-        <Button
-          variant="outline"
-          onClick={handleCopyLink}
-          className="w-full sm:w-auto h-10 flex items-center gap-2 justify-center"
-        >
-          <Link2 className="h-4 w-4" />
-          Copy link
-        </Button>
-        
-        {/* Reply to Page Button */}
-        <Button
-          variant="outline"
-          onClick={handleReplyToPage}
-          className="w-full sm:w-auto h-10 flex items-center gap-2 justify-center"
-        >
-          <Reply className="h-4 w-4" />
-          Reply to page
-        </Button>
-        
-        {/* Add to Page Button */}
-        <Button
-          variant="outline"
-          onClick={() => setShowAddToPageDialog(true)}
-          className="w-full sm:w-auto h-10 flex items-center gap-2 justify-center"
-        >
-          <Plus className="h-4 w-4" />
-          Add to page
-        </Button>
-      </div>
-      
-      {/* Page Layout Radio Group */}
-      <div className="mt-2 px-4 sm:px-0">
-        <div className="mb-2">
-          <Label className="text-sm font-medium">Page layout</Label>
-        </div>
-        <RadioGroup 
-          defaultValue={lineViewMode} 
-          onValueChange={handleViewModeChange}
-          className="flex space-x-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="normal" id="normal" />
-            <Label htmlFor="normal" className="text-sm">Normal</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="dense" id="dense" />
-            <Label htmlFor="dense" className="text-sm">Dense</Label>
-          </div>
-        </RadioGroup>
-      </div>
-      
-      <AddToPageDialog 
-        open={showAddToPageDialog} 
-        onOpenChange={setShowAddToPageDialog}
-        pageToAdd={page}
-      />
-    </div>
   );
 }
 

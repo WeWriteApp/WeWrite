@@ -12,8 +12,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { CustomLinkNode, $createCustomLinkNode } from "./CustomLinkNode";
 import { CustomLinkPlugin, INSERT_CUSTOM_LINK_COMMAND, insertCustomLink } from "./CustomLinkPlugin";
 import { BracketNode, BracketTriggerPlugin } from "./BracketTriggerPlugin";
-import { toast } from "../components/ui/use-toast";
-
+import { toast } from "sonner";
 const theme = {
 };
 

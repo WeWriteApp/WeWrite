@@ -12,17 +12,16 @@ import { Button } from "./ui/button";
 import { Trash2, Users, FileText, Plus, ChevronLeft, Globe, Lock } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "./ui/switch";
-import { useToast } from "./ui/use-toast";
+import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose
+} from "./ui/dialog";
 import SiteFooter from "./SiteFooter";
 
 export default function GroupDetails({ group }) {
@@ -33,7 +32,6 @@ export default function GroupDetails({ group }) {
   const [isPublic, setIsPublic] = useState(group.isPublic || false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingVisibilityChange, setPendingVisibilityChange] = useState(null);
-  const { toast } = useToast();
   
   if (!group) return <div>Loading...</div>;
   
@@ -53,19 +51,19 @@ export default function GroupDetails({ group }) {
           setIsPublic(pendingVisibilityChange);
           toast({
             title: "Group visibility updated",
-            description: `Group is now ${pendingVisibilityChange ? "public" : "private"}`,
+            description: `The group is now ${pendingVisibilityChange ? "public" : "private"}.`,
           });
         })
         .catch((error) => {
           console.error("Error updating group visibility:", error);
           toast({
             title: "Error",
-            description: "Failed to update group visibility",
+            description: "Failed to update group visibility. Please try again.",
             variant: "destructive",
           });
         });
-      setShowConfirmDialog(false);
       setPendingVisibilityChange(null);
+      setShowConfirmDialog(false);
     }
   };
 
@@ -212,28 +210,33 @@ export default function GroupDetails({ group }) {
       
       <SiteFooter />
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+      <Dialog open={showConfirmDialog} onOpenChange={(open) => {
+        setShowConfirmDialog(open);
+        if (!open) {
+          setPendingVisibilityChange(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Group Visibility</DialogTitle>
+            <DialogDescription>
               {pendingVisibilityChange
-                ? "Make group public?"
-                : "Make group private?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingVisibilityChange
-                ? "Public groups can be discovered by anyone. All members and their pages will be visible to anyone who visits the group."
-                : "Private groups are only visible to members. Only members can see the group's pages and other members."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelVisibilityChange}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmVisibilityChange}>
-              {pendingVisibilityChange ? "Make Public" : "Make Private"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                ? "Making this group public will allow anyone to see it and its pages. Continue?"
+                : "Making this group private will hide it and its pages from non-members. Continue?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" onClick={cancelVisibilityChange}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button onClick={confirmVisibilityChange}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

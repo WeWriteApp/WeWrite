@@ -24,6 +24,16 @@ const ActivitySkeleton = () => {
   );
 };
 
+/**
+ * RecentActivity Component
+ * 
+ * Displays recent activity from the platform, either in a carousel (homepage) or grid layout (activity page).
+ * 
+ * @param {number} limit - Maximum number of activities to display (default: 8)
+ * @param {boolean} showViewAll - Whether to show the "View all activity" button (default: true)
+ * @param {boolean} isActivityPage - Whether this component is being rendered on the activity page (default: false)
+ * @param {string} userId - Optional user ID to filter activities by (default: null)
+ */
 const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
   const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(limit, userId);
   const { user } = useContext(AuthContext);
@@ -47,9 +57,11 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   const isInUserProfile = userId && !isInActivityPage;
   // Use grid layout in activity page or user profile
   const useGridLayout = isInActivityPage || isInUserProfile;
+  // Determine if we're on the homepage
+  const isHomepage = !isInActivityPage && !isInUserProfile;
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${isHomepage ? 'bg-muted/30 p-4 rounded-lg border border-border/50' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4" />
@@ -116,7 +128,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
         {!loading && !error && activities.length > 0 && (
           <div className="space-y-3">
-            {activities.map((activity, index) => (
+            {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
               <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
             ))}
           </div>
@@ -170,7 +182,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
                 : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar'
             }`}
           >
-            {activities.map((activity, index) => (
+            {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
               <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
             ))}
           </div>

@@ -233,10 +233,17 @@ export function extractTextContent(contentJsonString) {
     let content;
     if (typeof contentJsonString === 'string') {
       try {
-        content = JSON.parse(contentJsonString);
+        // Sanitize the JSON string before parsing
+        // Remove any non-printable characters and ensure proper JSON formatting
+        const sanitizedJson = contentJsonString
+          .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+          .replace(/\\(?!["\\/bfnrt])/g, '\\\\'); // Escape backslashes properly
+        
+        content = JSON.parse(sanitizedJson);
       } catch (e) {
+        console.warn("JSON parsing failed, treating as plain text:", e.message);
         // If parsing fails, it might be a plain text string
-        return contentJsonString;
+        return contentJsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, ''); // Return sanitized text
       }
     } else {
       // It's already an object

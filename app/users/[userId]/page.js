@@ -12,8 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
 import Link from "next/link";
 import { useAuth } from "../../providers/AuthProvider";
+import { toast } from "sonner";
 import { Textarea } from "../../components/ui/textarea";
-import { toast } from "../../components/ui/use-toast";
 
 export default function UserProfilePage() {
   const { userId } = useParams();

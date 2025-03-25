@@ -91,7 +91,10 @@ export default function Home() {
           <TypeaheadSearch />
         </div>
         
-        {/* 1. My Pages */}
+        {/* 1. Recent Activity (moved to top) */}
+        <RecentActivity limit={4} />
+        
+        {/* 2. My Pages */}
         <div className="flex items-center justify-between mb-6">
           {isLoading ? (
             <div className="flex items-center space-x-2">
@@ -113,9 +116,6 @@ export default function Home() {
         </div>
         
         <AllPages />
-        
-        {/* 2. Recent Activity */}
-        <RecentActivity />
         
         {/* 3. My Groups */}
         <MyGroups />

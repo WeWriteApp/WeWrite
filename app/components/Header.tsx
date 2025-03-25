@@ -4,6 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthNav from "./AuthNav";
+import { Button } from "./ui/button";
+import { Plus } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
@@ -51,7 +53,7 @@ export default function Header() {
     <>
       <header ref={headerRef} className={`sticky top-0 z-50 ${isScrolled ? 'shadow-sm' : ''}`}>
         <div className={`relative border-b bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
-          <div className={`container flex items-center h-full px-6 transition-all duration-200`}>
+          <div className={`w-full flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
               {/* Auth navigation (sidebar toggle or login button) */}
               <AuthNav />
@@ -64,8 +66,15 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Empty div to maintain centering */}
-            <div className="flex-1" />
+            {/* New Page button (right side) */}
+            <div className="flex-1 flex justify-end">
+              <Button variant="outline" size="sm" asChild className="gap-1">
+                <Link href="/new">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">New Page</span>
+                </Link>
+              </Button>
+            </div>
           </div>
           {/* Scroll Progress Bar */}
           <div 

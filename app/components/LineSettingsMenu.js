@@ -21,6 +21,31 @@ import { useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
+/**
+ * LineSettingsMenu Component
+ * 
+ * A dropdown menu that allows users to switch between different paragraph modes.
+ * 
+ * Available Paragraph Modes:
+ * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
+ *    - Numbers positioned to the left of the text
+ *    - Clear indent for each paragraph
+ *    - Proper spacing between paragraphs
+ *    - Standard text size (1rem/16px)
+ * 
+ * 2. Dense Mode: Collapses all paragraphs for a more comfortable reading experience
+ *    - NO line breaks between paragraphs
+ *    - Text wraps continuously as if newline characters were temporarily deleted
+ *    - Paragraph numbers inserted inline within the continuous text
+ *    - Only a small space separates paragraphs
+ *    - Standard text size (1rem/16px)
+ * 
+ * Features:
+ * - Animated menu items using framer-motion
+ * - Visual icons to represent each paragraph mode
+ * - Persists selection in localStorage via LineSettingsContext
+ * - Consistent styling with the rest of the application
+ */
 export function LineSettingsMenu() {
   const { lineMode, setLineMode } = useLineSettings();
   const { theme } = useTheme();
