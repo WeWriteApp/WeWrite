@@ -25,7 +25,8 @@ import {
   Unlock, 
   AlertTriangle,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { RecentPagesContext } from "../contexts/RecentPagesContext";
@@ -74,6 +75,7 @@ export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState([]);
+  const [editorError, setEditorError] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPublic, setIsPublic] = useState(false);
@@ -173,9 +175,10 @@ export default function SinglePageView({ params }) {
               : contentString;
             
             setEditorState(parsedContent);
+            setEditorError(null); // Clear any previous errors
           } catch (error) {
             console.error("Error parsing content:", error);
-            setEditorState([{ type: "paragraph", children: [{ text: "Error loading content" }] }]);
+            setEditorError("There was an error loading the editor. Please try refreshing the page.");
           }
         }
         
@@ -202,6 +205,27 @@ export default function SinglePageView({ params }) {
       }
     }
   }, [page, addRecentPage, recentPages]);
+
+  useEffect(() => {
+    if (page && page.content) {
+      try {
+        const contentString = typeof page.content === 'string' 
+          ? page.content 
+          : JSON.stringify(page.content);
+          
+        const parsedContent = contentString.startsWith('[') 
+          ? JSON.parse(contentString) 
+          : contentString;
+        
+        setEditorState(parsedContent);
+        setEditorError(null); // Clear any previous errors
+      } catch (error) {
+        console.error("Error parsing content:", error);
+        setEditorError("There was an error loading the editor. Please try refreshing the page.");
+        setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
+      }
+    }
+  }, [page]);
 
   const copyLinkToClipboard = () => {
     if (typeof window !== 'undefined') {
@@ -404,6 +428,7 @@ export default function SinglePageView({ params }) {
               title={title}
               setTitle={setTitle}
               current={editorState}
+              editorError={editorError}
             />
           </PageProvider>
         ) : (
@@ -692,7 +717,10 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
         
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
           </DialogClose>
           <Button 
             onClick={handleAddToPage} 

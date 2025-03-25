@@ -18,6 +18,7 @@ const EditPage = ({
   current,
   title,
   setTitle,
+  editorError
 }) => {
   const { setIsEditMode } = usePage();
   const [editorState, setEditorState] = useState(() => {
@@ -174,11 +175,18 @@ const EditPage = ({
 
         <div className="space-y-6 rounded-xl">
           <div className="space-y-0">
-            <SlateEditor
-              ref={editorRef}
-              initialEditorState={editorState}
-              setEditorState={setEditorState}
-            />
+            {editorError ? (
+              <div className="bg-destructive/10 p-4 rounded-md mb-4">
+                <p className="text-destructive font-medium">{editorError}</p>
+                <p className="text-sm text-muted-foreground mt-2">Try refreshing the page or contact support if this issue persists.</p>
+              </div>
+            ) : (
+              <SlateEditor
+                ref={editorRef}
+                initialEditorState={editorState}
+                setEditorState={setEditorState}
+              />
+            )}
           </div>
         </div>
       </div>
