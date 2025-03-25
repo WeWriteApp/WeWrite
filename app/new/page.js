@@ -121,40 +121,14 @@ const Form = ({ Page, setPage, isReply }) => {
                       ? JSON.parse(originalPage.content) 
                       : originalPage.content;
                     
-                    // Extract a summary from the original content
-                    let contentSummary = "";
-                    if (Array.isArray(originalContent)) {
-                      // Find the first paragraph with text
-                      const firstPara = originalContent.find(node => 
-                        node.type === 'paragraph' && 
-                        node.children && 
-                        node.children.some(child => child.text && child.text.trim().length > 0)
-                      );
-                      
-                      if (firstPara) {
-                        contentSummary = firstPara.children
-                          .map(child => child.text || '')
-                          .join('')
-                          .slice(0, 150);
-                          
-                        if (contentSummary.length === 150) {
-                          contentSummary += '...';
-                        }
-                      }
-                    }
+                    // Keep the existing blockquote text which should already contain
+                    // "Reply to [page title] by [username]"
+                    // No need to modify it as it's already set correctly in PageActions
                     
-                    // Update the blockquote with the content summary
-                    if (contentSummary) {
-                      parsedContent[blockquoteIndex] = {
-                        type: 'blockquote',
-                        children: [{ text: contentSummary }]
-                      };
-                      
-                      // Update the initialContent
-                      setInitialContent([...parsedContent]);
-                      
-                      console.log("Updated reply content with original page summary:", parsedContent);
-                    }
+                    // Update the initialContent
+                    setInitialContent([...parsedContent]);
+                    
+                    console.log("Updated reply content with original page reference:", parsedContent);
                   } catch (error) {
                     console.error("Error parsing original page content:", error);
                   }

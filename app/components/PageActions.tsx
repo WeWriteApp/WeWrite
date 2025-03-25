@@ -121,8 +121,47 @@ export function PageActions({
       console.error("Error getting user profile:", error);
     }
 
+    // Create initial content with properly formatted links to both the page and the author
+    const initialContent = [
+      {
+        type: "paragraph",
+        children: [
+          { text: `Reply to ` },
+          {
+            type: "link",
+            url: `/pages/${page.id}`,
+            children: [{ text: page.title || "Untitled" }]
+          },
+          { text: ` by ` },
+          {
+            type: "link",
+            url: `/profile/${page.userId || "anonymous"}`,
+            children: [{ text: page.username || "Anonymous" }]
+          },
+          { text: "" }
+        ]
+      },
+      {
+        type: "paragraph",
+        children: [{ text: "" }]
+      },
+      {
+        type: "paragraph",
+        children: [{ text: "" }]
+      }
+    ];
+
     // Navigate to the new page creation form with pre-filled values
-    router.push(`/create?title=${encodeURIComponent(newPageTitle)}&username=${encodeURIComponent(username)}&replyTo=${page.id}`);
+    try {
+      const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
+      const encodedTitle = encodeURIComponent(newPageTitle);
+      
+      console.log("Navigating to new page with pre-filled content:", initialContent);
+      router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}&isReply=true`);
+    } catch (error) {
+      console.error("Error navigating to new page:", error);
+      toast.error("Failed to create reply");
+    }
   };
 
   return (
