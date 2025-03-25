@@ -1,14 +1,12 @@
-"use client";
-import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
+import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import {
   createEditor,
-  Editor,
   Transforms,
-  Range,
+  Editor,
   Element as SlateElement,
-  Node,
   Path,
-  Point
+  Range,
+  Node,
 } from "slate";
 import { Editable, withReact, useSlate, useSelected, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
@@ -20,9 +18,7 @@ import { Search, X, Link as LinkIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { motion } from "framer-motion";
-import Link from "next/link";
-import "../styles/shake-animation.css"; // Import the shake animation CSS
-import { toast } from "../components/ui/use-toast"; // Correct import for toast
+import "../styles/shake-animation.css";
 
 const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
@@ -34,7 +30,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const editableRef = useRef(null);
   const [lineCount, setLineCount] = useState(0);
   const [contentInitialized, setContentInitialized] = useState(false);
-  const editorContainerRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -77,58 +72,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           setEditorState(initialContent);
         }
         
-        // Force a re-render of the editor with the new content
-        const timeout = setTimeout(() => {
-          editor.children = initialContent;
-          Transforms.select(editor, Editor.start(editor, []));
-        }, 100);
-        
         setContentInitialized(true);
-        
-        return () => clearTimeout(timeout);
       } catch (error) {
         console.error("Error setting editor content from initialContent:", error);
       }
     }
-  }, [initialContent, setEditorState, contentInitialized, editor]);
+  }, [initialContent, setEditorState, contentInitialized]);
 
-  // Add effect to stabilize editor height
-  useEffect(() => {
-    const editable = editableRef.current;
-    if (!editable) return;
-    
-    // Set initial minimum height
-    editable.style.minHeight = '300px';
-    
-    // Create a ResizeObserver to monitor height changes
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        const height = entry.contentRect.height;
-        // Only update if height increases
-        if (height > 300) {
-          editable.style.minHeight = `${height}px`;
-        }
-      }
-    });
-    
-    // Start observing
-    resizeObserver.observe(editable);
-    
-    // Clean up
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  const [initialValue, setInitialValue] = useState(() => {
-    console.log("Initializing editor with:", initialContent || initialEditorState || "default empty paragraph");
-    return initialContent || initialEditorState || [
-      {
-        type: "paragraph",
-        children: [{ text: "" }],
-      },
-    ];
-  });
+  const [initialValue, setInitialValue] = useState(initialContent || initialEditorState || [
+    {
+      type: "paragraph",
+      children: [{ text: "" }],
+    },
+  ]);
 
   // onchange handler
   const onChange = (newValue) => {
@@ -147,6 +103,50 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     // Shift+enter should do nothing
     if (event.key === 'Enter' && event.shiftKey) {
       event.preventDefault();
+      return;
+    }
+
+    // Regular enter should create a newline, but prevent consecutive empty paragraphs
+    if (event.key === 'Enter') {
+      const { selection } = editor;
+      
+      if (selection && Range.isCollapsed(selection)) {
+        const [node, path] = Editor.node(editor, selection);
+        const [parent] = Editor.parent(editor, path);
+        
+        // Check if current node is in a paragraph and is empty or only contains whitespace
+        const isEmptyParagraph = 
+          SlateElement.isElement(parent) && 
+          parent.type === 'paragraph' && 
+          Node.string(parent).trim() === '';
+        
+        // Check if previous node is also an empty paragraph
+        let prevNodeIsEmpty = false;
+        
+        if (path[0] > 0) {
+          const prevPath = [path[0] - 1];
+          
+          try {
+            const [prevNode] = Editor.node(editor, prevPath);
+            
+            if (SlateElement.isElement(prevNode) && 
+                prevNode.type === 'paragraph' && 
+                Node.string(prevNode).trim() === '') {
+              prevNodeIsEmpty = true;
+            }
+          } catch (e) {
+            // Path might not exist, ignore
+          }
+        }
+        
+        // If current paragraph is empty and previous paragraph is also empty, prevent new line
+        if (isEmptyParagraph && prevNodeIsEmpty) {
+          event.preventDefault();
+          return;
+        }
+      }
+      
+      // Allow default behavior which creates a newline
       return;
     }
 
@@ -320,7 +320,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     setShowLinkEditor(false);
   };
 
-  const renderElement = useCallback(props => {
+  const renderElement = (props) => {
     const { attributes, children, element } = props;
     
     switch (element.type) {
@@ -347,52 +347,32 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           </p>
         );
     }
-  }, [editor]);
-
-  const renderLeaf = useCallback(props => {
-    let { attributes, children, leaf } = props;
-    
-    if (leaf.bold) {
-      children = <strong>{children}</strong>;
-    }
-    
-    if (leaf.italic) {
-      children = <em>{children}</em>;
-    }
-    
-    if (leaf.underline) {
-      children = <u>{children}</u>;
-    }
-    
-    return <span {...attributes}>{children}</span>;
-  }, []);
+  };
 
   return (
     <LineSettingsProvider>
       <motion.div 
-        ref={editorContainerRef}
         className="relative rounded-lg bg-background"
-        style={{ minHeight: '300px' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
       >
-        <div className="editor-container" style={{ minHeight: '300px' }}>
-          <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
-            <Editable
-              ref={editableRef}
-              className="outline-none p-4 prose prose-sm max-w-none"
-              style={{ minHeight: '300px' }}
-              renderElement={renderElement}
-              renderLeaf={renderLeaf}
-              placeholder="Start writing..."
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-          </Slate>
-        </div>
+        <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
+          <div className="flex">
+            <div className="flex-grow">
+              <div className="relative">
+                <EditorContent 
+                  editor={editor} 
+                  handleKeyDown={handleKeyDown} 
+                  renderElement={renderElement} 
+                  editableRef={editableRef} 
+                />
+              </div>
+            </div>
+          </div>
+        </Slate>
       </motion.div>
-      
+
       {showLinkEditor && (
         <LinkEditor 
           position={linkEditorPosition} 
@@ -419,77 +399,8 @@ function isUrl(string) {
 }
 
 const withInlines = (editor) => {
-  const { insertData, insertText, isInline, normalizeNode, insertBreak } = editor;
+  const { insertData, insertText, isInline, normalizeNode } = editor
 
-  // Override insertBreak to prevent consecutive empty paragraphs
-  editor.insertBreak = () => {
-    const { selection } = editor;
-    
-    if (selection) {
-      const [currentNode, currentPath] = Editor.node(editor, selection);
-      const [parentNode] = Editor.parent(editor, currentPath);
-      
-      // Check if current node is in an empty paragraph
-      const isEmptyParagraph = 
-        SlateElement.isElement(parentNode) && 
-        parentNode.type === 'paragraph' && 
-        Node.string(parentNode).trim() === '';
-      
-      // Check if previous node is also an empty paragraph
-      let prevNodeIsEmpty = false;
-      
-      if (currentPath[0] > 0) {
-        try {
-          const prevPath = [currentPath[0] - 1];
-          const [prevNode] = Editor.node(editor, prevPath);
-          
-          if (SlateElement.isElement(prevNode) && 
-              prevNode.type === 'paragraph' && 
-              Node.string(prevNode).trim() === '') {
-            prevNodeIsEmpty = true;
-          }
-        } catch (e) {
-          // Path might not exist, ignore
-        }
-      }
-      
-      // If current paragraph is empty and previous paragraph is also empty, show warning
-      if (isEmptyParagraph && prevNodeIsEmpty) {
-        // Show toast notification with action button
-        toast.error("One newline at a time!", {
-          description: "Please use only one newline at a time.",
-          action: {
-            label: "Why?",
-            onClick: () => window.open("/pages/LAN5SCiBX67EGALQGe28", "_blank")
-          },
-          position: "top-right",
-          duration: 4000,
-        });
-        
-        // Add shake animation to editor
-        if (editorContainerRef.current) {
-          editorContainerRef.current.classList.add('shake-animation');
-          setTimeout(() => {
-            if (editorContainerRef.current) {
-              editorContainerRef.current.classList.remove('shake-animation');
-            }
-          }, 500);
-        }
-        
-        // Remove the empty paragraph
-        if (currentPath[0] > 0) {
-          Transforms.removeNodes(editor, { at: currentPath });
-        }
-        
-        return; // Prevent the insertion of a new line
-      }
-    }
-    
-    // Default behavior for inserting a break
-    insertBreak();
-  };
-
-  // Restore the original functions that were accidentally removed
   editor.isInline = element => {
     return ['link'].includes(element.type) || isInline(element)
   }
@@ -511,55 +422,34 @@ const withInlines = (editor) => {
     }
   }
 
-  // Add custom normalizer to ensure links have valid url properties and prevent consecutive empty paragraphs
+  // Add custom normalizer to ensure links have valid url properties
   editor.normalizeNode = entry => {
     const [node, path] = entry;
 
-    // Normalize links to ensure they have valid url properties
+    // Check if the element is a link
     if (SlateElement.isElement(node) && node.type === 'link') {
-      // Handle link normalization
-      if (!node.url || typeof node.url !== 'string') {
-        Transforms.unwrapNodes(editor, { at: path });
-        return;
-      }
-    }
-
-    // Check for consecutive empty paragraphs during normalization
-    if (SlateElement.isElement(node) && node.type === 'paragraph' && path.length === 1) {
-      const nodeIndex = path[0];
-      
-      // Check if this paragraph is empty
-      const isEmptyParagraph = Node.string(node).trim() === '';
-      
-      // Check if previous node is also an empty paragraph
-      let prevNodeIsEmpty = false;
-      
-      if (nodeIndex > 0) {
-        try {
-          const prevPath = [nodeIndex - 1];
-          const [prevNode] = Editor.node(editor, prevPath);
-          
-          if (SlateElement.isElement(prevNode) && 
-              prevNode.type === 'paragraph' && 
-              Node.string(prevNode).trim() === '') {
-            
-            prevNodeIsEmpty = true;
-          }
-        } catch (e) {
-          // Path might not exist, ignore
+      // Ensure link has a url property
+      if (!node.url) {
+        // If no URL, convert to normal text or provide a default
+        if (node.href) {
+          // Handle legacy href attribute
+          Transforms.setNodes(
+            editor,
+            { url: node.href },
+            { at: path }
+          );
+        } else {
+          // Remove the link formatting if no URL available
+          Transforms.unwrapNodes(editor, { at: path });
         }
-      }
-      
-      // If current paragraph is empty and previous paragraph is also empty, remove this paragraph
-      if (isEmptyParagraph && prevNodeIsEmpty) {
-        Transforms.removeNodes(editor, { at: path });
-        return;
+        return; // Return early as we've handled this node
       }
     }
 
     // Fall back to the original normalizeNode
     normalizeNode(entry);
-  };
+  }
+
   return editor
 }
 
@@ -1000,7 +890,7 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
         <TooltipTrigger asChild>
           <button
             onMouseDown={onMouseDown}
-            className="p-1 rounded hover:bg-accent mr-1"
+            className="p-1 rounded-full hover:bg-accent mr-1"
           >
             {icon}
           </button>
@@ -1013,22 +903,16 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
   );
 };
 
-const Leaf = props => {
-  let { attributes, children, leaf } = props;
-  
-  if (leaf.bold) {
-    children = <strong>{children}</strong>;
-  }
-  
-  if (leaf.italic) {
-    children = <em>{children}</em>;
-  }
-  
-  if (leaf.underline) {
-    children = <u>{children}</u>;
-  }
-  
-  return <span {...attributes}>{children}</span>;
-};
+const Leaf = ({ attributes, children, leaf }) => {
+  return (
+    <span
+      {...attributes}
+      style={{ fontWeight: leaf.bold ? 'bold' : 'normal' }}
+      className="transition-colors"
+    >
+      {children}
+    </span>
+  )
+}
 
 export default SlateEditor;

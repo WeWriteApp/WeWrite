@@ -30,6 +30,7 @@ import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import Head from "next/head";
 import PageHeader from "./PageHeader";
+import PageFooter from "./PageFooter";
 import { LoggingProvider } from "../providers/LoggingProvider";
 import { PageProvider } from "../contexts/PageContext";
 import { LineSettingsProvider } from '../contexts/LineSettingsContext';
@@ -56,7 +57,6 @@ import {
 } from './ui/command';
 import EditPage from "./EditPage";
 import ActionRow from "./PageActionRow";
-import PageFooter from "./PageFooter";
 
 export default function SinglePageView({ params }) {
   const [page, setPage] = useState(null);
@@ -64,19 +64,16 @@ export default function SinglePageView({ params }) {
   const [editorState, setEditorState] = useState([]);
   const [isDeleted, setIsDeleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPublic, setIsPublic] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [isGroupMember, setIsGroupMember] = useState(false);
-  const [error, setError] = useState(null);
-  const [pageFullyRendered, setPageFullyRendered] = useState(false);
-  const [title, setTitle] = useState(null);
+  const [isPublic, setIsPublic] = useState(false);
   const [groupId, setGroupId] = useState(null);
   const [groupName, setGroupName] = useState(null);
   const [lineViewMode, setLineViewMode] = useState('normal');
   const [scrollDirection, setScrollDirection] = useState('none');
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [error, setError] = useState(null);
+  const [pageFullyRendered, setPageFullyRendered] = useState(false);
+  const [title, setTitle] = useState(null);
   const { user } = useContext(AuthContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
   const { toast } = useToast();
@@ -136,28 +133,24 @@ export default function SinglePageView({ params }) {
     };
   }, [lastScrollY]);
 
-  // Use keyboard shortcuts for editing
+  // Use keyboard shortcuts - moved back to top level
   useKeyboardShortcuts({
     isEditing,
-    isSaving,
     setIsEditing,
+    // Only allow editing if:
     // 1. Page is loaded (!isLoading)
     // 2. Page exists (page !== null)
     // 3. Page is public (isPublic)
     // 4. Page isn't deleted (!isDeleted)
-    // 5. User owns the page OR is a member of the group the page belongs to
+    // 5. User owns the page
     canEdit: Boolean(
       !isLoading &&
       page !== null &&
       isPublic &&
       !isDeleted &&
       user?.uid &&
-      (
-        // User is the owner of the page
-        (page?.userId && user.uid === page.userId) ||
-        // OR user is a member of the group the page belongs to
-        isGroupMember
-      )
+      page?.userId &&
+      user.uid === page.userId
     )
   });
 
@@ -181,52 +174,64 @@ export default function SinglePageView({ params }) {
         
         onValue(userRef, (snapshot) => {
           const userData = snapshot.val();
-          if (userData) {
-            setPage({
-              ...pageData,
-              username: userData.username,
-              userPhotoURL: userData.photoURL,
-              links: links || []
+          if (userData && userData.username) {
+            pageData.username = userData.username;
+          } else {
+            // If username not found in realtime DB, we should try to get it from Firestore
+            // This is a fallback mechanism
+            import('../firebase/auth').then(({ getUserProfile }) => {
+              if (getUserProfile && pageData.userId) {
+                getUserProfile(pageData.userId).then(profile => {
+                  if (profile && profile.username) {
+                    pageData.username = profile.username;
+                  } else if (profile && profile.displayName) {
+                    pageData.username = profile.displayName;
+                  }
+                  
+                  // Set state with the fetched data including username
+                  setPage({...pageData});
+                }).catch(err => {
+                  console.error("Error fetching user profile:", err);
+                });
+              }
             });
+          }
+          
+          // Set state with the fetched data
+          setPage(pageData);
+          setEditorState(versionData.content);
+          setTitle(pageData.title);
+
+          // Check and set groupId if it exists
+          if (pageData.groupId) {
+            setGroupId(pageData.groupId);
             
-            // Set owner status
-            setIsOwner(user?.uid === pageData.userId);
-            
-            // Check if the page belongs to a group and if the user is a member
-            if (pageData.groupId && user?.uid) {
-              const groupRef = ref(db, `groups/${pageData.groupId}`);
-              onValue(groupRef, (groupSnapshot) => {
-                const groupData = groupSnapshot.val();
-                if (groupData && groupData.members && groupData.members[user.uid]) {
-                  setIsGroupMember(true);
-                } else {
-                  setIsGroupMember(false);
-                }
-              });
-            } else {
-              setIsGroupMember(false);
-            }
-            
-            setIsPublic(pageData.isPublic !== false);
-            setIsDeleted(pageData.isDeleted === true);
-            setIsLoading(false);
-            
-            // Add to recent pages
-            if (addRecentPage && pageData.title) {
-              addRecentPage({
-                id: params.id,
-                title: pageData.title,
-                lastVisited: new Date().toISOString()
-              });
-            }
+            // Get group data to fetch the group name
+            const groupRef = ref(db, `groups/${pageData.groupId}`);
+            onValue(groupRef, (groupSnapshot) => {
+              const groupData = groupSnapshot.val();
+              if (groupData && groupData.name) {
+                setGroupName(groupData.name);
+              }
+            });
+          }
+
+          // Check if the current user is the owner or if the page is public
+          if (user && user.uid === pageData.userId) {
+            setIsPublic(true);
+          } else {
+            setIsPublic(pageData.isPublic);
           }
         });
-      } else {
+
+        // Data has loaded
         setIsLoading(false);
+      } else {
+        // Handle case where the page doesn't exist or was deleted
         setPage(null);
-        setError("Page not found");
+        setIsLoading(false);
       }
-    }, user?.uid);
+    }, user?.uid); // Pass the user ID for access control
 
     return () => unsubscribe();
   }, [params.id, user]);
@@ -436,19 +441,6 @@ export default function SinglePageView({ params }) {
     );
   }
 
-  // Edit button should be visible if:
-  // 1. User is logged in
-  // 2. Page exists and is loaded
-  // 3. Page is not deleted
-  // 4. User is the owner OR is a member of the page's group
-  const showEditButton = Boolean(
-    user?.uid && 
-    page && 
-    !isLoading && 
-    !isDeleted && 
-    (isOwner || isGroupMember)
-  );
-
   return (
     <Layout>
       <Head>
@@ -507,14 +499,11 @@ export default function SinglePageView({ params }) {
                     />
                   </div>
                 )}
-                
-                {/* Page Footer - Show for all users */}
-                <PageFooter 
-                  pageId={page.id} 
-                  pageTitle={title} 
-                  pageUserId={page.userId || "anonymous"} 
-                  pageUsername={page.username || "Anonymous"} 
-                />
+                {user && user.uid !== page.userId && (
+                  <div className="mt-8">
+                    <PageInteractionButtons page={page} username={page?.username || ""} />
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -527,6 +516,7 @@ export default function SinglePageView({ params }) {
           </div>
         </div>
       )}
+      <PageFooter />
     </Layout>
   );
 }
@@ -534,7 +524,7 @@ export default function SinglePageView({ params }) {
 export function PageInteractionButtons({ page, username }) {
   const router = useRouter();
   const { user } = useContext(AuthContext);
-  const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
+  const [showAddToPageDialog, setShowAddToPageDialog] = useState(false);
   const { toast } = useToast();
   const [lineViewMode, setLineViewMode] = useState("normal");
   
@@ -618,7 +608,7 @@ export function PageInteractionButtons({ page, username }) {
           {
             type: "link",
             url: `/profile/${page.userId || "anonymous"}`,
-            children: [{ text: page.username || "Anonymous" }]
+            children: [{ text: page.username || page.author || "Anonymous" }]
           },
           { text: "" }
         ]
@@ -667,6 +657,38 @@ export function PageInteractionButtons({ page, username }) {
   
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row gap-2 px-4 sm:px-0">
+        {/* Copy Link Button */}
+        <Button
+          variant="outline"
+          onClick={handleCopyLink}
+          className="w-full sm:w-auto h-10 flex items-center gap-2 justify-center"
+        >
+          <Link2 className="h-4 w-4" />
+          Copy link
+        </Button>
+        
+        {/* Reply to Page Button */}
+        <Button
+          variant="outline"
+          onClick={handleReplyToPage}
+          className="w-full sm:w-auto h-10 flex items-center gap-2 justify-center"
+        >
+          <Reply className="h-4 w-4" />
+          Reply to page
+        </Button>
+        
+        {/* Add to Page Button */}
+        <Button
+          variant="outline"
+          onClick={() => setShowAddToPageDialog(true)}
+          className="w-full sm:w-auto h-10 flex items-center gap-2 justify-center"
+        >
+          <Plus className="h-4 w-4" />
+          Add to page
+        </Button>
+      </div>
+      
       {/* Page Layout Radio Group */}
       <div className="mt-2 px-4 sm:px-0">
         <div className="mb-2">
@@ -689,8 +711,8 @@ export function PageInteractionButtons({ page, username }) {
       </div>
       
       <AddToPageDialog 
-        open={false} 
-        onOpenChange={() => {}}
+        open={showAddToPageDialog} 
+        onOpenChange={setShowAddToPageDialog}
         pageToAdd={page}
       />
     </div>
@@ -820,13 +842,7 @@ function AddToPageDialog({ open, onOpenChange, pageToAdd }) {
               url: `/pages/${pageToAdd.id}`,
               children: [{ text: pageToAdd.title || "Untitled" }]
             },
-            { text: ` by ` },
-            {
-              type: "link",
-              url: `/profile/${pageToAdd.userId || "anonymous"}`,
-              children: [{ text: pageToAdd.username || "Anonymous" }]
-            },
-            { text: "" }
+            { text: ` by ${pageToAdd.username || "Anonymous"}` }
           ]
         });
         
