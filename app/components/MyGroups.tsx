@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { ChevronRight, Users, FileText, Plus, Crown } from "lucide-react";
+import { ChevronRight, Users, FileText, Plus } from "lucide-react";
 import { useMediaQuery } from "../hooks/use-media-query";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
@@ -181,8 +181,7 @@ export default function MyGroups() {
                 </CardHeader>
                 <CardContent className="pb-2">
                   <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <Crown className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                    <span>{group.ownerUsername}</span>
+                    <span>by {group.ownerUsername}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <TooltipProvider>
@@ -239,8 +238,7 @@ export default function MyGroups() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <Crown className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                    <span>{group.ownerUsername}</span>
+                    <span>by {group.ownerUsername}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <TooltipProvider>
