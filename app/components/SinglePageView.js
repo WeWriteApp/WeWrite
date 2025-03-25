@@ -30,6 +30,7 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import Head from "next/head";
 import PageHeader from "./PageHeader";
 import PageFooter from "./PageFooter";
+import SiteFooter from "./SiteFooter";
 import { LoggingProvider } from "../providers/LoggingProvider";
 import { PageProvider } from "../contexts/PageContext";
 import { LineSettingsProvider } from '../contexts/LineSettingsContext';
@@ -508,7 +509,13 @@ export default function SinglePageView({ params }) {
           </>
         )}
       </div>
-      <PageFooter />
+      <PageFooter 
+        page={page}
+        isOwner={user?.uid === page?.userId}
+        isEditing={isEditing}
+        setIsEditing={setIsEditing}
+      />
+      <SiteFooter />
     </Layout>
   );
 }

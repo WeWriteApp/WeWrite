@@ -1,27 +1,19 @@
 "use client";
 
 import React from "react";
-import SiteFooter from "./SiteFooter";
+import { PageActions } from "./PageActions";
 
-export default function PageFooter() {
+export default function PageFooter({ page, isOwner, isEditing, setIsEditing }) {
+  if (!page) return null;
+  
   return (
-    <>
-      <div className="mt-8 py-4 border-t border-border">
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-            <p>Last updated: {new Date().toLocaleDateString()}</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Report Issue
-            </button>
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Share
-            </button>
-          </div>
-        </div>
-      </div>
-      <SiteFooter />
-    </>
+    <div className="mt-8 border-t border-border pt-4">
+      <PageActions 
+        page={page}
+        isOwner={isOwner}
+        isEditing={isEditing}
+        setIsEditing={setIsEditing}
+      />
+    </div>
   );
 }

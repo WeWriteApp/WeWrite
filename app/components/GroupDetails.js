@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
-import PageFooter from "./PageFooter";
+import SiteFooter from "./SiteFooter";
 
 export default function GroupDetails({ group }) {
   const { theme } = useTheme();
@@ -210,7 +210,7 @@ export default function GroupDetails({ group }) {
         </div>
       </div>
       
-      <PageFooter />
+      <SiteFooter />
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
