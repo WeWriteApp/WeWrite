@@ -50,6 +50,7 @@ import {
   CommandList 
 } from './ui/command';
 import EditPage from "./EditPage";
+import { ensurePageUsername } from "../utils/userUtils";
 
 /**
  * SinglePageView Component
@@ -137,94 +138,55 @@ export default function SinglePageView({ params }) {
   });
 
   useEffect(() => {
-    if (!params?.id) return;
-
-    const unsubscribe = listenToPageById(params.id, (data) => {
-      if (!data) {
-        setIsLoading(false);
-        setIsDeleted(true);
-        return;
-      }
-
-      // Check if data has the expected structure
-      if (data.error) {
-        setError(typeof data.error === 'object' ? data.error.message : data.error);
-        setIsLoading(false);
-        return;
-      }
-
-      // Extract page data from the response
-      const pageData = data.pageData || data;
+    if (params.id) {
+      setIsLoading(true);
       
-      if (!pageData) {
-        setIsLoading(false);
-        setIsDeleted(true);
-        return;
-      }
-
-      setPage(pageData);
-      setIsPublic(pageData.isPublic || false);
-      setGroupId(pageData.groupId || null);
-      setTitle(pageData.title || "Untitled");
-      
-      // If we have version data, set the editor state
-      if (data.versionData && data.versionData.content) {
-        setEditorState(data.versionData.content);
-      }
-      
-      // Add to recent pages
-      if (addRecentPage) {
-        addRecentPage({
-          id: params.id,
-          title: pageData.title || "Untitled",
-          isPublic: pageData.isPublic || false,
-          userId: pageData.userId,
-          groupId: pageData.groupId,
-          lastAccessed: new Date().toISOString()
-        });
-      }
-
-      // If the page belongs to a group, check group access
-      if (pageData.groupId) {
-        const rtdb = getDatabase();
-        const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
+      const unsubscribe = listenToPageById(params.id, async (data) => {
+        if (data.error) {
+          setError(data.error);
+          setIsLoading(false);
+          return;
+        }
         
-        onValue(groupRef, (snapshot) => {
-          if (snapshot.exists()) {
-            const groupData = snapshot.val();
-            setGroupName(groupData.name || "Unknown Group");
+        let pageData = data.pageData || data;
+        
+        // Ensure the page has a valid username using our utility function
+        pageData = await ensurePageUsername(pageData);
+        
+        console.log("Page data with ensured username:", pageData);
+        
+        setPage(pageData);
+        setIsPublic(pageData.isPublic || false);
+        setGroupId(pageData.groupId || null);
+        setGroupName(pageData.groupName || null);
+        
+        // Set page title for document title
+        if (pageData.title) {
+          setTitle(pageData.title);
+        }
+        
+        if (data.versionData) {
+          try {
+            const contentString = data.versionData.content;
+            const parsedContent = typeof contentString === 'string' 
+              ? JSON.parse(contentString) 
+              : contentString;
             
-            // Check if group is private
-            const isPrivate = !groupData.isPublic;
-            setGroupIsPrivate(isPrivate);
-            
-            if (isPrivate) {
-              // Check if user has access to this private group
-              let userHasAccess = false;
-              
-              // If user is logged in
-              if (user) {
-                // User is the group owner
-                if (groupData.owner === user.uid) {
-                  userHasAccess = true;
-                }
-                // User is a group member
-                else if (groupData.members && groupData.members[user.uid]) {
-                  userHasAccess = true;
-                }
-              }
-              
-              setHasGroupAccess(userHasAccess);
-            }
+            setEditorState(parsedContent);
+          } catch (error) {
+            console.error("Error parsing content:", error);
+            setEditorState([{ type: "paragraph", children: [{ text: "Error loading content" }] }]);
           }
-        });
-      }
-
-      setIsLoading(false);
-    }, user?.uid);
-
-    return () => unsubscribe();
-  }, [params?.id, user, addRecentPage]);
+        }
+        
+        setIsLoading(false);
+      });
+      
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [params.id]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {

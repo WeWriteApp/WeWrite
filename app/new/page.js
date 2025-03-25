@@ -24,7 +24,10 @@ const New = () => {
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
   const { user } = useContext(AuthContext);
-  const username = user?.displayName || (user?.username) || 'Anonymous';
+  
+  // Get username from URL parameters if available (for replies), otherwise use user data
+  const urlUsername = searchParams.get('username');
+  const username = urlUsername || user?.displayName || user?.username || 'Anonymous';
   
   return (
     <DashboardLayout>
@@ -69,9 +72,12 @@ const Form = ({ Page, setPage, isReply }) => {
   const [error, setError] = useState(null);
   const analytics = useWeWriteAnalytics();
 
+  // Get username from URL parameters if available (for replies), otherwise use user data
+  const urlUsername = searchParams.get('username');
+  const username = urlUsername || user?.displayName || user?.username || 'Anonymous';
+
   let updateTime = new Date().toISOString();
 
-  // Get initial title and content from URL parameters
   useEffect(() => {
     const titleParam = searchParams.get('title');
     const contentParam = searchParams.get('initialContent');
@@ -150,42 +156,64 @@ const Form = ({ Page, setPage, isReply }) => {
     setIsSaving(true);
     setError(null);
 
+    if (!user) {
+      setError("You must be logged in to create a page");
+      setIsSaving(false);
+      return;
+    }
+
     if (!Page.title) {
       setError("Please add a title");
       setIsSaving(false);
       return;
     }
 
-    const data = {
-      ...Page,
-      content: JSON.stringify(editorState),
-      userId: user.uid,
-      username: user?.displayName || (user?.username) || 'Anonymous',
-      lastModified: updateTime,
-      isReply: isReply || false, // Add flag to indicate this is a reply page
-    };
+    try {
+      // Get the username from URL parameters if available (for replies)
+      const urlUsername = searchParams.get('username');
+      console.log("Username from URL:", urlUsername);
+      console.log("User displayName:", user.displayName);
+      console.log("User username:", user.username);
+      
+      // Use the username from URL if available, otherwise fallback to user data
+      const username = urlUsername || user.displayName || user.username || 'Anonymous';
+      console.log("Final username to use:", username);
 
-    const res = await createPage(data);
-    if (res) {
-      // Track with existing ReactGA for backward compatibility
-      ReactGA.event({
-        category: "Page",
-        action: "Add new page",
-        label: Page.title,
-      });
-      
-      // Track with new analytics system
-      analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
-        label: Page.title,
-        page_id: res,
-        is_reply: !!isReply,
-      });
-      
+      const data = {
+        ...Page,
+        content: JSON.stringify(editorState),
+        userId: user.uid,
+        username: username,
+        lastModified: updateTime,
+        isReply: isReply || false, // Add flag to indicate this is a reply page
+      };
+
+      const res = await createPage(data);
+      if (res) {
+        // Track with existing ReactGA for backward compatibility
+        ReactGA.event({
+          category: "Page",
+          action: "Add new page",
+          label: Page.title,
+        });
+        
+        // Track with new analytics system
+        analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+          label: Page.title,
+          page_id: res,
+          is_reply: !!isReply,
+        });
+        
+        setIsSaving(false);
+        router.push(`/pages/${res}`);
+      } else {
+        setIsSaving(false);
+        console.log("Error creating page");
+      }
+    } catch (error) {
       setIsSaving(false);
-      router.push(`/pages/${res}`);
-    } else {
-      setIsSaving(false);
-      console.log("Error creating page");
+      console.error("Error creating page:", error);
+      setError("Failed to create page: " + error.message);
     }
   };
 

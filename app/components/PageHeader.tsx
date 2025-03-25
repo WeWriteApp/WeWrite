@@ -10,6 +10,7 @@ import { Sidebar } from "./ui/sidebar";
 import { PageMenu } from "./PageMenu";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { getUsernameById } from "../utils/userUtils";
 
 export interface PageHeaderProps {
   title?: string;
@@ -37,6 +38,28 @@ export default function PageHeader({
   const headerRef = React.useRef<HTMLDivElement>(null);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const tooltipTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
+
+  // Fetch username if not provided but userId is available
+  React.useEffect(() => {
+    const fetchUsername = async () => {
+      if (userId && (!username || username === "Anonymous")) {
+        try {
+          const fetchedUsername = await getUsernameById(userId);
+          if (fetchedUsername) {
+            setDisplayUsername(fetchedUsername);
+            console.log("Username fetched for PageHeader:", fetchedUsername);
+          }
+        } catch (error) {
+          console.error("Error fetching username for header:", error);
+        }
+      } else if (username) {
+        setDisplayUsername(username);
+      }
+    };
+
+    fetchUsername();
+  }, [userId, username]);
 
   // Calculate and update header height when component mounts or when title/isScrolled changes
   React.useEffect(() => {
@@ -208,10 +231,10 @@ export default function PageHeader({
                           {isScrolled ? "" : "by"}{" "}
                           {userId ? (
                             <Link href={`/user/${userId}`} className="hover:underline">
-                              <span data-component-name="PageHeader">{username || userId}</span>
+                              <span data-component-name="PageHeader">{displayUsername}</span>
                             </Link>
                           ) : (
-                            <span data-component-name="PageHeader">{username || "Anonymous"}</span>
+                            <span data-component-name="PageHeader">{displayUsername}</span>
                           )}
                         </>
                       )}

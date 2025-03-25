@@ -74,15 +74,15 @@ export function LoginForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-3 sm:gap-6", className)} 
+      className={cn("flex flex-col gap-2 sm:gap-4", className)} 
       {...props} 
       onSubmit={handleSubmit}
     >
-      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center">
+      <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">Log in</h1>
       </div>
-      <div className="grid gap-3 sm:gap-6">
-        <div className="grid gap-1 sm:gap-2">
+      <div className="grid gap-2 sm:gap-4">
+        <div className="grid gap-1">
           <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
           <Input 
             id="email" 
@@ -95,7 +95,7 @@ export function LoginForm({
             className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
           />
         </div>
-        <div className="grid gap-1 sm:gap-2">
+        <div className="grid gap-1">
           <Label htmlFor="password" className="text-foreground text-sm">Password</Label>
           <Input 
             id="password" 
@@ -137,7 +137,7 @@ export function LoginForm({
           {isLoading ? "Signing in..." : "Login"}
         </Button>
       </div>
-      <div className="text-center text-xs sm:text-sm text-muted-foreground">
+      <div className="text-center text-xs sm:text-sm text-muted-foreground mt-1">
         Don&apos;t have an account?{" "}
         <Link href="/auth/register" className="underline underline-offset-4 text-foreground hover:text-foreground/90" tabIndex={5}>
           Sign up

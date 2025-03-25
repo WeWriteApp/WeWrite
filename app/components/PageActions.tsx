@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
-import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, Plus, Check, AlignJustify, AlignLeft } from "lucide-react";
+import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, Plus, Check, AlignJustify, AlignLeft, Loader } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import { deletePage } from "../firebase/database";
 import { getUserProfile } from "../firebase/auth";
@@ -18,6 +17,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from './ui/dropdown-menu';
+import { getCurrentUsername } from "../utils/userUtils";
+import { generateReplyTitle, createReplyContent, encodeReplyParams } from "../utils/replyUtils";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogClose 
+} from "./ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
+import { AuthContext } from "../providers/AuthProvider";
+import { getDatabase, ref, onValue, update } from "firebase/database";
+import { app } from "../firebase/config";
 
 /**
  * PageActions Component
@@ -63,14 +77,15 @@ interface PageActionsProps {
 
 export function PageActions({ 
   page, 
-  isOwner, 
+  isOwner = false, 
   isEditing = false, 
   setIsEditing,
-  className = "" 
+  className = ""
 }: PageActionsProps) {
   const router = useRouter();
   const { lineMode, setLineMode } = useLineSettings();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   /**
    * Copies the current page URL to clipboard
@@ -107,98 +122,297 @@ export function PageActions({
       return;
     }
 
-    // Create a new page with title "Re: [original page title]"
-    const newPageTitle = `Re: "${page.title || "Untitled"}"`;
-    
-    // Get the current user's username instead of using the original page's username
-    let username = "anonymous";
+    // Get the current user's username using our centralized utility
     try {
-      const userProfile = await getUserProfile(auth.currentUser.uid);
-      if (userProfile && userProfile.username) {
-        username = userProfile.username;
+      const username = await getCurrentUsername();
+      console.log("Current user username from utility:", username);
+
+      // Use utility functions to create standardized reply content
+      const replyTitle = generateReplyTitle(page.title);
+      const initialContent = createReplyContent({
+        pageId: page.id,
+        pageTitle: page.title,
+        userId: page.userId,
+        username: page.username,
+        replyType: "standard"
+      });
+
+      // Use utility to encode parameters
+      try {
+        const params = encodeReplyParams({
+          title: replyTitle,
+          content: initialContent,
+          username
+        });
+        
+        console.log("Navigating to new page with:", {
+          title: replyTitle,
+          username,
+          initialContent
+        });
+        
+        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${params.username}`);
+      } catch (error) {
+        console.error("Error navigating to new page:", error);
+        toast.error("Failed to create reply");
       }
     } catch (error) {
-      console.error("Error getting user profile:", error);
-    }
-
-    // Create initial content with properly formatted links to both the page and the author
-    const initialContent = [
-      {
-        type: "paragraph",
-        children: [
-          { text: `Reply to ` },
-          {
-            type: "link",
-            url: `/pages/${page.id}`,
-            children: [{ text: page.title || "Untitled" }]
-          },
-          { text: ` by ` },
-          {
-            type: "link",
-            url: `/profile/${page.userId || "anonymous"}`,
-            children: [{ text: page.username || "Anonymous" }]
-          },
-          { text: "" }
-        ]
-      },
-      {
-        type: "paragraph",
-        children: [{ text: "" }]
-      },
-      {
-        type: "paragraph",
-        children: [{ text: "" }]
-      }
-    ];
-
-    // Navigate to the new page creation form with pre-filled values
-    try {
-      const encodedContent = encodeURIComponent(JSON.stringify(initialContent));
-      const encodedTitle = encodeURIComponent(newPageTitle);
-      
-      console.log("Navigating to new page with pre-filled content:", initialContent);
-      router.push(`/new?title=${encodedTitle}&initialContent=${encodedContent}&isReply=true`);
-    } catch (error) {
-      console.error("Error navigating to new page:", error);
+      console.error("Error getting username:", error);
       toast.error("Failed to create reply");
     }
   };
+
+  /**
+   * AddToPageDialogContent Component
+   * 
+   * Manages searching and selecting a page to add the current content to
+   */
+  function AddToPageDialogContent({ pageToAdd, onClose }) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [pages, setPages] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selectedPage, setSelectedPage] = useState(null);
+    const { user } = useContext(AuthContext);
+    
+    // Search for pages when dialog opens
+    useEffect(() => {
+      if (user) {
+        setLoading(true);
+        
+        // Get pages that the user has edit access to
+        const db = getDatabase(app);
+        const pagesRef = ref(db, 'pages');
+        
+        onValue(pagesRef, (snapshot) => {
+          const pagesData = snapshot.val();
+          if (pagesData) {
+            // Filter pages that the user has edit access to (user is the owner)
+            const userPages = Object.entries(pagesData)
+              .map(([id, page]) => ({ id, ...page }))
+              .filter(page => 
+                // Only include pages the user owns
+                page.userId === user.uid && 
+                // Exclude the current page
+                pageToAdd && page.id !== pageToAdd.id
+              )
+              .sort((a, b) => {
+                // Sort by last modified date (newest first)
+                const aDate = a.lastModified || 0;
+                const bDate = b.lastModified || 0;
+                return bDate - aDate;
+              });
+            
+            setPages(userPages);
+          } else {
+            setPages([]);
+          }
+          setLoading(false);
+        });
+      }
+    }, [user, pageToAdd]);
+    
+    // Filter pages based on search query
+    const filteredPages = searchQuery.trim() === '' 
+      ? pages 
+      : pages.filter(page => 
+          (page.title || 'Untitled').toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    
+    const handleAddToPage = async () => {
+      if (!selectedPage || !pageToAdd) return;
+      
+      try {
+        // Get the content of the selected page
+        const db = getDatabase(app);
+        const pageRef = ref(db, `pages/${selectedPage.id}`);
+        
+        onValue(pageRef, (snapshot) => {
+          const targetPage = snapshot.val();
+          if (!targetPage) {
+            toast({
+              title: "Error",
+              description: "Selected page not found",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          // Parse the content
+          let targetContent;
+          try {
+            targetContent = typeof targetPage.content === 'string' 
+              ? JSON.parse(targetPage.content) 
+              : targetPage.content;
+          } catch (error) {
+            console.error("Error parsing target page content:", error);
+            targetContent = [];
+          }
+          
+          if (!Array.isArray(targetContent)) {
+            targetContent = [];
+          }
+          
+          // Parse the content of the page to add
+          let sourceContent;
+          try {
+            sourceContent = typeof pageToAdd.content === 'string' 
+              ? JSON.parse(pageToAdd.content) 
+              : pageToAdd.content;
+          } catch (error) {
+            console.error("Error parsing source page content:", error);
+            sourceContent = [];
+          }
+          
+          if (!Array.isArray(sourceContent)) {
+            sourceContent = [];
+          }
+          
+          // Add a divider and reference to the source page
+          targetContent.push({
+            type: "thematicBreak",
+            children: [{ text: "" }]
+          });
+          
+          targetContent.push({
+            type: "paragraph",
+            children: [
+              { text: "Added from " },
+              {
+                type: "link",
+                url: `/pages/${pageToAdd.id}`,
+                children: [{ text: pageToAdd.title || "Untitled" }]
+              },
+              { text: ` by ${pageToAdd.username || "Anonymous"}` }
+            ]
+          });
+          
+          // Add the content from the source page
+          targetContent = [...targetContent, ...sourceContent];
+          
+          // Update the page
+          const updates = {};
+          updates[`pages/${selectedPage.id}/content`] = JSON.stringify(targetContent);
+          updates[`pages/${selectedPage.id}/lastModified`] = Date.now();
+          
+          const dbRef = ref(db);
+          update(dbRef, updates)
+            .then(() => {
+              toast({
+                title: "Success",
+                description: `Content added to "${selectedPage.title || 'Untitled'}"`,
+              });
+              onClose();
+            })
+            .catch((error) => {
+              console.error("Error updating page:", error);
+              toast({
+                title: "Error",
+                description: "Failed to add content to page",
+                variant: "destructive"
+              });
+            });
+        }, { onlyOnce: true });
+      } catch (error) {
+        console.error("Error in handleAddToPage:", error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    return (
+      <>
+        <div className="py-4">
+          <Command className="rounded-lg border shadow-md">
+            <CommandInput 
+              placeholder="Search pages..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList>
+              <CommandEmpty>No pages found</CommandEmpty>
+              
+              {/* All Pages */}
+              <CommandGroup heading="Your Pages">
+                {loading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Loading pages...</span>
+                  </div>
+                ) : (
+                  filteredPages.map(page => (
+                    <CommandItem
+                      key={page.id}
+                      value={page.id}
+                      onSelect={() => setSelectedPage(page)}
+                      className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
+                    >
+                      <div className="flex flex-col">
+                        <span>{page.title || 'Untitled'}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(page.lastModified || 0).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))
+                )}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
+        
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button 
+            onClick={handleAddToPage} 
+            disabled={!selectedPage || loading}
+          >
+            Add to Page
+          </Button>
+        </DialogFooter>
+      </>
+    );
+  }
 
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit and Delete buttons */}
       {isOwner && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 mb-3 w-full">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsEditing && setIsEditing(!isEditing)}
-            className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-2"
+            className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="h-5 w-5" />
             {isEditing ? "Cancel" : "Edit"}
           </Button>
           <Button
             variant="destructive"
             size="sm"
             onClick={handleDelete}
-            className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-2"
+            className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-5 w-5" />
             Delete
           </Button>
         </div>
       )}
       
       {/* Actions available to all users - Copy, Reply, Add, Layout */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 border-t pt-4 w-full">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t pt-4 w-full">
         <Button
           variant="outline"
           size="sm"
           onClick={handleCopyLink}
-          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-2"
+          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
         >
-          <Link2 className="h-4 w-4" />
+          <Link2 className="h-5 w-5" />
           Copy Link
         </Button>
         
@@ -206,77 +420,70 @@ export function PageActions({
           variant="outline"
           size="sm"
           onClick={handleReply}
-          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-2"
+          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
         >
-          <Reply className="h-4 w-4" />
+          <Reply className="h-5 w-5" />
           Reply to Page
         </Button>
         
         <Button
           variant="outline"
           size="sm"
-          asChild
-          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-2"
+          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
+          onClick={() => setShowAddDialog(true)}
         >
-          <Link href={`/pages/${page.id}/add`}>
-            <Plus className="h-4 w-4" />
-            Add to Page
-          </Link>
+          <Plus className="h-5 w-5" />
+          Add to Page
         </Button>
+        
+        {/* Add to Page Dialog */}
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add to Page</DialogTitle>
+              <DialogDescription>
+                Select a page to add the current content to
+              </DialogDescription>
+            </DialogHeader>
+            <AddToPageDialogContent pageToAdd={page} onClose={() => setShowAddDialog(false)} />
+          </DialogContent>
+        </Dialog>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-2"
+              className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
             >
-              <LayoutPanelLeft className="h-4 w-4 mr-1.5" />
+              <LayoutPanelLeft className="h-5 w-5 mr-1.5" />
               Paragraph Mode
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            side="top" 
-            align="start"
-            alignOffset={0}
-            sideOffset={5}
-            avoidCollisions={true}
-            className="max-w-[95vw]"
-          >
-            <DropdownMenuItem 
-              className={`flex flex-col cursor-pointer ${lineMode === LINE_MODES.NORMAL ? 'bg-accent/50' : ''}`}
-              onClick={() => {
-                setLineMode(LINE_MODES.NORMAL);
-              }}
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="text-sm">Select Paragraph Display</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="flex items-center gap-2 py-2 cursor-pointer"
+              onClick={() => setLineMode(LINE_MODES.NORMAL)}
             >
-              <div className="flex items-start w-full py-1">
-                <AlignLeft className="h-5 w-5 mr-3 flex-shrink-0 mt-0.5" />
-                <div className="text-left flex-grow overflow-hidden">
-                  <div className="font-medium break-words">Normal</div>
-                  <div className="text-sm opacity-90 break-words">Traditional style with paragraph numbers and spacing</div>
-                </div>
-                {lineMode === LINE_MODES.NORMAL && (
-                  <Check className="h-4 w-4 ml-2 flex-shrink-0 mt-0.5" />
-                )}
+              <AlignLeft className="h-5 w-5" />
+              <div className="flex flex-col">
+                <span className="font-medium">Normal Mode</span>
+                <span className="text-xs text-muted-foreground">Standard paragraph formatting</span>
               </div>
+              {lineMode === LINE_MODES.NORMAL && <Check className="h-5 w-5 ml-auto" />}
             </DropdownMenuItem>
-            
             <DropdownMenuItem 
-              className={`flex flex-col cursor-pointer ${lineMode === LINE_MODES.DENSE ? 'bg-accent/50' : ''}`}
-              onClick={() => {
-                setLineMode(LINE_MODES.DENSE);
-              }}
+              className="flex items-center gap-2 py-2 cursor-pointer"
+              onClick={() => setLineMode(LINE_MODES.DENSE)}
             >
-              <div className="flex items-start w-full py-1">
-                <AlignJustify className="h-5 w-5 mr-3 flex-shrink-0 mt-0.5" />
-                <div className="text-left flex-grow overflow-hidden">
-                  <div className="font-medium break-words">Dense</div>
-                  <div className="text-sm opacity-90 break-words">Collapses all paragraphs for a more comfortable reading experience</div>
-                </div>
-                {lineMode === LINE_MODES.DENSE && (
-                  <Check className="h-4 w-4 ml-2 flex-shrink-0 mt-0.5" />
-                )}
+              <AlignJustify className="h-5 w-5" />
+              <div className="flex flex-col">
+                <span className="font-medium">Dense Mode</span>
+                <span className="text-xs text-muted-foreground">Continuous text with verse numbers</span>
               </div>
+              {lineMode === LINE_MODES.DENSE && <Check className="h-5 w-5 ml-auto" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -91,10 +91,24 @@ export const createPage = async (data) => {
       return null;
     }
 
+    // Ensure we have the username - if not provided, fetch it from the user profile
+    let username = data.username;
+    if (!username && data.userId) {
+      try {
+        const userDoc = await getDoc(doc(db, "users", data.userId));
+        if (userDoc.exists()) {
+          username = userDoc.data().username;
+        }
+      } catch (error) {
+        console.error("Error fetching username:", error);
+      }
+    }
+
     const pageData = {
       title: data.title || "Untitled",
       isPublic: data.isPublic !== undefined ? data.isPublic : true,
       userId: data.userId,
+      username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
       // Add fundraising fields
@@ -104,13 +118,16 @@ export const createPage = async (data) => {
       fundraisingGoal: data.fundraisingGoal || 0,
     };
 
+    console.log("Creating page with username:", username);
+    
     const pageRef = await addDoc(collection(db, "pages"), pageData);
     
     // Ensure we have content before creating a version
     const versionData = {
       content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
       createdAt: new Date().toISOString(),
-      userId: data.userId
+      userId: data.userId,
+      username: username || "Anonymous" // Also store username in version data for consistency
     };
 
     // create a subcollection for versions

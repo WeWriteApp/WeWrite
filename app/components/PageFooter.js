@@ -13,6 +13,7 @@ import { PageActions } from "./PageActions";
  * - A border at the top for visual separation
  * - Proper padding and margins for spacing
  * - Responsive padding that adjusts to different screen sizes
+ * - Increased button sizes for better mobile usability
  * 
  * This component is used in SinglePageView and replaces the previous
  * combination of PageInteractionButtons and ActionRow components.
@@ -26,12 +27,13 @@ export default function PageFooter({ page, isOwner, isEditing, setIsEditing }) {
   if (!page) return null;
   
   return (
-    <div className="mt-10 border-t border-border pt-6 pb-4 px-2 sm:px-4">
+    <div className="mt-10 border-t border-border pt-6 pb-6 px-4 sm:px-6">
       <PageActions 
         page={page}
         isOwner={isOwner}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
+        className="action-buttons-container"
       />
     </div>
   );
