@@ -2,26 +2,77 @@
 import React, { useContext, useState } from "react";
 import { useTheme } from "../providers/ThemeProvider";
 import { rtdb } from "../firebase/rtdb";
-import { ref, set, onValue } from "firebase/database";
+import { ref, set, onValue, update } from "firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import GroupMembersTable from "./GroupMembersTable";
 import PageList from "./PageList";
 import AddExistingPageDialog from "./AddExistingPageDialog";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
-import { Trash2, Users, FileText, Plus, ChevronLeft } from "lucide-react";
+import { Trash2, Users, FileText, Plus, ChevronLeft, Globe, Lock } from "lucide-react";
 import Link from "next/link";
+import { Switch } from "./ui/switch";
+import { useToast } from "./ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import PageFooter from "./PageFooter";
 
 export default function GroupDetails({ group }) {
   const { theme } = useTheme();
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isPublic, setIsPublic] = useState(group.isPublic || false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingVisibilityChange, setPendingVisibilityChange] = useState(null);
+  const { toast } = useToast();
   
   if (!group) return <div>Loading...</div>;
   
   const isOwner = user?.uid === group.owner;
   const isMember = user?.uid && group.members && group.members[user.uid];
+
+  const handleVisibilityToggle = (newValue) => {
+    setPendingVisibilityChange(newValue);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmVisibilityChange = () => {
+    if (pendingVisibilityChange !== null) {
+      const groupRef = ref(rtdb, `groups/${group.id}`);
+      update(groupRef, { isPublic: pendingVisibilityChange })
+        .then(() => {
+          setIsPublic(pendingVisibilityChange);
+          toast({
+            title: "Group visibility updated",
+            description: `Group is now ${pendingVisibilityChange ? "public" : "private"}`,
+          });
+        })
+        .catch((error) => {
+          console.error("Error updating group visibility:", error);
+          toast({
+            title: "Error",
+            description: "Failed to update group visibility",
+            variant: "destructive",
+          });
+        });
+      setShowConfirmDialog(false);
+      setPendingVisibilityChange(null);
+    }
+  };
+
+  const cancelVisibilityChange = () => {
+    setShowConfirmDialog(false);
+    setPendingVisibilityChange(null);
+  };
   
   // Transform group pages into the format expected by PageList
   const pagesList = group.pages ? Object.entries(group.pages).map(([pageId, page]) => ({
@@ -60,9 +111,31 @@ export default function GroupDetails({ group }) {
           )}
         </div>
         
-        {isOwner && (
-          <DeleteGroupButton group={group} />
-        )}
+        <div className="flex items-center gap-4">
+          {isOwner && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
+                {isPublic ? (
+                  <Globe className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Lock className="h-4 w-4 text-amber-500" />
+                )}
+                <span className="text-sm font-medium">
+                  {isPublic ? "Public" : "Private"}
+                </span>
+                <Switch
+                  checked={isPublic}
+                  onCheckedChange={handleVisibilityToggle}
+                  aria-label="Toggle group visibility"
+                />
+              </div>
+            </div>
+          )}
+          
+          {isOwner && (
+            <DeleteGroupButton group={group} />
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -136,6 +209,31 @@ export default function GroupDetails({ group }) {
           )}
         </div>
       </div>
+      
+      <PageFooter />
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingVisibilityChange
+                ? "Make group public?"
+                : "Make group private?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingVisibilityChange
+                ? "Public groups can be discovered by anyone. All members and their pages will be visible to anyone who visits the group."
+                : "Private groups are only visible to members. Only members can see the group's pages and other members."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelVisibilityChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmVisibilityChange}>
+              {pendingVisibilityChange ? "Make Public" : "Make Private"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

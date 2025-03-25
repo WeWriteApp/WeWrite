@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { listenToPageById } from "../firebase/database";
-import PledgeBar from "./PledgeBar";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import Head from "next/head";
 import PageHeader from "./PageHeader";
@@ -509,13 +508,6 @@ export default function SinglePageView({ params }) {
           </>
         )}
       </div>
-      {!isEditing && (
-        <div className={`fixed left-0 right-0 w-full flex justify-center transition-transform duration-300 ease-in-out z-50 ${scrollDirection === "down" ? "translate-y-[200%]" : "translate-y-0"}`} style={{ bottom: '1rem' }}>
-          <div className="w-[95%] max-w-md mx-auto">
-            <PledgeBar />
-          </div>
-        </div>
-      )}
       <PageFooter />
     </Layout>
   );
