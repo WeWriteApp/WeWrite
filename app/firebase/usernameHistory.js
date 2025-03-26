@@ -1,33 +1,39 @@
 import { db } from './config';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { getDatabase, ref, get, update } from 'firebase/database';
-import admin from 'firebase-admin';
 
-// Initialize Firebase Admin if not already initialized
-let app;
-try {
-  app = admin.app();
-} catch (error) {
-  // This will only run in server-side contexts
+// Only import admin in a server context
+let admin;
+
+// Only initialize Firebase Admin on the server
+if (typeof window === 'undefined') {
   try {
-    // Use environment variables instead of the JSON file
-    const serviceAccount = {
-      type: 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
-    };
+    // Dynamic import to prevent client-side bundling
+    admin = require('firebase-admin');
     
-    app = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
-    });
+    // Check if app is already initialized
+    try {
+      admin.app();
+    } catch (error) {
+      // Initialize a new app
+      const serviceAccount = {
+        type: 'service_account',
+        project_id: process.env.FIREBASE_PROJECT_ID,
+        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        client_id: process.env.FIREBASE_CLIENT_ID,
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+        client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
+      };
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+      });
+    }
   } catch (initError) {
     console.error("Error initializing Firebase Admin:", initError);
   }
@@ -120,7 +126,7 @@ export const updateUsername = async (userId, newUsername) => {
     console.log("Username updated in RTDB");
     
     // Update displayName in Firebase Auth (server-side only)
-    if (typeof window === 'undefined' && admin.apps.length > 0) {
+    if (typeof window === 'undefined' && admin && admin.apps && admin.apps.length > 0) {
       try {
         await admin.auth().updateUser(userId, {
           displayName: newUsername

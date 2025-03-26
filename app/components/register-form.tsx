@@ -9,7 +9,6 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
 import { createUser, addUsername, checkUsernameAvailability } from "../firebase/auth"
-import { recordUsernameChange } from "../firebase/usernameHistory"
 import { Check, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
@@ -71,6 +70,32 @@ export function RegisterForm({
     setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid)
   }, [email, password, username, isAvailable])
 
+  // Function to record username history via API
+  const recordUsernameHistory = async (userId: string, oldUsername: string, newUsername: string) => {
+    try {
+      const response = await fetch('/api/username/history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          oldUsername,
+          newUsername
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to record username history');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error recording username history:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -92,7 +117,7 @@ export function RegisterForm({
         
         if (usernameResult.success) {
           // Record the initial username in the history
-          await recordUsernameChange(result.user.uid, "initial", username)
+          await recordUsernameHistory(result.user.uid, "initial", username)
           
           // Successfully added username
           router.push("/")
