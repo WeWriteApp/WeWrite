@@ -1,12 +1,21 @@
 "use client";
-import { createContext, useContext } from "react";
-import { AuthContext } from "./AuthProvider";
+import { createContext, useContext, useState, useEffect } from "react";
 import usePages from "../hooks/usePages";
+import { auth } from "../firebase/config";
 
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const { user } = useContext(AuthContext); // Get the authenticated user
+  const [user, setUser] = useState(null);
+
+  // Listen for auth state changes directly instead of using AuthContext
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((authUser) => {
+      setUser(authUser);
+    });
+    
+    return () => unsubscribe();
+  }, []);
 
   // Use the usePages hook, passing in the userId if the user is authenticated
   const {

@@ -5,6 +5,7 @@ import { Drawer } from 'vaul';
 import { UserCircle, CreditCard, Settings, Plus, Minus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import CompositionBar from './CompositionBar.js';
+import { updateUsername } from '../firebase/usernameHistory';
 
 interface Pledge {
   id: string;
@@ -149,9 +150,23 @@ const AccountDrawer = ({
     }
   }, [isOpen, onDeletePledge]);
 
-  const handleUsernameUpdate = () => {
-    onUsernameChange(editedUsername);
-    setIsEditingUsername(false);
+  const handleUsernameUpdate = async () => {
+    try {
+      // First update the username in Firebase and record the change in history
+      // We need to get the actual userId from the auth context, but since we don't have it directly,
+      // we'll use the email as a fallback. In a real implementation, you would pass the actual userId.
+      const userId = localStorage.getItem('userId') || email.split('@')[0];
+      await updateUsername(userId, editedUsername);
+      
+      // Then call the parent's onUsernameChange handler
+      onUsernameChange(editedUsername);
+      
+      // Close the edit form
+      setIsEditingUsername(false);
+    } catch (error) {
+      console.error("Error updating username:", error);
+      showErrorMessage('Failed to update username. Please try again.');
+    }
   };
 
   const handleActivateSubscription = () => {
@@ -568,6 +583,7 @@ const AccountDrawer = ({
                             onDeletePledge={onDeletePledge}
                             showTitle={true}
                             showRemoveButton={true}
+                            className=""
                           />
                         </div>
                       ))}

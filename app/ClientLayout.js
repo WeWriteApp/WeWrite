@@ -30,9 +30,9 @@ export default function ClientLayout({ children }) {
       enableSystem
       disableTransitionOnChange
     >
-      <AuthProvider>
-        <LoggingProvider>
-          <DataProvider>
+      <LoggingProvider>
+        <DataProvider>
+          <AuthProvider>
             <PortfolioProvider>
               <RecentPagesProvider>
                 <MobileProvider>
@@ -55,9 +55,9 @@ export default function ClientLayout({ children }) {
                 </MobileProvider>
               </RecentPagesProvider>
             </PortfolioProvider>
-          </DataProvider>
-        </LoggingProvider>
-      </AuthProvider>
+          </AuthProvider>
+        </DataProvider>
+      </LoggingProvider>
     </ThemeProvider>
   );
 }

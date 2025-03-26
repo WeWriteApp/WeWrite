@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
-import { User, Clock, FileText, Lock, Plus, Loader } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { ProfilePagesContext } from "../providers/ProfilePageProvider";
 import RecentActivity from "./RecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import usePages from "../hooks/usePages";
+import UsernameHistory from "./UsernameHistory";
 
 // Wrapper component for animated tabs content
 function AnimatedTabsContent({ children, activeTab }) {
@@ -88,7 +89,7 @@ export default function UserProfileTabs({ profile }) {
   } = usePages(profile?.uid, true, user?.uid);
   
   // Determine which tabs to show
-  const visibleTabs = ["activity", "pages"];
+  const visibleTabs = ["activity", "pages", "about"];
   if (isCurrentUser) {
     visibleTabs.push("private");
   }
@@ -126,6 +127,14 @@ export default function UserProfileTabs({ profile }) {
               >
                 <FileText className="h-4 w-4" />
                 <span>Pages</span>
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="about" 
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <Info className="h-4 w-4" />
+                <span>About</span>
               </TabsTrigger>
               
               {isCurrentUser && (
@@ -177,6 +186,25 @@ export default function UserProfileTabs({ profile }) {
                   )}
                 </>
               )}
+            </AnimatedTabsContent>
+          </TabsContent>
+          
+          <TabsContent value="about" className="mt-0">
+            <AnimatedTabsContent activeTab={activeTab}>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Username History</h3>
+                  {/* Debug profile object */}
+                  {console.log('Profile in About tab:', profile)}
+                  {profile?.uid ? (
+                    <UsernameHistory userId={profile.uid} />
+                  ) : (
+                    <div className="text-center py-8 border border-dashed border-border rounded-lg">
+                      <p className="text-muted-foreground">User profile not available.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </AnimatedTabsContent>
           </TabsContent>
           

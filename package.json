@@ -16,6 +16,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@gannonh/firebase-mcp": "github:gannonh/firebase-mcp",
     "@google-cloud/bigquery": "^7.9.0",
     "@google-cloud/logging": "^11.2.0",
     "@lexical/react": "^0.16.1",

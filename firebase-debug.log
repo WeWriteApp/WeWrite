@@ -1,0 +1,45 @@
+[debug] [2025-03-26T15:25:51.690Z] ----------------------------------------------------------------------
+[debug] [2025-03-26T15:25:51.692Z] Command:       /opt/homebrew/Cellar/node/22.5.1/bin/node /opt/homebrew/bin/firebase deploy --only firestore:indexes
+[debug] [2025-03-26T15:25:51.692Z] CLI Version:   13.34.0
+[debug] [2025-03-26T15:25:51.692Z] Platform:      darwin
+[debug] [2025-03-26T15:25:51.692Z] Node Version:  v22.5.1
+[debug] [2025-03-26T15:25:51.692Z] Time:          Wed Mar 26 2025 11:25:51 GMT-0400 (Eastern Daylight Time)
+[debug] [2025-03-26T15:25:51.692Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-26T15:25:51.773Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-26T15:25:51.773Z] > authorizing via signed-in user (getwewrite@gmail.com)
+[debug] [2025-03-26T15:25:51.773Z] [iam] checking project wewrite-ccd82 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2025-03-26T15:25:51.774Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:51.774Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:51.774Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/wewrite-ccd82:testIamPermissions [none]
+[debug] [2025-03-26T15:25:51.774Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/wewrite-ccd82:testIamPermissions x-goog-quota-user=projects/wewrite-ccd82
+[debug] [2025-03-26T15:25:51.774Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wewrite-ccd82:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2025-03-26T15:25:52.074Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/wewrite-ccd82:testIamPermissions 200
+[debug] [2025-03-26T15:25:52.075Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wewrite-ccd82:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'wewrite-ccd82'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2025-03-26T15:25:52.079Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:52.079Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:52.079Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/wewrite-ccd82:test [none]
+[debug] [2025-03-26T15:25:52.080Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/wewrite-ccd82:test [omitted]
+[debug] [2025-03-26T15:25:52.383Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/wewrite-ccd82:test 200
+[debug] [2025-03-26T15:25:52.383Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/wewrite-ccd82:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[info] i  firestore: deploying indexes... 
+[debug] [2025-03-26T15:25:52.384Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:52.384Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:52.384Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/wewrite-ccd82/databases/(default)/collectionGroups/-/indexes [none]
+[debug] [2025-03-26T15:25:52.692Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/wewrite-ccd82/databases/(default)/collectionGroups/-/indexes 200
+[debug] [2025-03-26T15:25:52.692Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/wewrite-ccd82/databases/(default)/collectionGroups/-/indexes {"indexes":[{"name":"projects/wewrite-ccd82/databases/(default)/collectionGroups/pages/indexes/CICAgJim14AK","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"lastModified","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY"},{"name":"projects/wewrite-ccd82/databases/(default)/collectionGroups/pages/indexes/CICAgJjmiJEK","queryScope":"COLLECTION","fields":[{"fieldPath":"isPublic","order":"ASCENDING"},{"fieldPath":"lastModified","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY"}]}
+[debug] [2025-03-26T15:25:52.692Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:52.692Z] Checked if tokens are valid: true, expires at: 1743005662267
+[debug] [2025-03-26T15:25:52.692Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/wewrite-ccd82/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2025-03-26T15:25:52.786Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/wewrite-ccd82/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2025-03-26T15:25:52.787Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/wewrite-ccd82/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/wewrite-ccd82/databases/(default)/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[info] i  firestore: The following indexes are defined in your project but are not present in your firestore indexes file:
+	(pages) -- (userId,ASCENDING) (lastModified,DESCENDING) 
+	(pages) -- (isPublic,ASCENDING) (lastModified,DESCENDING)  

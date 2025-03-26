@@ -6,7 +6,7 @@ import { getDatabase, ref, get, update } from "firebase/database";
 import { collection, query, where, getDocs, doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import ActivityCard from "../../components/ActivityCard";
-import { Loader, User, Edit, FileText } from "lucide-react";
+import { Loader, User, Edit, FileText, History } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSwipeable } from "react-swipeable";
@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useAuth } from "../../providers/AuthProvider";
 import { toast } from "sonner";
 import { Textarea } from "../../components/ui/textarea";
+import UsernameHistory from "../../components/UsernameHistory";
 
 export default function UserProfilePage() {
   const { userId } = useParams();
@@ -264,6 +265,15 @@ export default function UserProfilePage() {
                 />
               </TabsTrigger>
             )}
+            <TabsTrigger value="about" className="relative flex-shrink-0">
+              About
+              <motion.div 
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+                initial={false}
+                animate={{ opacity: activeTab === "about" ? 1 : 0 }}
+                transition={{ duration: 0.2 }}
+              />
+            </TabsTrigger>
             <TabsTrigger value="bio" className="relative flex-shrink-0">
               Bio
               <motion.div 
@@ -406,6 +416,19 @@ export default function UserProfilePage() {
             </TabsContent>
           )}
           
+          <TabsContent value="about" className="space-y-4">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-semibold">About</h2>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="p-4 border border-border rounded-lg bg-card">
+                <h3 className="text-lg font-medium mb-4">Username History</h3>
+                <UsernameHistory userId={userId} />
+              </div>
+            </div>
+          </TabsContent>
+          
           <TabsContent value="bio" className="space-y-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Bio</h2>
@@ -444,8 +467,8 @@ function AnimatedTabsContent({ children }) {
   const getTabOrder = useCallback(() => {
     const isOwnProfile = currentUser && currentUser.uid === userId;
     return isOwnProfile 
-      ? ["activity", "pages", "privatePages", "bio"] 
-      : ["activity", "pages", "bio"];
+      ? ["activity", "pages", "privatePages", "about", "bio"] 
+      : ["activity", "pages", "about", "bio"];
   }, [currentUser, userId]);
   
   // Update active tab when tab selection changes

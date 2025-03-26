@@ -61,7 +61,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   const isHomepage = !isInActivityPage && !isInUserProfile;
 
   return (
-    <div className={`space-y-4 ${isHomepage ? 'bg-muted/30 p-4 rounded-lg border border-border/50' : ''}`}>
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4" />

@@ -9,6 +9,7 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
 import { createUser, addUsername, checkUsernameAvailability } from "../firebase/auth"
+import { recordUsernameChange } from "../firebase/usernameHistory"
 import { Check, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
@@ -90,6 +91,9 @@ export function RegisterForm({
         const usernameResult = await addUsername(result.user.uid, username)
         
         if (usernameResult.success) {
+          // Record the initial username in the history
+          await recordUsernameChange(result.user.uid, "initial", username)
+          
           // Successfully added username
           router.push("/")
         } else {

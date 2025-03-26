@@ -8,6 +8,14 @@
         { "fieldPath": "lastModified", "order": "DESCENDING" },
         { "fieldPath": "isPublic", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "usernameHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "changedAt", "order": "DESCENDING" }
+      ]
     }
   ]
 }

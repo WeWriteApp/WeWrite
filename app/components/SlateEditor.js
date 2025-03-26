@@ -416,7 +416,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
           <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-xs text-muted-foreground flex items-center h-6 select-none w-6 text-right flex-shrink-0 px-1.5 py-0.5 rounded-full">
+            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
               {index + 1}
             </span>
             <span className="flex-1">{children}</span>
@@ -426,7 +426,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
           <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-xs text-muted-foreground flex items-center h-6 select-none w-6 text-right flex-shrink-0 px-1.5 py-0.5 rounded-full">
+            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
               {defaultIndex + 1}
             </span>
             <span className="flex-1">{children}</span>
