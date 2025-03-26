@@ -4,28 +4,24 @@ import { db, rtdb } from "./config";
 
 // Only import admin in a server context
 let admin;
-if (typeof window === 'undefined') {
-  // Dynamic import to prevent client-side bundling
-  admin = require('firebase-admin');
-}
-
-// Initialize Firebase Admin if not already initialized - SERVER SIDE ONLY
 let adminApp;
-if (typeof window === 'undefined' && admin) {
-  try {
-    adminApp = admin.app();
-  } catch (error) {
+
+// Only try to initialize Firebase Admin if we're on the server and have the required environment variables
+if (typeof window === 'undefined') {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  
+  // Only import and initialize Firebase Admin if we have the required environment variables
+  if (projectId && clientEmail && privateKey) {
     try {
-      // Check if required environment variables are present
-      const projectId = process.env.FIREBASE_PROJECT_ID;
-      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      admin = require('firebase-admin');
       
-      if (!projectId || !clientEmail || !privateKey) {
-        console.error("Missing required Firebase Admin environment variables");
-        // Don't throw here, the code will handle the missing admin gracefully
-      } else {
-        // Use environment variables instead of the JSON file
+      // Check if app is already initialized
+      try {
+        adminApp = admin.app();
+      } catch (error) {
+        // Initialize a new app
         const serviceAccount = {
           type: 'service_account',
           project_id: projectId,
@@ -44,9 +40,14 @@ if (typeof window === 'undefined' && admin) {
           databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
         });
       }
-    } catch (initError) {
-      console.error("Error initializing Firebase Admin:", initError);
+    } catch (error) {
+      console.error("Error initializing Firebase Admin:", error);
+      // Reset variables to ensure we don't try to use them
+      admin = null;
+      adminApp = null;
     }
+  } else {
+    console.log("Missing required Firebase Admin environment variables");
   }
 }
 

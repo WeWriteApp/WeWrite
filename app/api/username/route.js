@@ -2,27 +2,27 @@ import { NextResponse } from 'next/server';
 
 // Server-side only imports
 let admin;
-if (typeof window === 'undefined') {
-  admin = require('firebase-admin');
-}
+let db;
+let rtdb;
 
-// Initialize Firebase Admin if not already initialized
-let app;
-if (typeof window === 'undefined' && admin) {
-  try {
-    app = admin.app();
-  } catch (error) {
+// Only try to initialize Firebase Admin if we're on the server and have the required environment variables
+if (typeof window === 'undefined') {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  
+  // Only import and initialize Firebase Admin if we have the required environment variables
+  if (projectId && clientEmail && privateKey) {
     try {
-      // Use environment variables instead of the JSON file
-      // Check if required environment variables are present
-      const projectId = process.env.FIREBASE_PROJECT_ID;
-      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      admin = require('firebase-admin');
       
-      if (!projectId || !clientEmail || !privateKey) {
-        console.error("Missing required Firebase Admin environment variables");
-        // Don't throw here, the API will handle the missing admin gracefully
-      } else {
+      // Check if app is already initialized
+      try {
+        const app = admin.app();
+        db = admin.firestore();
+        rtdb = admin.database();
+      } catch (error) {
+        // Initialize a new app
         const serviceAccount = {
           type: 'service_account',
           project_id: projectId,
@@ -36,20 +36,25 @@ if (typeof window === 'undefined' && admin) {
           client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
         };
         
-        app = admin.initializeApp({
+        const app = admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
           databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
         });
+        
+        db = admin.firestore();
+        rtdb = admin.database();
       }
-    } catch (initError) {
-      console.error("Error initializing Firebase Admin:", initError);
+    } catch (error) {
+      console.error("Error initializing Firebase Admin:", error);
+      // Reset variables to ensure we don't try to use them
+      admin = null;
+      db = null;
+      rtdb = null;
     }
+  } else {
+    console.log("Missing required Firebase Admin environment variables");
   }
 }
-
-// Get database references - use optional chaining to prevent errors
-const db = admin?.firestore();
-const rtdb = admin?.database();
 
 export async function GET(request) {
   // Set CORS headers
@@ -81,6 +86,7 @@ export async function GET(request) {
     
     // Check if we have admin initialized
     if (!admin || !rtdb || !db) {
+      // Return a fallback response when Firebase Admin is not available
       return NextResponse.json(
         { 
           username: `user_${userId.substring(0, 8)}`,
