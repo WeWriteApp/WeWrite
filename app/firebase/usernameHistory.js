@@ -1,67 +1,49 @@
-import { ref, update, get } from "firebase/database";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
-import { db, rtdb } from "./config";
+import { db } from './config';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { getDatabase, ref, get, update } from 'firebase/database';
+import admin from 'firebase-admin';
 
-// Only import admin in a server context
-let admin;
-let adminApp;
-
-// Only try to initialize Firebase Admin if we're on the server and have the required environment variables
-if (typeof window === 'undefined') {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  
-  // Only import and initialize Firebase Admin if we have the required environment variables
-  if (projectId && clientEmail && privateKey) {
-    try {
-      admin = require('firebase-admin');
-      
-      // Check if app is already initialized
-      try {
-        adminApp = admin.app();
-      } catch (error) {
-        // Initialize a new app
-        const serviceAccount = {
-          type: 'service_account',
-          project_id: projectId,
-          private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || '',
-          private_key: privateKey,
-          client_email: clientEmail,
-          client_id: process.env.FIREBASE_CLIENT_ID || '',
-          auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-          token_uri: 'https://oauth2.googleapis.com/token',
-          auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-          client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
-        };
-        
-        adminApp = admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-          databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
-        });
-      }
-    } catch (error) {
-      console.error("Error initializing Firebase Admin:", error);
-      // Reset variables to ensure we don't try to use them
-      admin = null;
-      adminApp = null;
-    }
-  } else {
-    console.log("Missing required Firebase Admin environment variables");
+// Initialize Firebase Admin if not already initialized
+let app;
+try {
+  app = admin.app();
+} catch (error) {
+  // This will only run in server-side contexts
+  try {
+    // Use environment variables instead of the JSON file
+    const serviceAccount = {
+      type: 'service_account',
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      client_id: process.env.FIREBASE_CLIENT_ID,
+      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: 'https://oauth2.googleapis.com/token',
+      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+      client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
+    };
+    
+    app = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+    });
+  } catch (initError) {
+    console.error("Error initializing Firebase Admin:", initError);
   }
 }
 
 /**
- * Records a username change in Firestore
+ * Records a username change in the usernameHistory collection
  * @param {string} userId - The user's ID
  * @param {string} oldUsername - The previous username
  * @param {string} newUsername - The new username
- * @returns {Promise<void>}
+ * @returns {Promise<string>} - The ID of the newly created history record
  */
 export const recordUsernameChange = async (userId, oldUsername, newUsername) => {
-  const historyRef = collection(db, "usernameHistory");
-  
   try {
+    // Add record to Firestore
+    const historyRef = collection(db, 'usernameHistory');
     const docRef = await addDoc(historyRef, {
       userId,
       oldUsername,
@@ -69,10 +51,9 @@ export const recordUsernameChange = async (userId, oldUsername, newUsername) => 
       changedAt: serverTimestamp()
     });
     
-    console.log("Username change recorded with ID:", docRef.id);
     return docRef.id;
   } catch (error) {
-    console.error("Error recording username change:", error);
+    console.error('Error recording username change:', error);
     throw error;
   }
 };
@@ -102,6 +83,7 @@ export const getUsernameHistory = async (userId) => {
 export const updateUsername = async (userId, newUsername) => {
   try {
     // First, get the current username from RTDB
+    const rtdb = getDatabase();
     const userRef = ref(rtdb, `users/${userId}`);
     const snapshot = await get(userRef);
     
@@ -138,7 +120,7 @@ export const updateUsername = async (userId, newUsername) => {
     console.log("Username updated in RTDB");
     
     // Update displayName in Firebase Auth (server-side only)
-    if (typeof window === 'undefined' && admin && adminApp) {
+    if (typeof window === 'undefined' && admin.apps.length > 0) {
       try {
         await admin.auth().updateUser(userId, {
           displayName: newUsername

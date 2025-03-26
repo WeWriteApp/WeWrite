@@ -1,60 +1,34 @@
 import { NextResponse } from 'next/server';
+import admin from 'firebase-admin';
 
-// Server-side only imports
-let admin;
-let db;
-let rtdb;
-
-// Only try to initialize Firebase Admin if we're on the server and have the required environment variables
-if (typeof window === 'undefined') {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+// Initialize Firebase Admin if not already initialized
+let app;
+try {
+  app = admin.app();
+} catch (error) {
+  // Use environment variables instead of the JSON file
+  const serviceAccount = {
+    type: 'service_account',
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+    private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    client_id: process.env.FIREBASE_CLIENT_ID,
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token',
+    auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+    client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
+  };
   
-  // Only import and initialize Firebase Admin if we have the required environment variables
-  if (projectId && clientEmail && privateKey) {
-    try {
-      admin = require('firebase-admin');
-      
-      // Check if app is already initialized
-      try {
-        const app = admin.app();
-        db = admin.firestore();
-        rtdb = admin.database();
-      } catch (error) {
-        // Initialize a new app
-        const serviceAccount = {
-          type: 'service_account',
-          project_id: projectId,
-          private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || '',
-          private_key: privateKey,
-          client_email: clientEmail,
-          client_id: process.env.FIREBASE_CLIENT_ID || '',
-          auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-          token_uri: 'https://oauth2.googleapis.com/token',
-          auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-          client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
-        };
-        
-        const app = admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-          databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
-        });
-        
-        db = admin.firestore();
-        rtdb = admin.database();
-      }
-    } catch (error) {
-      console.error("Error initializing Firebase Admin:", error);
-      // Reset variables to ensure we don't try to use them
-      admin = null;
-      db = null;
-      rtdb = null;
-    }
-  } else {
-    console.log("Missing required Firebase Admin environment variables");
-  }
+  app = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+  });
 }
+
+// Get database references
+const db = admin.firestore();
+const rtdb = admin.database();
 
 export async function GET(request) {
   // Set CORS headers
@@ -83,19 +57,6 @@ export async function GET(request) {
     }
     
     console.log(`API: Fetching username for user ID: ${userId}`);
-    
-    // Check if we have admin initialized
-    if (!admin || !rtdb || !db) {
-      // Return a fallback response when Firebase Admin is not available
-      return NextResponse.json(
-        { 
-          username: `user_${userId.substring(0, 8)}`,
-          history: [],
-          error: 'Firebase Admin not initialized properly. Using fallback username.' 
-        }, 
-        { headers }
-      );
-    }
     
     // Get user data from RTDB
     const userSnapshot = await rtdb.ref(`users/${userId}`).get();
