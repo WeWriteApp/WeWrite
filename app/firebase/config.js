@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
 
 /**
@@ -11,6 +12,7 @@ import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
  * - Core Firebase App
  * - Authentication
  * - Firestore Database
+ * - Realtime Database
  * - Firebase Analytics
  * 
  * For analytics specifically, we initialize conditionally based on browser
@@ -48,6 +50,9 @@ export const auth = getAuth(app);
 
 // Initialize Firestore
 export const db = getFirestore(app);
+
+// Initialize Realtime Database
+export const rtdb = getDatabase(app);
 
 /**
  * Initialize Firebase Analytics

@@ -12,28 +12,42 @@ if (typeof window === 'undefined' && admin) {
   try {
     app = admin.app();
   } catch (error) {
-    // Use environment variables instead of the JSON file
-    const serviceAccount = {
-      type: 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID,
-      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      client_id: process.env.FIREBASE_CLIENT_ID,
-      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-      token_uri: 'https://oauth2.googleapis.com/token',
-      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-      client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
-    };
-    
-    app = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
-    });
+    try {
+      // Use environment variables instead of the JSON file
+      // Check if required environment variables are present
+      const projectId = process.env.FIREBASE_PROJECT_ID;
+      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      
+      if (!projectId || !clientEmail || !privateKey) {
+        console.error("Missing required Firebase Admin environment variables");
+        // Don't throw here, the API will handle the missing admin gracefully
+      } else {
+        const serviceAccount = {
+          type: 'service_account',
+          project_id: projectId,
+          private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || '',
+          private_key: privateKey,
+          client_email: clientEmail,
+          client_id: process.env.FIREBASE_CLIENT_ID || '',
+          auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+          token_uri: 'https://oauth2.googleapis.com/token',
+          auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+          client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
+        };
+        
+        app = admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+          databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+        });
+      }
+    } catch (initError) {
+      console.error("Error initializing Firebase Admin:", initError);
+    }
   }
 }
 
-// Get database references
+// Get database references - use optional chaining to prevent errors
 const db = admin?.firestore();
 const rtdb = admin?.database();
 
@@ -68,8 +82,12 @@ export async function GET(request) {
     // Check if we have admin initialized
     if (!admin || !rtdb || !db) {
       return NextResponse.json(
-        { error: 'Firebase Admin not initialized properly' }, 
-        { status: 500, headers }
+        { 
+          username: `user_${userId.substring(0, 8)}`,
+          history: [],
+          error: 'Firebase Admin not initialized properly. Using fallback username.' 
+        }, 
+        { headers }
       );
     }
     
