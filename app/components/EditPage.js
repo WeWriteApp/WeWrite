@@ -23,10 +23,27 @@ const EditPage = ({
   const { setIsEditMode } = usePage();
   const [editorState, setEditorState] = useState(() => {
     try {
-      return JSON.parse(current);
+      // Handle different types of input formats
+      if (!current) {
+        console.error("No current content provided");
+        return [{ type: "paragraph", children: [{ text: "" }] }];
+      }
+      
+      // If current is already an array, use it directly
+      if (Array.isArray(current)) {
+        return current;
+      }
+      
+      // If current is a string, try to parse it
+      if (typeof current === 'string') {
+        return JSON.parse(current);
+      }
+      
+      // If current is an object but not an array, stringify and parse it
+      return JSON.parse(JSON.stringify(current));
     } catch (e) {
-      console.error("Failed to parse editor state:", e);
-      return null;
+      console.error("Failed to parse editor state:", e, "Current value:", current);
+      return [{ type: "paragraph", children: [{ text: "" }] }];
     }
   });
   const [groupId, setGroupId] = useState(null);
@@ -155,8 +172,20 @@ const EditPage = ({
     }
   };
 
+  // Display the error message if provided, otherwise check for editorState
+  if (editorError) {
+    return (
+      <div className="bg-destructive/10 p-4 rounded-md mb-4">
+        <p className="text-destructive font-medium">{editorError}</p>
+        <p className="text-sm text-muted-foreground mt-2">Try refreshing the page or contact support if this issue persists.</p>
+      </div>
+    );
+  }
+
+  // Always provide a default editor state if none exists
   if (!editorState) {
-    return <div>Error loading editor state</div>;
+    console.error("Editor state is null or undefined, using default empty state");
+    setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
   }
 
   return (
@@ -175,18 +204,11 @@ const EditPage = ({
 
         <div className="space-y-6 rounded-xl">
           <div className="space-y-0">
-            {editorError ? (
-              <div className="bg-destructive/10 p-4 rounded-md mb-4">
-                <p className="text-destructive font-medium">{editorError}</p>
-                <p className="text-sm text-muted-foreground mt-2">Try refreshing the page or contact support if this issue persists.</p>
-              </div>
-            ) : (
-              <SlateEditor
-                ref={editorRef}
-                initialEditorState={editorState}
-                setEditorState={setEditorState}
-              />
-            )}
+            <SlateEditor
+              ref={editorRef}
+              initialEditorState={editorState}
+              setEditorState={setEditorState}
+            />
           </div>
         </div>
       </div>

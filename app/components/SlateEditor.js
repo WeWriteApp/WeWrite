@@ -70,12 +70,34 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const [lineCount, setLineCount] = useState(0);
   const [contentInitialized, setContentInitialized] = useState(false);
 
-  const [initialValue, setInitialValue] = useState(initialContent || initialEditorState || [
-    {
-      type: "paragraph",
-      children: [{ text: "" }],
-    },
-  ]);
+  // Initialize editor state with proper error handling
+  const [initialValue, setInitialValue] = useState(() => {
+    try {
+      // If initialContent is provided, it takes precedence
+      if (initialContent) {
+        console.log("Using initialContent for editor initialization");
+        return Array.isArray(initialContent) ? initialContent : JSON.parse(initialContent);
+      }
+      
+      // Otherwise use initialEditorState if available
+      if (initialEditorState) {
+        console.log("Using initialEditorState for editor initialization");
+        if (Array.isArray(initialEditorState)) {
+          return initialEditorState;
+        } else if (typeof initialEditorState === 'string') {
+          return JSON.parse(initialEditorState);
+        } else {
+          return JSON.parse(JSON.stringify(initialEditorState));
+        }
+      }
+      
+      // Default empty state
+      return [{ type: "paragraph", children: [{ text: "" }] }];
+    } catch (error) {
+      console.error("Error initializing editor state:", error);
+      return [{ type: "paragraph", children: [{ text: "" }] }];
+    }
+  });
 
   useImperativeHandle(ref, () => ({
     focus: () => {
