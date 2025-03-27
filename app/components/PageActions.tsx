@@ -175,6 +175,7 @@ export function PageActions({
     const [loading, setLoading] = useState(false);
     const [selectedPage, setSelectedPage] = useState(null);
     const { user } = useContext(AuthContext);
+    const [searchAttempted, setSearchAttempted] = useState(false);
     
     // Load recently visited pages from localStorage
     useEffect(() => {
@@ -182,6 +183,7 @@ export function PageActions({
         const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
         const recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
         setRecentPages(recentlyVisited);
+        console.log("Recently visited page IDs:", recentlyVisited);
       } catch (error) {
         console.error("Error loading recently visited pages:", error);
         setRecentPages([]);
@@ -237,12 +239,20 @@ export function PageActions({
             
             setPages(userPages);
             
-            // Process recent pages data
+            // Process recent pages data immediately after setting pages
             if (recentPages.length > 0) {
               const recentData = recentPages
-                .map(recentId => userPages.find(p => p.id === recentId))
+                .map(recentId => {
+                  const foundPage = userPages.find(p => p.id === recentId);
+                  console.log(`Looking for page with ID ${recentId}:`, foundPage ? "found" : "not found");
+                  return foundPage;
+                })
                 .filter(Boolean);
+              
+              console.log("Recent page data processed:", recentData.length);
               setRecentPageData(recentData);
+            } else {
+              console.log("No recent pages found in localStorage");
             }
           } else {
             setPages([]);
@@ -251,6 +261,16 @@ export function PageActions({
         });
       }
     }, [user, pageToAdd, recentPages]);
+    
+    // Track when a search is attempted
+    const handleSearchChange = (value) => {
+      setSearchQuery(value);
+      if (value.trim() !== '') {
+        setSearchAttempted(true);
+      } else {
+        setSearchAttempted(false);
+      }
+    };
     
     // Filter pages based on search query
     const filteredPages = searchQuery.trim() === '' 
@@ -319,7 +339,7 @@ export function PageActions({
           
           toast({
             title: "Success",
-            description: "Content added to page",
+            description: `Content added to "${selectedPage.title || 'Untitled'}"`,
           });
           
           onClose();
@@ -336,6 +356,10 @@ export function PageActions({
       }
     };
     
+    // Determine if we should show the empty state or not
+    const showEmptyState = searchAttempted && filteredPages.length === 0;
+    const showRecentPages = !searchAttempted && recentPageData.length > 0;
+    
     return (
       <>
         <div className="py-4">
@@ -343,7 +367,7 @@ export function PageActions({
             <CommandInput 
               placeholder="Search pages..." 
               value={searchQuery}
-              onValueChange={setSearchQuery}
+              onValueChange={handleSearchChange}
             />
             <CommandList>
               <CommandEmpty>
@@ -359,8 +383,8 @@ export function PageActions({
                 )}
               </CommandEmpty>
               
-              {/* Recently Visited Pages - Only show if search is empty */}
-              {searchQuery.trim() === '' && recentPageData.length > 0 && (
+              {/* Recently Visited Pages Section */}
+              {showRecentPages && (
                 <CommandGroup heading="Recently Visited">
                   {recentPageData.slice(0, 5).map(page => (
                     <CommandItem
@@ -381,30 +405,32 @@ export function PageActions({
               )}
               
               {/* All Pages */}
-              <CommandGroup heading="Your Pages">
-                {loading ? (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Loading pages...</span>
-                  </div>
-                ) : (
-                  filteredPages.map(page => (
-                    <CommandItem
-                      key={page.id}
-                      value={page.id}
-                      onSelect={() => setSelectedPage(page)}
-                      className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
-                    >
-                      <div className="flex flex-col">
-                        <span>{page.title || 'Untitled'}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(page.lastModified || 0).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  ))
-                )}
-              </CommandGroup>
+              {!showEmptyState && (
+                <CommandGroup heading="Your Pages">
+                  {loading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader className="h-4 w-4 animate-spin" />
+                      <span className="ml-2">Loading pages...</span>
+                    </div>
+                  ) : (
+                    filteredPages.map(page => (
+                      <CommandItem
+                        key={page.id}
+                        value={page.id}
+                        onSelect={() => setSelectedPage(page)}
+                        className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
+                      >
+                        <div className="flex flex-col">
+                          <span>{page.title || 'Untitled'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(page.lastModified || 0).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
         </div>
