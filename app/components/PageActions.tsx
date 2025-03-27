@@ -243,29 +243,62 @@ export function PageActions({
             }
             
             try {
-              // Get source page
-              const sourceSnapshot = await get(ref(db, `pages/${pageToAdd.id}`));
-              if (sourceSnapshot.exists()) {
-                const sourceData = sourceSnapshot.val();
-                if (sourceData.content) {
-                  try {
-                    sourceContent = typeof sourceData.content === 'string' 
-                      ? JSON.parse(sourceData.content) 
-                      : sourceData.content;
+              // Get source page - use pageToAdd data directly if available
+              console.log("PageToAdd content type:", typeof pageToAdd.content);
+              
+              // Always decode the content to ensure we have the actual content
+              try {
+                if (pageToAdd.content) {
+                  // Parse content if it's a string, otherwise use it directly
+                  if (typeof pageToAdd.content === 'string') {
+                    sourceContent = JSON.parse(pageToAdd.content);
+                    console.log("Parsed source content from string, got", sourceContent.length, "blocks");
+                  } else {
+                    sourceContent = pageToAdd.content;
+                    console.log("Using source content directly, got", sourceContent.length, "blocks");
+                  }
+                  
+                  if (!Array.isArray(sourceContent)) {
+                    console.warn("Source content is not an array, initializing empty array");
+                    sourceContent = [];
+                  }
+                } else {
+                  console.warn("No content in pageToAdd, fetching from database");
+                  
+                  // Fallback to database if needed
+                  const sourceSnapshot = await get(ref(db, `pages/${pageToAdd.id}`));
+                  if (sourceSnapshot.exists()) {
+                    const sourceData = sourceSnapshot.val();
                     
-                    if (!Array.isArray(sourceContent)) {
-                      sourceContent = [];
+                    if (sourceData.content) {
+                      try {
+                        sourceContent = typeof sourceData.content === 'string' 
+                          ? JSON.parse(sourceData.content) 
+                          : sourceData.content;
+                        
+                        console.log("Fetched source content from database, got", 
+                          Array.isArray(sourceContent) ? sourceContent.length : "non-array", 
+                          "blocks");
+                        
+                        if (!Array.isArray(sourceContent)) {
+                          sourceContent = [];
+                        }
+                      } catch (e) {
+                        console.error("Error parsing database source content:", e);
+                      }
                     }
-                  } catch (e) {
-                    console.error("Error parsing source content:", e);
                   }
                 }
-              } else {
-                console.error("Source page not found:", pageToAdd.id);
+              } catch (e) {
+                console.error("Error processing source content:", e);
               }
             } catch (e) {
-              console.error("Error fetching source page:", e);
+              console.error("Error handling source content:", e);
             }
+            
+            // Debugging: Log content blocks to see what's being combined
+            console.log("Final target content blocks:", targetContent.length);
+            console.log("Final source content blocks:", sourceContent.length);
             
             // Create combined content
             const combinedContent = [
@@ -415,7 +448,15 @@ export function PageActions({
                 Select a page to add the current content to
               </DialogDescription>
             </DialogHeader>
-            <AddToPageDialogContent pageToAdd={page} onClose={() => setShowAddDialog(false)} />
+            <AddToPageDialogContent 
+              pageToAdd={{
+                ...page,
+                content: typeof page.content === 'string' 
+                  ? page.content 
+                  : (page.content ? JSON.stringify(page.content) : '[]')
+              }} 
+              onClose={() => setShowAddDialog(false)} 
+            />
           </DialogContent>
         </Dialog>
         
