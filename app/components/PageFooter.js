@@ -19,17 +19,19 @@ import { PageActions } from "./PageActions";
  * combination of PageInteractionButtons and ActionRow components.
  * 
  * @param {Object} page - The page data object
+ * @param {Object} content - The content to be passed to PageActions
  * @param {boolean} isOwner - Whether the current user owns the page
  * @param {boolean} isEditing - Whether the page is currently in edit mode
  * @param {Function} setIsEditing - Function to toggle edit mode
  */
-export default function PageFooter({ page, isOwner, isEditing, setIsEditing }) {
+export default function PageFooter({ page, content, isOwner, isEditing, setIsEditing }) {
   if (!page) return null;
   
   return (
     <div className="mt-10 border-t border-border pt-6 pb-6 px-4 sm:px-6">
       <PageActions 
         page={page}
+        content={content}
         isOwner={isOwner}
         isEditing={isEditing}
         setIsEditing={setIsEditing}

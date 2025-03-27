@@ -70,6 +70,7 @@ interface PageActionsProps {
     userId?: string;
     username?: string;
   };
+  content: any;
   isOwner: boolean;
   isEditing?: boolean;
   setIsEditing?: (value: boolean) => void;
@@ -78,6 +79,7 @@ interface PageActionsProps {
 
 export function PageActions({ 
   page, 
+  content,
   isOwner = false, 
   isEditing = false, 
   setIsEditing,
@@ -87,7 +89,26 @@ export function PageActions({
   const { lineMode, setLineMode } = useLineSettings();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-
+  
+  // Store the current page content for the Add to Page functionality
+  const [currentPageContent, setCurrentPageContent] = useState<any>(null);
+  
+  // When the component mounts or content changes, capture the content
+  useEffect(() => {
+    if (content) {
+      try {
+        // Parse the content if it's a string, otherwise use it directly
+        const parsedContent = typeof content === 'string' 
+          ? JSON.parse(content) 
+          : content;
+        
+        setCurrentPageContent(parsedContent);
+        console.log("Captured current page content for Add to Page:", parsedContent);
+      } catch (error) {
+        console.error("Error parsing content for Add to Page:", error);
+      }
+    }
+  }, [content]);
   /**
    * Copies the current page URL to clipboard
    */
@@ -216,7 +237,9 @@ export function PageActions({
         let sourceContent = [];
         
         // Try to parse the content from the passed page object
-        if (pageToAdd.content) {
+        if (pageToAdd.parsedContent) {
+          sourceContent = pageToAdd.parsedContent;
+        } else if (pageToAdd.content) {
           try {
             sourceContent = typeof pageToAdd.content === 'string'
               ? JSON.parse(pageToAdd.content)
@@ -465,11 +488,12 @@ export function PageActions({
             <AddToPageDialogContent 
               pageToAdd={{
                 ...page,
-                // Ensure we have the ID properly set
                 id: page.id || '',
-                content: typeof page.content === 'string' 
-                  ? page.content 
-                  : (page.content ? JSON.stringify(page.content) : '[]')
+                // Pass the current page content directly from state
+                parsedContent: currentPageContent,
+                content: typeof content === 'string' 
+                  ? content 
+                  : (content ? JSON.stringify(content) : '[]')
               }} 
               onClose={() => setShowAddDialog(false)} 
             />

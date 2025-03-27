@@ -485,6 +485,7 @@ function SinglePageView({ params }) {
       <PageProvider>
         <PageFooter 
           page={page}
+          content={editorState}
           isOwner={user?.uid === page?.userId}
           isEditing={isEditing}
           setIsEditing={setIsEditing}
