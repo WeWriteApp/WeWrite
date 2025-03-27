@@ -579,11 +579,25 @@ const LinkNode = ({ node, index }) => {
   const href = node.url || node.href || node.link || '#';
   const pageId = extractPageId(href);
   
+  // Extract text content from children array if available
+  const getTextFromNode = (node) => {
+    if (node.displayText) return node.displayText;
+    if (node.text) return node.text;
+    if (node.content) return node.content;
+    // Check for children array and extract text
+    if (node.children && Array.isArray(node.children)) {
+      return node.children.map(child => child.text || '').join('');
+    }
+    return href;
+  };
+
+  const displayText = getTextFromNode(node);
+  
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
     return (
       <span className="inline-block">
-        <InternalLinkWithTitle pageId={pageId} href={href} displayText={node.displayText || node.text} />
+        <InternalLinkWithTitle pageId={pageId} href={href} displayText={displayText} />
       </span>
     );
   }
@@ -592,7 +606,7 @@ const LinkNode = ({ node, index }) => {
   return (
     <span className="inline-block">
       <PillLink href={href} isPublic={true} className="inline">
-        {node.displayText || node.text || node.content || href}
+        {displayText}
       </PillLink>
     </span>
   );
