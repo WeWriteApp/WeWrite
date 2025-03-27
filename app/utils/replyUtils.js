@@ -52,7 +52,7 @@ export const createReplyContent = ({
             { text: ` by ` },
             {
               type: "link",
-              url: `/profile/${userId || "anonymous"}`,
+              url: `/user/${userId || "anonymous"}`,
               children: [{ text: username || "Anonymous" }]
             },
             { text: "" }
