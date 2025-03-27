@@ -228,13 +228,13 @@ export function PageActions({
           const referenceBlock = {
             type: 'paragraph',
             children: [
-              { text: 'Reference to ' },
+              { text: 'Content from ' },
               {
                 type: 'link',
                 url: `/pages/${pageToAdd.id}`,
                 children: [{ text: pageToAdd.title || 'Untitled' }]
               },
-              { text: ` by ${pageToAdd.username || 'Anonymous'}` }
+              { text: ` by ${pageToAdd.username || 'Anonymous'}:` }
             ]
           };
           
@@ -244,7 +244,7 @@ export function PageActions({
             children: [{ text: '---' }]
           };
           
-          // Create the new content by combining the existing content with the reference block
+          // Create the new content by combining the existing content with the reference block and source content
           const newContent = [...targetContent, separator, referenceBlock, ...sourceContent];
           
           // Update the page content
