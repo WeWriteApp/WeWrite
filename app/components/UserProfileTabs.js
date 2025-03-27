@@ -190,14 +190,14 @@ export default function UserProfileTabs({ profile }) {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="rounded-full"
                         onClick={loadMorePages}
                         disabled={isMoreLoading}
+                        className="gap-2"
                       >
                         {isMoreLoading ? (
-                          <Loader className="h-4 w-4 animate-spin mr-2" />
+                          <Loader className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Plus className="h-4 w-4 mr-2" />
+                          <Plus className="h-4 w-4" />
                         )}
                         Load more
                       </Button>
@@ -247,14 +247,14 @@ export default function UserProfileTabs({ profile }) {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="rounded-full"
                           onClick={loadMorePrivatePages}
                           disabled={isMorePrivateLoading}
+                          className="gap-2"
                         >
                           {isMorePrivateLoading ? (
-                            <Loader className="h-4 w-4 animate-spin mr-2" />
+                            <Loader className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-4 w-4" />
                           )}
                           Load more
                         </Button>

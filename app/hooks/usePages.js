@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase/database";
-import { collection, query, where, orderBy, onSnapshot, limit, startAfter } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 
 const limitCount = 25;
 
@@ -14,7 +14,6 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
   const [isMorePrivateLoading, setIsMorePrivateLoading] = useState(false);
   const [hasMorePages, setHasMorePages] = useState(true);
   const [hasMorePrivatePages, setHasMorePrivatePages] = useState(true);
-  const [activeTab, setActiveTab] = useState('public');
   const [error, setError] = useState(null);
 
   const fetchInitialPages = () => {
@@ -75,10 +74,16 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         setHasMorePrivatePages(true);
       }
 
-      if (snapshot.docs.length > 0) {
-        const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-        setLastPageKey(lastDoc);
-        setLastPrivatePageKey(lastDoc);
+      // Set the last document keys for pagination
+      const publicDocs = snapshot.docs.filter(doc => doc.data().isPublic);
+      const privateDocs = snapshot.docs.filter(doc => !doc.data().isPublic);
+      
+      if (publicDocs.length > 0) {
+        setLastPageKey(publicDocs[publicDocs.length - 1]);
+      }
+      
+      if (privateDocs.length > 0 && isOwner) {
+        setLastPrivatePageKey(privateDocs[privateDocs.length - 1]);
       }
 
       setLoading(false);
@@ -92,169 +97,155 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
   };
 
   // Function to fetch more pages
-  const fetchMorePages = () => {
-    return new Promise((resolve, reject) => {
-      if (!lastPageKey && !lastPrivatePageKey) {
+  const fetchMorePages = async () => {
+    try {
+      if (!lastPageKey) {
         setHasMorePages(false);
-        setHasMorePrivatePages(false);
-        reject(new Error("No more pages to load"));
-        return;
+        throw new Error("No more pages to load");
       }
       
-      let moreQuery;
-      let paginationStartDoc;
+      // Check if the current user is the owner of the pages
+      const isOwner = currentUserId && userId === currentUserId;
       
-      if (activeTab === 'public') {
-        paginationStartDoc = lastPageKey;
-        if (!paginationStartDoc) {
-          setHasMorePages(false);
-          reject(new Error("No more pages to load"));
-          return;
-        }
-        
-        // Check if the current user is the owner of the pages
-        const isOwner = currentUserId && userId === currentUserId;
-        
-        if (includePrivate && isOwner) {
-          // Get all pages for the user (both public and private) if the current user is the owner
-          moreQuery = query(
-            collection(db, 'pages'),
-            where('userId', '==', userId),
-            orderBy('lastModified', 'desc'),
-            startAfter(paginationStartDoc),
-            limit(limitCount)
-          );
-        } else {
-          // Get only public pages if the current user is not the owner
-          moreQuery = query(
-            collection(db, 'pages'),
-            where('userId', '==', userId),
-            where('isPublic', '==', true),
-            orderBy('lastModified', 'desc'),
-            startAfter(paginationStartDoc),
-            limit(limitCount)
-          );
-        }
-        
-        setIsMoreLoading(true);
-        
-        onSnapshot(moreQuery, (snapshot) => {
-          const newPagesArray = [];
-          
-          snapshot.forEach((doc) => {
-            const pageData = { id: doc.id, ...doc.data() };
-            newPagesArray.push(pageData);
-          });
-          
-          setPages((prevPages) => [...prevPages, ...newPagesArray]);
-          
-          if (snapshot.docs.length < limitCount) {
-            setHasMorePages(false);
-          }
-          
-          if (snapshot.docs.length > 0) {
-            const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-            setLastPageKey(lastDoc);
-          }
-          
-          setIsMoreLoading(false);
-          resolve();
-        }, (err) => {
-          console.error("Error fetching more pages:", err);
-          setError("Failed to load more pages. Please try again later.");
-          setIsMoreLoading(false);
-          reject(err);
-        });
-      } else if (activeTab === 'private' && isOwner) {
-        paginationStartDoc = lastPrivatePageKey;
-        if (!paginationStartDoc) {
-          setHasMorePrivatePages(false);
-          reject(new Error("No more private pages to load"));
-          return;
-        }
-        
-        // Only fetch private pages if the current user is the owner
+      let moreQuery;
+      if (includePrivate && isOwner) {
+        // Get public pages for the user
         moreQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
-          where('isPublic', '==', false),
+          where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
-          startAfter(paginationStartDoc),
+          startAfter(lastPageKey),
           limit(limitCount)
         );
-        
-        setIsMorePrivateLoading(true);
-        
-        onSnapshot(moreQuery, (snapshot) => {
-          const newPrivateArray = [];
-          
-          snapshot.forEach((doc) => {
-            const pageData = { id: doc.id, ...doc.data() };
-            if (!pageData.isPublic) {
-              newPrivateArray.push(pageData);
-            }
-          });
-          
-          setPrivatePages((prevPages) => [...prevPages, ...newPrivateArray]);
-          
-          if (snapshot.docs.length < limitCount) {
-            setHasMorePrivatePages(false);
-          }
-          
-          if (snapshot.docs.length > 0) {
-            const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-            setLastPrivatePageKey(lastDoc);
-          }
-          
-          setIsMorePrivateLoading(false);
-          resolve();
-        }, (err) => {
-          console.error("Error fetching more private pages:", err);
-          setError("Failed to load more private pages. Please try again later.");
-          setIsMorePrivateLoading(false);
-          reject(err);
-        });
       } else {
-        reject(new Error("Invalid tab or permissions"));
+        // Get only public pages if the current user is not the owner
+        moreQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', true),
+          orderBy('lastModified', 'desc'),
+          startAfter(lastPageKey),
+          limit(limitCount)
+        );
       }
-    });
+      
+      setIsMoreLoading(true);
+      
+      const snapshot = await getDocs(moreQuery);
+      const newPagesArray = [];
+      
+      snapshot.forEach((doc) => {
+        const pageData = { id: doc.id, ...doc.data() };
+        if (pageData.isPublic) {
+          newPagesArray.push(pageData);
+        }
+      });
+      
+      setPages((prevPages) => [...prevPages, ...newPagesArray]);
+      
+      if (snapshot.docs.length < limitCount) {
+        setHasMorePages(false);
+      }
+      
+      if (snapshot.docs.length > 0) {
+        setLastPageKey(snapshot.docs[snapshot.docs.length - 1]);
+      } else {
+        setHasMorePages(false);
+      }
+      
+      setIsMoreLoading(false);
+      return newPagesArray;
+    } catch (err) {
+      console.error("Error fetching more pages:", err);
+      setError("Failed to load more pages. Please try again later.");
+      setIsMoreLoading(false);
+      throw err;
+    }
+  };
+  
+  // Function to fetch more private pages
+  const fetchMorePrivatePages = async () => {
+    try {
+      // Check if the current user is the owner of the pages
+      const isOwner = currentUserId && userId === currentUserId;
+      
+      if (!isOwner) {
+        throw new Error("You don't have permission to view private pages");
+      }
+      
+      if (!lastPrivatePageKey) {
+        setHasMorePrivatePages(false);
+        throw new Error("No more private pages to load");
+      }
+      
+      // Only fetch private pages if the current user is the owner
+      const moreQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('isPublic', '==', false),
+        orderBy('lastModified', 'desc'),
+        startAfter(lastPrivatePageKey),
+        limit(limitCount)
+      );
+      
+      setIsMorePrivateLoading(true);
+      
+      const snapshot = await getDocs(moreQuery);
+      const newPrivateArray = [];
+      
+      snapshot.forEach((doc) => {
+        const pageData = { id: doc.id, ...doc.data() };
+        if (!pageData.isPublic) {
+          newPrivateArray.push(pageData);
+        }
+      });
+      
+      setPrivatePages((prevPages) => [...prevPages, ...newPrivateArray]);
+      
+      if (snapshot.docs.length < limitCount) {
+        setHasMorePrivatePages(false);
+      }
+      
+      if (snapshot.docs.length > 0) {
+        setLastPrivatePageKey(snapshot.docs[snapshot.docs.length - 1]);
+      } else {
+        setHasMorePrivatePages(false);
+      }
+      
+      setIsMorePrivateLoading(false);
+      return newPrivateArray;
+    } catch (err) {
+      console.error("Error fetching more private pages:", err);
+      setError("Failed to load more private pages. Please try again later.");
+      setIsMorePrivateLoading(false);
+      throw err;
+    }
   };
 
+  // Fetch initial pages when the component mounts
   useEffect(() => {
-    let unsubscribe;
     if (userId) {
-      unsubscribe = fetchInitialPages();
-    }
-    
-    return () => {
-      if (unsubscribe) {
+      const unsubscribe = fetchInitialPages();
+      
+      // Cleanup function
+      return () => {
         unsubscribe();
-      }
-    };
-  }, [userId, includePrivate]);
-
-  const loadMorePages = () => {
-    if (activeTab === 'public') {
-      if (isMoreLoading || !hasMorePages || !lastPageKey) return;
-      fetchMorePages();
-    } else {
-      if (isMorePrivateLoading || !hasMorePrivatePages || !lastPrivatePageKey) return;
-      fetchMorePages();
+      };
     }
-  };
+  }, [userId]);
 
   return {
     pages,
     privatePages,
     loading,
-    loadMorePages,
-    isMoreLoading,
-    isMorePrivateLoading,
+    error,
     hasMorePages,
     hasMorePrivatePages,
-    activeTab,
-    setActiveTab,
-    error
+    isMoreLoading,
+    isMorePrivateLoading,
+    fetchMorePages,
+    fetchMorePrivatePages
   };
 };
 
