@@ -32,6 +32,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
+import TypeaheadSearch from './TypeaheadSearch';
 
 /**
  * PageActions Component
@@ -168,144 +169,16 @@ export function PageActions({
    * Manages searching and selecting a page to add the current content to
    */
   function AddToPageDialogContent({ pageToAdd, onClose }) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [pages, setPages] = useState([]);
-    const [recentPages, setRecentPages] = useState<string[]>([]);
-    const [recentPageData, setRecentPageData] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
     const [selectedPage, setSelectedPage] = useState(null);
     const { user } = useContext(AuthContext);
-    const [searchAttempted, setSearchAttempted] = useState(false);
+    const [searchActive, setSearchActive] = useState(false);
     
-    // Load recently visited pages from localStorage
-    useEffect(() => {
-      try {
-        const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
-        const recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
-        setRecentPages(recentlyVisited);
-        console.log("Recently visited page IDs:", recentlyVisited);
-      } catch (error) {
-        console.error("Error loading recently visited pages:", error);
-        setRecentPages([]);
-      }
-    }, []);
-    
-    // Search for pages when dialog opens
-    useEffect(() => {
-      if (user) {
-        setLoading(true);
-        
-        // Get pages that the user has edit access to
-        const db = getDatabase(app);
-        const pagesRef = ref(db, 'pages');
-        
-        onValue(pagesRef, (snapshot) => {
-          const pagesData = snapshot.val();
-          if (pagesData) {
-            // Get all usernames for displaying author information
-            const usersRef = ref(db, 'users');
-            onValue(usersRef, (usersSnapshot) => {
-              const usersData = usersSnapshot.val() || {};
-              
-              // Filter pages that the user has edit access to
-              const userPages = Object.entries(pagesData)
-                .map(([id, pageData]: [string, any]) => {
-                  // Add username information to each page
-                  const userId = pageData.userId;
-                  const username = 
-                    userId && usersData[userId] ? 
-                    (usersData[userId].username || usersData[userId].displayName || 'Anonymous') : 
-                    'Anonymous';
-                    
-                  return { 
-                    id, 
-                    ...pageData, 
-                    username 
-                  };
-                })
-                .filter(page => {
-                  // Include pages the user owns
-                  const isOwner = page.userId === user.uid;
-                  
-                  // Include pages where the user has edit access through collaborators
-                  const hasEditAccess = page.collaborators && 
-                    page.collaborators[user.uid] && 
-                    (page.collaborators[user.uid].role === 'editor' || 
-                     page.collaborators[user.uid].role === 'admin');
-                  
-                  // Include pages where the user has edit access through groups
-                  const hasGroupAccess = page.groups && Object.keys(page.groups).some(groupId => {
-                    // Check if user is in this group with edit permissions
-                    const userGroups = user.groups || {};
-                    return userGroups[groupId] && 
-                      (userGroups[groupId].role === 'editor' || 
-                       userGroups[groupId].role === 'admin' || 
-                       userGroups[groupId].role === 'owner');
-                  });
-                  
-                  // Exclude the current page
-                  const isNotCurrentPage = pageToAdd && page.id !== pageToAdd.id;
-                  
-                  return isNotCurrentPage && (isOwner || hasEditAccess || hasGroupAccess);
-                })
-                .sort((a, b) => {
-                  // Sort by last modified date (newest first)
-                  const aDate = a.lastModified || 0;
-                  const bDate = b.lastModified || 0;
-                  return bDate - aDate;
-                });
-              
-              setPages(userPages);
-              setLoading(false);
-              
-              // Process recent pages data immediately after setting pages
-              if (recentPages.length > 0) {
-                const recentData = recentPages
-                  .map(recentId => {
-                    const foundPage = userPages.find(p => p.id === recentId);
-                    console.log(`Looking for page with ID ${recentId}:`, foundPage ? "found" : "not found");
-                    return foundPage;
-                  })
-                  .filter(Boolean);
-                
-                console.log("Recent page data processed:", recentData.length);
-                setRecentPageData(recentData);
-              } else {
-                console.log("No recent pages found in localStorage");
-              }
-            }, {
-              onlyOnce: true
-            });
-          } else {
-            setPages([]);
-            setLoading(false);
-          }
-        });
-      }
-    }, [user, pageToAdd, recentPages]);
-    
-    // Track when a search is attempted
-    const handleSearchChange = (value) => {
-      setSearchQuery(value);
-      if (value.trim() !== '') {
-        setSearchAttempted(true);
-      } else {
-        setSearchAttempted(false);
-      }
+    // Handle page selection
+    const handleSelectPage = (page) => {
+      console.log("Selected page:", page);
+      setSelectedPage(page);
     };
-    
-    // Filter pages based on search query
-    const filteredPages = searchQuery.trim() === '' 
-      ? pages 
-      : pages.filter(page => {
-          const title = (page.title || 'Untitled').toLowerCase();
-          const username = (page.username || '').toLowerCase();
-          const query = searchQuery.toLowerCase();
-          
-          // Search in both title and username
-          return title.includes(query) || username.includes(query);
-        });
-    
+
     const handleAddToPage = async () => {
       if (!selectedPage || !pageToAdd) return;
       
@@ -351,130 +224,80 @@ export function PageActions({
             sourceContent = [];
           }
           
-          // Combine the content
-          const combinedContent = [...targetContent, ...sourceContent];
+          // Create a reference block
+          const referenceBlock = {
+            type: 'paragraph',
+            children: [
+              { text: 'Reference to ' },
+              {
+                type: 'link',
+                url: `/pages/${pageToAdd.id}`,
+                children: [{ text: pageToAdd.title || 'Untitled' }]
+              },
+              { text: ` by ${pageToAdd.username || 'Anonymous'}` }
+            ]
+          };
           
-          // Update the page
-          update(pageRef, {
-            content: JSON.stringify(combinedContent),
-            lastModified: Date.now()
-          });
+          // Add a separator
+          const separator = {
+            type: 'paragraph',
+            children: [{ text: '---' }]
+          };
           
-          toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
+          // Create the new content by combining the existing content with the reference block
+          const newContent = [...targetContent, separator, referenceBlock, ...sourceContent];
           
-          onClose();
+          // Update the page content
+          const updates = {};
+          updates[`pages/${selectedPage.id}/content`] = JSON.stringify(newContent);
+          updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
+          
+          update(ref(db), updates)
+            .then(() => {
+              toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
+              onClose();
+            })
+            .catch((error) => {
+              console.error("Error updating page:", error);
+              toast.error("Failed to add content to page");
+            });
         }, {
           onlyOnce: true
         });
       } catch (error) {
         console.error("Error in handleAddToPage:", error);
-        toast.error("Failed to add content to page");
+        toast.error("An error occurred while adding content to page");
       }
     };
     
-    // Determine if we should show the empty state or not
-    const showEmptyState = searchAttempted && filteredPages.length === 0;
-    const showRecentPages = !searchAttempted && recentPageData.length > 0;
-    
     return (
-      <>
-        <div className="py-4">
-          <Command className="rounded-lg border shadow-md">
-            <CommandInput 
-              placeholder="Search pages..." 
-              value={searchQuery}
-              onValueChange={handleSearchChange}
+      <div className="space-y-4">
+        <div className="p-2">
+          <h2 className="text-sm font-medium mb-2">Select a page to add the current content to</h2>
+          
+          <div className="overflow-y-auto max-h-[40vh]">
+            <TypeaheadSearch 
+              onSelect={handleSelectPage}
+              placeholder="Search pages..."
+              radioSelection={true}
+              selectedId={selectedPage?.id}
             />
-            <CommandList>
-              <CommandEmpty>
-                {loading ? (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Loading pages...</span>
-                  </div>
-                ) : (
-                  <div className="p-4 text-center">
-                    No pages found matching "{searchQuery}"
-                  </div>
-                )}
-              </CommandEmpty>
-              
-              {/* Recently Visited Pages Section */}
-              {showRecentPages && (
-                <CommandGroup heading="Recently Visited">
-                  {recentPageData.slice(0, 5).map(page => (
-                    <CommandItem
-                      key={page.id}
-                      value={`recent-${page.id}`}
-                      onSelect={() => setSelectedPage(page)}
-                      className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
-                    >
-                      <div className="flex flex-col">
-                        <span>{page.title || 'Untitled'}</span>
-                        <div className="flex flex-row gap-2 text-xs text-muted-foreground">
-                          <span>
-                            {page.username && page.username !== 'NULL' ? `by ${page.username}` : 'Anonymous'}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            {new Date(page.lastModified || 0).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              
-              {/* All Pages */}
-              {!showEmptyState && (
-                <CommandGroup heading="Your Pages">
-                  {loading ? (
-                    <div className="flex items-center justify-center p-4">
-                      <Loader className="h-4 w-4 animate-spin" />
-                      <span className="ml-2">Loading pages...</span>
-                    </div>
-                  ) : (
-                    filteredPages.map(page => (
-                      <CommandItem
-                        key={page.id}
-                        value={page.id}
-                        onSelect={() => setSelectedPage(page)}
-                        className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
-                      >
-                        <div className="flex flex-col">
-                          <span>{page.title || 'Untitled'}</span>
-                          <div className="flex flex-row gap-2 text-xs text-muted-foreground">
-                            <span>
-                              {page.username && page.username !== 'NULL' ? `by ${page.username}` : 'Anonymous'}
-                            </span>
-                            <span>·</span>
-                            <span>
-                              {new Date(page.lastModified || 0).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </CommandItem>
-                    ))
-                  )}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
+          </div>
         </div>
         
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
+        <div className="flex justify-end gap-2 p-2 pt-0">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button 
             onClick={handleAddToPage} 
             disabled={!selectedPage}
+            className="bg-primary hover:bg-primary/90"
           >
             Add to Page
           </Button>
-        </DialogFooter>
-      </>
+        </div>
+      </div>
     );
   }
 
