@@ -30,7 +30,7 @@ import {
 } from "./ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { AuthContext } from "../providers/AuthProvider";
-import { getDatabase, ref, onValue, update, get } from "firebase/database";
+import { getDatabase, ref, onValue, set, get } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
 
@@ -169,176 +169,142 @@ export function PageActions({
    * Manages searching and selecting a page to add the current content to
    */
   function AddToPageDialogContent({ pageToAdd, onClose }) {
-    const [selectedPage, setSelectedPage] = useState(null);
-    const { user } = useContext(AuthContext);
-    const [searchActive, setSearchActive] = useState(false);
+    const [selectedPageId, setSelectedPageId] = useState("");
+    const [selectedPageTitle, setSelectedPageTitle] = useState("");
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [selectedData, setSelectedData] = useState(null);
     
-    // Handle page selection
+    // Simple page selection handler - store only the essential data
     const handleSelectPage = (page) => {
-      console.log("Selected page (raw):", page);
-      
-      // Store the selected page data
-      setSelectedPage(page);
-      
-      // Log the selection
-      console.log("Selected page stored:", page);
+      if (page && page.id) {
+        setSelectedPageId(page.id);
+        setSelectedPageTitle(page.title || "Untitled");
+      }
     };
 
     const handleAddToPage = async () => {
-      // Input validation
-      if (!selectedPage) {
+      // Validate we have the necessary data
+      if (!selectedPageId) {
         toast.error("Please select a page first");
         return;
       }
       
-      if (!pageToAdd) {
-        toast.error("Source page data is missing");
+      if (!pageToAdd?.id) {
+        toast.error("Source page information is missing");
         return;
       }
       
-      // Start loading state
+      // Set loading state
       setLoading(true);
       
       try {
-        console.log("Adding content from", pageToAdd.title, "to", selectedPage.title);
-        
-        // Get database instance
-        const db = getDatabase(app);
-        
-        // Create direct references
-        const targetRef = ref(db, `pages/${selectedPage.id}`);
-        const sourceRef = ref(db, `pages/${pageToAdd.id}`);
-        
-        console.log("Target ref path:", targetRef.toString());
-        console.log("Source ref path:", sourceRef.toString());
-        
-        // Get target page data first
-        let targetData = null;
-        
-        try {
-          const targetSnap = await get(targetRef);
-          if (targetSnap.exists()) {
-            targetData = targetSnap.val();
-            console.log("Target page data found:", targetData.title);
-          } else {
-            console.error("Target page not found at path:", targetRef.toString());
-            toast.error("Selected page not found");
-            setLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error("Error fetching target page:", error);
-          toast.error("Error accessing selected page");
-          setLoading(false);
-          return;
-        }
-        
-        // Get source page data
-        let sourceData = null;
-        
-        try {
-          const sourceSnap = await get(sourceRef);
-          if (sourceSnap.exists()) {
-            sourceData = sourceSnap.val();
-            console.log("Source page data found:", sourceData.title);
-          } else {
-            console.error("Source page not found at path:", sourceRef.toString());
-            toast.error("Current page data not found");
-            setLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error("Error fetching source page:", error);
-          toast.error("Error accessing current page");
-          setLoading(false);
-          return;
-        }
-        
-        // Parse target content
-        let targetContent = [];
-        if (targetData.content) {
-          try {
-            targetContent = typeof targetData.content === 'string' 
-              ? JSON.parse(targetData.content) 
-              : targetData.content;
-              
-            if (!Array.isArray(targetContent)) {
-              console.warn("Target content is not an array, initializing empty array");
-              targetContent = [];
-            }
-          } catch (error) {
-            console.error("Error parsing target content:", error);
-            targetContent = [];
-          }
-        }
-        
-        // Parse source content
-        let sourceContent = [];
-        if (sourceData.content) {
-          try {
-            sourceContent = typeof sourceData.content === 'string'
-              ? JSON.parse(sourceData.content)
-              : sourceData.content;
-              
-            if (!Array.isArray(sourceContent)) {
-              console.warn("Source content is not an array, initializing empty array");
-              sourceContent = [];
-            }
-          } catch (error) {
-            console.error("Error parsing source content:", error);
-            sourceContent = [];
-          }
-        }
-        
-        // Create divider and reference
-        const separator = {
-          type: 'paragraph',
-          children: [{ text: '---' }]
-        };
-        
-        const referenceBlock = {
-          type: 'paragraph',
-          children: [
-            { text: 'Content from ' },
-            {
-              type: 'link',
-              url: `/pages/${pageToAdd.id}`,
-              children: [{ text: pageToAdd.title || 'Untitled' }]
-            },
-            { text: ` by ${pageToAdd.username || 'Anonymous'}:` }
-          ]
-        };
-        
-        // Combine content
-        const newContent = [...targetContent, separator, referenceBlock, ...sourceContent];
-        
-        // Prepare update
-        const updates = {};
-        updates[`pages/${selectedPage.id}/content`] = JSON.stringify(newContent);
-        updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
-        
-        // Close dialog first to avoid UI issues
-        console.log("Closing dialog");
+        // Immediately close the dialog and redirect for better user experience
         onClose();
         
-        // Show success notification
-        toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
+        // Show a toast that we're working on it
+        toast.success(`Adding content to "${selectedPageTitle}"...`);
         
-        // Redirect immediately
-        console.log("Redirecting to", selectedPage.id);
-        router.push(`/pages/${selectedPage.id}`);
+        // Navigate to the target page immediately
+        router.push(`/pages/${selectedPageId}`);
         
-        // Update database in background
-        console.log("Updating database...");
-        await update(ref(db), updates);
-        console.log("Database updated successfully");
-        
+        // Then perform all the actual data processing in the background
+        setTimeout(async () => {
+          try {
+            // Get database reference
+            const db = getDatabase(app);
+            
+            // Get both pages data with separate error handling
+            let targetContent = [];
+            let sourceContent = [];
+            
+            try {
+              // Get target page
+              const targetSnapshot = await get(ref(db, `pages/${selectedPageId}`));
+              if (targetSnapshot.exists()) {
+                const targetData = targetSnapshot.val();
+                if (targetData.content) {
+                  try {
+                    targetContent = typeof targetData.content === 'string' 
+                      ? JSON.parse(targetData.content) 
+                      : targetData.content;
+                    
+                    if (!Array.isArray(targetContent)) {
+                      targetContent = [];
+                    }
+                  } catch (e) {
+                    console.error("Error parsing target content:", e);
+                  }
+                }
+              } else {
+                console.error("Target page not found:", selectedPageId);
+              }
+            } catch (e) {
+              console.error("Error fetching target page:", e);
+            }
+            
+            try {
+              // Get source page
+              const sourceSnapshot = await get(ref(db, `pages/${pageToAdd.id}`));
+              if (sourceSnapshot.exists()) {
+                const sourceData = sourceSnapshot.val();
+                if (sourceData.content) {
+                  try {
+                    sourceContent = typeof sourceData.content === 'string' 
+                      ? JSON.parse(sourceData.content) 
+                      : sourceData.content;
+                    
+                    if (!Array.isArray(sourceContent)) {
+                      sourceContent = [];
+                    }
+                  } catch (e) {
+                    console.error("Error parsing source content:", e);
+                  }
+                }
+              } else {
+                console.error("Source page not found:", pageToAdd.id);
+              }
+            } catch (e) {
+              console.error("Error fetching source page:", e);
+            }
+            
+            // Create combined content
+            const combinedContent = [
+              ...targetContent,
+              { type: 'paragraph', children: [{ text: '---' }] },
+              { 
+                type: 'paragraph', 
+                children: [
+                  { text: 'Content from ' },
+                  { 
+                    type: 'link',
+                    url: `/pages/${pageToAdd.id}`,
+                    children: [{ text: pageToAdd.title || 'Untitled' }]
+                  },
+                  { text: ':' }
+                ]
+              },
+              ...sourceContent
+            ];
+            
+            // Update in the database - use set instead of update for more reliable operation
+            try {
+              const contentRef = ref(db, `pages/${selectedPageId}/content`);
+              const dateRef = ref(db, `pages/${selectedPageId}/lastModified`);
+              
+              await set(contentRef, JSON.stringify(combinedContent));
+              await set(dateRef, new Date().toISOString());
+              
+              console.log("Content successfully updated");
+            } catch (e) {
+              console.error("Error updating page content:", e);
+            }
+          } catch (backgroundError) {
+            console.error("Background processing error:", backgroundError);
+          }
+        }, 100);
       } catch (error) {
         console.error("Error in handleAddToPage:", error);
-        toast.error("An error occurred while adding content to page");
+        toast.error("An error occurred while adding content");
         setLoading(false);
       }
     };
@@ -353,7 +319,7 @@ export function PageActions({
               onSelect={handleSelectPage}
               placeholder="Search pages..."
               radioSelection={true}
-              selectedId={selectedPage?.id}
+              selectedId={selectedPageId}
               editableOnly={true}
             />
           </div>
@@ -365,7 +331,7 @@ export function PageActions({
           </Button>
           <Button 
             onClick={handleAddToPage} 
-            disabled={!selectedPage || loading}
+            disabled={!selectedPageId || loading}
             className="bg-primary hover:bg-primary/90"
           >
             {loading ? (
