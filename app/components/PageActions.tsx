@@ -202,62 +202,84 @@ export function PageActions({
         onValue(pagesRef, (snapshot) => {
           const pagesData = snapshot.val();
           if (pagesData) {
-            // Filter pages that the user has edit access to
-            const userPages = Object.entries(pagesData)
-              .map(([id, pageData]: [string, any]) => ({ id, ...pageData }))
-              .filter(page => {
-                // Include pages the user owns
-                const isOwner = page.userId === user.uid;
-                
-                // Include pages where the user has edit access through collaborators
-                const hasEditAccess = page.collaborators && 
-                  page.collaborators[user.uid] && 
-                  (page.collaborators[user.uid].role === 'editor' || 
-                   page.collaborators[user.uid].role === 'admin');
-                
-                // Include pages where the user has edit access through groups
-                const hasGroupAccess = page.groups && Object.keys(page.groups).some(groupId => {
-                  // Check if user is in this group with edit permissions
-                  const userGroups = user.groups || {};
-                  return userGroups[groupId] && 
-                    (userGroups[groupId].role === 'editor' || 
-                     userGroups[groupId].role === 'admin' || 
-                     userGroups[groupId].role === 'owner');
-                });
-                
-                // Exclude the current page
-                const isNotCurrentPage = pageToAdd && page.id !== pageToAdd.id;
-                
-                return isNotCurrentPage && (isOwner || hasEditAccess || hasGroupAccess);
-              })
-              .sort((a, b) => {
-                // Sort by last modified date (newest first)
-                const aDate = a.lastModified || 0;
-                const bDate = b.lastModified || 0;
-                return bDate - aDate;
-              });
-            
-            setPages(userPages);
-            
-            // Process recent pages data immediately after setting pages
-            if (recentPages.length > 0) {
-              const recentData = recentPages
-                .map(recentId => {
-                  const foundPage = userPages.find(p => p.id === recentId);
-                  console.log(`Looking for page with ID ${recentId}:`, foundPage ? "found" : "not found");
-                  return foundPage;
-                })
-                .filter(Boolean);
+            // Get all usernames for displaying author information
+            const usersRef = ref(db, 'users');
+            onValue(usersRef, (usersSnapshot) => {
+              const usersData = usersSnapshot.val() || {};
               
-              console.log("Recent page data processed:", recentData.length);
-              setRecentPageData(recentData);
-            } else {
-              console.log("No recent pages found in localStorage");
-            }
+              // Filter pages that the user has edit access to
+              const userPages = Object.entries(pagesData)
+                .map(([id, pageData]: [string, any]) => {
+                  // Add username information to each page
+                  const userId = pageData.userId;
+                  const username = 
+                    userId && usersData[userId] ? 
+                    (usersData[userId].username || usersData[userId].displayName || 'Anonymous') : 
+                    'Anonymous';
+                    
+                  return { 
+                    id, 
+                    ...pageData, 
+                    username 
+                  };
+                })
+                .filter(page => {
+                  // Include pages the user owns
+                  const isOwner = page.userId === user.uid;
+                  
+                  // Include pages where the user has edit access through collaborators
+                  const hasEditAccess = page.collaborators && 
+                    page.collaborators[user.uid] && 
+                    (page.collaborators[user.uid].role === 'editor' || 
+                     page.collaborators[user.uid].role === 'admin');
+                  
+                  // Include pages where the user has edit access through groups
+                  const hasGroupAccess = page.groups && Object.keys(page.groups).some(groupId => {
+                    // Check if user is in this group with edit permissions
+                    const userGroups = user.groups || {};
+                    return userGroups[groupId] && 
+                      (userGroups[groupId].role === 'editor' || 
+                       userGroups[groupId].role === 'admin' || 
+                       userGroups[groupId].role === 'owner');
+                  });
+                  
+                  // Exclude the current page
+                  const isNotCurrentPage = pageToAdd && page.id !== pageToAdd.id;
+                  
+                  return isNotCurrentPage && (isOwner || hasEditAccess || hasGroupAccess);
+                })
+                .sort((a, b) => {
+                  // Sort by last modified date (newest first)
+                  const aDate = a.lastModified || 0;
+                  const bDate = b.lastModified || 0;
+                  return bDate - aDate;
+                });
+              
+              setPages(userPages);
+              setLoading(false);
+              
+              // Process recent pages data immediately after setting pages
+              if (recentPages.length > 0) {
+                const recentData = recentPages
+                  .map(recentId => {
+                    const foundPage = userPages.find(p => p.id === recentId);
+                    console.log(`Looking for page with ID ${recentId}:`, foundPage ? "found" : "not found");
+                    return foundPage;
+                  })
+                  .filter(Boolean);
+                
+                console.log("Recent page data processed:", recentData.length);
+                setRecentPageData(recentData);
+              } else {
+                console.log("No recent pages found in localStorage");
+              }
+            }, {
+              onlyOnce: true
+            });
           } else {
             setPages([]);
+            setLoading(false);
           }
-          setLoading(false);
         });
       }
     }, [user, pageToAdd, recentPages]);
@@ -275,9 +297,14 @@ export function PageActions({
     // Filter pages based on search query
     const filteredPages = searchQuery.trim() === '' 
       ? pages 
-      : pages.filter(page => 
-          (page.title || 'Untitled').toLowerCase().includes(searchQuery.toLowerCase())
-        );
+      : pages.filter(page => {
+          const title = (page.title || 'Untitled').toLowerCase();
+          const username = (page.username || '').toLowerCase();
+          const query = searchQuery.toLowerCase();
+          
+          // Search in both title and username
+          return title.includes(query) || username.includes(query);
+        });
     
     const handleAddToPage = async () => {
       if (!selectedPage || !pageToAdd) return;
@@ -290,11 +317,7 @@ export function PageActions({
         onValue(pageRef, (snapshot) => {
           const targetPage = snapshot.val();
           if (!targetPage) {
-            toast({
-              title: "Error",
-              description: "Selected page not found",
-              variant: "destructive"
-            });
+            toast.error("Selected page not found");
             return;
           }
           
@@ -337,10 +360,7 @@ export function PageActions({
             lastModified: Date.now()
           });
           
-          toast({
-            title: "Success",
-            description: `Content added to "${selectedPage.title || 'Untitled'}"`,
-          });
+          toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
           
           onClose();
         }, {
@@ -348,11 +368,7 @@ export function PageActions({
         });
       } catch (error) {
         console.error("Error in handleAddToPage:", error);
-        toast({
-          title: "Error",
-          description: "Failed to add content to page",
-          variant: "destructive"
-        });
+        toast.error("Failed to add content to page");
       }
     };
     
@@ -395,9 +411,15 @@ export function PageActions({
                     >
                       <div className="flex flex-col">
                         <span>{page.title || 'Untitled'}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(page.lastModified || 0).toLocaleDateString()}
-                        </span>
+                        <div className="flex flex-row gap-2 text-xs text-muted-foreground">
+                          <span>
+                            {page.username && page.username !== 'NULL' ? `by ${page.username}` : 'Anonymous'}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            {new Date(page.lastModified || 0).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
                     </CommandItem>
                   ))}
@@ -422,9 +444,15 @@ export function PageActions({
                       >
                         <div className="flex flex-col">
                           <span>{page.title || 'Untitled'}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(page.lastModified || 0).toLocaleDateString()}
-                          </span>
+                          <div className="flex flex-row gap-2 text-xs text-muted-foreground">
+                            <span>
+                              {page.username && page.username !== 'NULL' ? `by ${page.username}` : 'Anonymous'}
+                            </span>
+                            <span>·</span>
+                            <span>
+                              {new Date(page.lastModified || 0).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
                       </CommandItem>
                     ))

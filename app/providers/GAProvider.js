@@ -59,29 +59,50 @@ export default function GAProvider({ children }) {
     // Get a meaningful page title based on the current route
     let pageTitle = document.title;
     
-    // For specific routes, we can set more descriptive titles
-    if (pathname === '/') {
-      pageTitle = 'WeWrite - Home';
-    } else if (pathname.startsWith('/auth/login')) {
-      pageTitle = 'WeWrite - Login';
-    } else if (pathname.startsWith('/auth/register')) {
-      pageTitle = 'WeWrite - Register';
-    } else if (pathname.startsWith('/user/')) {
+    // Map of standardized page titles for analytics
+    const pageTitleMap = {
+      '/': 'WeWrite - Landing Page',
+      '/new': 'WeWrite - Create New Page',
+      '/auth/login': 'WeWrite - Login',
+      '/auth/register': 'WeWrite - Register',
+      '/account': 'WeWrite - Account Settings',
+      '/activity': 'WeWrite - Activity Feed',
+      '/sandbox': 'WeWrite - Sandbox'
+    };
+    
+    // Check if we have a predefined title for this path
+    if (pageTitleMap[pathname]) {
+      pageTitle = pageTitleMap[pathname];
+    } 
+    // Handle dynamic routes
+    else if (pathname.startsWith('/users/')) {
       // For user profile pages
       const username = document.querySelector('h1')?.textContent;
       if (username) {
-        pageTitle = `WeWrite - ${username}`;
+        pageTitle = `WeWrite - User Profile: ${username}`;
       } else {
         pageTitle = 'WeWrite - User Profile';
       }
-    } else if (pathname.startsWith('/pages/')) {
-      // For content pages, try to get a more specific title
+    } 
+    else if (pathname.startsWith('/pages/')) {
+      // For content pages, get a specific title
       const contentTitle = document.querySelector('h1')?.textContent;
-      if (contentTitle) {
-        pageTitle = `WeWrite - ${contentTitle}`;
+      if (contentTitle && contentTitle !== 'Untitled') {
+        pageTitle = `WeWrite - Page: ${contentTitle}`;
       } else {
-        pageTitle = 'WeWrite - Content Page';
+        // Check if we're in edit mode
+        if (searchParams?.has('edit')) {
+          pageTitle = 'WeWrite - Page Editor';
+        } else {
+          pageTitle = 'WeWrite - Page View';
+        }
       }
+    }
+    // Ensure we never have "Untitled" in analytics
+    else if (pageTitle.includes('Untitled')) {
+      // Extract the path segment for a more descriptive title
+      const pathSegment = pathname.split('/').filter(Boolean).pop() || 'page';
+      pageTitle = `WeWrite - ${pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)}`;
     }
     
     // Track with ReactGA (legacy approach)

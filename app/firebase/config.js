@@ -59,26 +59,27 @@ export const db = getFirestore(app);
  * @returns Firebase Analytics instance or null if not supported/initialization failed
  */
 export const initializeAnalytics = async () => {
-  try {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Checking analytics support...');
+  if (typeof window !== 'undefined') {
+    try {
+      // Firebase 11 changes: isSupported is now a property, not a function
+      if (isSupported) {
+        const analytics = getAnalytics(app);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Firebase Analytics initialized successfully');
+        }
+        
+        return analytics;
+      } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Firebase Analytics is not supported in this environment');
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing Firebase Analytics:', error);
     }
-    
-    const supported = await isSupported();
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Analytics supported:', supported);
-    }
-    
-    if (supported) {
-      const analytics = getAnalytics(app);
-      return analytics;
-    } else {
-      console.warn('Firebase Analytics is not supported in this environment');
-    }
-  } catch (error) {
-    console.error('Error initializing Firebase Analytics:', error);
   }
+  
   return null;
 };
 
@@ -89,41 +90,34 @@ export const initializeAnalytics = async () => {
  * @returns {Promise<void>}
  */
 export const testFirebaseAnalytics = async () => {
-  if (process.env.NODE_ENV !== 'development') {
-    return; // Only run in development
-  }
-  
   try {
     // Check if analytics is supported
     console.log('🔍 Checking if Firebase Analytics is supported...');
-    const supported = await isSupported();
+    const supported = isSupported;
     console.log('🔍 Firebase Analytics supported:', supported);
     
     if (!supported) {
-      console.warn('⚠️ Firebase Analytics is not supported in this environment');
+      console.warn('❌ Firebase Analytics is not supported in this environment');
       return;
     }
     
     // Get analytics instance
-    console.log('🔍 Getting Firebase Analytics instance...');
+    console.log('🔄 Initializing Firebase Analytics...');
     const analytics = getAnalytics(app);
+    console.log('✅ Firebase Analytics initialized successfully');
     
-    if (!analytics) {
-      console.warn('⚠️ Failed to get Firebase Analytics instance');
-      return;
-    }
-    
-    // Log a test page view (this is for manual testing only)
-    console.log('📊 Sending page_view event to Firebase Analytics...');
-    logEvent(analytics, 'page_view', {
-      page_title: document.title,
-      page_location: window.location.href,
-      page_path: window.location.pathname
+    // Log a test event
+    console.log('📊 Sending test event...');
+    logEvent(analytics, 'test_event', {
+      test_param: 'test_value',
+      timestamp: new Date().toISOString()
     });
-    console.log('✅ page_view event sent to Firebase Analytics');
+    console.log('✅ Test event sent successfully');
     
+    return true;
   } catch (error) {
     console.error('❌ Error testing Firebase Analytics:', error);
+    return false;
   }
 };
 

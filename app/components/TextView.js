@@ -1,15 +1,14 @@
 import React from "react";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { usePage } from "../contexts/PageContext";
-import { duotoneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import { cx } from "class-variance-authority";
+import SecureSyntaxHighlighter from "./SecureSyntaxHighlighter";
+import { useLineSettings } from "../contexts/LineSettingsContext";
 import { getLanguages } from "../utils/common";
 import { nodeTypes } from "../utils/constants";
 import { PillLink } from "./PillLink";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { getPageById } from "../firebase/database";
-import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
+import { LineSettingsProvider, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 
 /**
@@ -468,10 +467,9 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
       >
         {index + 1}
       </motion.span>
-      <SyntaxHighlighter
+      <SecureSyntaxHighlighter
         language={codeLanguage}
-        style={duotoneDark}
-        customStyle={{
+        style={{
           borderRadius: '0.5rem',
           padding: '1rem',
           fontSize: '0.875rem',
@@ -479,7 +477,7 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
         }}
       >
         {node.content || (node.children && node.children.map(child => child.text).join('\n')) || ''}
-      </SyntaxHighlighter>
+      </SecureSyntaxHighlighter>
     </motion.div>
   );
 };

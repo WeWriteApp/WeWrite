@@ -17,7 +17,7 @@ const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "WeWrite - Collaborative Writing Platform",
+  title: "WeWrite",
   description: "Create, collaborate, and share your writing with others in real-time",
 }
 
