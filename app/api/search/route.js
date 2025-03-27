@@ -85,9 +85,7 @@ export async function GET(request) {
     if (!bigquery) {
       console.log('BigQuery client not initialized, returning empty results');
       return NextResponse.json({
-        userPages: [],
-        groupPages: [],
-        publicPages: [],
+        pages: [],
         error: {
           type: "bigquery_not_initialized",
           details: {
@@ -102,9 +100,7 @@ export async function GET(request) {
     if (!isConnected) {
       console.log('BigQuery connection failed, returning empty results');
       return NextResponse.json({
-        userPages: [],
-        groupPages: [],
-        publicPages: [],
+        pages: [],
         error: {
           type: "bigquery_connection_failed",
           details: "Failed to connect to BigQuery"
@@ -124,9 +120,7 @@ export async function GET(request) {
     if (!userId) {
       return NextResponse.json(
         { 
-          userPages: [], 
-          groupPages: [], 
-          publicPages: [],
+          pages: [], 
           message: "userId is required" 
         },
         { status: 400 }
@@ -271,52 +265,78 @@ export async function GET(request) {
     console.log('Public pages query results:', JSON.stringify(publicRowsResult, null, 2));
     publicRows = publicRowsResult || [];
 
-    // Process user pages
-    const userPages = (userRows || []).map((row) => ({
-      id: row.document_id,
-      title: row.title,
-      username: 'NULL',
-      isOwned: true
-    }));
+    try {
+      const pages = [];
+      
+      // Add user pages to results
+      if (userRows && userRows.length > 0) {
+        userRows.forEach(row => {
+          pages.push({
+            id: row.document_id,
+            title: row.title,
+            isOwned: true, // User owns this page
+            isEditable: true, // User can edit this page since they own it
+            userId: row.userId,
+            lastModified: row.lastModified,
+            type: 'user'
+          });
+        });
+      }
+      
+      // Add group pages to results
+      if (groupRows && groupRows.length > 0) {
+        groupRows.forEach(row => {
+          pages.push({
+            id: row.document_id,
+            title: row.title,
+            groupId: row.groupId,
+            isOwned: row.userId === userId, // If user is the creator of the page
+            isEditable: true, // User can edit this page since they're in the group
+            userId: row.userId,
+            lastModified: row.lastModified,
+            type: 'group'
+          });
+        });
+      }
+      
+      // Add public pages to results
+      if (publicRows && publicRows.length > 0) {
+        publicRows.forEach(row => {
+          pages.push({
+            id: row.document_id,
+            title: row.title,
+            isOwned: row.userId === userId, // If user is the creator of the page
+            isEditable: row.userId === userId, // Only the creator can edit public pages
+            userId: row.userId,
+            lastModified: row.lastModified,
+            type: 'public'
+          });
+        });
+      }
 
-    // Process group pages
-    const groupPages = (groupRows || []).map((row) => ({
-      id: row.document_id,
-      title: row.title,
-      groupId: row.groupId,
-      username: 'NULL',
-      isOwned: false
-    }));
+      console.log('Final processed results:', {
+        pagesCount: pages.length,
+        pages,
+        searchTerm,
+        searchTermFormatted
+      });
 
-    // Process public pages
-    const publicPages = (publicRows || []).map((row) => ({
-      id: row.document_id,
-      title: row.title,
-      userId: row.userId,
-      username: 'NULL',
-      isOwned: false,
-      isPublic: true
-    }));
-
-    console.log('Final processed results:', {
-      userPagesCount: userPages.length,
-      groupPagesCount: groupPages.length,
-      publicPagesCount: publicPages.length,
-      userPages,
-      groupPages,
-      publicPages,
-      searchTerm,
-      searchTermFormatted
-    });
-
-    // Return formatted results
-    return NextResponse.json({ userPages, groupPages, publicPages }, { status: 200 });
+      // Return formatted results
+      return NextResponse.json({ pages }, { status: 200 });
+    } catch (error) {
+      console.error('Error processing query results:', error);
+      return NextResponse.json({
+        pages: [],
+        error: {
+          message: error.message,
+          details: error.stack
+        }
+      }, { status: 200 });
+    }
   } catch (error) {
     console.error('Error querying BigQuery:', error);
     return NextResponse.json({
-      userPages: [],
-      groupPages: [],
-      publicPages: [],
+      pages: [],
       error: {
         message: error.message,
         details: error.stack

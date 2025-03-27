@@ -35,14 +35,17 @@ const TypeaheadSearch = ({
   userId = null,
   placeholder = "Search...",
   radioSelection = false,
-  selectedId = null
+  selectedId = null,
+  editableOnly = false // New prop to filter for editable pages only
 }) => {
   const [search, setSearch] = useState("");
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
-  const [userPages, setUserPages] = useState([]);
-  const [groupPages, setGroupPages] = useState([]);
-  const [publicPages, setPublicPages] = useState([]);
+  const [pages, setPages] = useState({
+    userPages: [],
+    groupPages: [],
+    publicPages: []
+  });
   const [isSearching, setIsSearching] = useState(false);
   const { theme } = useTheme();
   const router = useRouter();
@@ -199,15 +202,17 @@ const TypeaheadSearch = ({
             console.error('TypeaheadSearch - API returned error object:', data.error);
           }
           
-          // Process the fetched pages to include proper usernames
-          const processedUserPages = await processPagesWithUsernames(data.userPages || []);
-          const processedGroupPages = await processPagesWithUsernames(data.groupPages || []);
-          const processedPublicPages = await processPagesWithUsernames(data.publicPages || []);
-
-          // Continue with the arrays even if there's an error
-          setUserPages(processedUserPages || []);
-          setGroupPages(processedGroupPages || []);
-          setPublicPages(processedPublicPages || []);
+          // Process the results with usernames
+          if (data && data.pages) {
+            const processedPages = await processPagesWithUsernames(data.pages);
+            
+            // Set the pages state with categorized results
+            setPages({
+              userPages: processedPages.filter(page => page.type === 'user' || page.isOwned),
+              groupPages: processedPages.filter(page => page.type === 'group' && !page.isOwned),
+              publicPages: processedPages.filter(page => page.type === 'public' && !page.isOwned)
+            });
+          }
         } catch (fetchError) {
           if (fetchError.name === 'AbortError') {
             console.error('Search request timed out after 15 seconds');
@@ -219,9 +224,11 @@ const TypeaheadSearch = ({
       } catch (error) {
         console.error("TypeaheadSearch - Error fetching search results", error);
         console.error("Error details:", error.message, error.stack);
-        setUserPages([]);
-        setGroupPages([]);
-        setPublicPages([]);
+        setPages({
+          userPages: [],
+          groupPages: [],
+          publicPages: []
+        });
       } finally {
         setIsSearching(false);
       }
@@ -230,9 +237,11 @@ const TypeaheadSearch = ({
   );
 
   const resetSearchResults = () => {
-    setUserPages([]);
-    setGroupPages([]);
-    setPublicPages([]);
+    setPages({
+      userPages: [],
+      groupPages: [],
+      publicPages: []
+    });
     setIsSearching(false);
   };
 
@@ -302,76 +311,82 @@ const TypeaheadSearch = ({
           <Loader />
         ) : (
           <>
-            {userPages.length > 0 && (
+            {pages.userPages.length > 0 && (
               <div>
-                {userPages.map((page) =>
-                  onSelect ? (
-                    <SingleItemButton
-                      page={page}
-                      search={search}
-                      onSelect={onSelect}
-                      radioSelection={radioSelection}
-                      isSelected={selectedId === page.id}
-                      key={page.id}
-                    />
-                  ) : (
-                    <SingleItemLink
-                      page={page}
-                      search={search}
-                      key={page.id}
-                    />
-                  )
-                )}
+                {pages.userPages
+                  .filter((page) => !editableOnly || page.isOwned || page.isEditable)
+                  .map((page) =>
+                    onSelect ? (
+                      <SingleItemButton
+                        page={page}
+                        search={search}
+                        onSelect={onSelect}
+                        radioSelection={radioSelection}
+                        isSelected={selectedId === page.id}
+                        key={page.id}
+                      />
+                    ) : (
+                      <SingleItemLink
+                        page={page}
+                        search={search}
+                        key={page.id}
+                      />
+                    )
+                  )}
               </div>
             )}
 
-            {groupPages.length > 0 && (
+            {pages.groupPages.length > 0 && (
               <div>
-                {groupPages.map((page) =>
-                  onSelect ? (
-                    <SingleItemButton
-                      page={page}
-                      search={search}
-                      onSelect={onSelect}
-                      radioSelection={radioSelection}
-                      isSelected={selectedId === page.id}
-                      key={page.id}
-                    />
-                  ) : (
-                    <SingleItemLink
-                      page={page}
-                      search={search}
-                      key={page.id}
-                    />
-                  )
-                )}
+                {pages.groupPages
+                  .filter((page) => !editableOnly || page.isOwned || page.isEditable)
+                  .map((page) =>
+                    onSelect ? (
+                      <SingleItemButton
+                        page={page}
+                        search={search}
+                        onSelect={onSelect}
+                        radioSelection={radioSelection}
+                        isSelected={selectedId === page.id}
+                        key={page.id}
+                      />
+                    ) : (
+                      <SingleItemLink
+                        page={page}
+                        search={search}
+                        key={page.id}
+                      />
+                    )
+                  )}
               </div>
             )}
 
-            {publicPages.length > 0 && (
+            {pages.publicPages.length > 0 && (
               <div>
-                {publicPages.map((page) =>
-                  onSelect ? (
-                    <SingleItemButton
-                      page={page}
-                      search={search}
-                      onSelect={onSelect}
-                      radioSelection={radioSelection}
-                      isSelected={selectedId === page.id}
-                      key={page.id}
-                    />
-                  ) : (
-                    <SingleItemLink
-                      page={page}
-                      search={search}
-                      key={page.id}
-                    />
-                  )
-                )}
+                {pages.publicPages
+                  .filter((page) => !editableOnly || page.isOwned || page.isEditable)
+                  .map((page) =>
+                    onSelect ? (
+                      <SingleItemButton
+                        page={page}
+                        search={search}
+                        onSelect={onSelect}
+                        radioSelection={radioSelection}
+                        isSelected={selectedId === page.id}
+                        key={page.id}
+                      />
+                    ) : (
+                      <SingleItemLink
+                        page={page}
+                        search={search}
+                        key={page.id}
+                      />
+                    )
+                  )}
               </div>
             )}
 
-            {search.length >= 2 && userPages.length === 0 && groupPages.length === 0 && publicPages.length === 0 && (
+            {search.length >= 2 && pages.userPages.length === 0 && pages.groupPages.length === 0 && pages.publicPages.length === 0 && (
               <div className="p-3">
                 <button
                   onClick={() => {

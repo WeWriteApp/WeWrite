@@ -199,12 +199,16 @@ export function PageActions({
           targetTitle: selectedPage.title
         });
         
-        // Get the content of the selected page
+        // Get the content of both pages
         const db = getDatabase(app);
-        const targetPageRef = ref(db, `pages/${selectedPage.id}`);
         
-        // First verify the target page exists
-        const targetSnapshot = await get(targetPageRef);
+        // Get both pages in parallel for efficiency
+        const [targetSnapshot, sourceSnapshot] = await Promise.all([
+          get(ref(db, `pages/${selectedPage.id}`)),
+          get(ref(db, `pages/${pageToAdd.id}`))
+        ]);
+        
+        // Verify target page exists
         if (!targetSnapshot.exists()) {
           console.error("Target page not found:", selectedPage.id);
           toast.error("Selected page not found");
@@ -212,12 +216,7 @@ export function PageActions({
           return;
         }
         
-        const targetPage = targetSnapshot.val();
-        console.log("Target page data:", targetPage);
-        
-        // Get the source page data
-        const sourcePageRef = ref(db, `pages/${pageToAdd.id}`);
-        const sourceSnapshot = await get(sourcePageRef);
+        // Verify source page exists
         if (!sourceSnapshot.exists()) {
           console.error("Source page not found:", pageToAdd.id);
           toast.error("Current page data not found");
@@ -225,17 +224,22 @@ export function PageActions({
           return;
         }
         
+        const targetPage = targetSnapshot.val();
         const sourcePage = sourceSnapshot.val();
         
-        // Parse the content
-        let targetContent;
+        console.log("Target page data:", targetPage);
+        console.log("Source page data:", sourcePage);
+        
+        // Parse the content (safely handling different content formats)
+        let targetContent = [];
         try {
-          targetContent = typeof targetPage.content === 'string' 
-            ? JSON.parse(targetPage.content) 
-            : targetPage.content;
+          if (targetPage.content) {
+            targetContent = typeof targetPage.content === 'string' 
+              ? JSON.parse(targetPage.content) 
+              : targetPage.content;
+          }
         } catch (error) {
           console.error("Error parsing target page content:", error);
-          targetContent = [];
         }
         
         if (!Array.isArray(targetContent)) {
@@ -243,14 +247,15 @@ export function PageActions({
         }
         
         // Parse the content of the page to add
-        let sourceContent;
+        let sourceContent = [];
         try {
-          sourceContent = typeof sourcePage.content === 'string' 
-            ? JSON.parse(sourcePage.content) 
-            : sourcePage.content;
+          if (sourcePage.content) {
+            sourceContent = typeof sourcePage.content === 'string' 
+              ? JSON.parse(sourcePage.content) 
+              : sourcePage.content;
+          }
         } catch (error) {
           console.error("Error parsing source page content:", error);
-          sourceContent = [];
         }
         
         if (!Array.isArray(sourceContent)) {
@@ -311,6 +316,7 @@ export function PageActions({
               placeholder="Search pages..."
               radioSelection={true}
               selectedId={selectedPage?.id}
+              editableOnly={true}
             />
           </div>
         </div>
