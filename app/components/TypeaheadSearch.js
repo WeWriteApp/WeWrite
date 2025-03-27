@@ -361,6 +361,11 @@ const SingleItemLink = ({ page, search }) => {
 };
 
 const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSelected = false }) => {
+  // Ensure we have a valid username to display (handle NULL values properly)
+  const displayName = page.username && page.username !== 'NULL' 
+    ? page.username 
+    : 'Anonymous';
+    
   if (radioSelection) {
     return (
       <div 
@@ -379,7 +384,7 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
           {highlightText(page.title, search)}
         </label>
         <span className="text-xs opacity-75 whitespace-nowrap">
-          {page.groupId ? 'Group' : `by ${page.username || 'Anonymous'}`}
+          {page.groupId ? 'Group' : `by ${displayName}`}
         </span>
       </div>
     );
@@ -395,7 +400,7 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
         {highlightText(page.title, search)}
       </span>
       <span className="text-xs opacity-75 whitespace-nowrap">
-        {page.groupId ? 'Group' : `by ${page.username || 'Anonymous'}`}
+        {page.groupId ? 'Group' : `by ${displayName}`}
       </span>
     </button>
   );

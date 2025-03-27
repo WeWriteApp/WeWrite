@@ -188,7 +188,7 @@ export function PageActions({
         const db = getDatabase(app);
         const pageRef = ref(db, `pages/${selectedPage.id}`);
         
-        onValue(pageRef, (snapshot) => {
+        onValue(pageRef, async (snapshot) => {
           const targetPage = snapshot.val();
           if (!targetPage) {
             toast.error("Selected page not found");
@@ -248,21 +248,20 @@ export function PageActions({
           // Create the new content by combining the existing content with the reference block and source content
           const newContent = [...targetContent, separator, referenceBlock, ...sourceContent];
           
-          // Update the page content
-          const updates = {};
-          updates[`pages/${selectedPage.id}/content`] = JSON.stringify(newContent);
-          updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
-          
-          update(ref(db), updates)
-            .then(() => {
-              toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
-              onClose();
-              router.push(`/pages/${selectedPage.id}`);
-            })
-            .catch((error) => {
-              console.error("Error updating page:", error);
-              toast.error("Failed to add content to page");
-            });
+          // Update the page content - Using set instead of update to ensure all data is valid
+          try {
+            const updates = {};
+            updates[`pages/${selectedPage.id}/content`] = JSON.stringify(newContent);
+            updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
+            
+            await update(ref(db), updates);
+            toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
+            onClose();
+            router.push(`/pages/${selectedPage.id}`);
+          } catch (updateError) {
+            console.error("Error updating page:", updateError);
+            toast.error("Failed to add content to page");
+          }
         }, {
           onlyOnce: true
         });
