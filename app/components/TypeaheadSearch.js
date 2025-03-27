@@ -88,28 +88,52 @@ const TypeaheadSearch = ({
   const processPagesWithUsernames = async (pages) => {
     if (!pages || pages.length === 0) return pages;
     
-    // Create a set of unique userIds
-    const userIds = [...new Set(pages.filter(page => page.userId).map(page => page.userId))];
-    
-    // Fetch all user profiles in parallel
-    await Promise.all(userIds.map(userId => fetchUserProfile(userId)));
-    
-    // Map the pages with user information
-    return pages.map(page => {
-      // Include userId field in every page response
-      if (!page.userId && page.isOwned && user) {
-        page.userId = user.uid;
-      }
+    try {
+      // Create a set of unique userIds
+      const userIds = [...new Set(pages.filter(page => page.userId).map(page => page.userId))];
       
-      const userProfile = userProfiles[page.userId];
-      return {
+      // Get users from the realtime database
+      const db = getDatabase(app);
+      const usersRef = ref(db, 'users');
+      
+      // Get all users at once for efficiency
+      const usersData = await new Promise((resolve) => {
+        onValue(usersRef, (snapshot) => {
+          resolve(snapshot.val() || {});
+        }, {
+          onlyOnce: true
+        });
+      });
+      
+      // Map the pages with user information
+      return pages.map(page => {
+        // For user's own pages, ensure we have the userId
+        if (!page.userId && page.isOwned && user) {
+          page.userId = user.uid;
+        }
+        
+        // If we have a userId, try to get the username from the database
+        let username = 'Anonymous';
+        if (page.userId && usersData[page.userId]) {
+          const userData = usersData[page.userId];
+          username = userData.username || userData.displayName || 'Anonymous';
+        }
+        
+        return {
+          ...page,
+          userId: page.userId || (user ? user.uid : null),
+          username: username
+        };
+      });
+    } catch (error) {
+      console.error("Error processing page usernames:", error);
+      
+      // Fall back to returning the original pages if there was an error
+      return pages.map(page => ({
         ...page,
-        userId: page.userId || (user ? user.uid : null),
-        username: userProfile ? 
-          (userProfile.username || userProfile.displayName || 'Anonymous') : 
-          (page.username && page.username !== 'NULL' ? page.username : 'Anonymous')
-      };
-    });
+        username: page.username || 'Anonymous'
+      }));
+    }
   };
 
   // Add error handling for missing auth context
