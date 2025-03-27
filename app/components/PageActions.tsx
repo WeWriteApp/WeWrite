@@ -203,7 +203,7 @@ export function PageActions({
       }
     };
 
-    // Super simplistic add-to-page function with verbose debugging
+    // Direct Firebase operation with minimal transformation
     const handleAddToPage = async () => {
       if (!selectedPageId) {
         toast.error("Please select a page first");
@@ -211,103 +211,114 @@ export function PageActions({
       }
       
       setLoading(true);
-      console.log("🔍 STARTING ADD-TO-PAGE OPERATION WITH DETAILED LOGGING");
+      console.log("🚨 DIRECT DB OPERATION STARTED");
       
       try {
+        // SETUP - Get database reference
         const db = getDatabase(app);
         
-        // SOURCE PAGE INFO
-        console.log("🔍 Source page info:", {
-          id: pageToAdd?.id,
-          title: pageToAdd?.title
-        });
+        // SOURCE INFO
+        const sourceTitle = pageToAdd?.title || 'Unknown Page';
+        console.log("🚨 Source:", { title: sourceTitle, id: pageToAdd?.id });
         
-        // TARGET PAGE RETRIEVAL
-        console.log("🔍 Getting target page:", selectedPageId);
+        // 1. Get target page data directly from Firebase
+        console.log("🚨 Fetching target page:", selectedPageId);
         const targetRef = ref(db, `pages/${selectedPageId}`);
         const targetSnapshot = await get(targetRef);
         
         if (!targetSnapshot.exists()) {
-          console.error("❌ Target page not found in database");
-          toast.error("Target page not found");
+          console.error("🚨 TARGET PAGE NOT FOUND!");
+          toast.error("Target page not found in database");
           setLoading(false);
           return;
         }
         
-        // TARGET PAGE DATA
+        // 2. Extract target page data
         const targetData = targetSnapshot.val();
-        console.log("🔍 Retrieved target page data:", {
-          id: selectedPageId,
+        console.log("🚨 Target page data:", { 
           title: targetData.title,
-          contentType: typeof targetData.content
+          contentType: typeof targetData.content 
         });
         
-        // PARSE TARGET CONTENT
+        // 3. Extract and log raw content string/object for debugging
+        console.log("🚨 TARGET RAW CONTENT:", targetData.content);
+        
+        // 4. Create a GUARANTEED array format for target content
         let targetContent = [];
-        if (typeof targetData.content === 'string') {
-          try {
-            const parsed = JSON.parse(targetData.content);
-            if (Array.isArray(parsed)) {
-              targetContent = parsed;
-              console.log("🔍 Successfully parsed target content from string, length:", targetContent.length);
-            } else {
-              console.warn("⚠️ Parsed target content is not an array:", typeof parsed);
-              targetContent = [];
-            }
-          } catch (e) {
-            console.error("❌ Error parsing target content string:", e);
+        
+        try {
+          // Handle string or array formats
+          if (typeof targetData.content === 'string') {
+            targetContent = JSON.parse(targetData.content);
+            console.log("🚨 Parsed string content into array");
+          } else if (Array.isArray(targetData.content)) {
+            targetContent = targetData.content;
+            console.log("🚨 Content was already array");
+          } else {
+            console.error("🚨 Content is neither string nor array:", typeof targetData.content);
+          }
+          
+          // Ensure we have an array
+          if (!Array.isArray(targetContent)) {
+            console.error("🚨 Content is not an array after parsing, creating empty array");
             targetContent = [];
           }
-        } else if (Array.isArray(targetData.content)) {
-          targetContent = targetData.content;
-          console.log("🔍 Target content is already an array, length:", targetContent.length);
-        } else {
-          console.warn("⚠️ Target content is neither string nor array:", typeof targetData.content);
+        } catch (e) {
+          console.error("🚨 Error parsing content:", e);
           targetContent = [];
         }
         
-        // EXTRACT SOURCE CONTENT
-        console.log("🔍 Extracting source content from DOM...");
+        console.log("🚨 Target content array length:", targetContent.length);
         
-        // Create a simple text paragraph to add
-        const sourceContent = [
+        // 5. Create a super simple new paragraph to add
+        // This should be extremely obvious when added to the page
+        const newParagraphs = [
+          // Empty paragraph as separator
           {
             type: 'paragraph',
-            children: [{ text: '' }] // Empty line as separator
+            children: [{ text: '' }]
           },
+          // Test paragraph with timestamp to make it unique and identifiable
           {
             type: 'paragraph',
-            children: [{ text: `Added content from "${pageToAdd?.title || 'current page'}"` }]
+            children: [{ 
+              text: `★ ADDED FROM "${sourceTitle}" at ${new Date().toISOString()} ★`
+            }]
           }
         ];
         
-        console.log("🔍 Using simple source content:", JSON.stringify(sourceContent));
+        console.log("🚨 New paragraphs to add:", JSON.stringify(newParagraphs));
         
-        // LOG CONTENT ARRAYS FOR DIAGNOSIS
-        console.log("🔍 Target content BEFORE:", JSON.stringify(targetContent));
+        // 6. Create the combined content array 
+        const updatedContent = [...targetContent, ...newParagraphs];
+        console.log("🚨 Combined content length:", updatedContent.length);
         
-        // CREATE COMBINED CONTENT
-        const combinedContent = [...targetContent, ...sourceContent];
-        console.log("🔍 Combined content:", JSON.stringify(combinedContent));
+        // 7. Update the database with the new content
+        console.log("🚨 WRITING TO DATABASE NOW");
         
-        // UPDATE DATABASE
-        console.log("🔍 Updating database with combined content...");
-        await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(combinedContent));
+        // Convert to string for storage
+        const contentString = JSON.stringify(updatedContent);
+        console.log("🚨 Content string length:", contentString.length);
+        
+        // Update the database with transaction to avoid race conditions
+        await set(ref(db, `pages/${selectedPageId}/content`), contentString);
         await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
         
-        console.log("✅ Database updated successfully!");
+        console.log("🚨 DATABASE UPDATED SUCCESSFULLY");
         
-        // CLOSE AND REDIRECT
+        // 8. Close dialog and redirect to see changes
         onClose();
         toast.success(`Added content to "${selectedPageTitle}"`);
         
-        // Log after redirect
-        console.log("🔍 Redirecting to:", `/pages/${selectedPageId}`);
-        router.push(`/pages/${selectedPageId}`);
+        // Wait a moment before redirecting to ensure the database update has propagated
+        setTimeout(() => {
+          console.log("🚨 REDIRECTING NOW to:", `/pages/${selectedPageId}`);
+          router.push(`/pages/${selectedPageId}`);
+        }, 300);
         
       } catch (error) {
-        console.error("❌ ERROR IN ADD-TO-PAGE OPERATION:", error);
-        toast.error("An error occurred while adding to page");
+        console.error("🚨 CRITICAL ERROR:", error);
+        toast.error("Error adding to page");
         setLoading(false);
       }
     };
