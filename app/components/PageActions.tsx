@@ -170,10 +170,23 @@ export function PageActions({
   function AddToPageDialogContent({ pageToAdd, onClose }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [pages, setPages] = useState([]);
-    const [recentPages, setRecentPages] = useState([]);
+    const [recentPages, setRecentPages] = useState<string[]>([]);
+    const [recentPageData, setRecentPageData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedPage, setSelectedPage] = useState(null);
     const { user } = useContext(AuthContext);
+    
+    // Load recently visited pages from localStorage
+    useEffect(() => {
+      try {
+        const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
+        const recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
+        setRecentPages(recentlyVisited);
+      } catch (error) {
+        console.error("Error loading recently visited pages:", error);
+        setRecentPages([]);
+      }
+    }, []);
     
     // Search for pages when dialog opens
     useEffect(() => {
@@ -184,22 +197,12 @@ export function PageActions({
         const db = getDatabase(app);
         const pagesRef = ref(db, 'pages');
         
-        // Get recently visited pages from localStorage
-        try {
-          const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
-          const recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
-          setRecentPages(recentlyVisited);
-        } catch (error) {
-          console.error("Error loading recently visited pages:", error);
-          setRecentPages([]);
-        }
-        
         onValue(pagesRef, (snapshot) => {
           const pagesData = snapshot.val();
           if (pagesData) {
             // Filter pages that the user has edit access to
             const userPages = Object.entries(pagesData)
-              .map(([id, page]) => ({ id, ...page }))
+              .map(([id, pageData]: [string, any]) => ({ id, ...pageData }))
               .filter(page => {
                 // Include pages the user owns
                 const isOwner = page.userId === user.uid;
@@ -233,13 +236,21 @@ export function PageActions({
               });
             
             setPages(userPages);
+            
+            // Process recent pages data
+            if (recentPages.length > 0) {
+              const recentData = recentPages
+                .map(recentId => userPages.find(p => p.id === recentId))
+                .filter(Boolean);
+              setRecentPageData(recentData);
+            }
           } else {
             setPages([]);
           }
           setLoading(false);
         });
       }
-    }, [user, pageToAdd]);
+    }, [user, pageToAdd, recentPages]);
     
     // Filter pages based on search query
     const filteredPages = searchQuery.trim() === '' 
@@ -247,12 +258,6 @@ export function PageActions({
       : pages.filter(page => 
           (page.title || 'Untitled').toLowerCase().includes(searchQuery.toLowerCase())
         );
-    
-    // Get recently visited pages that match the current pages list
-    const filteredRecentPages = recentPages
-      .map(recentId => pages.find(page => page.id === recentId))
-      .filter(Boolean)
-      .slice(0, 5); // Show up to 5 recent pages
     
     const handleAddToPage = async () => {
       if (!selectedPage || !pageToAdd) return;
@@ -303,56 +308,29 @@ export function PageActions({
             sourceContent = [];
           }
           
-          // Add a divider and reference to the source page
-          targetContent.push({
-            type: "thematicBreak",
-            children: [{ text: "" }]
-          });
-          
-          targetContent.push({
-            type: "paragraph",
-            children: [
-              { text: "Added from " },
-              {
-                type: "link",
-                url: `/pages/${pageToAdd.id}`,
-                children: [{ text: pageToAdd.title || "Untitled" }]
-              },
-              { text: ` by ${pageToAdd.username || "Anonymous"}` }
-            ]
-          });
-          
-          // Add the content from the source page
-          targetContent = [...targetContent, ...sourceContent];
+          // Combine the content
+          const combinedContent = [...targetContent, ...sourceContent];
           
           // Update the page
-          const updates = {};
-          updates[`pages/${selectedPage.id}/content`] = JSON.stringify(targetContent);
-          updates[`pages/${selectedPage.id}/lastModified`] = Date.now();
+          update(pageRef, {
+            content: JSON.stringify(combinedContent),
+            lastModified: Date.now()
+          });
           
-          const dbRef = ref(db);
-          update(dbRef, updates)
-            .then(() => {
-              toast({
-                title: "Success",
-                description: `Content added to "${selectedPage.title || 'Untitled'}"`,
-              });
-              onClose();
-            })
-            .catch((error) => {
-              console.error("Error updating page:", error);
-              toast({
-                title: "Error",
-                description: "Failed to add content to page",
-                variant: "destructive"
-              });
-            });
-        }, { onlyOnce: true });
+          toast({
+            title: "Success",
+            description: "Content added to page",
+          });
+          
+          onClose();
+        }, {
+          onlyOnce: true
+        });
       } catch (error) {
         console.error("Error in handleAddToPage:", error);
         toast({
           title: "Error",
-          description: "An unexpected error occurred",
+          description: "Failed to add content to page",
           variant: "destructive"
         });
       }
@@ -368,7 +346,39 @@ export function PageActions({
               onValueChange={setSearchQuery}
             />
             <CommandList>
-              <CommandEmpty>No pages found</CommandEmpty>
+              <CommandEmpty>
+                {loading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span className="ml-2">Loading pages...</span>
+                  </div>
+                ) : (
+                  <div className="p-4 text-center">
+                    No pages found matching "{searchQuery}"
+                  </div>
+                )}
+              </CommandEmpty>
+              
+              {/* Recently Visited Pages - Only show if search is empty */}
+              {searchQuery.trim() === '' && recentPageData.length > 0 && (
+                <CommandGroup heading="Recently Visited">
+                  {recentPageData.slice(0, 5).map(page => (
+                    <CommandItem
+                      key={page.id}
+                      value={`recent-${page.id}`}
+                      onSelect={() => setSelectedPage(page)}
+                      className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
+                    >
+                      <div className="flex flex-col">
+                        <span>{page.title || 'Untitled'}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(page.lastModified || 0).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
               
               {/* All Pages */}
               <CommandGroup heading="Your Pages">
@@ -395,23 +405,6 @@ export function PageActions({
                   ))
                 )}
               </CommandGroup>
-              <CommandGroup heading="Recently Visited">
-                {filteredRecentPages.map(page => (
-                  <CommandItem
-                    key={page.id}
-                    value={page.id}
-                    onSelect={() => setSelectedPage(page)}
-                    className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
-                  >
-                    <div className="flex flex-col">
-                      <span>{page.title || 'Untitled'}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(page.lastModified || 0).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
             </CommandList>
           </Command>
         </div>
@@ -422,7 +415,7 @@ export function PageActions({
           </DialogClose>
           <Button 
             onClick={handleAddToPage} 
-            disabled={!selectedPage || loading}
+            disabled={!selectedPage}
           >
             Add to Page
           </Button>
