@@ -182,6 +182,7 @@ export function PageActions({
       }
     };
 
+    // Completely simplified approach - no background operations, direct database access
     const handleAddToPage = async () => {
       // Validate we have the necessary data
       if (!selectedPageId) {
@@ -198,145 +199,104 @@ export function PageActions({
       setLoading(true);
       
       try {
-        // Immediately close the dialog and redirect for better user experience
+        // Get database reference
+        const db = getDatabase(app);
+        
+        // 1. First get the current page (source) content from the database
+        const sourceRef = ref(db, `pages/${pageToAdd.id}`);
+        const sourceSnapshot = await get(sourceRef);
+        
+        if (!sourceSnapshot.exists()) {
+          toast.error("Source page not found in database");
+          setLoading(false);
+          return;
+        }
+        
+        const sourceData = sourceSnapshot.val();
+        console.log("Source page data:", sourceData);
+        
+        // 2. Then get the target page content
+        const targetRef = ref(db, `pages/${selectedPageId}`);
+        const targetSnapshot = await get(targetRef);
+        
+        if (!targetSnapshot.exists()) {
+          toast.error("Target page not found in database");
+          setLoading(false);
+          return;
+        }
+        
+        const targetData = targetSnapshot.val();
+        console.log("Target page data:", targetData);
+        
+        // 3. Parse both contents
+        let targetContent = [];
+        let sourceContent = [];
+        
+        try {
+          if (targetData.content) {
+            targetContent = typeof targetData.content === 'string'
+              ? JSON.parse(targetData.content)
+              : targetData.content;
+          }
+        } catch (e) {
+          console.error("Error parsing target content:", e);
+        }
+        
+        try {
+          if (sourceData.content) {
+            sourceContent = typeof sourceData.content === 'string'
+              ? JSON.parse(sourceData.content)
+              : sourceData.content;
+          }
+        } catch (e) {
+          console.error("Error parsing source content:", e);
+        }
+        
+        if (!Array.isArray(targetContent)) targetContent = [];
+        if (!Array.isArray(sourceContent)) sourceContent = [];
+        
+        console.log("Target content blocks:", targetContent.length);
+        console.log("Source content blocks:", sourceContent.length);
+        
+        // 4. Create combined content with separator and attribution
+        const combinedContent = [
+          ...targetContent,
+          // Add empty paragraph as separator
+          { type: 'paragraph', children: [{ text: '' }] },
+          // Add divider
+          { type: 'paragraph', children: [{ text: '---' }] },
+          // Add attribution
+          { 
+            type: 'paragraph', 
+            children: [
+              { text: 'Content from ' },
+              { 
+                type: 'link',
+                url: `/pages/${pageToAdd.id}`,
+                children: [{ text: pageToAdd.title || 'Untitled' }]
+              },
+              { text: ':' }
+            ]
+          },
+          // Add empty paragraph for spacing
+          { type: 'paragraph', children: [{ text: '' }] },
+          // Add the source content
+          ...sourceContent
+        ];
+        
+        // 5. Update the target page with the combined content
+        await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(combinedContent));
+        await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
+        
+        // 6. Close dialog and show success message
         onClose();
+        toast.success(`Added content to "${selectedPageTitle}"`);
         
-        // Show a toast that we're working on it
-        toast.success(`Adding content to "${selectedPageTitle}"...`);
-        
-        // Navigate to the target page immediately
+        // 7. Redirect to the target page
         router.push(`/pages/${selectedPageId}`);
         
-        // Then perform all the actual data processing in the background
-        setTimeout(async () => {
-          try {
-            // Get database reference
-            const db = getDatabase(app);
-            
-            // Get both pages data with separate error handling
-            let targetContent = [];
-            let sourceContent = [];
-            
-            try {
-              // Get target page
-              const targetSnapshot = await get(ref(db, `pages/${selectedPageId}`));
-              if (targetSnapshot.exists()) {
-                const targetData = targetSnapshot.val();
-                if (targetData.content) {
-                  try {
-                    targetContent = typeof targetData.content === 'string' 
-                      ? JSON.parse(targetData.content) 
-                      : targetData.content;
-                    
-                    if (!Array.isArray(targetContent)) {
-                      targetContent = [];
-                    }
-                  } catch (e) {
-                    console.error("Error parsing target content:", e);
-                  }
-                }
-              } else {
-                console.error("Target page not found:", selectedPageId);
-              }
-            } catch (e) {
-              console.error("Error fetching target page:", e);
-            }
-            
-            try {
-              // Get source page - use pageToAdd data directly if available
-              console.log("PageToAdd content type:", typeof pageToAdd.content);
-              
-              // Always decode the content to ensure we have the actual content
-              try {
-                if (pageToAdd.content) {
-                  // Parse content if it's a string, otherwise use it directly
-                  if (typeof pageToAdd.content === 'string') {
-                    sourceContent = JSON.parse(pageToAdd.content);
-                    console.log("Parsed source content from string, got", sourceContent.length, "blocks");
-                  } else {
-                    sourceContent = pageToAdd.content;
-                    console.log("Using source content directly, got", sourceContent.length, "blocks");
-                  }
-                  
-                  if (!Array.isArray(sourceContent)) {
-                    console.warn("Source content is not an array, initializing empty array");
-                    sourceContent = [];
-                  }
-                } else {
-                  console.warn("No content in pageToAdd, fetching from database");
-                  
-                  // Fallback to database if needed
-                  const sourceSnapshot = await get(ref(db, `pages/${pageToAdd.id}`));
-                  if (sourceSnapshot.exists()) {
-                    const sourceData = sourceSnapshot.val();
-                    
-                    if (sourceData.content) {
-                      try {
-                        sourceContent = typeof sourceData.content === 'string' 
-                          ? JSON.parse(sourceData.content) 
-                          : sourceData.content;
-                        
-                        console.log("Fetched source content from database, got", 
-                          Array.isArray(sourceContent) ? sourceContent.length : "non-array", 
-                          "blocks");
-                        
-                        if (!Array.isArray(sourceContent)) {
-                          sourceContent = [];
-                        }
-                      } catch (e) {
-                        console.error("Error parsing database source content:", e);
-                      }
-                    }
-                  }
-                }
-              } catch (e) {
-                console.error("Error processing source content:", e);
-              }
-            } catch (e) {
-              console.error("Error handling source content:", e);
-            }
-            
-            // Debugging: Log content blocks to see what's being combined
-            console.log("Final target content blocks:", targetContent.length);
-            console.log("Final source content blocks:", sourceContent.length);
-            
-            // Create combined content
-            const combinedContent = [
-              ...targetContent,
-              { type: 'paragraph', children: [{ text: '---' }] },
-              { 
-                type: 'paragraph', 
-                children: [
-                  { text: 'Content from ' },
-                  { 
-                    type: 'link',
-                    url: `/pages/${pageToAdd.id}`,
-                    children: [{ text: pageToAdd.title || 'Untitled' }]
-                  },
-                  { text: ':' }
-                ]
-              },
-              ...sourceContent
-            ];
-            
-            // Update in the database - use set instead of update for more reliable operation
-            try {
-              const contentRef = ref(db, `pages/${selectedPageId}/content`);
-              const dateRef = ref(db, `pages/${selectedPageId}/lastModified`);
-              
-              await set(contentRef, JSON.stringify(combinedContent));
-              await set(dateRef, new Date().toISOString());
-              
-              console.log("Content successfully updated");
-            } catch (e) {
-              console.error("Error updating page content:", e);
-            }
-          } catch (backgroundError) {
-            console.error("Background processing error:", backgroundError);
-          }
-        }, 100);
       } catch (error) {
-        console.error("Error in handleAddToPage:", error);
+        console.error("Error adding content to page:", error);
         toast.error("An error occurred while adding content");
         setLoading(false);
       }
