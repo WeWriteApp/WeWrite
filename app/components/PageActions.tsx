@@ -203,7 +203,7 @@ export function PageActions({
       }
     };
 
-    // Extremely simplified approach - just focus on getting the database operation right
+    // Create a fixed version using the current page content in memory
     const handleAddToPage = async () => {
       // Validate we have the necessary data
       if (!selectedPageId) {
@@ -211,66 +211,75 @@ export function PageActions({
         return;
       }
       
-      if (!pageToAdd?.id) {
-        toast.error("Source page information is missing");
-        return;
-      }
-      
       // Set loading state
       setLoading(true);
       console.log("Starting page append operation...");
-      console.log("Source page ID:", pageToAdd.id);
-      console.log("Target page ID:", selectedPageId);
       
       try {
         // Get database reference
         const db = getDatabase(app);
         
-        // STEP 1: Get current page directly from the database
-        console.log("Fetching current page from database...");
-        const currentPageRef = ref(db, `pages/${pageToAdd.id}`);
-        const currentPageSnapshot = await get(currentPageRef);
-        
-        if (!currentPageSnapshot.exists()) {
-          console.error("Current page not found in database!");
-          toast.error("Current page not found in database");
-          setLoading(false);
-          return;
-        }
-        
-        const currentPageData = currentPageSnapshot.val();
-        console.log("Current page retrieved:", currentPageData.title);
-        
-        let currentPageContent = [];
-        
-        // Parse the current page content
-        try {
-          if (typeof currentPageData.content === 'string') {
-            currentPageContent = JSON.parse(currentPageData.content);
-          } else if (Array.isArray(currentPageData.content)) {
-            currentPageContent = currentPageData.content;
-          }
-          
-          // If content is not an array or is empty, create a simple placeholder
-          if (!Array.isArray(currentPageContent) || currentPageContent.length === 0) {
-            console.warn("Current page content is not in expected format");
-            currentPageContent = [{ 
-              type: 'paragraph', 
-              children: [{ text: `Content from ${currentPageData.title || 'Untitled'}` }] 
-            }];
-          }
-          
-          console.log("Current page content parsed, found", currentPageContent.length, "blocks");
-        } catch (error) {
-          console.error("Error parsing current page content:", error);
-          // Create minimal fallback content
-          currentPageContent = [{ 
+        // Create emergency fallback content in case we need it
+        const fallbackContent = [
+          { 
             type: 'paragraph', 
-            children: [{ text: `Content from ${currentPageData.title || 'Untitled'}` }] 
-          }];
+            children: [{ text: pageToAdd?.title || "Content placeholder" }] 
+          }
+        ];
+        
+        // We'll use this array for the final content
+        let currentPageContent = fallbackContent;
+        
+        // Check if we can extract content from the page element
+        try {
+          const pageContentElement = document.querySelector('.page-content');
+          if (pageContentElement) {
+            console.log("Found page content element, creating content from displayed paragraphs");
+            
+            // Get all paragraph text content from the displayed page
+            const paragraphs = Array.from(pageContentElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
+            
+            if (paragraphs.length > 0) {
+              // Create a simplified slate structure from the DOM elements
+              currentPageContent = paragraphs.map(p => {
+                // Get any links in this paragraph
+                const links = Array.from(p.querySelectorAll('a')).map(a => {
+                  return {
+                    start: 0, // We don't know exact positions, so put link at start
+                    end: a.textContent.length,
+                    url: a.href,
+                    text: a.textContent
+                  };
+                });
+                
+                // Create text content with links
+                if (links.length > 0) {
+                  return {
+                    type: 'paragraph',
+                    children: links.map(link => ({
+                      type: 'link',
+                      url: link.url,
+                      children: [{ text: link.text }]
+                    }))
+                  };
+                } else {
+                  // Simple paragraph with text
+                  return {
+                    type: 'paragraph',
+                    children: [{ text: p.textContent }]
+                  };
+                }
+              });
+              
+              console.log("Created content from DOM with", currentPageContent.length, "paragraphs");
+            }
+          }
+        } catch (err) {
+          console.error("Error extracting content from DOM:", err);
+          // We'll use the fallback content already set
         }
         
-        // STEP 2: Get target page directly from the database
+        // Get target page
         console.log("Fetching target page from database...");
         const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnapshot = await get(targetPageRef);
@@ -295,7 +304,6 @@ export function PageActions({
             targetPageContent = targetPageData.content;
           }
           
-          // If content is not an array, initialize an empty array
           if (!Array.isArray(targetPageContent)) {
             console.warn("Target page content is not an array");
             targetPageContent = [];
@@ -307,7 +315,7 @@ export function PageActions({
           targetPageContent = [];
         }
         
-        // STEP 3: Combine content with clear separation
+        // Combine content with clear separation
         console.log("Combining content...");
         const combinedContent = [
           ...targetPageContent,
@@ -322,8 +330,8 @@ export function PageActions({
               { text: 'Content from ' },
               { 
                 type: 'link',
-                url: `/pages/${pageToAdd.id}`,
-                children: [{ text: currentPageData.title || 'Untitled' }]
+                url: `/pages/${pageToAdd?.id || ''}`,
+                children: [{ text: pageToAdd?.title || 'Untitled' }]
               },
               { text: ':' }
             ]
@@ -336,7 +344,7 @@ export function PageActions({
         
         console.log("Combined content created with", combinedContent.length, "blocks");
         
-        // STEP 4: Update the target page content
+        // Update the target page content
         console.log("Updating target page...");
         await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(combinedContent));
         await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
