@@ -74,16 +74,16 @@ export function LoginForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-1 sm:gap-3", className)} 
+      className={cn("flex flex-col gap-4 sm:gap-6", className)} 
       {...props} 
       onSubmit={handleSubmit}
     >
-      <div className="flex flex-col items-center gap-0.5 text-center">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Log in</h1>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Log in</h1>
       </div>
-      <div className="grid gap-1.5 sm:gap-3">
-        <div className="grid gap-0.5">
-          <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
+      <div className="grid gap-4 sm:gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="email" className="text-foreground text-sm sm:text-base">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -92,11 +92,11 @@ export function LoginForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={1}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-8 sm:h-9"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />
         </div>
-        <div className="grid gap-0.5">
-          <Label htmlFor="password" className="text-foreground text-sm">Password</Label>
+        <div className="grid gap-2">
+          <Label htmlFor="password" className="text-foreground text-sm sm:text-base">Password</Label>
           <Input 
             id="password" 
             type="password" 
@@ -105,9 +105,9 @@ export function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={2} 
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-8 sm:h-9"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-1">
             <Link
               href="/auth/forgot-password"
               className="text-xs sm:text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
@@ -119,7 +119,7 @@ export function LoginForm({
         </div>
         
         {error && (
-          <div className="text-xs sm:text-sm font-medium text-destructive">
+          <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
             {error}
           </div>
         )}
@@ -127,7 +127,7 @@ export function LoginForm({
         <Button 
           type="submit" 
           className={cn(
-            "w-full transition-all h-8 sm:h-9",
+            "w-full transition-all h-10 sm:h-11 mt-2",
             !isFormValid && !isLoading ? 
               "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
           )}
@@ -137,9 +137,9 @@ export function LoginForm({
           {isLoading ? "Signing in..." : "Login"}
         </Button>
       </div>
-      <div className="text-center text-xs sm:text-sm text-muted-foreground mt-0.5">
+      <div className="text-center text-sm sm:text-base text-muted-foreground mt-2">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/register" className="underline underline-offset-4 text-foreground hover:text-foreground/90" tabIndex={5}>
+        <Link href="/auth/register" className="underline underline-offset-4 text-foreground hover:text-foreground/90 font-medium" tabIndex={5}>
           Sign up
         </Link>
       </div>

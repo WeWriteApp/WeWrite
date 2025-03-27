@@ -149,16 +149,16 @@ export function RegisterForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-1 sm:gap-3", className)} 
+      className={cn("flex flex-col gap-4 sm:gap-6", className)} 
       {...props} 
       onSubmit={handleSubmit}
     >
-      <div className="flex flex-col items-center gap-0.5 sm:gap-1 text-center">
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Create account</h1>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Create account</h1>
       </div>
-      <div className="grid gap-1.5 sm:gap-3">
-        <div className="grid gap-0.5 sm:gap-1">
-          <Label htmlFor="username" className="text-foreground text-sm">Username</Label>
+      <div className="grid gap-4 sm:gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="username" className="text-foreground text-sm sm:text-base">Username</Label>
           <div className="relative">
             <Input 
               id="username" 
@@ -168,26 +168,26 @@ export function RegisterForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               tabIndex={1}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10 h-8 sm:h-9"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10 h-10 sm:h-11 px-3"
             />
             {username && username.length >= 3 && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 {isChecking ? (
-                  <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
+                  <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
                 ) : (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className={cn(
-                          "flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5 rounded-full",
+                          "flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full",
                           isAvailable 
                             ? "bg-green-500" 
                             : "bg-red-500"
                         )}>
                           {isAvailable ? (
-                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white stroke-[3]" />
+                            <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-white stroke-[3]" />
                           ) : (
-                            <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white stroke-[3]" />
+                            <X className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-white stroke-[3]" />
                           )}
                         </div>
                       </TooltipTrigger>
@@ -201,11 +201,11 @@ export function RegisterForm({
             )}
           </div>
           {username && username.length < 3 && (
-            <p className="text-xs text-muted-foreground">Username must be at least 3 characters</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Username must be at least 3 characters</p>
           )}
         </div>
-        <div className="grid gap-0.5 sm:gap-1">
-          <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
+        <div className="grid gap-2">
+          <Label htmlFor="email" className="text-foreground text-sm sm:text-base">Email</Label>
           <Input 
             id="email" 
             type="email" 
@@ -214,11 +214,11 @@ export function RegisterForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={2}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-8 sm:h-9"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />
         </div>
-        <div className="grid gap-0.5 sm:gap-1">
-          <Label htmlFor="password" className="text-foreground text-sm">Password</Label>
+        <div className="grid gap-2">
+          <Label htmlFor="password" className="text-foreground text-sm sm:text-base">Password</Label>
           <Input 
             id="password" 
             type="password" 
@@ -226,18 +226,18 @@ export function RegisterForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={3}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-8 sm:h-9"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />
         </div>
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-1 sm:p-2">
-            <p className="text-xs sm:text-sm text-red-400">{error}</p>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
         <Button 
           disabled={isLoading || !isFormValid} 
           className={cn(
-            "w-full transition-all h-8 sm:h-9",
+            "w-full transition-all h-10 sm:h-11 mt-2",
             !isFormValid && !isLoading ? 
               "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : 
               "bg-white hover:bg-white/90 text-black !text-black"
@@ -248,7 +248,7 @@ export function RegisterForm({
           {isLoading ? "Creating account..." : "Create account"}
         </Button>
       </div>
-      <div className="text-center text-xs sm:text-sm text-muted-foreground">
+      <div className="text-center text-sm sm:text-base text-muted-foreground mt-2">
         Already have an account?{" "}
         <Link 
           href="/auth/login" 
