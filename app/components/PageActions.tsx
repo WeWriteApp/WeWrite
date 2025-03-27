@@ -203,7 +203,7 @@ export function PageActions({
       }
     };
 
-    // Completely simplified approach - no background operations, direct database access
+    // Extremely simplified approach - just focus on getting the database operation right
     const handleAddToPage = async () => {
       // Validate we have the necessary data
       if (!selectedPageId) {
@@ -218,132 +218,104 @@ export function PageActions({
       
       // Set loading state
       setLoading(true);
+      console.log("Starting page append operation...");
+      console.log("Source page ID:", pageToAdd.id);
+      console.log("Target page ID:", selectedPageId);
       
       try {
-        // Log page data for debugging
-        console.log("Source page data being used:", {
-          id: pageToAdd.id,
-          title: pageToAdd.title,
-          contentType: typeof pageToAdd.content,
-          contentLength: pageToAdd.content ? 
-            (typeof pageToAdd.content === 'string' ? pageToAdd.content.length : 'non-string') 
-            : 'undefined'
-        });
-        
         // Get database reference
         const db = getDatabase(app);
         
-        // First try to use the page content directly if available
-        let sourceContent = [];
+        // STEP 1: Get current page directly from the database
+        console.log("Fetching current page from database...");
+        const currentPageRef = ref(db, `pages/${pageToAdd.id}`);
+        const currentPageSnapshot = await get(currentPageRef);
         
-        // Try to parse the content from the passed page object
-        if (pageToAdd.parsedContent) {
-          sourceContent = pageToAdd.parsedContent;
-        } else if (pageToAdd.content) {
-          try {
-            sourceContent = typeof pageToAdd.content === 'string'
-              ? JSON.parse(pageToAdd.content)
-              : pageToAdd.content;
-              
-            if (Array.isArray(sourceContent) && sourceContent.length > 0) {
-              console.log("Using direct page content - found", sourceContent.length, "blocks");
-            } else {
-              console.log("Direct content was empty or invalid array - will fetch from DB");
-            }
-          } catch (e) {
-            console.error("Error parsing direct content:", e);
-          }
+        if (!currentPageSnapshot.exists()) {
+          console.error("Current page not found in database!");
+          toast.error("Current page not found in database");
+          setLoading(false);
+          return;
         }
         
-        // If we couldn't use the direct content, try to fetch from DB
-        if (!Array.isArray(sourceContent) || sourceContent.length === 0) {
-          console.log("Attempting to fetch source page from database at path:", `pages/${pageToAdd.id}`);
+        const currentPageData = currentPageSnapshot.val();
+        console.log("Current page retrieved:", currentPageData.title);
+        
+        let currentPageContent = [];
+        
+        // Parse the current page content
+        try {
+          if (typeof currentPageData.content === 'string') {
+            currentPageContent = JSON.parse(currentPageData.content);
+          } else if (Array.isArray(currentPageData.content)) {
+            currentPageContent = currentPageData.content;
+          }
           
-          // Try to get the page from the database
-          try {
-            const sourceSnapshot = await get(ref(db, `pages/${pageToAdd.id}`));
-            
-            if (sourceSnapshot.exists()) {
-              const sourceData = sourceSnapshot.val();
-              console.log("Found source page in database:", sourceData.title);
-              
-              try {
-                if (sourceData.content) {
-                  sourceContent = typeof sourceData.content === 'string'
-                    ? JSON.parse(sourceData.content)
-                    : sourceData.content;
-                    
-                  if (!Array.isArray(sourceContent)) {
-                    console.warn("Content from DB is not an array");
-                    sourceContent = [];
-                  }
-                }
-              } catch (e) {
-                console.error("Error parsing DB content:", e);
-              }
-            } else {
-              // Log error but don't fail - we might have content directly
-              console.error("Source page not found in database at path:", `pages/${pageToAdd.id}`);
-              
-              // Create a simple default content if we have nothing else
-              if (sourceContent.length === 0) {
-                sourceContent = [
-                  { 
-                    type: 'paragraph', 
-                    children: [{ text: pageToAdd.title || 'Untitled content' }] 
-                  }
-                ];
-              }
-            }
-          } catch (e) {
-            console.error("Error fetching source page:", e);
-            // Don't fail - we might have content directly
+          // If content is not an array or is empty, create a simple placeholder
+          if (!Array.isArray(currentPageContent) || currentPageContent.length === 0) {
+            console.warn("Current page content is not in expected format");
+            currentPageContent = [{ 
+              type: 'paragraph', 
+              children: [{ text: `Content from ${currentPageData.title || 'Untitled'}` }] 
+            }];
           }
+          
+          console.log("Current page content parsed, found", currentPageContent.length, "blocks");
+        } catch (error) {
+          console.error("Error parsing current page content:", error);
+          // Create minimal fallback content
+          currentPageContent = [{ 
+            type: 'paragraph', 
+            children: [{ text: `Content from ${currentPageData.title || 'Untitled'}` }] 
+          }];
         }
         
-        // Now process the target page
-        const targetRef = ref(db, `pages/${selectedPageId}`);
-        const targetSnapshot = await get(targetRef);
+        // STEP 2: Get target page directly from the database
+        console.log("Fetching target page from database...");
+        const targetPageRef = ref(db, `pages/${selectedPageId}`);
+        const targetPageSnapshot = await get(targetPageRef);
         
-        if (!targetSnapshot.exists()) {
+        if (!targetPageSnapshot.exists()) {
+          console.error("Target page not found in database!");
           toast.error("Target page not found in database");
           setLoading(false);
           return;
         }
         
-        const targetData = targetSnapshot.val();
-        console.log("Target page data:", targetData.title);
+        const targetPageData = targetPageSnapshot.val();
+        console.log("Target page retrieved:", targetPageData.title);
         
-        // Parse target content
-        let targetContent = [];
+        let targetPageContent = [];
+        
+        // Parse the target page content
         try {
-          if (targetData.content) {
-            targetContent = typeof targetData.content === 'string'
-              ? JSON.parse(targetData.content)
-              : targetData.content;
+          if (typeof targetPageData.content === 'string') {
+            targetPageContent = JSON.parse(targetPageData.content);
+          } else if (Array.isArray(targetPageData.content)) {
+            targetPageContent = targetPageData.content;
           }
-        } catch (e) {
-          console.error("Error parsing target content:", e);
+          
+          // If content is not an array, initialize an empty array
+          if (!Array.isArray(targetPageContent)) {
+            console.warn("Target page content is not an array");
+            targetPageContent = [];
+          }
+          
+          console.log("Target page content parsed, found", targetPageContent.length, "blocks");
+        } catch (error) {
+          console.error("Error parsing target page content:", error);
+          targetPageContent = [];
         }
         
-        if (!Array.isArray(targetContent)) targetContent = [];
-        
-        console.log("Target content blocks:", targetContent.length);
-        console.log("Source content blocks:", sourceContent.length);
-        
-        // Make sure we have some content to add
-        if (sourceContent.length === 0) {
-          sourceContent = [{ type: 'paragraph', children: [{ text: "Content was empty" }] }];
-        }
-        
-        // Create combined content with separator and attribution
+        // STEP 3: Combine content with clear separation
+        console.log("Combining content...");
         const combinedContent = [
-          ...targetContent,
-          // Add empty paragraph as separator
+          ...targetPageContent,
+          // Empty paragraph as separator
           { type: 'paragraph', children: [{ text: '' }] },
-          // Add divider
+          // Divider for visual separation
           { type: 'paragraph', children: [{ text: '---' }] },
-          // Add attribution
+          // Attribution line
           { 
             type: 'paragraph', 
             children: [
@@ -351,69 +323,70 @@ export function PageActions({
               { 
                 type: 'link',
                 url: `/pages/${pageToAdd.id}`,
-                children: [{ text: pageToAdd.title || 'Untitled' }]
+                children: [{ text: currentPageData.title || 'Untitled' }]
               },
               { text: ':' }
             ]
           },
-          // Add empty paragraph for spacing
+          // Another empty paragraph for spacing
           { type: 'paragraph', children: [{ text: '' }] },
-          // Add the source content
-          ...sourceContent
+          // The actual content
+          ...currentPageContent
         ];
         
-        // Update the target page with the combined content
+        console.log("Combined content created with", combinedContent.length, "blocks");
+        
+        // STEP 4: Update the target page content
+        console.log("Updating target page...");
         await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(combinedContent));
         await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
         
-        // Close dialog and show success message
+        console.log("Target page updated successfully!");
+        
+        // Close dialog and show success
         onClose();
         toast.success(`Added content to "${selectedPageTitle}"`);
         
-        // Redirect to the target page
+        // Redirect to see changes
         router.push(`/pages/${selectedPageId}`);
+        
       } catch (error) {
-        console.error("Error adding content to page:", error);
-        toast.error("An error occurred while adding content");
+        console.error("Error in add to page operation:", error);
+        toast.error("An error occurred while adding to page");
         setLoading(false);
       }
     };
-    
+
     return (
-      <div className="space-y-4">
-        <div className="p-2">
-          <h2 className="text-sm font-medium mb-2">Select a page to add the current content to</h2>
-          
-          <div className="overflow-y-auto max-h-[40vh]">
-            <TypeaheadSearch 
-              onSelect={handleSelectPage}
-              placeholder="Search pages..."
-              radioSelection={true}
-              selectedId={selectedPageId}
-              editableOnly={true}
-            />
-          </div>
+      <div className="grid gap-4 py-4">
+        <div>
+          <h3 className="mb-2 text-sm font-medium">Select a page</h3>
+          <TypeaheadSearch 
+            onSelect={handleSelectPage}
+            placeholder="Search for a page"
+            radioSelection={true}
+            selectedId={selectedPageId}
+            editableOnly={true}
+          />
         </div>
         
-        <div className="flex justify-end gap-2 p-2 pt-0">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button 
-            onClick={handleAddToPage} 
+          <Button
+            onClick={handleAddToPage}
             disabled={!selectedPageId || loading}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary"
           >
-            {loading ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                Adding...
-              </>
-            ) : (
-              'Add to Page'
-            )}
+            {loading ? <Loader size={16} className="animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
+            Add to Page
           </Button>
-        </div>
+        </DialogFooter>
       </div>
     );
   }
