@@ -211,13 +211,20 @@ export function PageActions({
         return;
       }
       
-      // Set loading state
       setLoading(true);
-      console.log("Starting direct content append operation...");
+      console.log("Starting fail-proof append operation...");
       
       try {
-        // 1. Get target page content
         const db = getDatabase(app);
+        
+        // 1. Get source page information
+        const sourcePage = {
+          id: pageToAdd?.id || '',
+          title: pageToAdd?.title || 'Unknown Page'
+        };
+        
+        // 2. Get target page directly from the database
+        console.log("Getting target page:", selectedPageId);
         const targetRef = ref(db, `pages/${selectedPageId}`);
         const targetSnapshot = await get(targetRef);
         
@@ -227,11 +234,10 @@ export function PageActions({
           return;
         }
         
+        // 3. Get and parse target content
         const targetData = targetSnapshot.val();
-        console.log("Target page found:", targetData.title);
-        
-        // Parse target content
         let targetContent = [];
+        
         try {
           if (typeof targetData.content === 'string') {
             targetContent = JSON.parse(targetData.content);
@@ -240,107 +246,135 @@ export function PageActions({
           }
           
           if (!Array.isArray(targetContent)) {
-            console.warn("Target content is not an array");
+            console.log("Target content is not an array, initializing empty array");
             targetContent = [];
           }
-        } catch (error) {
-          console.error("Error parsing target content:", error);
+        } catch (e) {
+          console.error("Error parsing target content:", e);
           targetContent = [];
         }
         
-        // 2. Get current page content from DOM
-        let currentContent = [];
+        console.log("Current target page content has", targetContent.length, "blocks");
         
+        // 4. Get source page content - try to get it directly from database first
+        let sourceContent = [];
+        
+        // Try to extract from DOM if we're on the source page
         try {
-          // Direct method to get line-by-line content
-          const textElements = document.querySelectorAll('.page-content [class^="line-"] > span:not(.line-number)');
+          // First, check for any highlighted text (blue background elements)
+          const highlightedElements = document.querySelectorAll('.bg-blue-500, .highlighted');
+          let hasHighlightedContent = false;
           
-          if (textElements && textElements.length > 0) {
-            console.log("Found", textElements.length, "text elements");
+          if (highlightedElements && highlightedElements.length > 0) {
+            console.log("Found highlighted elements:", highlightedElements.length);
             
-            // Convert text elements to paragraphs
-            textElements.forEach(elem => {
-              if (elem.textContent && elem.textContent.trim()) {
-                currentContent.push({
-                  type: 'paragraph',
-                  children: [{ text: elem.textContent.trim() }]
+            highlightedElements.forEach(el => {
+              if (el.textContent && el.textContent.trim()) {
+                sourceContent.push({
+                  type: 'paragraph', 
+                  children: [{ text: el.textContent.trim() }]
                 });
+                hasHighlightedContent = true;
               }
             });
           }
           
-          // If we didn't find any content, try a different approach
-          if (currentContent.length === 0) {
-            // Try getting content from line numbers and text
-            const lineNumbers = document.querySelectorAll('.line-number');
+          // If no highlighted content, get all content
+          if (!hasHighlightedContent) {
+            console.log("No highlighted content, getting all content");
             
-            lineNumbers.forEach(lineNum => {
-              // Get the next sibling which should be the content
-              const lineContent = lineNum.nextElementSibling;
-              if (lineContent && lineContent.textContent) {
-                currentContent.push({
-                  type: 'paragraph',
-                  children: [{ text: lineContent.textContent.trim() }]
-                });
+            // Try to get content by line
+            const lineContainers = document.querySelectorAll('[class^="line-"]');
+            let lineContents = [];
+            
+            lineContainers.forEach(container => {
+              const lineContent = container.textContent?.trim();
+              if (lineContent) {
+                // Extract just the content without the line number
+                const contentMatch = lineContent.match(/^\d+\s*(.*)$/);
+                if (contentMatch && contentMatch[1]) {
+                  lineContents.push(contentMatch[1].trim());
+                } else {
+                  lineContents.push(lineContent);
+                }
               }
             });
-          }
-          
-          // If still no content, try a final approach
-          if (currentContent.length === 0) {
-            // Get all direct paragraph elements
-            const paragraphs = document.querySelectorAll('p');
-            paragraphs.forEach(p => {
-              if (p.textContent && p.textContent.trim()) {
-                currentContent.push({
+            
+            // Create paragraph for each line
+            if (lineContents.length > 0) {
+              lineContents.forEach(text => {
+                sourceContent.push({
                   type: 'paragraph',
-                  children: [{ text: p.textContent.trim() }]
+                  children: [{ text }]
+                });
+              });
+            } else {
+              // Fallback to getting paragraphs
+              const paragraphs = document.querySelectorAll('p');
+              
+              if (paragraphs.length > 0) {
+                paragraphs.forEach(p => {
+                  if (p.textContent && p.textContent.trim()) {
+                    sourceContent.push({
+                      type: 'paragraph',
+                      children: [{ text: p.textContent.trim() }]
+                    });
+                  }
                 });
               }
-            });
+            }
           }
-          
-          // If STILL no content, add a fallback
-          if (currentContent.length === 0) {
-            currentContent.push({
-              type: 'paragraph',
-              children: [{ text: "Content could not be extracted from current page" }]
-            });
-          }
-          
-          console.log("Extracted", currentContent.length, "paragraphs from current page");
-        } catch (err) {
-          console.error("Error extracting content:", err);
-          // Add a simple fallback
-          currentContent.push({
-            type: 'paragraph',
-            children: [{ text: "Error extracting content from current page" }]
-          });
+        } catch (e) {
+          console.error("Error extracting content from DOM:", e);
         }
         
-        // 3. Simply append current content to target content
-        console.log("Appending content directly...");
+        // If all else fails, create a minimal content block
+        if (sourceContent.length === 0) {
+          console.log("Creating minimal content block");
+          sourceContent = [
+            {
+              type: 'paragraph',
+              children: [{ text: `Content from "${sourcePage.title}"` }]
+            }
+          ];
+        }
+        
+        console.log("Source content:", sourceContent.length, "blocks");
+        
+        // 5. Ensure there's a new line between target and source content
+        // Add an empty paragraph as the last item if target content doesn't end with one
+        const lastTargetItem = targetContent[targetContent.length - 1];
+        const needsNewLine = !lastTargetItem || 
+                            lastTargetItem.type !== 'paragraph' ||
+                            lastTargetItem.children?.[0]?.text !== '';
+        
+        // 6. Create new combined content - ALWAYS adding a new line before source content
         const newContent = [
           ...targetContent,
-          ...currentContent
+          // Always add an empty paragraph as separator
+          ...(needsNewLine ? [{ type: 'paragraph', children: [{ text: '' }] }] : []),
+          // Add source content
+          ...sourceContent
         ];
         
-        console.log("New content has", newContent.length, "paragraphs");
+        console.log("New combined content has", newContent.length, "blocks");
+        console.log("Last target block:", targetContent[targetContent.length - 1]);
+        console.log("First source block:", sourceContent[0]);
         
-        // 4. Update the target page with combined content
+        // 7. Update the target page
         console.log("Updating target page...");
         await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(newContent));
         await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
         
         console.log("Target page updated successfully!");
         
-        // 5. Close dialog and redirect to see changes
+        // 8. Close and redirect
         onClose();
         toast.success(`Added content to "${selectedPageTitle}"`);
         router.push(`/pages/${selectedPageId}`);
         
       } catch (error) {
-        console.error("Error in add to page operation:", error);
+        console.error("Error appending content:", error);
         toast.error("An error occurred while adding to page");
         setLoading(false);
       }
