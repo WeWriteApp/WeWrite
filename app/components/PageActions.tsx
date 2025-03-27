@@ -199,23 +199,86 @@ export function PageActions({
       setLoading(true);
       
       try {
+        // Log page data for debugging
+        console.log("Source page data being used:", {
+          id: pageToAdd.id,
+          title: pageToAdd.title,
+          contentType: typeof pageToAdd.content,
+          contentLength: pageToAdd.content ? 
+            (typeof pageToAdd.content === 'string' ? pageToAdd.content.length : 'non-string') 
+            : 'undefined'
+        });
+        
         // Get database reference
         const db = getDatabase(app);
         
-        // 1. First get the current page (source) content from the database
-        const sourceRef = ref(db, `pages/${pageToAdd.id}`);
-        const sourceSnapshot = await get(sourceRef);
+        // First try to use the page content directly if available
+        let sourceContent = [];
         
-        if (!sourceSnapshot.exists()) {
-          toast.error("Source page not found in database");
-          setLoading(false);
-          return;
+        // Try to parse the content from the passed page object
+        if (pageToAdd.content) {
+          try {
+            sourceContent = typeof pageToAdd.content === 'string'
+              ? JSON.parse(pageToAdd.content)
+              : pageToAdd.content;
+              
+            if (Array.isArray(sourceContent) && sourceContent.length > 0) {
+              console.log("Using direct page content - found", sourceContent.length, "blocks");
+            } else {
+              console.log("Direct content was empty or invalid array - will fetch from DB");
+            }
+          } catch (e) {
+            console.error("Error parsing direct content:", e);
+          }
         }
         
-        const sourceData = sourceSnapshot.val();
-        console.log("Source page data:", sourceData);
+        // If we couldn't use the direct content, try to fetch from DB
+        if (!Array.isArray(sourceContent) || sourceContent.length === 0) {
+          console.log("Attempting to fetch source page from database at path:", `pages/${pageToAdd.id}`);
+          
+          // Try to get the page from the database
+          try {
+            const sourceSnapshot = await get(ref(db, `pages/${pageToAdd.id}`));
+            
+            if (sourceSnapshot.exists()) {
+              const sourceData = sourceSnapshot.val();
+              console.log("Found source page in database:", sourceData.title);
+              
+              try {
+                if (sourceData.content) {
+                  sourceContent = typeof sourceData.content === 'string'
+                    ? JSON.parse(sourceData.content)
+                    : sourceData.content;
+                    
+                  if (!Array.isArray(sourceContent)) {
+                    console.warn("Content from DB is not an array");
+                    sourceContent = [];
+                  }
+                }
+              } catch (e) {
+                console.error("Error parsing DB content:", e);
+              }
+            } else {
+              // Log error but don't fail - we might have content directly
+              console.error("Source page not found in database at path:", `pages/${pageToAdd.id}`);
+              
+              // Create a simple default content if we have nothing else
+              if (sourceContent.length === 0) {
+                sourceContent = [
+                  { 
+                    type: 'paragraph', 
+                    children: [{ text: pageToAdd.title || 'Untitled content' }] 
+                  }
+                ];
+              }
+            }
+          } catch (e) {
+            console.error("Error fetching source page:", e);
+            // Don't fail - we might have content directly
+          }
+        }
         
-        // 2. Then get the target page content
+        // Now process the target page
         const targetRef = ref(db, `pages/${selectedPageId}`);
         const targetSnapshot = await get(targetRef);
         
@@ -226,12 +289,10 @@ export function PageActions({
         }
         
         const targetData = targetSnapshot.val();
-        console.log("Target page data:", targetData);
+        console.log("Target page data:", targetData.title);
         
-        // 3. Parse both contents
+        // Parse target content
         let targetContent = [];
-        let sourceContent = [];
-        
         try {
           if (targetData.content) {
             targetContent = typeof targetData.content === 'string'
@@ -242,23 +303,17 @@ export function PageActions({
           console.error("Error parsing target content:", e);
         }
         
-        try {
-          if (sourceData.content) {
-            sourceContent = typeof sourceData.content === 'string'
-              ? JSON.parse(sourceData.content)
-              : sourceData.content;
-          }
-        } catch (e) {
-          console.error("Error parsing source content:", e);
-        }
-        
         if (!Array.isArray(targetContent)) targetContent = [];
-        if (!Array.isArray(sourceContent)) sourceContent = [];
         
         console.log("Target content blocks:", targetContent.length);
         console.log("Source content blocks:", sourceContent.length);
         
-        // 4. Create combined content with separator and attribution
+        // Make sure we have some content to add
+        if (sourceContent.length === 0) {
+          sourceContent = [{ type: 'paragraph', children: [{ text: "Content was empty" }] }];
+        }
+        
+        // Create combined content with separator and attribution
         const combinedContent = [
           ...targetContent,
           // Add empty paragraph as separator
@@ -284,17 +339,16 @@ export function PageActions({
           ...sourceContent
         ];
         
-        // 5. Update the target page with the combined content
+        // Update the target page with the combined content
         await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(combinedContent));
         await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
         
-        // 6. Close dialog and show success message
+        // Close dialog and show success message
         onClose();
         toast.success(`Added content to "${selectedPageTitle}"`);
         
-        // 7. Redirect to the target page
+        // Redirect to the target page
         router.push(`/pages/${selectedPageId}`);
-        
       } catch (error) {
         console.error("Error adding content to page:", error);
         toast.error("An error occurred while adding content");
@@ -411,6 +465,8 @@ export function PageActions({
             <AddToPageDialogContent 
               pageToAdd={{
                 ...page,
+                // Ensure we have the ID properly set
+                id: page.id || '',
                 content: typeof page.content === 'string' 
                   ? page.content 
                   : (page.content ? JSON.stringify(page.content) : '[]')
