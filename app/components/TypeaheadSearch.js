@@ -16,6 +16,7 @@ import debounce from "lodash.debounce";
 import { useTheme } from "next-themes";
 import { Input } from "./ui/input";
 import { getDatabase, ref, onValue } from "firebase/database";
+import { app } from "../firebase/config";
 
 // Define a simple Loader component directly in this file
 const Loader = () => {
@@ -60,7 +61,7 @@ const TypeaheadSearch = ({
     
     try {
       // Get users from the realtime database
-      const db = getDatabase();
+      const db = getDatabase(app);
       const userRef = ref(db, `users/${userId}`);
       
       return new Promise((resolve) => {
@@ -95,12 +96,18 @@ const TypeaheadSearch = ({
     
     // Map the pages with user information
     return pages.map(page => {
+      // Include userId field in every page response
+      if (!page.userId && page.isOwned && user) {
+        page.userId = user.uid;
+      }
+      
       const userProfile = userProfiles[page.userId];
       return {
         ...page,
+        userId: page.userId || (user ? user.uid : null),
         username: userProfile ? 
           (userProfile.username || userProfile.displayName || 'Anonymous') : 
-          'Anonymous'
+          (page.username && page.username !== 'NULL' ? page.username : 'Anonymous')
       };
     });
   };

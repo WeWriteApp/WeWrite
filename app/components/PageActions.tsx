@@ -177,13 +177,21 @@ export function PageActions({
     // Handle page selection
     const handleSelectPage = (page) => {
       console.log("Selected page:", page);
-      setSelectedPage(page);
+      // Make sure we have a complete page object with the required fields
+      setSelectedPage({
+        id: page.id,
+        title: page.title || 'Untitled',
+        username: page.username || 'Anonymous',
+        userId: page.userId
+      });
     };
 
     const handleAddToPage = async () => {
       if (!selectedPage || !pageToAdd) return;
       
       try {
+        console.log("Adding page content:", { sourcePageId: pageToAdd.id, targetPageId: selectedPage.id });
+        
         // Get the content of the selected page
         const db = getDatabase(app);
         const pageRef = ref(db, `pages/${selectedPage.id}`);
@@ -191,9 +199,12 @@ export function PageActions({
         onValue(pageRef, async (snapshot) => {
           const targetPage = snapshot.val();
           if (!targetPage) {
+            console.error("Target page not found:", selectedPage.id);
             toast.error("Selected page not found");
             return;
           }
+          
+          console.log("Target page data:", targetPage);
           
           // Parse the content
           let targetContent;
@@ -247,16 +258,20 @@ export function PageActions({
           
           // Update the page content - Using set instead of update to ensure all data is valid
           try {
-            // Immediately redirect to the target page
-            router.push(`/pages/${selectedPage.id}`);
-            
+            // First perform the update to make sure it succeeds
             const updates = {};
             updates[`pages/${selectedPage.id}/content`] = JSON.stringify([...targetContent, separator, referenceBlock, ...sourceContent]);
             updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
             
             await update(ref(db), updates);
+            console.log("Content updated successfully, redirecting to:", `/pages/${selectedPage.id}`);
+            
+            // Show success toast and close dialog
             toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
             onClose();
+            
+            // Now redirect after successful update
+            router.push(`/pages/${selectedPage.id}`);
           } catch (updateError) {
             console.error("Error updating page:", updateError);
             toast.error("Failed to add content to page");
