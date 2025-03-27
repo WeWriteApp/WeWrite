@@ -378,11 +378,9 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
         <label htmlFor={`page-${page.id}`} className="text-sm cursor-pointer flex-1">
           {highlightText(page.title, search)}
         </label>
-        {page.username !== 'NULL' && page.isPublic && (
-          <span className="text-xs opacity-75 whitespace-nowrap">
-            {page.groupId ? 'Group' : `by ${page.username}`}
-          </span>
-        )}
+        <span className="text-xs opacity-75 whitespace-nowrap">
+          {page.groupId ? 'Group' : `by ${page.username || 'Anonymous'}`}
+        </span>
       </div>
     );
   }
@@ -396,11 +394,9 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
       <span className="truncate">
         {highlightText(page.title, search)}
       </span>
-      {page.username !== 'NULL' && page.isPublic && (
-        <span className="text-xs opacity-75 whitespace-nowrap">
-          {page.groupId ? 'Group' : `by ${page.username}`}
-        </span>
-      )}
+      <span className="text-xs opacity-75 whitespace-nowrap">
+        {page.groupId ? 'Group' : `by ${page.username || 'Anonymous'}`}
+      </span>
     </button>
   );
 };

@@ -172,6 +172,7 @@ export function PageActions({
     const [selectedPage, setSelectedPage] = useState(null);
     const { user } = useContext(AuthContext);
     const [searchActive, setSearchActive] = useState(false);
+    const router = useRouter();
     
     // Handle page selection
     const handleSelectPage = (page) => {
@@ -256,6 +257,7 @@ export function PageActions({
             .then(() => {
               toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
               onClose();
+              router.push(`/pages/${selectedPage.id}`);
             })
             .catch((error) => {
               console.error("Error updating page:", error);
