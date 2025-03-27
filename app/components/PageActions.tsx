@@ -177,24 +177,49 @@ export function PageActions({
     
     // Handle page selection
     const handleSelectPage = (page) => {
-      console.log("Selected page:", page);
+      console.log("Selected page (raw):", page);
       // Make sure we have a complete page object with the required fields
+      const normalizedId = page.id?.trim();
+      if (!normalizedId) {
+        console.error("Invalid page ID:", page.id);
+        return;
+      }
+      
       setSelectedPage({
-        id: page.id,
+        id: normalizedId,
         title: page.title || 'Untitled',
         username: page.username || 'Anonymous',
         userId: page.userId
       });
+      
+      console.log("Selected page (normalized):", {
+        id: normalizedId,
+        title: page.title || 'Untitled'
+      });
     };
 
     const handleAddToPage = async () => {
-      if (!selectedPage || !pageToAdd) return;
+      if (!selectedPage || !pageToAdd) {
+        console.error("Missing required data:", { selectedPage, pageToAdd });
+        return;
+      }
+      
+      // Normalize IDs, removing any whitespace
+      const targetId = selectedPage.id?.trim();
+      const sourceId = pageToAdd.id?.trim();
+      
+      if (!targetId || !sourceId) {
+        console.error("Invalid page IDs:", { targetId, sourceId });
+        toast.error("Invalid page data");
+        return;
+      }
+      
       setLoading(true);
       
       try {
         console.log("Adding page content:", { 
-          sourcePageId: pageToAdd.id, 
-          targetPageId: selectedPage.id,
+          sourcePageId: sourceId, 
+          targetPageId: targetId,
           sourceTitle: pageToAdd.title,
           targetTitle: selectedPage.title
         });
@@ -202,106 +227,114 @@ export function PageActions({
         // Get the content of both pages
         const db = getDatabase(app);
         
-        // Get both pages in parallel for efficiency
-        const [targetSnapshot, sourceSnapshot] = await Promise.all([
-          get(ref(db, `pages/${selectedPage.id}`)),
-          get(ref(db, `pages/${pageToAdd.id}`))
-        ]);
-        
-        // Verify target page exists
-        if (!targetSnapshot.exists()) {
-          console.error("Target page not found:", selectedPage.id);
-          toast.error("Selected page not found");
-          setLoading(false);
-          return;
-        }
-        
-        // Verify source page exists
-        if (!sourceSnapshot.exists()) {
-          console.error("Source page not found:", pageToAdd.id);
-          toast.error("Current page data not found");
-          setLoading(false);
-          return;
-        }
-        
-        const targetPage = targetSnapshot.val();
-        const sourcePage = sourceSnapshot.val();
-        
-        console.log("Target page data:", targetPage);
-        console.log("Source page data:", sourcePage);
-        
-        // Parse the content (safely handling different content formats)
-        let targetContent = [];
+        // Check if pages exist before trying to get them
         try {
-          if (targetPage.content) {
-            targetContent = typeof targetPage.content === 'string' 
-              ? JSON.parse(targetPage.content) 
-              : targetPage.content;
+          // Get both pages in parallel for efficiency
+          const [targetSnapshot, sourceSnapshot] = await Promise.all([
+            get(ref(db, `pages/${targetId}`)),
+            get(ref(db, `pages/${sourceId}`))
+          ]);
+          
+          // Verify target page exists
+          if (!targetSnapshot.exists()) {
+            console.error("Target page not found:", targetId);
+            toast.error("Selected page not found");
+            setLoading(false);
+            return;
           }
-        } catch (error) {
-          console.error("Error parsing target page content:", error);
-        }
-        
-        if (!Array.isArray(targetContent)) {
-          targetContent = [];
-        }
-        
-        // Parse the content of the page to add
-        let sourceContent = [];
-        try {
-          if (sourcePage.content) {
-            sourceContent = typeof sourcePage.content === 'string' 
-              ? JSON.parse(sourcePage.content) 
-              : sourcePage.content;
+          
+          // Verify source page exists
+          if (!sourceSnapshot.exists()) {
+            console.error("Source page not found:", sourceId);
+            toast.error("Current page data not found");
+            setLoading(false);
+            return;
           }
+          
+          const targetPage = targetSnapshot.val();
+          const sourcePage = sourceSnapshot.val();
+          
+          console.log("Target page data:", targetPage);
+          console.log("Source page data:", sourcePage);
+          
+          // Parse the content (safely handling different content formats)
+          let targetContent = [];
+          try {
+            if (targetPage.content) {
+              targetContent = typeof targetPage.content === 'string' 
+                ? JSON.parse(targetPage.content) 
+                : targetPage.content;
+            }
+          } catch (error) {
+            console.error("Error parsing target page content:", error);
+          }
+          
+          if (!Array.isArray(targetContent)) {
+            console.warn("Target content is not an array, resetting to empty array");
+            targetContent = [];
+          }
+          
+          // Parse the content of the page to add
+          let sourceContent = [];
+          try {
+            if (sourcePage.content) {
+              sourceContent = typeof sourcePage.content === 'string' 
+                ? JSON.parse(sourcePage.content) 
+                : sourcePage.content;
+            }
+          } catch (error) {
+            console.error("Error parsing source page content:", error);
+          }
+          
+          if (!Array.isArray(sourceContent)) {
+            console.warn("Source content is not an array, resetting to empty array");
+            sourceContent = [];
+          }
+          
+          // Create a reference block
+          const referenceBlock = {
+            type: 'paragraph',
+            children: [
+              { text: 'Content from ' },
+              {
+                type: 'link',
+                url: `/pages/${pageToAdd.id}`,
+                children: [{ text: pageToAdd.title || 'Untitled' }]
+              },
+              { text: ` by ${pageToAdd.username || 'Anonymous'}:` }
+            ]
+          };
+          
+          // Add a separator
+          const separator = {
+            type: 'paragraph',
+            children: [{ text: '---' }]
+          };
+          
+          // First perform the update to make sure it succeeds
+          const updates = {};
+          updates[`pages/${targetId}/content`] = JSON.stringify([...targetContent, separator, referenceBlock, ...sourceContent]);
+          updates[`pages/${targetId}/lastModified`] = new Date().toISOString();
+          
+          // Show success toast and close dialog
+          onClose();
+          
+          // Immediately redirect to the target page
+          toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
+          router.push(`/pages/${targetId}`);
+          
+          // Update in the background
+          await update(ref(db), updates);
+          console.log("Content updated successfully");
         } catch (error) {
-          console.error("Error parsing source page content:", error);
+          console.error("Error in handleAddToPage:", error);
+          toast.error("An error occurred while adding content to page");
+        } finally {
+          setLoading(false);
         }
-        
-        if (!Array.isArray(sourceContent)) {
-          sourceContent = [];
-        }
-        
-        // Create a reference block
-        const referenceBlock = {
-          type: 'paragraph',
-          children: [
-            { text: 'Content from ' },
-            {
-              type: 'link',
-              url: `/pages/${pageToAdd.id}`,
-              children: [{ text: pageToAdd.title || 'Untitled' }]
-            },
-            { text: ` by ${pageToAdd.username || 'Anonymous'}:` }
-          ]
-        };
-        
-        // Add a separator
-        const separator = {
-          type: 'paragraph',
-          children: [{ text: '---' }]
-        };
-        
-        // First perform the update to make sure it succeeds
-        const updates = {};
-        updates[`pages/${selectedPage.id}/content`] = JSON.stringify([...targetContent, separator, referenceBlock, ...sourceContent]);
-        updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
-        
-        // Show success toast and close dialog
-        onClose();
-        
-        // Immediately redirect to the target page
-        toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
-        router.push(`/pages/${selectedPage.id}`);
-        
-        // Update in the background
-        await update(ref(db), updates);
-        console.log("Content updated successfully");
       } catch (error) {
         console.error("Error in handleAddToPage:", error);
         toast.error("An error occurred while adding content to page");
-      } finally {
-        setLoading(false);
       }
     };
     

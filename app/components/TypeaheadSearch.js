@@ -454,20 +454,21 @@ const TypeaheadSearch = ({
 
 const SingleItemLink = ({ page, search }) => {
   return (
-    <PillLink 
-      href={`/pages/${page.id}`} 
-      key={page.id}
-      isPublic={page.isPublic}
-    >
-      <div className="flex items-center justify-between gap-2 w-full">
+    <div className="flex items-center w-full overflow-hidden my-1">
+      <PillLink 
+        href={`/pages/${page.id}`} 
+        key={page.id}
+        isPublic={page.isPublic}
+        className="flex-shrink-0"
+      >
         <span className="truncate">{highlightText(page.title, search)}</span>
-        {page.username !== 'NULL' && page.isPublic && (
-          <span className="text-xs opacity-75 whitespace-nowrap">
-            by {page.username}
-          </span>
-        )}
-      </div>
-    </PillLink>
+      </PillLink>
+      {page.username && page.username !== 'NULL' && (
+        <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+          by {page.username}
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -491,10 +492,10 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
           checked={isSelected}
           onChange={() => onSelect(page)}
         />
-        <label htmlFor={`page-${page.id}`} className="text-sm cursor-pointer flex-1">
+        <label htmlFor={`page-${page.id}`} className="text-sm cursor-pointer font-medium">
           {highlightText(page.title, search)}
         </label>
-        <span className="text-xs opacity-75 whitespace-nowrap">
+        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
           {page.groupId ? 'Group' : `by ${displayName}`}
         </span>
       </div>
@@ -502,18 +503,20 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
   }
   
   return (
-    <button
-      onClick={() => onSelect(page)}
-      className="inline-flex mr-2 my-1 px-3 py-1.5 items-center gap-1 whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors w-full justify-between"
-      key={page.id}
-    >
-      <span className="truncate">
-        {highlightText(page.title, search)}
-      </span>
-      <span className="text-xs opacity-75 whitespace-nowrap">
+    <div className="flex items-center w-full overflow-hidden my-1">
+      <button
+        onClick={() => onSelect(page)}
+        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
+        key={page.id}
+      >
+        <span className="truncate">
+          {highlightText(page.title, search)}
+        </span>
+      </button>
+      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
         {page.groupId ? 'Group' : `by ${displayName}`}
       </span>
-    </button>
+    </div>
   );
 };
 
