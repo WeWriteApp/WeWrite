@@ -82,39 +82,44 @@ const TypeaheadSearch = ({
         
         // Add timeout to prevent infinite loading
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (increased from 10s)
         
-        const response = await fetch(queryUrl, { 
-          signal: controller.signal 
-        }).catch(error => {
-          if (error.name === 'AbortError') {
-            console.error('Search request timed out after 10 seconds');
+        // Add more comprehensive error handling for fetch
+        try {
+          const response = await fetch(queryUrl, { 
+            signal: controller.signal,
+            cache: 'no-store' // Prevent caching of search results
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            console.error('TypeaheadSearch - API returned error:', response.status);
+            const errorText = await response.text();
+            console.error('Error details:', errorText);
+            throw new Error(`Search API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log('TypeaheadSearch - API response:', data);
+          
+          // Check if we received an error message
+          if (data.error) {
+            console.error('TypeaheadSearch - API returned error object:', data.error);
+          }
+          
+          // Continue with the arrays even if there's an error
+          setUserPages(data.userPages || []);
+          setGroupPages(data.groupPages || []);
+          setPublicPages(data.publicPages || []);
+        } catch (fetchError) {
+          if (fetchError.name === 'AbortError') {
+            console.error('Search request timed out after 15 seconds');
             throw new Error('Search request timed out');
           }
-          throw error;
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          console.error('TypeaheadSearch - API returned error:', response.status);
-          const errorText = await response.text();
-          console.error('Error details:', errorText);
-          throw new Error(`Search API error: ${response.status}`);
+          console.error('Fetch error:', fetchError);
+          throw fetchError;
         }
-
-        const data = await response.json();
-        console.log('TypeaheadSearch - API response:', data);
-        
-        // Check if we received an error message
-        if (data.error) {
-          console.error('TypeaheadSearch - API returned error object:', data.error);
-        }
-        
-        // Continue with the arrays even if there's an error
-        setUserPages(data.userPages || []);
-        setGroupPages(data.groupPages || []);
-        setPublicPages(data.publicPages || []);
       } catch (error) {
         console.error("TypeaheadSearch - Error fetching search results", error);
         console.error("Error details:", error.message, error.stack);
