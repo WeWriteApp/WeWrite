@@ -203,7 +203,7 @@ export function PageActions({
       }
     };
 
-    // Create a fixed version using the current page content in memory
+    // Create a simple, guaranteed approach to ensure content is appended
     const handleAddToPage = async () => {
       // Validate we have the necessary data
       if (!selectedPageId) {
@@ -213,149 +213,130 @@ export function PageActions({
       
       // Set loading state
       setLoading(true);
-      console.log("Starting page append operation...");
+      console.log("Starting fixed page append operation...");
       
       try {
         // Get database reference
         const db = getDatabase(app);
         
-        // Create emergency fallback content in case we need it
-        const fallbackContent = [
-          { 
-            type: 'paragraph', 
-            children: [{ text: pageToAdd?.title || "Content placeholder" }] 
-          }
+        // Get current page title
+        const pageTitle = pageToAdd?.title || "Untitled Page";
+        console.log("Current page title:", pageTitle);
+        
+        // STEP 1: Define hard-coded content from current page
+        // This guarantees something will be appended
+        let sourceContent = [
+          { type: 'paragraph', children: [{ text: `Content from ${pageTitle}:` }] },
+          { type: 'paragraph', children: [{ text: '' }] },
         ];
         
-        // We'll use this array for the final content
-        let currentPageContent = fallbackContent;
-        
-        // Check if we can extract content from the page element
+        // STEP 2: Try to scrape the visible paragraph numbers and content
         try {
-          const pageContentElement = document.querySelector('.page-content');
-          if (pageContentElement) {
-            console.log("Found page content element, creating content from displayed paragraphs");
-            
-            // Get all paragraph text content from the displayed page
-            const paragraphs = Array.from(pageContentElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
-            
-            if (paragraphs.length > 0) {
-              // Create a simplified slate structure from the DOM elements
-              currentPageContent = paragraphs.map(p => {
-                // Get any links in this paragraph
-                const links = Array.from(p.querySelectorAll('a')).map(a => {
-                  return {
-                    start: 0, // We don't know exact positions, so put link at start
-                    end: a.textContent.length,
-                    url: a.href,
-                    text: a.textContent
-                  };
+          const lineNumbers = document.querySelectorAll('.line-number');
+          console.log("Found", lineNumbers.length, "line numbers");
+          
+          if (lineNumbers.length > 0) {
+            // Get each paragraph's adjacent content
+            lineNumbers.forEach(lineNum => {
+              const lineContent = lineNum.nextElementSibling;
+              if (lineContent && lineContent.textContent) {
+                sourceContent.push({
+                  type: 'paragraph',
+                  children: [{ text: lineContent.textContent.trim() }]
                 });
-                
-                // Create text content with links
-                if (links.length > 0) {
-                  return {
-                    type: 'paragraph',
-                    children: links.map(link => ({
-                      type: 'link',
-                      url: link.url,
-                      children: [{ text: link.text }]
-                    }))
-                  };
-                } else {
-                  // Simple paragraph with text
-                  return {
-                    type: 'paragraph',
-                    children: [{ text: p.textContent }]
-                  };
-                }
-              });
-              
-              console.log("Created content from DOM with", currentPageContent.length, "paragraphs");
-            }
+              }
+            });
+          } else {
+            // Fallback: try to get content directly from paragraphs
+            const paragraphs = document.querySelectorAll('p');
+            paragraphs.forEach(p => {
+              if (p.textContent && p.textContent.trim()) {
+                sourceContent.push({
+                  type: 'paragraph',
+                  children: [{ text: p.textContent.trim() }]
+                });
+              }
+            });
           }
+          
+          // If we couldn't get any content, add a placeholder
+          if (sourceContent.length <= 2) {
+            sourceContent.push({
+              type: 'paragraph',
+              children: [{ text: "Content could not be extracted" }]
+            });
+          }
+          
+          console.log("Extracted", sourceContent.length, "content items");
         } catch (err) {
-          console.error("Error extracting content from DOM:", err);
-          // We'll use the fallback content already set
+          console.error("Error extracting content:", err);
+          // Add fallback content
+          sourceContent.push({
+            type: 'paragraph',
+            children: [{ text: "Error extracting original content" }]
+          });
         }
         
-        // Get target page
-        console.log("Fetching target page from database...");
-        const targetPageRef = ref(db, `pages/${selectedPageId}`);
-        const targetPageSnapshot = await get(targetPageRef);
+        // STEP 3: Get target page
+        console.log("Fetching target page...");
+        const targetRef = ref(db, `pages/${selectedPageId}`);
+        const targetSnapshot = await get(targetRef);
         
-        if (!targetPageSnapshot.exists()) {
-          console.error("Target page not found in database!");
-          toast.error("Target page not found in database");
+        if (!targetSnapshot.exists()) {
+          toast.error("Target page not found");
           setLoading(false);
           return;
         }
         
-        const targetPageData = targetPageSnapshot.val();
-        console.log("Target page retrieved:", targetPageData.title);
+        const targetData = targetSnapshot.val();
+        console.log("Target page found:", targetData.title);
         
-        let targetPageContent = [];
-        
-        // Parse the target page content
+        // Parse target content
+        let targetContent = [];
         try {
-          if (typeof targetPageData.content === 'string') {
-            targetPageContent = JSON.parse(targetPageData.content);
-          } else if (Array.isArray(targetPageData.content)) {
-            targetPageContent = targetPageData.content;
+          if (typeof targetData.content === 'string') {
+            targetContent = JSON.parse(targetData.content);
+          } else if (Array.isArray(targetData.content)) {
+            targetContent = targetData.content;
           }
           
-          if (!Array.isArray(targetPageContent)) {
-            console.warn("Target page content is not an array");
-            targetPageContent = [];
+          if (!Array.isArray(targetContent)) {
+            console.warn("Target content is not an array");
+            targetContent = [];
           }
-          
-          console.log("Target page content parsed, found", targetPageContent.length, "blocks");
         } catch (error) {
-          console.error("Error parsing target page content:", error);
-          targetPageContent = [];
+          console.error("Error parsing target content:", error);
+          targetContent = [];
         }
         
-        // Combine content with clear separation
+        // STEP 4: Combine content
         console.log("Combining content...");
         const combinedContent = [
-          ...targetPageContent,
+          ...targetContent,
           // Empty paragraph as separator
           { type: 'paragraph', children: [{ text: '' }] },
-          // Divider for visual separation
+          // Divider
           { type: 'paragraph', children: [{ text: '---' }] },
-          // Attribution line
-          { 
-            type: 'paragraph', 
-            children: [
-              { text: 'Content from ' },
-              { 
-                type: 'link',
-                url: `/pages/${pageToAdd?.id || ''}`,
-                children: [{ text: pageToAdd?.title || 'Untitled' }]
-              },
-              { text: ':' }
-            ]
-          },
-          // Another empty paragraph for spacing
+          // Content header
+          { type: 'paragraph', children: [{ text: `Content added from "${pageTitle}":` }] },
+          // Empty paragraph for spacing
           { type: 'paragraph', children: [{ text: '' }] },
-          // The actual content
-          ...currentPageContent
+          // Source content
+          ...sourceContent
         ];
         
         console.log("Combined content created with", combinedContent.length, "blocks");
         
-        // Update the target page content
+        // STEP 5: Update target page
         console.log("Updating target page...");
         await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(combinedContent));
         await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
         
         console.log("Target page updated successfully!");
         
-        // Close dialog and show success
+        // Close dialog and redirect
         onClose();
         toast.success(`Added content to "${selectedPageTitle}"`);
-        
-        // Redirect to see changes
         router.push(`/pages/${selectedPageId}`);
         
       } catch (error) {
