@@ -169,8 +169,8 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
     );
   }
   
-  // Only show first 4 groups
-  const displayGroups = groups.slice(0, 4);
+  // Only show all groups when on the groups page
+  const displayGroups = profileUserId ? groups.slice(0, 4) : groups;
   
   return (
     <div className="w-full space-y-4">
@@ -179,135 +179,77 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
           <Users className="h-5 w-5 mr-2" />
           My Groups
         </h2>
-        <Button variant="outline" asChild>
-          <Link href="/groups/new" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Group
-          </Link>
-        </Button>
-      </div>
-      
-      {isMobile ? (
-        <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide">
-          {displayGroups.map((group) => (
-            <Link key={group.id} href={`/groups/${group.id}`} className="block min-w-[250px]">
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center">
-                    {!group.isPublic && <Lock className="h-4 w-4 mr-1.5 text-muted-foreground" />}
-                    {group.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <span>by {group.ownerUsername}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="ml-1 text-sm">{getMemberCount(group.members)}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{getMemberCount(group.members)} members</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="ml-1 text-sm">{getPageCount(group.pages)}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{getPageCount(group.pages)} pages</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-          
-          {groups.length > 4 && (
-            <div className="flex items-center justify-center min-w-[100px]">
-              <Button variant="ghost" asChild>
-                <Link href="/groups" className="flex items-center">
-                  View All
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Link>
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {displayGroups.map((group) => (
-            <Link key={group.id} href={`/groups/${group.id}`} className="block">
-              <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center">
-                    {!group.isPublic && <Lock className="h-4 w-4 mr-1.5 text-muted-foreground" />}
-                    {group.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center text-sm text-muted-foreground mb-2">
-                    <span>by {group.ownerUsername}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center">
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="ml-1 text-sm">{getMemberCount(group.members)}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{getMemberCount(group.members)} members</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="ml-1 text-sm">{getPageCount(group.pages)}</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{getPageCount(group.pages)} pages</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
-      
-      {groups.length > 4 && !isMobile && (
-        <div className="flex justify-center mt-4">
+        {!profileUserId && (
           <Button variant="outline" asChild>
-            <Link href="/groups" className="flex items-center gap-2">
-              View All Groups
-              <ChevronRight className="h-4 w-4" />
+            <Link href="/groups/new" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Group
             </Link>
           </Button>
-        </div>
-      )}
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {displayGroups.map((group) => (
+          <Link key={group.id} href={`/groups/${group.id}`} className="block">
+            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  {!group.isPublic && <Lock className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+                  {group.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center text-sm text-muted-foreground mb-2">
+                  <span>by {group.ownerUsername}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="ml-1 text-sm">{getMemberCount(group.members)}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{getMemberCount(group.members)} members</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="ml-1 text-sm">{getPageCount(group.pages)}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{getPageCount(group.pages)} pages</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+        
+        {profileUserId && groups.length > 4 && (
+          <Link href="/groups" className="block">
+            <Card className="h-full hover:shadow-md transition-shadow cursor-pointer flex items-center justify-center p-6">
+              <div className="text-center">
+                <Button variant="ghost" className="flex items-center">
+                  View All Groups
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </Card>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

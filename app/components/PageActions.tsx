@@ -170,6 +170,7 @@ export function PageActions({
   function AddToPageDialogContent({ pageToAdd, onClose }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [pages, setPages] = useState([]);
+    const [recentPages, setRecentPages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedPage, setSelectedPage] = useState(null);
     const { user } = useContext(AuthContext);
@@ -183,18 +184,47 @@ export function PageActions({
         const db = getDatabase(app);
         const pagesRef = ref(db, 'pages');
         
+        // Get recently visited pages from localStorage
+        try {
+          const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
+          const recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
+          setRecentPages(recentlyVisited);
+        } catch (error) {
+          console.error("Error loading recently visited pages:", error);
+          setRecentPages([]);
+        }
+        
         onValue(pagesRef, (snapshot) => {
           const pagesData = snapshot.val();
           if (pagesData) {
-            // Filter pages that the user has edit access to (user is the owner)
+            // Filter pages that the user has edit access to
             const userPages = Object.entries(pagesData)
               .map(([id, page]) => ({ id, ...page }))
-              .filter(page => 
-                // Only include pages the user owns
-                page.userId === user.uid && 
+              .filter(page => {
+                // Include pages the user owns
+                const isOwner = page.userId === user.uid;
+                
+                // Include pages where the user has edit access through collaborators
+                const hasEditAccess = page.collaborators && 
+                  page.collaborators[user.uid] && 
+                  (page.collaborators[user.uid].role === 'editor' || 
+                   page.collaborators[user.uid].role === 'admin');
+                
+                // Include pages where the user has edit access through groups
+                const hasGroupAccess = page.groups && Object.keys(page.groups).some(groupId => {
+                  // Check if user is in this group with edit permissions
+                  const userGroups = user.groups || {};
+                  return userGroups[groupId] && 
+                    (userGroups[groupId].role === 'editor' || 
+                     userGroups[groupId].role === 'admin' || 
+                     userGroups[groupId].role === 'owner');
+                });
+                
                 // Exclude the current page
-                pageToAdd && page.id !== pageToAdd.id
-              )
+                const isNotCurrentPage = pageToAdd && page.id !== pageToAdd.id;
+                
+                return isNotCurrentPage && (isOwner || hasEditAccess || hasGroupAccess);
+              })
               .sort((a, b) => {
                 // Sort by last modified date (newest first)
                 const aDate = a.lastModified || 0;
@@ -217,6 +247,12 @@ export function PageActions({
       : pages.filter(page => 
           (page.title || 'Untitled').toLowerCase().includes(searchQuery.toLowerCase())
         );
+    
+    // Get recently visited pages that match the current pages list
+    const filteredRecentPages = recentPages
+      .map(recentId => pages.find(page => page.id === recentId))
+      .filter(Boolean)
+      .slice(0, 5); // Show up to 5 recent pages
     
     const handleAddToPage = async () => {
       if (!selectedPage || !pageToAdd) return;
@@ -358,6 +394,23 @@ export function PageActions({
                     </CommandItem>
                   ))
                 )}
+              </CommandGroup>
+              <CommandGroup heading="Recently Visited">
+                {filteredRecentPages.map(page => (
+                  <CommandItem
+                    key={page.id}
+                    value={page.id}
+                    onSelect={() => setSelectedPage(page)}
+                    className={`flex items-center justify-between ${selectedPage?.id === page.id ? 'bg-accent' : ''}`}
+                  >
+                    <div className="flex flex-col">
+                      <span>{page.title || 'Untitled'}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(page.lastModified || 0).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </CommandList>
           </Command>

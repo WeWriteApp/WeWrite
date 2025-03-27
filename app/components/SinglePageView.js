@@ -227,6 +227,30 @@ export default function SinglePageView({ params }) {
     }
   }, [page]);
 
+  useEffect(() => {
+    if (page && page.id && user) {
+      // Track this page as recently visited
+      try {
+        const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
+        let recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
+        
+        // Remove this page ID if it already exists in the list
+        recentlyVisited = recentlyVisited.filter(id => id !== page.id);
+        
+        // Add this page ID to the beginning of the list
+        recentlyVisited.unshift(page.id);
+        
+        // Keep only the most recent 10 pages
+        recentlyVisited = recentlyVisited.slice(0, 10);
+        
+        // Save back to localStorage
+        localStorage.setItem('recentlyVisitedPages', JSON.stringify(recentlyVisited));
+      } catch (error) {
+        console.error("Error updating recently visited pages:", error);
+      }
+    }
+  }, [page, user]);
+
   const copyLinkToClipboard = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);

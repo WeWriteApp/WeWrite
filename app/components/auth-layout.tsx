@@ -22,10 +22,10 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   return (
     <div className="container relative h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
       {/* Left side - Form */}
-      <div className="lg:p-4 flex flex-col h-full">
-        <div className="mx-auto flex w-full flex-col justify-center flex-1 sm:w-[350px]">
+      <div className="lg:p-2 flex flex-col h-full">
+        <div className="mx-auto flex w-full flex-col justify-center flex-1 sm:w-[400px]">
           <Card className="mt-auto mb-auto border border-gray-200 shadow-sm dark:border-gray-800 bg-white dark:bg-background">
-            <CardContent className="pt-2 pb-2 px-2 sm:pt-4 sm:pb-4 sm:px-4">
+            <CardContent className="pt-1 pb-1 px-1 sm:pt-2 sm:pb-2 sm:px-2">
               {children}
             </CardContent>
           </Card>

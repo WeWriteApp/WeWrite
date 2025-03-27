@@ -117,8 +117,9 @@ export default function Home() {
         
         <AllPages />
         
-        {/* 3. My Groups */}
+        {/* 3. My Groups - temporarily hidden
         <MyGroups />
+        */}
         
         {/* 4. Top Users */}
         <TopUsers />

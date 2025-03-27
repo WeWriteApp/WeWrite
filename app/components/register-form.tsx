@@ -149,15 +149,15 @@ export function RegisterForm({
 
   return (
     <form 
-      className={cn("flex flex-col gap-3 sm:gap-6", className)} 
+      className={cn("flex flex-col gap-1 sm:gap-3", className)} 
       {...props} 
       onSubmit={handleSubmit}
     >
-      <div className="flex flex-col items-center gap-1 sm:gap-2 text-center">
+      <div className="flex flex-col items-center gap-0.5 sm:gap-1 text-center">
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">Create account</h1>
       </div>
-      <div className="grid gap-3 sm:gap-6">
-        <div className="grid gap-1 sm:gap-2">
+      <div className="grid gap-1.5 sm:gap-3">
+        <div className="grid gap-0.5 sm:gap-1">
           <Label htmlFor="username" className="text-foreground text-sm">Username</Label>
           <div className="relative">
             <Input 
@@ -168,26 +168,26 @@ export function RegisterForm({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               tabIndex={1}
-              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10 h-9 sm:h-10"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground pr-10 h-8 sm:h-9"
             />
             {username && username.length >= 3 && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 {isChecking ? (
-                  <div className="h-5 w-5 sm:h-6 sm:w-6 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
+                  <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"></div>
                 ) : (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className={cn(
-                          "flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full",
+                          "flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5 rounded-full",
                           isAvailable 
                             ? "bg-green-500" 
                             : "bg-red-500"
                         )}>
                           {isAvailable ? (
-                            <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white stroke-[3]" />
+                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white stroke-[3]" />
                           ) : (
-                            <X className="h-3 w-3 sm:h-4 sm:w-4 text-white stroke-[3]" />
+                            <X className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white stroke-[3]" />
                           )}
                         </div>
                       </TooltipTrigger>
@@ -204,7 +204,7 @@ export function RegisterForm({
             <p className="text-xs text-muted-foreground">Username must be at least 3 characters</p>
           )}
         </div>
-        <div className="grid gap-1 sm:gap-2">
+        <div className="grid gap-0.5 sm:gap-1">
           <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
           <Input 
             id="email" 
@@ -214,10 +214,10 @@ export function RegisterForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={2}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-8 sm:h-9"
           />
         </div>
-        <div className="grid gap-1 sm:gap-2">
+        <div className="grid gap-0.5 sm:gap-1">
           <Label htmlFor="password" className="text-foreground text-sm">Password</Label>
           <Input 
             id="password" 
@@ -226,18 +226,18 @@ export function RegisterForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={3}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
+            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-8 sm:h-9"
           />
         </div>
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-2 sm:p-3">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-md p-1 sm:p-2">
             <p className="text-xs sm:text-sm text-red-400">{error}</p>
           </div>
         )}
         <Button 
           disabled={isLoading || !isFormValid} 
           className={cn(
-            "w-full transition-all",
+            "w-full transition-all h-8 sm:h-9",
             !isFormValid && !isLoading ? 
               "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : 
               "bg-white hover:bg-white/90 text-black !text-black"

@@ -73,6 +73,7 @@ export default function UserProfileTabs({ profile }) {
   const [activeTab, setActiveTab] = useState("activity");
   const { user } = useContext(AuthContext);
   const isCurrentUser = user && profile && user.uid === profile.uid;
+  const [loadingError, setLoadingError] = useState(null);
   
   // Use the usePages hook to get the user's pages
   const {
@@ -97,14 +98,26 @@ export default function UserProfileTabs({ profile }) {
   // Handle tab changes
   const handleTabChange = (newTab) => setActiveTab(newTab);
   
-  // Load more pages
-  const loadMorePages = () => {
-    fetchMorePages();
+  // Load more pages with error handling
+  const loadMorePages = async () => {
+    try {
+      setLoadingError(null);
+      await fetchMorePages();
+    } catch (err) {
+      console.error("Error loading more pages:", err);
+      setLoadingError("Failed to load more pages. Please try again.");
+    }
   };
   
-  // Load more private pages
-  const loadMorePrivatePages = () => {
-    fetchMorePrivatePages();
+  // Load more private pages with error handling
+  const loadMorePrivatePages = async () => {
+    try {
+      setLoadingError(null);
+      await fetchMorePrivatePages();
+    } catch (err) {
+      console.error("Error loading more private pages:", err);
+      setLoadingError("Failed to load more private pages. Please try again.");
+    }
   };
 
   return (
@@ -167,10 +180,16 @@ export default function UserProfileTabs({ profile }) {
               ) : (
                 <>
                   <PageList pageList={pages} emptyMessage="No public pages yet" />
+                  {loadingError && (
+                    <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                      {loadingError}
+                    </div>
+                  )}
                   {hasMorePages && (
                     <div className="flex justify-center mt-4">
                       <Button 
                         variant="outline" 
+                        size="sm"
                         className="rounded-full"
                         onClick={loadMorePages}
                         disabled={isMoreLoading}
@@ -218,10 +237,16 @@ export default function UserProfileTabs({ profile }) {
                 ) : (
                   <>
                     <PageList pageList={privatePages} emptyMessage="No private pages yet" />
+                    {loadingError && (
+                      <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                        {loadingError}
+                      </div>
+                    )}
                     {hasMorePrivatePages && (
                       <div className="flex justify-center mt-4">
                         <Button 
                           variant="outline" 
+                          size="sm"
                           className="rounded-full"
                           onClick={loadMorePrivatePages}
                           disabled={isMorePrivateLoading}
