@@ -245,19 +245,18 @@ export function PageActions({
             children: [{ text: '---' }]
           };
           
-          // Create the new content by combining the existing content with the reference block and source content
-          const newContent = [...targetContent, separator, referenceBlock, ...sourceContent];
-          
           // Update the page content - Using set instead of update to ensure all data is valid
           try {
+            // Immediately redirect to the target page
+            router.push(`/pages/${selectedPage.id}`);
+            
             const updates = {};
-            updates[`pages/${selectedPage.id}/content`] = JSON.stringify(newContent);
+            updates[`pages/${selectedPage.id}/content`] = JSON.stringify([...targetContent, separator, referenceBlock, ...sourceContent]);
             updates[`pages/${selectedPage.id}/lastModified`] = new Date().toISOString();
             
             await update(ref(db), updates);
             toast.success(`Content added to "${selectedPage.title || 'Untitled'}"`);
             onClose();
-            router.push(`/pages/${selectedPage.id}`);
           } catch (updateError) {
             console.error("Error updating page:", updateError);
             toast.error("Failed to add content to page");

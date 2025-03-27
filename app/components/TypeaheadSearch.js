@@ -15,6 +15,7 @@ import { PillLink } from "./PillLink";
 import debounce from "lodash.debounce";
 import { useTheme } from "next-themes";
 import { Input } from "./ui/input";
+import { getDatabase, ref, onValue } from "firebase/database";
 
 // Define a simple Loader component directly in this file
 const Loader = () => {
@@ -44,6 +45,65 @@ const TypeaheadSearch = ({
   const [isSearching, setIsSearching] = useState(false);
   const { theme } = useTheme();
   const router = useRouter();
+
+  // Cache for user profiles
+  const [userProfiles, setUserProfiles] = useState({});
+
+  // Fetch user profile for a given userId
+  const fetchUserProfile = async (userId) => {
+    if (!userId) return null;
+    
+    // Return from cache if available
+    if (userProfiles[userId]) {
+      return userProfiles[userId];
+    }
+    
+    try {
+      // Get users from the realtime database
+      const db = getDatabase();
+      const userRef = ref(db, `users/${userId}`);
+      
+      return new Promise((resolve) => {
+        onValue(userRef, (snapshot) => {
+          const userData = snapshot.val();
+          if (userData) {
+            // Update cache
+            setUserProfiles(prev => ({...prev, [userId]: userData}));
+            resolve(userData);
+          } else {
+            resolve(null);
+          }
+        }, {
+          onlyOnce: true
+        });
+      });
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  };
+  
+  // Process the fetched pages to include proper usernames
+  const processPagesWithUsernames = async (pages) => {
+    if (!pages || pages.length === 0) return pages;
+    
+    // Create a set of unique userIds
+    const userIds = [...new Set(pages.filter(page => page.userId).map(page => page.userId))];
+    
+    // Fetch all user profiles in parallel
+    await Promise.all(userIds.map(userId => fetchUserProfile(userId)));
+    
+    // Map the pages with user information
+    return pages.map(page => {
+      const userProfile = userProfiles[page.userId];
+      return {
+        ...page,
+        username: userProfile ? 
+          (userProfile.username || userProfile.displayName || 'Anonymous') : 
+          'Anonymous'
+      };
+    });
+  };
 
   // Add error handling for missing auth context
   useEffect(() => {
@@ -108,10 +168,15 @@ const TypeaheadSearch = ({
             console.error('TypeaheadSearch - API returned error object:', data.error);
           }
           
+          // Process the fetched pages to include proper usernames
+          const processedUserPages = await processPagesWithUsernames(data.userPages || []);
+          const processedGroupPages = await processPagesWithUsernames(data.groupPages || []);
+          const processedPublicPages = await processPagesWithUsernames(data.publicPages || []);
+
           // Continue with the arrays even if there's an error
-          setUserPages(data.userPages || []);
-          setGroupPages(data.groupPages || []);
-          setPublicPages(data.publicPages || []);
+          setUserPages(processedUserPages || []);
+          setGroupPages(processedGroupPages || []);
+          setPublicPages(processedPublicPages || []);
         } catch (fetchError) {
           if (fetchError.name === 'AbortError') {
             console.error('Search request timed out after 15 seconds');
