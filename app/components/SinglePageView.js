@@ -52,6 +52,7 @@ import {
 } from './ui/command';
 import EditPage from "./EditPage";
 import { ensurePageUsername } from "../utils/userUtils";
+import BacklinksSection from "./BacklinksSection";
 
 /**
  * SinglePageView Component
@@ -491,6 +492,9 @@ function SinglePageView({ params }) {
           setIsEditing={setIsEditing}
         />
       </PageProvider>
+      {!isEditing && page?.id && (
+        <BacklinksSection pageId={page.id} />
+      )}
       <SiteFooter />
     </Layout>
   );

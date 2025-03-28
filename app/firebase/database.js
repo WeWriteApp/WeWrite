@@ -957,7 +957,6 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
     });
     
     // Get pages from groups the user is a member of
-    const rtdb = getDatabase();
     const groupsRef = ref(rtdb, 'groups');
     const groupsSnapshot = await get(groupsRef);
     
@@ -1025,3 +1024,94 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
     return [];
   }
 };
+
+// Find pages that link to a specific page
+export async function findBacklinks(pageId) {
+  try {
+    console.log("Finding backlinks for page:", pageId);
+    
+    if (!pageId) {
+      console.error("No pageId provided to findBacklinks");
+      return [];
+    }
+    
+    // Use the rtdb instance directly
+    const pagesRef = ref(rtdb, 'pages');
+    
+    try {
+      const pagesSnapshot = await get(pagesRef);
+      
+      if (!pagesSnapshot.exists()) {
+        console.log("No pages found in database");
+        return [];
+      }
+      
+      const pages = pagesSnapshot.val();
+      console.log(`Scanning ${Object.keys(pages).length} pages for backlinks`);
+      
+      const backlinks = [];
+      
+      for (const [id, page] of Object.entries(pages)) {
+        // Skip the page itself
+        if (id === pageId) continue;
+        
+        // Skip pages without content
+        if (!page.content) {
+          continue;
+        }
+        
+        // Parse the content
+        let content = [];
+        try {
+          if (typeof page.content === 'string') {
+            content = JSON.parse(page.content);
+          } else if (Array.isArray(page.content)) {
+            content = page.content;
+          }
+        } catch (error) {
+          console.error(`Error parsing content for page ${id}:`, error);
+          continue;
+        }
+        
+        // Extract links from the content
+        const links = extractLinksFromNodes(content);
+        console.log(`Page ${id} has ${links.length} links`);
+        
+        // Check if any of the links point to the target page
+        const hasBacklink = links.some(link => {
+          // Handle both relative and absolute URLs
+          if (link.includes(`/pages/${pageId}`) || link === `/pages/${pageId}`) {
+            return true;
+          }
+          return false;
+        });
+        
+        if (hasBacklink) {
+          console.log(`Found backlink in page ${id}: ${page.title}`);
+          backlinks.push({
+            id,
+            title: page.title || 'Untitled Page',
+            lastModified: page.lastModified || null,
+            userId: page.userId || null
+          });
+        }
+      }
+      
+      // Sort by lastModified (newest first)
+      backlinks.sort((a, b) => {
+        if (!a.lastModified) return 1;
+        if (!b.lastModified) return -1;
+        return new Date(b.lastModified) - new Date(a.lastModified);
+      });
+      
+      console.log(`Found ${backlinks.length} backlinks for page ${pageId}`);
+      return backlinks;
+    } catch (dbError) {
+      console.error("Database error in findBacklinks:", dbError);
+      throw dbError;
+    }
+  } catch (error) {
+    console.error('Error finding backlinks:', error);
+    return [];
+  }
+}
