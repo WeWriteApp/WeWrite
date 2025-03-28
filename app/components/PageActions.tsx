@@ -184,189 +184,6 @@ export function PageActions({
     }
   };
 
-  // Add to Page Dialog Content
-  const AddToPageDialogContent = ({
-    onClose,
-    pageToAdd,
-  }) => {
-    const [selectedPage, setSelectedPage] = useState(null);
-    const [selectedPageId, setSelectedPageId] = useState("");
-    const [selectedPageTitle, setSelectedPageTitle] = useState("");
-    const [loading, setLoading] = useState(false);
-    const router = useRouter();
-    const { user } = useContext(AuthContext);
-    
-    console.log("Dialog opened for page:", pageToAdd?.title, pageToAdd?.id);
-    
-    // Track the FULL page object when selected, not just ID
-    const handleSelectPage = React.useCallback((page) => {
-      if (page && page.id) {
-        console.log(" STORING FULL PAGE OBJECT:", page);
-        // Store the complete page object itself
-        setSelectedPage(page);
-        // Also store ID and title for convenience
-        setSelectedPageId(page.id);
-        setSelectedPageTitle(page.title || "Selected Page");
-      } else {
-        console.warn("Invalid page selected:", page);
-        setSelectedPage(null);
-        setSelectedPageId("");
-        setSelectedPageTitle("");
-      }
-    }, []);
-    
-    // ENHANCED DEBUGGING FOR PAGE CREATION AND UPDATING
-    const handleAddToPage = async () => {
-      if (!selectedPage || !selectedPageId) {
-        toast.error("Please select a page first");
-        return;
-      }
-      
-      if (!page || !page.id) {
-        toast.error("Current page not found");
-        return;
-      }
-      
-      console.log("🔍 Starting Add to Page operation");
-      console.log("🔍 Selected target page:", selectedPage);
-      console.log("🔍 Selected target ID:", selectedPageId);
-      console.log("🔍 Current source page:", page);
-      
-      setLoading(true);
-      
-      try {
-        const db = getDatabase(app);
-        
-        // Create a link node to the source page with a newline
-        const linkNodes = [
-          // Add a newline before the link
-          {
-            type: "paragraph",
-            children: [{ text: "" }]
-          },
-          // Add the actual link
-          {
-            type: "paragraph",
-            children: [
-              {
-                type: "link",
-                url: `/pages/${page.id}`,
-                title: page.title,
-                children: [{ text: page.title || "Untitled Page" }]
-              }
-            ]
-          }
-        ];
-        
-        console.log("🔍 Created link nodes:", linkNodes);
-        
-        const targetPageRef = ref(db, `pages/${selectedPageId}`);
-        const targetPageSnap = await get(targetPageRef);
-        
-        if (targetPageSnap.exists()) {
-          console.log("🔍 Target page exists, appending link to the end");
-          const targetPageData = targetPageSnap.val();
-          console.log("🔍 Target page data:", targetPageData);
-          
-          let existingContent = [];
-          try {
-            const rawTargetContent = targetPageData.content;
-            console.log("🔍 Raw target content:", rawTargetContent);
-            
-            if (typeof rawTargetContent === 'string') {
-              existingContent = JSON.parse(rawTargetContent);
-            } else if (Array.isArray(rawTargetContent)) {
-              existingContent = rawTargetContent;
-            }
-            
-            if (!Array.isArray(existingContent)) {
-              throw new Error("Invalid target content format");
-            }
-            
-            // Filter out any null or undefined elements
-            existingContent = existingContent.filter(node => node != null);
-            
-            console.log("🔍 Parsed target content:", existingContent);
-          } catch (error) {
-            console.error("🔍 Error parsing target content:", error);
-            existingContent = [];
-          }
-          
-          // Append link nodes to the end of the content
-          const updatedContent = [...existingContent, ...linkNodes];
-          console.log("🔍 Updated content:", updatedContent);
-          
-          // Update the target page
-          await set(targetPageRef, {
-            ...targetPageData,
-            content: JSON.stringify(updatedContent),
-            lastModified: new Date().toISOString()
-          });
-          
-          console.log("🔍 Link appended successfully");
-        } else {
-          console.log("🔍 Target page doesn't exist, creating new page");
-          const newPageData = {
-            title: selectedPage.title,
-            content: JSON.stringify(linkNodes),
-            lastModified: new Date().toISOString(),
-            createdAt: new Date().toISOString(),
-            userId: user?.uid || "anonymous",
-            isPublic: true
-          };
-          
-          await set(targetPageRef, newPageData);
-          console.log("🔍 New page created successfully");
-        }
-        
-        onClose();
-        toast.success(`Added to "${selectedPage.title}"`);
-        
-        const navUrl = `/pages/${selectedPageId}?refresh=${Date.now()}`;
-        console.log("🔍 Navigating to:", navUrl);
-        window.location.href = navUrl;
-      } catch (error) {
-        console.error("🔍 Error:", error);
-        toast.error("Error adding to page: " + error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    return (
-      <div className="grid gap-4 py-4">
-        <div>
-          <h3 className="mb-2 text-sm font-medium">Select a page</h3>
-          <TypeaheadSearch 
-            onSelect={handleSelectPage}
-            placeholder="Search for a page"
-            radioSelection={true}
-            selectedId={selectedPageId}
-            editableOnly={true}
-          />
-        </div>
-        
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={loading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAddToPage}
-            disabled={!selectedPageId || loading}
-            className="bg-primary"
-          >
-            {loading ? <Loader size={16} className="animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
-            Add to Page
-          </Button>
-        </DialogFooter>
-      </div>
-    );
-  }
-
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit and Delete buttons */}
@@ -418,37 +235,13 @@ export function PageActions({
         <Button
           variant="ghost"
           size="sm"
-          className="gap-2"
+          className="gap-2 cursor-not-allowed"
           disabled
           title="Coming soon!"
         >
           <Plus className="h-4 w-4" />
           Add to Page
         </Button>
-        
-        {/* Add to Page Dialog */}
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add to Page</DialogTitle>
-              <DialogDescription>
-                Select a page to add the current content to
-              </DialogDescription>
-            </DialogHeader>
-            <AddToPageDialogContent 
-              pageToAdd={{
-                ...page,
-                id: page.id || '',
-                // Pass the current page content directly from state
-                parsedContent: currentPageContent,
-                content: typeof content === 'string' 
-                  ? content 
-                  : (content ? JSON.stringify(content) : '[]')
-              }} 
-              onClose={() => setShowAddDialog(false)} 
-            />
-          </DialogContent>
-        </Dialog>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -457,38 +250,22 @@ export function PageActions({
               size="sm"
               className="gap-2"
             >
-              <LayoutPanelLeft className="h-4 w-4 mr-1.5" />
+              <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel className="text-sm">Select Paragraph Display</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="flex items-center gap-2 py-2 cursor-pointer"
-              onClick={() => setLineMode(LINE_MODES.NORMAL)}
-            >
-              <AlignLeft className="h-5 w-5" />
-              <div className="flex flex-col">
-                <span className="font-medium">Normal Mode</span>
-                <span className="text-xs text-muted-foreground">Standard paragraph formatting</span>
-              </div>
-              {lineMode === LINE_MODES.NORMAL && <Check className="h-5 w-5 ml-auto" />}
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Layout Options</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setLineMode(LINE_MODES.NORMAL)}>
+              <AlignLeft className="h-4 w-4 mr-2" />
+              Normal Mode
             </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="flex items-center gap-2 py-2 cursor-pointer"
-              onClick={() => setLineMode(LINE_MODES.DENSE)}
-            >
-              <AlignJustify className="h-5 w-5" />
-              <div className="flex flex-col">
-                <span className="font-medium">Dense Mode</span>
-                <span className="text-xs text-muted-foreground">Continuous text with verse numbers</span>
-              </div>
-              {lineMode === LINE_MODES.DENSE && <Check className="h-5 w-5 ml-auto" />}
+            <DropdownMenuItem onClick={() => setLineMode(LINE_MODES.DENSE)}>
+              <AlignJustify className="h-4 w-4 mr-2" />
+              Dense Mode
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
       </div>
     </div>
   );
