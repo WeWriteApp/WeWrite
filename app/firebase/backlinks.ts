@@ -9,7 +9,21 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db } from './config';
-import { Page } from '../types';
+
+// Define Page interface directly to avoid import issues
+interface Page {
+  id: string;
+  title: string;
+  isPublic: boolean;
+  userId: string;
+  username?: string;
+  authorName?: string;
+  lastModified?: string;
+  createdAt: string;
+  groupId?: string;
+  groupName?: string;
+  content?: any[];
+}
 
 // Interface for backlink document
 interface BacklinkDocument {
