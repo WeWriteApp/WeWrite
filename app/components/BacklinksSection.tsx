@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { findBacklinks } from "../firebase/database";
 import { Loader, ExternalLink } from "lucide-react";
-import PageList from "./PageList";
+import PageList, { Page } from "./PageList";
 import { Button } from "./ui/button";
 
 interface Backlink {
@@ -12,6 +12,7 @@ interface Backlink {
   lastModified: string | null;
   userId: string | null;
   isPublic: boolean;
+  createdAt: string; 
 }
 
 interface BacklinksSectionProps {
@@ -19,7 +20,7 @@ interface BacklinksSectionProps {
 }
 
 export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
-  const [backlinks, setBacklinks] = useState<Backlink[]>([]);
+  const [backlinks, setBacklinks] = useState<Page[]>([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -36,14 +37,14 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
         const links = await findBacklinks(pageId);
         console.log("Backlinks loaded:", links);
         
-        // Convert to the format expected by PageList
-        const formattedLinks = links.map(link => ({
+        const formattedLinks: Page[] = links.map(link => ({
           id: link.id,
           title: link.title || "Untitled Page",
-          isPublic: link.isPublic || true, // Use the isPublic property or default to true
+          isPublic: link.isPublic || true, 
           userId: link.userId || "",
           lastModified: link.lastModified,
-          createdAt: link.lastModified || new Date().toISOString()
+          createdAt: link.lastModified || new Date().toISOString(),
+          authorName: "" 
         }));
         
         setBacklinks(formattedLinks);
@@ -87,7 +88,7 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
   );
 
   return (
-    <div className="mt-6 border-t border-border pt-4 pb-6">
+    <div className="mt-6 border-t border-border pt-6 pb-6 px-4 sm:px-6">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-medium text-muted-foreground">
           What links here {backlinks.length > 0 && `(${backlinks.length})`}

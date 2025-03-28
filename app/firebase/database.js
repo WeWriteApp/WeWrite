@@ -562,6 +562,15 @@ function extractLinksFromNodes(nodes) {
         console.log("Found URLs in text:", matches);
         links.push(...matches);
       }
+      
+      // Also look for direct mentions of the page ID in text
+      // This helps catch cases where the page ID is mentioned but not as a formal link
+      const pageIdRegex = /\b([a-zA-Z0-9-]{20,})\b/g; // Most Firebase IDs are 20+ chars
+      const idMatches = node.text.match(pageIdRegex);
+      if (idMatches) {
+        console.log("Found potential page IDs in text:", idMatches);
+        links.push(...idMatches);
+      }
     }
 
     // Recursively check children if they exist
@@ -606,10 +615,14 @@ export async function findBacklinks(pageId) {
       
       for (const [id, page] of Object.entries(pages)) {
         // Skip the page itself
-        if (id === pageId) continue;
+        if (id === pageId) {
+          console.log(`Skipping self-reference: ${id}`);
+          continue;
+        }
         
         // Skip pages without content
         if (!page.content) {
+          console.log(`Skipping page ${id} - no content`);
           continue;
         }
         
@@ -631,6 +644,8 @@ export async function findBacklinks(pageId) {
         
         if (links.length > 0) {
           console.log(`Page ${id} has ${links.length} links:`, links);
+        } else {
+          console.log(`Page ${id} has no links`);
         }
         
         // Check if any of the links point to the target page
