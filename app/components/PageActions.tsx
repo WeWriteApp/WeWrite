@@ -33,6 +33,12 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 /**
  * PageActions Component
@@ -232,16 +238,24 @@ export function PageActions({
           Reply to Page
         </Button>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2 cursor-not-allowed"
-          disabled
-          title="Coming soon!"
-        >
-          <Plus className="h-4 w-4" />
-          Add to Page
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 cursor-not-allowed opacity-60"
+                disabled
+              >
+                <Plus className="h-4 w-4" />
+                Add to Page
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Coming soon!</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
