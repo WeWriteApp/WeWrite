@@ -223,7 +223,7 @@ export function PageActions({
       }
       
       console.log("🔍 Starting Add to Page operation");
-      console.log("🔍 Selected page object:", selectedPage);
+      console.log("🔍 Selected page:", selectedPage);
       console.log("🔍 Selected ID:", selectedPageId);
       
       setLoading(true);
@@ -241,18 +241,12 @@ export function PageActions({
           console.log("🔍 No pages found in database");
         }
         
-        // Use the search result directly to create/update content
-        console.log("🔍 Using search result data");
-        const pageId = selectedPageId;
-        const pageTitle = selectedPageTitle;
-        
-        console.log("🔍 Creating/updating content for page:", pageId, pageTitle);
-        
-        const currentPageRef = ref(db, `pages/${pageToAdd.id}`);
+        // Get the current page content
+        const currentPageRef = ref(db, `pages/${window.location.pathname.split('/').pop()}`);
         const currentPageSnap = await get(currentPageRef);
         
         if (!currentPageSnap.exists()) {
-          throw new Error("Current page not found in database");
+          throw new Error("Source page not found in database");
         }
         
         const currentPageData = currentPageSnap.val();
@@ -262,7 +256,7 @@ export function PageActions({
         const contentToAdd = `Content from "${currentPageData.title}" added at ${timestamp}`;
         
         const newPageData = {
-          title: pageTitle,
+          title: selectedPage.title,
           content: JSON.stringify([
             { type: 'paragraph', children: [{ text: contentToAdd }] }
           ]),
@@ -272,11 +266,11 @@ export function PageActions({
           isPublic: true
         };
         
-        const targetPageRef = ref(db, `pages/${pageId}`);
+        const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnap = await get(targetPageRef);
         
         if (targetPageSnap.exists()) {
-          console.log("🔍 Page exists, appending content");
+          console.log("🔍 Target page exists, appending content");
           const targetPageData = targetPageSnap.val();
           
           let existingContent = [];
@@ -297,20 +291,20 @@ export function PageActions({
             { type: 'paragraph', children: [{ text: contentToAdd }] }
           ];
           
-          await set(ref(db, `pages/${pageId}/content`), JSON.stringify(updatedContent));
-          await set(ref(db, `pages/${pageId}/lastModified`), new Date().toISOString());
+          await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(updatedContent));
+          await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
           
           console.log("🔍 Content appended successfully");
         } else {
-          console.log("🔍 Page doesn't exist, creating new page");
+          console.log("🔍 Target page doesn't exist, creating new page");
           await set(targetPageRef, newPageData);
           console.log("🔍 New page created successfully");
         }
         
         onClose();
-        toast.success(`Added to "${pageTitle}"`);
+        toast.success(`Added to "${selectedPage.title}"`);
         
-        const navUrl = `/pages/${pageId}?refresh=${Date.now()}`;
+        const navUrl = `/pages/${selectedPageId}?refresh=${Date.now()}`;
         console.log("🔍 Navigating to:", navUrl);
         window.location.href = navUrl;
       } catch (error) {
