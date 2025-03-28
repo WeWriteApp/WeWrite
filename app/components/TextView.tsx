@@ -485,7 +485,7 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
 
 const HeadingNode = ({ node, index = 0 }) => {
   const level = node.level || 1;
-  const HeadingTag = `h${level}`;
+  // Instead of using a template literal, use React.createElement
   
   const headingClasses = {
     1: 'text-2xl font-bold mt-8 mb-4',
@@ -521,13 +521,15 @@ const HeadingNode = ({ node, index = 0 }) => {
       >
         {index + 1}
       </motion.span>
-      <HeadingTag className={headingClasses[level] || headingClasses[1]}>
-        {node.children && node.children.map((child, i) => (
+      {React.createElement(
+        `h${level}`,
+        { className: headingClasses[level] || headingClasses[1] },
+        node.children && node.children.map((child, i) => (
           <span key={i} className={child.bold ? 'font-bold' : child.italic ? 'italic' : ''}>
             {child.text}
           </span>
-        ))}
-      </HeadingTag>
+        ))
+      )}
     </motion.div>
   );
 };
