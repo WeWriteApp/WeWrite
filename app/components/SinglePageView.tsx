@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { listenToPageById } from "../firebase/database";
 import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
-import { RecentPagesContext } from "../contexts/RecentPagesContext";
+import { RecentPagesContext, useRecentPages } from "../contexts/RecentPagesContext";
 import { useLineSettings } from "../contexts/LineSettingsContext";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
@@ -66,7 +66,7 @@ function SinglePageView({ params }: SinglePageViewProps) {
   const [title, setTitle] = useState<string | null>(null);
   
   const { user } = useContext(AuthContext);
-  const { addRecentPage } = useContext(RecentPagesContext) || {};
+  const recentPagesContext = useContext(RecentPagesContext);
   const { lineMode } = useLineSettings();
 
   useEffect(() => {
@@ -118,9 +118,9 @@ function SinglePageView({ params }: SinglePageViewProps) {
           await updateBacklinks(params.id, pageData.content);
         }
         
-        // Add to recent pages
-        if (addRecentPage) {
-          addRecentPage({
+        // Add to recent pages (if context exists)
+        if (recentPagesContext && typeof recentPagesContext.addRecentPage === 'function') {
+          recentPagesContext.addRecentPage({
             id: params.id,
             title: pageData.title || 'Untitled',
             lastModified: pageData.lastModified || new Date().toISOString()
@@ -136,7 +136,7 @@ function SinglePageView({ params }: SinglePageViewProps) {
     });
 
     return () => unsubscribe();
-  }, [params?.id, addRecentPage]);
+  }, [params?.id]);
 
   const handleRenderComplete = () => {
     // Placeholder function for TextView
