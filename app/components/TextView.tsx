@@ -318,7 +318,7 @@ const renderNode = (node, mode, index) => {
       case nodeTypes.PARAGRAPH:
         return <ParagraphNode key={index} node={node} effectiveMode={mode} index={index} />;
       case nodeTypes.CODE_BLOCK:
-        return <CodeBlockNode key={index} node={node} index={index} />;
+        return <CodeBlockNode key={index} node={node} index={index} language={node.language} />;
       case nodeTypes.HEADING:
         return <HeadingNode key={index} node={node} index={index} />;
       case nodeTypes.LIST:
