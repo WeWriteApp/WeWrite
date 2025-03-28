@@ -1,8 +1,7 @@
 "use client";
-import React, { useEffect, useState, useContext, createContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams } from "next/navigation";
 import { listenToPageById } from "../firebase/database";
-// import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
 import { RecentPagesContext, useRecentPages } from "../contexts/RecentPagesContext";
 import { useLineSettings } from "../contexts/LineSettingsContext";
@@ -13,47 +12,14 @@ import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import EditPage from "./EditPage";
 import TextView from "./TextView";
-// import BacklinksSection from "./BacklinksSection";
 import { Loader, AlertTriangle } from "lucide-react";
 import Head from "next/head";
 
-// Create a local version of PageContext for this component
-// This avoids the TypeScript error with the JS version
-const PageContext = createContext({
-  page: null,
-  setPage: (page: any) => {},
-  isEditMode: false,
-  setIsEditMode: (isEditMode: boolean) => {}
-});
+// Import PageProvider from the original module
+import { PageProvider, usePage } from "../contexts/PageContext";
 
-// Create a usePage hook that mirrors the one in ../contexts/PageContext.js
-// This will ensure that components that use usePage() will still work
-export function usePage() {
-  const context = useContext(PageContext);
-  if (context === undefined) {
-    throw new Error('usePage must be used within a PageProvider');
-  }
-  return context;
-}
-
-// Override the original PageProvider and usePage with our custom versions
-// This is done by placing this file earlier in the import order
-// export { usePage as usePageOriginal } from "../contexts/PageContext";
-
-export function CustomPageProvider({ children, pageData, isEditing, setIsEditing }: any) {
-  return (
-    <PageContext.Provider 
-      value={{
-        page: pageData,
-        setPage: () => {}, // No-op since we handle this in SinglePageView
-        isEditMode: isEditing,
-        setIsEditMode: setIsEditing
-      }}
-    >
-      {children}
-    </PageContext.Provider>
-  );
-}
+// Re-export the usePage hook
+export { usePage };
 
 // Define Page interface directly to avoid import issues
 interface Page {
@@ -93,7 +59,6 @@ interface SinglePageViewProps {
  * - Page visibility controls (public/private)
  * - Keyboard shortcuts for navigation and editing
  * - Page interactions through the PageFooter component
- * - Backlinks tracking and display
  */
 function SinglePageView({ params }: SinglePageViewProps) {
   const [page, setPage] = useState<Page | null>(null);
@@ -111,7 +76,6 @@ function SinglePageView({ params }: SinglePageViewProps) {
   const [title, setTitle] = useState<string | null>(null);
   
   const { user } = useContext(AuthContext);
-  // Use type assertion to make TypeScript happy
   const recentPagesContext = useContext(RecentPagesContext) as RecentPagesContextType;
   const { lineMode } = useLineSettings();
 
@@ -159,14 +123,8 @@ function SinglePageView({ params }: SinglePageViewProps) {
         setGroupName(pageData.groupName || null);
         setTitle(pageData.title || 'Untitled');
         
-        // Update backlinks when content changes
-        // if (pageData.content) {
-        //   await updateBacklinks(params.id, pageData.content);
-        // }
-        
         // Add to recent pages (if context exists)
         if (recentPagesContext && typeof recentPagesContext.addRecentPage === 'function') {
-          // Call with type assertion to bypass TypeScript checking
           (recentPagesContext.addRecentPage as Function)({
             id: params.id,
             title: pageData.title || 'Untitled',
@@ -186,19 +144,16 @@ function SinglePageView({ params }: SinglePageViewProps) {
   }, [params?.id]);
 
   const handleRenderComplete = () => {
-    // Placeholder function for TextView
     console.log('Page render complete');
   };
 
-  // Wrap the entire component in our custom PageProvider with the correct values
   return (
-    <CustomPageProvider pageData={page} isEditing={isEditing} setIsEditing={setIsEditing}>
+    <PageProvider>
       <div className="min-h-screen bg-background">
         <Head>
           <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
         </Head>
 
-        {/* Page Content */}
         <div className="container max-w-4xl mx-auto px-4 pb-32">
           {isLoading ? (
             <div className="flex items-center justify-center min-h-[50vh]">
@@ -216,7 +171,6 @@ function SinglePageView({ params }: SinglePageViewProps) {
             </div>
           ) : (
             <>
-              {/* Page Header */}
               <PageHeader 
                 title={title || ''}
                 username={page?.username}
@@ -226,7 +180,6 @@ function SinglePageView({ params }: SinglePageViewProps) {
                 groupName={groupName || undefined}
               />
 
-              {/* Editor or TextView */}
               {isEditing ? (
                 <EditPage 
                   isEditing={isEditing}
@@ -246,12 +199,6 @@ function SinglePageView({ params }: SinglePageViewProps) {
                 />
               )}
 
-              {/* Backlinks Section */}
-              {/* !isEditing && params.id && (
-                <BacklinksSection pageId={params.id} />
-              ) */}
-
-              {/* Page Footer */}
               <PageFooter
                 pageId={params.id || ''}
                 isPublic={isPublic}
@@ -264,10 +211,9 @@ function SinglePageView({ params }: SinglePageViewProps) {
           )}
         </div>
 
-        {/* Site Footer */}
         <SiteFooter className="mt-auto" />
       </div>
-    </CustomPageProvider>
+    </PageProvider>
   );
 }
 

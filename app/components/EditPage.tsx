@@ -21,7 +21,7 @@ const EditPage = ({
   setTitle,
   editorError
 }) => {
-  const { setIsEditMode } = usePage();
+  // const { setIsEditMode } = usePage();
   const [editorState, setEditorState] = useState(() => {
     try {
       // Handle different types of input formats
@@ -77,13 +77,13 @@ const EditPage = ({
     }
     
     // Set edit mode in PageContext
-    setIsEditMode(true);
+    // setIsEditMode(true);
     
     // Cleanup when component unmounts
     return () => {
-      setIsEditMode(false);
+      // setIsEditMode(false);
     };
-  }, [setIsEditMode]);
+  }, []);
 
   useEffect(() => {
     if (!groups) return;
