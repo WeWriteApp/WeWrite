@@ -184,26 +184,33 @@ export function PageActions({
     }
   };
 
-  /**
-   * AddToPageDialogContent Component
-   * 
-   * Manages searching and selecting a page to add the current content to
-   */
-  function AddToPageDialogContent({ pageToAdd, onClose }) {
+  // Add to Page Dialog Content
+  const AddToPageDialogContent = ({
+    onClose,
+    pageToAdd,
+  }) => {
     const [selectedPageId, setSelectedPageId] = useState("");
     const [selectedPageTitle, setSelectedPageTitle] = useState("");
-    const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
+    const { user } = useContext(AuthContext);
     
-    // Simple page selection handler - store only the essential data
-    const handleSelectPage = (page) => {
+    console.log("Dialog opened for page:", pageToAdd?.title, pageToAdd?.id);
+    
+    // This is called when a page is selected in the TypeaheadSearch
+    const handleSelectPage = React.useCallback((page) => {
       if (page && page.id) {
+        console.log("Selected page:", page.title, page.id);
         setSelectedPageId(page.id);
-        setSelectedPageTitle(page.title || "Untitled");
+        setSelectedPageTitle(page.title || "Selected Page");
+      } else {
+        console.warn("Invalid page selected:", page);
+        setSelectedPageId("");
+        setSelectedPageTitle("");
       }
-    };
-
-    // Improved target page detection and error handling
+    }, []);
+    
+    // Direct database operation with maximum debugging
     const handleAddToPage = async () => {
       if (!selectedPageId) {
         toast.error("Please select a page first");
@@ -211,96 +218,108 @@ export function PageActions({
       }
       
       setLoading(true);
-      console.log("🔍 ADD TO PAGE - DEBUGGING VERSION");
-      console.log("🔍 Selected page ID:", selectedPageId);
-      console.log("🔍 Selected page title:", selectedPageTitle);
+      console.log(" Add to Page Operation Starting");
+      console.log(" Selected page ID:", selectedPageId);
+      console.log(" Selected page title:", selectedPageTitle);
       
       try {
         const db = getDatabase(app);
         
-        // 1. VERIFY TARGET PAGE EXISTS - Thorough check
-        console.log("🔍 Verifying target page existence...");
-        const targetPageRef = ref(db, `pages/${selectedPageId}`);
-        const targetPageSnapshot = await get(targetPageRef);
-        
-        if (!targetPageSnapshot.exists()) {
-          console.error("❌ Target page not found in database:", selectedPageId);
-          toast.error("Target page not found in database");
+        // STEP 1: Verify source page (the page we're adding from)
+        console.log(" Source page:", pageToAdd?.id, pageToAdd?.title);
+        if (!pageToAdd?.id) {
+          console.error(" Source page ID is missing!");
+          toast.error("Source page information is missing");
           setLoading(false);
           return;
         }
         
-        // 2. EXTRACT TARGET PAGE DATA
-        const targetPageData = targetPageSnapshot.val();
-        console.log("✅ Target page found:", targetPageData.title);
+        // STEP 2: Verify the target page exists
+        const targetPagePath = `pages/${selectedPageId}`;
+        console.log(" Looking up target page at path:", targetPagePath);
         
-        // 3. PARSE TARGET CONTENT
+        const targetSnapshot = await get(ref(db, targetPagePath));
+        if (!targetSnapshot.exists()) {
+          console.error(" Target page not found at path:", targetPagePath);
+          toast.error("Target page not found - please try selecting a different page");
+          setLoading(false);
+          return;
+        }
+        
+        // STEP 3: Get target page data
+        const targetData = targetSnapshot.val();
+        console.log(" Target page found:", targetData.title);
+        
+        // STEP 4: Parse target content
         let targetContent = [];
-        if (typeof targetPageData.content === 'string') {
-          try {
-            targetContent = JSON.parse(targetPageData.content);
-            console.log("✅ Successfully parsed target content string");
-          } catch (err) {
-            console.error("❌ Error parsing target content string:", err);
+        try {
+          if (typeof targetData.content === 'string') {
+            targetContent = JSON.parse(targetData.content);
+            console.log(" Parsed target content string, length:", targetContent.length);
+          } else if (Array.isArray(targetData.content)) {
+            targetContent = targetData.content;
+            console.log(" Target content is already array, length:", targetContent.length);
+          } else {
+            console.warn(" Target content is neither string nor array:", typeof targetData.content);
             targetContent = [];
           }
-        } else if (Array.isArray(targetPageData.content)) {
-          targetContent = targetPageData.content;
-          console.log("✅ Target content is already an array");
-        } else {
-          console.warn("⚠️ Target content is not string or array, creating empty array");
+          
+          if (!Array.isArray(targetContent)) {
+            console.warn(" Target content is not an array after parsing");
+            targetContent = [];
+          }
+        } catch (error) {
+          console.error(" Error parsing target content:", error);
           targetContent = [];
         }
         
-        if (!Array.isArray(targetContent)) {
-          console.warn("⚠️ Parsed content is not an array, resetting to empty array");
-          targetContent = [];
-        }
-        
-        console.log("🔍 Target content has", targetContent.length, "items");
-        
-        // 4. CREATE TEST PARAGRAPH
-        const timestamp = new Date().toISOString().substring(11, 19);
-        const newContent = [
-          ...targetContent,
+        // STEP 5: Create new content with timestamp for easy testing
+        const timestamp = new Date().toLocaleTimeString();
+        const newParagraphs = [
+          // Empty line separator
           {
             type: 'paragraph',
-            children: [{ text: '' }] // Empty line as separator
+            children: [{ text: '' }]
           },
+          // Test content with timestamp
           {
             type: 'paragraph',
-            children: [{ text: `TEST LINE ADDED AT ${timestamp}` }]
+            children: [{ text: `Content added at ${timestamp} from ${pageToAdd.title}` }]
           }
         ];
         
-        console.log("🔍 New content has", newContent.length, "items");
+        // STEP 6: Combine content
+        const combinedContent = [...targetContent, ...newParagraphs];
+        console.log(" Created combined content with", combinedContent.length, "items");
         
-        // 5. UPDATE DATABASE DIRECTLY
-        console.log("🔍 Updating database...");
+        // STEP 7: Update the database
+        const targetPageRef = ref(db, targetPagePath);
+        console.log(" Updating target page...");
         
-        // Update in a single atomic operation
-        await update(targetPageRef, {
-          content: JSON.stringify(newContent),
+        const updates = {
+          content: JSON.stringify(combinedContent),
           lastModified: new Date().toISOString()
-        });
+        };
         
-        console.log("✅ Database updated successfully!");
+        await update(targetPageRef, updates);
+        console.log(" Database updated successfully!");
         
-        // 6. REDIRECT WITH FULL PAGE RELOAD
-        toast.success("Content added to page");
+        // STEP 8: Close dialog and redirect
         onClose();
+        toast.success(`Added to "${targetData.title}"`);
         
-        // Force full page reload to ensure fresh data
-        console.log("🔍 Forcing full page reload to:", `/pages/${selectedPageId}`);
-        window.location.href = `/pages/${selectedPageId}?t=${Date.now()}`;
+        // STEP 9: Force hard reload with cache busting
+        const targetUrl = `/pages/${selectedPageId}?refresh=${Date.now()}`;
+        console.log(" Redirecting to:", targetUrl);
+        window.location.href = targetUrl;
         
       } catch (error) {
-        console.error("❌ Error in add to page operation:", error);
-        toast.error("Failed to add content to page");
+        console.error(" Error in add to page operation:", error);
+        toast.error("Error adding to page: " + error.message);
         setLoading(false);
       }
     };
-
+    
     return (
       <div className="grid gap-4 py-4">
         <div>
