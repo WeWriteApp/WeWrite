@@ -241,19 +241,14 @@ export function PageActions({
           console.log("🔍 No pages found in database");
         }
         
-        // Get the current page content
-        const currentPageRef = ref(db, `pages/${window.location.pathname.split('/').pop()}`);
-        const currentPageSnap = await get(currentPageRef);
-        
-        if (!currentPageSnap.exists()) {
-          throw new Error("Source page not found in database");
+        // Get the source page content from pageToAdd prop
+        if (!pageToAdd) {
+          throw new Error("No source page data available");
         }
         
-        const currentPageData = currentPageSnap.val();
-        console.log("🔍 Current page data:", currentPageData.title);
-        
+        console.log("🔍 Source page data:", pageToAdd);
         const timestamp = new Date().toLocaleTimeString();
-        const contentToAdd = `Content from "${currentPageData.title}" added at ${timestamp}`;
+        const contentToAdd = `Content from "${pageToAdd.title}" added at ${timestamp}`;
         
         const newPageData = {
           title: selectedPage.title,
