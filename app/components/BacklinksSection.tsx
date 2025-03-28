@@ -19,11 +19,34 @@ interface BacklinksSectionProps {
   pageId: string;
 }
 
+// Test data for debugging UI
+const TEST_BACKLINKS: Page[] = [
+  {
+    id: 'test-backlink-1',
+    title: "Test Backlink Page 1",
+    isPublic: true,
+    userId: "test-user",
+    lastModified: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    authorName: "Test Author"
+  },
+  {
+    id: 'test-backlink-2',
+    title: "Test Backlink Page 2",
+    isPublic: true,
+    userId: "test-user",
+    lastModified: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    authorName: "Test Author"
+  }
+];
+
 export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
-  const [backlinks, setBacklinks] = useState<Page[]>([]); 
+  const [backlinks, setBacklinks] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [useTestData, setUseTestData] = useState(false);
 
   useEffect(() => {
     async function loadBacklinks() {
@@ -48,7 +71,13 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
         
         if (!links || links.length === 0) {
           console.log("[BacklinksSection] No backlinks found with either method");
-          setBacklinks([]);
+          // If the real methods don't return anything, check if we should use test data
+          if (useTestData) {
+            console.log("[BacklinksSection] Using test backlinks data");
+            setBacklinks(TEST_BACKLINKS);
+          } else {
+            setBacklinks([]);
+          }
           setLoading(false);
           return;
         }
@@ -69,16 +98,26 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
       } catch (error) {
         console.error("[BacklinksSection] Error loading backlinks:", error);
         setError("Failed to load backlinks");
+        
+        // On error, optionally use test data
+        if (useTestData) {
+          console.log("[BacklinksSection] Using test backlinks data after error");
+          setBacklinks(TEST_BACKLINKS);
+        }
       } finally {
         setLoading(false);
       }
     }
 
     loadBacklinks();
-  }, [pageId, retryCount]);
+  }, [pageId, retryCount, useTestData]);
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
+  };
+
+  const toggleTestData = () => {
+    setUseTestData(prev => !prev);
   };
 
   const BacklinksEmptyState = () => (
@@ -87,21 +126,38 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
       <p className="text-xs text-muted-foreground mt-1">
         When other pages link to this one, they'll appear here.
       </p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={toggleTestData}
+        className="mt-3"
+      >
+        {useTestData ? "Hide Test Data" : "Show Test Data"}
+      </Button>
     </div>
   );
 
   const ErrorState = () => (
     <div className="text-center py-4">
       <p className="text-sm text-red-500 mb-2">{error}</p>
-      <Button 
-        variant="outline" 
-        size="sm" 
-        onClick={handleRetry}
-        className="flex items-center gap-1"
-      >
-        <Loader className="h-3 w-3" />
-        Retry
-      </Button>
+      <div className="flex items-center gap-2 justify-center">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRetry}
+          className="flex items-center gap-1"
+        >
+          <Loader className="h-3 w-3" />
+          Retry
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleTestData}
+        >
+          {useTestData ? "Hide Test Data" : "Show Test Data"}
+        </Button>
+      </div>
     </div>
   );
 
