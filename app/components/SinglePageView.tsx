@@ -6,6 +6,7 @@ import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
 import { RecentPagesContext, useRecentPages } from "../contexts/RecentPagesContext";
 import { useLineSettings } from "../contexts/LineSettingsContext";
+import { PageProvider } from "../contexts/PageContext";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
 import PageHeader from "./PageHeader";
@@ -152,81 +153,83 @@ function SinglePageView({ params }: SinglePageViewProps) {
     console.log('Page render complete');
   };
 
-  // Use a simple div as container since PageProvider needs specific props
+  // Wrap the entire component in PageProvider with the correct values
   return (
-    <div className="min-h-screen bg-background">
-      <Head>
-        <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
-      </Head>
+    <PageProvider>
+      <div className="min-h-screen bg-background">
+        <Head>
+          <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
+        </Head>
 
-      {/* Page Content */}
-      <div className="container max-w-4xl mx-auto px-4 pb-32">
-        {isLoading ? (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader className="w-6 h-6 animate-spin" />
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-            <AlertTriangle className="w-12 h-12 text-destructive" />
-            <p className="text-lg font-medium text-destructive">{error}</p>
-          </div>
-        ) : isDeleted ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-            <AlertTriangle className="w-12 h-12 text-destructive" />
-            <p className="text-lg font-medium">This page has been deleted</p>
-          </div>
-        ) : (
-          <>
-            {/* Page Header */}
-            <PageHeader 
-              title={title || ''}
-              username={page?.username}
-              userId={page?.userId}
-              isLoading={false}
-              groupId={groupId || undefined}
-              groupName={groupName || undefined}
-            />
-
-            {/* Editor or TextView */}
-            {isEditing ? (
-              <EditPage 
-                isEditing={isEditing}
-                setIsEditing={setIsEditing}
-                page={page}
-                current={editorState}
+        {/* Page Content */}
+        <div className="container max-w-4xl mx-auto px-4 pb-32">
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <Loader className="w-6 h-6 animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+              <AlertTriangle className="w-12 h-12 text-destructive" />
+              <p className="text-lg font-medium text-destructive">{error}</p>
+            </div>
+          ) : isDeleted ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+              <AlertTriangle className="w-12 h-12 text-destructive" />
+              <p className="text-lg font-medium">This page has been deleted</p>
+            </div>
+          ) : (
+            <>
+              {/* Page Header */}
+              <PageHeader 
                 title={title || ''}
-                setTitle={setTitle}
-                editorError={null}
+                username={page?.username}
+                userId={page?.userId}
+                isLoading={false}
+                groupId={groupId || undefined}
+                groupName={groupName || undefined}
               />
-            ) : (
-              <TextView 
-                content={editorState} 
-                viewMode={lineMode}
-                onRenderComplete={handleRenderComplete}
+
+              {/* Editor or TextView */}
+              {isEditing ? (
+                <EditPage 
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                  page={page}
+                  current={editorState}
+                  title={title || ''}
+                  setTitle={setTitle}
+                  editorError={null}
+                />
+              ) : (
+                <TextView 
+                  content={editorState} 
+                  viewMode={lineMode}
+                  onRenderComplete={handleRenderComplete}
+                />
+              )}
+
+              {/* Backlinks Section */}
+              {!isEditing && params.id && (
+                <BacklinksSection pageId={params.id} />
+              )}
+
+              {/* Page Footer */}
+              <PageFooter
+                pageId={params.id || ''}
+                isPublic={isPublic}
+                isEditing={isEditing}
+                onEdit={() => setIsEditing(true)}
+                scrollDirection={scrollDirection}
+                isScrolled={isScrolled}
               />
-            )}
+            </>
+          )}
+        </div>
 
-            {/* Backlinks Section */}
-            {!isEditing && params.id && (
-              <BacklinksSection pageId={params.id} />
-            )}
-
-            {/* Page Footer */}
-            <PageFooter
-              pageId={params.id || ''}
-              isPublic={isPublic}
-              isEditing={isEditing}
-              onEdit={() => setIsEditing(true)}
-              scrollDirection={scrollDirection}
-              isScrolled={isScrolled}
-            />
-          </>
-        )}
+        {/* Site Footer */}
+        <SiteFooter className="mt-auto" />
       </div>
-
-      {/* Site Footer */}
-      <SiteFooter className="mt-auto" />
-    </div>
+    </PageProvider>
   );
 }
 
