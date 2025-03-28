@@ -248,7 +248,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
                     {/* Paragraph content without any breaks */}
                     {node.children && node.children.map((child, childIndex) => {
                       if (child.type === 'link') {
-                        return <LinkNode key={childIndex} node={child} />;
+                        return <LinkNode key={childIndex} node={child} index={childIndex} />;
                       } else if (child.text) {
                         let className = '';
                         if (child.bold) className += ' font-bold';
@@ -359,7 +359,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
   // Helper function to render child nodes
   const renderChild = (child, i) => {
     if (child.type === 'link') {
-      return <LinkNode key={i} node={child} />;
+      return <LinkNode key={i} node={child} index={i} />;
     } else if (child.text) {
       let className = '';
       if (child.bold) className += ' font-bold';
