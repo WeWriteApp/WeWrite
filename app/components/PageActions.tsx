@@ -256,7 +256,7 @@ export function PageActions({
         const targetPageSnap = await get(targetPageRef);
         
         if (targetPageSnap.exists()) {
-          console.log("🔍 Target page exists, inserting link at line 8");
+          console.log("🔍 Target page exists, appending link to the end");
           const targetPageData = targetPageSnap.val();
           console.log("🔍 Target page data:", targetPageData);
           
@@ -281,14 +281,8 @@ export function PageActions({
             existingContent = [];
           }
           
-          // Insert link node at line 8 (index 7)
-          const insertIndex = 7;
-          const updatedContent = [
-            ...existingContent.slice(0, insertIndex),
-            linkNode,
-            ...existingContent.slice(insertIndex)
-          ];
-          
+          // Append link node to the end of the content
+          const updatedContent = [...existingContent, linkNode];
           console.log("🔍 Updated content:", updatedContent);
           
           // Update the target page
@@ -298,7 +292,7 @@ export function PageActions({
             lastModified: new Date().toISOString()
           });
           
-          console.log("🔍 Link inserted successfully");
+          console.log("🔍 Link appended successfully");
         } else {
           console.log("🔍 Target page doesn't exist, creating new page");
           const newPageData = {
