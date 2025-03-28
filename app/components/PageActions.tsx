@@ -258,7 +258,7 @@ export function PageActions({
         const targetPageSnap = await get(targetPageRef);
         
         if (targetPageSnap.exists()) {
-          console.log("🔍 Target page exists, appending content");
+          console.log("🔍 Target page exists, inserting content at line 8");
           const targetPageData = targetPageSnap.val();
           console.log("🔍 Target page data:", targetPageData);
           
@@ -283,8 +283,14 @@ export function PageActions({
             existingContent = [];
           }
           
-          // Combine existing content with source content
-          const updatedContent = [...existingContent, ...sourceContent];
+          // Insert source content at line 8 (index 7)
+          const insertIndex = 7;
+          const updatedContent = [
+            ...existingContent.slice(0, insertIndex),
+            ...sourceContent,
+            ...existingContent.slice(insertIndex)
+          ];
+          
           console.log("🔍 Updated content:", updatedContent);
           
           // Update the target page
@@ -294,7 +300,7 @@ export function PageActions({
             lastModified: new Date().toISOString()
           });
           
-          console.log("🔍 Content appended successfully");
+          console.log("🔍 Content inserted successfully");
         } else {
           console.log("🔍 Target page doesn't exist, creating new page");
           const newPageData = {
