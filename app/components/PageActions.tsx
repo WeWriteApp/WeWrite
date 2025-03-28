@@ -203,7 +203,7 @@ export function PageActions({
       }
     };
 
-    // Bare minimum database manipulation function
+    // Absolute minimum approach with page reload
     const handleAddToPage = async () => {
       if (!selectedPageId) {
         toast.error("Please select a page first");
@@ -211,90 +211,77 @@ export function PageActions({
       }
       
       setLoading(true);
-      console.log("🔥 DIRECT DB MANIPULATION START");
+      console.log("🧠 BARE MINIMUM APPEND OPERATION");
       
       try {
         const db = getDatabase(app);
         
-        // 1. Get the RAW target page data
-        console.log("🔥 Getting target page:", selectedPageId);
-        const targetPageRef = ref(db, `pages/${selectedPageId}`);
-        const targetSnapshot = await get(targetPageRef);
+        // 1. Get target page
+        console.log("🧠 Getting target page:", selectedPageId);
+        const targetRef = ref(db, `pages/${selectedPageId}`);
+        const targetSnapshot = await get(targetRef);
         
         if (!targetSnapshot.exists()) {
-          console.error("🔥 Target page not found");
+          console.error("🧠 Target page not found");
           toast.error("Target page not found");
           setLoading(false);
           return;
         }
         
-        // 2. Get the raw content data as a string
+        // 2. Get current content
         const targetData = targetSnapshot.val();
-        console.log("🔥 Target page title:", targetData.title);
+        console.log("🧠 Got target page:", targetData.title);
         
-        let rawContentString = "";
+        // 3. Parse content or create empty array
+        let content = [];
         if (typeof targetData.content === 'string') {
-          rawContentString = targetData.content;
-          console.log("🔥 Raw content is string, length:", rawContentString.length);
-        } else if (Array.isArray(targetData.content)) {
-          rawContentString = JSON.stringify(targetData.content);
-          console.log("🔥 Raw content is array, converted to string, length:", rawContentString.length);
-        } else {
-          console.error("🔥 Content is not string or array:", typeof targetData.content);
-          rawContentString = "[]";
-        }
-        
-        // 3. Parse content regardless of format
-        let parsedContent = [];
-        try {
-          parsedContent = JSON.parse(rawContentString);
-          if (!Array.isArray(parsedContent)) {
-            console.error("🔥 Parsed content is not an array, creating new array");
-            parsedContent = [];
+          try {
+            content = JSON.parse(targetData.content);
+          } catch (e) {
+            console.error("🧠 Error parsing content:", e);
           }
-        } catch (e) {
-          console.error("🔥 Error parsing content:", e);
-          parsedContent = [];
+        } else if (Array.isArray(targetData.content)) {
+          content = targetData.content;
         }
         
-        // 4. Log content format details
-        console.log("🔥 Current content has", parsedContent.length, "blocks");
-        if (parsedContent.length > 0) {
-          console.log("🔥 First block type:", parsedContent[0].type);
-          console.log("🔥 Last block type:", parsedContent[parsedContent.length - 1].type);
+        if (!Array.isArray(content)) {
+          console.log("🧠 Content is not an array, creating new array");
+          content = [];
         }
         
-        // 5. Create extremely simple test item
-        const testContent = {
+        console.log("🧠 Current content has", content.length, "blocks");
+        
+        // 4. Create a single test paragraph
+        const timestamp = new Date().toISOString().slice(11, 19);
+        const testParagraph = {
           type: 'paragraph',
-          children: [{ 
-            text: `TEST LINE FROM "Add to Page" at ${new Date().toISOString().slice(11, 19)}` 
-          }]
+          children: [{ text: `Line added at ${timestamp}` }]
         };
         
-        // 6. Create NEW array with added content - NO string manipulation
-        const newContent = [...parsedContent, testContent];
-        console.log("🔥 New content has", newContent.length, "blocks");
+        // 5. Create new content with test paragraph added at the end
+        const newContent = [...content, testParagraph];
+        console.log("🧠 New content has", newContent.length, "blocks");
         
-        // 7. Update the database with raw transaction
-        console.log("🔥 Updating database with new content...");
-        await update(targetPageRef, {
+        // 6. Update the database directly
+        console.log("🧠 Updating database...");
+        await update(targetRef, {
           content: JSON.stringify(newContent),
           lastModified: new Date().toISOString()
         });
         
-        console.log("🔥 Database updated!");
+        console.log("🧠 Database updated successfully!");
         
-        // 8. Close dialog and navigate to page
+        // 7. Close dialog
         onClose();
-        toast.success("Added to page");
+        toast.success("Content added successfully");
         
-        // 9. Force page reload to ensure fresh data
-        console.log("🔥 Redirecting and forcing reload...");
-        window.location.href = `/pages/${selectedPageId}`;
+        // 8. Force complete page reload
+        console.log("🧠 Forcing complete page reload...");
+        window.location.replace(`/pages/${selectedPageId}`);
+        
       } catch (error) {
-        console.error("🔥 ERROR:", error);
-        toast.error("Failed to add to page");
+        console.error("🧠 Error:", error);
+        toast.error("Failed to add content");
         setLoading(false);
       }
     };
