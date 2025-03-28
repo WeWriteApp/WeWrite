@@ -1241,9 +1241,16 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
     
     // Add user's own pages to the result
     userPagesSnapshot.forEach((doc) => {
+      const data = doc.data();
       pages.push({
         id: doc.id,
-        ...doc.data()
+        title: data.title || 'Untitled',
+        isPublic: data.isPublic || false,
+        userId: data.userId || userId,
+        authorName: data.authorName,
+        lastModified: data.lastModified,
+        createdAt: data.createdAt || new Date().toISOString(),
+        ...data
       });
     });
     
@@ -1266,15 +1273,6 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
       
       // For each group, get all pages
       for (const group of userGroups) {
-        // Skip private groups if the current user is not a member or owner
-        if (!group.isPublic && currentUserId !== userId) {
-          // If current user is not the group owner and not a member, skip this group
-          if (group.owner !== currentUserId && 
-              (!group.members || !group.members[currentUserId])) {
-            continue;
-          }
-        }
-        
         if (group.pages) {
           // Get detailed page data for each page in the group
           const groupPageIds = Object.keys(group.pages);
@@ -1287,10 +1285,16 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
               const pageSnap = await getDoc(pageRef);
               
               if (pageSnap.exists()) {
-                const pageData = pageSnap.data();
+                const data = pageSnap.data();
                 pages.push({
                   id: pageId,
-                  ...pageData,
+                  title: data.title || 'Untitled',
+                  isPublic: data.isPublic || false,
+                  userId: data.userId,
+                  authorName: data.authorName,
+                  lastModified: data.lastModified,
+                  createdAt: data.createdAt || new Date().toISOString(),
+                  ...data,
                   // Add group information
                   groupId: group.id,
                   groupName: group.name
@@ -1302,24 +1306,20 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
       }
     }
     
-    // Sort all pages by last modified date
-    pages.sort((a, b) => {
-      const dateA = new Date(a.lastModified || a.createdAt || 0);
-      const dateB = new Date(b.lastModified || b.createdAt || 0);
-      return dateB - dateA; // Descending order (newest first)
-    });
-    
-    // Client-side filtering for search
+    // Filter by search query if provided
     if (searchQuery) {
-      const normalizedQuery = searchQuery.toLowerCase();
-      const filteredPages = pages.filter(page => {
-        const normalizedTitle = page.title.toLowerCase();
-        return normalizedTitle.includes(normalizedQuery);
-      });
-      return filteredPages;
+      pages = pages.filter(page => 
+        page.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
     
-    console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
+    // Sort by last modified date
+    pages.sort((a, b) => {
+      const dateA = new Date(a.lastModified || a.createdAt);
+      const dateB = new Date(b.lastModified || b.createdAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
     return pages;
   } catch (error) {
     console.error("Error getting editable pages:", error);
