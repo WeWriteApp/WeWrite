@@ -205,6 +205,7 @@ const EditPage = ({
 
         <div className="space-y-6 rounded-xl">
           <div className="space-y-0">
+            {/* @ts-ignore - Ignore type errors for now until we properly type SlateEditor */}
             <SlateEditor
               ref={editorRef}
               initialEditorState={editorState}
