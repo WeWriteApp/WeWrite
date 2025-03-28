@@ -687,7 +687,14 @@ export async function findBacklinks(pageId) {
 // Add a new function to fetch only page metadata (title, lastModified, etc.)
 export async function getPageMetadata(pageId) {
   try {
-    const { doc, getDoc, collection, query, orderBy, limit, getDocs } = await import('firebase/firestore');
+    console.log("Fetching page metadata for page:", pageId);
+    
+    if (!pageId) {
+      console.error("No pageId provided to getPageMetadata");
+      return null;
+    }
+    
+    // Use the Firestore instance directly
     const pageRef = doc(db, 'pages', pageId);
     const pageSnapshot = await getDoc(pageRef);
     
@@ -995,10 +1002,11 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
     // Client-side filtering for search
     if (searchQuery) {
       const normalizedQuery = searchQuery.toLowerCase();
-      pages = pages.filter(page => {
+      const filteredPages = pages.filter(page => {
         const normalizedTitle = page.title.toLowerCase();
         return normalizedTitle.includes(normalizedQuery);
       });
+      return filteredPages;
     }
     
     console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
@@ -1128,10 +1136,11 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
     // Client-side filtering for search
     if (searchQuery) {
       const normalizedQuery = searchQuery.toLowerCase();
-      pages = pages.filter(page => {
+      const filteredPages = pages.filter(page => {
         const normalizedTitle = page.title.toLowerCase();
         return normalizedTitle.includes(normalizedQuery);
       });
+      return filteredPages;
     }
     
     console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
