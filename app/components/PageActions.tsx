@@ -236,16 +236,20 @@ export function PageActions({
           throw new Error("No source page data available");
         }
         
-        console.log("🔍 Source page data:", pageToAdd);
+        console.log("🔍 Source page:", pageToAdd);
         
         // Parse the source page content
         let sourceContent = [];
         try {
-          if (typeof pageToAdd.content === 'string') {
-            sourceContent = JSON.parse(pageToAdd.content);
-          } else if (Array.isArray(pageToAdd.content)) {
-            sourceContent = pageToAdd.content;
+          const rawContent = pageToAdd.content;
+          console.log("🔍 Raw source content:", rawContent);
+          
+          if (typeof rawContent === 'string') {
+            sourceContent = JSON.parse(rawContent);
+          } else if (Array.isArray(rawContent)) {
+            sourceContent = rawContent;
           }
+          console.log("🔍 Parsed source content:", sourceContent);
         } catch (error) {
           console.error("🔍 Error parsing source content:", error);
           throw new Error("Could not parse source page content");
@@ -257,25 +261,27 @@ export function PageActions({
         if (targetPageSnap.exists()) {
           console.log("🔍 Target page exists, appending content");
           const targetPageData = targetPageSnap.val();
+          console.log("🔍 Target page data:", targetPageData);
           
           let existingContent = [];
           try {
-            if (typeof targetPageData.content === 'string') {
-              existingContent = JSON.parse(targetPageData.content);
-            } else if (Array.isArray(targetPageData.content)) {
-              existingContent = targetPageData.content;
+            const rawTargetContent = targetPageData.content;
+            console.log("🔍 Raw target content:", rawTargetContent);
+            
+            if (typeof rawTargetContent === 'string') {
+              existingContent = JSON.parse(rawTargetContent);
+            } else if (Array.isArray(rawTargetContent)) {
+              existingContent = rawTargetContent;
             }
+            console.log("🔍 Parsed target content:", existingContent);
           } catch (error) {
             console.error("🔍 Error parsing target content:", error);
             existingContent = [];
           }
           
-          // Add a blank line between existing content and new content
-          const updatedContent = [
-            ...existingContent,
-            { type: 'paragraph', children: [{ text: '' }] },
-            ...sourceContent
-          ];
+          // Combine existing content with source content
+          const updatedContent = [...existingContent, ...sourceContent];
+          console.log("🔍 Updated content:", updatedContent);
           
           await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(updatedContent));
           await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
@@ -305,6 +311,7 @@ export function PageActions({
       } catch (error) {
         console.error("🔍 Error:", error);
         toast.error("Error adding to page: " + error.message);
+      } finally {
         setLoading(false);
       }
     };
