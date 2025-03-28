@@ -189,6 +189,7 @@ export function PageActions({
     onClose,
     pageToAdd,
   }) => {
+    const [selectedPage, setSelectedPage] = useState(null);
     const [selectedPageId, setSelectedPageId] = useState("");
     const [selectedPageTitle, setSelectedPageTitle] = useState("");
     const [loading, setLoading] = useState(false);
@@ -197,130 +198,153 @@ export function PageActions({
     
     console.log("Dialog opened for page:", pageToAdd?.title, pageToAdd?.id);
     
-    // Handle page selection with ID debugging
+    // Track the FULL page object when selected, not just ID
     const handleSelectPage = React.useCallback((page) => {
       if (page && page.id) {
-        // Log the exact page object from selection
-        console.log("🔍 Page selected from search:", {
-          id: page.id,
-          title: page.title,
-          fullObject: page
-        });
-        
-        // Store the page ID and title
+        console.log("🔍 STORING FULL PAGE OBJECT:", page);
+        // Store the complete page object itself
+        setSelectedPage(page);
+        // Also store ID and title for convenience
         setSelectedPageId(page.id);
         setSelectedPageTitle(page.title || "Selected Page");
       } else {
         console.warn("Invalid page selected:", page);
+        setSelectedPage(null);
         setSelectedPageId("");
         setSelectedPageTitle("");
       }
     }, []);
     
-    // Direct database operation with ID validation
+    // Use direct API calls to fetch page content
     const handleAddToPage = async () => {
-      if (!selectedPageId) {
+      if (!selectedPage || !selectedPageId) {
         toast.error("Please select a page first");
         return;
       }
       
-      console.log("🔍 Add to Page Operation");
-      console.log("🔍 Selected page ID:", selectedPageId);
-      console.log("🔍 Selected page title:", selectedPageTitle);
+      console.log("📌 Starting Add to Page operation");
+      console.log("📌 Using selected page:", selectedPage);
       
-      // Start loading state
       setLoading(true);
       
       try {
-        // Get database reference
         const db = getDatabase(app);
         
-        // First try using the exact ID as is
-        console.log("🔍 Fetching target page with exact ID:", selectedPageId);
-        let targetRef = ref(db, `pages/${selectedPageId}`);
-        let targetSnap = await get(targetRef);
+        // Approach 1: Try to get the page via API endpoint
+        console.log("📌 Trying to get page via direct API fetch...");
         
-        // If not found, try different formats - Firebase might have URLencoded the ID
-        if (!targetSnap.exists()) {
-          console.log("🔍 Page not found with exact ID, trying URL decoded version");
-          const decodedId = decodeURIComponent(selectedPageId);
-          targetRef = ref(db, `pages/${decodedId}`);
-          targetSnap = await get(targetRef);
-          
-          // If still not found, try encoded version
-          if (!targetSnap.exists()) {
-            console.log("🔍 Page not found with decoded ID, trying URL encoded version");
-            const encodedId = encodeURIComponent(selectedPageId);
-            targetRef = ref(db, `pages/${encodedId}`);
-            targetSnap = await get(targetRef);
-          }
-        }
+        let targetPageData = null;
+        let targetPageRef = null;
         
-        // Final check if page exists
-        if (!targetSnap.exists()) {
-          console.error("🔍 Target page not found after all attempts:", selectedPageId);
-          toast.error("Target page not found in database");
-          setLoading(false);
-          return;
-        }
-        
-        // We found the page! Extract data
-        const targetData = targetSnap.val();
-        console.log("🔍 Target page found:", targetData.title);
-        
-        // Parse the existing content
-        let existingContent = [];
         try {
-          if (typeof targetData.content === 'string') {
-            existingContent = JSON.parse(targetData.content);
-            console.log("🔍 Parsed content string");
-          } else if (Array.isArray(targetData.content)) {
-            existingContent = targetData.content;
-            console.log("🔍 Content was already array");
-          }
+          // First attempt: use the page ID as found in the database
+          const cleanId = selectedPageId.trim();
+          console.log("📌 Getting page with ID:", cleanId);
           
-          if (!Array.isArray(existingContent)) {
-            console.warn("🔍 Content is not an array");
+          // URL endpoint for getting a specific page
+          const apiUrl = `/api/pages/${cleanId}`;
+          console.log("📌 Fetching from API URL:", apiUrl);
+          
+          // Call the API to get the page
+          const response = await fetch(apiUrl);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log("📌 API response success:", data);
+            targetPageData = data;
+          } else {
+            console.error("📌 API response error:", response.status);
+          }
+        } catch (apiError) {
+          console.error("📌 API fetch error:", apiError);
+        }
+        
+        // Approach 2: If API fails, try direct database access with selected page object
+        if (!targetPageData) {
+          console.log("📌 API approach failed, trying direct database access");
+          
+          // Use database path from the selected page if available
+          const databasePath = selectedPage.databasePath || `pages/${selectedPageId}`;
+          console.log("📌 Using database path:", databasePath);
+          
+          targetPageRef = ref(db, databasePath);
+          const snapshot = await get(targetPageRef);
+          
+          if (snapshot.exists()) {
+            console.log("📌 Found page via direct database access");
+            targetPageData = snapshot.val();
+          } else {
+            console.error("📌 Page not found in database");
+            throw new Error("Page not found in database");
+          }
+        }
+        
+        // If we have target page data, update it
+        if (targetPageData) {
+          console.log("📌 Target page data found:", targetPageData.title);
+          
+          // Parse the content (or use empty array if none exists)
+          let existingContent = [];
+          try {
+            if (typeof targetPageData.content === 'string') {
+              existingContent = JSON.parse(targetPageData.content);
+            } else if (Array.isArray(targetPageData.content)) {
+              existingContent = targetPageData.content;
+            }
+            
+            if (!Array.isArray(existingContent)) {
+              console.warn("📌 Content is not an array after parsing");
+              existingContent = [];
+            }
+          } catch (error) {
+            console.error("📌 Error parsing content:", error);
             existingContent = [];
           }
-        } catch (error) {
-          console.error("🔍 Error parsing content:", error);
-          existingContent = [];
+          
+          console.log("📌 Existing content has", existingContent.length, "items");
+          
+          // Create updated content with a test paragraph
+          const timestamp = new Date().toLocaleTimeString();
+          const updatedContent = [
+            ...existingContent,
+            { type: 'paragraph', children: [{ text: '' }] }, // Empty line separator
+            { type: 'paragraph', children: [{ text: `Content added at ${timestamp}` }] }
+          ];
+          
+          // Update the database with the new content
+          console.log("📌 Updating page content...");
+          
+          // If we found the page via direct database access, use that ref
+          if (targetPageRef) {
+            console.log("📌 Updating via Firebase ref");
+            await set(ref(db, `${targetPageRef.toString()}/content`), JSON.stringify(updatedContent));
+            await set(ref(db, `${targetPageRef.toString()}/lastModified`), new Date().toISOString());
+          } 
+          // Otherwise use the page ID from the API response
+          else {
+            console.log("📌 Updating via API page ID:", targetPageData.id);
+            await set(ref(db, `pages/${targetPageData.id}/content`), JSON.stringify(updatedContent));
+            await set(ref(db, `pages/${targetPageData.id}/lastModified`), new Date().toISOString());
+          }
+          
+          console.log("📌 Database updated successfully!");
+          
+          // Get the correct page ID for navigation
+          const pageIdForNav = targetPageData.id || selectedPageId;
+          
+          // Close dialog and show success
+          onClose();
+          toast.success(`Added to "${targetPageData.title}"`);
+          
+          // Navigate with window.location for full refresh
+          const navUrl = `/pages/${pageIdForNav}?refresh=${Date.now()}`;
+          console.log("📌 Navigating to:", navUrl);
+          window.location.href = navUrl;
+        } else {
+          throw new Error("Could not find page data through any method");
         }
-        
-        console.log("🔍 Existing content has", existingContent.length, "items");
-        
-        // Create simple test content
-        const timestamp = new Date().toLocaleTimeString();
-        const updatedContent = [
-          ...existingContent, 
-          { type: 'paragraph', children: [{ text: '' }] }, // Empty line
-          { type: 'paragraph', children: [{ text: `TEST CONTENT ADDED AT ${timestamp}` }] }
-        ];
-        
-        // Update the database with the new content
-        console.log("🔍 Updating database...");
-        const dbPath = targetRef;
-        
-        await set(ref(db, `${dbPath.toString()}/content`), JSON.stringify(updatedContent));
-        await set(ref(db, `${dbPath.toString()}/lastModified`), new Date().toISOString());
-        
-        console.log("🔍 Database updated successfully!");
-        
-        // Close dialog and redirect
-        onClose();
-        toast.success(`Added to "${targetData.title}"`);
-        
-        // Get the path from the reference for navigation
-        const pathParts = dbPath.toString().split('/');
-        const pageId = pathParts[pathParts.length - 1];
-        console.log("🔍 Navigating to page ID:", pageId);
-        
-        // Navigate with force reload
-        window.location.href = `/pages/${pageId}?refresh=${Date.now()}`;
-        
       } catch (error) {
-        console.error("🔍 Error:", error);
+        console.error("📌 Error:", error);
         toast.error("Error adding to page: " + error.message);
         setLoading(false);
       }
