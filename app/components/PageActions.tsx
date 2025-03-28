@@ -231,35 +231,25 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Log the current state of the database for debugging
-        console.log("🔍 Fetching current state of the database...");
-        const allPagesRef = ref(db, 'pages');
-        const allPagesSnapshot = await get(allPagesRef);
-        if (allPagesSnapshot.exists()) {
-          console.log("🔍 Current pages in database:", Object.keys(allPagesSnapshot.val()).length);
-        } else {
-          console.log("🔍 No pages found in database");
-        }
-        
         // Get the source page content from pageToAdd prop
         if (!pageToAdd) {
           throw new Error("No source page data available");
         }
         
         console.log("🔍 Source page data:", pageToAdd);
-        const timestamp = new Date().toLocaleTimeString();
-        const contentToAdd = `Content from "${pageToAdd.title}" added at ${timestamp}`;
         
-        const newPageData = {
-          title: selectedPage.title,
-          content: JSON.stringify([
-            { type: 'paragraph', children: [{ text: contentToAdd }] }
-          ]),
-          lastModified: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          userId: user?.uid || "anonymous",
-          isPublic: true
-        };
+        // Parse the source page content
+        let sourceContent = [];
+        try {
+          if (typeof pageToAdd.content === 'string') {
+            sourceContent = JSON.parse(pageToAdd.content);
+          } else if (Array.isArray(pageToAdd.content)) {
+            sourceContent = pageToAdd.content;
+          }
+        } catch (error) {
+          console.error("🔍 Error parsing source content:", error);
+          throw new Error("Could not parse source page content");
+        }
         
         const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnap = await get(targetPageRef);
@@ -276,14 +266,15 @@ export function PageActions({
               existingContent = targetPageData.content;
             }
           } catch (error) {
-            console.error("🔍 Error parsing content:", error);
+            console.error("🔍 Error parsing target content:", error);
             existingContent = [];
           }
           
+          // Add a blank line between existing content and new content
           const updatedContent = [
             ...existingContent,
             { type: 'paragraph', children: [{ text: '' }] },
-            { type: 'paragraph', children: [{ text: contentToAdd }] }
+            ...sourceContent
           ];
           
           await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(updatedContent));
@@ -292,6 +283,15 @@ export function PageActions({
           console.log("🔍 Content appended successfully");
         } else {
           console.log("🔍 Target page doesn't exist, creating new page");
+          const newPageData = {
+            title: selectedPage.title,
+            content: JSON.stringify(sourceContent),
+            lastModified: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            userId: user?.uid || "anonymous",
+            isPublic: true
+          };
+          
           await set(targetPageRef, newPageData);
           console.log("🔍 New page created successfully");
         }
