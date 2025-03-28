@@ -2,7 +2,6 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
     "dev:safe": "./scripts/start-dev.sh",
@@ -10,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache",
-    "migrate-backlinks": "NODE_OPTIONS='--experimental-modules --es-module-specifier-resolution=node' node scripts/migrate-backlinks.js",
+    "migrate-backlinks": "node scripts/migrate-backlinks.js",
     "postbuild": "node scripts/migrate-backlinks.js"
   },
   "dependencies": {

@@ -1,14 +1,14 @@
 // @ts-check
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { 
+const { initializeApp } = require('firebase/app');
+const { getFirestore } = require('firebase/firestore');
+const { 
   collection, 
   getDocs, 
   doc, 
   writeBatch,
   query,
   where
-} from 'firebase/firestore';
+} = require('firebase/firestore');
 
 // Initialize Firebase with environment variables
 const firebaseConfig = {
