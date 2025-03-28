@@ -237,27 +237,26 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Use the current page's content directly instead of fetching from database
-        let sourceContent = [];
-        try {
-          const rawContent = content; // Use the content prop directly
-          console.log("🔍 Raw source content:", rawContent);
-          
-          if (typeof rawContent === 'string') {
-            sourceContent = JSON.parse(rawContent);
-          } else if (Array.isArray(rawContent)) {
-            sourceContent = rawContent;
-          }
-          
-          if (!Array.isArray(sourceContent)) {
+        // Get the source content from the content prop
+        let sourceContent = content;
+        
+        // If content is a string, try to parse it
+        if (typeof content === 'string') {
+          try {
+            sourceContent = JSON.parse(content);
+          } catch (error) {
+            console.error("🔍 Error parsing string content:", error);
             throw new Error("Invalid source content format");
           }
-          
-          console.log("🔍 Parsed source content:", sourceContent);
-        } catch (error) {
-          console.error("🔍 Error parsing source content:", error);
-          throw new Error("Could not parse source page content");
         }
+        
+        // Validate that we have valid content
+        if (!Array.isArray(sourceContent) || sourceContent.length === 0) {
+          console.error("🔍 Invalid source content:", sourceContent);
+          throw new Error("Source page content is invalid or empty");
+        }
+        
+        console.log("🔍 Source content to add:", sourceContent);
         
         const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnap = await get(targetPageRef);
