@@ -237,21 +237,10 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Get the source page content
-        const sourcePageRef = ref(db, `pages/${page.id}`);
-        const sourcePageSnap = await get(sourcePageRef);
-        
-        if (!sourcePageSnap.exists()) {
-          throw new Error("Source page not found in database");
-        }
-        
-        const sourcePageData = sourcePageSnap.val();
-        console.log("🔍 Source page data:", sourcePageData);
-        
-        // Parse the source page content
+        // Use the current page's content directly instead of fetching from database
         let sourceContent = [];
         try {
-          const rawContent = sourcePageData.content;
+          const rawContent = content; // Use the content prop directly
           console.log("🔍 Raw source content:", rawContent);
           
           if (typeof rawContent === 'string') {
