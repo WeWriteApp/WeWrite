@@ -210,7 +210,7 @@ export function PageActions({
       }
     }, []);
     
-    // Direct database operation with maximum debugging
+    // Hard-coded database operation for debugging
     const handleAddToPage = async () => {
       if (!selectedPageId) {
         toast.error("Please select a page first");
@@ -218,104 +218,120 @@ export function PageActions({
       }
       
       setLoading(true);
-      console.log(" Add to Page Operation Starting");
-      console.log(" Selected page ID:", selectedPageId);
-      console.log(" Selected page title:", selectedPageTitle);
+      console.log("⚡ DEBUG ADD-TO-PAGE WITH FIXED TARGET");
+      console.log("⚡ Selected page ID:", selectedPageId);
       
       try {
         const db = getDatabase(app);
         
-        // STEP 1: Verify source page (the page we're adding from)
-        console.log(" Source page:", pageToAdd?.id, pageToAdd?.title);
-        if (!pageToAdd?.id) {
-          console.error(" Source page ID is missing!");
-          toast.error("Source page information is missing");
+        // Get ALL pages to log them and find the issue
+        console.log("⚡ Getting ALL pages to check existence...");
+        const allPagesRef = ref(db, 'pages');
+        const allPagesSnapshot = await get(allPagesRef);
+        
+        if (!allPagesSnapshot.exists()) {
+          console.error("⚡ No pages found in database at all!");
+          toast.error("No pages found in database");
           setLoading(false);
           return;
         }
         
-        // STEP 2: Verify the target page exists
-        const targetPagePath = `pages/${selectedPageId}`;
-        console.log(" Looking up target page at path:", targetPagePath);
+        // Log all pages for debugging
+        const allPages = allPagesSnapshot.val();
+        console.log("⚡ All pages:", Object.keys(allPages));
         
-        const targetSnapshot = await get(ref(db, targetPagePath));
-        if (!targetSnapshot.exists()) {
-          console.error(" Target page not found at path:", targetPagePath);
-          toast.error("Target page not found - please try selecting a different page");
-          setLoading(false);
-          return;
+        // Check if selected page exists
+        if (!allPages[selectedPageId]) {
+          console.error("⚡ Selected page not found in database:", selectedPageId);
+          console.log("⚡ Available pages:", Object.keys(allPages));
+          
+          // Get the first available page as fallback
+          const firstPageId = Object.keys(allPages)[0];
+          console.log("⚡ Using first available page as fallback:", firstPageId);
+          
+          // Show error but continue with fallback
+          toast.error(`Selected page not found, using "${allPages[firstPageId].title}" as fallback`);
+          
+          // Update the selected page ID to use the fallback
+          setSelectedPageId(firstPageId);
+          setSelectedPageTitle(allPages[firstPageId].title || "Fallback Page");
+          
+          // Continue with the first available page
+          var targetPageData = allPages[firstPageId];
+          var targetPageId = firstPageId;
+        } else {
+          // Use the selected page
+          var targetPageData = allPages[selectedPageId];
+          var targetPageId = selectedPageId;
+          console.log("⚡ Target page found:", targetPageData.title);
         }
         
-        // STEP 3: Get target page data
-        const targetData = targetSnapshot.val();
-        console.log(" Target page found:", targetData.title);
-        
-        // STEP 4: Parse target content
+        // Parse target content
         let targetContent = [];
         try {
-          if (typeof targetData.content === 'string') {
-            targetContent = JSON.parse(targetData.content);
-            console.log(" Parsed target content string, length:", targetContent.length);
-          } else if (Array.isArray(targetData.content)) {
-            targetContent = targetData.content;
-            console.log(" Target content is already array, length:", targetContent.length);
-          } else {
-            console.warn(" Target content is neither string nor array:", typeof targetData.content);
-            targetContent = [];
-          }
-          
-          if (!Array.isArray(targetContent)) {
-            console.warn(" Target content is not an array after parsing");
-            targetContent = [];
+          if (typeof targetPageData.content === 'string') {
+            targetContent = JSON.parse(targetPageData.content);
+          } else if (Array.isArray(targetPageData.content)) {
+            targetContent = targetPageData.content;
           }
         } catch (error) {
-          console.error(" Error parsing target content:", error);
+          console.error("⚡ Error parsing content:", error);
+        }
+        
+        // Ensure target content is an array
+        if (!Array.isArray(targetContent)) {
+          console.log("⚡ Target content is not an array, creating empty array");
           targetContent = [];
         }
         
-        // STEP 5: Create new content with timestamp for easy testing
-        const timestamp = new Date().toLocaleTimeString();
+        console.log("⚡ Target content has", targetContent.length, "items");
+        
+        // Create simple test paragraphs
         const newParagraphs = [
-          // Empty line separator
+          // Empty paragraph separator
           {
             type: 'paragraph',
             children: [{ text: '' }]
           },
-          // Test content with timestamp
+          // Test paragraph with timestamp
           {
             type: 'paragraph',
-            children: [{ text: `Content added at ${timestamp} from ${pageToAdd.title}` }]
+            children: [{ text: `TEST CONTENT added at ${new Date().toLocaleTimeString()}` }]
           }
         ];
         
-        // STEP 6: Combine content
-        const combinedContent = [...targetContent, ...newParagraphs];
-        console.log(" Created combined content with", combinedContent.length, "items");
+        // Combine content
+        const newContent = [...targetContent, ...newParagraphs];
+        console.log("⚡ New content has", newContent.length, "items");
         
-        // STEP 7: Update the database
-        const targetPageRef = ref(db, targetPagePath);
-        console.log(" Updating target page...");
+        // Update database
+        const targetRef = ref(db, `pages/${targetPageId}`);
+        console.log("⚡ Updating target page:", targetPageId);
         
-        const updates = {
-          content: JSON.stringify(combinedContent),
+        // Update content and lastModified fields
+        await update(targetRef, {
+          content: JSON.stringify(newContent),
           lastModified: new Date().toISOString()
-        };
+        });
         
-        await update(targetPageRef, updates);
-        console.log(" Database updated successfully!");
+        console.log("⚡ Database updated!");
         
-        // STEP 8: Close dialog and redirect
+        // Close dialog and show success message
         onClose();
-        toast.success(`Added to "${targetData.title}"`);
+        toast.success(`Added to page "${targetPageData.title}"`);
         
-        // STEP 9: Force hard reload with cache busting
-        const targetUrl = `/pages/${selectedPageId}?refresh=${Date.now()}`;
-        console.log(" Redirecting to:", targetUrl);
-        window.location.href = targetUrl;
+        // Redirect with full page reload and cache busting
+        const redirectUrl = `/pages/${targetPageId}?refresh=${Date.now()}`;
+        console.log("⚡ Redirecting to:", redirectUrl);
+        
+        // Wait a bit before redirecting to ensure database propagation
+        setTimeout(() => {
+          window.location.replace(redirectUrl);
+        }, 500);
         
       } catch (error) {
-        console.error(" Error in add to page operation:", error);
-        toast.error("Error adding to page: " + error.message);
+        console.error("⚡ Error:", error);
+        toast.error("Failed to add content: " + error.message);
         setLoading(false);
       }
     };
