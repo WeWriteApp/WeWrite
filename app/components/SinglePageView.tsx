@@ -38,7 +38,7 @@ export function usePage() {
 
 // Override the original PageProvider and usePage with our custom versions
 // This is done by placing this file earlier in the import order
-export { usePage as usePageOriginal } from "../contexts/PageContext";
+// export { usePage as usePageOriginal } from "../contexts/PageContext";
 
 export function CustomPageProvider({ children, pageData, isEditing, setIsEditing }: any) {
   return (
