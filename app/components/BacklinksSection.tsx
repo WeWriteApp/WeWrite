@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { findBacklinks } from "../firebase/database";
+import { findBacklinks, findBacklinksWithFirestore } from "../firebase/database";
 import { Loader, ExternalLink } from "lucide-react";
 import PageList, { Page } from "./PageList";
 import { Button } from "./ui/button";
@@ -33,10 +33,27 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
       setError(null);
       
       try {
-        console.log(`Loading backlinks for page ${pageId}`);
-        const links = await findBacklinks(pageId);
-        console.log("Backlinks loaded:", links);
+        console.log(`[BacklinksSection] Loading backlinks for page ${pageId}`);
         
+        // First try with Firestore implementation
+        let links = await findBacklinksWithFirestore(pageId);
+        
+        // If no results, fall back to original implementation
+        if (!links || links.length === 0) {
+          console.log("[BacklinksSection] No backlinks found with Firestore, trying RTDB...");
+          links = await findBacklinks(pageId);
+        }
+        
+        console.log("[BacklinksSection] Backlinks loaded:", JSON.stringify(links, null, 2));
+        
+        if (!links || links.length === 0) {
+          console.log("[BacklinksSection] No backlinks found with either method");
+          setBacklinks([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Convert to the format expected by PageList
         const formattedLinks: Page[] = links.map(link => ({
           id: link.id,
           title: link.title || "Untitled Page",
@@ -47,9 +64,10 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
           authorName: "" 
         }));
         
+        console.log("[BacklinksSection] Formatted links:", JSON.stringify(formattedLinks, null, 2));
         setBacklinks(formattedLinks);
       } catch (error) {
-        console.error("Error loading backlinks:", error);
+        console.error("[BacklinksSection] Error loading backlinks:", error);
         setError("Failed to load backlinks");
       } finally {
         setLoading(false);

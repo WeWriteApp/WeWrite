@@ -590,39 +590,49 @@ function extractLinksFromNodes(nodes) {
 // Find pages that link to a specific page
 export async function findBacklinks(pageId) {
   try {
-    console.log("Finding backlinks for page:", pageId);
+    console.log("[findBacklinks] Starting backlinks search for page:", pageId);
     
     if (!pageId) {
-      console.error("No pageId provided to findBacklinks");
+      console.error("[findBacklinks] No pageId provided to findBacklinks");
       return [];
     }
     
     // Use the rtdb instance directly
     const pagesRef = ref(rtdb, 'pages');
+    console.log("[findBacklinks] Fetching pages from database");
     
     try {
       const pagesSnapshot = await get(pagesRef);
       
       if (!pagesSnapshot.exists()) {
-        console.log("No pages found in database");
+        console.log("[findBacklinks] No pages found in database");
         return [];
       }
       
       const pages = pagesSnapshot.val();
-      console.log(`Scanning ${Object.keys(pages).length} pages for backlinks`);
+      const pageCount = Object.keys(pages).length;
+      console.log(`[findBacklinks] Scanning ${pageCount} pages for backlinks to ${pageId}`);
       
       const backlinks = [];
+      let scannedPages = 0;
+      let pagesWithLinks = 0;
+      let pagesWithoutContent = 0;
+      let parseErrors = 0;
       
       for (const [id, page] of Object.entries(pages)) {
+        scannedPages++;
         // Skip the page itself
         if (id === pageId) {
-          console.log(`Skipping self-reference: ${id}`);
+          console.log(`[findBacklinks] Skipping self-reference: ${id}`);
           continue;
         }
         
         // Skip pages without content
         if (!page.content) {
-          console.log(`Skipping page ${id} - no content`);
+          pagesWithoutContent++;
+          if (pagesWithoutContent <= 5) { // Limit log spam
+            console.log(`[findBacklinks] Skipping page ${id} - no content`);
+          }
           continue;
         }
         
@@ -635,7 +645,8 @@ export async function findBacklinks(pageId) {
             content = page.content;
           }
         } catch (error) {
-          console.error(`Error parsing content for page ${id}:`, error);
+          parseErrors++;
+          console.error(`[findBacklinks] Error parsing content for page ${id}:`, error);
           continue;
         }
         
@@ -643,13 +654,21 @@ export async function findBacklinks(pageId) {
         const links = extractLinksFromNodes(content);
         
         if (links.length > 0) {
-          console.log(`Page ${id} has ${links.length} links:`, links);
-        } else {
-          console.log(`Page ${id} has no links`);
+          pagesWithLinks++;
+          console.log(`[findBacklinks] Page ${id} has ${links.length} links`);
+          
+          // Log at most 5 links to avoid console spam
+          if (links.length > 5) {
+            console.log(`[findBacklinks] First 5 links:`, links.slice(0, 5));
+          } else {
+            console.log(`[findBacklinks] Links:`, links);
+          }
         }
         
         // Check if any of the links point to the target page
-        const hasBacklink = links.some(link => {
+        const matchingLinks = [];
+        
+        links.forEach(link => {
           // Handle all possible link formats
           const patterns = [
             `/pages/${pageId}`,
@@ -659,23 +678,26 @@ export async function findBacklinks(pageId) {
             pageId // Also check for direct pageId references
           ];
           
-          return patterns.some(pattern => {
+          for (const pattern of patterns) {
             if (link.includes(pattern)) {
-              console.log(`Found backlink in page ${id} with link ${link} matching pattern ${pattern}`);
-              return true;
+              matchingLinks.push({ link, pattern });
+              break;
             }
-            return false;
-          });
+          }
         });
         
-        if (hasBacklink) {
-          console.log(`Found backlink in page ${id}: ${page.title}`);
+        if (matchingLinks.length > 0) {
+          console.log(`[findBacklinks] Found ${matchingLinks.length} backlinks in page ${id}: ${page.title}`);
+          matchingLinks.forEach(({ link, pattern }) => {
+            console.log(`[findBacklinks] Matched link "${link}" with pattern "${pattern}"`);
+          });
+          
           backlinks.push({
             id,
             title: page.title || 'Untitled Page',
             lastModified: page.lastModified || null,
             userId: page.userId || null,
-            isPublic: page.isPublic || false // Add isPublic property for PageList component
+            isPublic: page.isPublic || false
           });
         }
       }
@@ -687,14 +709,17 @@ export async function findBacklinks(pageId) {
         return new Date(b.lastModified) - new Date(a.lastModified);
       });
       
-      console.log(`Found ${backlinks.length} backlinks for page ${pageId}`);
+      console.log(`[findBacklinks] Summary: Scanned ${scannedPages} pages, ${pagesWithLinks} had links, ${backlinks.length} have backlinks to ${pageId}`);
+      console.log(`[findBacklinks] Stats: ${pagesWithoutContent} pages without content, ${parseErrors} parse errors`);
+      console.log(`[findBacklinks] Final backlinks:`, JSON.stringify(backlinks, null, 2));
+      
       return backlinks;
     } catch (dbError) {
-      console.error("Database error in findBacklinks:", dbError);
+      console.error("[findBacklinks] Database error:", dbError);
       throw dbError;
     }
   } catch (error) {
-    console.error('Error finding backlinks:', error);
+    console.error('[findBacklinks] Error finding backlinks:', error);
     return [];
   }
 }
@@ -1165,3 +1190,118 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
     return [];
   }
 };
+
+// Alternative backlinks implementation using Firestore
+export async function findBacklinksWithFirestore(pageId) {
+  try {
+    console.log("[findBacklinksWithFirestore] Starting search for backlinks to page:", pageId);
+    
+    if (!pageId) {
+      console.error("[findBacklinksWithFirestore] No pageId provided");
+      return [];
+    }
+    
+    // Use Firestore for querying
+    const pagesCollection = collection(db, 'pages');
+    const querySnapshot = await getDocs(pagesCollection);
+    
+    if (querySnapshot.empty) {
+      console.log("[findBacklinksWithFirestore] No pages found in database");
+      return [];
+    }
+    
+    console.log(`[findBacklinksWithFirestore] Scanning ${querySnapshot.size} pages for backlinks`);
+    
+    const backlinks = [];
+    let scannedPages = 0;
+    let pagesWithLinks = 0;
+    
+    querySnapshot.forEach((doc) => {
+      scannedPages++;
+      const page = doc.data();
+      const id = doc.id;
+      
+      // Skip the page itself
+      if (id === pageId) {
+        return;
+      }
+      
+      // Skip pages without content
+      if (!page.content) {
+        return;
+      }
+      
+      // Parse the content if it's a string
+      let content = [];
+      try {
+        if (typeof page.content === 'string') {
+          content = JSON.parse(page.content);
+        } else if (Array.isArray(page.content)) {
+          content = page.content;
+        }
+      } catch (error) {
+        console.error(`[findBacklinksWithFirestore] Error parsing content for page ${id}:`, error);
+        return;
+      }
+      
+      // Look for links to the target page
+      const hasLink = searchForPageLinks(content, pageId);
+      
+      if (hasLink) {
+        console.log(`[findBacklinksWithFirestore] Found backlink in page ${id}: ${page.title}`);
+        backlinks.push({
+          id,
+          title: page.title || 'Untitled Page',
+          lastModified: page.lastModified || null,
+          userId: page.userId || null,
+          isPublic: page.isPublic || false
+        });
+      }
+    });
+    
+    // Sort by lastModified (newest first)
+    backlinks.sort((a, b) => {
+      if (!a.lastModified) return 1;
+      if (!b.lastModified) return -1;
+      return new Date(b.lastModified) - new Date(a.lastModified);
+    });
+    
+    console.log(`[findBacklinksWithFirestore] Found ${backlinks.length} backlinks for page ${pageId}`);
+    console.log(JSON.stringify(backlinks, null, 2));
+    
+    return backlinks;
+  } catch (error) {
+    console.error('[findBacklinksWithFirestore] Error:', error);
+    return [];
+  }
+}
+
+// Helper function to search for links to a specific page
+function searchForPageLinks(content, pageId) {
+  // First convert content to a string to do a quick check
+  const contentString = JSON.stringify(content);
+  
+  // Check if the page ID exists anywhere in the content
+  if (!contentString.includes(pageId)) {
+    return false;
+  }
+  
+  // Patterns to look for
+  const patterns = [
+    `/pages/${pageId}`,
+    `pages/${pageId}`,
+    `/page/${pageId}`,
+    `page/${pageId}`,
+    pageId
+  ];
+  
+  // Look for these patterns in the stringified content
+  for (const pattern of patterns) {
+    if (contentString.includes(pattern)) {
+      console.log(`[searchForPageLinks] Found pattern "${pattern}" in content`);
+      return true;
+    }
+  }
+  
+  return false;
+}
