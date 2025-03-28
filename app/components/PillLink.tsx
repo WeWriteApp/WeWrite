@@ -32,4 +32,5 @@ const PillLink = ({
   );
 };
 
+export { PillLink };
 export default PillLink;
