@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
-import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, Plus, Check, AlignJustify, AlignLeft, Loader } from "lucide-react";
+import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deletePage } from "../firebase/database";
@@ -14,7 +14,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
   DropdownMenuLabel
 } from './ui/dropdown-menu';
 import { getCurrentUsername } from "../utils/userUtils";
@@ -33,19 +32,13 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
 
 /**
  * PageActions Component
  * 
  * This component provides all interactive actions for a page, including:
  * - Owner-specific actions: Edit and Delete
- * - General actions: Copy Link, Reply to Page, Add to Page, and Toggle Paragraph Mode
+ * - General actions: Copy Link, Reply to Page, and Toggle Paragraph Mode
  * 
  * Paragraph Mode Options:
  * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
@@ -94,9 +87,8 @@ export function PageActions({
   const router = useRouter();
   const { lineMode, setLineMode } = useLineSettings();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
   
-  // Store the current page content for the Add to Page functionality
+  // Store the current page content for future use
   const [currentPageContent, setCurrentPageContent] = useState<any>(null);
   
   // When the component mounts or content changes, capture the content
@@ -109,9 +101,9 @@ export function PageActions({
           : content;
         
         setCurrentPageContent(parsedContent);
-        console.log("Captured current page content for Add to Page:", parsedContent);
+        console.log("Captured current page content:", parsedContent);
       } catch (error) {
-        console.error("Error parsing content for Add to Page:", error);
+        console.error("Error parsing content:", error);
       }
     }
   }, [content]);
@@ -216,7 +208,7 @@ export function PageActions({
         </div>
       )}
       
-      {/* Actions available to all users - Copy, Reply, Add, Layout */}
+      {/* Actions available to all users - Copy, Reply, Layout */}
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t pt-4 w-full">
         <Button
           variant="ghost"
@@ -237,25 +229,6 @@ export function PageActions({
           <Reply className="h-4 w-4" />
           Reply to Page
         </Button>
-        
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 cursor-not-allowed opacity-60"
-                disabled
-              >
-                <Plus className="h-4 w-4" />
-                Add to Page
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Coming soon!</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
