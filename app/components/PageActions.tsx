@@ -215,33 +215,39 @@ export function PageActions({
       }
     }, []);
     
-    // DIRECT DATABASE LOOKUP APPROACH
+    // ENHANCED DEBUGGING FOR PAGE CREATION AND UPDATING
     const handleAddToPage = async () => {
       if (!selectedPage || !selectedPageId) {
         toast.error("Please select a page first");
         return;
       }
       
-      console.log(" Add to Page Operation Starting");
-      console.log(" Selected page object:", selectedPage);
-      console.log(" Selected ID:", selectedPageId);
+      console.log("🔍 Starting Add to Page operation");
+      console.log("🔍 Selected page object:", selectedPage);
+      console.log("🔍 Selected ID:", selectedPageId);
       
       setLoading(true);
       
       try {
         const db = getDatabase(app);
         
-        // EMERGENCY SOLUTION: Use the search result directly to create content
-        // This bypasses the need to find the page in the database
-        console.log(" EMERGENCY SOLUTION: Using search result directly");
+        // Log the current state of the database for debugging
+        console.log("🔍 Fetching current state of the database...");
+        const allPagesRef = ref(db, 'pages');
+        const allPagesSnapshot = await get(allPagesRef);
+        if (allPagesSnapshot.exists()) {
+          console.log("🔍 Current pages in database:", Object.keys(allPagesSnapshot.val()).length);
+        } else {
+          console.log("🔍 No pages found in database");
+        }
         
-        // Create a direct path to the page using the ID from search
+        // Use the search result directly to create/update content
+        console.log("🔍 Using search result data");
         const pageId = selectedPageId;
         const pageTitle = selectedPageTitle;
         
-        console.log(" Creating content for page:", pageId, pageTitle);
+        console.log("🔍 Creating/updating content for page:", pageId, pageTitle);
         
-        // Get the current page content to append
         const currentPageRef = ref(db, `pages/${pageToAdd.id}`);
         const currentPageSnap = await get(currentPageRef);
         
@@ -250,13 +256,11 @@ export function PageActions({
         }
         
         const currentPageData = currentPageSnap.val();
-        console.log(" Current page data:", currentPageData.title);
+        console.log("🔍 Current page data:", currentPageData.title);
         
-        // Create a timestamp for the content
         const timestamp = new Date().toLocaleTimeString();
         const contentToAdd = `Content from "${currentPageData.title}" added at ${timestamp}`;
         
-        // Create a new page entry if it doesn't exist
         const newPageData = {
           title: pageTitle,
           content: JSON.stringify([
@@ -268,16 +272,13 @@ export function PageActions({
           isPublic: true
         };
         
-        // Check if the page exists first
         const targetPageRef = ref(db, `pages/${pageId}`);
         const targetPageSnap = await get(targetPageRef);
         
         if (targetPageSnap.exists()) {
-          // Page exists, append content
-          console.log(" Page exists, appending content");
+          console.log("🔍 Page exists, appending content");
           const targetPageData = targetPageSnap.val();
           
-          // Parse existing content
           let existingContent = [];
           try {
             if (typeof targetPageData.content === 'string') {
@@ -286,39 +287,34 @@ export function PageActions({
               existingContent = targetPageData.content;
             }
           } catch (error) {
-            console.error(" Error parsing content:", error);
+            console.error("🔍 Error parsing content:", error);
             existingContent = [];
           }
           
-          // Append content
           const updatedContent = [
             ...existingContent,
-            { type: 'paragraph', children: [{ text: '' }] }, // Empty line
+            { type: 'paragraph', children: [{ text: '' }] },
             { type: 'paragraph', children: [{ text: contentToAdd }] }
           ];
           
-          // Update the page
           await set(ref(db, `pages/${pageId}/content`), JSON.stringify(updatedContent));
           await set(ref(db, `pages/${pageId}/lastModified`), new Date().toISOString());
           
-          console.log(" Content appended successfully");
+          console.log("🔍 Content appended successfully");
         } else {
-          // Page doesn't exist, create it
-          console.log(" Page doesn't exist, creating new page");
+          console.log("🔍 Page doesn't exist, creating new page");
           await set(targetPageRef, newPageData);
-          console.log(" New page created successfully");
+          console.log("🔍 New page created successfully");
         }
         
-        // Close dialog and show success
         onClose();
         toast.success(`Added to "${pageTitle}"`);
         
-        // Navigate to the page
         const navUrl = `/pages/${pageId}?refresh=${Date.now()}`;
-        console.log(" Navigating to:", navUrl);
+        console.log("🔍 Navigating to:", navUrl);
         window.location.href = navUrl;
       } catch (error) {
-        console.error(" Error:", error);
+        console.error("🔍 Error:", error);
         toast.error("Error adding to page: " + error.message);
         setLoading(false);
       }
