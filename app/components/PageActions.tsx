@@ -222,9 +222,15 @@ export function PageActions({
         return;
       }
       
+      if (!page || !page.id) {
+        toast.error("Current page not found");
+        return;
+      }
+      
       console.log("🔍 Starting Add to Page operation");
-      console.log("🔍 Selected page:", selectedPage);
-      console.log("🔍 Selected ID:", selectedPageId);
+      console.log("🔍 Selected target page:", selectedPage);
+      console.log("🔍 Selected target ID:", selectedPageId);
+      console.log("🔍 Current source page:", page);
       
       setLoading(true);
       
@@ -232,7 +238,7 @@ export function PageActions({
         const db = getDatabase(app);
         
         // Get the source page content
-        const sourcePageRef = ref(db, `pages/${pageToAdd.id}`);
+        const sourcePageRef = ref(db, `pages/${page.id}`);
         const sourcePageSnap = await get(sourcePageRef);
         
         if (!sourcePageSnap.exists()) {
