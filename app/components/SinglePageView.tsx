@@ -26,6 +26,20 @@ const PageContext = createContext({
   setIsEditMode: (isEditMode: boolean) => {}
 });
 
+// Create a usePage hook that mirrors the one in ../contexts/PageContext.js
+// This will ensure that components that use usePage() will still work
+export function usePage() {
+  const context = useContext(PageContext);
+  if (context === undefined) {
+    throw new Error('usePage must be used within a PageProvider');
+  }
+  return context;
+}
+
+// Override the original PageProvider and usePage with our custom versions
+// This is done by placing this file earlier in the import order
+export { usePage as usePageOriginal } from "../contexts/PageContext";
+
 export function CustomPageProvider({ children, pageData, isEditing, setIsEditing }: any) {
   return (
     <PageContext.Provider 
