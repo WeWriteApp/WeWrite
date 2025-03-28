@@ -237,20 +237,28 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Create a link node to the source page
-        const linkNode = {
-          type: "paragraph",
-          children: [
-            {
-              type: "link",
-              url: `/pages/${page.id}`,
-              title: page.title,
-              children: [{ text: page.title || "Untitled Page" }]
-            }
-          ]
-        };
+        // Create a link node to the source page with a newline
+        const linkNodes = [
+          // Add a newline before the link
+          {
+            type: "paragraph",
+            children: [{ text: "" }]
+          },
+          // Add the actual link
+          {
+            type: "paragraph",
+            children: [
+              {
+                type: "link",
+                url: `/pages/${page.id}`,
+                title: page.title,
+                children: [{ text: page.title || "Untitled Page" }]
+              }
+            ]
+          }
+        ];
         
-        console.log("🔍 Created link node:", linkNode);
+        console.log("🔍 Created link nodes:", linkNodes);
         
         const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnap = await get(targetPageRef);
@@ -275,14 +283,17 @@ export function PageActions({
               throw new Error("Invalid target content format");
             }
             
+            // Filter out any null or undefined elements
+            existingContent = existingContent.filter(node => node != null);
+            
             console.log("🔍 Parsed target content:", existingContent);
           } catch (error) {
             console.error("🔍 Error parsing target content:", error);
             existingContent = [];
           }
           
-          // Append link node to the end of the content
-          const updatedContent = [...existingContent, linkNode];
+          // Append link nodes to the end of the content
+          const updatedContent = [...existingContent, ...linkNodes];
           console.log("🔍 Updated content:", updatedContent);
           
           // Update the target page
@@ -297,7 +308,7 @@ export function PageActions({
           console.log("🔍 Target page doesn't exist, creating new page");
           const newPageData = {
             title: selectedPage.title,
-            content: JSON.stringify([linkNode]),
+            content: JSON.stringify(linkNodes),
             lastModified: new Date().toISOString(),
             createdAt: new Date().toISOString(),
             userId: user?.uid || "anonymous",
