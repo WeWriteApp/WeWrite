@@ -227,11 +227,6 @@ export function PageActions({
         return;
       }
       
-      if (!content || !Array.isArray(content) || content.length === 0) {
-        toast.error("No content to add");
-        return;
-      }
-      
       console.log("🔍 Starting Add to Page operation");
       console.log("🔍 Selected target page:", selectedPage);
       console.log("🔍 Selected target ID:", selectedPageId);
@@ -242,23 +237,26 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Use the Slate editor content directly
-        const sourceContent = content.map(node => {
-          // Ensure each node has the required Slate structure
-          return {
-            type: node.type || 'paragraph',
-            children: node.children || [],
-            ...node // Keep any other properties
-          };
-        });
+        // Create a link node to the source page
+        const linkNode = {
+          type: "paragraph",
+          children: [
+            {
+              type: "link",
+              url: `/pages/${page.id}`,
+              title: page.title,
+              children: [{ text: page.title || "Untitled Page" }]
+            }
+          ]
+        };
         
-        console.log("🔍 Processed source content:", sourceContent);
+        console.log("🔍 Created link node:", linkNode);
         
         const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnap = await get(targetPageRef);
         
         if (targetPageSnap.exists()) {
-          console.log("🔍 Target page exists, inserting content at line 8");
+          console.log("🔍 Target page exists, inserting link at line 8");
           const targetPageData = targetPageSnap.val();
           console.log("🔍 Target page data:", targetPageData);
           
@@ -283,11 +281,11 @@ export function PageActions({
             existingContent = [];
           }
           
-          // Insert source content at line 8 (index 7)
+          // Insert link node at line 8 (index 7)
           const insertIndex = 7;
           const updatedContent = [
             ...existingContent.slice(0, insertIndex),
-            ...sourceContent,
+            linkNode,
             ...existingContent.slice(insertIndex)
           ];
           
@@ -300,12 +298,12 @@ export function PageActions({
             lastModified: new Date().toISOString()
           });
           
-          console.log("🔍 Content inserted successfully");
+          console.log("🔍 Link inserted successfully");
         } else {
           console.log("🔍 Target page doesn't exist, creating new page");
           const newPageData = {
             title: selectedPage.title,
-            content: JSON.stringify(sourceContent),
+            content: JSON.stringify([linkNode]),
             lastModified: new Date().toISOString(),
             createdAt: new Date().toISOString(),
             userId: user?.uid || "anonymous",
