@@ -11,7 +11,8 @@ import {
   query,
   where,
   orderBy,
-  limit
+  limit,
+  writeBatch
 } from "firebase/firestore";
 
 import { app } from "./config";
@@ -135,6 +136,8 @@ export const createPage = async (data) => {
     
     // take the version id and add it as the currentVersion on the page
     await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
+
+    await updateBacklinks(pageRef.id, versionData.content);
 
     return pageRef.id;
 
@@ -418,6 +421,8 @@ export const saveNewVersion = async (pageId, data) => {
     // set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
 
+    await updateBacklinks(pageId, versionData.content);
+
     return versionRef.id;
   } catch (e) {
     return e;
@@ -469,6 +474,9 @@ export const updateDoc = async (collectionName, docName, data) => {
   try {
     const docRef = doc(db, collectionName, docName);
     await setDoc(docRef, data, { merge: true });
+    if (data.content) {
+      await updateBacklinks(docName, data.content);
+    }
     return docRef;
   } catch (e) {
     return e;
@@ -535,10 +543,138 @@ export const updatePage = async (pageId, data) => {
   try {
     const pageRef = doc(db, "pages", pageId);
     await setDoc(pageRef, { ...data, lastModified: new Date().toISOString() }, { merge: true });
+    if (data.content) {
+      await updateBacklinks(pageId, data.content);
+    }
     return true;
   } catch (e) {
     console.error("Error updating page:", e);
     throw e;
+  }
+}
+
+// Maintain a backlinks collection for efficient querying
+async function updateBacklinks(pageId, content) {
+  try {
+    if (!pageId || !content) return;
+    
+    // Get existing backlinks for this page
+    const backlinksRef = collection(db, 'backlinks');
+    const existingBacklinksQuery = query(backlinksRef, where('sourcePageId', '==', pageId));
+    const existingBacklinksSnap = await getDocs(existingBacklinksQuery);
+    const existingBacklinks = new Set();
+    
+    existingBacklinksSnap.forEach(doc => {
+      existingBacklinks.add(doc.data().targetPageId);
+    });
+    
+    // Find all links in the new content
+    const newBacklinks = new Set();
+    if (Array.isArray(content)) {
+      content.forEach(node => {
+        // Check top-level links
+        if (node.type === 'link' || node.type === 'internal-link') {
+          const url = node.url || node.href || node.link || '';
+          const targetId = extractPageIdFromUrl(url);
+          if (targetId) newBacklinks.add(targetId);
+        }
+        
+        // Check child nodes
+        if (node.children && Array.isArray(node.children)) {
+          node.children.forEach(child => {
+            if (child.type === 'link' || child.type === 'internal-link') {
+              const url = child.url || child.href || child.link || '';
+              const targetId = extractPageIdFromUrl(url);
+              if (targetId) newBacklinks.add(targetId);
+            }
+          });
+        }
+      });
+    }
+    
+    // Remove old backlinks that are no longer present
+    const backlinkBatch = writeBatch(db);
+    existingBacklinks.forEach(targetId => {
+      if (!newBacklinks.has(targetId)) {
+        const docRef = doc(backlinksRef);
+        backlinkBatch.delete(docRef);
+      }
+    });
+    
+    // Add new backlinks
+    newBacklinks.forEach(targetId => {
+      if (!existingBacklinks.has(targetId)) {
+        const docRef = doc(backlinksRef);
+        backlinkBatch.set(docRef, {
+          sourcePageId: pageId,
+          targetPageId: targetId,
+          createdAt: new Date().toISOString()
+        });
+      }
+    });
+    
+    await backlinkBatch.commit();
+  } catch (error) {
+    console.error("[updateBacklinks] Error:", error);
+  }
+}
+
+// Helper function to extract page ID from URL
+function extractPageIdFromUrl(url) {
+  if (!url) return null;
+  
+  // Handle direct pageId
+  if (url.match(/^[A-Za-z0-9-_]+$/)) {
+    return url;
+  }
+  
+  // Handle /pages/pageId format
+  const match = url.match(/\/pages\/([A-Za-z0-9-_]+)/);
+  return match ? match[1] : null;
+}
+
+// Efficient backlinks lookup using the backlinks collection
+export async function findBacklinksSimple(pageId) {
+  try {
+    console.log("[findBacklinksSimple] Starting search for page:", pageId);
+    
+    if (!pageId) {
+      console.error("[findBacklinksSimple] No pageId provided");
+      return [];
+    }
+    
+    // Query the backlinks collection
+    const backlinksRef = collection(db, 'backlinks');
+    const backlinksQuery = query(backlinksRef, where('targetPageId', '==', pageId));
+    const backlinksSnap = await getDocs(backlinksQuery);
+    
+    if (backlinksSnap.empty) {
+      console.log("[findBacklinksSimple] No backlinks found");
+      return [];
+    }
+    
+    // Get all source page IDs
+    const sourcePageIds = backlinksSnap.docs.map(doc => doc.data().sourcePageId);
+    
+    // Get page details for all source pages in one batch
+    const pagesRef = collection(db, 'pages');
+    const pagesQuery = query(pagesRef, where('__name__', 'in', sourcePageIds));
+    const pagesSnap = await getDocs(pagesQuery);
+    
+    const backlinks = pagesSnap.docs.map(doc => ({
+      id: doc.id,
+      title: doc.data().title || 'Untitled Page',
+      lastModified: doc.data().lastModified || doc.data().createdAt || new Date().toISOString(),
+      userId: doc.data().userId || null,
+      isPublic: typeof doc.data().isPublic === 'boolean' ? doc.data().isPublic : true,
+      createdAt: doc.data().createdAt || doc.data().lastModified || new Date().toISOString()
+    }));
+    
+    console.log("[findBacklinksSimple] Found backlinks:", backlinks);
+    return backlinks;
+  } catch (error) {
+    console.error("[findBacklinksSimple] Error:", error);
+    return [];
   }
 }
 
@@ -1191,6 +1327,84 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
   }
 };
 
+// Simple and direct implementation of backlinks
+export async function findBacklinksSimple(pageId) {
+  try {
+    console.log("[findBacklinksSimple] Starting search for page:", pageId);
+    
+    if (!pageId) {
+      console.error("[findBacklinksSimple] No pageId provided");
+      return [];
+    }
+    
+    // Use Firestore for querying
+    const pagesCollection = collection(db, 'pages');
+    const querySnapshot = await getDocs(pagesCollection);
+    
+    if (querySnapshot.empty) {
+      console.log("[findBacklinksSimple] No pages found in database");
+      return [];
+    }
+    
+    const backlinks = [];
+    
+    // Simple approach: just look for the page ID in the content as a string
+    querySnapshot.forEach((doc) => {
+      const page = doc.data();
+      const id = doc.id;
+      
+      // Skip the page itself
+      if (id === pageId) {
+        return;
+      }
+      
+      // Skip pages without content
+      if (!page.content) {
+        return;
+      }
+      
+      const contentString = typeof page.content === 'string' 
+        ? page.content 
+        : JSON.stringify(page.content);
+      
+      // Search for the page ID or paths that might contain it
+      const searchTerms = [
+        pageId,
+        `/pages/${pageId}`,
+        `pages/${pageId}`,
+        `/page/${pageId}`,
+        `page/${pageId}`
+      ];
+      
+      for (const term of searchTerms) {
+        if (contentString.includes(term)) {
+          console.log(`[findBacklinksSimple] Found backlink in ${id}: ${page.title} containing ${term}`);
+          
+          // Successfully found a backlink - create a properly formatted object
+          backlinks.push({
+            id,
+            title: page.title || 'Untitled Page',
+            lastModified: page.lastModified || page.createdAt || new Date().toISOString(),
+            userId: page.userId || null,
+            isPublic: typeof page.isPublic === 'boolean' ? page.isPublic : true,
+            createdAt: page.createdAt || page.lastModified || new Date().toISOString()
+          });
+          
+          // Break the loop once we've found a match
+          break;
+        }
+      }
+    });
+    
+    console.log(`[findBacklinksSimple] Found ${backlinks.length} backlinks for ${pageId}:`, backlinks);
+    
+    return backlinks;
+  } catch (error) {
+    console.error("[findBacklinksSimple] Error:", error);
+    return [];
+  }
+}
+
 // Alternative backlinks implementation using Firestore
 export async function findBacklinksWithFirestore(pageId) {
   try {
@@ -1231,7 +1445,7 @@ export async function findBacklinksWithFirestore(pageId) {
         return;
       }
       
-      // Parse the content if it's a string
+      // Parse the content
       let content = [];
       try {
         if (typeof page.content === 'string') {
@@ -1249,25 +1463,20 @@ export async function findBacklinksWithFirestore(pageId) {
       
       if (hasLink) {
         console.log(`[findBacklinksWithFirestore] Found backlink in page ${id}: ${page.title}`);
+        
+        // Successfully found a backlink - create a properly formatted object
         backlinks.push({
           id,
           title: page.title || 'Untitled Page',
-          lastModified: page.lastModified || null,
+          lastModified: page.lastModified || page.createdAt || new Date().toISOString(),
           userId: page.userId || null,
-          isPublic: page.isPublic || false
+          isPublic: typeof page.isPublic === 'boolean' ? page.isPublic : true,
+          createdAt: page.createdAt || page.lastModified || new Date().toISOString()
         });
       }
     });
     
-    // Sort by lastModified (newest first)
-    backlinks.sort((a, b) => {
-      if (!a.lastModified) return 1;
-      if (!b.lastModified) return -1;
-      return new Date(b.lastModified) - new Date(a.lastModified);
-    });
-    
-    console.log(`[findBacklinksWithFirestore] Found ${backlinks.length} backlinks for page ${pageId}`);
-    console.log(JSON.stringify(backlinks, null, 2));
+    console.log(`[findBacklinksWithFirestore] Found ${backlinks.length} backlinks for ${pageId}:`, backlinks);
     
     return backlinks;
   } catch (error) {
@@ -1350,20 +1559,22 @@ export async function findBacklinksSimple(pageId) {
       const searchTerms = [
         pageId,
         `/pages/${pageId}`,
-        `pages/${pageId}`
+        `pages/${pageId}`,
+        `/page/${pageId}`,
+        `page/${pageId}`
       ];
       
       for (const term of searchTerms) {
         if (contentString.includes(term)) {
-          console.log(`[findBacklinksSimple] Found backlink in ${id}: ${page.title}`);
+          console.log(`[findBacklinksSimple] Found backlink in ${id}: ${page.title} containing ${term}`);
           
           // Successfully found a backlink - create a properly formatted object
           backlinks.push({
             id,
             title: page.title || 'Untitled Page',
-            lastModified: page.lastModified || null,
+            lastModified: page.lastModified || page.createdAt || new Date().toISOString(),
             userId: page.userId || null,
-            isPublic: page.isPublic || false,
+            isPublic: typeof page.isPublic === 'boolean' ? page.isPublic : true,
             createdAt: page.createdAt || page.lastModified || new Date().toISOString()
           });
           
@@ -1373,8 +1584,7 @@ export async function findBacklinksSimple(pageId) {
       }
     });
     
-    console.log(`[findBacklinksSimple] Found ${backlinks.length} backlinks for ${pageId}:`);
-    console.log(JSON.stringify(backlinks, null, 2));
+    console.log(`[findBacklinksSimple] Found ${backlinks.length} backlinks for ${pageId}:`, backlinks);
     
     return backlinks;
   } catch (error) {

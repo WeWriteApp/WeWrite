@@ -493,7 +493,9 @@ function SinglePageView({ params }) {
         />
       </PageProvider>
       {!isEditing && page?.id && (
-        <BacklinksSection pageId={page.id} />
+        <div className="mt-4">
+          <BacklinksSection pageId={page.id} key={page.id} />
+        </div>
       )}
       <SiteFooter />
     </Layout>

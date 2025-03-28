@@ -2,13 +2,16 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev -p 3000",
     "dev:safe": "./scripts/start-dev.sh",
     "build": "rm -rf .next && SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -rf .next node_modules/.cache"
+    "clean": "rm -rf .next node_modules/.cache",
+    "migrate-backlinks": "NODE_OPTIONS='--experimental-modules --es-module-specifier-resolution=node' node scripts/migrate-backlinks.js",
+    "postbuild": "node scripts/migrate-backlinks.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -44,6 +47,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
     "firebase": "^11.5.0",
     "firebase-functions": "^5.1.1",
     "framer-motion": "^12.5.0",
@@ -90,6 +94,7 @@
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
+    "esm": "^3.2.25",
     "postcss": "^8.4.35",
     "typescript": "^5.4.2"
   }
