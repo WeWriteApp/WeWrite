@@ -373,21 +373,21 @@ export function PageActions({
       {isOwner && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
+            className="gap-2"
             onClick={() => setIsEditing && setIsEditing(!isEditing)}
-            className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
           >
-            <Edit className="h-5 w-5" />
+            <Edit className="h-4 w-4" />
             {isEditing ? "Cancel" : "Edit"}
           </Button>
           <Button
             variant="destructive"
             size="sm"
+            className="gap-2"
             onClick={handleDelete}
-            className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="h-4 w-4" />
             Delete
           </Button>
         </div>
@@ -396,32 +396,33 @@ export function PageActions({
       {/* Actions available to all users - Copy, Reply, Add, Layout */}
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t pt-4 w-full">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
+          className="gap-2"
           onClick={handleCopyLink}
-          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
         >
-          <Link2 className="h-5 w-5" />
+          <Link2 className="h-4 w-4" />
           Copy Link
         </Button>
         
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
+          className="gap-2"
           onClick={handleReply}
-          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
         >
-          <Reply className="h-5 w-5" />
+          <Reply className="h-4 w-4" />
           Reply to Page
         </Button>
         
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
-          onClick={() => setShowAddDialog(true)}
+          className="gap-2"
+          disabled
+          title="Coming soon!"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
           Add to Page
         </Button>
         
@@ -452,11 +453,11 @@ export function PageActions({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="flex items-center gap-1.5 justify-center w-full sm:w-auto px-4 py-3 text-base"
+              className="gap-2"
             >
-              <LayoutPanelLeft className="h-5 w-5 mr-1.5" />
+              <LayoutPanelLeft className="h-4 w-4 mr-1.5" />
               Paragraph Mode
             </Button>
           </DropdownMenuTrigger>

@@ -1,9 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { PageActions } from "./PageActions";
-import { CopyIcon, ReplyIcon, AddIcon } from "./icons";
 
 /**
  * PageFooter Component
@@ -27,7 +25,6 @@ import { CopyIcon, ReplyIcon, AddIcon } from "./icons";
  * @param {Function} setIsEditing - Function to toggle edit mode
  */
 export default function PageFooter({ page, content, isOwner, isEditing, setIsEditing }) {
-  const router = useRouter();
   if (!page) return null;
   
   return (
@@ -40,30 +37,6 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         setIsEditing={setIsEditing}
         className="action-buttons-container"
       />
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800">
-        <button
-          onClick={() => navigator.clipboard.writeText(window.location.href)}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
-        >
-          <CopyIcon className="w-4 h-4" />
-          Copy Link
-        </button>
-        <button
-          onClick={() => router.push(`/pages/${page.id}/reply`)}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
-        >
-          <ReplyIcon className="w-4 h-4" />
-          Reply to Page
-        </button>
-        <button
-          disabled
-          title="Coming soon!"
-          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 dark:text-gray-500 rounded-md cursor-not-allowed"
-        >
-          <AddIcon className="w-4 h-4" />
-          Add to Page
-        </button>
-      </div>
     </div>
   );
 }
