@@ -231,94 +231,90 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // CRITICAL FIX: Use the EXACT ID format from the search result
-        // This is what we see in the console logs: M80CceBv7RD5UZeVYN
-        const exactId = selectedPageId;
-        console.log(" Using exact ID from search:", exactId);
+        // EMERGENCY SOLUTION: Use the search result directly to create content
+        // This bypasses the need to find the page in the database
+        console.log(" EMERGENCY SOLUTION: Using search result directly");
         
-        // DIRECT LOOKUP: Get all pages and find the matching one by ID
-        console.log(" Getting all pages to find exact match");
-        const allPagesRef = ref(db, 'pages');
-        const allPagesSnapshot = await get(allPagesRef);
+        // Create a direct path to the page using the ID from search
+        const pageId = selectedPageId;
+        const pageTitle = selectedPageTitle;
         
-        if (!allPagesSnapshot.exists()) {
-          throw new Error("No pages found in database");
+        console.log(" Creating content for page:", pageId, pageTitle);
+        
+        // Get the current page content to append
+        const currentPageRef = ref(db, `pages/${pageToAdd.id}`);
+        const currentPageSnap = await get(currentPageRef);
+        
+        if (!currentPageSnap.exists()) {
+          throw new Error("Current page not found in database");
         }
         
-        const allPages = allPagesSnapshot.val();
-        console.log(" Found pages in database:", Object.keys(allPages).length);
+        const currentPageData = currentPageSnap.val();
+        console.log(" Current page data:", currentPageData.title);
         
-        // Find the page with the matching ID
-        let targetPageKey = null;
-        let targetPageData = null;
-        
-        Object.entries(allPages).forEach(([key, pageData]) => {
-          // Check for exact match
-          if (key === exactId) {
-            console.log(" FOUND EXACT MATCH by key:", key);
-            targetPageKey = key;
-            targetPageData = pageData;
-          }
-          // Check for partial match (in case ID is truncated)
-          else if (key.includes(exactId) || exactId.includes(key)) {
-            console.log(" FOUND PARTIAL MATCH:", key, "contains", exactId);
-            if (!targetPageKey) { // Only use if we don't have an exact match
-              targetPageKey = key;
-              targetPageData = pageData;
-            }
-          }
-          // Check for title match as last resort
-          else if (pageData && typeof pageData === 'object' && 
-                  'title' in pageData && selectedPageTitle && 
-                  typeof pageData.title === 'string' &&
-                  pageData.title.toLowerCase() === selectedPageTitle.toLowerCase()) {
-            console.log(" FOUND MATCH BY TITLE:", key);
-            if (!targetPageKey) { // Only use if we don't have any other match
-              targetPageKey = key;
-              targetPageData = pageData;
-            }
-          }
-        });
-        
-        if (!targetPageKey || !targetPageData) {
-          throw new Error("Page not found in database after searching all pages");
-        }
-        
-        console.log(" Target page found:", targetPageKey);
-        console.log(" Page title:", targetPageData.title);
-        
-        // Parse the existing content
-        let existingContent = [];
-        try {
-          if (typeof targetPageData.content === 'string') {
-            existingContent = JSON.parse(targetPageData.content);
-          } else if (Array.isArray(targetPageData.content)) {
-            existingContent = targetPageData.content;
-          }
-        } catch (error) {
-          console.error(" Error parsing content:", error);
-          existingContent = [];
-        }
-        
-        // Create updated content
+        // Create a timestamp for the content
         const timestamp = new Date().toLocaleTimeString();
-        const updatedContent = [
-          ...existingContent,
-          { type: 'paragraph', children: [{ text: '' }] },
-          { type: 'paragraph', children: [{ text: `Content added at ${timestamp}` }] }
-        ];
+        const contentToAdd = `Content from "${currentPageData.title}" added at ${timestamp}`;
         
-        // Update the database with the new content
-        console.log(" Updating page content for key:", targetPageKey);
-        await set(ref(db, `pages/${targetPageKey}/content`), JSON.stringify(updatedContent));
-        await set(ref(db, `pages/${targetPageKey}/lastModified`), new Date().toISOString());
+        // Create a new page entry if it doesn't exist
+        const newPageData = {
+          title: pageTitle,
+          content: JSON.stringify([
+            { type: 'paragraph', children: [{ text: contentToAdd }] }
+          ]),
+          lastModified: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          userId: user?.uid || "anonymous",
+          isPublic: true
+        };
+        
+        // Check if the page exists first
+        const targetPageRef = ref(db, `pages/${pageId}`);
+        const targetPageSnap = await get(targetPageRef);
+        
+        if (targetPageSnap.exists()) {
+          // Page exists, append content
+          console.log(" Page exists, appending content");
+          const targetPageData = targetPageSnap.val();
+          
+          // Parse existing content
+          let existingContent = [];
+          try {
+            if (typeof targetPageData.content === 'string') {
+              existingContent = JSON.parse(targetPageData.content);
+            } else if (Array.isArray(targetPageData.content)) {
+              existingContent = targetPageData.content;
+            }
+          } catch (error) {
+            console.error(" Error parsing content:", error);
+            existingContent = [];
+          }
+          
+          // Append content
+          const updatedContent = [
+            ...existingContent,
+            { type: 'paragraph', children: [{ text: '' }] }, // Empty line
+            { type: 'paragraph', children: [{ text: contentToAdd }] }
+          ];
+          
+          // Update the page
+          await set(ref(db, `pages/${pageId}/content`), JSON.stringify(updatedContent));
+          await set(ref(db, `pages/${pageId}/lastModified`), new Date().toISOString());
+          
+          console.log(" Content appended successfully");
+        } else {
+          // Page doesn't exist, create it
+          console.log(" Page doesn't exist, creating new page");
+          await set(targetPageRef, newPageData);
+          console.log(" New page created successfully");
+        }
         
         // Close dialog and show success
         onClose();
-        toast.success(`Added to "${targetPageData.title}"`);
+        toast.success(`Added to "${pageTitle}"`);
         
         // Navigate to the page
-        const navUrl = `/pages/${targetPageKey}?refresh=${Date.now()}`;
+        const navUrl = `/pages/${pageId}?refresh=${Date.now()}`;
         console.log(" Navigating to:", navUrl);
         window.location.href = navUrl;
       } catch (error) {
