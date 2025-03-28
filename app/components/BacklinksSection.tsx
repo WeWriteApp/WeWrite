@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { findBacklinks, findBacklinksWithFirestore } from "../firebase/database";
+import { findBacklinks, findBacklinksWithFirestore, findBacklinksSimple } from "../firebase/database";
 import { Loader, ExternalLink } from "lucide-react";
 import PageList, { Page } from "./PageList";
 import { Button } from "./ui/button";
@@ -58,19 +58,25 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
       try {
         console.log(`[BacklinksSection] Loading backlinks for page ${pageId}`);
         
-        // First try with Firestore implementation
-        let links = await findBacklinksWithFirestore(pageId);
+        // Use the simplest, most direct implementation first
+        let links = await findBacklinksSimple(pageId);
         
-        // If no results, fall back to original implementation
+        // If no results from simple approach, try Firestore
         if (!links || links.length === 0) {
-          console.log("[BacklinksSection] No backlinks found with Firestore, trying RTDB...");
-          links = await findBacklinks(pageId);
+          console.log("[BacklinksSection] No backlinks found with simple method, trying Firestore...");
+          links = await findBacklinksWithFirestore(pageId);
+          
+          // If still no results, try RTDB
+          if (!links || links.length === 0) {
+            console.log("[BacklinksSection] No backlinks found with Firestore, trying RTDB...");
+            links = await findBacklinks(pageId);
+          }
         }
         
         console.log("[BacklinksSection] Backlinks loaded:", JSON.stringify(links, null, 2));
         
         if (!links || links.length === 0) {
-          console.log("[BacklinksSection] No backlinks found with either method");
+          console.log("[BacklinksSection] No backlinks found with any method");
           // If the real methods don't return anything, check if we should use test data
           if (useTestData) {
             console.log("[BacklinksSection] Using test backlinks data");
@@ -82,22 +88,22 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
           return;
         }
         
-        // Convert to the format expected by PageList
+        // Convert to the format expected by PageList - ensure all required fields are present
         const formattedLinks: Page[] = links.map(link => ({
           id: link.id,
           title: link.title || "Untitled Page",
-          isPublic: link.isPublic || true, 
+          isPublic: typeof link.isPublic === 'boolean' ? link.isPublic : true, 
           userId: link.userId || "",
-          lastModified: link.lastModified,
-          createdAt: link.lastModified || new Date().toISOString(),
-          authorName: "" 
+          lastModified: link.lastModified || "",
+          createdAt: link.createdAt || link.lastModified || new Date().toISOString(),
+          authorName: ""  // Required by Page interface but not used in wrapped mode
         }));
         
-        console.log("[BacklinksSection] Formatted links:", JSON.stringify(formattedLinks, null, 2));
+        console.log("[BacklinksSection] Formatted links for UI:", JSON.stringify(formattedLinks, null, 2));
         setBacklinks(formattedLinks);
       } catch (error) {
         console.error("[BacklinksSection] Error loading backlinks:", error);
-        setError("Failed to load backlinks");
+        setError(`Failed to load backlinks: ${error.message || "Unknown error"}`);
         
         // On error, optionally use test data
         if (useTestData) {

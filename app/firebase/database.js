@@ -1305,3 +1305,80 @@ function searchForPageLinks(content, pageId) {
   
   return false;
 }
+
+// Simple and direct implementation of backlinks
+export async function findBacklinksSimple(pageId) {
+  try {
+    console.log("[findBacklinksSimple] Starting search for page:", pageId);
+    
+    if (!pageId) {
+      console.error("[findBacklinksSimple] No pageId provided");
+      return [];
+    }
+    
+    // Use Firestore for querying
+    const pagesCollection = collection(db, 'pages');
+    const querySnapshot = await getDocs(pagesCollection);
+    
+    if (querySnapshot.empty) {
+      console.log("[findBacklinksSimple] No pages found in database");
+      return [];
+    }
+    
+    const backlinks = [];
+    
+    // Simple approach: just look for the page ID in the content as a string
+    querySnapshot.forEach((doc) => {
+      const page = doc.data();
+      const id = doc.id;
+      
+      // Skip the page itself
+      if (id === pageId) {
+        return;
+      }
+      
+      // Skip pages without content
+      if (!page.content) {
+        return;
+      }
+      
+      const contentString = typeof page.content === 'string' 
+        ? page.content 
+        : JSON.stringify(page.content);
+      
+      // Search for the page ID or paths that might contain it
+      const searchTerms = [
+        pageId,
+        `/pages/${pageId}`,
+        `pages/${pageId}`
+      ];
+      
+      for (const term of searchTerms) {
+        if (contentString.includes(term)) {
+          console.log(`[findBacklinksSimple] Found backlink in ${id}: ${page.title}`);
+          
+          // Successfully found a backlink - create a properly formatted object
+          backlinks.push({
+            id,
+            title: page.title || 'Untitled Page',
+            lastModified: page.lastModified || null,
+            userId: page.userId || null,
+            isPublic: page.isPublic || false,
+            createdAt: page.createdAt || page.lastModified || new Date().toISOString()
+          });
+          
+          // Break the loop once we've found a match
+          break;
+        }
+      }
+    });
+    
+    console.log(`[findBacklinksSimple] Found ${backlinks.length} backlinks for ${pageId}:`);
+    console.log(JSON.stringify(backlinks, null, 2));
+    
+    return backlinks;
+  } catch (error) {
+    console.error("[findBacklinksSimple] Error:", error);
+    return [];
+  }
+}
