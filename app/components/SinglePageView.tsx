@@ -6,7 +6,6 @@ import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
 import { RecentPagesContext } from "../contexts/RecentPagesContext";
 import { useLineSettings } from "../contexts/LineSettingsContext";
-import { PageProvider } from "../contexts/PageContext";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
 import PageHeader from "./PageHeader";
@@ -17,7 +16,21 @@ import TextView from "./TextView";
 import BacklinksSection from "./BacklinksSection";
 import { Loader, AlertTriangle } from "lucide-react";
 import Head from "next/head";
-import { Page } from "../types";
+
+// Define Page interface directly to avoid import issues
+interface Page {
+  id: string;
+  title: string;
+  isPublic: boolean;
+  userId: string;
+  username?: string;
+  authorName?: string;
+  lastModified?: string;
+  createdAt: string;
+  groupId?: string;
+  groupName?: string;
+  content?: any[];
+}
 
 interface SinglePageViewProps {
   params: {
@@ -36,9 +49,6 @@ interface SinglePageViewProps {
  * - Keyboard shortcuts for navigation and editing
  * - Page interactions through the PageFooter component
  * - Backlinks tracking and display
- * 
- * The component uses several context providers:
- * - PageProvider: For sharing page data with child components
  */
 function SinglePageView({ params }: SinglePageViewProps) {
   const [page, setPage] = useState<Page | null>(null);
@@ -128,75 +138,86 @@ function SinglePageView({ params }: SinglePageViewProps) {
     return () => unsubscribe();
   }, [params?.id, addRecentPage]);
 
+  const handleRenderComplete = () => {
+    // Placeholder function for TextView
+    console.log('Page render complete');
+  };
+
+  // Use a simple div as container since PageProvider needs specific props
   return (
-    <PageProvider value={{ page, isEditing, setIsEditing }}>
-      <div className="min-h-screen bg-background">
-        <Head>
-          <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
-        </Head>
+    <div className="min-h-screen bg-background">
+      <Head>
+        <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
+      </Head>
 
-        {/* Page Content */}
-        <div className="container max-w-4xl mx-auto px-4 pb-32">
-          {isLoading ? (
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <Loader className="w-6 h-6 animate-spin" />
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-              <AlertTriangle className="w-12 h-12 text-destructive" />
-              <p className="text-lg font-medium text-destructive">{error}</p>
-            </div>
-          ) : isDeleted ? (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-              <AlertTriangle className="w-12 h-12 text-destructive" />
-              <p className="text-lg font-medium">This page has been deleted</p>
-            </div>
-          ) : (
-            <>
-              {/* Page Header */}
-              <PageHeader 
+      {/* Page Content */}
+      <div className="container max-w-4xl mx-auto px-4 pb-32">
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader className="w-6 h-6 animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+            <AlertTriangle className="w-12 h-12 text-destructive" />
+            <p className="text-lg font-medium text-destructive">{error}</p>
+          </div>
+        ) : isDeleted ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+            <AlertTriangle className="w-12 h-12 text-destructive" />
+            <p className="text-lg font-medium">This page has been deleted</p>
+          </div>
+        ) : (
+          <>
+            {/* Page Header */}
+            <PageHeader 
+              title={title || ''}
+              username={page?.username}
+              userId={page?.userId}
+              isLoading={false}
+              groupId={groupId || undefined}
+              groupName={groupName || undefined}
+            />
+
+            {/* Editor or TextView */}
+            {isEditing ? (
+              <EditPage 
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                page={page}
+                current={editorState}
                 title={title || ''}
-                isPublic={isPublic}
-                isEditing={isEditing}
-                groupName={groupName}
-                username={page?.username}
-                lastModified={page?.lastModified}
+                setTitle={setTitle}
+                editorError={null}
               />
-
-              {/* Editor or TextView */}
-              {isEditing ? (
-                <EditPage 
-                  pageId={params.id || ''}
-                  initialContent={editorState}
-                  onSave={() => setIsEditing(false)}
-                  onCancel={() => setIsEditing(false)}
-                />
-              ) : (
-                <TextView content={editorState} />
-              )}
-
-              {/* Backlinks Section */}
-              {!isEditing && params.id && (
-                <BacklinksSection pageId={params.id} />
-              )}
-
-              {/* Page Footer */}
-              <PageFooter
-                pageId={params.id || ''}
-                isPublic={isPublic}
-                isEditing={isEditing}
-                onEdit={() => setIsEditing(true)}
-                scrollDirection={scrollDirection}
-                isScrolled={isScrolled}
+            ) : (
+              <TextView 
+                content={editorState} 
+                viewMode={lineMode}
+                onRenderComplete={handleRenderComplete}
               />
-            </>
-          )}
-        </div>
+            )}
 
-        {/* Site Footer */}
-        <SiteFooter />
+            {/* Backlinks Section */}
+            {!isEditing && params.id && (
+              <BacklinksSection pageId={params.id} />
+            )}
+
+            {/* Page Footer */}
+            <PageFooter
+              pageId={params.id || ''}
+              isPublic={isPublic}
+              isEditing={isEditing}
+              onEdit={() => setIsEditing(true)}
+              scrollDirection={scrollDirection}
+              isScrolled={isScrolled}
+            />
+          </>
+        )}
       </div>
-    </PageProvider>
+
+      {/* Site Footer */}
+      <SiteFooter className="mt-auto" />
+    </div>
   );
 }
 
