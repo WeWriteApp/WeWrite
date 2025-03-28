@@ -542,12 +542,14 @@ export const updatePage = async (pageId, data) => {
   }
 }
 
+// Extract links from Slate editor nodes
 function extractLinksFromNodes(nodes) {
   let links = [];
 
   function traverse(node) {
     // Check if the node is a link
     if (node.type === 'link' && node.url) {
+      console.log("Found link:", node.url);
       links.push(node.url);
     }
 
@@ -558,150 +560,116 @@ function extractLinksFromNodes(nodes) {
   }
 
   // Start traversal
-  nodes.forEach(traverse);
+  if (Array.isArray(nodes)) {
+    nodes.forEach(traverse);
+  }
 
   return links;
 }
 
-export const getUsernameByEmail = async (email) => {
+// Find pages that link to a specific page
+export async function findBacklinks(pageId) {
   try {
-    const q = query(collection(db, "users"), where("email", "==", email), limit(1));
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) {
-      return null;
-    }
-    const userDoc = querySnapshot.docs[0];
-    return userDoc.data().username;
-  } catch (error) {
-    console.error("Error getting username:", error);
-    return null;
-  }
-};
-
-// Get page statistics including active donors, monthly income, and total views
-export const getPageStats = async (pageId) => {
-  try {
-    if (!pageId) return null;
+    console.log("Finding backlinks for page:", pageId);
     
-    const pageRef = doc(db, "pages", pageId);
-    const pageSnapshot = await getDoc(pageRef);
-    
-    if (!pageSnapshot.exists()) {
-      return null;
+    if (!pageId) {
+      console.error("No pageId provided to findBacklinks");
+      return [];
     }
     
-    const pageData = pageSnapshot.data();
+    // Use the rtdb instance directly
+    const pagesRef = ref(rtdb, 'pages');
     
-    // Here we would fetch additional statistics from other subcollections
-    // For now, return the basic stats from the page document
-    return {
-      totalPledged: pageData.totalPledged || 0,
-      pledgeCount: pageData.pledgeCount || 0,
-      views: pageData.views || 0,
-      lastModified: pageData.lastModified,
-      // Add more stats as needed
-    };
-  } catch (error) {
-    console.error("Error getting page stats:", error);
-    return null;
-  }
-};
-
-// Get pages that the user has edit access to (they own or are in groups they belong to)
-export const getEditablePagesByUser = async (userId, searchQuery = "") => {
-  try {
-    if (!userId) return [];
-    
-    let pages = [];
-    
-    // First get all pages owned by the user
-    const userPagesQuery = query(
-      collection(db, "pages"),
-      where("userId", "==", userId),
-      orderBy("lastModified", "desc"),
-      limit(50)
-    );
-    
-    const userPagesSnapshot = await getDocs(userPagesQuery);
-    
-    // Add user's own pages to the result
-    userPagesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      pages.push({
-        id: doc.id,
-        ...data
-      });
-    });
-    
-    // Get all groups the user is a member of
-    const groupsRef = ref(rtdb, 'groups');
-    const groupsSnapshot = await get(groupsRef);
-    
-    if (groupsSnapshot.exists()) {
-      const groups = groupsSnapshot.val();
+    try {
+      const pagesSnapshot = await get(pagesRef);
       
-      // Find groups where user is a member
-      const userGroups = Object.entries(groups)
-        .filter(([_, groupData]) => 
-          groupData.members && groupData.members[userId]
-        )
-        .map(([groupId, groupData]) => ({
-          id: groupId,
-          ...groupData
-        }));
+      if (!pagesSnapshot.exists()) {
+        console.log("No pages found in database");
+        return [];
+      }
       
-      // For each group, get all pages
-      for (const group of userGroups) {
-        if (group.pages) {
-          // Get detailed page data for each page in the group
-          const groupPageIds = Object.keys(group.pages);
-          
-          for (const pageId of groupPageIds) {
-            // Check if we already have this page (user might own pages in their groups)
-            if (!pages.some(p => p.id === pageId)) {
-              // Get the page data from Firestore
-              const pageRef = doc(db, "pages", pageId);
-              const pageSnap = await getDoc(pageRef);
-              
-              if (pageSnap.exists()) {
-                const pageData = pageSnap.data();
-                pages.push({
-                  id: pageId,
-                  ...pageData,
-                  // Add group information
-                  groupId: group.id,
-                  groupName: group.name
-                });
-              }
-            }
+      const pages = pagesSnapshot.val();
+      console.log(`Scanning ${Object.keys(pages).length} pages for backlinks`);
+      
+      const backlinks = [];
+      
+      for (const [id, page] of Object.entries(pages)) {
+        // Skip the page itself
+        if (id === pageId) continue;
+        
+        // Skip pages without content
+        if (!page.content) {
+          continue;
+        }
+        
+        // Parse the content
+        let content = [];
+        try {
+          if (typeof page.content === 'string') {
+            content = JSON.parse(page.content);
+          } else if (Array.isArray(page.content)) {
+            content = page.content;
           }
+        } catch (error) {
+          console.error(`Error parsing content for page ${id}:`, error);
+          continue;
+        }
+        
+        // Extract links from the content
+        const links = extractLinksFromNodes(content);
+        
+        if (links.length > 0) {
+          console.log(`Page ${id} has ${links.length} links:`, links);
+        }
+        
+        // Check if any of the links point to the target page
+        const hasBacklink = links.some(link => {
+          // Handle all possible link formats
+          const patterns = [
+            `/pages/${pageId}`,
+            `pages/${pageId}`,
+            `/page/${pageId}`,
+            `page/${pageId}`
+          ];
+          
+          return patterns.some(pattern => {
+            if (link.includes(pattern)) {
+              console.log(`Found backlink in page ${id} with link ${link} matching pattern ${pattern}`);
+              return true;
+            }
+            return false;
+          });
+        });
+        
+        if (hasBacklink) {
+          console.log(`Found backlink in page ${id}: ${page.title}`);
+          backlinks.push({
+            id,
+            title: page.title || 'Untitled Page',
+            lastModified: page.lastModified || null,
+            userId: page.userId || null
+          });
         }
       }
-    }
-    
-    // Sort all pages by last modified date
-    pages.sort((a, b) => {
-      const dateA = new Date(a.lastModified || a.createdAt || 0);
-      const dateB = new Date(b.lastModified || b.createdAt || 0);
-      return dateB - dateA; // Descending order (newest first)
-    });
-    
-    // Client-side filtering for search
-    if (searchQuery) {
-      const normalizedQuery = searchQuery.toLowerCase();
-      pages = pages.filter(page => {
-        const normalizedTitle = page.title.toLowerCase();
-        return normalizedTitle.includes(normalizedQuery);
+      
+      // Sort by lastModified (newest first)
+      backlinks.sort((a, b) => {
+        if (!a.lastModified) return 1;
+        if (!b.lastModified) return -1;
+        return new Date(b.lastModified) - new Date(a.lastModified);
       });
+      
+      console.log(`Found ${backlinks.length} backlinks for page ${pageId}`);
+      return backlinks;
+    } catch (dbError) {
+      console.error("Database error in findBacklinks:", dbError);
+      throw dbError;
     }
-    
-    console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
-    return pages;
   } catch (error) {
-    console.error("Error getting editable pages:", error);
+    console.error('Error finding backlinks:', error);
     return [];
   }
-};
+}
 
 // Add a new function to fetch only page metadata (title, lastModified, etc.)
 export async function getPageMetadata(pageId) {
@@ -934,7 +902,8 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
       pageQuery = query(
         pagesRef,
         where("userId", "==", userId),
-        orderBy("lastModified", "desc")
+        orderBy("lastModified", "desc"),
+        limit(50)
       );
     } else {
       // If viewing someone else's profile, only get public pages
@@ -942,7 +911,8 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
         pagesRef,
         where("userId", "==", userId),
         where("isPublic", "==", true),
-        orderBy("lastModified", "desc")
+        orderBy("lastModified", "desc"),
+        limit(50)
       );
     }
     
@@ -957,6 +927,130 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
     });
     
     // Get pages from groups the user is a member of
+    const groupsRef = ref(rtdb, 'groups');
+    const groupsSnapshot = await get(groupsRef);
+    
+    if (groupsSnapshot.exists()) {
+      const groups = groupsSnapshot.val();
+      
+      // Find groups where user is a member
+      const userGroups = Object.entries(groups)
+        .filter(([_, groupData]) => 
+          groupData.members && groupData.members[userId]
+        )
+        .map(([groupId, groupData]) => ({
+          id: groupId,
+          ...groupData
+        }));
+      
+      // For each group, get all pages
+      for (const group of userGroups) {
+        if (group.pages) {
+          // Get detailed page data for each page in the group
+          const groupPageIds = Object.keys(group.pages);
+          
+          for (const pageId of groupPageIds) {
+            // Check if we already have this page (user might own pages in their groups)
+            if (!pages.some(p => p.id === pageId)) {
+              // Get the page data from Firestore
+              const pageRef = doc(db, "pages", pageId);
+              const pageSnap = await getDoc(pageRef);
+              
+              if (pageSnap.exists()) {
+                const pageData = pageSnap.data();
+                pages.push({
+                  id: pageId,
+                  ...pageData,
+                  // Add group information
+                  groupId: group.id,
+                  groupName: group.name
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Sort all pages by last modified date
+    pages.sort((a, b) => {
+      const dateA = new Date(a.lastModified || a.createdAt || 0);
+      const dateB = new Date(b.lastModified || b.createdAt || 0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    // Client-side filtering for search
+    if (searchQuery) {
+      const normalizedQuery = searchQuery.toLowerCase();
+      pages = pages.filter(page => {
+        const normalizedTitle = page.title.toLowerCase();
+        return normalizedTitle.includes(normalizedQuery);
+      });
+    }
+    
+    console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
+    return pages;
+  } catch (error) {
+    console.error("Error getting user pages:", error);
+    return [];
+  }
+};
+
+// Get page statistics including active donors, monthly income, and total views
+export const getPageStats = async (pageId) => {
+  try {
+    if (!pageId) return null;
+    
+    const pageRef = doc(db, "pages", pageId);
+    const pageSnapshot = await getDoc(pageRef);
+    
+    if (!pageSnapshot.exists()) {
+      return null;
+    }
+    
+    const pageData = pageSnapshot.data();
+    
+    // Here we would fetch additional statistics from other subcollections
+    // For now, return the basic stats from the page document
+    return {
+      totalPledged: pageData.totalPledged || 0,
+      pledgeCount: pageData.pledgeCount || 0,
+      views: pageData.views || 0,
+      lastModified: pageData.lastModified,
+      // Add more stats as needed
+    };
+  } catch (error) {
+    console.error("Error getting page stats:", error);
+    return null;
+  }
+};
+
+// Get pages that the user has edit access to (they own or are in groups they belong to)
+export const getEditablePagesByUser = async (userId, searchQuery = "") => {
+  try {
+    if (!userId) return [];
+    
+    let pages = [];
+    
+    // First get all pages owned by the user
+    const userPagesQuery = query(
+      collection(db, "pages"),
+      where("userId", "==", userId),
+      orderBy("lastModified", "desc"),
+      limit(50)
+    );
+    
+    const userPagesSnapshot = await getDocs(userPagesQuery);
+    
+    // Add user's own pages to the result
+    userPagesSnapshot.forEach((doc) => {
+      pages.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    // Get all groups the user is a member of
     const groupsRef = ref(rtdb, 'groups');
     const groupsSnapshot = await get(groupsRef);
     
@@ -1018,9 +1112,19 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
       return dateB - dateA; // Descending order (newest first)
     });
     
+    // Client-side filtering for search
+    if (searchQuery) {
+      const normalizedQuery = searchQuery.toLowerCase();
+      pages = pages.filter(page => {
+        const normalizedTitle = page.title.toLowerCase();
+        return normalizedTitle.includes(normalizedQuery);
+      });
+    }
+    
+    console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
     return pages;
   } catch (error) {
-    console.error("Error getting user pages:", error);
+    console.error("Error getting editable pages:", error);
     return [];
   }
 };
@@ -1075,15 +1179,28 @@ export async function findBacklinks(pageId) {
         
         // Extract links from the content
         const links = extractLinksFromNodes(content);
-        console.log(`Page ${id} has ${links.length} links`);
+        
+        if (links.length > 0) {
+          console.log(`Page ${id} has ${links.length} links:`, links);
+        }
         
         // Check if any of the links point to the target page
         const hasBacklink = links.some(link => {
-          // Handle both relative and absolute URLs
-          if (link.includes(`/pages/${pageId}`) || link === `/pages/${pageId}`) {
-            return true;
-          }
-          return false;
+          // Handle all possible link formats
+          const patterns = [
+            `/pages/${pageId}`,
+            `pages/${pageId}`,
+            `/page/${pageId}`,
+            `page/${pageId}`
+          ];
+          
+          return patterns.some(pattern => {
+            if (link.includes(pattern)) {
+              console.log(`Found backlink in page ${id} with link ${link} matching pattern ${pattern}`);
+              return true;
+            }
+            return false;
+          });
         });
         
         if (hasBacklink) {

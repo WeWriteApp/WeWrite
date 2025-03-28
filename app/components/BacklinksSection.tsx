@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { findBacklinks } from "../firebase/database";
 import { Loader } from "lucide-react";
+import PageList from "./PageList";
 
 interface Backlink {
   id: string;
@@ -31,7 +31,19 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
       try {
         console.log(`Loading backlinks for page ${pageId}`);
         const links = await findBacklinks(pageId);
-        setBacklinks(links);
+        console.log("Backlinks loaded:", links);
+        
+        // Convert to the format expected by PageList
+        const formattedLinks = links.map(link => ({
+          id: link.id,
+          title: link.title || "Untitled Page",
+          isPublic: true, // Assume public since we can see it
+          userId: link.userId || "",
+          lastModified: link.lastModified,
+          createdAt: link.lastModified || new Date().toISOString()
+        }));
+        
+        setBacklinks(formattedLinks);
       } catch (error) {
         console.error("Error loading backlinks:", error);
         setError("Failed to load backlinks");
@@ -43,49 +55,32 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
     loadBacklinks();
   }, [pageId]);
 
-  if (loading) {
-    return (
-      <div className="mt-6 border-t border-border pt-4">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">What links here</h3>
-        <div className="flex items-center justify-center py-4">
-          <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="mt-6 border-t border-border pt-4">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">What links here</h3>
-        <p className="text-sm text-red-500">{error}</p>
-      </div>
-    );
-  }
-
-  if (backlinks.length === 0) {
-    return (
-      <div className="mt-6 border-t border-border pt-4">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2">What links here</h3>
-        <p className="text-sm text-muted-foreground">No pages link to this page yet.</p>
-      </div>
-    );
-  }
+  const BacklinksEmptyState = () => (
+    <div className="text-center py-4">
+      <p className="text-sm text-muted-foreground">No pages link to this page yet.</p>
+    </div>
+  );
 
   return (
-    <div className="mt-6 border-t border-border pt-4">
-      <h3 className="text-sm font-medium text-muted-foreground mb-2">What links here</h3>
-      <div className="flex flex-wrap gap-2">
-        {backlinks.map((link) => (
-          <Link 
-            key={link.id} 
-            href={`/pages/${link.id}`}
-            className="text-sm px-2 py-1 bg-muted hover:bg-muted/80 rounded-md text-foreground"
-          >
-            {link.title || "Untitled Page"}
-          </Link>
-        ))}
-      </div>
+    <div className="mt-6 border-t border-border pt-4 pb-6">
+      <h3 className="text-sm font-medium text-muted-foreground mb-2">
+        What links here {backlinks.length > 0 && `(${backlinks.length})`}
+      </h3>
+      
+      {error ? (
+        <p className="text-sm text-red-500 py-2">{error}</p>
+      ) : (
+        <PageList 
+          pages={backlinks}
+          mode="wrapped"
+          loading={loading}
+          emptyState={<BacklinksEmptyState />}
+          maxItems={10}
+          showViewAll={backlinks.length > 10}
+          viewAllHref={`/pages/${pageId}/backlinks`}
+          viewAllText="View all backlinks"
+        />
+      )}
     </div>
   );
 }
