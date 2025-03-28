@@ -231,17 +231,21 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Get the source page content from pageToAdd prop
-        if (!pageToAdd) {
-          throw new Error("No source page data available");
+        // Get the source page content
+        const sourcePageRef = ref(db, `pages/${pageToAdd.id}`);
+        const sourcePageSnap = await get(sourcePageRef);
+        
+        if (!sourcePageSnap.exists()) {
+          throw new Error("Source page not found in database");
         }
         
-        console.log("🔍 Source page:", pageToAdd);
+        const sourcePageData = sourcePageSnap.val();
+        console.log("🔍 Source page data:", sourcePageData);
         
         // Parse the source page content
         let sourceContent = [];
         try {
-          const rawContent = pageToAdd.content;
+          const rawContent = sourcePageData.content;
           console.log("🔍 Raw source content:", rawContent);
           
           if (typeof rawContent === 'string') {
@@ -249,6 +253,11 @@ export function PageActions({
           } else if (Array.isArray(rawContent)) {
             sourceContent = rawContent;
           }
+          
+          if (!Array.isArray(sourceContent)) {
+            throw new Error("Invalid source content format");
+          }
+          
           console.log("🔍 Parsed source content:", sourceContent);
         } catch (error) {
           console.error("🔍 Error parsing source content:", error);
@@ -273,6 +282,11 @@ export function PageActions({
             } else if (Array.isArray(rawTargetContent)) {
               existingContent = rawTargetContent;
             }
+            
+            if (!Array.isArray(existingContent)) {
+              throw new Error("Invalid target content format");
+            }
+            
             console.log("🔍 Parsed target content:", existingContent);
           } catch (error) {
             console.error("🔍 Error parsing target content:", error);
@@ -283,8 +297,12 @@ export function PageActions({
           const updatedContent = [...existingContent, ...sourceContent];
           console.log("🔍 Updated content:", updatedContent);
           
-          await set(ref(db, `pages/${selectedPageId}/content`), JSON.stringify(updatedContent));
-          await set(ref(db, `pages/${selectedPageId}/lastModified`), new Date().toISOString());
+          // Update the target page
+          await set(targetPageRef, {
+            ...targetPageData,
+            content: JSON.stringify(updatedContent),
+            lastModified: new Date().toISOString()
+          });
           
           console.log("🔍 Content appended successfully");
         } else {
