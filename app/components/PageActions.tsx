@@ -227,6 +227,11 @@ export function PageActions({
         return;
       }
       
+      if (!content || !Array.isArray(content) || content.length === 0) {
+        toast.error("No content to add");
+        return;
+      }
+      
       console.log("🔍 Starting Add to Page operation");
       console.log("🔍 Selected target page:", selectedPage);
       console.log("🔍 Selected target ID:", selectedPageId);
@@ -237,26 +242,17 @@ export function PageActions({
       try {
         const db = getDatabase(app);
         
-        // Get the source content from the content prop
-        let sourceContent = content;
+        // Use the Slate editor content directly
+        const sourceContent = content.map(node => {
+          // Ensure each node has the required Slate structure
+          return {
+            type: node.type || 'paragraph',
+            children: node.children || [],
+            ...node // Keep any other properties
+          };
+        });
         
-        // If content is a string, try to parse it
-        if (typeof content === 'string') {
-          try {
-            sourceContent = JSON.parse(content);
-          } catch (error) {
-            console.error("🔍 Error parsing string content:", error);
-            throw new Error("Invalid source content format");
-          }
-        }
-        
-        // Validate that we have valid content
-        if (!Array.isArray(sourceContent) || sourceContent.length === 0) {
-          console.error("🔍 Invalid source content:", sourceContent);
-          throw new Error("Source page content is invalid or empty");
-        }
-        
-        console.log("🔍 Source content to add:", sourceContent);
+        console.log("🔍 Processed source content:", sourceContent);
         
         const targetPageRef = ref(db, `pages/${selectedPageId}`);
         const targetPageSnap = await get(targetPageRef);
