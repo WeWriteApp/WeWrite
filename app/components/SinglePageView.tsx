@@ -1,12 +1,11 @@
 "use client";
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, createContext } from "react";
 import { useParams } from "next/navigation";
 import { listenToPageById } from "../firebase/database";
 import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
 import { RecentPagesContext, useRecentPages } from "../contexts/RecentPagesContext";
 import { useLineSettings } from "../contexts/LineSettingsContext";
-import { PageProvider } from "../contexts/PageContext";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
 import PageHeader from "./PageHeader";
@@ -17,6 +16,30 @@ import TextView from "./TextView";
 import BacklinksSection from "./BacklinksSection";
 import { Loader, AlertTriangle } from "lucide-react";
 import Head from "next/head";
+
+// Create a local version of PageContext for this component
+// This avoids the TypeScript error with the JS version
+const PageContext = createContext({
+  page: null,
+  setPage: (page: any) => {},
+  isEditMode: false,
+  setIsEditMode: (isEditMode: boolean) => {}
+});
+
+export function CustomPageProvider({ children, pageData, isEditing, setIsEditing }: any) {
+  return (
+    <PageContext.Provider 
+      value={{
+        page: pageData,
+        setPage: () => {}, // No-op since we handle this in SinglePageView
+        isEditMode: isEditing,
+        setIsEditMode: setIsEditing
+      }}
+    >
+      {children}
+    </PageContext.Provider>
+  );
+}
 
 // Define Page interface directly to avoid import issues
 interface Page {
@@ -153,9 +176,9 @@ function SinglePageView({ params }: SinglePageViewProps) {
     console.log('Page render complete');
   };
 
-  // Wrap the entire component in PageProvider with the correct values
+  // Wrap the entire component in our custom PageProvider with the correct values
   return (
-    <PageProvider>
+    <CustomPageProvider pageData={page} isEditing={isEditing} setIsEditing={setIsEditing}>
       <div className="min-h-screen bg-background">
         <Head>
           <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
@@ -202,9 +225,10 @@ function SinglePageView({ params }: SinglePageViewProps) {
                 />
               ) : (
                 <TextView 
-                  content={editorState} 
+                  content={editorState || []}
                   viewMode={lineMode}
                   onRenderComplete={handleRenderComplete}
+                  isSearch={false}
                 />
               )}
 
@@ -229,7 +253,7 @@ function SinglePageView({ params }: SinglePageViewProps) {
         {/* Site Footer */}
         <SiteFooter className="mt-auto" />
       </div>
-    </PageProvider>
+    </CustomPageProvider>
   );
 }
 
