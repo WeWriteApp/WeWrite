@@ -470,11 +470,11 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
       </motion.span>
       <SecureSyntaxHighlighter
         language={codeLanguage}
-        style={{
+        customStyle={{
           borderRadius: '0.5rem',
           padding: '1rem',
           fontSize: '0.875rem',
-          lineHeight: 1.7,
+          lineHeight: 1.5
         }}
       >
         {node.content || (node.children && node.children.map(child => child.text).join('\n')) || ''}
