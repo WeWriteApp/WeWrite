@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useContext, createContext } from "react";
 import { useParams } from "next/navigation";
 import { listenToPageById } from "../firebase/database";
-import { updateBacklinks } from "../firebase/backlinks";
+// import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
 import { RecentPagesContext, useRecentPages } from "../contexts/RecentPagesContext";
 import { useLineSettings } from "../contexts/LineSettingsContext";
@@ -13,7 +13,7 @@ import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import EditPage from "./EditPage";
 import TextView from "./TextView";
-import BacklinksSection from "./BacklinksSection";
+// import BacklinksSection from "./BacklinksSection";
 import { Loader, AlertTriangle } from "lucide-react";
 import Head from "next/head";
 
@@ -160,9 +160,9 @@ function SinglePageView({ params }: SinglePageViewProps) {
         setTitle(pageData.title || 'Untitled');
         
         // Update backlinks when content changes
-        if (pageData.content) {
-          await updateBacklinks(params.id, pageData.content);
-        }
+        // if (pageData.content) {
+        //   await updateBacklinks(params.id, pageData.content);
+        // }
         
         // Add to recent pages (if context exists)
         if (recentPagesContext && typeof recentPagesContext.addRecentPage === 'function') {
@@ -247,9 +247,9 @@ function SinglePageView({ params }: SinglePageViewProps) {
               )}
 
               {/* Backlinks Section */}
-              {!isEditing && params.id && (
+              {/* !isEditing && params.id && (
                 <BacklinksSection pageId={params.id} />
-              )}
+              ) */}
 
               {/* Page Footer */}
               <PageFooter
