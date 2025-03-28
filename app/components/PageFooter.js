@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { PageActions } from "./PageActions";
+import { CopyIcon, ReplyIcon, AddIcon } from "./icons";
 
 /**
  * PageFooter Component
@@ -25,6 +27,7 @@ import { PageActions } from "./PageActions";
  * @param {Function} setIsEditing - Function to toggle edit mode
  */
 export default function PageFooter({ page, content, isOwner, isEditing, setIsEditing }) {
+  const router = useRouter();
   if (!page) return null;
   
   return (
