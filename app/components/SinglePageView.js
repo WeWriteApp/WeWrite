@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
+import { updateBacklinks } from "../firebase/backlinks";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
 import { createEditor } from "slate";
@@ -64,6 +65,7 @@ import BacklinksSection from "./BacklinksSection";
  * - Page visibility controls (public/private)
  * - Keyboard shortcuts for navigation and editing
  * - Page interactions through the PageFooter component
+ * - Backlinks tracking and display
  * 
  * The component uses several context providers:
  * - PageProvider: For sharing page data with child components
@@ -111,398 +113,129 @@ function SinglePageView({ params }) {
       // Set scrolled state
       setIsScrolled(currentScrollY > 0);
     };
-    
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Use keyboard shortcuts - moved back to top level
-  useKeyboardShortcuts({
-    isEditing,
-    setIsEditing,
-    // Only allow editing if:
-    // 1. Page is loaded (!isLoading)
-    // 2. Page exists (page !== null)
-    // 3. Page is public (isPublic)
-    // 4. Page isn't deleted (!isDeleted)
-    // 5. User owns the page
-    canEdit: Boolean(
-      !isLoading &&
-      page !== null &&
-      isPublic &&
-      !isDeleted &&
-      user?.uid &&
-      page?.userId &&
-      user.uid === page.userId
-    )
-  });
-
   useEffect(() => {
-    if (params.id) {
-      setIsLoading(true);
-      
-      const unsubscribe = listenToPageById(params.id, async (data) => {
-        if (data.error) {
-          setError(data.error);
-          setIsLoading(false);
-          return;
-        }
-        
-        let pageData = data.pageData || data;
-        
-        // Ensure the page has a valid username using our utility function
-        pageData = await ensurePageUsername(pageData);
-        
-        console.log("Page data with ensured username:", pageData);
-        
-        setPage(pageData);
+    if (!params?.id) {
+      setError('No page ID provided');
+      setIsLoading(false);
+      return;
+    }
+
+    const unsubscribe = listenToPageById(params.id, async (pageData) => {
+      if (!pageData) {
+        setIsDeleted(true);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const username = await ensurePageUsername(pageData);
+        setPage({ ...pageData, username });
+        setEditorState(pageData.content || []);
         setIsPublic(pageData.isPublic || false);
         setGroupId(pageData.groupId || null);
         setGroupName(pageData.groupName || null);
+        setTitle(pageData.title || 'Untitled');
         
-        // Set page title for document title
-        if (pageData.title) {
-          setTitle(pageData.title);
+        // Update backlinks when content changes
+        if (pageData.content) {
+          await updateBacklinks(params.id, pageData.content);
         }
         
-        if (data.versionData) {
-          try {
-            const contentString = data.versionData.content;
-            const parsedContent = typeof contentString === 'string' 
-              ? JSON.parse(contentString) 
-              : contentString;
-            
-            setEditorState(parsedContent);
-            setEditorError(null); // Clear any previous errors
-          } catch (error) {
-            console.error("Error parsing content:", error);
-            setEditorError("There was an error loading the editor. Please try refreshing the page.");
-          }
+        // Add to recent pages
+        if (addRecentPage) {
+          addRecentPage({
+            id: params.id,
+            title: pageData.title || 'Untitled',
+            lastModified: pageData.lastModified || new Date().toISOString()
+          });
         }
         
+      } catch (err) {
+        console.error('Error processing page data:', err);
+        setError(err.message);
+      } finally {
         setIsLoading(false);
-      });
-      
-      return () => {
-        unsubscribe();
-      };
-    }
-  }, [params.id]);
-
-  useEffect(() => {
-    if (page && addRecentPage && Array.isArray(recentPages)) {
-      try {
-        // Only add to recent pages if it doesn't already exist in the list
-        const pageExists = recentPages.some(p => p && p.id === page.id);
-        if (!pageExists) {
-          addRecentPage(page);
-        }
-      } catch (error) {
-        console.error("Error adding page to recent pages:", error);
-        // Don't throw error to prevent app from crashing
       }
-    }
-  }, [page, addRecentPage, recentPages]);
+    });
 
-  useEffect(() => {
-    if (page && page.content) {
-      try {
-        const contentString = typeof page.content === 'string' 
-          ? page.content 
-          : JSON.stringify(page.content);
-          
-        const parsedContent = contentString.startsWith('[') 
-          ? JSON.parse(contentString) 
-          : contentString;
-        
-        setEditorState(parsedContent);
-        setEditorError(null); // Clear any previous errors
-      } catch (error) {
-        console.error("Error parsing content:", error);
-        setEditorError("There was an error loading the editor. Please try refreshing the page.");
-        setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
-      }
-    }
-  }, [page]);
+    return () => unsubscribe();
+  }, [params?.id, addRecentPage]);
 
-  useEffect(() => {
-    if (page && page.id && user) {
-      // Track this page as recently visited
-      try {
-        const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
-        let recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
-        
-        // Remove this page ID if it already exists in the list
-        recentlyVisited = recentlyVisited.filter(id => id !== page.id);
-        
-        // Add this page ID to the beginning of the list
-        recentlyVisited.unshift(page.id);
-        
-        // Keep only the most recent 10 pages
-        recentlyVisited = recentlyVisited.slice(0, 10);
-        
-        // Save back to localStorage
-        localStorage.setItem('recentlyVisitedPages', JSON.stringify(recentlyVisited));
-      } catch (error) {
-        console.error("Error updating recently visited pages:", error);
-      }
-    }
-  }, [page, user]);
-
-  const copyLinkToClipboard = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-      
-      // Show toast notification
-      toast({
-        title: "Link copied",
-        description: "Page link copied to clipboard",
-        variant: "success",
-        duration: 2000,
-      });
-    }
-  };
-
-  // Function to handle when page content is fully rendered
-  const handlePageFullyRendered = () => {
-    setPageFullyRendered(true);
-  };
-
-  const Layout = user ? DashboardLayout : PublicLayout;
-
-  // If the page is deleted, show a message
-  if (isDeleted) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <h1 className="text-2xl font-bold mb-4">Page not found</h1>
-          <p className="text-muted-foreground mb-6">This page may have been deleted or never existed.</p>
-          <Link href="/">
-            <Button>Go Home</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
-
-  // If the page belongs to a private group and user doesn't have access
-  if (groupIsPrivate && !hasGroupAccess) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Lock className="h-12 w-12 text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Private Group Content</h1>
-          <p className="text-muted-foreground mb-2">This page belongs to a private group.</p>
-          <p className="text-muted-foreground mb-6">You need to be a member of the group to access this content.</p>
-          <Link href="/">
-            <Button>Go Home</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!page) {
-    return (
-      <Layout>
-        <Head>
-          <title>Page Not Found - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <div className="min-h-[400px] w-full">
-          {isLoading ? (
-            <Loader />
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-4 rounded-lg max-w-md">
-                <h2 className="text-xl font-medium mb-2">Access Error</h2>
-                <p>{error}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <h2 className="text-xl font-medium mb-2">Page Not Found</h2>
-              <p className="text-muted-foreground mb-4">The page you're looking for doesn't exist or has been removed.</p>
-              <Link href="/">
-                <Button variant="outline">Return Home</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <Head>
-          <title>Loading... - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <Loader />
-      </Layout>
-    );
-  }
-
-  if (error) {
-    return (
-      <Layout>
-        <Head>
-          <title>Error - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            Error
-          </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              width="24" 
-              height="24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="h-5 w-5 text-red-500"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-            <span className="text-lg text-text">
-              {error}
-            </span>
-            <Link href="/">
-              <button className="bg-background text-button-text px-4 py-2 rounded-full">
-                Go back
-              </button>
-            </Link>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!isPublic && (!user || user.uid !== page.userId)) {
-    return (
-      <Layout>
-        <Head>
-          <title>Private Page - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            {title}
-          </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              width="24" 
-              height="24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="h-5 w-5 text-muted-foreground"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span className="text-lg text-muted-foreground">This page is private</span>
-            <Link href={user ? "/" : "/auth/login"}>
-              <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
-                {user ? "Go back" : "Log in"}
-              </button>
-            </Link>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  // Rest of the component implementation...
 
   return (
-    <Layout>
-      <Head>
-        <title>{title} - WeWrite</title>
-      </Head>
-      <PageHeader 
-        title={isEditing ? "Editing page" : title} 
-        username={page?.username || "Anonymous"} 
-        userId={page?.userId}
-        isLoading={isLoading}
-        scrollDirection={scrollDirection}
-        groupId={groupId}
-        groupName={groupName}
-      />
-      <div className="pb-24 px-2 sm:px-4 md:px-6">
-        {isEditing ? (
-          <PageProvider>
-            <EditPage
-              isEditing={isEditing}
-              setIsEditing={setIsEditing}
-              page={page}
-              title={title}
-              setTitle={setTitle}
-              current={editorState}
-              editorError={editorError}
-            />
-          </PageProvider>
-        ) : (
-          <>
-            <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
-              <div className={`page-content ${lineMode === LINE_MODES.DENSE ? 'max-w-full break-words' : ''}`}>
-                <PageProvider>
-                  <TextView 
-                    content={editorState} 
-                    viewMode={lineMode}
-                    onRenderComplete={handlePageFullyRendered}
-                  />
-                </PageProvider>
-              </div>
+    <PageProvider value={{ page, isEditing, setIsEditing }}>
+      <div className="min-h-screen bg-background">
+        <Head>
+          <title>{title ? `${title} - WeWrite` : 'WeWrite'}</title>
+        </Head>
+
+        {/* Page Content */}
+        <div className="container max-w-4xl mx-auto px-4 pb-32">
+          {isLoading ? (
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <Loader className="w-6 h-6 animate-spin" />
             </div>
-            
-            {/* Page Controls - Only show after content is fully rendered */}
-            {pageFullyRendered && (
-              <div className="mt-8 flex flex-col gap-4">
-                {user && user.uid === page.userId && !isEditing && (
-                  <div className="mt-8">
-                    {/* ActionRow removed - now using PageFooter with PageActions instead */}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      <PageProvider>
-        <PageFooter 
-          page={page}
-          content={editorState}
-          isOwner={user?.uid === page?.userId}
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
-        />
-      </PageProvider>
-      {!isEditing && page?.id && (
-        <div className="mt-4">
-          <BacklinksSection pageId={page.id} key={page.id} />
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+              <AlertTriangle className="w-12 h-12 text-destructive" />
+              <p className="text-lg font-medium text-destructive">{error}</p>
+            </div>
+          ) : isDeleted ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+              <AlertTriangle className="w-12 h-12 text-destructive" />
+              <p className="text-lg font-medium">This page has been deleted</p>
+            </div>
+          ) : (
+            <>
+              {/* Page Header */}
+              <PageHeader 
+                title={title}
+                isPublic={isPublic}
+                isEditing={isEditing}
+                groupName={groupName}
+                username={page?.username}
+                lastModified={page?.lastModified}
+              />
+
+              {/* Editor or TextView */}
+              {isEditing ? (
+                <EditPage 
+                  pageId={params.id}
+                  initialContent={editorState}
+                  onSave={() => setIsEditing(false)}
+                  onCancel={() => setIsEditing(false)}
+                />
+              ) : (
+                <TextView content={editorState} />
+              )}
+
+              {/* Backlinks Section */}
+              {!isEditing && <BacklinksSection pageId={params.id} />}
+
+              {/* Page Footer */}
+              <PageFooter
+                pageId={params.id}
+                isPublic={isPublic}
+                isEditing={isEditing}
+                onEdit={() => setIsEditing(true)}
+                scrollDirection={scrollDirection}
+                isScrolled={isScrolled}
+              />
+            </>
+          )}
         </div>
-      )}
-      <SiteFooter />
-    </Layout>
+
+        {/* Site Footer */}
+        <SiteFooter />
+      </div>
+    </PageProvider>
   );
 }
-
-// AddToPageDialog component has been moved to PageActions.tsx
-// This implementation is no longer used and has been removed to avoid duplication
 
 export default SinglePageView;

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { findBacklinksSimple } from "../firebase/database";
+import { findBacklinks } from "../firebase/backlinks";
 import { Loader } from "lucide-react";
 import PageList, { Page } from "./PageList";
 
@@ -38,7 +38,7 @@ export default function BacklinksSection({ pageId }: BacklinksSectionProps) {
       
       try {
         console.log(`[BacklinksSection] Loading backlinks for page ${pageId}`);
-        const links = await findBacklinksSimple(pageId);
+        const links = await findBacklinks(pageId);
         console.log("[BacklinksSection] Found backlinks:", links);
         
         if (!links || links.length === 0) {

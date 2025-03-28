@@ -29,4 +29,17 @@ export interface User {
   displayName: string | null;
   photoURL: string | null;
   emailVerified: boolean;
-} 
+}
+
+// Page interface for page data
+export interface Page {
+  id: string;
+  title: string;
+  isPublic: boolean;
+  userId: string;
+  authorName?: string;
+  lastModified?: string;
+  createdAt: string;
+  groupId?: string;
+  groupName?: string;
+}
