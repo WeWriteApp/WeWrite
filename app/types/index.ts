@@ -37,9 +37,11 @@ export interface Page {
   title: string;
   isPublic: boolean;
   userId: string;
+  username?: string;
   authorName?: string;
   lastModified?: string;
   createdAt: string;
   groupId?: string;
   groupName?: string;
+  content?: any[];
 }
