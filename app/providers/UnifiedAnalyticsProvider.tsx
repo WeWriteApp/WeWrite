@@ -26,7 +26,6 @@ interface UnifiedAnalyticsProviderProps {
 export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderProps) {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<any>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -48,10 +47,6 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
           if (isDev) console.warn('Missing Google Analytics Measurement ID');
           setError('Missing GA ID');
         }
-        
-        // Get debug info from analytics instance
-        const analyticsStatus = analytics.debugStatus();
-        setStatus(analyticsStatus);
         
         // Mark as successfully initialized
         setInitialized(true);
@@ -93,8 +88,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
             // Re-track the current page with the new title
             if (initialized && pathname) {
               const url = pathname + (searchParams?.toString() || '');
-              const pageId = extractPageId(pathname);
-              analytics.pageView(url, newTitle, pageId);
+              analytics.pageView(url, newTitle);
               if (isDev) console.log('Re-tracked page view with updated title:', newTitle);
             }
           }
@@ -103,46 +97,26 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
     });
     
     // Start observing title changes
-    titleObserver.observe(document.head, { 
-      subtree: true, 
-      childList: true, 
-      characterData: true 
+    titleObserver.observe(document.head, {
+      subtree: true,
+      childList: true,
+      characterData: true
     });
     
-    return () => {
-      titleObserver.disconnect();
-    };
+    // Cleanup observer on unmount
+    return () => titleObserver.disconnect();
   }, [initialized, pathname, searchParams, analytics, isDev]);
   
-  // Track page views - runs whenever the route changes
+  // Track page views when route changes
   useEffect(() => {
     if (!initialized || !pathname) return;
     
-    try {
-      // Construct the full URL
-      const url = pathname + (searchParams?.toString() || '');
-      
-      // Get page title - try document title first then fall back to URL-based title
-      const pageTitle = typeof document !== 'undefined' && document.title 
-        ? document.title 
-        : getPageTitle(pathname);
-      
-      // Store the current title
-      if (typeof document !== 'undefined') {
-        documentTitleRef.current = document.title;
-      }
-      
-      // Extract page ID from URL if present (for pages/[id] routes)
-      const pageId = extractPageId(pathname);
-      
-      // Track page view with our unified analytics
-      analytics.pageView(url, pageTitle, pageId);
-      
-      if (isDev) console.log('Page view tracked:', url, pageTitle ? `(${pageTitle})` : '');
-    } catch (err) {
-      console.error('Error tracking page view:', err);
-    }
-  }, [pathname, searchParams, initialized, analytics, isDev]);
+    const url = pathname + (searchParams?.toString() || '');
+    const title = documentTitleRef.current || document.title;
+    
+    analytics.pageView(url, title);
+    if (isDev) console.log('Tracked page view:', { url, title });
+  }, [initialized, pathname, searchParams, analytics, isDev]);
   
   // Handlers for script loading
   const handleGAScriptLoad = () => {
@@ -242,32 +216,8 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
             Analytics: {initialized ? '✅' : '❌'}
             {error && <span style={{ color: '#ff4d4d' }}> (Error)</span>}
           </div>
-          
-          {status && (
-            <div style={{ fontSize: '10px', wordBreak: 'break-word' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Google Analytics:</span>
-                <span style={{ color: status.gaAvailable ? '#4caf50' : '#ff4d4d' }}>
-                  {status.gaAvailable ? 'Ready' : 'Not available'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Firebase Analytics:</span>
-                <span style={{ color: status.fbAvailable ? '#4caf50' : '#ff4d4d' }}>
-                  {status.fbAvailable ? 'Ready' : 'Not available'}
-                </span>
-              </div>
-              <div style={{ marginTop: '4px', fontSize: '9px' }}>
-                Path: {pathname || 'none'}
-              </div>
-              <div style={{ marginTop: '2px', fontSize: '9px' }}>
-                Title: {typeof document !== 'undefined' ? document.title : 'N/A'}
-              </div>
-              {error && <div style={{ color: '#ff4d4d', marginTop: '4px' }}>{error}</div>}
-            </div>
-          )}
         </div>
       )}
     </>
   );
-} 
+}

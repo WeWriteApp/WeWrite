@@ -14,12 +14,12 @@ import { cn, interactiveCard } from "../lib/utils";
 
 interface Page {
   id: string;
-  title: string;
-  isPublic: boolean;
-  userId: string;
+  title?: string;
+  isPublic?: boolean;
+  userId?: string;
   authorName?: string;
   lastModified?: string;
-  createdAt: string;
+  createdAt?: string;
   groupId?: string;
   groupName?: string;
 }
@@ -56,7 +56,7 @@ export default function AddExistingPageDialog({
   useEffect(() => {
     if (pages.length > 0) {
       const filtered = pages.filter(page => 
-        page.title.toLowerCase().includes(searchTerm.toLowerCase())
+        (page.title || 'Untitled').toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredPages(filtered);
     }
@@ -69,7 +69,7 @@ export default function AddExistingPageDialog({
       // Get all pages the user can edit
       const userPagesData = await getEditablePagesByUser(user.uid);
       
-      // Ensure proper typing for userPages
+      // Transform the data to match our Page interface
       const userPages: Page[] = userPagesData.map(page => ({
         id: page.id,
         title: page.title || 'Untitled',
@@ -213,10 +213,10 @@ export default function AddExistingPageDialog({
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="flex-grow">
-                    <h3 className="font-medium">{page.title}</h3>
+                    <h3 className="font-medium">{page.title || 'Untitled'}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>
-                        {new Date(page.lastModified || page.createdAt).toLocaleDateString()}
+                        {page.lastModified || page.createdAt ? new Date(page.lastModified || page.createdAt).toLocaleDateString() : 'Unknown'}
                       </span>
                       <Badge variant="outline" className="flex items-center gap-1">
                         {page.isPublic ? (

@@ -19,8 +19,7 @@ const nextConfig = {
     optimizePackageImports: ['react-icons'],
     // Try to improve performance
     forceSwcTransforms: true,
-    // Skip type checking during build
-    skipTypechecking: true,
+    // Skip type checking is handled by typescript.ignoreBuildErrors above
   }
 }
 
