@@ -152,7 +152,9 @@ const Form = ({ Page, setPage, isReply }) => {
   }, [searchParams, setPage, setEditorState, isReply]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
     setIsSaving(true);
     setError(null);
 
@@ -239,7 +241,7 @@ const Form = ({ Page, setPage, isReply }) => {
         <div>
           <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
           <div className="min-h-[300px] border border-input rounded-md bg-background">
-            <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
+            <SlateEditor setEditorState={setEditorState} initialContent={initialContent} onSave={handleSubmit} />
           </div>
         </div>
         

@@ -57,9 +57,10 @@ import "../styles/shake-animation.css";
  * @param {Object} initialEditorState - The initial state to load into the editor (for existing content)
  * @param {Object} initialContent - The initial content to load (takes precedence, used for replies)
  * @param {Function} setEditorState - Function to update the parent component's state with editor changes
+ * @param {Function} onSave - Function to trigger save from keyboard shortcut
  * @param {Ref} ref - Reference to access editor methods from parent components
  */
-const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState }, ref) => {
+const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState, onSave }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({});
@@ -182,7 +183,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     // Handle cmd+enter to save
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      // TODO: Implement save functionality
+      if (onSave) {
+        onSave();
+      }
       return;
     }
 

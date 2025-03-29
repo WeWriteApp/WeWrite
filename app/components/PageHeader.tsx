@@ -206,7 +206,7 @@ export default function PageHeader({
                       <span className="text-muted-foreground">Loading title...</span>
                     </div>
                   ) : (
-                    title || "Untitled"
+                    title || "New WeWrite Page"
                   )}
                 </h1>
                 <p className={`text-muted-foreground transition-all duration-120 ${

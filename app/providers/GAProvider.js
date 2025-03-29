@@ -67,7 +67,8 @@ export default function GAProvider({ children }) {
       '/auth/register': 'WeWrite - Register',
       '/account': 'WeWrite - Account Settings',
       '/activity': 'WeWrite - Activity Feed',
-      '/sandbox': 'WeWrite - Sandbox'
+      '/sandbox': 'WeWrite - Sandbox',
+      '/pages': 'WeWrite - All Pages'
     };
     
     // Check if we have a predefined title for this path
@@ -92,9 +93,13 @@ export default function GAProvider({ children }) {
       } else {
         // Check if we're in edit mode
         if (searchParams?.has('edit')) {
-          pageTitle = 'WeWrite - Page Editor';
+          // Get the page ID from the URL for more descriptive analytics
+          const pageId = pathname.split('/').pop();
+          pageTitle = `WeWrite - Page Editor: ${pageId}`;
         } else {
-          pageTitle = 'WeWrite - Page View';
+          // Get the page ID from the URL for more descriptive analytics
+          const pageId = pathname.split('/').pop();
+          pageTitle = `WeWrite - Page View: ${pageId}`;
         }
       }
     }
