@@ -998,6 +998,8 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
 const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   // Detect if device is mobile
   useEffect(() => {
@@ -1013,6 +1015,46 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     };
   }, []);
   
+  // Track keyboard visibility using visualViewport API
+  useEffect(() => {
+    if (!isMobile) return;
+    
+    const handleViewportChange = () => {
+      if (!window.visualViewport) return;
+      
+      const windowHeight = window.innerHeight;
+      const viewportHeight = window.visualViewport.height;
+      
+      // If viewport height is significantly smaller than window height, keyboard is likely visible
+      const isKeyboardVisible = viewportHeight < windowHeight * 0.8;
+      setKeyboardVisible(isKeyboardVisible);
+      
+      if (isKeyboardVisible) {
+        // Calculate keyboard height (window height minus viewport height)
+        const estimatedKeyboardHeight = windowHeight - viewportHeight;
+        setKeyboardHeight(estimatedKeyboardHeight);
+      } else {
+        setKeyboardHeight(0);
+      }
+    };
+    
+    // Initial check
+    handleViewportChange();
+    
+    // Add listeners to visualViewport for better mobile support
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+      window.visualViewport.addEventListener('scroll', handleViewportChange);
+    }
+    
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+        window.visualViewport.removeEventListener('scroll', handleViewportChange);
+      }
+    };
+  }, [isMobile]);
+  
   // Handle save with loading state and error handling
   const handleSave = async () => {
     if (!onSave) return;
@@ -1027,12 +1069,20 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
+  // Get correct bottom position based on keyboard visibility
+  const getBottomPosition = () => {
+    if (isMobile && keyboardVisible && keyboardHeight > 0) {
+      return `${keyboardHeight}px`;
+    }
+    return '0';
+  };
+  
   return (
     <div 
-      className={`fixed left-0 right-0 bottom-0 bg-[#1e1e1e] border-t border-gray-700 z-[9999] flex items-center justify-center gap-1 ${isMobile ? 'w-full' : 'w-fit max-w-[90%] mx-auto rounded-lg border'}`}
+      className={`fixed left-0 right-0 bg-[#1e1e1e] border-t border-gray-700 z-[9999] flex items-center justify-center gap-1 ${isMobile ? 'w-full' : 'w-fit max-w-[90%] mx-auto rounded-lg border'}`}
       style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: getBottomPosition(),
         margin: isMobile ? 0 : '0 auto 16px auto',
       }}
     >
