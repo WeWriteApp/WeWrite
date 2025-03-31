@@ -208,47 +208,14 @@ const EditPage = ({
               ref={editorRef}
               initialEditorState={editorState}
               setEditorState={setEditorState}
+              onSave={handleSave}
+              onDiscard={handleCancel}
+              onInsert={handleInsertLink}
             />
           </div>
         </div>
       </div>
-
-      <div>
-        <Button
-          variant="outline"
-          onClick={handleInsertLink}
-          className="ml-auto flex"
-        >
-          Insert Link
-        </Button>
-      </div>
-
-      {/* Sticky footer */}
-      <div className="fixed bottom-0 left-0 right-0 w-full bg-background/80 backdrop-blur-md border-t border-border py-4 px-4 z-50">
-        <div className="w-full flex items-center justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-          >
-            Cancel
-          </Button>
-          
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-green-600 text-white hover:bg-green-700"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Save'
-            )}
-          </Button>
-        </div>
-      </div>
+      {/* Removed the fixed footer - now using the floating toolbar from SlateEditor */}
     </div>
   );
 };

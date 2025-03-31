@@ -14,10 +14,10 @@ import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon } from "lucide-react";
+import { Search, X, Link as LinkIcon, Save, FileSignature } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import "../styles/shake-animation.css";
 
 /**
@@ -57,9 +57,12 @@ import "../styles/shake-animation.css";
  * @param {Object} initialEditorState - The initial state to load into the editor (for existing content)
  * @param {Object} initialContent - The initial content to load (takes precedence, used for replies)
  * @param {Function} setEditorState - Function to update the parent component's state with editor changes
+ * @param {Function} onSave - Function to handle save functionality
+ * @param {Function} onDiscard - Function to handle discard functionality
+ * @param {Function} onInsert - Function to handle insert functionality
  * @param {Ref} ref - Reference to access editor methods from parent components
  */
-const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState }, ref) => {
+const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState, onSave, onDiscard, onInsert }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({});
@@ -469,6 +472,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           initialPageTitle={initialLinkValues.pageTitle || ""}
         />
       )}
+      <AnimatePresence>
+        {onSave && onDiscard && onInsert && <FloatingToolbar editor={editor} onInsert={onInsert} onDiscard={onDiscard} onSave={onSave} />}
+      </AnimatePresence>
     </LineSettingsProvider>
   );
 });
@@ -985,6 +991,141 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+};
+
+// Editor toolbar that floats at the bottom of the screen for all devices
+const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Detect if device is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768); // Standard tablet breakpoint
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkIfMobile);
+    };
+  }, []);
+  
+  // Track viewport height changes to detect keyboard on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      // Use visualViewport API for more accurate keyboard detection
+      const newHeight = window.visualViewport?.height || window.innerHeight;
+      setViewportHeight(newHeight);
+      
+      // If viewport height is significantly less than window height, keyboard is likely visible
+      const windowHeight = window.innerHeight;
+      setKeyboardVisible(newHeight < windowHeight * 0.8);
+    };
+    
+    // Set initial values
+    setViewportHeight(window.visualViewport?.height || window.innerHeight);
+    
+    // Add listeners to visualViewport for better mobile support
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+    
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+  
+  // Handle save with loading state and error handling
+  const handleSave = async () => {
+    if (!onSave) return;
+    
+    setIsSaving(true);
+    try {
+      await onSave();
+    } catch (error) {
+      console.error("Error saving:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Calculate style based on device type and keyboard visibility
+  const getToolbarStyle = () => {
+    // For mobile with keyboard visible
+    if (isMobile && keyboardVisible && viewportHeight) {
+      return { 
+        bottom: `${window.innerHeight - viewportHeight + 8}px`, // Add small offset to ensure visibility
+        position: 'fixed'
+      };
+    }
+    
+    // For desktop or mobile without keyboard
+    return { 
+      bottom: '16px',
+      position: 'fixed'
+    };
+  };
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.2 }}
+      className="fixed left-0 right-0 mx-auto py-2 px-4 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg z-[9999] flex items-center justify-center gap-4 w-fit max-w-[90%]"
+      style={{
+        ...getToolbarStyle(),
+        margin: '0 auto'
+      }}
+    >
+      <button
+        onClick={onInsert}
+        className="px-4 py-2 rounded-md bg-muted hover:bg-muted/80 text-foreground flex items-center justify-center"
+      >
+        <FileSignature className="w-4 h-4 mr-1.5" />
+        Insert
+      </button>
+      
+      <div className="flex space-x-2">
+        <button
+          onClick={onDiscard}
+          className="px-4 py-2 rounded-md bg-muted hover:bg-muted/80 text-foreground"
+        >
+          Discard
+        </button>
+        
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white flex items-center justify-center"
+        >
+          {isSaving ? (
+            <>
+              <span className="w-4 h-4 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Saving
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-1.5" />
+              Save
+            </>
+          )}
+        </button>
+      </div>
+    </motion.div>
   );
 };
 
