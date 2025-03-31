@@ -996,10 +996,8 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
 
 // Editor toolbar that floats at the bottom of the screen for all devices
 const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Detect if device is mobile
   useEffect(() => {
@@ -1012,39 +1010,6 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     
     return () => {
       window.removeEventListener('resize', checkIfMobile);
-    };
-  }, []);
-  
-  // Track viewport height changes to detect keyboard on mobile
-  useEffect(() => {
-    const handleResize = () => {
-      // Use visualViewport API for more accurate keyboard detection
-      const newHeight = window.visualViewport?.height || window.innerHeight;
-      setViewportHeight(newHeight);
-      
-      // If viewport height is significantly less than window height, keyboard is likely visible
-      const windowHeight = window.innerHeight;
-      setKeyboardVisible(newHeight < windowHeight * 0.8);
-    };
-    
-    // Set initial values
-    setViewportHeight(window.visualViewport?.height || window.innerHeight);
-    
-    // Add listeners to visualViewport for better mobile support
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-      window.visualViewport.addEventListener('scroll', handleResize);
-    } else {
-      window.addEventListener('resize', handleResize);
-    }
-    
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-        window.visualViewport.removeEventListener('scroll', handleResize);
-      } else {
-        window.removeEventListener('resize', handleResize);
-      }
     };
   }, []);
   
@@ -1062,80 +1027,55 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Calculate style based on device type and keyboard visibility
-  const getToolbarStyle = () => {
-    // For mobile with keyboard visible
-    if (isMobile && keyboardVisible && viewportHeight) {
-      return { 
-        bottom: `${window.innerHeight - viewportHeight}px`, 
-        position: 'fixed'
-      };
-    }
-    
-    // For mobile without keyboard - stick to bottom with no gap
-    if (isMobile) {
-      return { 
-        bottom: '0',
-        position: 'fixed'
-      };
-    }
-    
-    // For desktop - keep the small gap
-    return { 
-      bottom: '16px',
-      position: 'fixed'
-    };
-  };
-  
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.2 }}
-      className="fixed left-0 right-0 mx-auto py-2 px-4 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg z-[9999] flex items-center justify-center gap-4 w-fit max-w-[90%]"
+    <div 
+      className={`fixed left-0 right-0 bottom-0 bg-[#1e1e1e] border-t border-gray-700 z-[9999] flex items-center justify-center gap-1 ${isMobile ? 'w-full' : 'w-fit max-w-[90%] mx-auto rounded-lg border'}`}
       style={{
-        ...getToolbarStyle(),
-        margin: isMobile ? '0 auto' : '0 auto',
-        borderBottomLeftRadius: isMobile ? 0 : undefined,
-        borderBottomRightRadius: isMobile ? 0 : undefined
+        position: 'fixed',
+        bottom: 0,
+        margin: isMobile ? 0 : '0 auto 16px auto',
       }}
     >
+      {/* Insert button */}
       <button
+        type="button"
         onClick={onInsert}
-        className="px-4 py-2 rounded-md bg-muted hover:bg-muted/80 text-foreground flex items-center justify-center"
+        className="flex items-center justify-center py-3 px-4 text-blue-400 hover:bg-[#252525] focus:outline-none transition-colors"
       >
-        <FileSignature className="w-4 h-4 mr-1.5" />
-        Insert
+        <FileSignature className="w-5 h-5 mr-2" />
+        <span>Insert</span>
       </button>
       
-      <div className="flex space-x-2">
-        <button
-          onClick={onDiscard}
-          className="px-4 py-2 rounded-md bg-muted hover:bg-muted/80 text-foreground"
-        >
-          Discard
-        </button>
-        
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white flex items-center justify-center"
-        >
-          {isSaving ? (
-            <>
-              <span className="w-4 h-4 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Saving
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-1.5" />
-              Save
-            </>
-          )}
-        </button>
-      </div>
-    </motion.div>
+      {/* Discard button */}
+      <button
+        type="button"
+        onClick={onDiscard}
+        className="flex items-center justify-center py-3 px-4 text-gray-400 hover:bg-[#252525] focus:outline-none transition-colors"
+      >
+        <X className="w-5 h-5 mr-2" />
+        <span>Discard</span>
+      </button>
+      
+      {/* Save button */}
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={handleSave}
+        className="flex items-center justify-center py-3 px-6 text-white bg-blue-600 hover:bg-blue-700 rounded-md mx-2 focus:outline-none transition-colors"
+      >
+        {isSaving ? (
+          <span className="flex items-center">
+            <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Saving...
+          </span>
+        ) : (
+          <span className="flex items-center">
+            <Save className="w-5 h-5 mr-2" />
+            Save
+          </span>
+        )}
+      </button>
+    </div>
   );
 };
 
