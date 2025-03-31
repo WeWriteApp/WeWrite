@@ -1000,6 +1000,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const toolbarRef = useRef(null);
   
   // Detect if device is mobile
   useEffect(() => {
@@ -1044,16 +1045,58 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     // Add listeners to visualViewport for better mobile support
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange);
-      window.visualViewport.addEventListener('scroll', handleViewportChange);
     }
     
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleViewportChange);
-        window.visualViewport.removeEventListener('scroll', handleViewportChange);
       }
     };
   }, [isMobile]);
+  
+  // Totally isolate toolbar from scroll events using a fixed position
+  useEffect(() => {
+    if (!toolbarRef.current) return;
+    
+    // Ensure toolbar stays fixed at bottom regardless of scroll
+    const toolbar = toolbarRef.current;
+    
+    const setFixedPosition = () => {
+      // Fix toolbar to viewport, not document
+      toolbar.style.position = 'fixed';
+      toolbar.style.bottom = isMobile && keyboardVisible && keyboardHeight > 0 
+        ? `${keyboardHeight}px` 
+        : '0';
+      toolbar.style.left = '0';
+      toolbar.style.right = '0';
+      toolbar.style.zIndex = '9999';
+    };
+    
+    // Apply immediately and on any scroll event
+    setFixedPosition();
+    
+    const handleScroll = () => {
+      // Re-apply fixed positioning on scroll
+      setFixedPosition();
+      
+      // Prevent default scroll behavior when touching the toolbar
+      toolbar.addEventListener('touchmove', (e) => {
+        if (e.target === toolbar || toolbar.contains(e.target)) {
+          e.preventDefault();
+        }
+      });
+    };
+    
+    // Add event listeners
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll);
+      toolbar.removeEventListener('touchmove', handleScroll);
+    };
+  }, [isMobile, keyboardVisible, keyboardHeight, toolbarRef]);
   
   // Handle save with loading state and error handling
   const handleSave = async () => {
@@ -1069,21 +1112,17 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Get correct bottom position based on keyboard visibility
-  const getBottomPosition = () => {
-    if (isMobile && keyboardVisible && keyboardHeight > 0) {
-      return `${keyboardHeight}px`;
-    }
-    return '0';
-  };
-  
   return (
     <div 
-      className={`fixed left-0 right-0 bg-[#1e1e1e] border-t border-gray-700 z-[9999] flex items-center justify-center gap-1 ${isMobile ? 'w-full' : 'w-fit max-w-[90%] mx-auto rounded-lg border'}`}
+      ref={toolbarRef}
+      className={`fixed left-0 right-0 bg-[#1e1e1e] border-t border-gray-700 flex items-center justify-center gap-1 ${isMobile ? 'w-full' : 'w-fit max-w-[90%] mx-auto rounded-lg border'}`}
       style={{
         position: 'fixed',
-        bottom: getBottomPosition(),
+        bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : '0',
         margin: isMobile ? 0 : '0 auto 16px auto',
+        transform: 'translateZ(0)', // Force hardware acceleration
+        willChange: 'transform', // Hint to browser this element will change
+        isolation: 'isolate', // Create a new stacking context
       }}
     >
       {/* Insert button */}
