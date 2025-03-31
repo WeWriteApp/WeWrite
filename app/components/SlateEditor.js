@@ -1067,12 +1067,20 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     // For mobile with keyboard visible
     if (isMobile && keyboardVisible && viewportHeight) {
       return { 
-        bottom: `${window.innerHeight - viewportHeight + 8}px`, // Add small offset to ensure visibility
+        bottom: `${window.innerHeight - viewportHeight}px`, 
         position: 'fixed'
       };
     }
     
-    // For desktop or mobile without keyboard
+    // For mobile without keyboard - stick to bottom with no gap
+    if (isMobile) {
+      return { 
+        bottom: '0',
+        position: 'fixed'
+      };
+    }
+    
+    // For desktop - keep the small gap
     return { 
       bottom: '16px',
       position: 'fixed'
@@ -1088,7 +1096,9 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       className="fixed left-0 right-0 mx-auto py-2 px-4 bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg z-[9999] flex items-center justify-center gap-4 w-fit max-w-[90%]"
       style={{
         ...getToolbarStyle(),
-        margin: '0 auto'
+        margin: isMobile ? '0 auto' : '0 auto',
+        borderBottomLeftRadius: isMobile ? 0 : undefined,
+        borderBottomRightRadius: isMobile ? 0 : undefined
       }}
     >
       <button
