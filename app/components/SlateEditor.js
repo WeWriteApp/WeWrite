@@ -7,6 +7,35 @@ import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings } from '../contexts/LineSettingsContext';
 
+// Helper function to deserialize content
+const deserialize = (content) => {
+  if (!content) {
+    // Return a default value if content is null or undefined
+    return [{ type: 'line', children: [{ text: '' }] }];
+  }
+  if (typeof content === 'string') {
+    try {
+      // Try parsing if it's a JSON string
+      const parsed = JSON.parse(content);
+      // Basic validation if it looks like Slate structure
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type && parsed[0].children) {
+        return parsed;
+      }
+    } catch (e) {
+      // If parsing fails or it's not valid structure, treat as plain text
+      console.warn("Failed to parse initialContent JSON, treating as plain text:", content, e);
+      return [{ type: 'line', children: [{ text: content }] }];
+    }
+  }
+  // If it's already an object/array (assumed Slate structure)
+  if (Array.isArray(content) && content.length > 0) {
+      return content;
+  }
+  // Fallback for unexpected formats
+  console.warn("Unexpected initialContent format, using default:", content);
+  return [{ type: 'line', children: [{ text: '' }] }];
+};
+
 // Line modes for different types of content
 const LINE_MODES = {
   NORMAL: 'normal',
