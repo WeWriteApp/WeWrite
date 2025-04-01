@@ -156,11 +156,18 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           </a>
         );
       case 'line':
-      default:
-        // Find the path of the element to get the line number
+        // Explicitly handle 'line' type for line numbers
         try {
           const path = ReactEditor.findPath(editor, element);
           const lineNumber = path[0] + 1; // 1-based indexing
+          
+          // Basic check for valid path
+          if (!path || path.length === 0) {
+            console.warn("Invalid path found for element:", element);
+            // Render without line number if path is invalid
+            return <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>{children}</div>;
+          }
+          
           return (
             <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>
               <span
@@ -185,9 +192,12 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         } catch (e) {
            // Handle cases where path might not be found temporarily during intense ops
            console.warn("Could not find path for element", element, e);
-           // Fallback rendering without line number
-           return <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>{children}</div>;
+           // Render a simple div for unknown types or errors
+           return <div {...attributes}>{children}</div>;
         }
+      default:
+        // Handle any other element types or default case
+        return <div {...attributes}>{children}</div>;
     }
   }, [editor]);
 
