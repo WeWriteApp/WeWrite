@@ -17,7 +17,7 @@ import TypeaheadSearch from "./TypeaheadSearch";
 import { Search, X, Link as LinkIcon, Save, FileSignature } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, createPortal } from "framer-motion";
 import "../styles/shake-animation.css";
 
 /**
@@ -1001,6 +1001,36 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const toolbarRef = useRef(null);
+  const [portalContainer, setPortalContainer] = useState(null);
+  
+  // Create a portal container to render the toolbar outside the main DOM flow
+  useEffect(() => {
+    // Only create portal in client
+    if (typeof window === 'undefined') return;
+    
+    // Create portal container if it doesn't exist
+    let container = document.getElementById('floating-toolbar-portal');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'floating-toolbar-portal';
+      container.style.position = 'fixed';
+      container.style.zIndex = '9999';
+      container.style.left = '0';
+      container.style.right = '0';
+      container.style.bottom = '0';
+      container.style.pointerEvents = 'none'; // Let clicks pass through the container
+      document.body.appendChild(container);
+    }
+    
+    setPortalContainer(container);
+    
+    return () => {
+      // Cleanup on unmount
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    };
+  }, []);
   
   // Detect if device is mobile
   useEffect(() => {
@@ -1018,7 +1048,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   
   // Track keyboard visibility using visualViewport API
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || typeof window === 'undefined') return;
     
     const handleViewportChange = () => {
       if (!window.visualViewport) return;
@@ -1054,49 +1084,29 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     };
   }, [isMobile]);
   
-  // Totally isolate toolbar from scroll events using a fixed position
+  // Position the toolbar in the portal to fully isolate from scroll
   useEffect(() => {
-    if (!toolbarRef.current) return;
+    if (!portalContainer || !toolbarRef.current) return;
     
-    // Ensure toolbar stays fixed at bottom regardless of scroll
-    const toolbar = toolbarRef.current;
+    // Update portal container position based on keyboard
+    if (isMobile && keyboardVisible && keyboardHeight > 0) {
+      portalContainer.style.bottom = `${keyboardHeight}px`;
+    } else {
+      portalContainer.style.bottom = isMobile ? '0' : '24px';
+    }
     
-    const setFixedPosition = () => {
-      // Fix toolbar to viewport, not document
-      toolbar.style.position = 'fixed';
-      toolbar.style.bottom = isMobile && keyboardVisible && keyboardHeight > 0 
-        ? `${keyboardHeight}px` 
-        : '0';
-      toolbar.style.left = '0';
-      toolbar.style.right = '0';
-      toolbar.style.zIndex = '9999';
-    };
+    // Center the toolbar on desktop
+    if (!isMobile) {
+      portalContainer.style.display = 'flex';
+      portalContainer.style.justifyContent = 'center';
+    } else {
+      portalContainer.style.display = 'block';
+    }
     
-    // Apply immediately and on any scroll event
-    setFixedPosition();
+    // Make toolbar interactive
+    toolbarRef.current.style.pointerEvents = 'auto';
     
-    const handleScroll = () => {
-      // Re-apply fixed positioning on scroll
-      setFixedPosition();
-      
-      // Prevent default scroll behavior when touching the toolbar
-      toolbar.addEventListener('touchmove', (e) => {
-        if (e.target === toolbar || toolbar.contains(e.target)) {
-          e.preventDefault();
-        }
-      });
-    };
-    
-    // Add event listeners
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    document.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('scroll', handleScroll);
-      toolbar.removeEventListener('touchmove', handleScroll);
-    };
-  }, [isMobile, keyboardVisible, keyboardHeight, toolbarRef]);
+  }, [isMobile, keyboardVisible, keyboardHeight, portalContainer]);
   
   // Handle save with loading state and error handling
   const handleSave = async () => {
@@ -1112,19 +1122,21 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  return (
+  // Don't render until portal is ready
+  if (!portalContainer) return null;
+  
+  // Create toolbar content
+  const toolbarContent = (
     <div 
       ref={toolbarRef}
-      className={`fixed left-0 right-0 bg-[#1e1e1e]/90 backdrop-blur-sm flex items-center justify-center gap-2 ${isMobile ? 'w-full border-t border-gray-800' : 'w-fit max-w-[90%] mx-auto rounded-full border border-gray-800'}`}
+      className={`bg-[#1e1e1e]/90 backdrop-blur-sm flex items-center justify-center gap-2 ${isMobile ? 'w-full border-t border-gray-800' : 'w-fit rounded-full border border-gray-800'}`}
       style={{
-        position: 'fixed',
-        bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '24px',
-        margin: isMobile ? 0 : '0 auto',
         padding: isMobile ? '8px 0' : '4px',
-        transform: 'translateZ(0)', // Force hardware acceleration
-        willChange: 'transform', // Hint to browser this element will change
-        isolation: 'isolate', // Create a new stacking context
-        boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.1)',
+        // Accelerate rendering
+        transform: 'translateZ(0)',
+        willChange: 'transform',
+        isolation: 'isolate',
       }}
     >
       {/* Insert button */}
@@ -1181,6 +1193,9 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       </button>
     </div>
   );
+  
+  // Use createPortal to render toolbar outside of normal DOM flow
+  return createPortal(toolbarContent, portalContainer);
 };
 
 const Leaf = ({ attributes, children, leaf }) => {
