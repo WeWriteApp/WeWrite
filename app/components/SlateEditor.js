@@ -1007,27 +1007,41 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   useEffect(() => {
     setMounted(true);
     
-    // Add a special CSS class to body to prevent toolbar from scrolling
+    // Add global styles to ensure toolbar visibility
     if (typeof document !== 'undefined') {
-      document.body.classList.add('has-floating-toolbar');
-      
-      // Add custom styles to ensure fixed positioning works correctly
       const style = document.createElement('style');
       style.innerHTML = `
+        body {
+          /* Ensure there's padding at the bottom for the toolbar */
+          padding-bottom: 70px !important;
+        }
+        
         .floating-toolbar-container {
           position: fixed !important;
           bottom: 0 !important;
           left: 0 !important;
           right: 0 !important;
-          z-index: 9999 !important;
+          z-index: 99999 !important;
           width: 100% !important;
           transform: translateZ(0) !important;
           will-change: transform !important;
-          transition: bottom 0.2s ease-out !important;
           pointer-events: none !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: flex-end !important;
+          /* Ensure it's above everything else */
+          background: transparent !important;
         }
-        .floating-toolbar-container > * {
+        
+        .floating-toolbar-content {
           pointer-events: auto !important;
+          margin-bottom: 0 !important;
+        }
+        
+        @media (max-width: 768px) {
+          .floating-toolbar-content {
+            width: 100% !important;
+          }
         }
       `;
       document.head.appendChild(style);
@@ -1038,7 +1052,6 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       
       // Clean up
       if (typeof document !== 'undefined') {
-        document.body.classList.remove('has-floating-toolbar');
         const style = document.head.querySelector('style:last-child');
         if (style) document.head.removeChild(style);
       }
@@ -1079,6 +1092,14 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         // Calculate keyboard height (window height minus viewport height)
         const estimatedKeyboardHeight = windowHeight - viewportHeight;
         setKeyboardHeight(estimatedKeyboardHeight);
+        
+        // When keyboard is visible, ensure toolbar is still visible
+        if (toolbarRef.current) {
+          window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
       } else {
         setKeyboardHeight(0);
       }
@@ -1090,12 +1111,18 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     // Add listeners to visualViewport for better mobile support
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange);
+      window.visualViewport.addEventListener('scroll', handleViewportChange);
     }
+    
+    // Add regular window resize event as fallback
+    window.addEventListener('resize', handleViewportChange);
     
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleViewportChange);
+        window.visualViewport.removeEventListener('scroll', handleViewportChange);
       }
+      window.removeEventListener('resize', handleViewportChange);
     };
   }, [isMobile]);
   
@@ -1113,23 +1140,38 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
+  // Force toolbar to be visible on mount and whenever keyboard state changes
+  useEffect(() => {
+    if (!mounted) return;
+    
+    // Force browser to redraw toolbar by toggling a class
+    if (toolbarRef.current) {
+      toolbarRef.current.classList.add('toolbar-refresh');
+      setTimeout(() => {
+        if (toolbarRef.current) {
+          toolbarRef.current.classList.remove('toolbar-refresh');
+        }
+      }, 10);
+    }
+  }, [mounted, keyboardVisible, keyboardHeight]);
+  
   // Don't render anything during SSR
   if (!mounted) return null;
   
   return (
     <div className="floating-toolbar-container" style={{
-      bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '24px',
+      bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : '0',
     }}>
       <div
         ref={toolbarRef}
-        className={`flex items-center justify-center gap-2 ${
+        className={`floating-toolbar-content flex items-center justify-center gap-2 ${
           isMobile 
-            ? 'w-full bg-[#1e1e1e]/95 backdrop-blur-sm border-t border-gray-800' 
-            : 'w-fit mx-auto rounded-full bg-[#1e1e1e]/95 backdrop-blur-sm border border-gray-800'
+            ? 'w-full bg-[#1e1e1e]/95 backdrop-blur-md border-t border-gray-800' 
+            : 'w-fit mx-auto rounded-full bg-[#1e1e1e]/95 backdrop-blur-md border border-gray-800 mb-6'
         }`}
         style={{
-          padding: isMobile ? '8px 0' : '4px',
-          boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.1)',
+          padding: isMobile ? '10px 0' : '4px',
+          boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.2)',
         }}
       >
         {/* Insert button */}
