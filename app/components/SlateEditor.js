@@ -258,12 +258,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           overflow: 'hidden'
         }}
       >
+        {/* Toolbar at the top instead of bottom */}
+        <TopToolbar 
+          onInsert={onInsert} 
+          onDiscard={onDiscard} 
+          onSave={onSave} 
+        />
+        
         <div className="editor-content" 
           style={{
             flex: '1 1 auto',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            paddingBottom: '70px' // Space for the toolbar
+            paddingTop: '60px' // Space for the toolbar
           }}
         >
           <Slate
@@ -289,12 +296,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             )}
           </Slate>
         </div>
-        
-        <SimpleToolbar 
-          onInsert={onInsert} 
-          onDiscard={onDiscard} 
-          onSave={onSave} 
-        />
       </div>
     </LineSettingsProvider>
   );
@@ -555,8 +556,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   );
 };
 
-// Simple toolbar with CSS-only positioning (no JS detection)
-const SimpleToolbar = ({ onInsert, onDiscard, onSave }) => {
+// Toolbar at the top of the screen
+const TopToolbar = ({ onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   
   const handleSave = async () => {
@@ -574,12 +575,12 @@ const SimpleToolbar = ({ onInsert, onDiscard, onSave }) => {
   return (
     <div 
       style={{
-        position: 'absolute', 
-        bottom: 0,
+        position: 'fixed', 
+        top: 0,
         left: 0,
         right: 0,
         backgroundColor: '#f8f9fa',
-        borderTop: '1px solid #e1e4e8',
+        borderBottom: '1px solid #e1e4e8',
         padding: '10px',
         zIndex: 1000,
         display: 'flex',
