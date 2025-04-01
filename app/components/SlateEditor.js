@@ -999,103 +999,20 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
 const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [toolbarStyle, setToolbarStyle] = useState({});
-  const [mounted, setMounted] = useState(false);
   
-  // Handle SSR
+  // Check if mobile
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-  
-  // Detect mobile
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
-  // Update toolbar style - this is the main positioning logic
-  useEffect(() => {
-    // Different styles for mobile and desktop
-    if (isMobile) {
-      setToolbarStyle({
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        width: '100%',
-        padding: 0,
-        margin: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(30, 30, 30, 0.95)',
-        backdropFilter: 'blur(8px)',
-        borderTop: '1px solid rgba(128, 128, 128, 0.3)'
-      });
-    } else {
-      setToolbarStyle({
-        position: 'fixed',
-        bottom: '24px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        borderRadius: '9999px',
-        margin: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(30, 30, 30, 0.95)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(128, 128, 128, 0.3)'
-      });
+    if (typeof window !== 'undefined') {
+      const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
     }
-  }, [isMobile]);
+  }, []);
   
-  // Handle keyboard visibility
-  useEffect(() => {
-    if (!isMobile || typeof window === 'undefined' || !window.visualViewport) return;
-    
-    const handleViewportResize = () => {
-      const windowHeight = window.innerHeight;
-      const viewportHeight = window.visualViewport.height;
-      const isKeyboardVisible = viewportHeight < windowHeight * 0.8;
-      
-      setKeyboardVisible(isKeyboardVisible);
-      
-      // Update bottom position when keyboard is visible
-      if (isKeyboardVisible) {
-        const keyboardHeight = windowHeight - viewportHeight;
-        setToolbarStyle(current => ({
-          ...current,
-          bottom: `${keyboardHeight}px`
-        }));
-      } else {
-        setToolbarStyle(current => ({
-          ...current,
-          bottom: 0
-        }));
-      }
-    };
-    
-    // Initial setup
-    handleViewportResize();
-    
-    // Listen for viewport changes (keyboard appearing/disappearing)
-    window.visualViewport.addEventListener('resize', handleViewportResize);
-    
-    return () => {
-      window.visualViewport.removeEventListener('resize', handleViewportResize);
-    };
-  }, [isMobile]);
-  
-  // Handle save button click
+  // Handle save
   const handleSave = async () => {
     if (!onSave) return;
-    
     setIsSaving(true);
     try {
       await onSave();
@@ -1106,22 +1023,14 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Don't render on server
-  if (!mounted) return null;
-  
+  // Simple toolbar with absolutely minimal styling
   return (
-    <div style={toolbarStyle}>
-      <div 
-        className="flex items-center justify-center py-2"
-        style={{
-          padding: isMobile ? '8px 0' : '4px 2px',
-        }}
-      >
-        {/* Insert button */}
+    <div className="fixed left-0 right-0 bottom-0 z-[99999] bg-[#1e1e1e] border-t border-gray-800">
+      <div className="flex justify-center items-center py-2 px-1">
         <button
           type="button"
           onClick={onInsert}
-          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full"
         >
           <span className="flex items-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
@@ -1134,11 +1043,10 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           </span>
         </button>
         
-        {/* Discard button */}
         <button
           type="button"
           onClick={onDiscard}
-          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full"
         >
           <span className="flex items-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
@@ -1148,12 +1056,11 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           </span>
         </button>
         
-        {/* Save button */}
         <button
           type="button"
           disabled={isSaving}
           onClick={handleSave}
-          className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
+          className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full mx-1"
         >
           {isSaving ? (
             <span className="flex items-center">
