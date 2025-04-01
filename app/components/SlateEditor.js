@@ -46,7 +46,17 @@ const LINE_MODES = {
 
 const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onDiscard, onSave }, ref) => {
   const { lineSettings } = useLineSettings();
-  const initialEditorState = useMemo(() => deserialize(initialContent), [initialContent]);
+  
+  // Log initialContent and deserialized result
+  console.log("SlateEditor received initialContent:", initialContent);
+  const deserializedValue = useMemo(() => {
+    const result = deserialize(initialContent);
+    console.log("Deserialized initialContent:", JSON.stringify(result));
+    return result;
+  }, [initialContent]);
+  
+  const initialEditorState = deserializedValue; // Use the logged value
+
   const editor = useMemo(() => withLinks(withReact(createEditor())), []); // Removed withLineNumbers wrapper
   const [linkEditorPosition, setLinkEditorPosition] = useState(null);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
@@ -731,19 +741,23 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
     
     // Position above keyboard when it's visible
     if (keyboardHeight > 0) {
-      return {
+      const style = {
         ...baseStyle,
         bottom: `${keyboardHeight}px`,
         transition: 'bottom 0.15s ease-out', // Faster transition
         willChange: 'bottom' // Hint for performance
       };
+      console.log(`Toolbar Style (Keyboard Visible): keyboardH=${keyboardHeight}px, bottom=${style.bottom}`);
+      return style;
     }
     
     // Default position at bottom
-    return {
+    const style = {
       ...baseStyle,
       bottom: 0
     };
+    console.log(`Toolbar Style (Keyboard Hidden): bottom=${style.bottom}`);
+    return style;
   };
   
   return (
