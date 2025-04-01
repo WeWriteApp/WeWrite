@@ -1118,7 +1118,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       className={`fixed left-0 right-0 bg-[#1e1e1e]/90 backdrop-blur-sm flex items-center justify-center gap-2 ${isMobile ? 'w-full border-t border-gray-800' : 'w-fit max-w-[90%] mx-auto rounded-full border border-gray-800'}`}
       style={{
         position: 'fixed',
-        bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '16px',
+        bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '24px',
         margin: isMobile ? 0 : '0 auto',
         padding: isMobile ? '8px 0' : '4px',
         transform: 'translateZ(0)', // Force hardware acceleration
@@ -1135,7 +1135,10 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       >
         <span className="flex items-center">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-            <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Insert
         </span>
