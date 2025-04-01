@@ -1,4 +1,5 @@
 import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
+import ReactDOM from "react-dom";
 import {
   createEditor,
   Transforms,
@@ -1002,59 +1003,57 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const toolbarRef = useRef(null);
   const [mounted, setMounted] = useState(false);
+  const [portalContainer, setPortalContainer] = useState(null);
   
-  // Handle SSR safely - only run client-side code after mount
+  // Create portal container for toolbar
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
     setMounted(true);
     
-    // Add global styles to ensure toolbar visibility
-    if (typeof document !== 'undefined') {
-      const style = document.createElement('style');
-      style.innerHTML = `
-        body {
-          /* Ensure there's padding at the bottom for the toolbar */
-          padding-bottom: 70px !important;
-        }
-        
-        .floating-toolbar-container {
-          position: fixed !important;
-          bottom: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          z-index: 99999 !important;
-          width: 100% !important;
-          transform: translateZ(0) !important;
-          will-change: transform !important;
-          pointer-events: none !important;
-          display: flex !important;
-          justify-content: center !important;
-          align-items: flex-end !important;
-          /* Ensure it's above everything else */
-          background: transparent !important;
-        }
-        
-        .floating-toolbar-content {
-          pointer-events: auto !important;
-          margin-bottom: 0 !important;
-        }
-        
-        @media (max-width: 768px) {
-          .floating-toolbar-content {
-            width: 100% !important;
-          }
-        }
-      `;
-      document.head.appendChild(style);
+    // Create portal container
+    let container = document.getElementById('floating-toolbar-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'floating-toolbar-container';
+      container.style.position = 'fixed';
+      container.style.bottom = '0';
+      container.style.left = '0';
+      container.style.width = '100%';
+      container.style.zIndex = '999999';
+      container.style.padding = '0';
+      container.style.margin = '0';
+      container.style.pointerEvents = 'none';
+      container.style.display = 'flex';
+      container.style.justifyContent = 'center';
+      container.style.alignItems = 'flex-end';
+      
+      // Add to body
+      document.body.appendChild(container);
     }
     
-    return () => {
-      setMounted(false);
-      
-      // Clean up
-      if (typeof document !== 'undefined') {
-        const style = document.head.querySelector('style:last-child');
-        if (style) document.head.removeChild(style);
+    setPortalContainer(container);
+    
+    // Add padding to bottom of body to make room for toolbar
+    const style = document.createElement('style');
+    style.innerHTML = `
+      body {
+        padding-bottom: 80px !important;
       }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      // Clean up
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+      
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+      
+      setMounted(false);
     };
   }, []);
   
@@ -1093,13 +1092,13 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         const estimatedKeyboardHeight = windowHeight - viewportHeight;
         setKeyboardHeight(estimatedKeyboardHeight);
         
-        // When keyboard is visible, ensure toolbar is still visible
-        if (toolbarRef.current) {
-          window.scrollTo({
-            top: document.body.scrollHeight,
+        // Scroll to make sure content is visible above keyboard
+        setTimeout(() => {
+          window.scrollBy({
+            top: 100,
             behavior: 'smooth'
           });
-        }
+        }, 100);
       } else {
         setKeyboardHeight(0);
       }
@@ -1108,14 +1107,14 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     // Initial check
     handleViewportChange();
     
-    // Add listeners to visualViewport for better mobile support
+    // Add listeners for keyboard visibility
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange);
       window.visualViewport.addEventListener('scroll', handleViewportChange);
     }
     
-    // Add regular window resize event as fallback
     window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange);
     
     return () => {
       if (window.visualViewport) {
@@ -1123,8 +1122,20 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         window.visualViewport.removeEventListener('scroll', handleViewportChange);
       }
       window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange);
     };
   }, [isMobile]);
+  
+  // Update portal position when keyboard appears/disappears
+  useEffect(() => {
+    if (!portalContainer) return;
+    
+    if (isMobile && keyboardVisible && keyboardHeight > 0) {
+      portalContainer.style.bottom = `${keyboardHeight}px`;
+    } else {
+      portalContainer.style.bottom = '0';
+    }
+  }, [portalContainer, keyboardVisible, keyboardHeight, isMobile]);
   
   // Handle save with loading state and error handling
   const handleSave = async () => {
@@ -1140,95 +1151,82 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Force toolbar to be visible on mount and whenever keyboard state changes
-  useEffect(() => {
-    if (!mounted) return;
-    
-    // Force browser to redraw toolbar by toggling a class
-    if (toolbarRef.current) {
-      toolbarRef.current.classList.add('toolbar-refresh');
-      setTimeout(() => {
-        if (toolbarRef.current) {
-          toolbarRef.current.classList.remove('toolbar-refresh');
-        }
-      }, 10);
-    }
-  }, [mounted, keyboardVisible, keyboardHeight]);
+  // Don't render until portal container is ready
+  if (!mounted || !portalContainer) return null;
   
-  // Don't render anything during SSR
-  if (!mounted) return null;
-  
-  return (
-    <div className="floating-toolbar-container" style={{
-      bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : '0',
-    }}>
-      <div
-        ref={toolbarRef}
-        className={`floating-toolbar-content flex items-center justify-center gap-2 ${
-          isMobile 
-            ? 'w-full bg-[#1e1e1e]/95 backdrop-blur-md border-t border-gray-800' 
-            : 'w-fit mx-auto rounded-full bg-[#1e1e1e]/95 backdrop-blur-md border border-gray-800 mb-6'
-        }`}
-        style={{
-          padding: isMobile ? '10px 0' : '4px',
-          boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.2)',
-        }}
+  // Create toolbar content
+  const toolbarContent = (
+    <div
+      ref={toolbarRef}
+      className={`${
+        isMobile 
+          ? 'w-full bg-[#1e1e1e]/95 backdrop-blur-md border-t border-gray-800' 
+          : 'rounded-full bg-[#1e1e1e]/95 backdrop-blur-md border border-gray-800 mb-6'
+      } flex items-center justify-center gap-2`}
+      style={{
+        padding: isMobile ? '10px 0' : '4px',
+        boxShadow: '0 0 20px rgba(0, 0, 0, 0.3)',
+        pointerEvents: 'auto',
+        maxWidth: isMobile ? '100%' : '500px',
+      }}
+    >
+      {/* Insert button */}
+      <button
+        type="button"
+        onClick={onInsert}
+        className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
       >
-        {/* Insert button */}
-        <button
-          type="button"
-          onClick={onInsert}
-          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
-        >
+        <span className="flex items-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+            <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Insert
+        </span>
+      </button>
+      
+      {/* Discard button */}
+      <button
+        type="button"
+        onClick={onDiscard}
+        className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+      >
+        <span className="flex items-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Discard
+        </span>
+      </button>
+      
+      {/* Save button */}
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={handleSave}
+        className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
+      >
+        {isSaving ? (
+          <span className="flex items-center">
+            <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Saving...
+          </span>
+        ) : (
           <span className="flex items-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-              <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Insert
+            Save
           </span>
-        </button>
-        
-        {/* Discard button */}
-        <button
-          type="button"
-          onClick={onDiscard}
-          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
-        >
-          <span className="flex items-center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Discard
-          </span>
-        </button>
-        
-        {/* Save button */}
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={handleSave}
-          className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
-        >
-          {isSaving ? (
-            <span className="flex items-center">
-              <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Saving...
-            </span>
-          ) : (
-            <span className="flex items-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-                <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Save
-            </span>
-          )}
-        </button>
-      </div>
+        )}
+      </button>
     </div>
   );
+  
+  // Use ReactDOM.createPortal to render toolbar in portal container
+  return ReactDOM.createPortal(toolbarContent, portalContainer);
 };
 
 const Leaf = ({ attributes, children, leaf }) => {
