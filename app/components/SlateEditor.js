@@ -999,52 +999,100 @@ const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
 const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [toolbarStyle, setToolbarStyle] = useState({});
   const [mounted, setMounted] = useState(false);
   
-  // Check if we're in a browser environment
+  // Handle SSR
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
   
-  // Detect mobile device
+  // Detect mobile
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const checkIfMobile = () => {
+    const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
     
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    return () => window.removeEventListener('resize', checkIfMobile);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Mobile keyboard detection using visualViewport
+  // Update toolbar style - this is the main positioning logic
+  useEffect(() => {
+    // Different styles for mobile and desktop
+    if (isMobile) {
+      setToolbarStyle({
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        padding: 0,
+        margin: 0,
+        zIndex: 9999,
+        backgroundColor: 'rgba(30, 30, 30, 0.95)',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1px solid rgba(128, 128, 128, 0.3)'
+      });
+    } else {
+      setToolbarStyle({
+        position: 'fixed',
+        bottom: '24px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        borderRadius: '9999px',
+        margin: 0,
+        zIndex: 9999,
+        backgroundColor: 'rgba(30, 30, 30, 0.95)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid rgba(128, 128, 128, 0.3)'
+      });
+    }
+  }, [isMobile]);
+  
+  // Handle keyboard visibility
   useEffect(() => {
     if (!isMobile || typeof window === 'undefined' || !window.visualViewport) return;
     
-    const handleResize = () => {
-      // Simple calculation: if the viewport height is significantly less than window height,
-      // keyboard is probably visible
-      const diff = window.innerHeight - window.visualViewport.height;
-      setKeyboardHeight(diff > 150 ? diff : 0);
+    const handleViewportResize = () => {
+      const windowHeight = window.innerHeight;
+      const viewportHeight = window.visualViewport.height;
+      const isKeyboardVisible = viewportHeight < windowHeight * 0.8;
+      
+      setKeyboardVisible(isKeyboardVisible);
+      
+      // Update bottom position when keyboard is visible
+      if (isKeyboardVisible) {
+        const keyboardHeight = windowHeight - viewportHeight;
+        setToolbarStyle(current => ({
+          ...current,
+          bottom: `${keyboardHeight}px`
+        }));
+      } else {
+        setToolbarStyle(current => ({
+          ...current,
+          bottom: 0
+        }));
+      }
     };
     
-    // Initial check
-    handleResize();
+    // Initial setup
+    handleViewportResize();
     
-    // Add listener
-    window.visualViewport.addEventListener('resize', handleResize);
+    // Listen for viewport changes (keyboard appearing/disappearing)
+    window.visualViewport.addEventListener('resize', handleViewportResize);
     
-    // Cleanup
     return () => {
-      window.visualViewport.removeEventListener('resize', handleResize);
+      window.visualViewport.removeEventListener('resize', handleViewportResize);
     };
   }, [isMobile]);
   
-  // Handle save action
+  // Handle save button click
   const handleSave = async () => {
     if (!onSave) return;
     
@@ -1058,95 +1106,69 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
+  // Don't render on server
   if (!mounted) return null;
   
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0',
-        left: 0,
-        right: 0,
-        zIndex: 100000,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        pointerEvents: 'none',
-        transition: 'bottom 0.2s ease',
-        transform: 'translateZ(0)',
-        willChange: 'transform, bottom'
-      }}
-    >
-      <div
-        className={`pointer-events-auto ${isMobile ? 'w-full' : 'w-auto'}`}
+    <div style={toolbarStyle}>
+      <div 
+        className="flex items-center justify-center py-2"
+        style={{
+          padding: isMobile ? '8px 0' : '4px 2px',
+        }}
       >
-        <div
-          className={`
-            flex items-center justify-center gap-2
-            ${isMobile 
-              ? 'w-full bg-[#1e1e1e]/95 backdrop-blur-md border-t border-gray-800' 
-              : 'rounded-full bg-[#1e1e1e]/95 backdrop-blur-md border border-gray-800 mb-6'
-            }
-          `}
-          style={{
-            padding: isMobile ? '10px 0' : '4px',
-            boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)',
-            maxWidth: isMobile ? '100%' : '500px',
-          }}
+        {/* Insert button */}
+        <button
+          type="button"
+          onClick={onInsert}
+          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
         >
-          {/* Insert button */}
-          <button
-            type="button"
-            onClick={onInsert}
-            className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
-          >
+          <span className="flex items-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+              <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Insert
+          </span>
+        </button>
+        
+        {/* Discard button */}
+        <button
+          type="button"
+          onClick={onDiscard}
+          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+        >
+          <span className="flex items-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Discard
+          </span>
+        </button>
+        
+        {/* Save button */}
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSave}
+          className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
+        >
+          {isSaving ? (
+            <span className="flex items-center">
+              <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Saving...
+            </span>
+          ) : (
             <span className="flex items-center">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-                <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Insert
+              Save
             </span>
-          </button>
-          
-          {/* Discard button */}
-          <button
-            type="button"
-            onClick={onDiscard}
-            className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
-          >
-            <span className="flex items-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Discard
-            </span>
-          </button>
-          
-          {/* Save button */}
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={handleSave}
-            className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
-          >
-            {isSaving ? (
-              <span className="flex items-center">
-                <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-                  <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Save
-              </span>
-            )}
-          </button>
-        </div>
+          )}
+        </button>
       </div>
     </div>
   );
