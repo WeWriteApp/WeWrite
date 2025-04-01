@@ -258,19 +258,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           overflow: 'hidden'
         }}
       >
-        {/* Toolbar at the top instead of bottom */}
-        <TopToolbar 
-          onInsert={onInsert} 
-          onDiscard={onDiscard} 
-          onSave={onSave} 
-        />
-        
         <div className="editor-content" 
           style={{
             flex: '1 1 auto',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            paddingTop: '60px' // Space for the toolbar
+            paddingBottom: '70px' // Space for the toolbar
           }}
         >
           <Slate
@@ -296,6 +289,13 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             )}
           </Slate>
         </div>
+        
+        {/* Keyboard-aware toolbar */}
+        <KeyboardAwareToolbar 
+          onInsert={onInsert} 
+          onDiscard={onDiscard} 
+          onSave={onSave} 
+        />
       </div>
     </LineSettingsProvider>
   );
@@ -556,10 +556,69 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   );
 };
 
-// Toolbar at the top of the screen
-const TopToolbar = ({ onInsert, onDiscard, onSave }) => {
+// Keyboard-aware toolbar that stays above the keyboard
+const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const toolbarRef = useRef(null);
   
+  // Use iOS-specific technique to detect keyboard and adjust position
+  useEffect(() => {
+    // Only run on mobile browsers
+    if (typeof window === 'undefined' || window.innerWidth > 768) return;
+    
+    // Add viewport meta tag to prevent zooming and ensure proper keyboard handling
+    const meta = document.createElement('meta');
+    meta.name = 'viewport';
+    meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+    document.getElementsByTagName('head')[0].appendChild(meta);
+    
+    // Focus on input to trigger keyboard
+    const triggerKeyboard = () => {
+      const inputs = document.querySelectorAll('input, [contenteditable="true"]');
+      if (inputs.length > 0) {
+        inputs[0].focus();
+      }
+    };
+    
+    // Listen for viewport changes (iOS specific)
+    const detectKeyboard = () => {
+      if (!window.visualViewport) return;
+      
+      const windowHeight = window.innerHeight;
+      const viewportHeight = window.visualViewport.height;
+      
+      // If visualViewport is significantly smaller than window, keyboard is likely visible
+      if (viewportHeight < windowHeight * 0.8) {
+        const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
+        setKeyboardHeight(keyboardHeight);
+      } else {
+        setKeyboardHeight(0);
+      }
+    };
+    
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', detectKeyboard);
+      window.visualViewport.addEventListener('scroll', detectKeyboard);
+    }
+    
+    // iOS specific hack to ensure keyboard appears
+    window.addEventListener('touchend', triggerKeyboard, { once: true });
+    
+    // Initial detection
+    detectKeyboard();
+    
+    return () => {
+      // Cleanup
+      document.head.removeChild(meta);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', detectKeyboard);
+        window.visualViewport.removeEventListener('scroll', detectKeyboard);
+      }
+    };
+  }, []);
+  
+  // Handle save button
   const handleSave = async () => {
     if (!onSave) return;
     setIsSaving(true);
@@ -572,21 +631,43 @@ const TopToolbar = ({ onInsert, onDiscard, onSave }) => {
     }
   };
   
+  // Get styles to position above keyboard
+  const getToolbarStyle = () => {
+    const baseStyle = {
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      backgroundColor: '#f8f9fa',
+      borderTop: '1px solid #e1e4e8',
+      padding: '10px',
+      zIndex: 10000,
+      display: 'flex',
+      justifyContent: 'center',
+      width: '100%',
+      WebkitTransform: 'translateZ(0)', // Force hardware acceleration
+      transform: 'translateZ(0)'
+    };
+    
+    // Position above keyboard when it's visible
+    if (keyboardHeight > 0) {
+      return {
+        ...baseStyle,
+        bottom: `${keyboardHeight}px`,
+        transition: 'bottom 0.2s'
+      };
+    }
+    
+    // Default position at bottom
+    return {
+      ...baseStyle,
+      bottom: 0
+    };
+  };
+  
   return (
     <div 
-      style={{
-        position: 'fixed', 
-        top: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#f8f9fa',
-        borderBottom: '1px solid #e1e4e8',
-        padding: '10px',
-        zIndex: 1000,
-        display: 'flex',
-        justifyContent: 'center',
-        width: '100%'
-      }}
+      ref={toolbarRef}
+      style={getToolbarStyle()}
     >
       <div style={{ display: 'flex', gap: '8px' }}>
         <button
