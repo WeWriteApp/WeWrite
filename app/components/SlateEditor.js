@@ -583,13 +583,20 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
     
     // Listen for viewport changes (iOS specific)
     const detectKeyboard = () => {
-      if (!window.visualViewport) return;
+      // visualViewport is the most reliable source for the visible area
+      if (!window.visualViewport) {
+        setKeyboardHeight(0); // Fallback if visualViewport is not supported
+        return;
+      }
       
-      const windowHeight = window.innerHeight;
+      const windowHeight = window.innerHeight; // Height of the layout viewport
       const viewportHeight = window.visualViewport.height;
       
-      // If visualViewport is significantly smaller than window, keyboard is likely visible
-      if (viewportHeight < windowHeight * 0.8) {
+      // Compare visual viewport height with the initial window height to detect keyboard
+      // Using a threshold helps avoid minor fluctuations
+      const isKeyboardVisible = viewportHeight < windowHeight - 70; // Assume keyboard is at least 70px
+      
+      if (isKeyboardVisible) {
         const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
         setKeyboardHeight(keyboardHeight);
       } else {
@@ -597,13 +604,11 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
       }
     };
     
+    // Only listen to resize events for keyboard height changes
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', detectKeyboard);
-      window.visualViewport.addEventListener('scroll', detectKeyboard);
+      // No need to listen to scroll, as fixed position handles it
     }
-    
-    // iOS specific hack to ensure keyboard appears
-    window.addEventListener('touchend', triggerKeyboard, { once: true });
     
     // Initial detection
     detectKeyboard();
@@ -613,7 +618,6 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
       document.head.removeChild(meta);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', detectKeyboard);
-        window.visualViewport.removeEventListener('scroll', detectKeyboard);
       }
     };
   }, []);
@@ -639,11 +643,11 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
       right: 0,
       backgroundColor: '#f8f9fa',
       borderTop: '1px solid #e1e4e8',
-      padding: '10px',
+      padding: '8px 10px', // Slightly adjusted padding
       zIndex: 10000,
       display: 'flex',
       justifyContent: 'center',
-      width: '100%',
+      boxSizing: 'border-box', // Ensure padding is included in width
       WebkitTransform: 'translateZ(0)', // Force hardware acceleration
       transform: 'translateZ(0)'
     };
@@ -653,7 +657,8 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
       return {
         ...baseStyle,
         bottom: `${keyboardHeight}px`,
-        transition: 'bottom 0.2s'
+        transition: 'bottom 0.15s ease-out', // Faster transition
+        willChange: 'bottom' // Hint for performance
       };
     }
     
