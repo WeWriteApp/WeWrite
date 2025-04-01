@@ -21,31 +21,7 @@ const EditPage = ({
   editorError
 }) => {
   const { setIsEditMode } = usePage();
-  const [editorState, setEditorState] = useState(() => {
-    try {
-      // Handle different types of input formats
-      if (!current) {
-        console.error("No current content provided");
-        return [{ type: "paragraph", children: [{ text: "" }] }];
-      }
-      
-      // If current is already an array, use it directly
-      if (Array.isArray(current)) {
-        return current;
-      }
-      
-      // If current is a string, try to parse it
-      if (typeof current === 'string') {
-        return JSON.parse(current);
-      }
-      
-      // If current is an object but not an array, stringify and parse it
-      return JSON.parse(JSON.stringify(current));
-    } catch (e) {
-      console.error("Failed to parse editor state:", e, "Current value:", current);
-      return [{ type: "paragraph", children: [{ text: "" }] }];
-    }
-  });
+  const [currentEditorValue, setCurrentEditorValue] = useState(current); // State to hold latest editor value for saving
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
   const { user } = useContext(AuthContext);
@@ -85,6 +61,11 @@ const EditPage = ({
   }, [setIsEditMode]);
 
   useEffect(() => {
+    // Update currentEditorValue when the `current` prop changes (e.g., initial load)
+    setCurrentEditorValue(current);
+  }, [current]);
+
+  useEffect(() => {
     if (!groups) return;
     if (groups.length > 0 && user?.groups) {
       let arr = [];
@@ -119,7 +100,8 @@ const EditPage = ({
     setIsSaving(true);
     try {
       // convert the editorState to JSON
-      const editorStateJSON = JSON.stringify(editorState);
+      // Use the latest value from the editor captured in `currentEditorValue`
+      const editorStateJSON = JSON.stringify(currentEditorValue);
 
       // save the new version
       const result = await saveNewVersion(page.id, {
@@ -183,10 +165,11 @@ const EditPage = ({
   }
 
   // Always provide a default editor state if none exists
-  if (!editorState) {
-    console.error("Editor state is null or undefined, using default empty state");
-    setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
-  }
+  // This check is less critical now as SlateEditor handles its default internally
+  // if (!currentEditorValue) { 
+  //   console.warn("Current editor value is null or undefined, using default empty state for safety.");
+  //   setCurrentEditorValue([{ type: "paragraph", children: [{ text: "" }] }]);
+  // }
 
   return (
     <div className="space-y-8 pb-28">
@@ -204,11 +187,11 @@ const EditPage = ({
 
         <div className="space-y-6 rounded-xl">
           <div className="space-y-0">
-            <SlateEditor
-              ref={editorRef}
-              initialEditorState={editorState}
-              setEditorState={setEditorState}
-              onSave={handleSave}
+            <SlateEditor 
+              ref={editorRef} 
+              initialContent={current} // Pass the `current` prop directly
+              onContentChange={setCurrentEditorValue} // Update local state on change
+              onSave={!isSaving ? handleSave : null}
               onDiscard={handleCancel}
               onInsert={handleInsertLink}
             />

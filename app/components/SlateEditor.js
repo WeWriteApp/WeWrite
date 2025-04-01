@@ -55,8 +55,6 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     return result;
   }, [initialContent]);
   
-  const initialEditorState = deserializedValue; // Use the logged value
-
   const editor = useMemo(() => withLinks(withReact(createEditor())), []); // Removed withLineNumbers wrapper
   const [linkEditorPosition, setLinkEditorPosition] = useState(null);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
@@ -88,39 +86,34 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
   // Use initialContent as the priority content source if available
   useEffect(() => {
-    if (initialContent && !contentInitialized) {
-      try {
-        // Parse the initial content to get the editor state
-        const content = Array.isArray(initialContent) ? initialContent : JSON.parse(initialContent);
-        
-        // Set the editor's content and mark it as initialized
-        editor.children = content;
+    // Only initialize if not already done and editor exists
+    if (editor && !contentInitialized) {
+      // Use the memoized deserialized value derived from initialContent
+      const contentToSet = deserializedValue; 
+      
+      // Ensure contentToSet is a valid Slate structure (basic check)
+      if (Array.isArray(contentToSet) && contentToSet.length > 0) {
+        console.log("Initializing editor content with:", JSON.stringify(contentToSet));
+        editor.children = contentToSet;
+        // Insert operations may need normalization if structure isn't perfect
+        // editor.normalizeNode([editor, []]); // Add normalization if needed
         setContentInitialized(true);
-        
-        // Update the parent component's state if needed
         if (onContentChange) {
-          onContentChange(content);
+          onContentChange(contentToSet);
         }
-      } catch (error) {
-        console.error("Error initializing content:", error, initialContent);
-        // Fallback to initialEditorState if initialContent parsing fails
-        if (initialEditorState && !contentInitialized) {
-          editor.children = initialEditorState;
-          setContentInitialized(true);
-          if (onContentChange) {
-            onContentChange(initialEditorState);
-          }
-        }
-      }
-    } else if (initialEditorState && !contentInitialized) {
-      // Use initialEditorState if initialContent is not available
-      editor.children = initialEditorState;
-      setContentInitialized(true);
-      if (onContentChange) {
-        onContentChange(initialEditorState);
+      } else {
+         // Handle cases where deserializedValue is invalid or empty
+         console.warn("Deserialized value is not valid Slate content, using default empty state.", contentToSet);
+         const defaultContent = [{ type: 'line', children: [{ text: '' }] }];
+         editor.children = defaultContent;
+         setContentInitialized(true);
+         if (onContentChange) {
+             onContentChange(defaultContent);
+         }
       }
     }
-  }, [initialContent, initialEditorState, editor, onContentChange, contentInitialized]);
+  // Depend only on the things that should trigger re-initialization if they change *before* initialization
+  }, [editor, deserializedValue, contentInitialized, onContentChange]); 
 
   const onChange = value => {
     if (onContentChange) {
@@ -353,7 +346,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         >
           <Slate
             editor={editor}
-            initialValue={initialEditorState || [{ type: 'line', children: [{ text: '' }] }]}
+            initialValue={deserializedValue || [{ type: 'line', children: [{ text: '' }] }]}
             onChange={onChange}
           >
             <EditorContent 
@@ -643,242 +636,201 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
 
 // Keyboard-aware toolbar that stays above the keyboard
 const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const editor = useSlateStatic();
+  const [toolbarPosition, setToolbarPosition] = useState(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false); // Basic state, might need refinement
   const toolbarRef = useRef(null);
-  
-  // Use iOS-specific technique to detect keyboard and adjust position
-  useEffect(() => {
-    // Only run on mobile browsers
-    if (typeof window === 'undefined' || window.innerWidth > 768) return;
-    
-    // Add viewport meta tag to prevent zooming and ensure proper keyboard handling
-    const meta = document.createElement('meta');
-    meta.name = 'viewport';
-    meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
-    document.getElementsByTagName('head')[0].appendChild(meta);
-    
-    // Focus on input to trigger keyboard
-    const triggerKeyboard = () => {
-      const inputs = document.querySelectorAll('input, [contenteditable="true"]');
-      if (inputs.length > 0) {
-        inputs[0].focus();
-      }
-    };
-    
-    // Listen for viewport changes (iOS specific)
-    const detectKeyboard = () => {
-      // visualViewport is the most reliable source for the visible area
-      if (!window.visualViewport) {
-        setKeyboardHeight(0); // Fallback if visualViewport is not supported
+  const saveButtonRef = useRef(null); // Ref for the save button
+  const { user } = useContext(AuthContext); // Get user context
+
+
+  // Effect to show/hide toolbar based on selection and focus
+  useLayoutEffect(() => {
+    const { selection } = editor;
+    const editableElement = document.querySelector('[data-slate-editor="true"]'); // Find the editable area
+
+    if (
+      !selection ||
+      !ReactEditor.isFocused(editor) ||
+      Range.isCollapsed(selection) ||
+      Editor.string(editor, selection) === ''
+    ) {
+      // Hide toolbar if no selection, not focused, selection collapsed, or selection is empty
+      // setToolbarPosition(null); // Keep toolbar visible but maybe disabled/differently styled? Let's try keeping it.
+      return;
+    }
+
+    const domSelection = window.getSelection();
+    if (domSelection.rangeCount === 0) {
+      // setToolbarPosition(null); // Keep toolbar visible
+      return;
+    }
+
+    const domRange = domSelection.getRangeAt(0);
+    const rect = domRange.getBoundingClientRect();
+
+    // --- Logging added ---
+    const scrollY = window.scrollY || window.pageYOffset;
+    console.log("Toolbar positioning: rect=", rect, "scrollY=", scrollY); 
+    // --- End Logging ---
+
+
+    if (rect.width === 0 && rect.height === 0) {
+        // Avoid positioning based on invalid rect
         return;
-      }
-      
-      const windowHeight = window.innerHeight; // Height of the layout viewport
-      const viewportHeight = window.visualViewport.height;
-      
-      console.log(`detectKeyboard: windowH=${windowHeight.toFixed(0)}, visualH=${viewportHeight.toFixed(0)}, keyboardH=${keyboardHeight.toFixed(0)}`);
-      
-      // Compare visual viewport height with the initial window height to detect keyboard
-      // Using a threshold helps avoid minor fluctuations
-      const isKeyboardVisible = viewportHeight < windowHeight - 70; // Assume keyboard is at least 70px
-      
-      if (isKeyboardVisible) {
-        const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
-        setKeyboardHeight(keyboardHeight);
-      } else {
-        setKeyboardHeight(0);
-      }
-    };
-    
-    // Only listen to resize events for keyboard height changes
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', detectKeyboard);
-      // No need to listen to scroll, as fixed position handles it
     }
-    
-    // Initial detection
-    detectKeyboard();
-    
-    return () => {
-      // Cleanup
-      document.head.removeChild(meta);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', detectKeyboard);
-      }
+
+    // Position toolbar above the selection
+    // Add scrollY to account for page scrolling when using fixed positioning
+    const calculatedTop = rect.top + scrollY - (toolbarRef.current?.offsetHeight || 50) - 8; // Position above selection
+    const calculatedLeft = rect.left + scrollY; // Use scrollY for left too if needed, depends on layout
+
+    // Check if positioning near top edge, potentially flip below
+    // Simplified logic: Always position above for now
+    setToolbarPosition({ 
+      // Ensure top is not negative
+      top: Math.max(0, calculatedTop), 
+      left: rect.left // Left relative to viewport seems correct for fixed
+    }); 
+
+  }, [editor.selection, editor]); // Re-run when selection changes
+
+  // Simplified keyboard detection (example, may need library for reliability)
+  useEffect(() => {
+    const handleResize = () => {
+      // Basic check: if window height significantly decreases, assume keyboard
+      // This is unreliable; a dedicated library is better
+      const newHeight = window.innerHeight;
+      // Store initial height or use threshold logic
     };
+    window.addEventListener('resize', handleResize);
+    // Add listeners for virtual keyboard APIs if available/needed
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
-  // Handle save button
-  const handleSave = async () => {
-    if (!onSave) return;
-    setIsSaving(true);
-    try {
-      await onSave();
-    } catch (error) {
-      console.error("Error saving:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  // Get styles to position above keyboard
-  const getToolbarStyle = () => {
-    const baseStyle = {
-      position: 'fixed',
-      left: 0,
-      right: 0,
-      backgroundColor: '#f8f9fa',
-      borderTop: '1px solid #e1e4e8',
-      padding: '8px 10px', // Slightly adjusted padding
-      zIndex: 10000,
-      display: 'flex',
-      justifyContent: 'center',
-      boxSizing: 'border-box', // Ensure padding is included in width
-      WebkitTransform: 'translateZ(0)', // Force hardware acceleration
-      transform: 'translateZ(0)'
-    };
-    
-    // Position above keyboard when it's visible
-    if (keyboardHeight > 0) {
-      const style = {
-        ...baseStyle,
-        bottom: `${keyboardHeight}px`,
-        transition: 'bottom 0.15s ease-out', // Faster transition
-        willChange: 'bottom' // Hint for performance
-      };
-      console.log(`Toolbar Style (Keyboard Visible): keyboardH=${keyboardHeight}px, bottom=${style.bottom}`);
-      return style;
-    }
-    
-    // Default position at bottom
-    const style = {
-      ...baseStyle,
-      bottom: 0
-    };
-    console.log(`Toolbar Style (Keyboard Hidden): bottom=${style.bottom}`);
-    return style;
-  };
-  
+
+
+  if (!toolbarPosition) {
+    // Don't render if position is not set (or selection is invalid)
+    // return null; // Let's keep it rendered but maybe visually hidden or disabled
+  }
+
+  // Conditionally render Save/Discard/Insert based on user auth and context
+  const showSaveDiscard = !!onSave && !!onDiscard && user; // Only show if user is logged in
+  const showInsert = !!onInsert; // Show if insert handler is provided
+
+
   return (
-    <div 
-      ref={toolbarRef}
-      style={getToolbarStyle()}
-    >
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <button
-          type="button"
-          onClick={onInsert}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '8px 16px',
-            border: 'none',
-            borderRadius: '20px',
-            background: '#f1f3f5',
-            color: '#333',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
-              <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Insert
-          </span>
-        </button>
-        
-        <button
-          type="button"
-          onClick={onDiscard}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '8px 16px',
-            border: 'none',
-            borderRadius: '20px',
-            background: '#f1f3f5',
-            color: '#333',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Discard
-          </span>
-        </button>
-        
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={handleSave}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '8px 16px',
-            border: 'none',
-            borderRadius: '20px',
-            background: '#1a73e8',
-            color: 'white',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          {isSaving ? (
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <span
-                style={{ 
-                  width: '16px', 
-                  height: '16px', 
-                  marginRight: '8px',
-                  border: '2px solid white',
-                  borderTopColor: 'transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
+    <AnimatePresence>
+    {toolbarPosition && ( // Only render with animation if position is set
+      <motion.div
+        ref={toolbarRef}
+        className="absolute z-50 bg-background border border-border rounded-md shadow-lg p-1 flex items-center space-x-1"
+        style={{
+          position: 'fixed', // Keep fixed positioning for now
+          top: `${toolbarPosition.top}px`,
+          left: `${toolbarPosition.left}px`,
+          opacity: 1, // Ensure visible
+        }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.1 }}
+      >
+        {/* Toolbar buttons */}
+        {/* Example Button: Bold */}
+        {/* <button 
+            className="p-1 hover:bg-muted rounded"
+            onMouseDown={(event) => {
+              event.preventDefault(); // Prevent editor losing focus
+              // Toggle Bold Mark Command
+            }}
+          >
+            B
+          </button> */}
+          
+        {/* Add other formatting buttons here */}
+
+        {/* Separator */}
+        {/* <div className="border-l border-border h-4 mx-1"></div> */}
+
+        {/* Insert/Save/Discard Buttons */}
+        {showInsert && (
+           <button 
+             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+             onMouseDown={(event) => {
+                 event.preventDefault();
+                 onInsert(); // Call the insert handler passed via props
+             }}
+           >
+             Insert
+           </button>
+        )}
+         {showSaveDiscard && (
+           <>
+             <button 
+                ref={saveButtonRef} // Assign ref to save button
+                className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  console.log("Save button clicked");
+                  onSave(); // Call the save handler passed via props
                 }}
-              />
-              Saving...
-            </span>
-          ) : (
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
-                <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Save
-            </span>
-          )}
-        </button>
-      </div>
-    </div>
+              >
+                Save
+              </button>
+              <button 
+                className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                onMouseDown={(event) => {
+                    event.preventDefault();
+                    onDiscard(); // Call the discard handler
+                }}
+              >
+                Discard
+              </button>
+           </>
+         )}
+      </motion.div>
+     )}
+    </AnimatePresence>
   );
 };
 
 // Custom EditorContent component to apply line mode styles
 const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) => {
-  // Set up custom handling for leaf rendering
-  const renderLeaf = useCallback(props => <Leaf {...props} />, []);
-  
+  const { lineSettings } = useLineSettings();
+
+  // Determine the class based on the line setting mode
+  const editorClassName = useMemo(() => {
+    let baseClass = "prose dark:prose-invert max-w-none focus:outline-none";
+    // Apply spacing based on mode - These might need adjustment based on recent padding changes
+    if (lineSettings.mode === 'spaced') {
+      return `${baseClass} editor-spaced`; // Add specific class for spaced
+    } else if (lineSettings.mode === 'wrapped') {
+      return `${baseClass} editor-wrapped`; // Add specific class for wrapped
+    } else {
+      return `${baseClass} editor-default`; // Default class
+    }
+  }, [lineSettings.mode]);
+
+
   return (
-    <Editable
-      ref={editableRef}
-      renderElement={renderElement}
-      renderLeaf={renderLeaf}
-      placeholder="Write something..."
-      spellCheck={false}
-      autoFocus
-      onKeyDown={e => handleKeyDown(e, editor)}
-      className="outline-none py-4 px-4 min-h-full"
-    />
+    <motion.div 
+      className={`editable-container p-2`} // Reduced padding from p-4
+      initial={{ opacity: 0, y: 5 }} // Subtle slide up and fade in
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.15, ease: "easeOut" }} // Quick fade in
+    >
+      <Editable
+        ref={editableRef}
+        renderElement={renderElement}
+        renderLeaf={Leaf} // Use custom Leaf component
+        placeholder="Start writing..."
+        spellCheck
+        autoFocus={false} // Manage focus via ref if needed
+        onKeyDown={event => handleKeyDown(event, editor)}
+        className={editorClassName} // Apply dynamic class name
+      />
+    </motion.div>
   );
 };
 
