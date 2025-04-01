@@ -1003,10 +1003,46 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const toolbarRef = useRef(null);
   const [mounted, setMounted] = useState(false);
   
-  // Handle SSR safely - only run portal code on client
+  // Handle SSR safely - only run client-side code after mount
   useEffect(() => {
     setMounted(true);
-    return () => setMounted(false);
+    
+    // Add a special CSS class to body to prevent toolbar from scrolling
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('has-floating-toolbar');
+      
+      // Add custom styles to ensure fixed positioning works correctly
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .floating-toolbar-container {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          z-index: 9999 !important;
+          width: 100% !important;
+          transform: translateZ(0) !important;
+          will-change: transform !important;
+          transition: bottom 0.2s ease-out !important;
+          pointer-events: none !important;
+        }
+        .floating-toolbar-container > * {
+          pointer-events: auto !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    return () => {
+      setMounted(false);
+      
+      // Clean up
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('has-floating-toolbar');
+        const style = document.head.querySelector('style:last-child');
+        if (style) document.head.removeChild(style);
+      }
+    };
   }, []);
   
   // Detect if device is mobile
@@ -1077,94 +1113,80 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Get position styles based on device and keyboard state
-  const getPositionStyles = () => {
-    const styles = {
-      position: 'fixed',
-      bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '24px',
-      left: 0,
-      right: 0,
-      zIndex: 9999,
-      display: 'flex',
-      justifyContent: isMobile ? 'space-between' : 'center',
-      pointerEvents: 'auto'
-    };
-    
-    return styles;
-  };
+  // Don't render anything during SSR
+  if (!mounted) return null;
   
-  // Create toolbar content
-  const toolbarContent = (
-    <div 
-      ref={toolbarRef}
-      className={`bg-[#1e1e1e]/90 backdrop-blur-sm flex items-center justify-center gap-2 ${isMobile ? 'w-full border-t border-gray-800' : 'w-fit rounded-full border border-gray-800'}`}
-      style={{
-        padding: isMobile ? '8px 0' : '4px',
-        boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.1)',
-        // Accelerate rendering
-        transform: 'translateZ(0)',
-        willChange: 'transform',
-        isolation: 'isolate',
-        ...getPositionStyles()
-      }}
-    >
-      {/* Insert button */}
-      <button
-        type="button"
-        onClick={onInsert}
-        className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+  return (
+    <div className="floating-toolbar-container" style={{
+      bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '24px',
+    }}>
+      <div
+        ref={toolbarRef}
+        className={`flex items-center justify-center gap-2 ${
+          isMobile 
+            ? 'w-full bg-[#1e1e1e]/95 backdrop-blur-sm border-t border-gray-800' 
+            : 'w-fit mx-auto rounded-full bg-[#1e1e1e]/95 backdrop-blur-sm border border-gray-800'
+        }`}
+        style={{
+          padding: isMobile ? '8px 0' : '4px',
+          boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.1)',
+        }}
       >
-        <span className="flex items-center">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-            <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Insert
-        </span>
-      </button>
-      
-      {/* Discard button */}
-      <button
-        type="button"
-        onClick={onDiscard}
-        className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
-      >
-        <span className="flex items-center">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Discard
-        </span>
-      </button>
-      
-      {/* Save button */}
-      <button
-        type="button"
-        disabled={isSaving}
-        onClick={handleSave}
-        className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
-      >
-        {isSaving ? (
-          <span className="flex items-center">
-            <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Saving...
-          </span>
-        ) : (
+        {/* Insert button */}
+        <button
+          type="button"
+          onClick={onInsert}
+          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+        >
           <span className="flex items-center">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-              <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Save
+            Insert
           </span>
-        )}
-      </button>
+        </button>
+        
+        {/* Discard button */}
+        <button
+          type="button"
+          onClick={onDiscard}
+          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
+        >
+          <span className="flex items-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Discard
+          </span>
+        </button>
+        
+        {/* Save button */}
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSave}
+          className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
+        >
+          {isSaving ? (
+            <span className="flex items-center">
+              <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Saving...
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Save
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
-  
-  // Return the toolbar
-  return mounted ? toolbarContent : null;
 };
 
 const Leaf = ({ attributes, children, leaf }) => {
