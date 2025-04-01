@@ -68,65 +68,27 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({});
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
-  const [selectedLinkPath, setSelectedLinkPath] = useState(null);
-  const [initialLinkValues, setInitialLinkValues] = useState({}); // New state to store initial link values
-  const editableRef = useRef(null);
-  const [lineCount, setLineCount] = useState(0);
+  const [selectedNodePath, setSelectedNodePath] = useState(null);
   const [contentInitialized, setContentInitialized] = useState(false);
 
-  // Initialize editor state with proper error handling
-  const [initialValue, setInitialValue] = useState(() => {
-    try {
-      // If initialContent is provided, it takes precedence
-      if (initialContent) {
-        console.log("Using initialContent for editor initialization");
-        return Array.isArray(initialContent) ? initialContent : JSON.parse(initialContent);
-      }
-      
-      // Otherwise use initialEditorState if available
-      if (initialEditorState) {
-        console.log("Using initialEditorState for editor initialization");
-        if (Array.isArray(initialEditorState)) {
-          return initialEditorState;
-        } else if (typeof initialEditorState === 'string') {
-          return JSON.parse(initialEditorState);
-        } else {
-          return JSON.parse(JSON.stringify(initialEditorState));
-        }
-      }
-      
-      // Default empty state
-      return [{ type: "paragraph", children: [{ text: "" }] }];
-    } catch (error) {
-      console.error("Error initializing editor state:", error);
-      return [{ type: "paragraph", children: [{ text: "" }] }];
-    }
-  });
+  const editorRef = useRef(null);
+  const editableRef = useRef(null);
+  const { data } = useContext(DataContext);
+  const { user } = useContext(AuthContext);
+  const { hasLineSettings } = useLineSettings();
 
+  // Expose methods via ref
   useImperativeHandle(ref, () => ({
-    focus: () => {
-      try {
-        ReactEditor.focus(editor);
-        
-        // If there's no content, add an empty paragraph
-        if (editor.children.length === 0) {
-          Transforms.insertNodes(editor, {
-            type: 'paragraph',
-            children: [{ text: '' }],
-          });
-        }
-
-        // Find the last text node
-        const lastNode = Editor.last(editor, []);
-        if (lastNode) {
-          const [node, path] = lastNode;
-          
-          // Create a new selection at the end of the last text node
-          const point = { path, offset: node.text.length };
-          Transforms.select(editor, point);
-        }
-      } catch (error) {
-        console.error('Error focusing editor:', error);
+    focus() {
+      if (!editor || !ReactEditor.isFocused(editor)) {
+        setTimeout(() => {
+          try {
+            ReactEditor.focus(editor);
+            Transforms.select(editor, Editor.end(editor, []));
+          } catch (error) {
+            console.error("Error focusing editor:", error);
+          }
+        }, 100);
       }
     }
   }));
@@ -134,348 +96,291 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   // Use initialContent as the priority content source if available
   useEffect(() => {
     if (initialContent && !contentInitialized) {
-      console.log("SlateEditor received initialContent:", JSON.stringify(initialContent, null, 2));
-      
       try {
-        // Use initialContent as the priority source
-        console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
-        setInitialValue(initialContent);
+        // Parse the initial content to get the editor state
+        const content = Array.isArray(initialContent) ? initialContent : JSON.parse(initialContent);
         
-        // Also set the editor state if the callback is provided
-        if (setEditorState) {
-          console.log("Setting editorState from initialContent");
-          setEditorState(initialContent);
-          
-          // Force update the editor with the initialContent
-          editor.children = initialContent;
-          editor.onChange();
-        }
-        
-        // Set content as initialized to prevent re-initialization
+        // Set the editor's content and mark it as initialized
+        editor.children = content;
         setContentInitialized(true);
         
-        // Focus the editor after setting content
-        setTimeout(() => {
-          try {
-            ReactEditor.focus(editor);
-          } catch (error) {
-            console.error("Error focusing editor after content initialization:", error);
-          }
-        }, 100);
+        // Update the parent component's state if needed
+        if (setEditorState) {
+          setEditorState(content);
+        }
       } catch (error) {
-        console.error("Error setting editor content from initialContent:", error);
+        console.error("Error initializing content:", error, initialContent);
+        // Fallback to initialEditorState if initialContent parsing fails
+        if (initialEditorState && !contentInitialized) {
+          editor.children = initialEditorState;
+          setContentInitialized(true);
+          if (setEditorState) {
+            setEditorState(initialEditorState);
+          }
+        }
+      }
+    } else if (initialEditorState && !contentInitialized) {
+      // Use initialEditorState if initialContent is not available
+      editor.children = initialEditorState;
+      setContentInitialized(true);
+      if (setEditorState) {
+        setEditorState(initialEditorState);
       }
     }
-  }, [initialContent, setEditorState, contentInitialized, editor]);
+  }, [initialContent, initialEditorState, editor, setEditorState, contentInitialized]);
 
-  // Make sure initialValue is properly set from initialContent
-  useEffect(() => {
-    if (initialContent && initialValue.length === 1 && initialValue[0].children[0].text === "") {
-      console.log("Setting initialValue from initialContent in secondary effect");
-      setInitialValue(initialContent);
+  const onChange = value => {
+    if (setEditorState) {
+      setEditorState(value);
     }
-  }, [initialContent, initialValue]);
-
-  // onchange handler
-  const onChange = (newValue) => {
-    setEditorState(newValue);
-    setLineCount(newValue.length);
   };
 
   const handleKeyDown = (event, editor) => {
-    // Handle cmd+enter to save
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    // If the link editor is shown, close it on escape
+    if (event.key === 'Escape' && showLinkEditor) {
       event.preventDefault();
-      // TODO: Implement save functionality
-      return;
-    }
-
-    // Shift+enter should do nothing
-    if (event.key === 'Enter' && event.shiftKey) {
-      event.preventDefault();
-      return;
-    }
-
-    // Regular enter should create a newline, but prevent consecutive empty paragraphs
-    if (event.key === 'Enter') {
-      const { selection } = editor;
-      
-      if (selection && Range.isCollapsed(selection)) {
-        const [node, path] = Editor.node(editor, selection);
-        const [parent] = Editor.parent(editor, path);
-        
-        // Check if current node is in a paragraph and is empty or only contains whitespace
-        const isEmptyParagraph = 
-          SlateElement.isElement(parent) && 
-          parent.type === 'paragraph' && 
-          Node.string(parent).trim() === '';
-        
-        // Check if previous node is also an empty paragraph
-        let prevNodeIsEmpty = false;
-        
-        if (path[0] > 0) {
-          const prevPath = [path[0] - 1];
-          
-          try {
-            const [prevNode] = Editor.node(editor, prevPath);
-            
-            if (SlateElement.isElement(prevNode) && 
-                prevNode.type === 'paragraph' && 
-                Node.string(prevNode).trim() === '') {
-              prevNodeIsEmpty = true;
-            }
-          } catch (e) {
-            // Path might not exist, ignore
-          }
-        }
-        
-        // If current paragraph is empty and previous paragraph is also empty, prevent new line
-        if (isEmptyParagraph && prevNodeIsEmpty) {
-          event.preventDefault();
-          return;
-        }
-      }
-      
-      // Allow default behavior which creates a newline
-      return;
-    }
-
-    // Fix arrow key navigation around links
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      const [link] = Editor.nodes(editor, {
-        match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
-      });
-      
-      if (link) {
-        // Get the current selection
-        const { selection } = editor;
-        if (!selection) return;
-        
-        // Find the link element and its parent paragraph
-        const [, linkPath] = link;
-        const parentPath = Path.parent(linkPath);
-        
-        if (event.key === 'ArrowUp') {
-          // Find the previous paragraph if exists
-          if (parentPath[0] > 0) {
-            const prevPath = [...parentPath];
-            prevPath[0] = parentPath[0] - 1;
-            const newPoint = Editor.end(editor, prevPath);
-            Transforms.select(editor, newPoint);
-            event.preventDefault();
-          }
-        } else if (event.key === 'ArrowDown') {
-          // Find the next paragraph if exists
-          const nextPath = [...parentPath];
-          nextPath[0] = parentPath[0] + 1;
-          
-          try {
-            const nextNode = Node.get(editor, nextPath);
-            if (nextNode) {
-              const newPoint = Editor.start(editor, nextPath);
-              Transforms.select(editor, newPoint);
-              event.preventDefault();
-            }
-          } catch (error) {
-            // Next paragraph doesn't exist, do nothing
-          }
-        }
-      }
-    }
-
-    if (event.key === "@") {
-      event.preventDefault();
-      const { selection } = editor;
-
-      if (selection) {
-        showLinkEditorMenu(editor, selection);
-      }
-    }
-
-    if (event.key === "Escape") {
       setShowLinkEditor(false);
+      return;
+    }
+
+    // Check if we're on a line with special mode settings
+    const { selection } = editor;
+    if (selection && Range.isCollapsed(selection)) {
+      const [lineNode] = Editor.nodes(editor, {
+        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'line',
+        at: selection,
+      });
+
+      // If we are, handle keys based on line mode
+      if (lineNode) {
+        const [node, path] = lineNode;
+        if (node.mode === LINE_MODES.CODE) {
+          if (event.key === 'Tab') {
+            event.preventDefault();
+            Transforms.insertText(editor, '  ');
+            return;
+          }
+        }
+
+        // Add more line mode specific handlers here if needed
+      }
+    }
+
+    // Handle keyboard shortcuts
+    if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      
+      // Get the current selection
+      const { selection } = editor;
+      
+      if (selection && !Range.isCollapsed(selection)) {
+        // Show the link editor menu at the selection
+        showLinkEditorMenu(editor, selection);
+      } else {
+        // If no text is selected, place cursor in link editor
+        setShowLinkEditor(true);
+        const domSelection = window.getSelection();
+        if (domSelection.rangeCount > 0) {
+          const range = domSelection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          setLinkEditorPosition({
+            left: rect.left,
+            top: rect.bottom + window.scrollY,
+          });
+        }
+      }
     }
   };
 
   const showLinkEditorMenu = (editor, editorSelection) => {
     try {
-      // First try to use the editor selection if provided
-      if (editor && editorSelection) {
-        try {
-          const domSelection = ReactEditor.toDOMRange(editor, editorSelection);
-          if (domSelection) {
-            const rect = domSelection.getBoundingClientRect();
-          
-            setLinkEditorPosition({
-              top: rect.bottom + window.pageYOffset,
-              left: rect.left + window.pageXOffset,
-            });
-          
-            setShowLinkEditor(true);
-            setSelectedLinkElement(null);
-            setSelectedLinkPath(null);
-            return;
-          }
-        } catch (editorError) {
-          console.warn("Error getting DOM range from editor selection:", editorError);
-          // Continue to fallback method
-        }
-      }
-      
-      // Fall back to window.getSelection()
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        console.warn("No selection available");
-        // Position the link editor in the center as a fallback
+      // If we already have a selection, we can show the link menu directly
+      if (editorSelection) {
+        const domRange = ReactEditor.toDOMRange(editor, editorSelection);
+        const rect = domRange.getBoundingClientRect();
         setLinkEditorPosition({
-          top: window.innerHeight / 2,
-          left: window.innerWidth / 2,
+          left: rect.left,
+          top: rect.bottom + window.scrollY,
         });
         setShowLinkEditor(true);
         return;
       }
-    
-      const range = selection.getRangeAt(0).cloneRange();
-      const rect = range.getBoundingClientRect();
-    
-      setLinkEditorPosition({
-        top: rect.bottom + window.pageYOffset,
-        left: rect.left + window.pageXOffset,
-      });
-    
-      setShowLinkEditor(true);
-      setSelectedLinkElement(null);
-      setSelectedLinkPath(null);
+
+      // If we don't have a selection, we need to use the current DOM selection
+      const domSelection = window.getSelection();
+      if (domSelection && domSelection.rangeCount > 0) {
+        const domRange = domSelection.getRangeAt(0);
+        const rect = domRange.getBoundingClientRect();
+        setLinkEditorPosition({
+          left: rect.left,
+          top: rect.bottom + window.scrollY,
+        });
+        setShowLinkEditor(true);
+      }
     } catch (error) {
-      console.error("Error showing link editor menu:", error);
-      // Position the link editor in the center if all else fails
-      setLinkEditorPosition({
-        top: window.innerHeight / 2,
-        left: window.innerWidth / 2,
-      });
-      setShowLinkEditor(true);
-      setSelectedLinkElement(null);
-      setSelectedLinkPath(null);
+      console.error("Error showing link editor:", error);
     }
   };
-  
+
   const openLinkEditor = (element, path) => {
     setSelectedLinkElement(element);
-    setSelectedLinkPath(path);
-    // Pass initial values to the LinkEditor
-    setInitialLinkValues({
-      text: element.children[0]?.text || "",
-      pageId: element.pageId || null,
-      pageTitle: element.pageTitle || ""
+    setSelectedNodePath(path);
+    const domNode = ReactEditor.toDOMNode(editor, element);
+    const rect = domNode.getBoundingClientRect();
+    setLinkEditorPosition({
+      left: rect.left,
+      top: rect.bottom + window.scrollY,
     });
     setShowLinkEditor(true);
   };
 
-  const handleSelection = (item) => {
-    if (selectedLinkElement && selectedLinkPath) {
-      // Edit existing link
-      Transforms.setNodes(
-        editor,
-        { 
-          url: `/pages/${item.id}`,
-          children: [{ text: item.displayText || item.title }],
-          pageId: item.id,
-          pageTitle: item.title // Store the original page title for reference
-        },
-        { at: selectedLinkPath }
-      );
-    } else {
-      // Insert new link
-      const link = {
-        type: "link",
-        url: `/pages/${item.id}`,
-        children: [{ text: item.displayText || item.title }],
-        pageId: item.id,
-        pageTitle: item.title // Store the original page title for reference
-      };
-      Transforms.insertNodes(editor, link, { at: editor.selection });
-      // after insert -- move the cursor to the end of the link
-      Transforms.collapse(editor, { edge: "end" });
-
-      // position the cursor at the end of the new link
-      Transforms.select(editor, Editor.end(editor, []));
-
-      // insert a space after the link
-      Transforms.insertText(editor, ' ');
+  const handleSelection = item => {
+    try {
+      if (selectedNodePath) {
+        // If editing an existing link
+        Transforms.setNodes(
+          editor,
+          { 
+            ...item, 
+            type: 'link',
+            url: item.pageId ? `/page/${item.pageId}` : item.url,
+            children: [{ text: item.text }] 
+          },
+          { at: selectedNodePath }
+        );
+      } else if (editor.selection) {
+        // If creating a new link
+        if (isLinkActive(editor)) {
+          unwrapLink(editor);
+        }
+        
+        // Insert the link with the selected text or URL
+        const text = item.text || (item.pageId ? item.pageTitle : item.url);
+        const url = item.pageId ? `/page/${item.pageId}` : item.url;
+        
+        if (Range.isCollapsed(editor.selection)) {
+          // If no text is selected, insert the link text
+          Transforms.insertNodes(editor, {
+            type: 'link',
+            url,
+            pageId: item.pageId,
+            pageTitle: item.pageTitle,
+            children: [{ text }],
+          });
+        } else {
+          // If text is selected, convert it to a link
+          wrapLink(editor, url, item.pageId, item.pageTitle);
+        }
+      }
+    } catch (error) {
+      console.error("Error handling selection:", error);
+    } finally {
+      // Clean up
+      setShowLinkEditor(false);
+      setSelectedLinkElement(null);
+      setSelectedNodePath(null);
+      ReactEditor.focus(editor);
     }
-
-    ReactEditor.focus(editor);
-
-    // hide the dropdown
-    setShowLinkEditor(false);
   };
 
-  const renderElement = (props) => {
-    const { attributes, children, element } = props;
-    
-    switch (element.type) {
-      case "link":
-        return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
-      case "paragraph":
-        const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
-        return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
-              {index + 1}
-            </span>
-            <span className="flex-1">{children}</span>
-          </p>
-        );
+  const renderElement = props => {
+    switch (props.element.type) {
+      case 'link':
+        return <LinkElement {...props} openLinkEditor={openLinkEditor} />;
+      case 'line':
+        // Apply line-specific styling here
+        return <LineElement {...props} />;
       default:
-        const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
-        return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
-              {defaultIndex + 1}
-            </span>
-            <span className="flex-1">{children}</span>
-          </p>
-        );
+        return <DefaultElement {...props} />;
     }
   };
 
   return (
     <LineSettingsProvider>
       <motion.div 
-        className="relative rounded-lg bg-background"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="relative flex flex-col h-screen bg-background"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
       >
-        <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
-          <div className="flex">
-            <div className="flex-grow">
-              <div className="relative">
-                <EditorContent 
-                  editor={editor} 
-                  handleKeyDown={handleKeyDown} 
-                  renderElement={renderElement} 
-                  editableRef={editableRef} 
+        <div className="flex-grow overflow-auto">
+          <div 
+            className="editor-container h-full pb-20" // Add bottom padding for toolbar
+            ref={editorRef}
+          >
+            <Slate
+              editor={editor}
+              initialValue={initialEditorState || [{ type: 'line', children: [{ text: '' }] }]}
+              onChange={onChange}
+            >
+              <EditorContent 
+                editor={editor} 
+                handleKeyDown={handleKeyDown} 
+                renderElement={renderElement}
+                editableRef={editableRef}
+              />
+              {showLinkEditor && (
+                <LinkEditor
+                  position={linkEditorPosition}
+                  onSelect={handleSelection}
+                  setShowLinkEditor={setShowLinkEditor}
+                  initialText={selectedLinkElement?.children[0]?.text || ''}
+                  initialPageId={selectedLinkElement?.pageId}
+                  initialPageTitle={selectedLinkElement?.pageTitle}
                 />
-              </div>
-            </div>
+              )}
+            </Slate>
           </div>
-        </Slate>
+        </div>
+        
+        {/* Fixed toolbar at the bottom */}
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 py-2 flex justify-center z-50">
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={onInsert}
+              className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full"
+            >
+              <span className="flex items-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                  <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 15H11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Insert
+              </span>
+            </button>
+            
+            <button
+              type="button"
+              onClick={onDiscard}
+              className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full"
+            >
+              <span className="flex items-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Discard
+              </span>
+            </button>
+            
+            <button
+              type="button"
+              disabled={false}
+              onClick={onSave}
+              className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full"
+            >
+              <span className="flex items-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                  <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Save
+              </span>
+            </button>
+          </div>
+        </div>
       </motion.div>
-
-      {showLinkEditor && (
-        <LinkEditor 
-          position={linkEditorPosition} 
-          onSelect={handleSelection} 
-          setShowLinkEditor={setShowLinkEditor} 
-          initialText={initialLinkValues.text || ""}
-          initialPageId={initialLinkValues.pageId || null}
-          initialPageTitle={initialLinkValues.pageTitle || ""}
-        />
-      )}
-      <AnimatePresence>
-        {onSave && onDiscard && onInsert && <FloatingToolbar editor={editor} onInsert={onInsert} onDiscard={onDiscard} onSave={onSave} />}
-      </AnimatePresence>
     </LineSettingsProvider>
   );
 });
@@ -1025,7 +930,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   
   // Simple toolbar with absolutely minimal styling
   return (
-    <div className="fixed left-0 right-0 bottom-0 z-[99999] bg-[#1e1e1e] border-t border-gray-800">
+    <div className="fixed bottom-0 left-0 right-0 bg-[#1e1e1e] border-t border-gray-800">
       <div className="flex justify-center items-center py-2 px-1">
         <button
           type="button"
