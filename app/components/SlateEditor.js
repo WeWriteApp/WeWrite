@@ -1115,34 +1115,44 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   return (
     <div 
       ref={toolbarRef}
-      className={`fixed left-0 right-0 bg-[#1e1e1e] border-t border-gray-700 flex items-center justify-center gap-1 ${isMobile ? 'w-full' : 'w-fit max-w-[90%] mx-auto rounded-lg border'}`}
+      className={`fixed left-0 right-0 bg-[#1e1e1e]/90 backdrop-blur-sm flex items-center justify-center gap-2 ${isMobile ? 'w-full border-t border-gray-800' : 'w-fit max-w-[90%] mx-auto rounded-full border border-gray-800'}`}
       style={{
         position: 'fixed',
-        bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : '0',
-        margin: isMobile ? 0 : '0 auto 16px auto',
+        bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '16px',
+        margin: isMobile ? 0 : '0 auto',
+        padding: isMobile ? '8px 0' : '4px',
         transform: 'translateZ(0)', // Force hardware acceleration
         willChange: 'transform', // Hint to browser this element will change
         isolation: 'isolate', // Create a new stacking context
+        boxShadow: '0 -1px 10px rgba(0, 0, 0, 0.1)'
       }}
     >
       {/* Insert button */}
       <button
         type="button"
         onClick={onInsert}
-        className="flex items-center justify-center py-3 px-4 text-blue-400 hover:bg-[#252525] focus:outline-none transition-colors"
+        className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
       >
-        <FileSignature className="w-5 h-5 mr-2" />
-        <span>Insert</span>
+        <span className="flex items-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Insert
+        </span>
       </button>
       
       {/* Discard button */}
       <button
         type="button"
         onClick={onDiscard}
-        className="flex items-center justify-center py-3 px-4 text-gray-400 hover:bg-[#252525] focus:outline-none transition-colors"
+        className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full focus:outline-none transition-colors"
       >
-        <X className="w-5 h-5 mr-2" />
-        <span>Discard</span>
+        <span className="flex items-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Discard
+        </span>
       </button>
       
       {/* Save button */}
@@ -1150,7 +1160,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         type="button"
         disabled={isSaving}
         onClick={handleSave}
-        className="flex items-center justify-center py-3 px-6 text-white bg-blue-600 hover:bg-blue-700 rounded-md mx-2 focus:outline-none transition-colors"
+        className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full focus:outline-none transition-colors mx-1"
       >
         {isSaving ? (
           <span className="flex items-center">
@@ -1159,7 +1169,9 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           </span>
         ) : (
           <span className="flex items-center">
-            <Save className="w-5 h-5 mr-2" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+              <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             Save
           </span>
         )}
