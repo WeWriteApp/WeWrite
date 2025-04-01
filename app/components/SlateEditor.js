@@ -1,11 +1,12 @@
-import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
-import { createEditor, Editor, Transforms, Range, Element as SlateElement, Node, Path } from "slate";
-import { Slate, Editable, ReactEditor, withReact, useSelected, useSlate } from "slate-react";
+import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo } from "react";
+import { createEditor, Editor, Transforms, Range, Point, Path, Element as SlateElement, Node } from "slate";
+import { Slate, Editable, ReactEditor, withReact, useSelected, useSlate, useSlateStatic, useReadOnly } from "slate-react";
 import { withHistory } from "slate-history";
 import { AnimatePresence, motion } from "framer-motion";
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings } from '../contexts/LineSettingsContext';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
 
 // Line modes for different types of content
 const LINE_MODES = {
@@ -15,10 +16,12 @@ const LINE_MODES = {
   HEADING: 'heading',
 };
 
-const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState, onSave, onDiscard, onInsert }, ref) => {
-  const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
+const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onDiscard, onSave }, ref) => {
+  const { lineSettings } = useLineSettings();
+  const initialEditorState = useMemo(() => deserialize(initialContent), [initialContent]);
+  const editor = useMemo(() => withLineNumbers(withLinks(withReact(createEditor()))), []);
+  const [linkEditorPosition, setLinkEditorPosition] = useState(null);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
-  const [linkEditorPosition, setLinkEditorPosition] = useState({});
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
   const [selectedNodePath, setSelectedNodePath] = useState(null);
   const [contentInitialized, setContentInitialized] = useState(false);
@@ -57,8 +60,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         setContentInitialized(true);
         
         // Update the parent component's state if needed
-        if (setEditorState) {
-          setEditorState(content);
+        if (onContentChange) {
+          onContentChange(content);
         }
       } catch (error) {
         console.error("Error initializing content:", error, initialContent);
@@ -66,8 +69,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         if (initialEditorState && !contentInitialized) {
           editor.children = initialEditorState;
           setContentInitialized(true);
-          if (setEditorState) {
-            setEditorState(initialEditorState);
+          if (onContentChange) {
+            onContentChange(initialEditorState);
           }
         }
       }
@@ -75,15 +78,15 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       // Use initialEditorState if initialContent is not available
       editor.children = initialEditorState;
       setContentInitialized(true);
-      if (setEditorState) {
-        setEditorState(initialEditorState);
+      if (onContentChange) {
+        onContentChange(initialEditorState);
       }
     }
-  }, [initialContent, initialEditorState, editor, setEditorState, contentInitialized]);
+  }, [initialContent, initialEditorState, editor, onContentChange, contentInitialized]);
 
   const onChange = value => {
-    if (setEditorState) {
-      setEditorState(value);
+    if (onContentChange) {
+      onContentChange(value);
     }
   };
 
@@ -144,17 +147,50 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     }
   };
 
-  const renderElement = props => {
-    switch (props.element.type) {
+  // Render Elements with Line Numbers
+  const renderElement = useCallback(({ attributes, children, element }) => {
+    switch (element.type) {
       case 'link':
-        return <LinkElement {...props} openLinkEditor={openLinkEditor} />;
+        return (
+          <a {...attributes} href={element.url || '#'} data-page-id={element.pageId} data-page-title={element.pageTitle} className="editor-link">
+            {children}
+          </a>
+        );
       case 'line':
-        // Apply line-specific styling here
-        return <LineElement {...props} />;
       default:
-        return <DefaultElement {...props} />;
+        // Find the path of the element to get the line number
+        try {
+          const path = ReactEditor.findPath(editor, element);
+          const lineNumber = path[0] + 1; // 1-based indexing
+          return (
+            <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>
+              <span
+                contentEditable={false}
+                style={{
+                  position: 'absolute',
+                  left: '0',
+                  top: '0',
+                  width: '30px',
+                  textAlign: 'right',
+                  color: '#aaa',
+                  fontSize: '0.9em',
+                  userSelect: 'none',
+                  paddingRight: '10px',
+                }}
+              >
+                {lineNumber}
+              </span>
+              {children}
+            </div>
+          );
+        } catch (e) {
+           // Handle cases where path might not be found temporarily during intense ops
+           console.warn("Could not find path for element", element, e);
+           // Fallback rendering without line number
+           return <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>{children}</div>;
+        }
     }
-  };
+  }, [editor]);
 
   const showLinkEditorMenu = (editor, editorSelection) => {
     try {
@@ -255,7 +291,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           flexDirection: 'column',
           height: '100vh',
           position: 'relative',
-          overflow: 'hidden'
+          // Removed overflow: hidden which can interfere with fixed children
         }}
       >
         <div className="editor-content" 
@@ -263,7 +299,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             flex: '1 1 auto',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            paddingBottom: '70px' // Space for the toolbar
+            paddingBottom: '70px', // Keep space for the toolbar
+            position: 'relative' // Needed for absolute positioned line numbers
           }}
         >
           <Slate
@@ -312,7 +349,42 @@ function isUrl(string) {
   }
 }
 
-const withInlines = (editor) => {
+const withLineNumbers = (editor) => {
+  const { renderElement } = editor
+
+  editor.renderElement = (props) => {
+    switch (props.element.type) {
+      case 'line':
+        return (
+          <div {...props.attributes} style={{ position: 'relative', paddingLeft: '40px' }}>
+            <span
+              contentEditable={false}
+              style={{
+                position: 'absolute',
+                left: '0',
+                top: '0',
+                width: '30px',
+                textAlign: 'right',
+                color: '#aaa',
+                fontSize: '0.9em',
+                userSelect: 'none',
+                paddingRight: '10px',
+              }}
+            >
+              {props.element.lineNumber}
+            </span>
+            {props.children}
+          </div>
+        )
+      default:
+        return renderElement(props)
+    }
+  }
+
+  return editor
+}
+
+const withLinks = (editor) => {
   const { insertData, insertText, isInline, normalizeNode } = editor
 
   editor.isInline = element => {
