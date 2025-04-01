@@ -249,50 +249,53 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   return (
     <LineSettingsProvider>
-      <motion.div 
-        className="relative flex flex-col h-screen bg-background"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
+      <div className="editor-container" 
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
       >
-        <div className="flex-grow overflow-auto">
-          <div 
-            className="editor-container h-full pb-20" // Add bottom padding for toolbar
-            ref={editorRef}
+        <div className="editor-content" 
+          style={{
+            flex: '1 1 auto',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: '70px' // Space for the toolbar
+          }}
+        >
+          <Slate
+            editor={editor}
+            initialValue={initialEditorState || [{ type: 'line', children: [{ text: '' }] }]}
+            onChange={onChange}
           >
-            <Slate
-              editor={editor}
-              initialValue={initialEditorState || [{ type: 'line', children: [{ text: '' }] }]}
-              onChange={onChange}
-            >
-              <EditorContent 
-                editor={editor} 
-                handleKeyDown={handleKeyDown} 
-                renderElement={renderElement}
-                editableRef={editableRef}
+            <EditorContent 
+              editor={editor} 
+              handleKeyDown={handleKeyDown} 
+              renderElement={renderElement}
+              editableRef={editableRef}
+            />
+            {showLinkEditor && (
+              <LinkEditor
+                position={linkEditorPosition}
+                onSelect={handleSelection}
+                setShowLinkEditor={setShowLinkEditor}
+                initialText={selectedLinkElement?.children[0]?.text || ''}
+                initialPageId={selectedLinkElement?.pageId}
+                initialPageTitle={selectedLinkElement?.pageTitle}
               />
-              {showLinkEditor && (
-                <LinkEditor
-                  position={linkEditorPosition}
-                  onSelect={handleSelection}
-                  setShowLinkEditor={setShowLinkEditor}
-                  initialText={selectedLinkElement?.children[0]?.text || ''}
-                  initialPageId={selectedLinkElement?.pageId}
-                  initialPageTitle={selectedLinkElement?.pageTitle}
-                />
-              )}
-            </Slate>
-          </div>
+            )}
+          </Slate>
         </div>
         
-        {/* Fixed toolbar at the bottom */}
-        <FloatingToolbar 
-          editor={editor} 
+        <SimpleToolbar 
           onInsert={onInsert} 
           onDiscard={onDiscard} 
           onSave={onSave} 
         />
-      </motion.div>
+      </div>
     </LineSettingsProvider>
   );
 });
@@ -552,8 +555,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   );
 };
 
-// Simple, highly compatible fixed toolbar
-const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
+// Simple toolbar with CSS-only positioning (no JS detection)
+const SimpleToolbar = ({ onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   
   const handleSave = async () => {
@@ -568,22 +571,19 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Using absolutely minimal, maximally compatible styling
   return (
     <div 
-      className="toolbar-fixed"
       style={{
-        position: 'fixed',
+        position: 'absolute', 
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 99999,
-        backgroundColor: '#f5f5f5',
-        borderTop: '1px solid #ddd',
-        padding: '8px 0',
+        backgroundColor: '#f8f9fa',
+        borderTop: '1px solid #e1e4e8',
+        padding: '10px',
+        zIndex: 1000,
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
         width: '100%'
       }}
     >
@@ -594,10 +594,10 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '10px 16px',
+            padding: '8px 16px',
             border: 'none',
             borderRadius: '20px',
-            background: '#eee',
+            background: '#f1f3f5',
             color: '#333',
             fontSize: '14px',
             fontWeight: '500',
@@ -621,10 +621,10 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '10px 16px',
+            padding: '8px 16px',
             border: 'none',
             borderRadius: '20px',
-            background: '#eee',
+            background: '#f1f3f5',
             color: '#333',
             fontSize: '14px',
             fontWeight: '500',
@@ -646,7 +646,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '10px 16px',
+            padding: '8px 16px',
             border: 'none',
             borderRadius: '20px',
             background: '#1a73e8',
