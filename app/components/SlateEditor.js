@@ -592,6 +592,8 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
       const windowHeight = window.innerHeight; // Height of the layout viewport
       const viewportHeight = window.visualViewport.height;
       
+      console.log(`detectKeyboard: windowH=${windowHeight.toFixed(0)}, visualH=${viewportHeight.toFixed(0)}, keyboardH=${keyboardHeight.toFixed(0)}`);
+      
       // Compare visual viewport height with the initial window height to detect keyboard
       // Using a threshold helps avoid minor fluctuations
       const isKeyboardVisible = viewportHeight < windowHeight - 70; // Assume keyboard is at least 70px
