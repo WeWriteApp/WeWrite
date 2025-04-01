@@ -1027,6 +1027,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       container.style.display = 'flex';
       container.style.justifyContent = 'center';
       container.style.alignItems = 'flex-end';
+      container.style.transition = 'bottom 0.15s ease';
       
       // Add to body
       document.body.appendChild(container);
@@ -1034,25 +1035,11 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     
     setPortalContainer(container);
     
-    // Add padding to bottom of body to make room for toolbar
-    const style = document.createElement('style');
-    style.innerHTML = `
-      body {
-        padding-bottom: 80px !important;
-      }
-    `;
-    document.head.appendChild(style);
-    
     return () => {
       // Clean up
       if (document.body.contains(container)) {
         document.body.removeChild(container);
       }
-      
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-      
       setMounted(false);
     };
   }, []);
@@ -1091,14 +1078,6 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         // Calculate keyboard height (window height minus viewport height)
         const estimatedKeyboardHeight = windowHeight - viewportHeight;
         setKeyboardHeight(estimatedKeyboardHeight);
-        
-        // Scroll to make sure content is visible above keyboard
-        setTimeout(() => {
-          window.scrollBy({
-            top: 100,
-            behavior: 'smooth'
-          });
-        }, 100);
       } else {
         setKeyboardHeight(0);
       }
@@ -1110,19 +1089,12 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     // Add listeners for keyboard visibility
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange);
-      window.visualViewport.addEventListener('scroll', handleViewportChange);
     }
-    
-    window.addEventListener('resize', handleViewportChange);
-    window.addEventListener('scroll', handleViewportChange);
     
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleViewportChange);
-        window.visualViewport.removeEventListener('scroll', handleViewportChange);
       }
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange);
     };
   }, [isMobile]);
   
@@ -1165,7 +1137,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
       } flex items-center justify-center gap-2`}
       style={{
         padding: isMobile ? '10px 0' : '4px',
-        boxShadow: '0 0 20px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)',
         pointerEvents: 'auto',
         maxWidth: isMobile ? '100%' : '500px',
       }}
