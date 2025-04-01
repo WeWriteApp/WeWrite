@@ -1001,39 +1001,18 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const toolbarRef = useRef(null);
-  const [portalContainer, setPortalContainer] = useState(null);
+  const [mounted, setMounted] = useState(false);
   
-  // Create a portal container to render the toolbar outside the main DOM flow
+  // Handle SSR safely - only run portal code on client
   useEffect(() => {
-    // Only create portal in client
-    if (typeof window === 'undefined') return;
-    
-    // Create portal container if it doesn't exist
-    let container = document.getElementById('floating-toolbar-portal');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'floating-toolbar-portal';
-      container.style.position = 'fixed';
-      container.style.zIndex = '9999';
-      container.style.left = '0';
-      container.style.right = '0';
-      container.style.bottom = '0';
-      container.style.pointerEvents = 'none'; // Let clicks pass through the container
-      document.body.appendChild(container);
-    }
-    
-    setPortalContainer(container);
-    
-    return () => {
-      // Cleanup on unmount
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
-    };
+    setMounted(true);
+    return () => setMounted(false);
   }, []);
   
   // Detect if device is mobile
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth <= 768); // Standard tablet breakpoint
     };
@@ -1084,30 +1063,6 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     };
   }, [isMobile]);
   
-  // Position the toolbar in the portal to fully isolate from scroll
-  useEffect(() => {
-    if (!portalContainer || !toolbarRef.current) return;
-    
-    // Update portal container position based on keyboard
-    if (isMobile && keyboardVisible && keyboardHeight > 0) {
-      portalContainer.style.bottom = `${keyboardHeight}px`;
-    } else {
-      portalContainer.style.bottom = isMobile ? '0' : '24px';
-    }
-    
-    // Center the toolbar on desktop
-    if (!isMobile) {
-      portalContainer.style.display = 'flex';
-      portalContainer.style.justifyContent = 'center';
-    } else {
-      portalContainer.style.display = 'block';
-    }
-    
-    // Make toolbar interactive
-    toolbarRef.current.style.pointerEvents = 'auto';
-    
-  }, [isMobile, keyboardVisible, keyboardHeight, portalContainer]);
-  
   // Handle save with loading state and error handling
   const handleSave = async () => {
     if (!onSave) return;
@@ -1122,8 +1077,21 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Don't render until portal is ready
-  if (!portalContainer) return null;
+  // Get position styles based on device and keyboard state
+  const getPositionStyles = () => {
+    const styles = {
+      position: 'fixed',
+      bottom: isMobile && keyboardVisible && keyboardHeight > 0 ? `${keyboardHeight}px` : isMobile ? '0' : '24px',
+      left: 0,
+      right: 0,
+      zIndex: 9999,
+      display: 'flex',
+      justifyContent: isMobile ? 'space-between' : 'center',
+      pointerEvents: 'auto'
+    };
+    
+    return styles;
+  };
   
   // Create toolbar content
   const toolbarContent = (
@@ -1137,6 +1105,7 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         transform: 'translateZ(0)',
         willChange: 'transform',
         isolation: 'isolate',
+        ...getPositionStyles()
       }}
     >
       {/* Insert button */}
@@ -1194,8 +1163,8 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     </div>
   );
   
-  // Use createPortal to render toolbar outside of normal DOM flow
-  return createPortal(toolbarContent, portalContainer);
+  // Return the toolbar
+  return mounted ? toolbarContent : null;
 };
 
 const Leaf = ({ attributes, children, leaf }) => {
