@@ -552,64 +552,10 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   );
 };
 
-// Floating toolbar that positions itself above the keyboard
+// Simple, highly compatible fixed toolbar
 const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [toolbarHeight, setToolbarHeight] = useState(0);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const toolbarRef = useRef(null);
   
-  // Detect mobile device
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-      checkMobile();
-      window.addEventListener('resize', checkMobile);
-      return () => window.removeEventListener('resize', checkMobile);
-    }
-  }, []);
-  
-  // Measure toolbar height
-  useEffect(() => {
-    if (toolbarRef.current) {
-      setToolbarHeight(toolbarRef.current.offsetHeight);
-    }
-  }, []);
-  
-  // Use visualViewport to detect keyboard and position toolbar
-  useEffect(() => {
-    if (!isMobile || typeof window === 'undefined' || !window.visualViewport) return;
-    
-    const handleViewportResize = () => {
-      if (!window.visualViewport) return;
-      
-      const windowHeight = window.innerHeight;
-      const viewportHeight = window.visualViewport.height;
-      
-      // If viewport is significantly smaller than window height, keyboard is likely visible
-      if (viewportHeight < windowHeight * 0.75) {
-        const newKeyboardHeight = windowHeight - viewportHeight;
-        setKeyboardHeight(newKeyboardHeight);
-      } else {
-        setKeyboardHeight(0);
-      }
-    };
-    
-    window.visualViewport.addEventListener('resize', handleViewportResize);
-    window.visualViewport.addEventListener('scroll', handleViewportResize);
-    
-    // Initial check
-    handleViewportResize();
-    
-    return () => {
-      if (!window.visualViewport) return;
-      window.visualViewport.removeEventListener('resize', handleViewportResize);
-      window.visualViewport.removeEventListener('scroll', handleViewportResize);
-    };
-  }, [isMobile]);
-  
-  // Handle save
   const handleSave = async () => {
     if (!onSave) return;
     setIsSaving(true);
@@ -622,41 +568,44 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
     }
   };
   
-  // Calculate toolbar position style
-  const getToolbarStyle = () => {
-    if (keyboardHeight > 0) {
-      return {
-        position: 'fixed',
-        bottom: `${keyboardHeight}px`,
-        left: 0,
-        right: 0,
-        zIndex: 99999
-      };
-    }
-    
-    return {
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      zIndex: 99999
-    };
-  };
-  
+  // Using absolutely minimal, maximally compatible styling
   return (
     <div 
-      ref={toolbarRef}
-      style={getToolbarStyle()}
-      className="bg-gray-900 border-t border-gray-800 py-2"
+      className="toolbar-fixed"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 99999,
+        backgroundColor: '#f5f5f5',
+        borderTop: '1px solid #ddd',
+        padding: '8px 0',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%'
+      }}
     >
-      <div className="flex justify-center items-center py-2 px-1">
+      <div style={{ display: 'flex', gap: '8px' }}>
         <button
           type="button"
           onClick={onInsert}
-          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 16px',
+            border: 'none',
+            borderRadius: '20px',
+            background: '#eee',
+            color: '#333',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer'
+          }}
         >
-          <span className="flex items-center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
               <path d="M19 16V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M9 7H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M9 11H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -669,10 +618,21 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
         <button
           type="button"
           onClick={onDiscard}
-          className="flex items-center justify-center py-3 px-5 text-white/90 hover:bg-white/5 rounded-full"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 16px',
+            border: 'none',
+            borderRadius: '20px',
+            background: '#eee',
+            color: '#333',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer'
+          }}
         >
-          <span className="flex items-center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+          <span style={{ display: 'flex', alignItems: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Discard
@@ -683,16 +643,37 @@ const FloatingToolbar = ({ editor, onInsert, onDiscard, onSave }) => {
           type="button"
           disabled={isSaving}
           onClick={handleSave}
-          className="flex items-center justify-center py-3 px-6 bg-[#1a73e8] hover:bg-[#1a73e8]/90 text-white rounded-full mx-1"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 16px',
+            border: 'none',
+            borderRadius: '20px',
+            background: '#1a73e8',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer'
+          }}
         >
           {isSaving ? (
-            <span className="flex items-center">
-              <span className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <span
+                style={{ 
+                  width: '16px', 
+                  height: '16px', 
+                  marginRight: '8px',
+                  border: '2px solid white',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}
+              />
               Saving...
             </span>
           ) : (
-            <span className="flex items-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '8px' }}>
                 <path d="M5 12L10 17L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               Save
