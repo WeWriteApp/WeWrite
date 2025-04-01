@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings } from '../contexts/LineSettingsContext';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
 
 // Line modes for different types of content
 const LINE_MODES = {
@@ -19,7 +18,7 @@ const LINE_MODES = {
 const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onDiscard, onSave }, ref) => {
   const { lineSettings } = useLineSettings();
   const initialEditorState = useMemo(() => deserialize(initialContent), [initialContent]);
-  const editor = useMemo(() => withLineNumbers(withLinks(withReact(createEditor()))), []);
+  const editor = useMemo(() => withLinks(withReact(createEditor())), []); // Removed withLineNumbers wrapper
   const [linkEditorPosition, setLinkEditorPosition] = useState(null);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
@@ -347,41 +346,6 @@ function isUrl(string) {
   } catch {
     return false;
   }
-}
-
-const withLineNumbers = (editor) => {
-  const { renderElement } = editor
-
-  editor.renderElement = (props) => {
-    switch (props.element.type) {
-      case 'line':
-        return (
-          <div {...props.attributes} style={{ position: 'relative', paddingLeft: '40px' }}>
-            <span
-              contentEditable={false}
-              style={{
-                position: 'absolute',
-                left: '0',
-                top: '0',
-                width: '30px',
-                textAlign: 'right',
-                color: '#aaa',
-                fontSize: '0.9em',
-                userSelect: 'none',
-                paddingRight: '10px',
-              }}
-            >
-              {props.element.lineNumber}
-            </span>
-            {props.children}
-          </div>
-        )
-      default:
-        return renderElement(props)
-    }
-  }
-
-  return editor
 }
 
 const withLinks = (editor) => {
