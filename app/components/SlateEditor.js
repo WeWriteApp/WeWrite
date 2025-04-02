@@ -60,7 +60,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
   const [selectedNodePath, setSelectedNodePath] = useState(null);
-  const [contentInitialized, setContentInitialized] = useState(false);
+
+  // Use local state for editor value, initialized from the prop
+  const [value, setValue] = useState(deserializedValue);
 
   const editorRef = useRef(null);
   const editableRef = useRef(null);
@@ -84,38 +86,24 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     }
   }));
 
-  // Use initialContent as the priority content source if available
+  // Sync internal state (`value`) with external prop (`initialContent` -> `deserializedValue`)
   useEffect(() => {
-    // Only initialize if not already done and editor exists
-    if (editor && !contentInitialized) {
-      // Use the memoized deserialized value derived from initialContent
-      const contentToSet = deserializedValue; 
-      
-      // Ensure contentToSet is a valid Slate structure (basic check)
-      if (Array.isArray(contentToSet) && contentToSet.length > 0) {
-        console.log("Initializing editor content with:", JSON.stringify(contentToSet));
-        editor.children = contentToSet;
-        // Insert operations may need normalization if structure isn't perfect
-        // editor.normalizeNode([editor, []]); // Add normalization if needed
-        setContentInitialized(true);
-        if (onContentChange) {
-          onContentChange(contentToSet);
-        }
-      } else {
-         // Handle cases where deserializedValue is invalid or empty
-         console.warn("Deserialized value is not valid Slate content, using default empty state.", contentToSet);
-         const defaultContent = [{ type: 'line', children: [{ text: '' }] }];
-         editor.children = defaultContent;
-         setContentInitialized(true);
-         if (onContentChange) {
-             onContentChange(defaultContent);
-         }
+    // Only update if the incoming deserialized prop value is different
+    // from the current internal state. Avoids loops and unnecessary updates.
+    // Basic string comparison; consider deep equality for complex cases if needed.
+    if (JSON.stringify(deserializedValue) !== JSON.stringify(value)) {
+      console.log("External initialContent prop changed, updating internal editor value.");
+      setValue(deserializedValue); // Update internal state
+      // Notify parent immediately about the externally triggered change
+      if (onContentChange) {
+        onContentChange(deserializedValue);
       }
     }
-  // Depend only on the things that should trigger re-initialization if they change *before* initialization
-  }, [editor, deserializedValue, contentInitialized, onContentChange]); 
+  // Run this effect when the source prop (via deserializedValue) changes.
+  }, [deserializedValue]); // Removed dependencies like `value` and `onContentChange` to prevent loops
 
   const onChange = value => {
+    setValue(value); // Update internal state first
     if (onContentChange) {
       onContentChange(value);
     }
@@ -178,60 +166,69 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     }
   };
 
+  // Log state right before rendering Slate component
+  console.log('[SlateEditor Render] Editor instance:', editor);
+  console.log('[SlateEditor Render] Value state for initialValue:', JSON.stringify(value));
+
   // Render Elements with Line Numbers
-  const renderElement = useCallback(({ attributes, children, element }) => {
-    switch (element.type) {
-      case 'link':
-        return (
-          <a {...attributes} href={element.url || '#'} data-page-id={element.pageId} data-page-title={element.pageTitle} className="editor-link">
-            {children}
-          </a>
-        );
-      case 'line':
-        // Explicitly handle 'line' type for line numbers
-        try {
-          const path = ReactEditor.findPath(editor, element);
-          const lineNumber = path[0] + 1; // 1-based indexing
-          
-          // Basic check for valid path
-          if (!path || path.length === 0) {
-            console.warn("Invalid path found for element:", element);
-            // Render without line number if path is invalid
-            return <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>{children}</div>;
-          }
-          
+  const renderElement = useCallback((props) => {
+    const { attributes, children, element } = props;
+    try {
+      switch (element.type) {
+        case 'link':
           return (
-            <div {...attributes} style={{ position: 'relative', paddingLeft: '40px' }}>
-              <span
-                contentEditable={false}
-                style={{
-                  position: 'absolute',
-                  left: '0',
-                  top: '0',
-                  width: '30px',
-                  textAlign: 'right',
-                  color: '#aaa',
-                  fontSize: '0.9em',
-                  userSelect: 'none',
-                  paddingRight: '10px',
-                }}
-              >
-                {lineNumber}
-              </span>
+            <a {...attributes} href={element.url || '#'} data-page-id={element.pageId} data-page-title={element.pageTitle} className="editor-link">
+              {children}
+            </a>
+          );
+        case 'line':
+          // Explicitly handle 'line' type for line numbers
+          let path, lineNumber, showLineNumbers = false;
+          if (editor) {
+            try {
+              path = ReactEditor.findPath(editor, element);
+              if (path && path.length > 0) {
+                lineNumber = path[0] + 1; // 1-based indexing
+                showLineNumbers = lineSettings[lineNumber] !== undefined ? lineSettings[lineNumber] : hasLineSettings;
+              } else {
+                console.warn("Invalid path found for element:", element);
+              }
+            } catch (pathError) {
+              console.error("Error finding path for line element:", pathError, element);
+            }
+          } else {
+             console.warn("Editor instance not available for path finding.");
+          }
+
+          return (
+            <div {...attributes} style={{ position: 'relative', paddingLeft: showLineNumbers ? '40px' : '0px' }}>
+              {showLineNumbers && lineNumber && (
+                <span
+                  contentEditable={false}
+                  className="line-number"
+                  style={{
+                    position: 'absolute',
+                    left: '0',
+                    userSelect: 'none',
+                    opacity: 0.5,
+                  }}
+                >
+                  {lineNumber}
+                </span>
+              )}
               {children}
             </div>
           );
-        } catch (e) {
-           // Handle cases where path might not be found temporarily during intense ops
-           console.warn("Could not find path for element", element, e);
-           // Render a simple div for unknown types or errors
-           return <div {...attributes}>{children}</div>;
-        }
-      default:
-        // Handle any other element types or default case
-        return <div {...attributes}>{children}</div>;
+        default:
+          // Use paragraph as a safe default
+          return <p {...attributes}>{children}</p>;
+      }
+    } catch (error) {
+      console.error("Error rendering element:", error, "Element:", JSON.stringify(element));
+      // Fallback rendering on error
+      return <div {...attributes} style={{ backgroundColor: 'rgba(255,0,0,0.1)', border: '1px solid red', padding: '2px' }}>Error rendering node. {children}</div>;
     }
-  }, [editor]);
+  }, [editor, lineSettings, hasLineSettings]); // Added editor dependency
 
   const showLinkEditorMenu = (editor, editorSelection) => {
     try {
@@ -325,57 +322,33 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
   };
 
   return (
-    <LineSettingsProvider>
-      <div className="editor-container" 
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-          position: 'relative',
-          // Removed overflow: hidden which can interfere with fixed children
-        }}
-      >
-        <div className="editor-content" 
-          style={{
-            flex: '1 1 auto',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            paddingBottom: '70px', // Keep space for the toolbar
-            position: 'relative' // Needed for absolute positioned line numbers
-          }}
-        >
-          <Slate
-            editor={editor}
-            initialValue={deserializedValue || [{ type: 'line', children: [{ text: '' }] }]}
-            onChange={onChange}
-          >
-            <EditorContent 
-              editor={editor} 
-              handleKeyDown={handleKeyDown} 
-              renderElement={renderElement}
-              editableRef={editableRef}
-            />
-            {showLinkEditor && (
-              <LinkEditor
-                position={linkEditorPosition}
-                onSelect={handleSelection}
-                setShowLinkEditor={setShowLinkEditor}
-                initialText={selectedLinkElement?.children[0]?.text || ''}
-                initialPageId={selectedLinkElement?.pageId}
-                initialPageTitle={selectedLinkElement?.pageTitle}
-              />
-            )}
-          </Slate>
-        </div>
-        
-        {/* Keyboard-aware toolbar */}
-        <KeyboardAwareToolbar 
-          onInsert={onInsert} 
-          onDiscard={onDiscard} 
-          onSave={onSave} 
+    // No need for extra provider here if EditPage already has one
+    <Slate editor={editor} initialValue={value} onChange={onChange}>
+      {/* Conditionally render LinkEditor */}
+      {showLinkEditor && (
+        <LinkEditor
+          position={linkEditorPosition}
+          onSelect={handleSelection}
+          setShowLinkEditor={setShowLinkEditor}
+          initialText={selectedLinkElement?.children[0]?.text || ''}
+          initialPageId={selectedLinkElement?.pageId}
+          initialPageTitle={selectedLinkElement?.pageTitle}
         />
-      </div>
-    </LineSettingsProvider>
+      )}
+      {/* Custom EditorContent */}
+      <EditorContent 
+        editor={editor} 
+        handleKeyDown={handleKeyDown} 
+        renderElement={renderElement} 
+        editableRef={editableRef} 
+      /> 
+      {/* Floating Toolbar */}
+      <KeyboardAwareToolbar 
+        onInsert={onInsert} 
+        onDiscard={onDiscard} 
+        onSave={onSave} 
+      />
+    </Slate>
   );
 });
 
@@ -551,11 +524,17 @@ const DefaultElement = ({ attributes, children }) => {
 
 // Check if the current selection has a link
 const isLinkActive = (editor) => {
-  const [link] = Editor.nodes(editor, {
-    match: (n) =>
-      !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
-  });
-  return !!link;
+  if (!editor || !editor.selection) return false;
+  try {
+    const [link] = Editor.nodes(editor, {
+      match: (n) =>
+        !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link',
+    });
+    return !!link;
+  } catch (error) {
+    console.error("Error checking if link is active:", error);
+    return false;
+  }
 };
 
 // Simple LinkEditor component
@@ -836,17 +815,22 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
 // Custom Leaf component for text formatting
 const Leaf = ({ attributes, children, leaf }) => {
-  if (leaf.bold) {
-    children = <strong>{children}</strong>;
-  }
-  if (leaf.italic) {
-    children = <em>{children}</em>;
-  }
-  if (leaf.underline) {
-    children = <u>{children}</u>;
-  }
-  if (leaf.code) {
-    children = <code className="bg-gray-800 rounded px-1 py-0.5 text-amber-400 font-mono text-sm">{children}</code>;
+  try {
+    if (leaf.bold) {
+      children = <strong>{children}</strong>;
+    }
+    if (leaf.italic) {
+      children = <em>{children}</em>;
+    }
+    if (leaf.underline) {
+      children = <u>{children}</u>;
+    }
+    if (leaf.code) {
+      children = <code className="bg-gray-800 rounded px-1 py-0.5 text-amber-400 font-mono text-sm">{children}</code>;
+    }
+  } catch (error) {
+     console.error("Error applying leaf format:", error, "Leaf:", JSON.stringify(leaf));
+     // Render children without formatting on error
   }
   return <span {...attributes}>{children}</span>;
 };
