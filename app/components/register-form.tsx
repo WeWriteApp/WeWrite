@@ -98,6 +98,13 @@ export function RegisterForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Explicitly check for empty username, though button should be disabled
+    if (!username) {
+      setError("Username is required.")
+      return
+    }
+
     setError(null)
     setIsLoading(true)
     
