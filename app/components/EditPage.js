@@ -21,7 +21,10 @@ const EditPage = ({
   editorError
 }) => {
   const { setIsEditMode } = usePage();
-  const [currentEditorValue, setCurrentEditorValue] = useState(current); // State to hold latest editor value for saving
+  // Ensure initial state is always a valid Slate structure
+  const [currentEditorValue, setCurrentEditorValue] = useState(() =>
+    current || [{ type: 'paragraph', children: [{ text: '' }] }]
+  );
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
   const { user } = useContext(AuthContext);
@@ -62,7 +65,10 @@ const EditPage = ({
 
   useEffect(() => {
     // Update currentEditorValue when the `current` prop changes (e.g., initial load)
-    setCurrentEditorValue(current);
+    if (current) { // Only update if `current` is truthy
+      // Consider adding a deep comparison here if needed to avoid unnecessary updates
+      setCurrentEditorValue(current);
+    }
   }, [current]);
 
   useEffect(() => {
@@ -164,13 +170,6 @@ const EditPage = ({
     );
   }
 
-  // Always provide a default editor state if none exists
-  // This check is less critical now as SlateEditor handles its default internally
-  // if (!currentEditorValue) { 
-  //   console.warn("Current editor value is null or undefined, using default empty state for safety.");
-  //   setCurrentEditorValue([{ type: "paragraph", children: [{ text: "" }] }]);
-  // }
-
   return (
     <div className="space-y-8 pb-28">
       <div className="space-y-4">
@@ -189,7 +188,7 @@ const EditPage = ({
           <div className="space-y-0">
             <SlateEditor 
               ref={editorRef} 
-              initialContent={current} // Pass the `current` prop directly
+              initialContent={currentEditorValue} // Pass the guaranteed-valid state
               onContentChange={setCurrentEditorValue} // Update local state on change
               onSave={!isSaving ? handleSave : null}
               onDiscard={handleCancel}
