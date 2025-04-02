@@ -32,6 +32,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
+import { AuthModal } from "./AuthModal";
 
 /**
  * PageActions Component
@@ -88,6 +89,10 @@ export function PageActions({
   const { lineMode, setLineMode } = useLineSettings();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
   
+  // Get user from AuthContext
+  const { user } = useContext(AuthContext);
+  const actualIsOwner = user && user.uid === page.userId;
+
   // Store the current page content for future use
   const [currentPageContent, setCurrentPageContent] = useState<any>(null);
   
@@ -137,15 +142,18 @@ export function PageActions({
    * Creates a reply to the current page
    */
   const handleReply = async () => {
-    if (!auth.currentUser) {
+    if (!user) {
       toast.error("You must be logged in to reply");
       return;
     }
 
-    // Get the current user's username using our centralized utility
+    // Username is now available from the auth context directly (user.displayName)
+    // or we can fetch it more reliably if needed, but for the URL generation, 
+    // let's keep using the utility function for consistency as it handles fallbacks.
     try {
-      const username = await getCurrentUsername();
-      console.log("Current user username from utility:", username);
+      // We still need the current username for the reply metadata
+      const replyInitiatorUsername = user?.displayName || await getCurrentUsername();
+      console.log("Reply initiator username:", replyInitiatorUsername);
 
       // Use utility functions to create standardized reply content
       const replyTitle = generateReplyTitle(page.title);
@@ -162,16 +170,17 @@ export function PageActions({
         const params = encodeReplyParams({
           title: replyTitle,
           content: initialContent,
-          username
+          username: replyInitiatorUsername // Use the fetched/context username
         });
         
         console.log("Navigating to new page with:", {
           title: replyTitle,
-          username,
+          username: replyInitiatorUsername,
           initialContent
         });
         
-        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${params.username}`);
+        // Ensure username param is encoded correctly
+        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${encodeURIComponent(replyInitiatorUsername)}`);
       } catch (error) {
         console.error("Error navigating to new page:", error);
         toast.error("Failed to create reply");
@@ -185,7 +194,7 @@ export function PageActions({
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit and Delete buttons */}
-      {isOwner && (
+      {actualIsOwner && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
           <Button
             variant="ghost"
@@ -210,6 +219,7 @@ export function PageActions({
       
       {/* Actions available to all users - Copy, Reply, Layout */}
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t pt-4 w-full">
+        {/* Copy Link Button (always shown) */}
         <Button
           variant="ghost"
           size="sm"
@@ -220,16 +230,34 @@ export function PageActions({
           Copy Link
         </Button>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2"
-          onClick={handleReply}
-        >
-          <Reply className="h-4 w-4" />
-          Reply to Page
-        </Button>
+        {/* Conditional Reply Button */}
+        {user ? (
+          // Logged-in user: Show direct reply button
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+            onClick={handleReply}
+          >
+            <Reply className="h-4 w-4" />
+            Reply to Page
+          </Button>
+        ) : (
+          // Logged-out user: Show reply button wrapped in AuthModal
+          <AuthModal initialTab="login">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              // No onClick needed here, AuthModal handles opening
+            >
+              <Reply className="h-4 w-4" />
+              Reply to Page
+            </Button>
+          </AuthModal>
+        )}
         
+        {/* Layout Dropdown (always shown) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
