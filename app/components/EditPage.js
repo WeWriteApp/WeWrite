@@ -53,10 +53,10 @@ const EditPage = ({
     if (editorRef.current) {
       editorRef.current.focus();
     }
-    
+
     // Set edit mode in PageContext
     setIsEditMode(true);
-    
+
     // Cleanup when component unmounts
     return () => {
       setIsEditMode(false);
@@ -171,7 +171,7 @@ const EditPage = ({
   }
 
   return (
-    <div className="space-y-8 pb-28">
+    <div className="space-y-8 pb-32">
       <div className="space-y-4">
         <div>
           <input
@@ -186,8 +186,8 @@ const EditPage = ({
 
         <div className="space-y-6 rounded-xl">
           <div className="space-y-0">
-            <SlateEditor 
-              ref={editorRef} 
+            <SlateEditor
+              ref={editorRef}
               initialContent={currentEditorValue} // Pass the guaranteed-valid state
               onContentChange={setCurrentEditorValue} // Update local state on change
               onSave={!isSaving ? handleSave : null}

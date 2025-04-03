@@ -494,6 +494,12 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         onDiscard={onDiscard}
         onSave={onSave}
       />
+
+      {/* Fixed Bottom Toolbar */}
+      <FixedBottomToolbar
+        onSave={onSave}
+        onDiscard={onDiscard}
+      />
     </Slate>
   );
 });
@@ -989,6 +995,44 @@ const Leaf = ({ attributes, children, leaf }) => {
      // Render children without formatting on error
   }
   return <span {...attributes}>{children}</span>;
+};
+
+// Fixed bottom toolbar that's always visible and doesn't get covered by keyboard
+const FixedBottomToolbar = ({ onSave, onDiscard }) => {
+  const { user } = useContext(AuthContext);
+  const showSaveDiscard = !!onSave && !!onDiscard && user;
+
+  if (!showSaveDiscard) return null;
+
+  return (
+    <motion.div
+      className="fixed-toolbar-bottom fixed left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.2 }}
+
+    >
+      <button
+        className="px-4 py-2 rounded-md border border-border bg-background hover:bg-accent/10 transition-colors"
+        onClick={(event) => {
+          event.preventDefault();
+          onDiscard();
+        }}
+      >
+        Cancel
+      </button>
+      <button
+        className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        onClick={(event) => {
+          event.preventDefault();
+          onSave();
+        }}
+      >
+        Save
+      </button>
+    </motion.div>
+  );
 };
 
 export default SlateEditor;
