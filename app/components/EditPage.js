@@ -171,32 +171,28 @@ const EditPage = ({
   }
 
   return (
-    <div className="editor-container flex flex-col min-h-[calc(100vh-120px)]">
-      <div className="editor-content flex-grow">
-        <div className="mb-4">
-          <input
-            type="text"
-            defaultValue={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal"
-            placeholder="Enter a title..."
-            autoComplete="off"
-            style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
-          />
-        </div>
-
-        <div className="editor-slate-container">
-          <SlateEditor
-            ref={editorRef}
-            initialContent={currentEditorValue} // Pass the guaranteed-valid state
-            onContentChange={setCurrentEditorValue} // Update local state on change
-            onSave={!isSaving ? handleSave : null}
-            onDiscard={handleCancel}
-            onInsert={handleInsertLink}
-          />
-        </div>
+    <div className="editor-container" style={{ paddingBottom: '60px' }}>
+      <div className="mb-4">
+        <input
+          type="text"
+          defaultValue={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal"
+          placeholder="Enter a title..."
+          autoComplete="off"
+          style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+        />
       </div>
-      {/* The toolbar is now part of the SlateEditor component with sticky positioning */}
+
+      {/* Simple SlateEditor with no nested containers */}
+      <SlateEditor
+        ref={editorRef}
+        initialContent={currentEditorValue}
+        onContentChange={setCurrentEditorValue}
+        onSave={!isSaving ? handleSave : null}
+        onDiscard={handleCancel}
+        onInsert={handleInsertLink}
+      />
     </div>
   );
 };

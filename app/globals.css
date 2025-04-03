@@ -39,32 +39,23 @@
   color: white;
 }
 
-/* Simplified editor toolbar container */
-.editor-toolbar-container {
-  position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  margin-top: auto;
+/* iOS-compatible keyboard toolbar styles - base styles applied inline */
+
+/* Dark mode adjustments */
+.dark .ios-keyboard-toolbar {
+  --toolbar-bg: rgba(0, 0, 0, 0.95);
+  --border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Toolbar buttons container */
-.editor-toolbar-buttons {
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+/* Simple editor container */
+.editor-container {
+  position: relative;
+  /* Padding is applied inline */
 }
 
-/* Add padding to the bottom of the editor to prevent content from being hidden behind the toolbar */
+/* Make sure the editor content is visible */
 .editable-container {
-  padding-bottom: 80px; /* Ensure enough space for the toolbar */
-}
-
-/* Ensure the editor container takes up the full height */
-.space-y-8.pb-32 {
-  min-height: calc(100vh - 120px); /* Adjust based on your header height */
-  display: flex;
-  flex-direction: column;
+  min-height: 200px;
 }
 
 @keyframes mulShdSpin {

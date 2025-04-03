@@ -471,7 +471,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       {/* Add custom styles */}
       <style dangerouslySetInnerHTML={{ __html: editorStyles }} />
 
-      <div className="slate-editor-container flex flex-col min-h-full">
+      <div className="slate-editor-container" style={{ position: 'relative', paddingBottom: '60px' }}>
         {/* Conditionally render LinkEditor */}
         {showLinkEditor && linkEditorPosition && (
           <LinkEditor
@@ -484,24 +484,22 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           />
         )}
 
-        {/* Main editor content - flex-grow to take available space */}
-        <div className="editor-main flex-grow flex flex-col">
-          <EditorContent
-            editor={editor}
-            handleKeyDown={handleKeyDown}
-            renderElement={renderElement}
-            editableRef={editableRef}
-          />
+        {/* Simple editor content */}
+        <EditorContent
+          editor={editor}
+          handleKeyDown={handleKeyDown}
+          renderElement={renderElement}
+          editableRef={editableRef}
+        />
 
-          {/* Floating Toolbar */}
-          <KeyboardAwareToolbar
-            onInsert={onInsert}
-            onDiscard={onDiscard}
-            onSave={onSave}
-          />
-        </div>
+        {/* Floating Toolbar */}
+        <KeyboardAwareToolbar
+          onInsert={onInsert}
+          onDiscard={onDiscard}
+          onSave={onSave}
+        />
 
-        {/* Fixed Bottom Toolbar - now uses sticky positioning */}
+        {/* iOS-compatible toolbar that stays above keyboard */}
         <FixedBottomToolbar
           onSave={onSave}
           onDiscard={onDiscard}
@@ -1004,41 +1002,88 @@ const Leaf = ({ attributes, children, leaf }) => {
   return <span {...attributes}>{children}</span>;
 };
 
-// Simple fixed bottom toolbar with iOS-safe positioning
+// iOS-compatible toolbar that stays above the keyboard
 const FixedBottomToolbar = ({ onSave, onDiscard }) => {
   const { user } = useContext(AuthContext);
   const showSaveDiscard = !!onSave && !!onDiscard && user;
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const toolbarRef = useRef(null);
+
+  // Track viewport height changes (keyboard appearing/disappearing)
+  useEffect(() => {
+    const handleResize = () => {
+      // Use visualViewport API if available (more accurate for keyboard detection)
+      if (window.visualViewport) {
+        setViewportHeight(window.visualViewport.height);
+      } else {
+        setViewportHeight(window.innerHeight);
+      }
+    };
+
+    // Initial setup
+    handleResize();
+
+    // Add event listeners
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener('scroll', handleResize);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener('scroll', handleResize);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   if (!showSaveDiscard) return null;
 
   return (
-    <div className="editor-toolbar-container">
-      <motion.div
-        className="editor-toolbar-buttons bg-background/95 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.2 }}
+    <div
+      ref={toolbarRef}
+      className="ios-keyboard-toolbar"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        padding: '10px 16px',
+        backgroundColor: 'var(--toolbar-bg, rgba(255, 255, 255, 0.95))',
+        backdropFilter: 'blur(8px)',
+        borderTop: '1px solid var(--border-color, rgba(0, 0, 0, 0.1))',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '12px',
+        transform: `translateY(-${window.innerHeight - viewportHeight}px)`,
+        transition: 'transform 0.1s ease-out'
+      }}
+    >
+      <button
+        className="px-4 py-2 rounded-md border border-border bg-background hover:bg-accent/10 transition-colors"
+        onClick={(event) => {
+          event.preventDefault();
+          onDiscard();
+        }}
+        style={{ minWidth: '80px' }}
       >
-        <button
-          className="px-4 py-2 rounded-md border border-border bg-background hover:bg-accent/10 transition-colors"
-          onClick={(event) => {
-            event.preventDefault();
-            onDiscard();
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          onClick={(event) => {
-            event.preventDefault();
-            onSave();
-          }}
-        >
-          Save
-        </button>
-      </motion.div>
+        Cancel
+      </button>
+      <button
+        className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        onClick={(event) => {
+          event.preventDefault();
+          onSave();
+        }}
+        style={{ minWidth: '80px' }}
+      >
+        Save
+      </button>
     </div>
   );
 };
