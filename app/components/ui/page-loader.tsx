@@ -39,7 +39,7 @@ export function PageLoader({
     >
       <div className="flex flex-col items-center gap-4 text-center px-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         {/* Custom multi-shadow spinner */}
-        <div className="loader loader-lg"></div>
+        <div className="loader loader-md"></div>
 
         {/* Optional message */}
         {message && (

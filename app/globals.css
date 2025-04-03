@@ -30,9 +30,13 @@
   font-size: 8px;
 }
 
-/* Dark theme version with higher contrast */
-.dark .loader {
+/* Theme-specific loader colors */
+.loader {
   color: hsl(var(--primary));
+}
+
+.dark .loader {
+  color: white;
 }
 
 /* Ensure fixed toolbars stay above keyboard on mobile */
@@ -40,6 +44,41 @@
   .fixed-toolbar-bottom {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
     bottom: 0;
+  }
+}
+
+/* Fix for mobile keyboard covering toolbar */
+.fixed-toolbar-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999; /* Ensure it's above everything */
+  /* iOS specific fix for virtual keyboard */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS 11+ specific */
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
+    /* Add viewport units for iOS */
+    bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* When keyboard is visible, adjust toolbar position */
+.fixed-toolbar-bottom.keyboard-visible {
+  position: fixed;
+  bottom: 0;
+  /* Use viewport height to position above keyboard */
+  transform: translateY(-50px); /* Fallback for older browsers */
+  /* Modern browsers with visualViewport API will handle this better */
+  @supports (bottom: constant(safe-area-inset-bottom)) {
+    /* iOS 11 */
+    bottom: constant(safe-area-inset-bottom);
+    transform: none;
+  }
+  @supports (bottom: env(safe-area-inset-bottom)) {
+    /* iOS 11.2+ */
+    bottom: env(safe-area-inset-bottom);
+    transform: none;
   }
 }
 
@@ -176,6 +215,7 @@ input[type="number"]::-webkit-outer-spin-button {
 /* Hide the spinner for Firefox */
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
   /* Remove the spinner in Firefox */
 }
 

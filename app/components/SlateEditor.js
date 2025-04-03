@@ -1001,12 +1001,42 @@ const Leaf = ({ attributes, children, leaf }) => {
 const FixedBottomToolbar = ({ onSave, onDiscard }) => {
   const { user } = useContext(AuthContext);
   const showSaveDiscard = !!onSave && !!onDiscard && user;
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Detect keyboard visibility changes
+  useEffect(() => {
+    const detectKeyboard = () => {
+      // Simple heuristic: if window height significantly decreases, keyboard is likely visible
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const windowHeight = window.innerHeight;
+
+      // If viewport is significantly smaller than window, keyboard is likely visible
+      // The threshold can be adjusted based on testing
+      setIsKeyboardVisible(windowHeight - viewportHeight > 150);
+    };
+
+    // Use visualViewport API if available (modern browsers)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', detectKeyboard);
+    } else {
+      // Fallback to window resize
+      window.addEventListener('resize', detectKeyboard);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', detectKeyboard);
+      } else {
+        window.removeEventListener('resize', detectKeyboard);
+      }
+    };
+  }, []);
 
   if (!showSaveDiscard) return null;
 
   return (
     <motion.div
-      className="fixed-toolbar-bottom fixed left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3"
+      className={`fixed-toolbar-bottom bg-background/80 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3 ${isKeyboardVisible ? 'keyboard-visible' : ''}`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
