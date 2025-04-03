@@ -26,8 +26,8 @@ import {
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 50 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: {
       duration: 0.6,
@@ -55,22 +55,22 @@ const LandingPage = () => {
   // Smooth scroll function for anchor links
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
-    
+
     // Extract the id from the href
     const targetId = href.replace('#', '');
     const targetElement = document.getElementById(targetId);
-    
+
     if (targetElement) {
       // Get the header height to offset the scroll position
       const headerHeight = 80; // Approximate header height in pixels
       const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
-      
+
       // Smooth scroll to the target position
       window.scrollTo({
         top: targetPosition,
         behavior: 'smooth'
       });
-      
+
       // Update URL without scrolling
       window.history.pushState(null, '', href);
     }
@@ -79,27 +79,27 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background overflow-y-auto">
       {/* Desktop Header */}
-      <header 
-        className={`fixed top-0 left-0 right-0 w-full border-b z-50 transition-all duration-200 hidden md:block ${
-          isScrolled 
-            ? 'border-border/10 py-3 bg-background/80 backdrop-blur-xl shadow-md' 
-            : 'border-transparent py-4 bg-background/70 backdrop-blur-lg'
+      <header
+        className={`fixed top-0 left-0 right-0 w-full header-border-transition z-50 transition-all duration-200 hidden md:block ${
+          isScrolled
+            ? 'py-3 bg-background/80 backdrop-blur-xl shadow-md'
+            : 'border-visible py-4 bg-background/70 backdrop-blur-lg'
         }`}
       >
         <div className="container mx-auto flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
-            <h1 
-              className="text-2xl font-bold text-primary cursor-pointer" 
+            <h1
+              className="text-2xl font-bold text-primary cursor-pointer"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               WeWrite
             </h1>
-            
+
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <a 
-                    href="#features" 
+                  <a
+                    href="#features"
                     onClick={(e) => scrollToSection(e, '#features')}
                     className={navigationMenuTriggerStyle()}
                   >
@@ -107,8 +107,8 @@ const LandingPage = () => {
                   </a>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <a 
-                    href="#about" 
+                  <a
+                    href="#about"
                     onClick={(e) => scrollToSection(e, '#about')}
                     className={navigationMenuTriggerStyle()}
                   >
@@ -118,7 +118,7 @@ const LandingPage = () => {
               </NavigationMenuList>
             </NavigationMenu>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <Button variant="secondary" asChild>
               <Link href="/auth/login">Sign In</Link>
@@ -129,26 +129,26 @@ const LandingPage = () => {
           </div>
         </div>
       </header>
-      
+
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
         {/* Top Header with Logo and Buttons */}
-        <div className={`w-full border-b transition-all duration-200 ${
-          isScrolled 
-            ? 'border-border/10 py-2 bg-background/90 backdrop-blur-xl shadow-sm' 
-            : 'border-transparent py-3 bg-background/80 backdrop-blur-lg'
+        <div className={`w-full header-border-transition transition-all duration-200 ${
+          isScrolled
+            ? 'py-2 bg-background/90 backdrop-blur-xl shadow-sm'
+            : 'border-visible py-3 bg-background/80 backdrop-blur-lg'
           }`}
         >
           <div className="container mx-auto flex justify-between items-center px-4">
             <div className="flex items-center">
-              <h1 
-                className="text-xl font-bold text-primary cursor-pointer" 
+              <h1
+                className="text-xl font-bold text-primary cursor-pointer"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
                 WeWrite
               </h1>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Button variant="secondary" size="sm" asChild>
                 <Link href="/auth/login">Sign In</Link>
@@ -159,19 +159,19 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Bottom Subheader with Scrollable Links */}
         <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-2 overflow-x-auto scrollbar-hide">
           <div className="flex items-center justify-center space-x-8 px-4 min-w-max mx-auto">
-            <a 
-              href="#features" 
+            <a
+              href="#features"
               onClick={(e) => scrollToSection(e, '#features')}
               className="text-sm font-medium whitespace-nowrap transition-colors hover:text-primary"
             >
               Features
             </a>
-            <a 
-              href="#about" 
+            <a
+              href="#about"
               onClick={(e) => scrollToSection(e, '#about')}
               className="text-sm font-medium whitespace-nowrap transition-colors hover:text-primary"
             >
@@ -190,8 +190,8 @@ const LandingPage = () => {
         >
           <Hero />
         </motion.div>
-        
-        <motion.section 
+
+        <motion.section
           id="features"
           initial="hidden"
           whileInView="visible"
@@ -200,8 +200,8 @@ const LandingPage = () => {
         >
           <FeatureSection />
         </motion.section>
-        
-        <motion.section 
+
+        <motion.section
           id="about"
           initial="hidden"
           whileInView="visible"
@@ -212,8 +212,8 @@ const LandingPage = () => {
         </motion.section>
       </main>
 
-      <motion.footer 
-        className="border-t border-border/40 py-8 px-6 bg-background"
+      <motion.footer
+        className="border-theme-medium border-t-only py-8 px-6 bg-background"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true }}

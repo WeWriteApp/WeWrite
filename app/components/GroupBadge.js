@@ -29,12 +29,12 @@ export default function GroupBadge({ groupId,index }) {
         let pageC = Object.keys(snapshot.val().pages).length;
         setPageCount(pageC);
       }
-      
-      
+
+
     });
   }, [groupId]);
 
-  if (!group || !groupId) return <div>Loading...</div>;
+  if (!group || !groupId) return <div className="flex justify-center py-4"><div className="loader loader-lg"></div></div>;
 
   return (
     <Link className="p-4 border bg-background border-gray-500 rounded-lg fade-in
@@ -46,7 +46,7 @@ export default function GroupBadge({ groupId,index }) {
       >{group.description}</p>
       <p className="text-gray-600 text-sm mt-1"
       >{memberCount} members | {pageCount} pages</p>
-      
+
     </Link>
   );
 }

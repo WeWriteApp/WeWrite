@@ -20,7 +20,7 @@ export async function generateMetadata({ params }) {
 export default async function Page({ params }) {
   const group = await fetchGroupFromFirebase(params.id);
 
-  if (!group) return <div>Loading...</div>;
+  if (!group) return <div className="flex items-center justify-center h-screen"><div className="loader loader-lg"></div></div>;
 
   return (
     <GroupDetails group={group} />

@@ -13,16 +13,16 @@ import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform 
 
 /**
  * TextView Component - Renders text content with different paragraph modes
- * 
+ *
  * PARAGRAPH MODES REQUIREMENTS:
- * 
+ *
  * 1. Normal Mode:
  *    - Paragraph numbers create indentation (like traditional documents)
  *    - Numbers positioned to the left of the text
  *    - Creates a clear indent for each paragraph
  *    - Standard text size (1rem/16px)
  *    - Proper spacing between paragraphs
- * 
+ *
  * 2. Dense Mode:
  *    - Collapses all paragraphs for a more comfortable reading experience
  *    - NO line breaks between paragraphs
@@ -30,7 +30,7 @@ import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform 
  *    - Paragraph numbers are inserted inline within the continuous text
  *    - Standard text size (1rem/16px)
  *    - Only a small space separates one paragraph from the next
- * 
+ *
  * IMPLEMENTATION NOTES:
  * - Both modes use the same paragraph number style (text-muted-foreground)
  * - Both modes use the same text size (1rem/16px)
@@ -60,12 +60,12 @@ const extractPageId = (url) => {
 // Function to get page title from ID
 const getPageTitle = async (pageId) => {
   if (!pageId) return null;
-  
+
   // Check cache first
   if (pageTitleCache.has(pageId)) {
     return pageTitleCache.get(pageId);
   }
-  
+
   try {
     const { pageData } = await getPageById(pageId);
     if (pageData && pageData.title) {
@@ -76,7 +76,7 @@ const getPageTitle = async (pageId) => {
   } catch (error) {
     console.error("Error fetching page title:", error);
   }
-  
+
   return null;
 };
 
@@ -111,9 +111,9 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       console.error("Error parsing content:", e);
       contents = [];
     }
-    
+
     setParsedContents(contents || []);
-    
+
     // Reset loaded paragraphs and initial load state when content changes
     setLoadedParagraphs([]);
     setIsInitialLoad(true);
@@ -123,32 +123,32 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph-like nodes
-      const paragraphNodes = parsedContents.filter(node => 
-        node.type === nodeTypes.PARAGRAPH || 
-        node.type === nodeTypes.HEADING || 
+      const paragraphNodes = parsedContents.filter(node =>
+        node.type === nodeTypes.PARAGRAPH ||
+        node.type === nodeTypes.HEADING ||
         node.type === nodeTypes.CODE_BLOCK ||
         node.type === nodeTypes.LIST
       );
-      
+
       // Create a staggered loading effect
       const totalNodes = paragraphNodes.length;
       const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
-      
+
       if (totalNodes > 0) {
         const newLoadedParagraphs = [];
-        
+
         // Schedule each paragraph to appear with a staggered delay
         for (let i = 0; i < totalNodes; i++) {
           setTimeout(() => {
             setLoadedParagraphs(prev => [...prev, i]);
           }, i * loadingDelay);
         }
-        
+
         // Mark initial load as complete after all paragraphs are loaded
         setTimeout(() => {
           setIsInitialLoad(false);
           setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
-          
+
           // Call onRenderComplete callback when all paragraphs are loaded
           if (onRenderComplete && typeof onRenderComplete === 'function') {
             onRenderComplete();
@@ -156,7 +156,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         }, totalNodes * loadingDelay + 100);
       } else {
         setIsInitialLoad(false);
-        
+
         // If there are no paragraphs, call onRenderComplete immediately
         if (onRenderComplete && typeof onRenderComplete === 'function') {
           onRenderComplete();
@@ -175,7 +175,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   };
 
   return (
-    <motion.div 
+    <motion.div
       className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
         effectiveMode === LINE_MODES.NORMAL ? 'items-start' : ''
       } ${
@@ -188,11 +188,11 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       {!parsedContents && !isSearch && (
         <div className="p-6 text-muted-foreground">No content available</div>
       )}
-      
+
       {parsedContents && (
-        <RenderContent 
-          contents={parsedContents} 
-          language={language} 
+        <RenderContent
+          contents={parsedContents}
+          language={language}
           loadedParagraphs={loadedParagraphs}
           effectiveMode={effectiveMode}
         />
@@ -205,7 +205,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   // Try to use the page context, but provide a fallback if it's not available
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
-  
+
   // Use the provided effectiveMode or fall back to lineMode from context
   const mode = effectiveMode || lineMode || LINE_MODES.NORMAL;
 
@@ -213,7 +213,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
 
   /**
    * DENSE MODE IMPLEMENTATION
-   * 
+   *
    * Bible verse style with continuous text flow:
    * - NO line breaks between paragraphs
    * - Text wraps continuously as if newline characters were temporarily deleted
@@ -230,20 +230,20 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
             <p className="text-foreground leading-normal text-base">
               {contents.map((node, index) => {
                 if (!loadedParagraphs.includes(index)) return null;
-                
+
                 // Only process paragraph nodes
                 if (node.type !== nodeTypes.PARAGRAPH) return null;
-                
+
                 return (
                   <React.Fragment key={index}>
                     {/* Only add a space if this isn't the first paragraph */}
                     {index > 0 && ' '}
-                    
+
                     {/* Paragraph number */}
                     <span className="text-muted-foreground text-xs select-none">
                       {index + 1}
                     </span>{'\u00A0'}
-                    
+
                     {/* Paragraph content without any breaks */}
                     {node.children && node.children.map((child, childIndex) => {
                       if (child.type === 'link') {
@@ -253,7 +253,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
                         if (child.bold) className += ' font-bold';
                         if (child.italic) className += ' italic';
                         if (child.underline) className += ' underline';
-                        
+
                         if (child.code) {
                           return (
                             <code key={childIndex} className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono">
@@ -261,7 +261,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
                             </code>
                           );
                         }
-                        
+
                         return (
                           <span key={childIndex} className={className || undefined}>
                             {child.text}
@@ -279,10 +279,10 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
       );
     }
   }
-  
+
   /**
    * NORMAL MODE IMPLEMENTATION
-   * 
+   *
    * Traditional document style:
    * - Paragraph numbers create indentation
    * - Numbers positioned to the left of the text
@@ -302,7 +302,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
       </div>
     );
   }
-  
+
   // If it's a single node, render it directly
   return renderNode(contents, mode, 0);
 };
@@ -326,14 +326,14 @@ const renderNode = (node, mode, index) => {
         return null;
     }
   }
-  
+
   // For any other modes, we'll handle them in RenderContent directly
   return null;
 };
 
 /**
  * ParagraphNode - Renders a paragraph in NORMAL mode
- * 
+ *
  * Features:
  * - Paragraph numbers create indentation (traditional document style)
  * - Numbers positioned to the left of the text
@@ -345,10 +345,10 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
   const { lineMode } = useLineSettings();
   // Use lineMode from context if available, otherwise fall back to effectiveMode prop
   const mode = lineMode || (effectiveMode === 'dense' ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
-  
+
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
-  
+
   // Define consistent text size for all modes
   const TEXT_SIZE = "text-base"; // 1rem (16px) for all modes
 
@@ -364,18 +364,18 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
       if (child.bold) className += ' font-bold';
       if (child.italic) className += ' italic';
       if (child.underline) className += ' underline';
-      
+
       if (child.code) {
         return (
-          <code 
-            key={i} 
+          <code
+            key={i}
             className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono"
           >
             {child.text}
           </code>
         );
       }
-      
+
       return (
         <span key={i} className={className || undefined}>
           {child.text}
@@ -394,14 +394,14 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
 
   // Normal mode with motion animations
   return (
-    <motion.div 
+    <motion.div
       ref={paragraphRef}
       className={`group relative ${spacingClass}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+      transition={{
+        type: "spring",
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
         mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
@@ -411,22 +411,22 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
         {/* Paragraph number - precisely aligned with centerline of first line of text */}
         <motion.div
           className="flex-shrink-0 w-6 text-right pr-1 flex items-center justify-end"
-          style={{ 
-            height: "1.5rem", 
-            transform: "translateY(0.15rem)" 
+          style={{
+            height: "1.5rem",
+            transform: "translateY(0.15rem)"
           }}
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ 
+          transition={{
             delay: 0.05,
-            type: "spring", 
-            stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
-            damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
+            type: "spring",
+            stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+            damping: ANIMATION_CONSTANTS.SPRING_DAMPING
           }}
         >
           {renderParagraphNumber(index)}
         </motion.div>
-        
+
         {/* Paragraph content */}
         <div className="flex-1">
           <p className={`text-left ${TEXT_SIZE}`}>
@@ -441,28 +441,28 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
 const CodeBlockNode = ({ node, language, index = 0 }) => {
   // If language is not provided, try to extract it from the node
   const codeLanguage = language || node.language || 'javascript';
-  
+
   return (
-    <motion.div 
+    <motion.div
       className="relative my-4 group"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+      transition={{
+        type: "spring",
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
         mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
-      <motion.span 
+      <motion.span
         className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
+        transition={{
           delay: 0.05,
-          type: "spring", 
-          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
-          damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
+          type: "spring",
+          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+          damping: ANIMATION_CONSTANTS.SPRING_DAMPING
         }}
       >
         {index + 1}
@@ -485,7 +485,7 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
 const HeadingNode = ({ node, index = 0 }) => {
   const level = node.level || 1;
   const HeadingTag = `h${level}`;
-  
+
   const headingClasses = {
     1: 'text-2xl font-bold mt-8 mb-4',
     2: 'text-xl font-bold mt-6 mb-3',
@@ -494,28 +494,28 @@ const HeadingNode = ({ node, index = 0 }) => {
     5: 'text-sm font-bold mt-3 mb-1',
     6: 'text-xs font-bold mt-2 mb-1'
   };
-  
+
   return (
     <motion.div
       className="relative"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+      transition={{
+        type: "spring",
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
         mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
-      <motion.span 
+      <motion.span
         className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
+        transition={{
           delay: 0.05,
-          type: "spring", 
-          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
-          damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
+          type: "spring",
+          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+          damping: ANIMATION_CONSTANTS.SPRING_DAMPING
         }}
       >
         {index + 1}
@@ -534,28 +534,28 @@ const HeadingNode = ({ node, index = 0 }) => {
 const ListNode = ({ node, index = 0 }) => {
   const ListTag = node.listType === 'ordered' ? 'ol' : 'ul';
   const listClasses = node.listType === 'ordered' ? 'list-decimal' : 'list-disc';
-  
+
   return (
     <motion.div
       className="relative my-4 pl-8"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
+      transition={{
+        type: "spring",
+        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
         mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
     >
-      <motion.span 
+      <motion.span
         className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ 
+        transition={{
           delay: 0.05,
-          type: "spring", 
-          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS, 
-          damping: ANIMATION_CONSTANTS.SPRING_DAMPING 
+          type: "spring",
+          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+          damping: ANIMATION_CONSTANTS.SPRING_DAMPING
         }}
       >
         {index + 1}
@@ -578,7 +578,7 @@ const ListNode = ({ node, index = 0 }) => {
 const LinkNode = ({ node, index }) => {
   const href = node.url || node.href || node.link || '#';
   const pageId = extractPageId(href);
-  
+
   // Extract text content from children array if available
   const getTextFromNode = (node) => {
     if (node.displayText) return node.displayText;
@@ -592,7 +592,7 @@ const LinkNode = ({ node, index }) => {
   };
 
   const displayText = getTextFromNode(node);
-  
+
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
     return (
@@ -601,7 +601,7 @@ const LinkNode = ({ node, index }) => {
       </span>
     );
   }
-  
+
   // For external links, use the PillLink component
   return (
     <span className="inline-block">
@@ -616,7 +616,7 @@ const LinkNode = ({ node, index }) => {
 const InternalLinkWithTitle = ({ pageId, href, displayText }) => {
   const [title, setTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchTitle = async () => {
       setIsLoading(true);
@@ -624,13 +624,13 @@ const InternalLinkWithTitle = ({ pageId, href, displayText }) => {
       setTitle(pageTitle);
       setIsLoading(false);
     };
-    
+
     fetchTitle();
   }, [pageId]);
-  
+
   return (
     <PillLink href={href} isPublic={true} className="inline">
-      {displayText || title || (isLoading ? 'Loading...' : 'Page Link')}
+      {displayText || title || (isLoading ? <><div className="loader"></div> Loading</> : 'Page Link')}
     </PillLink>
   );
 };

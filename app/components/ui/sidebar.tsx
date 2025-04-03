@@ -27,7 +27,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <SheetContent side="right" className={`p-0 ${className || ''}`}>
       <div className="flex flex-col h-full bg-background text-foreground">
-        <SheetHeader className="p-4 border-b">
+        <SheetHeader className="p-4 border-b-only">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-xl font-bold">WeWrite</SheetTitle>
             <SheetClose asChild>
@@ -120,7 +120,7 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
 
         {/* Account Actions */}
-        <div className="mt-auto pt-4 border-t border-border" data-component-name="Sidebar">
+        <div className="mt-auto pt-4 border-t-only" data-component-name="Sidebar">
           {user && (
             <div className="px-4 pb-2 text-sm text-muted-foreground">
               Signed in as <span className="font-medium text-foreground">{user.username || user.email || 'Anonymous'}</span>
@@ -137,7 +137,7 @@ export function Sidebar({ className }: SidebarProps) {
             </svg>
             Account
           </Button>
-          
+
           <Button
             variant="outline"
             className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"

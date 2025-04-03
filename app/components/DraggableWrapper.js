@@ -98,12 +98,12 @@ const DraggableWrapper = ({
         userSelect: 'none',
       }}
     >
-      <div 
-        className="draggable-handle bg-background border border-border rounded-t-md px-2 py-1 flex items-center justify-between"
+      <div
+        className="draggable-handle bg-background border-theme-medium rounded-t-md px-2 py-1 flex items-center justify-between"
         onMouseDown={handleMouseDown}
       >
         <div className="text-xs text-muted-foreground">Drag me</div>
-        <button 
+        <button
           className="text-xs text-muted-foreground hover:text-foreground ml-2"
           onClick={() => {
             setPosition(initialPosition);
@@ -112,7 +112,7 @@ const DraggableWrapper = ({
           Reset
         </button>
       </div>
-      <div className="draggable-content border border-t-0 border-border rounded-b-md bg-background/95 backdrop-blur-sm shadow-md">
+      <div className="draggable-content border-theme-medium border-t-0 rounded-b-md bg-background/95 backdrop-blur-sm shadow-md">
         {children}
       </div>
     </div>

@@ -1,52 +1,140 @@
-import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo, useLayoutEffect } from "react";
 import { createEditor, Editor, Transforms, Range, Point, Path, Element as SlateElement, Node } from "slate";
 import { Slate, Editable, ReactEditor, withReact, useSelected, useSlate, useSlateStatic, useReadOnly } from "slate-react";
 import { withHistory } from "slate-history";
 import { AnimatePresence, motion } from "framer-motion";
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
-import { LineSettingsProvider, useLineSettings } from '../contexts/LineSettingsContext';
+import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 
-// Helper function to deserialize content
+// CSS for editor modes - ensures consistent styling with TextView
+const editorStyles = `
+  .editor-normal {
+    /* Normal mode styling */
+    line-height: 1.6;
+  }
+
+  .editor-dense {
+    /* Dense mode styling */
+    line-height: 1.6;
+  }
+
+  /* Ensure paragraph numbers are styled consistently */
+  [data-slate-editor] [contenteditable="false"] {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Match TextView styling */
+  [data-slate-editor] {
+    font-size: 1rem;
+    color: var(--foreground);
+  }
+
+  /* Ensure proper spacing between paragraphs */
+  [data-slate-editor] > div {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Style for code blocks */
+  [data-slate-editor] code {
+    background-color: var(--muted);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    font-family: monospace;
+  }
+`;
+
+// Helper function to deserialize content with improved error handling
 const deserialize = (content) => {
-  if (!content) {
-    // Return a default value if content is null or undefined
-    return [{ type: 'line', children: [{ text: '' }] }];
-  }
-  if (typeof content === 'string') {
-    try {
-      // Try parsing if it's a JSON string
-      const parsed = JSON.parse(content);
-      // Basic validation if it looks like Slate structure
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type && parsed[0].children) {
-        return parsed;
-      }
-    } catch (e) {
-      // If parsing fails or it's not valid structure, treat as plain text
-      console.warn("Failed to parse initialContent JSON, treating as plain text:", content, e);
-      return [{ type: 'line', children: [{ text: content }] }];
+  // Default valid Slate structure
+  const defaultValue = [{ type: ELEMENT_TYPES.PARAGRAPH, children: [{ text: '' }] }];
+
+  try {
+    // Return default if content is null, undefined, or empty
+    if (!content) {
+      console.log("No content provided, using default empty editor state");
+      return defaultValue;
     }
+
+    // Handle string content (likely JSON)
+    if (typeof content === 'string') {
+      try {
+        // Try parsing if it's a JSON string
+        const parsed = JSON.parse(content);
+
+        // Validate parsed content structure
+        if (Array.isArray(parsed)) {
+          if (parsed.length === 0) {
+            // Empty array, return with at least one node
+            console.log("Empty array in content, using default structure");
+            return defaultValue;
+          }
+
+          // Check if the structure looks like valid Slate content
+          const hasValidStructure = parsed.every(node =>
+            node && typeof node === 'object' && node.type && Array.isArray(node.children)
+          );
+
+          if (hasValidStructure) {
+            return parsed;
+          } else {
+            console.warn("Content has invalid Slate structure, using default");
+            return defaultValue;
+          }
+        } else {
+          console.warn("Parsed content is not an array, using default");
+          return defaultValue;
+        }
+      } catch (e) {
+        // If parsing fails, treat as plain text
+        console.warn("Failed to parse content as JSON, treating as plain text:", e.message);
+        return [{ type: ELEMENT_TYPES.LINE, children: [{ text: String(content).substring(0, 1000) }] }];
+      }
+    }
+
+    // Handle array content (already parsed)
+    if (Array.isArray(content)) {
+      if (content.length === 0) {
+        return defaultValue;
+      }
+
+      // Validate array structure
+      const hasValidStructure = content.every(node =>
+        node && typeof node === 'object' && node.type && Array.isArray(node.children)
+      );
+
+      if (hasValidStructure) {
+        return content;
+      } else {
+        console.warn("Array content has invalid Slate structure, using default");
+        return defaultValue;
+      }
+    }
+
+    // Handle unexpected formats
+    console.warn("Unexpected content format, using default:", typeof content);
+    return defaultValue;
+  } catch (error) {
+    // Catch any unexpected errors in the deserialization process
+    console.error("Error in deserialize function:", error);
+    return defaultValue;
   }
-  // If it's already an object/array (assumed Slate structure)
-  if (Array.isArray(content) && content.length > 0) {
-      return content;
-  }
-  // Fallback for unexpected formats
-  console.warn("Unexpected initialContent format, using default:", content);
-  return [{ type: 'line', children: [{ text: '' }] }];
 };
 
-// Line modes for different types of content
-const LINE_MODES = {
-  NORMAL: 'normal',
+// Element types for the editor
+const ELEMENT_TYPES = {
+  PARAGRAPH: 'paragraph',
   CODE: 'code',
   QUOTE: 'quote',
   HEADING: 'heading',
+  LINK: 'link',
+  LINE: 'line'
 };
 
 const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onDiscard, onSave }, ref) => {
-  const { lineSettings } = useLineSettings();
-  
+  const { lineMode } = useLineSettings();
+
   // Log initialContent and deserialized result
   console.log("SlateEditor received initialContent:", initialContent);
   const deserializedValue = useMemo(() => {
@@ -54,8 +142,34 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     console.log("Deserialized initialContent:", JSON.stringify(result));
     return result;
   }, [initialContent]);
-  
-  const editor = useMemo(() => withLinks(withReact(createEditor())), []); // Removed withLineNumbers wrapper
+
+  // Custom plugin to ensure nodes are paragraphs by default
+  const withParagraphNumbers = editor => {
+    const { normalizeNode } = editor;
+
+    editor.normalizeNode = ([node, path]) => {
+      if (path.length === 0) {
+        // For the top-level nodes, ensure they have a type
+        for (let i = 0; i < node.children.length; i++) {
+          const child = node.children[i];
+          if (!child.type) {
+            Transforms.setNodes(
+              editor,
+              { type: ELEMENT_TYPES.PARAGRAPH },
+              { at: [...path, i] }
+            );
+          }
+        }
+      }
+
+      // Fall back to the original normalizeNode
+      normalizeNode([node, path]);
+    };
+
+    return editor;
+  };
+
+  const editor = useMemo(() => withParagraphNumbers(withLinks(withReact(createEditor()))), []);
   const [linkEditorPosition, setLinkEditorPosition] = useState(null);
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
@@ -68,7 +182,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
   const editableRef = useRef(null);
   const { data } = useContext(DataContext);
   const { user } = useContext(AuthContext);
-  const { hasLineSettings } = useLineSettings();
+  // We don't need hasLineSettings anymore as we're always showing paragraph numbers
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -128,7 +242,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       // If we are, handle keys based on line mode
       if (lineNode) {
         const [node, path] = lineNode;
-        if (node.mode === LINE_MODES.CODE) {
+        if (node.mode === 'code') {
           if (event.key === 'Tab') {
             event.preventDefault();
             Transforms.insertText(editor, '  ');
@@ -143,10 +257,10 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     // Handle keyboard shortcuts
     if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
-      
+
       // Get the current selection
       const { selection } = editor;
-      
+
       if (selection && !Range.isCollapsed(selection)) {
         // Show the link editor menu at the selection
         showLinkEditorMenu(editor, selection);
@@ -172,51 +286,81 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
   // Render Elements with Line Numbers
   const renderElement = useCallback((props) => {
-    const { attributes, children, element } = props;
+    // Safely destructure props with fallbacks
+    const { attributes = {}, children = null } = props;
+    const element = props.element || {};
+
     try {
+      // Check if element is valid before accessing properties
+      if (!element || typeof element !== 'object') {
+        console.error('Invalid element in renderElement:', element);
+        return <div {...attributes} className="error-element bg-red-100 p-1 rounded">{children}</div>;
+      }
+
+      // Get current line mode from context
+      const currentLineMode = lineMode || 'normal';
+
       switch (element.type) {
-        case 'link':
+        case ELEMENT_TYPES.LINK:
           return (
             <a {...attributes} href={element.url || '#'} data-page-id={element.pageId} data-page-title={element.pageTitle} className="editor-link">
               {children}
             </a>
           );
-        case 'line':
-          // Explicitly handle 'line' type for line numbers
-          let path, lineNumber, showLineNumbers = false;
+        case ELEMENT_TYPES.PARAGRAPH:
+          // Get paragraph number (1-based index)
+          let paragraphPath, paragraphNumber;
           if (editor) {
             try {
-              path = ReactEditor.findPath(editor, element);
+              paragraphPath = ReactEditor.findPath(editor, element);
+              if (paragraphPath && paragraphPath.length > 0) {
+                paragraphNumber = paragraphPath[0] + 1; // 1-based indexing
+              }
+            } catch (pathError) {
+              console.error("Error finding path for paragraph element:", pathError, element);
+            }
+          }
+
+          return (
+            <div {...attributes} className="flex items-start py-1 relative">
+              {/* Paragraph number - non-editable */}
+              <span
+                contentEditable={false}
+                className="text-muted-foreground text-sm w-6 mr-2 text-right flex-shrink-0 select-none"
+                style={{ userSelect: 'none', pointerEvents: 'none' }}
+              >
+                {paragraphNumber}
+              </span>
+              {/* Paragraph content */}
+              <div className="flex-1">{children}</div>
+            </div>
+          );
+        case ELEMENT_TYPES.LINE:
+          // Convert line type to paragraph for consistency
+          let lineNumber;
+          if (editor) {
+            try {
+              const path = ReactEditor.findPath(editor, element);
               if (path && path.length > 0) {
                 lineNumber = path[0] + 1; // 1-based indexing
-                showLineNumbers = lineSettings[lineNumber] !== undefined ? lineSettings[lineNumber] : hasLineSettings;
-              } else {
-                console.warn("Invalid path found for element:", element);
               }
             } catch (pathError) {
               console.error("Error finding path for line element:", pathError, element);
             }
-          } else {
-             console.warn("Editor instance not available for path finding.");
           }
 
           return (
-            <div {...attributes} style={{ position: 'relative', paddingLeft: showLineNumbers ? '40px' : '0px' }}>
-              {showLineNumbers && lineNumber && (
-                <span
-                  contentEditable={false}
-                  className="line-number"
-                  style={{
-                    position: 'absolute',
-                    left: '0',
-                    userSelect: 'none',
-                    opacity: 0.5,
-                  }}
-                >
-                  {lineNumber}
-                </span>
-              )}
-              {children}
+            <div {...attributes} className="flex items-start py-1 relative">
+              {/* Line number - non-editable */}
+              <span
+                contentEditable={false}
+                className="text-muted-foreground text-sm w-6 mr-2 text-right flex-shrink-0 select-none"
+                style={{ userSelect: 'none', pointerEvents: 'none' }}
+              >
+                {lineNumber}
+              </span>
+              {/* Line content */}
+              <div className="flex-1">{children}</div>
             </div>
           );
         default:
@@ -228,7 +372,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       // Fallback rendering on error
       return <div {...attributes} style={{ backgroundColor: 'rgba(255,0,0,0.1)', border: '1px solid red', padding: '2px' }}>Error rendering node. {children}</div>;
     }
-  }, [editor, lineSettings, hasLineSettings]); // Added editor dependency
+  }, [editor, lineMode]); // Updated dependencies
 
   const showLinkEditorMenu = (editor, editorSelection) => {
     try {
@@ -278,11 +422,11 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         // If editing an existing link
         Transforms.setNodes(
           editor,
-          { 
-            ...item, 
+          {
+            ...item,
             type: 'link',
             url: item.pageId ? `/page/${item.pageId}` : item.url,
-            children: [{ text: item.text }] 
+            children: [{ text: item.text }]
           },
           { at: selectedNodePath }
         );
@@ -291,11 +435,11 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         if (isLinkActive(editor)) {
           unwrapLink(editor);
         }
-        
+
         // Insert the link with the selected text or URL
         const text = item.text || (item.pageId ? item.pageTitle : item.url);
         const url = item.pageId ? `/page/${item.pageId}` : item.url;
-        
+
         if (Range.isCollapsed(editor.selection)) {
           // If no text is selected, insert the link text
           Transforms.insertNodes(editor, {
@@ -324,29 +468,31 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
   return (
     // No need for extra provider here if EditPage already has one
     <Slate editor={editor} initialValue={value} onChange={onChange}>
+      {/* Add custom styles */}
+      <style dangerouslySetInnerHTML={{ __html: editorStyles }} />
       {/* Conditionally render LinkEditor */}
-      {showLinkEditor && (
+      {showLinkEditor && linkEditorPosition && (
         <LinkEditor
           position={linkEditorPosition}
           onSelect={handleSelection}
           setShowLinkEditor={setShowLinkEditor}
-          initialText={selectedLinkElement?.children[0]?.text || ''}
-          initialPageId={selectedLinkElement?.pageId}
-          initialPageTitle={selectedLinkElement?.pageTitle}
+          initialText={selectedLinkElement && selectedLinkElement.children && selectedLinkElement.children[0] ? selectedLinkElement.children[0].text || '' : ''}
+          initialPageId={selectedLinkElement ? selectedLinkElement.pageId : null}
+          initialPageTitle={selectedLinkElement ? selectedLinkElement.pageTitle : ''}
         />
       )}
       {/* Custom EditorContent */}
-      <EditorContent 
-        editor={editor} 
-        handleKeyDown={handleKeyDown} 
-        renderElement={renderElement} 
-        editableRef={editableRef} 
-      /> 
+      <EditorContent
+        editor={editor}
+        handleKeyDown={handleKeyDown}
+        renderElement={renderElement}
+        editableRef={editableRef}
+      />
       {/* Floating Toolbar */}
-      <KeyboardAwareToolbar 
-        onInsert={onInsert} 
-        onDiscard={onDiscard} 
-        onSave={onSave} 
+      <KeyboardAwareToolbar
+        onInsert={onInsert}
+        onDiscard={onDiscard}
+        onSave={onSave}
       />
     </Slate>
   );
@@ -465,17 +611,17 @@ const InlineChromiumBugfix = forwardRef((props, ref) => (
 const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   const { url } = element;
   const editor = useSlate();
-  
+
   const handleClick = (e) => {
     if (e.ctrlKey || e.metaKey) {
       // Allow default behavior (open link) when Ctrl/Cmd is pressed
       return;
     }
-    
+
     e.preventDefault();
     openLinkEditor(element, ReactEditor.findPath(editor, element));
   };
-  
+
   return (
     <a
       {...attributes}
@@ -490,19 +636,30 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
 
 // Line element component with optional mode styling
 const LineElement = ({ attributes, children, element }) => {
-  const lineNumber = ReactEditor.findPath(useSlate(), element)[0] + 1;
-  
+  let lineNumber = 0;
+  try {
+    const editor = useSlate();
+    if (editor && element) {
+      const path = ReactEditor.findPath(editor, element);
+      if (path && path.length > 0) {
+        lineNumber = path[0] + 1;
+      }
+    }
+  } catch (error) {
+    console.error("Error finding path for line element:", error);
+  }
+
   // Apply different styling based on line mode
   const getLineStyles = () => {
-    if (element.mode === LINE_MODES.CODE) {
+    if (element && element.mode === 'code') {
       return "font-mono text-amber-400 bg-gray-900/50";
     }
     return "";
   };
-  
+
   return (
-    <div 
-      {...attributes} 
+    <div
+      {...attributes}
       className={`flex items-start py-1 ${getLineStyles()}`}
     >
       <span className="text-sm text-gray-500 w-6 mr-2 text-right flex-shrink-0 select-none">
@@ -542,21 +699,21 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   const [text, setText] = useState(initialText);
   const [url, setUrl] = useState('');
   const inputRef = useRef(null);
-  
+
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!url && !text) {
       setShowLinkEditor(false);
       return;
     }
-    
+
     onSelect({
       text: text || url,
       url: url,
@@ -564,9 +721,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
       pageTitle: initialPageTitle
     });
   };
-  
+
   return (
-    <div 
+    <div
       className="absolute z-[1000] bg-gray-900 border border-gray-700 rounded-md shadow-lg p-3 w-64"
       style={{
         top: position.top + 'px',
@@ -650,7 +807,7 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
 
     // --- Logging added ---
     const scrollY = window.scrollY || window.pageYOffset;
-    console.log("Toolbar positioning: rect=", rect, "scrollY=", scrollY); 
+    console.log("Toolbar positioning: rect=", rect, "scrollY=", scrollY);
     // --- End Logging ---
 
 
@@ -666,11 +823,11 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
 
     // Check if positioning near top edge, potentially flip below
     // Simplified logic: Always position above for now
-    setToolbarPosition({ 
+    setToolbarPosition({
       // Ensure top is not negative
-      top: Math.max(0, calculatedTop), 
+      top: Math.max(0, calculatedTop),
       left: rect.left // Left relative to viewport seems correct for fixed
-    }); 
+    });
 
   }, [editor.selection, editor]); // Re-run when selection changes
 
@@ -717,7 +874,7 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
       >
         {/* Toolbar buttons */}
         {/* Example Button: Bold */}
-        {/* <button 
+        {/* <button
             className="p-1 hover:bg-muted rounded"
             onMouseDown={(event) => {
               event.preventDefault(); // Prevent editor losing focus
@@ -726,7 +883,7 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
           >
             B
           </button> */}
-          
+
         {/* Add other formatting buttons here */}
 
         {/* Separator */}
@@ -734,7 +891,7 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
 
         {/* Insert/Save/Discard Buttons */}
         {showInsert && (
-           <button 
+           <button
              className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
              onMouseDown={(event) => {
                  event.preventDefault();
@@ -746,7 +903,7 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
         )}
          {showSaveDiscard && (
            <>
-             <button 
+             <button
                 ref={saveButtonRef} // Assign ref to save button
                 className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                 onMouseDown={(event) => {
@@ -757,7 +914,7 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
               >
                 Save
               </button>
-              <button 
+              <button
                 className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                 onMouseDown={(event) => {
                     event.preventDefault();
@@ -776,38 +933,37 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
 
 // Custom EditorContent component to apply line mode styles
 const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) => {
-  const { lineSettings } = useLineSettings();
+  const { lineMode } = useLineSettings();
 
   // Determine the class based on the line setting mode
   const editorClassName = useMemo(() => {
-    let baseClass = "prose dark:prose-invert max-w-none focus:outline-none";
-    // Apply spacing based on mode - These might need adjustment based on recent padding changes
-    if (lineSettings.mode === 'spaced') {
-      return `${baseClass} editor-spaced`; // Add specific class for spaced
-    } else if (lineSettings.mode === 'wrapped') {
-      return `${baseClass} editor-wrapped`; // Add specific class for wrapped
-    } else {
-      return `${baseClass} editor-default`; // Default class
-    }
-  }, [lineSettings.mode]);
+    // Base class for all modes
+    let baseClass = "prose dark:prose-invert max-w-none focus:outline-none text-base";
 
+    // Apply specific classes based on line mode
+    if (lineMode === 'dense') {
+      return `${baseClass} editor-dense max-w-full break-words`;
+    } else {
+      return `${baseClass} editor-normal`;
+    }
+  }, [lineMode]);
 
   return (
-    <motion.div 
-      className={`editable-container p-2`} // Reduced padding from p-4
-      initial={{ opacity: 0, y: 5 }} // Subtle slide up and fade in
+    <motion.div
+      className={`editable-container p-2`}
+      initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }} // Quick fade in
+      transition={{ duration: 0.15, ease: "easeOut" }}
     >
       <Editable
         ref={editableRef}
         renderElement={renderElement}
-        renderLeaf={Leaf} // Use custom Leaf component
+        renderLeaf={Leaf}
         placeholder="Start writing..."
         spellCheck
-        autoFocus={false} // Manage focus via ref if needed
+        autoFocus={false}
         onKeyDown={event => handleKeyDown(event, editor)}
-        className={editorClassName} // Apply dynamic class name
+        className={editorClassName}
       />
     </motion.div>
   );

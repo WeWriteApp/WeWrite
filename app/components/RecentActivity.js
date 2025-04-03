@@ -26,9 +26,9 @@ const ActivitySkeleton = () => {
 
 /**
  * RecentActivity Component
- * 
+ *
  * Displays recent activity from the platform, either in a carousel (homepage) or grid layout (activity page).
- * 
+ *
  * @param {number} limit - Maximum number of activities to display (default: 8)
  * @param {boolean} showViewAll - Whether to show the "View all activity" button (default: true)
  * @param {boolean} isActivityPage - Whether this component is being rendered on the activity page (default: false)
@@ -70,8 +70,8 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         {/* Only show carousel controls on homepage (not activity page or user profile) */}
         {!useGridLayout && (
           <div className="hidden md:flex items-center gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={scrollLeft}
               disabled={loading || error}
@@ -79,8 +79,8 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={scrollRight}
               disabled={loading || error}
@@ -174,10 +174,10 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
 
         {!loading && !error && activities.length > 0 && (
-          <div 
+          <div
             ref={useGridLayout ? null : carouselRef}
             className={`${
-              useGridLayout 
+              useGridLayout
                 ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
                 : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar'
             }`}
@@ -202,14 +202,14 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
       {/* Show load more button if there are more activities to load */}
       {hasMore && !loading && !error && activities.length > 0 && (isInActivityPage || isInUserProfile) && (
         <div className="flex justify-center mt-4">
-          <Button 
+          <Button
             variant="outline"
             size="sm"
             onClick={loadMore}
             disabled={loadingMore}
           >
             {loadingMore ? (
-              <PulseLoader size={8} color="currentColor" className="mr-2" />
+              <div className="loader mr-2"></div>
             ) : (
               <Plus className="h-4 w-4 mr-2" />
             )}

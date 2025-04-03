@@ -32,9 +32,9 @@ export default function GroupDetails({ group }) {
   const [isPublic, setIsPublic] = useState(group.isPublic || false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingVisibilityChange, setPendingVisibilityChange] = useState(null);
-  
-  if (!group) return <div>Loading...</div>;
-  
+
+  if (!group) return <div className="flex justify-center py-4"><div className="loader loader-lg"></div></div>;
+
   const isOwner = user?.uid === group.owner;
   const isMember = user?.uid && group.members && group.members[user.uid];
 
@@ -71,7 +71,7 @@ export default function GroupDetails({ group }) {
     setShowConfirmDialog(false);
     setPendingVisibilityChange(null);
   };
-  
+
   // Transform group pages into the format expected by PageList
   const pagesList = group.pages ? Object.entries(group.pages).map(([pageId, page]) => ({
     id: pageId,
@@ -82,12 +82,12 @@ export default function GroupDetails({ group }) {
     createdAt: page.createdAt || new Date().toISOString(),
     groupId: group.id
   })) : [];
-  
+
   const handlePagesAdded = () => {
     // Trigger a refresh of the component
     setRefreshKey(prev => prev + 1);
   };
-  
+
   return (
     <div
       className="p-6 bg-background text-foreground min-h-screen space-y-6"
@@ -100,7 +100,7 @@ export default function GroupDetails({ group }) {
           Back
         </Button>
       </div>
-      
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">{group.name}</h1>
@@ -108,7 +108,7 @@ export default function GroupDetails({ group }) {
             <p className="text-muted-foreground mt-1">{group.description}</p>
           )}
         </div>
-        
+
         <div className="flex items-center gap-4">
           {isOwner && (
             <div className="flex items-center gap-2">
@@ -129,13 +129,13 @@ export default function GroupDetails({ group }) {
               </div>
             </div>
           )}
-          
+
           {isOwner && (
             <DeleteGroupButton group={group} />
           )}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
@@ -156,15 +156,15 @@ export default function GroupDetails({ group }) {
                     New Page
                   </Link>
                 </Button>
-                <AddExistingPageDialog 
+                <AddExistingPageDialog
                   groupId={group.id}
                   onPagesAdded={handlePagesAdded}
                 />
               </div>
             )}
           </div>
-          
-          <PageList 
+
+          <PageList
             pages={pagesList}
             mode="grid"
             emptyState={
@@ -176,7 +176,7 @@ export default function GroupDetails({ group }) {
                     <Button variant="outline" asChild>
                       <Link href={`/new?groupId=${group.id}`}>Create your first page</Link>
                     </Button>
-                    <AddExistingPageDialog 
+                    <AddExistingPageDialog
                       groupId={group.id}
                       onPagesAdded={handlePagesAdded}
                     />
@@ -186,7 +186,7 @@ export default function GroupDetails({ group }) {
             }
           />
         </div>
-        
+
         <div>
           <div className="mb-4">
             <h2 className="text-xl font-semibold flex items-center">
@@ -197,17 +197,17 @@ export default function GroupDetails({ group }) {
               {Object.keys(group.members || {}).length} {Object.keys(group.members || {}).length === 1 ? 'member' : 'members'} in this group
             </p>
           </div>
-          
+
           {group.members && (
-            <GroupMembersTable 
-              members={group.members} 
-              groupId={group.id} 
-              isOwner={isOwner} 
+            <GroupMembersTable
+              members={group.members}
+              groupId={group.id}
+              isOwner={isOwner}
             />
           )}
         </div>
       </div>
-      
+
       <SiteFooter />
 
       <Dialog open={showConfirmDialog} onOpenChange={(open) => {
@@ -243,15 +243,15 @@ export default function GroupDetails({ group }) {
 
 const DeleteGroupButton = ({ group }) => {
   const router = useRouter();
-  
+
   const handleDelete = () => {
     if (confirm("Are you sure you want to delete this group? All pages will remain but will no longer be associated with this group.")) {
       const groupRef = ref(rtdb, `groups/${group.id}`);
       set(groupRef, null);
       router.push("/");
-    } 
+    }
   };
-  
+
   return (
     <Button
       variant="destructive"

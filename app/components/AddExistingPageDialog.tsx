@@ -30,10 +30,10 @@ interface AddExistingPageDialogProps {
   onPagesAdded?: () => void;
 }
 
-export default function AddExistingPageDialog({ 
-  groupId, 
-  trigger, 
-  onPagesAdded 
+export default function AddExistingPageDialog({
+  groupId,
+  trigger,
+  onPagesAdded
 }: AddExistingPageDialogProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,7 +43,7 @@ export default function AddExistingPageDialog({
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const { user } = useContext(AuthContext);
-  
+
   // Fetch user's pages when dialog opens
   useEffect(() => {
     if (open && user) {
@@ -51,24 +51,24 @@ export default function AddExistingPageDialog({
       fetchUserPages();
     }
   }, [open, user]);
-  
+
   // Filter pages when search term changes
   useEffect(() => {
     if (pages.length > 0) {
-      const filtered = pages.filter(page => 
+      const filtered = pages.filter(page =>
         page.title.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredPages(filtered);
     }
   }, [searchTerm, pages]);
-  
+
   const fetchUserPages = async () => {
     if (!user) return;
-    
+
     try {
       // Get all pages the user can edit
       const userPagesData = await getEditablePagesByUser(user.uid);
-      
+
       // Ensure proper typing for userPages
       const userPages: Page[] = userPagesData.map(page => ({
         id: page.id,
@@ -81,15 +81,15 @@ export default function AddExistingPageDialog({
         groupId: page.groupId,
         groupName: page.groupName
       }));
-      
+
       // Get current group pages to exclude
       const groupRef = ref(rtdb, `groups/${groupId}`);
       const groupSnapshot = await get(groupRef);
-      
+
       if (groupSnapshot.exists()) {
         const groupData = groupSnapshot.val();
         const groupPageIds = groupData.pages ? Object.keys(groupData.pages) : [];
-        
+
         // Filter out pages that are already in the group
         const availablePages = userPages.filter(page => !groupPageIds.includes(page.id));
         setPages(availablePages);
@@ -104,7 +104,7 @@ export default function AddExistingPageDialog({
       setLoading(false);
     }
   };
-  
+
   const togglePageSelection = (pageId: string) => {
     setSelectedPages(prev => {
       if (prev.includes(pageId)) {
@@ -114,23 +114,23 @@ export default function AddExistingPageDialog({
       }
     });
   };
-  
+
   const handleAddPages = async () => {
     if (selectedPages.length === 0) return;
-    
+
     setAdding(true);
     try {
       // Get the group reference
       const groupRef = ref(rtdb, `groups/${groupId}/pages`);
-      
+
       // Get current pages
       const groupPagesSnapshot = await get(groupRef);
       const currentPages = groupPagesSnapshot.exists() ? groupPagesSnapshot.val() : {};
-      
+
       // Add selected pages
       const selectedPageObjects = pages.filter(page => selectedPages.includes(page.id));
       const updates: Record<string, any> = {};
-      
+
       selectedPageObjects.forEach(page => {
         updates[page.id] = {
           id: page.id,
@@ -142,10 +142,10 @@ export default function AddExistingPageDialog({
           groupId: groupId
         };
       });
-      
+
       // Update the group with new pages
       await update(groupRef, updates);
-      
+
       // Close dialog and reset state
       setOpen(false);
       setSelectedPages([]);
@@ -156,7 +156,7 @@ export default function AddExistingPageDialog({
       setAdding(false);
     }
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -174,7 +174,7 @@ export default function AddExistingPageDialog({
             Select pages you want to add to this group. Group members will be able to edit these pages.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="relative my-4">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -185,8 +185,8 @@ export default function AddExistingPageDialog({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
-        <div className="flex-1 overflow-y-auto min-h-[300px] border rounded-md p-1">
+
+        <div className="flex-1 overflow-y-auto min-h-[300px] border-theme-medium rounded-md p-1">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-muted-foreground">Loading your pages...</p>
@@ -198,7 +198,7 @@ export default function AddExistingPageDialog({
           ) : (
             <div className="space-y-2 p-2">
               {filteredPages.map(page => (
-                <div 
+                <div
                   key={page.id}
                   className={cn(
                     interactiveCard("flex items-center gap-3 cursor-pointer"),
@@ -249,7 +249,7 @@ export default function AddExistingPageDialog({
             </div>
           )}
         </div>
-        
+
         <DialogFooter className="flex items-center justify-between mt-4">
           <div className="text-sm text-muted-foreground">
             {selectedPages.length} {selectedPages.length === 1 ? 'page' : 'pages'} selected
@@ -258,8 +258,8 @@ export default function AddExistingPageDialog({
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleAddPages} 
+            <Button
+              onClick={handleAddPages}
               disabled={selectedPages.length === 0 || adding}
             >
               {adding ? 'Adding...' : 'Add to Group'}

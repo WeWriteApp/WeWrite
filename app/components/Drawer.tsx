@@ -12,7 +12,7 @@ export function Drawer() {
   return (
     <div className="fixed inset-0 z-50 bg-black/50">
       <div className="fixed right-0 top-0 h-full w-80 bg-background shadow-xl">
-        <div className="flex h-16 items-center justify-between border-b px-4">
+        <div className="flex h-16 items-center justify-between border-b-only px-4">
           <h2 className="text-lg font-semibold">Menu</h2>
           <button
             onClick={() => setIsOpen(false)}
@@ -27,4 +27,4 @@ export function Drawer() {
       </div>
     </div>
   );
-} 
+}

@@ -19,7 +19,7 @@ export default function Header() {
       // Update scroll state
       const scrollY = window.scrollY;
       setIsScrolled(scrollY > 10);
-      
+
       // Calculate scroll progress for the progress bar
       const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
       const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
@@ -29,10 +29,10 @@ export default function Header() {
 
     // Initial update
     handleScroll();
-    
+
     // Add scroll event listener
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Add scrollend event listener if supported
     if ('onscrollend' in window) {
       window.addEventListener('scrollend', () => {
@@ -52,7 +52,7 @@ export default function Header() {
   return (
     <>
       <header ref={headerRef} className={`sticky top-0 z-50 ${isScrolled ? 'shadow-sm' : ''}`}>
-        <div className={`relative border-b bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
+        <div className={`relative header-border-transition border-visible bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`w-full flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
               {/* Auth navigation (sidebar toggle or login button) */}
@@ -77,7 +77,7 @@ export default function Header() {
             </div>
           </div>
           {/* Scroll Progress Bar */}
-          <div 
+          <div
             className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-200"
             style={{ width: `${scrollProgress}%` }}
           />
@@ -85,4 +85,4 @@ export default function Header() {
       </header>
     </>
   );
-} 
+}

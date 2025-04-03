@@ -28,7 +28,7 @@ export function AuthModal({ children, initialTab = "login" }: AuthModalProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] p-4">
         <Tabs defaultValue={initialTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Log In</TabsTrigger>
@@ -36,11 +36,11 @@ export function AuthModal({ children, initialTab = "login" }: AuthModalProps) {
           </TabsList>
           <TabsContent value="login">
              {/* Apply padding directly if needed, remove intermediate div */}
-             <LoginForm className="pt-4"/>
+             <LoginForm className="pt-2"/>
           </TabsContent>
           <TabsContent value="register">
              {/* Apply padding directly if needed, remove intermediate div */}
-             <RegisterForm className="pt-4" />
+             <RegisterForm className="pt-2" />
           </TabsContent>
         </Tabs>
       </DialogContent>

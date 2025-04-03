@@ -1,38 +1,89 @@
-/**
- * Global Styles and Theme Configuration
- * 
- * IMPORTANT THEME HANDLING REQUIREMENTS:
- * 1. All theme-specific colors MUST be defined as CSS variables here
- * 2. Components should NOT use hardcoded colors - always use CSS variables
- * 3. Theme changes are handled through the ThemeProvider (providers/ThemeProvider.js)
- * 4. Dark/Light modes are toggled via CSS classes, not media queries
- * 5. System theme preferences should NOT be accessed directly
- * 
- * CSS Variable Usage:
- * - Background: var(--background-color)
- * - Text: var(--text-color)
- * - Primary: var(--primary-color)
- * - Secondary: var(--secondary-color)
- * - Borders: var(--border-color)
- */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Helvetica';
-  src: url('../public/fonts/Helvetica-Neue-Font/Medium-Extended.ttf');
-  font-weight: normal;
-  font-style: normal;
+/* Custom Spinner Animation */
+.loader {
+  color: hsl(var(--primary));
+  font-size: 10px;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  position: relative;
+  text-indent: -9999em;
+  animation: mulShdSpin 1.3s infinite linear;
+  transform: translateZ(0);
 }
 
-html body .page-content p {
-  line-height: 2.3;
-  margin-bottom: 12px;
+/* Larger version of the loader */
+.loader-lg {
+  font-size: 20px;
 }
 
-/* styles/globals.css */
+/* Medium version of the loader */
+.loader-md {
+  font-size: 15px;
+}
+
+/* Small version of the loader */
+.loader-sm {
+  font-size: 8px;
+}
+
+/* Dark theme version with higher contrast */
+.dark .loader {
+  color: hsl(var(--primary));
+}
+
+@keyframes mulShdSpin {
+  0%,
+  100% {
+    box-shadow: 0 -3em 0 0.2em,
+    2em -2em 0 0em, 3em 0 0 -1em,
+    2em 2em 0 -1em, 0 3em 0 -1em,
+    -2em 2em 0 -1em, -3em 0 0 -1em,
+    -2em -2em 0 0;
+  }
+  12.5% {
+    box-shadow: 0 -3em 0 0, 2em -2em 0 0.2em,
+    3em 0 0 0, 2em 2em 0 -1em, 0 3em 0 -1em,
+    -2em 2em 0 -1em, -3em 0 0 -1em,
+    -2em -2em 0 -1em;
+  }
+  25% {
+    box-shadow: 0 -3em 0 -0.5em,
+    2em -2em 0 0, 3em 0 0 0.2em,
+    2em 2em 0 0, 0 3em 0 -1em,
+    -2em 2em 0 -1em, -3em 0 0 -1em,
+    -2em -2em 0 -1em;
+  }
+  37.5% {
+    box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em,
+     3em 0em 0 0, 2em 2em 0 0.2em, 0 3em 0 0em,
+     -2em 2em 0 -1em, -3em 0em 0 -1em, -2em -2em 0 -1em;
+  }
+  50% {
+    box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em,
+     3em 0 0 -1em, 2em 2em 0 0em, 0 3em 0 0.2em,
+     -2em 2em 0 0, -3em 0em 0 -1em, -2em -2em 0 -1em;
+  }
+  62.5% {
+    box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em,
+     3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 0,
+     -2em 2em 0 0.2em, -3em 0 0 0, -2em -2em 0 -1em;
+  }
+  75% {
+    box-shadow: 0em -3em 0 -1em, 2em -2em 0 -1em,
+    3em 0em 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em,
+    -2em 2em 0 0, -3em 0em 0 0.2em, -2em -2em 0 0;
+  }
+  87.5% {
+    box-shadow: 0em -3em 0 0, 2em -2em 0 -1em,
+    3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em,
+    -2em 2em 0 0, -3em 0em 0 0, -2em -2em 0 0.2em;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%; /* Level 0 - Background */
@@ -72,7 +123,7 @@ html body .page-content p {
     --muted-foreground: 215 20.2% 65.1%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84.2% 60.2%; /* Brighter red for better contrast in dark mode */
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 25%; /* Slightly lighter border for dark mode */
     --input: 217.2 32.6% 17.5%;
@@ -81,57 +132,30 @@ html body .page-content p {
   }
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
+/* Glass card styling - using theme variables for better light/dark mode support */
+.glass-card {
+  border: 1px solid;
+  border-radius: 16px;
+  border-color: hsl(var(--border) / 0.2);
 }
 
-@layer utilities {
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .hide-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
+.glass-panel {
+  border: 1px solid hsl(var(--border) / 0.4);
 }
 
-/* Custom utility classes */
-.bg-background {
-  background-color: hsl(var(--background));
+.glass-panel:hover {
+  border-color: hsl(var(--border) / 0.6);
 }
 
-.text-text {
-  color: hsl(var(--foreground));
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-.text-button-text {
-  color: hsl(var(--foreground));
-}
-
-.border-border {
-  border-color: hsl(var(--border));
-}
-
-/* Hide scrollbars for carousel elements */
+/* Hide scrollbar for IE, Edge and Firefox */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
-}
-
-/* Transitions */
-.transition-theme {
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Hide the spinner for WebKit browsers (Chrome, Safari) */
@@ -147,346 +171,82 @@ input[type="number"] {
   /* Remove the spinner in Firefox */
 }
 
-/* Custom utility classes using CSS variables */
-.bg-background--light {
-  background-color: var(--light-background-color);
-}
-
-.text-primary {
-  color: var(--primary-color);
-}
-
-.text-primary:hover {
-  color: var(--primary-hover);
-}
-
-.bg-primary {
-  background-color: var(--primary-color);
-}
-
-.text-secondary {
-  color: var(--secondary-color);
-}
-
-.bg-secondary {
-  background-color: var(--secondary-color);
-}
-
-.text-button-text:hover {
-  color: var(--button-hover);
-}
-
-.border-text {
-  border-color: var(--text-color);
-}
-
+/* Basic styling for html and body */
 html,
 body {
   min-height: 100vh;
-  background: var(--background-color) !important;
   overflow-x: hidden;
 }
 
-input,
-textarea {
-  /* background: var(--background-color) !important; */
-  color: var(--text-color) !important;
+/* Centralized border utilities for consistent styling */
+.border-theme-light {
+  border: 1px solid hsl(var(--border) / 0.2);
 }
 
-p {
-  color: var(--text-color) !important;
+.border-theme-medium {
+  border: 1px solid hsl(var(--border) / 0.4);
 }
 
-.searchbar .wrapper {
-  background: var(--background-color) !important;
-  color: var(--text-color) !important;
+.border-theme-strong {
+  border: 1px solid hsl(var(--border) / 0.6);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+.border-theme-solid {
+  border: 1px solid hsl(var(--border));
 }
 
-.fade-in {
-  opacity: 0;
-  /* Ensure all elements start invisible */
-  animation: fadeIn 0.5s forwards;
-  /* 0.5s for each fade effect */
+/* Border direction utilities */
+.border-t-only {
+  border-top: 1px solid hsl(var(--border) / 0.4);
+  border-right: none;
+  border-bottom: none;
+  border-left: none;
 }
 
-.border-gradient {
-  border: 1px solid;
-  border-radius: 21px;
-  border-color: #FFFFFF30;
-  background-color: #FFFFFF2B;
-  box-shadow: 0px 4px 74px 0px #00000033;
-  backdrop-filter: blur(40px);
+.border-b-only {
+  border-top: none;
+  border-right: none;
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+  border-left: none;
 }
 
-.action-button-gradient {
-  border: 1px solid;
-  border-radius: 16px;
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0px 4px 14px 0px #0808081a;
+.border-r-only {
+  border-top: none;
+  border-right: 1px solid hsl(var(--border) / 0.4);
+  border-bottom: none;
+  border-left: none;
 }
 
-.active-bar {
-  box-shadow: 0px 0px 24px 0px #0083FD80;
+.border-l-only {
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid hsl(var(--border) / 0.4);
 }
 
-.focus-text {
-  border-radius: 10px;
-  background: linear-gradient(0deg, rgba(2, 2, 2, 0.6), rgba(2, 2, 2, 0.6)),
-    linear-gradient(0deg, rgba(13, 139, 255, 0.1), rgba(13, 139, 255, 0.1));
+/* Header border transition */
+.header-border-transition {
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease-in-out;
 }
 
-.adjust-box {
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1));
-  backdrop-filter: blur(135.91409301757812px)
+.header-border-transition.border-visible {
+  border-color: hsl(var(--border) / 0.4);
 }
 
-/* Create a new custom class for blue pill links */
-.pill-link-blue {
-  background-color: #0057FF;
-  color: white !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+/* Interactive border states */
+.hover-border-light:hover {
+  border-color: hsl(var(--border) / 0.3);
 }
 
-.pill-link-blue:hover {
-  background-color: #0046CC;
-  border-color: rgba(255, 255, 255, 0.5);
+.hover-border-medium:hover {
+  border-color: hsl(var(--border) / 0.5);
 }
 
-/* Force borders on all button-like elements */
-button, 
-a[role="button"],
-.button, 
-[class*="pill"], 
-[class*="btn"] {
-  border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+.hover-border-strong:hover {
+  border-color: hsl(var(--border) / 0.7);
 }
 
-/* Make sure dark mode has proper contrast for buttons */
-.dark button,
-.dark a[role="button"],
-.dark .button,
-.dark [class*="pill"],
-.dark [class*="btn"] {
-  border-color: hsl(var(--border)) !important;
-}
-
-/* Ensure icons are centered in icon buttons */
-button[size="icon"],
-.btn-icon,
-[class*="button-icon"],
-a[role="button"][size="icon"] {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-button[size="icon"] > svg,
-.btn-icon > svg,
-[class*="button-icon"] > svg {
-  margin: auto !important;
-}
-
-/* Fix for invisible icons */
-svg {
-  fill: currentColor;
-  stroke: currentColor;
-  stroke-width: inherit;
-  height: 1em;
-  width: 1em;
-  display: inline-block;
-}
-
-/* Ensure Lucide icons are properly visible */
-.lucide,
-.lucide-icon,
-svg[data-lucide] {
-  color: currentColor;
-  height: 1.5rem;
-  width: 1.5rem;
-  stroke-width: 1.5;
-  stroke: currentColor;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  display: inline-block;
-}
-
-/* Enhanced visibility for icon buttons */
-button svg,
-.button svg,
-[role="button"] svg {
-  color: inherit;
-  stroke: currentColor;
-  fill: none;
-  stroke-width: 2;
-  height: 1.5rem !important;
-  width: 1.5rem !important;
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Special case for the Plus/Minus buttons in the payment slider */
-.action-button-gradient button svg {
-  stroke: var(--foreground);
-  stroke-width: 2.5;
-  height: 1.75rem !important;
-  width: 1.75rem !important;
-}
-
-/* Force all icons to be visible */
-svg.h-5, svg.h-6, svg.w-5, svg.w-6 {
-  height: 1.5rem !important;
-  width: 1.5rem !important;
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Ensure SVG icons are always visible */
-svg {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  stroke-width: inherit;
-}
-
-/* Fix for SVG inside button components */
-button svg, 
-[role="button"] svg,
-.button svg {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-}
-
-/* Force proper sizing for SVGs in specific contexts */
-.h-4, .w-4, .h-5, .w-5, .h-6, .w-6 {
-  min-width: 1rem;
-  min-height: 1rem;
-  display: inline-flex !important; 
-  align-items: center;
-  justify-content: center;
-}
-
-/* Light mode styles for composition elements */
-.light-mode {
-  --composition-bg: #f8f9fa;
-  --composition-border: #e9ecef;
-  --composition-text: #212529;
-  --button-bg: #e9ecef;
-  --button-hover: #dee2e6;
-  --button-text: #495057;
-}
-
-/* Dark mode styles for composition elements */
-.dark-mode {
-  --composition-bg: rgba(255, 255, 255, 0.05);
-  --composition-border: rgba(255, 255, 255, 0.1);
-  --composition-text: #ffffff;
-  --button-bg: rgba(255, 255, 255, 0.1);
-  --button-hover: rgba(255, 255, 255, 0.2);
-  --button-text: #ffffff;
-}
-
-/* Composition bar styles */
-.composition-bar {
-  background-color: var(--composition-bg);
-  border: 1px solid var(--composition-border);
-  color: var(--composition-text);
-}
-
-/* Plus/Minus button styles */
-.increment-button {
-  background-color: var(--button-bg);
-  color: var(--button-text);
-  border: 1px solid var(--composition-border);
-  transition: all 0.2s ease;
-}
-
-.increment-button:hover:not(:disabled) {
-  background-color: var(--button-hover);
-}
-
-.increment-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Stepper input styles */
-.stepper-input {
-  background-color: var(--composition-bg);
-  border: 1px solid var(--composition-border);
-  color: var(--composition-text);
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-}
-
-.stepper-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-color/20);
-}
-
-/* Custom card styles */
-.card-hover {
-  border: 1px solid rgba(var(--border-color), 0.4);
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-}
-
-.card-hover:hover {
-  background-color: rgba(var(--accent-color), 0.05);
-}
-
-/* Light mode card hover */
-@media (prefers-color-scheme: light) {
-  .card-hover:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-}
-
-/* Dark mode card hover */
-.dark .card-hover:hover {
-  background-color: rgba(var(--accent-color), 0.1);
-}
-
-.glass-card {
-  border: 1px solid;
-  border-radius: 16px;
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.glass-panel {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* Compact table styles */
-.table-compact th {
-  height: 2.5rem; /* Reduced from 3rem (h-12) */
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.table-compact td {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+.hover-border-solid:hover {
+  border-color: hsl(var(--border));
 }

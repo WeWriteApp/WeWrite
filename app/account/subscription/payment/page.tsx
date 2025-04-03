@@ -6,13 +6,13 @@ import { useAuth } from '../../../providers/AuthProvider';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
-import { 
-  Elements, 
+import {
+  Elements,
   CardNumberElement,
   CardExpiryElement,
   CardCvcElement,
-  useStripe, 
-  useElements 
+  useStripe,
+  useElements
 } from '@stripe/react-stripe-js';
 import { useTheme } from '../../../providers/ThemeProvider';
 
@@ -20,8 +20,8 @@ import { useTheme } from '../../../providers/ThemeProvider';
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 // Payment Form Component
-function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: { 
-  clientSecret: string; 
+function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
+  clientSecret: string;
   amount: number;
   onSuccess: () => void;
   onCancel: () => void;
@@ -47,7 +47,7 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
     setProcessing(true);
 
     const cardElement = elements.getElement(CardNumberElement);
-    
+
     if (!cardElement) {
       setError('Card element not found');
       setProcessing(false);
@@ -70,8 +70,8 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
 
       if (confirmError) {
         throw new Error(confirmError.message || 'Payment failed');
-      } 
-      
+      }
+
       if (paymentIntent.status === 'succeeded') {
         onSuccess();
       } else {
@@ -89,14 +89,14 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
       ...cardComplete,
       [field]: event.complete
     });
-    
+
     if (event.error) {
       setError(event.error.message);
     } else {
       setError(null);
     }
   };
-  
+
   const isFormComplete = cardComplete.cardNumber && cardComplete.cardExpiry && cardComplete.cardCvc;
 
   // Simplified styling for the card elements to avoid CSS warnings
@@ -125,35 +125,35 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
         <h2 className="text-lg font-medium mb-1 text-foreground">Subscribe to WeWrite</h2>
         <p className="text-xs text-muted-foreground">Complete your ${amount.toFixed(2)}/month subscription</p>
       </div>
-      
+
       <div className="space-y-3 mb-4">
         <div>
           <label className="block text-sm font-medium mb-1 text-foreground">Card number</label>
           <div className="w-full p-3 rounded-md border border-border bg-card shadow-sm">
-            <CardNumberElement 
+            <CardNumberElement
               options={cardElementStyle}
               onChange={(e) => handleCardElementChange(e, 'cardNumber')}
               className="w-full"
             />
           </div>
         </div>
-        
+
         <div className="flex gap-3">
           <div className="w-1/2">
             <label className="block text-sm font-medium mb-1 text-foreground">Expiry date</label>
             <div className="w-full p-3 rounded-md border border-border bg-card shadow-sm">
-              <CardExpiryElement 
+              <CardExpiryElement
                 options={cardElementStyle}
                 onChange={(e) => handleCardElementChange(e, 'cardExpiry')}
                 className="w-full"
               />
             </div>
           </div>
-          
+
           <div className="w-1/2">
             <label className="block text-sm font-medium mb-1 text-foreground">CVC</label>
             <div className="w-full p-3 rounded-md border border-border bg-card shadow-sm">
-              <CardCvcElement 
+              <CardCvcElement
                 options={cardElementStyle}
                 onChange={(e) => handleCardElementChange(e, 'cardCvc')}
                 className="w-full"
@@ -162,24 +162,24 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
           </div>
         </div>
       </div>
-      
+
       {error && (
         <div className="py-2 px-3 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md mb-3">
           {error}
         </div>
       )}
-      
+
       <div className="flex justify-between">
-        <button 
-          onClick={onCancel} 
+        <button
+          onClick={onCancel}
           disabled={processing}
           className="bg-background border border-border hover:bg-accent text-foreground text-sm px-4 py-1.5 rounded"
           type="button"
         >
           Back
         </button>
-        
-        <button 
+
+        <button
           disabled={!stripe || processing || !isFormComplete}
           className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium px-4 py-1.5 rounded"
           type="submit"
@@ -201,7 +201,7 @@ export default function SubscriptionPaymentPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
-  
+
   useEffect(() => {
     if (!user) {
       router.push('/auth/login');
@@ -231,7 +231,7 @@ export default function SubscriptionPaymentPage() {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
           throw new Error(data.error || 'Failed to create subscription');
         }
@@ -268,7 +268,7 @@ export default function SubscriptionPaymentPage() {
           Back to Subscription Options
         </Link>
       </div>
-      
+
       <div className="mb-6">
         <h1 className="text-xl font-bold mb-1 text-foreground">Complete Your Subscription</h1>
         <p className="text-xs text-muted-foreground">
@@ -284,7 +284,7 @@ export default function SubscriptionPaymentPage() {
         <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
           <h3 className="font-medium text-destructive mb-1 text-sm">Error</h3>
           <p className="text-destructive/80 text-xs">{error}</p>
-          <button 
+          <button
             onClick={() => router.push('/account/subscription')}
             className="mt-3 px-3 py-1 bg-background hover:bg-accent rounded text-xs"
           >
@@ -299,14 +299,14 @@ export default function SubscriptionPaymentPage() {
         </div>
       ) : (
         clientSecret && (
-          <div className="bg-card shadow-md border border-border rounded-lg p-4">
-            <Elements stripe={stripePromise} options={{ 
-              clientSecret, 
-              appearance: { theme: theme === 'dark' ? 'night' : 'stripe' } 
+          <div className="bg-card shadow-md border-theme-medium rounded-lg p-4">
+            <Elements stripe={stripePromise} options={{
+              clientSecret,
+              appearance: { theme: theme === 'dark' ? 'night' : 'stripe' }
             }}>
-              <PaymentForm 
-                clientSecret={clientSecret} 
-                amount={amount} 
+              <PaymentForm
+                clientSecret={clientSecret}
+                amount={amount}
                 onSuccess={handleSuccess}
                 onCancel={handleCancel}
               />
@@ -316,4 +316,4 @@ export default function SubscriptionPaymentPage() {
       )}
     </div>
   );
-} 
+}

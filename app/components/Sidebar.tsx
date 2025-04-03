@@ -28,20 +28,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   }
 
   const themeOptions = [
-    { 
-      value: "light", 
-      label: "Light", 
+    {
+      value: "light",
+      label: "Light",
       icon: (
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          width="24" 
-          height="24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="mr-2 h-5 w-5 text-foreground"
         >
           <circle cx="12" cy="12" r="5"></circle>
@@ -56,40 +56,40 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </svg>
       )
     },
-    { 
-      value: "dark", 
-      label: "Dark", 
+    {
+      value: "dark",
+      label: "Dark",
       icon: (
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          width="24" 
-          height="24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="mr-2 h-5 w-5 text-foreground"
         >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
       )
     },
-    { 
-      value: "system", 
-      label: "System", 
+    {
+      value: "system",
+      label: "System",
       icon: (
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          width="24" 
-          height="24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="mr-2 h-5 w-5 text-foreground"
         >
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -111,11 +111,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-r border-border z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto",
+          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-theme-medium border-r-only z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -132,7 +132,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          
+
           <div className="flex-1">
             <div className="mb-8">
               <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
@@ -157,7 +157,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               ))}
             </div>
           </div>
-          
+
           {/* Account and Logout buttons at bottom */}
           <div className="mt-auto pt-4 border-t border-border">
             <Button
@@ -165,16 +165,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               className="w-full justify-start text-foreground hover:bg-accent mb-2"
               onClick={() => router.push('/account')}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                width="24" 
-                height="24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 className="h-5 w-5 mr-2"
               >
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -187,16 +187,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={handleLogout}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                width="24" 
-                height="24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 className="h-5 w-5 mr-2 text-destructive"
               >
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

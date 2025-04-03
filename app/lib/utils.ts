@@ -11,9 +11,9 @@ export function cn(...inputs: ClassValue[]) {
  * @returns A string of CSS classes for an interactive card
  */
 export function interactiveCard(...additionalClasses: ClassValue[]) {
-  const baseClasses = "block border border-border/40 rounded-lg transition-all duration-200 p-3 bg-card text-card-foreground"
-  const hoverClasses = "hover:bg-card/90 hover:shadow-md dark:hover:bg-accent/10 hover:border-border/60" 
-  
+  const baseClasses = "block border-theme-medium rounded-lg transition-all duration-200 p-3 bg-card text-card-foreground"
+  const hoverClasses = "hover:bg-card/90 hover:shadow-md dark:hover:bg-accent/10 hover-border-medium"
+
   return cn(
     baseClasses,
     hoverClasses,

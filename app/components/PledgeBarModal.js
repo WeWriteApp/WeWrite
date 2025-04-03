@@ -42,8 +42,8 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="max-w-sm sm:max-w-md mx-auto animate-in fade-in-50 slide-in-from-bottom-8 duration-300" 
+      <DialogContent
+        className="max-w-sm sm:max-w-md mx-auto animate-in fade-in-50 slide-in-from-bottom-8 duration-300"
         hideCloseButton
       >
         <DialogHeader>
@@ -56,13 +56,13 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
         </DialogHeader>
 
         <div className="py-3">
-          <Button 
-            asChild 
-            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`} 
+          <Button
+            asChild
+            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >
-            <a 
+            <a
               href={content.action.href}
               target={content.action.external ? "_blank" : undefined}
               rel={content.action.external ? "noopener noreferrer" : undefined}
@@ -75,7 +75,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
         </div>
 
         {/* Social Links Section */}
-        <div className="pt-4 border-t">
+        <div className="pt-4 border-t-only">
           <h3 className="text-sm font-medium mb-3 text-center">Follow us for updates</h3>
           <div className="flex flex-col gap-2 w-full">
             {sortedSocialLinks.map((link) => (
@@ -84,12 +84,12 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
                 variant="outline"
                 asChild
                 className={`w-full justify-center ${
-                  link.platform === 'twitter' 
-                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white border-[#1DA1F2]' 
-                    : link.platform === 'youtube' 
-                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white border-[#FF0000]' 
-                    : link.platform === 'instagram' 
-                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white border-transparent' 
+                  link.platform === 'twitter'
+                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white'
+                    : link.platform === 'youtube'
+                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white'
+                    : link.platform === 'instagram'
+                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white'
                     : ''
                 }`}
               >
@@ -107,7 +107,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
           </div>
         </div>
 
-        <div className="pt-4 mt-2 border-t">
+        <div className="pt-4 mt-2 border-t-only">
           <DialogFooter className="sm:justify-center pt-2">
             <DialogClose asChild>
               <Button variant="outline">
@@ -121,4 +121,4 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
   );
 };
 
-export default PledgeBarModal; 
+export default PledgeBarModal;

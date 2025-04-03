@@ -38,11 +38,11 @@ export default function Checkout({ userId, amount = 10, onSuccess }) {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
           throw new Error(data.error || 'Failed to create payment intent');
         }
-        
+
         setClientSecret(data.clientSecret);
       } catch (err) {
         setError(err.message);
@@ -124,7 +124,7 @@ export default function Checkout({ userId, amount = 10, onSuccess }) {
             </button>
           ))}
         </div>
-        
+
         {showCustomInput && (
           <div className="flex items-center space-x-2">
             <span className="text-sm text-foreground/70">$</span>
@@ -134,7 +134,7 @@ export default function Checkout({ userId, amount = 10, onSuccess }) {
               onChange={(e) => setCustomAmount(e.target.value)}
               min="1"
               step="1"
-              className="w-32 px-3 py-1 border rounded-md bg-background text-foreground"
+              className="w-32 px-3 py-1 border-theme-medium rounded-md bg-background text-foreground"
               placeholder="Enter amount"
             />
             <button
@@ -149,7 +149,7 @@ export default function Checkout({ userId, amount = 10, onSuccess }) {
 
       {clientSecret && (
         <Elements stripe={stripePromise} options={options}>
-          <div className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden shadow-sm">
+          <div className="border-theme-medium rounded-lg overflow-hidden shadow-sm">
             <CheckoutForm onSuccess={onSuccess} />
           </div>
         </Elements>

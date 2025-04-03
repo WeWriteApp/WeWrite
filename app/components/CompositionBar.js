@@ -19,15 +19,15 @@ const CompositionBar = ({
 }) => {
   const [showSubscriptionLimitModal, setShowSubscriptionLimitModal] = useState(false);
   const [activePledgeId, setActivePledgeId] = useState(null);
-  
+
   // Debugging the props
   console.log("CompositionBar props:", {
-    disabled, 
+    disabled,
     hasPledges: pledges?.length > 0,
     hasSubscriptionAmount: !!subscriptionAmount,
     hasOnPledgeChange: !!onPledgeChange
   });
-  
+
   // Handle safer percentage calculations to avoid NaN
   const calculatePercentage = (amount, total) => {
     if (!total || total <= 0 || isNaN(amount) || amount <= 0) return 0;
@@ -35,9 +35,9 @@ const CompositionBar = ({
     const percentage = Math.min(100, (safeAmount / total) * 100);
     return percentage;
   };
-  
+
   // Check if total spending exceeds subscription amount
-  const totalSpending = pledges.reduce((acc, pledge) => 
+  const totalSpending = pledges.reduce((acc, pledge) =>
     acc + (Number(pledge.amount) || 0), 0);
   const isExceeded = subscriptionAmount > 0 && totalSpending > subscriptionAmount;
 
@@ -61,16 +61,16 @@ const CompositionBar = ({
           const pledgeAmount = Number(pledge.amount || 0);
           const isZero = pledgeAmount === 0;
           const percentage = calculatePercentage(pledgeAmount, max);
-          
+
           // Calculate other pledges total percentage for visualization
           const currentPledgeAmount = pledgeAmount;
           const otherPledgesAmount = totalSpending - currentPledgeAmount;
           const otherPledgesPercentage = calculatePercentage(otherPledgesAmount, max);
-          
+
           // Calculate if this pledge would exceed the limit when increased
           const remainingSubscription = subscriptionAmount - otherPledgesAmount;
           const wouldExceedLimit = subscriptionAmount > 0 && (remainingSubscription <= 0 || pledgeAmount >= remainingSubscription);
-          
+
           return (
             <div key={pledge.id} className="w-full">
               {/* Show title only when showTitle prop is true */}
@@ -81,10 +81,10 @@ const CompositionBar = ({
                   </a>
                 </div>
               )}
-              
-              <div className="relative h-[56px] rounded-full overflow-hidden border border-border bg-background shadow-sm">
+
+              <div className="relative h-[56px] rounded-full overflow-hidden border-theme-medium bg-background shadow-sm">
                 {/* Other pledges background - always show regardless of percentage */}
-                <div 
+                <div
                   className="h-full absolute left-0 bg-muted"
                   style={{
                     width: `${otherPledgesPercentage}%`,
@@ -92,9 +92,9 @@ const CompositionBar = ({
                     zIndex: 1
                   }}
                 ></div>
-                
+
                 {/* Current pledge progress bar */}
-                <div 
+                <div
                   key={`pledge-bar-${pledgeAmount}`}
                   className={cn(
                     "h-full absolute",
@@ -109,10 +109,10 @@ const CompositionBar = ({
                 ></div>
 
                 {/* Remaining subscription amount is implicit in background */}
-                
+
                 {/* Inner border that appears when there's a value */}
                 {pledgeAmount > 0 && (
-                  <div 
+                  <div
                     className={cn(
                       "absolute h-full pointer-events-none border-l-2",
                       isExceeded ? "border-destructive" : "border-primary"
@@ -125,7 +125,7 @@ const CompositionBar = ({
                     }}
                   ></div>
                 )}
-                
+
                 {/* Controls */}
                 <div className="flex justify-between items-center h-full relative z-10">
                   <div
@@ -137,7 +137,7 @@ const CompositionBar = ({
                         disabled,
                         id: pledge.id
                       });
-                      
+
                       // Call the handler without checking for disabled
                       if (onPledgeChange) {
                         console.log("Calling onPledgeChange with", pledge.id, -1);
@@ -149,8 +149,8 @@ const CompositionBar = ({
                       <path d="M5 12h14"></path>
                     </svg>
                   </div>
-                  
-                  <div 
+
+                  <div
                     className="flex-1 flex justify-center items-center cursor-pointer text-foreground group transition-all hover:bg-foreground/5"
                     onClick={() => {
                       if (onPledgeCustomAmount) {
@@ -167,7 +167,7 @@ const CompositionBar = ({
                     </span>
                     <span className="text-sm opacity-70 ml-1">/mo</span>
                   </div>
-                  
+
                   <div
                     className={cn(
                       "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 cursor-pointer",
@@ -182,7 +182,7 @@ const CompositionBar = ({
                         id: pledge.id,
                         subscriptionAmount
                       });
-                      
+
                       if (wouldExceedLimit && subscriptionAmount > 0) {
                         // Set active pledge and show subscription limit modal
                         setActivePledgeId(pledge.id);
@@ -201,14 +201,14 @@ const CompositionBar = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Show subscription limit message */}
               {wouldExceedLimit && (
                 <div className="mt-1 p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs rounded">
                   Subscription limit reached. Increase subscription to pledge more.
                 </div>
               )}
-              
+
               {/* Delete button only shown when amount is zero and showRemoveButton is true */}
               {isZero && onDeletePledge && showRemoveButton && (
                 <div className="mt-1 flex justify-end">
@@ -229,7 +229,7 @@ const CompositionBar = ({
           );
         })}
       </div>
-      
+
       {/* Subscription Limit Modal */}
       {typeof document !== 'undefined' && createPortal(
         <ActionModal
@@ -246,4 +246,4 @@ const CompositionBar = ({
   );
 };
 
-export default CompositionBar; 
+export default CompositionBar;

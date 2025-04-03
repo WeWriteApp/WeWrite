@@ -8,23 +8,23 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "default" | "sm" | "lg" | "icon"
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ 
-  className = "", 
-  variant = "default", 
-  size = "default", 
-  ...props 
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
+  className = "",
+  variant = "default",
+  size = "default",
+  ...props
 }, ref) => {
   const baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
-  
+
   const variantClasses = {
-    default: "border-[1.5px] border-border bg-background/50 text-foreground shadow-sm hover:bg-accent/20 hover:border-primary",
-    secondary: "border-[1.5px] border-border bg-secondary/10 text-foreground shadow-sm hover:bg-secondary/20",
-    destructive: "border-[1.5px] border-destructive/30 bg-destructive/5 text-foreground shadow-sm hover:bg-destructive/10",
-    outline: "border-[1.5px] border-border bg-transparent shadow-sm hover:bg-accent/10",
+    default: "border-theme-medium bg-background/50 text-foreground shadow-sm hover:bg-accent/20 hover-border-medium",
+    secondary: "border-theme-medium bg-secondary/10 text-foreground shadow-sm hover:bg-secondary/20 hover-border-medium",
+    destructive: "border-destructive/30 bg-destructive/5 text-foreground shadow-sm hover:bg-destructive/10",
+    outline: "border-theme-medium bg-transparent shadow-sm hover:bg-accent/10 hover-border-medium",
     ghost: "text-foreground hover:bg-accent/10 hover:text-accent-foreground",
     link: "text-primary underline-offset-4 hover:underline"
   }
-  
+
   const sizeClasses = {
     default: "h-10 px-4 py-2",
     sm: "h-9 rounded-md px-3",
@@ -48,4 +48,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
 
 Button.displayName = "Button"
 
-export default Button 
+export default Button

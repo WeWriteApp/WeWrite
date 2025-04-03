@@ -14,15 +14,16 @@ import PublicLayout from "./layout/PublicLayout";
 import PageHeader from "./PageHeader";
 import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
+import PledgeBar from "./PledgeBar";
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "./ui/button";
 import { EditorContent } from "./SlateEditor";
 import TextView from "./TextView";
-import { 
-  Loader, 
-  Lock, 
-  Unlock, 
+import {
+  Loader,
+  Lock,
+  Unlock,
   AlertTriangle,
   ChevronUp,
   ChevronDown,
@@ -32,30 +33,30 @@ import { toast } from "sonner";
 import { RecentPagesContext } from "../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../contexts/PageContext";
-import { useLineSettings, LINE_MODES } from "../contexts/LineSettingsContext";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
+import { useLineSettings, LINE_MODES, LineSettingsProvider } from "../contexts/LineSettingsContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
-  DialogClose 
+  DialogClose
 } from './ui/dialog';
-import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList 
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
 } from './ui/command';
 import EditPage from "./EditPage";
 import { ensurePageUsername } from "../utils/userUtils";
 
 /**
  * SinglePageView Component
- * 
+ *
  * This component is responsible for displaying a single page with all its content and interactive elements.
  * It handles:
  * - Loading and displaying page content
@@ -63,10 +64,10 @@ import { ensurePageUsername } from "../utils/userUtils";
  * - Page visibility controls (public/private)
  * - Keyboard shortcuts for navigation and editing
  * - Page interactions through the PageFooter component
- * 
+ *
  * The component uses several context providers:
  * - PageProvider: For sharing page data with child components
- * 
+ *
  * This component has been refactored to use the PageFooter component which contains
  * the PageActions component for all page interactions, replacing the previous
  * PageInteractionButtons and ActionRow components.
@@ -96,23 +97,23 @@ function SinglePageView({ params }) {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       // Determine scroll direction
       if (currentScrollY > lastScrollY) {
         setScrollDirection('down');
       } else if (currentScrollY < lastScrollY) {
         setScrollDirection('up');
       }
-      
+
       // Update last scroll position
       setLastScrollY(currentScrollY);
-      
+
       // Set scrolled state
       setIsScrolled(currentScrollY > 0);
     };
-    
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -142,38 +143,38 @@ function SinglePageView({ params }) {
   useEffect(() => {
     if (params.id) {
       setIsLoading(true);
-      
+
       const unsubscribe = listenToPageById(params.id, async (data) => {
         if (data.error) {
           setError(data.error);
           setIsLoading(false);
           return;
         }
-        
+
         let pageData = data.pageData || data;
-        
+
         // Ensure the page has a valid username using our utility function
         pageData = await ensurePageUsername(pageData);
-        
+
         console.log("Page data with ensured username:", pageData);
-        
+
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
         setGroupId(pageData.groupId || null);
         setGroupName(pageData.groupName || null);
-        
+
         // Set page title for document title
         if (pageData.title) {
           setTitle(pageData.title);
         }
-        
+
         if (data.versionData) {
           try {
             const contentString = data.versionData.content;
-            const parsedContent = typeof contentString === 'string' 
-              ? JSON.parse(contentString) 
+            const parsedContent = typeof contentString === 'string'
+              ? JSON.parse(contentString)
               : contentString;
-            
+
             setEditorState(parsedContent);
             setEditorError(null); // Clear any previous errors
           } catch (error) {
@@ -181,10 +182,10 @@ function SinglePageView({ params }) {
             setEditorError("There was an error loading the editor. Please try refreshing the page.");
           }
         }
-        
+
         setIsLoading(false);
       });
-      
+
       return () => {
         unsubscribe();
       };
@@ -209,14 +210,14 @@ function SinglePageView({ params }) {
   useEffect(() => {
     if (page && page.content) {
       try {
-        const contentString = typeof page.content === 'string' 
-          ? page.content 
+        const contentString = typeof page.content === 'string'
+          ? page.content
           : JSON.stringify(page.content);
-          
-        const parsedContent = contentString.startsWith('[') 
-          ? JSON.parse(contentString) 
+
+        const parsedContent = contentString.startsWith('[')
+          ? JSON.parse(contentString)
           : contentString;
-        
+
         setEditorState(parsedContent);
         setEditorError(null); // Clear any previous errors
       } catch (error) {
@@ -233,16 +234,16 @@ function SinglePageView({ params }) {
       try {
         const recentlyVisitedStr = localStorage.getItem('recentlyVisitedPages');
         let recentlyVisited = recentlyVisitedStr ? JSON.parse(recentlyVisitedStr) : [];
-        
+
         // Remove this page ID if it already exists in the list
         recentlyVisited = recentlyVisited.filter(id => id !== page.id);
-        
+
         // Add this page ID to the beginning of the list
         recentlyVisited.unshift(page.id);
-        
+
         // Keep only the most recent 10 pages
         recentlyVisited = recentlyVisited.slice(0, 10);
-        
+
         // Save back to localStorage
         localStorage.setItem('recentlyVisitedPages', JSON.stringify(recentlyVisited));
       } catch (error) {
@@ -254,7 +255,7 @@ function SinglePageView({ params }) {
   const copyLinkToClipboard = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
-      
+
       // Show toast notification
       toast({
         title: "Link copied",
@@ -359,16 +360,16 @@ function SinglePageView({ params }) {
             Error
           </h1>
           <div className="flex items-center gap-2 mt-4">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              width="24" 
-              height="24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className="h-5 w-5 text-red-500"
             >
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -401,16 +402,16 @@ function SinglePageView({ params }) {
             {title}
           </h1>
           <div className="flex items-center gap-2 mt-4">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              width="24" 
-              height="24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               className="h-5 w-5 text-muted-foreground"
             >
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -433,9 +434,9 @@ function SinglePageView({ params }) {
       <Head>
         <title>{title} - WeWrite</title>
       </Head>
-      <PageHeader 
-        title={isEditing ? "Editing page" : title} 
-        username={page?.username || "Anonymous"} 
+      <PageHeader
+        title={isEditing ? "Editing page" : title}
+        username={page?.username || "Anonymous"}
         userId={page?.userId}
         isLoading={isLoading}
         scrollDirection={scrollDirection}
@@ -445,30 +446,32 @@ function SinglePageView({ params }) {
       <div className="pb-24 px-2 sm:px-4 md:px-6">
         {isEditing ? (
           <PageProvider>
-            <EditPage
-              isEditing={isEditing}
-              setIsEditing={setIsEditing}
-              page={page}
-              title={title}
-              setTitle={setTitle}
-              current={editorState}
-              editorError={editorError}
-            />
+            <LineSettingsProvider>
+              <EditPage
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                page={page}
+                title={title}
+                setTitle={setTitle}
+                current={editorState}
+                editorError={editorError}
+              />
+            </LineSettingsProvider>
           </PageProvider>
         ) : (
           <>
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
               <div className={`page-content ${lineMode === LINE_MODES.DENSE ? 'max-w-full break-words' : ''}`}>
                 <PageProvider>
-                  <TextView 
-                    content={editorState} 
+                  <TextView
+                    content={editorState}
                     viewMode={lineMode}
                     onRenderComplete={handlePageFullyRendered}
                   />
                 </PageProvider>
               </div>
             </div>
-            
+
             {/* Page Controls - Only show after content is fully rendered */}
             {pageFullyRendered && (
               <div className="mt-8 flex flex-col gap-4">
@@ -483,7 +486,7 @@ function SinglePageView({ params }) {
         )}
       </div>
       <PageProvider>
-        <PageFooter 
+        <PageFooter
           page={page}
           content={editorState}
           isOwner={user?.uid === page?.userId}
@@ -492,6 +495,7 @@ function SinglePageView({ params }) {
         />
       </PageProvider>
       <SiteFooter />
+      {!isEditing && <PledgeBar />}
     </Layout>
   );
 }

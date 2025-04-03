@@ -14,7 +14,8 @@ import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "./components/ui/button";
-import { Plus, FileText, Loader } from "lucide-react";
+import { Plus, FileText, Loader as LoaderIcon } from "lucide-react";
+import { PageLoader } from "./components/ui/page-loader";
 import { ShimmerEffect } from "./components/ui/skeleton";
 import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/LandingPage";
@@ -34,17 +35,17 @@ export default function Home() {
       // First check cookies for auth state
       const isAuthenticated = document.cookie.includes('authenticated=true');
       const persistedAuthState = localStorage.getItem('authState');
-      
-      console.log("Home page auth check:", { 
-        authLoading, 
-        user: !!user, 
+
+      console.log("Home page auth check:", {
+        authLoading,
+        user: !!user,
         cookieAuth: isAuthenticated,
         persistedAuth: persistedAuthState === 'authenticated'
       });
-      
+
       // If auth is still loading, wait
       if (authLoading) return;
-      
+
       // If we have a cookie or localStorage indicating auth, but no user yet,
       // wait a bit longer as Firebase might still be initializing
       if ((isAuthenticated || persistedAuthState === 'authenticated') && !user) {
@@ -52,15 +53,15 @@ export default function Home() {
         // Don't redirect immediately, give a chance for auth to complete
         return;
       }
-      
+
       // If user is authenticated, show dashboard
       if (user) {
         setShowLanding(false);
       }
     };
-    
+
     checkAuth();
-    
+
     // Set up a timer to check again in case of race conditions
     const timer = setTimeout(checkAuth, 1000);
     return () => clearTimeout(timer);
@@ -68,11 +69,7 @@ export default function Home() {
 
   // Display a loading state while checking authentication
   if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader className="animate-spin h-8 w-8 text-primary"/>
-      </div>
-    );
+    return <PageLoader message="Loading your account..." />;
   }
 
   // Show landing page for logged-out users
@@ -86,19 +83,19 @@ export default function Home() {
       <Header />
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />
-        
+
         <div className="w-full mb-6">
           <TypeaheadSearch />
         </div>
-        
+
         {/* 1. Recent Activity (moved to top) */}
         <RecentActivity limit={4} />
-        
+
         {/* 2. My Pages */}
         <div className="flex items-center justify-between mb-6">
           {isLoading ? (
             <div className="flex items-center space-x-2">
-              <Loader className="h-5 w-5 animate-spin text-primary" />
+              <LoaderIcon className="h-5 w-5 animate-spin text-primary" />
               <span className="text-lg text-muted-foreground">Loading your pages...</span>
             </div>
           ) : (
@@ -114,16 +111,16 @@ export default function Home() {
             </Link>
           </Button>
         </div>
-        
+
         <AllPages />
-        
+
         {/* 3. My Groups - temporarily hidden
         <MyGroups />
         */}
-        
+
         {/* 4. Top Users */}
         <TopUsers />
-        
+
         <FloatingActionButton href="/new" />
       </main>
     </>
