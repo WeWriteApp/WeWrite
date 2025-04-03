@@ -178,9 +178,10 @@ const EditPage = ({
             type="text"
             defaultValue={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all"
+            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal"
             placeholder="Enter a title..."
             autoComplete="off"
+            style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
           />
         </div>
 

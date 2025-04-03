@@ -66,10 +66,18 @@
 /* When keyboard is visible, adjust toolbar position */
 .fixed-toolbar-bottom.keyboard-visible {
   position: fixed;
-  bottom: 0;
-  /* Use viewport height to position above keyboard */
-  transform: translateY(-50px); /* Fallback for older browsers */
-  /* Modern browsers with visualViewport API will handle this better */
+  /* Bottom position is now set dynamically via inline styles */
+  /* This ensures the toolbar stays above the keyboard */
+
+  /* Improved styling for better visibility when keyboard is open */
+  background-color: rgba(var(--background), 0.95) !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+
+  /* Fallbacks for older browsers */
+  transform: translateY(-50px); /* Only used if inline styles don't work */
+
+  /* iOS specific adjustments */
   @supports (bottom: constant(safe-area-inset-bottom)) {
     /* iOS 11 */
     bottom: constant(safe-area-inset-bottom);

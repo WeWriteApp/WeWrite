@@ -1002,22 +1002,43 @@ const FixedBottomToolbar = ({ onSave, onDiscard }) => {
   const { user } = useContext(AuthContext);
   const showSaveDiscard = !!onSave && !!onDiscard && user;
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Detect keyboard visibility changes
+  // Detect keyboard visibility changes with improved detection
   useEffect(() => {
     const detectKeyboard = () => {
-      // Simple heuristic: if window height significantly decreases, keyboard is likely visible
+      // Use visualViewport API for more accurate keyboard detection
       const viewportHeight = window.visualViewport?.height || window.innerHeight;
       const windowHeight = window.innerHeight;
+      const heightDifference = windowHeight - viewportHeight;
 
       // If viewport is significantly smaller than window, keyboard is likely visible
-      // The threshold can be adjusted based on testing
-      setIsKeyboardVisible(windowHeight - viewportHeight > 150);
+      const isVisible = heightDifference > 150;
+      setIsKeyboardVisible(isVisible);
+
+      // Store the keyboard height for positioning
+      if (isVisible) {
+        setKeyboardHeight(heightDifference);
+      } else {
+        setKeyboardHeight(0);
+      }
+
+      // Debug info
+      console.log('Keyboard detection:', {
+        viewportHeight,
+        windowHeight,
+        heightDifference,
+        isVisible
+      });
     };
+
+    // Initial detection
+    detectKeyboard();
 
     // Use visualViewport API if available (modern browsers)
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', detectKeyboard);
+      window.visualViewport.addEventListener('scroll', detectKeyboard);
     } else {
       // Fallback to window resize
       window.addEventListener('resize', detectKeyboard);
@@ -1026,6 +1047,7 @@ const FixedBottomToolbar = ({ onSave, onDiscard }) => {
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', detectKeyboard);
+        window.visualViewport.removeEventListener('scroll', detectKeyboard);
       } else {
         window.removeEventListener('resize', detectKeyboard);
       }
@@ -1034,6 +1056,15 @@ const FixedBottomToolbar = ({ onSave, onDiscard }) => {
 
   if (!showSaveDiscard) return null;
 
+  // Calculate dynamic styles for positioning
+  const toolbarStyle = isKeyboardVisible ? {
+    position: 'fixed',
+    bottom: `${keyboardHeight}px`, // Position above the keyboard
+    left: 0,
+    right: 0,
+    zIndex: 9999
+  } : {};
+
   return (
     <motion.div
       className={`fixed-toolbar-bottom bg-background/80 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3 ${isKeyboardVisible ? 'keyboard-visible' : ''}`}
@@ -1041,7 +1072,7 @@ const FixedBottomToolbar = ({ onSave, onDiscard }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.2 }}
-
+      style={toolbarStyle}
     >
       <button
         className="px-4 py-2 rounded-md border border-border bg-background hover:bg-accent/10 transition-colors"
