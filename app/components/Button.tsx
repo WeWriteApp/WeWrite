@@ -14,7 +14,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   size = "default",
   ...props
 }, ref) => {
-  const baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+  const baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4"
 
   const variantClasses = {
     default: "border-theme-medium bg-background/50 text-foreground shadow-sm hover:bg-accent/20 hover-border-medium",
@@ -26,10 +26,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   }
 
   const sizeClasses = {
-    default: "h-10 px-4 py-2",
-    sm: "h-9 rounded-md px-3",
-    lg: "h-11 rounded-md px-8",
-    icon: "h-10 w-10 p-0 flex items-center justify-center [&>svg]:m-auto [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-[1.5]"
+    default: "h-10 px-4 py-2 gap-2",
+    sm: "h-9 rounded-md px-3 gap-1.5",
+    lg: "h-11 rounded-md px-8 gap-2",
+    icon: "h-10 w-10 p-0 flex items-center justify-center [&>svg]:m-auto [&>svg]:size-[18px] [&>svg]:stroke-[1.5]"
   }
 
   return (

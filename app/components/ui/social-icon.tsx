@@ -5,10 +5,10 @@ interface SocialIconProps {
   className?: string;
 }
 
-export function SocialIcon({ platform, className = "mr-2 h-4 w-4" }: SocialIconProps) {
+export function SocialIcon({ platform, className = "mr-2 size-4" }: SocialIconProps) {
   // All icons will be white for better visibility against colored backgrounds
   const iconClassName = `${className} text-white`;
-  
+
   switch (platform) {
     case 'twitter':
       return <Twitter className={iconClassName} />;
@@ -19,4 +19,4 @@ export function SocialIcon({ platform, className = "mr-2 h-4 w-4" }: SocialIconP
     default:
       return null;
   }
-} 
+}

@@ -1,7 +1,7 @@
 import React from "react";
 
 const Button = ({ children, onClick, disabled, type = "primary", variant = "default", className = "" }) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium transition-colors duration-200 shadow-sm";
+  const baseStyles = "inline-flex items-center justify-center gap-2 font-medium transition-colors duration-200 shadow-sm [&_svg]:size-4 [&_svg]:shrink-0";
 
   const pillStyles = `
     inline-flex items-center justify-center
@@ -20,13 +20,13 @@ const Button = ({ children, onClick, disabled, type = "primary", variant = "defa
     : "bg-primary text-primary-foreground py-2 px-4 rounded-md border-[1.5px] border-primary/30 hover:bg-primary/90";
 
   // Add icon variant support
-  const iconStyles = "h-10 w-10 p-0 flex items-center justify-center";
+  const iconStyles = "h-10 w-10 p-0 flex items-center justify-center [&_svg]:size-[18px]";
 
   // Add specific styling for SVG icons to ensure they're visible
   const enhancedChildren = React.Children.map(children, child => {
     if (React.isValidElement(child) && child.type === 'svg') {
       return React.cloneElement(child, {
-        className: `h-5 w-5 stroke-current ${child.props.className || ''}`
+        className: `size-4 stroke-current ${child.props.className || ''}`
       });
     }
     return child;
