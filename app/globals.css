@@ -39,55 +39,32 @@
   color: white;
 }
 
-/* Ensure fixed toolbars stay above keyboard on mobile */
-@supports (padding: max(0px)) {
-  .fixed-toolbar-bottom {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
-    bottom: 0;
-  }
-}
-
-/* Fix for mobile keyboard covering toolbar */
-.fixed-toolbar-bottom {
-  position: fixed;
+/* Simplified editor toolbar container */
+.editor-toolbar-container {
+  position: sticky;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 9999; /* Ensure it's above everything */
-  /* iOS specific fix for virtual keyboard */
-  @supports (-webkit-touch-callout: none) {
-    /* iOS 11+ specific */
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
-    /* Add viewport units for iOS */
-    bottom: env(safe-area-inset-bottom, 0);
-  }
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  margin-top: auto;
 }
 
-/* When keyboard is visible, adjust toolbar position */
-.fixed-toolbar-bottom.keyboard-visible {
-  position: fixed;
-  /* Bottom position is now set dynamically via inline styles */
-  /* This ensures the toolbar stays above the keyboard */
-
-  /* Improved styling for better visibility when keyboard is open */
-  background-color: rgba(var(--background), 0.95) !important;
-  backdrop-filter: blur(8px);
+/* Toolbar buttons container */
+.editor-toolbar-buttons {
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
 
-  /* Fallbacks for older browsers */
-  transform: translateY(-50px); /* Only used if inline styles don't work */
+/* Add padding to the bottom of the editor to prevent content from being hidden behind the toolbar */
+.editable-container {
+  padding-bottom: 80px; /* Ensure enough space for the toolbar */
+}
 
-  /* iOS specific adjustments */
-  @supports (bottom: constant(safe-area-inset-bottom)) {
-    /* iOS 11 */
-    bottom: constant(safe-area-inset-bottom);
-    transform: none;
-  }
-  @supports (bottom: env(safe-area-inset-bottom)) {
-    /* iOS 11.2+ */
-    bottom: env(safe-area-inset-bottom);
-    transform: none;
-  }
+/* Ensure the editor container takes up the full height */
+.space-y-8.pb-32 {
+  min-height: calc(100vh - 120px); /* Adjust based on your header height */
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes mulShdSpin {

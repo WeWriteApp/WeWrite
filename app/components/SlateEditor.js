@@ -470,36 +470,43 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     <Slate editor={editor} initialValue={value} onChange={onChange}>
       {/* Add custom styles */}
       <style dangerouslySetInnerHTML={{ __html: editorStyles }} />
-      {/* Conditionally render LinkEditor */}
-      {showLinkEditor && linkEditorPosition && (
-        <LinkEditor
-          position={linkEditorPosition}
-          onSelect={handleSelection}
-          setShowLinkEditor={setShowLinkEditor}
-          initialText={selectedLinkElement && selectedLinkElement.children && selectedLinkElement.children[0] ? selectedLinkElement.children[0].text || '' : ''}
-          initialPageId={selectedLinkElement ? selectedLinkElement.pageId : null}
-          initialPageTitle={selectedLinkElement ? selectedLinkElement.pageTitle : ''}
-        />
-      )}
-      {/* Custom EditorContent */}
-      <EditorContent
-        editor={editor}
-        handleKeyDown={handleKeyDown}
-        renderElement={renderElement}
-        editableRef={editableRef}
-      />
-      {/* Floating Toolbar */}
-      <KeyboardAwareToolbar
-        onInsert={onInsert}
-        onDiscard={onDiscard}
-        onSave={onSave}
-      />
 
-      {/* Fixed Bottom Toolbar */}
-      <FixedBottomToolbar
-        onSave={onSave}
-        onDiscard={onDiscard}
-      />
+      <div className="slate-editor-container flex flex-col min-h-full">
+        {/* Conditionally render LinkEditor */}
+        {showLinkEditor && linkEditorPosition && (
+          <LinkEditor
+            position={linkEditorPosition}
+            onSelect={handleSelection}
+            setShowLinkEditor={setShowLinkEditor}
+            initialText={selectedLinkElement && selectedLinkElement.children && selectedLinkElement.children[0] ? selectedLinkElement.children[0].text || '' : ''}
+            initialPageId={selectedLinkElement ? selectedLinkElement.pageId : null}
+            initialPageTitle={selectedLinkElement ? selectedLinkElement.pageTitle : ''}
+          />
+        )}
+
+        {/* Main editor content - flex-grow to take available space */}
+        <div className="editor-main flex-grow flex flex-col">
+          <EditorContent
+            editor={editor}
+            handleKeyDown={handleKeyDown}
+            renderElement={renderElement}
+            editableRef={editableRef}
+          />
+
+          {/* Floating Toolbar */}
+          <KeyboardAwareToolbar
+            onInsert={onInsert}
+            onDiscard={onDiscard}
+            onSave={onSave}
+          />
+        </div>
+
+        {/* Fixed Bottom Toolbar - now uses sticky positioning */}
+        <FixedBottomToolbar
+          onSave={onSave}
+          onDiscard={onDiscard}
+        />
+      </div>
     </Slate>
   );
 });
@@ -956,7 +963,7 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
   return (
     <motion.div
-      className={`editable-container p-2`}
+      className={`editable-container p-2 flex-grow`}
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
@@ -997,102 +1004,42 @@ const Leaf = ({ attributes, children, leaf }) => {
   return <span {...attributes}>{children}</span>;
 };
 
-// Fixed bottom toolbar that's always visible and doesn't get covered by keyboard
+// Simple fixed bottom toolbar with iOS-safe positioning
 const FixedBottomToolbar = ({ onSave, onDiscard }) => {
   const { user } = useContext(AuthContext);
   const showSaveDiscard = !!onSave && !!onDiscard && user;
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  // Detect keyboard visibility changes with improved detection
-  useEffect(() => {
-    const detectKeyboard = () => {
-      // Use visualViewport API for more accurate keyboard detection
-      const viewportHeight = window.visualViewport?.height || window.innerHeight;
-      const windowHeight = window.innerHeight;
-      const heightDifference = windowHeight - viewportHeight;
-
-      // If viewport is significantly smaller than window, keyboard is likely visible
-      const isVisible = heightDifference > 150;
-      setIsKeyboardVisible(isVisible);
-
-      // Store the keyboard height for positioning
-      if (isVisible) {
-        setKeyboardHeight(heightDifference);
-      } else {
-        setKeyboardHeight(0);
-      }
-
-      // Debug info
-      console.log('Keyboard detection:', {
-        viewportHeight,
-        windowHeight,
-        heightDifference,
-        isVisible
-      });
-    };
-
-    // Initial detection
-    detectKeyboard();
-
-    // Use visualViewport API if available (modern browsers)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', detectKeyboard);
-      window.visualViewport.addEventListener('scroll', detectKeyboard);
-    } else {
-      // Fallback to window resize
-      window.addEventListener('resize', detectKeyboard);
-    }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', detectKeyboard);
-        window.visualViewport.removeEventListener('scroll', detectKeyboard);
-      } else {
-        window.removeEventListener('resize', detectKeyboard);
-      }
-    };
-  }, []);
 
   if (!showSaveDiscard) return null;
 
-  // Calculate dynamic styles for positioning
-  const toolbarStyle = isKeyboardVisible ? {
-    position: 'fixed',
-    bottom: `${keyboardHeight}px`, // Position above the keyboard
-    left: 0,
-    right: 0,
-    zIndex: 9999
-  } : {};
-
   return (
-    <motion.div
-      className={`fixed-toolbar-bottom bg-background/80 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3 ${isKeyboardVisible ? 'keyboard-visible' : ''}`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.2 }}
-      style={toolbarStyle}
-    >
-      <button
-        className="px-4 py-2 rounded-md border border-border bg-background hover:bg-accent/10 transition-colors"
-        onClick={(event) => {
-          event.preventDefault();
-          onDiscard();
-        }}
+    <div className="editor-toolbar-container">
+      <motion.div
+        className="editor-toolbar-buttons bg-background/95 backdrop-blur-sm border-t border-border py-3 px-4 flex justify-end space-x-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: 0.2 }}
       >
-        Cancel
-      </button>
-      <button
-        className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-        onClick={(event) => {
-          event.preventDefault();
-          onSave();
-        }}
-      >
-        Save
-      </button>
-    </motion.div>
+        <button
+          className="px-4 py-2 rounded-md border border-border bg-background hover:bg-accent/10 transition-colors"
+          onClick={(event) => {
+            event.preventDefault();
+            onDiscard();
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          onClick={(event) => {
+            event.preventDefault();
+            onSave();
+          }}
+        >
+          Save
+        </button>
+      </motion.div>
+    </div>
   );
 };
 

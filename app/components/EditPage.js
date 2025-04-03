@@ -171,9 +171,9 @@ const EditPage = ({
   }
 
   return (
-    <div className="space-y-8 pb-32">
-      <div className="space-y-4">
-        <div>
+    <div className="editor-container flex flex-col min-h-[calc(100vh-120px)]">
+      <div className="editor-content flex-grow">
+        <div className="mb-4">
           <input
             type="text"
             defaultValue={title}
@@ -185,20 +185,18 @@ const EditPage = ({
           />
         </div>
 
-        <div className="space-y-6 rounded-xl">
-          <div className="space-y-0">
-            <SlateEditor
-              ref={editorRef}
-              initialContent={currentEditorValue} // Pass the guaranteed-valid state
-              onContentChange={setCurrentEditorValue} // Update local state on change
-              onSave={!isSaving ? handleSave : null}
-              onDiscard={handleCancel}
-              onInsert={handleInsertLink}
-            />
-          </div>
+        <div className="editor-slate-container">
+          <SlateEditor
+            ref={editorRef}
+            initialContent={currentEditorValue} // Pass the guaranteed-valid state
+            onContentChange={setCurrentEditorValue} // Update local state on change
+            onSave={!isSaving ? handleSave : null}
+            onDiscard={handleCancel}
+            onInsert={handleInsertLink}
+          />
         </div>
       </div>
-      {/* Removed the fixed footer - now using the floating toolbar from SlateEditor */}
+      {/* The toolbar is now part of the SlateEditor component with sticky positioning */}
     </div>
   );
 };
