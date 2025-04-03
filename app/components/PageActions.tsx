@@ -194,7 +194,7 @@ export function PageActions({
 
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
-      {/* Owner-only actions - Edit and Delete buttons */}
+      {/* Owner-only actions - Edit button always, Delete button only in edit mode */}
       {actualIsOwner && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
           <Button
@@ -227,15 +227,18 @@ export function PageActions({
               </>
             )}
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="gap-2"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </Button>
+          {/* Delete button only shown in edit mode */}
+          {isEditing && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          )}
         </div>
       )}
 
