@@ -15,7 +15,11 @@ export default function ZoomControl() {
     if (typeof window === 'undefined') return;
 
     // Apply initial zoom level to the document
-    document.body.style.zoom = `${zoomLevel}%`;
+    // Use transform scale instead of zoom for better browser compatibility and to scale all elements
+    document.documentElement.style.transform = `scale(${zoomLevel / 100})`;
+    document.documentElement.style.transformOrigin = 'top center';
+    // Set height to ensure the scaled content doesn't get cut off
+    document.documentElement.style.height = `${10000 / zoomLevel * 100}px`;
 
     // Function to handle touch start
     const handleTouchStart = (e) => {
@@ -69,7 +73,9 @@ export default function ZoomControl() {
 
             // Update zoom level
             setZoomLevel(newZoomLevel);
-            document.body.style.zoom = `${newZoomLevel}%`;
+            document.documentElement.style.transform = `scale(${newZoomLevel / 100})`;
+            document.documentElement.style.transformOrigin = 'top center';
+            document.documentElement.style.height = `${10000 / newZoomLevel * 100}px`;
 
             // Show zoom controls when user zooms
             setShowControls(newZoomLevel !== 100);
@@ -105,18 +111,24 @@ export default function ZoomControl() {
   const handleZoomIn = () => {
     const newZoomLevel = Math.min(200, zoomLevel + 10);
     setZoomLevel(newZoomLevel);
-    document.body.style.zoom = `${newZoomLevel}%`;
+    document.documentElement.style.transform = `scale(${newZoomLevel / 100})`;
+    document.documentElement.style.transformOrigin = 'top center';
+    document.documentElement.style.height = `${10000 / newZoomLevel * 100}px`;
   };
 
   const handleZoomOut = () => {
     const newZoomLevel = Math.max(50, zoomLevel - 10);
     setZoomLevel(newZoomLevel);
-    document.body.style.zoom = `${newZoomLevel}%`;
+    document.documentElement.style.transform = `scale(${newZoomLevel / 100})`;
+    document.documentElement.style.transformOrigin = 'top center';
+    document.documentElement.style.height = `${10000 / newZoomLevel * 100}px`;
   };
 
   const resetZoom = () => {
     setZoomLevel(100);
-    document.body.style.zoom = '100%';
+    document.documentElement.style.transform = 'scale(1)';
+    document.documentElement.style.transformOrigin = 'top center';
+    document.documentElement.style.height = '100%';
     setShowControls(false);
   };
 
