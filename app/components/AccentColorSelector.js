@@ -49,6 +49,7 @@ export default function AccentColorSelector() {
   };
 
   const handleColorSelect = (color) => {
+    console.log('Color selected:', color);
     changeAccentColor(color);
     setShowCustomInput(color === ACCENT_COLORS.CUSTOM);
     if (color === ACCENT_COLORS.CUSTOM) {
@@ -61,8 +62,15 @@ export default function AccentColorSelector() {
     setTempColor(newColor);
   };
 
+  const handleCustomColorApply = (e) => {
+    console.log('Applying custom color:', tempColor);
+    setCustomColor(tempColor);
+    changeAccentColor(ACCENT_COLORS.CUSTOM, tempColor);
+  };
+
   const handleColorPickerChange = (e) => {
     const hexColor = e.target.value;
+    console.log('Color picker changed:', hexColor);
     setTempColor(hexColor);
     setCustomColor(hexColor);
     changeAccentColor(ACCENT_COLORS.CUSTOM, hexColor);
@@ -122,7 +130,7 @@ export default function AccentColorSelector() {
                   type="text"
                   value={tempColor}
                   onChange={handleCustomColorChange}
-                  onBlur={(e) => changeAccentColor(ACCENT_COLORS.CUSTOM, e.target.value)}
+                  onBlur={handleCustomColorApply}
                   placeholder="hsl(217, 91%, 60%) or #3b82f6"
                   className="h-8 text-xs flex-1"
                 />
