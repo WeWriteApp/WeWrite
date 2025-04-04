@@ -46,13 +46,13 @@ export const createReplyContent = ({
             { text: `Reply to ` },
             {
               type: "link",
-              url: `/pages/${pageId}`,
+              url: `/${pageId}`,
               children: [{ text: pageTitle || "Untitled" }]
             },
             { text: ` by ` },
             {
               type: "link",
-              url: `/user/${userId || "anonymous"}`,
+              url: `/u/${userId || "anonymous"}`,
               children: [{ text: username || "Anonymous" }]
             },
             { text: "\n" } // Add newline character

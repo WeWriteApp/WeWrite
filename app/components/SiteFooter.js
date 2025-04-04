@@ -31,19 +31,19 @@ export default function SiteFooter({ className = "" }) {
       external: true
     },
     {
-      href: "/pages/zRNwhNgIEfLFo050nyAT",
+      href: "/zRNwhNgIEfLFo050nyAT",
       label: "Roadmap",
       icon: <Map className="h-3 w-3" />,
       external: false
     },
     {
-      href: "/pages/sUASL4gNdCMVHkr7Qzty",
+      href: "/sUASL4gNdCMVHkr7Qzty",
       label: "About us",
       icon: <Info className="h-3 w-3" />,
       external: false
     },
     {
-      href: "/pages/Kva5XqFpFb2bl5TCZoxE",
+      href: "/Kva5XqFpFb2bl5TCZoxE",
       label: "Feedback",
       icon: <MessageSquare className="h-3 w-3" />,
       external: false

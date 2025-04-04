@@ -1,24 +1,63 @@
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
-  // Get the pathname of the request
-  const path = request.nextUrl.pathname;
+  // Clone the URL so we can modify it
+  const url = request.nextUrl.clone();
+  const path = url.pathname;
 
   // Define paths that are always public
-  const isPublicPath = path === "/auth/login" || 
-                      path === "/auth/register" || 
+  const isPublicPath = path === "/auth/login" ||
+                      path === "/auth/register" ||
                       path === "/auth/forgot-password" ||
                       path.startsWith("/api/") ||
                       path.startsWith("/pages/") ||
                       path === "/"; // Allow access to home page
 
   // Define paths that always require authentication
-  const requiresAuth = path === "/new" || 
+  const requiresAuth = path === "/new" ||
                       path === "/groups/new" ||
                       path.startsWith("/dashboard");
 
   // Get the token from the cookies
   const token = request.cookies.get("session")?.value;
+
+  // URL structure redirects
+
+  // Redirect /pages/[id] to /[id]
+  if (path.startsWith('/pages/')) {
+    const id = path.replace('/pages/', '');
+    // Don't redirect /pages/new
+    if (id !== 'new') {
+      url.pathname = `/${id}`;
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Redirect /user/[id] to /u/[id]
+  if (path.startsWith('/user/')) {
+    const id = path.replace('/user/', '');
+    url.pathname = `/u/${id}`;
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect /users/[userId] to /u/[id]
+  if (path.startsWith('/users/')) {
+    const id = path.replace('/users/', '');
+    url.pathname = `/u/${id}`;
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect /groups/[id] to /g/[id]
+  if (path.startsWith('/groups/')) {
+    const id = path.replace('/groups/', '');
+    // Don't redirect /groups/new
+    if (id !== 'new') {
+      url.pathname = `/g/${id}`;
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Authentication redirects
 
   // Redirect authenticated users away from auth pages
   if (path.startsWith("/auth/") && token) {
@@ -47,4 +86,4 @@ export const config = {
      */
     "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
-}; 
+};

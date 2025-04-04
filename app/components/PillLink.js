@@ -31,6 +31,36 @@ export const PillLink = ({
   variant = "primary",
   label
 }) => {
+  // Convert old URL format to new URL format
+  if (href) {
+    // Convert page URLs
+    if (href.startsWith('/pages/')) {
+      const pageId = href.replace('/pages/', '');
+      if (pageId !== 'new') {
+        href = `/${pageId}`;
+      }
+    }
+
+    // Convert user URLs
+    if (href.startsWith('/user/')) {
+      const userId = href.replace('/user/', '');
+      href = `/u/${userId}`;
+    }
+
+    // Convert users URLs
+    if (href.startsWith('/users/')) {
+      const userId = href.replace('/users/', '');
+      href = `/u/${userId}`;
+    }
+
+    // Convert group URLs
+    if (href.startsWith('/groups/')) {
+      const groupId = href.replace('/groups/', '');
+      if (groupId !== 'new') {
+        href = `/g/${groupId}`;
+      }
+    }
+  }
   const { user } = useAuth();
   // Only show lock for private pages (where isPublic is explicitly false)
   const showLock = isPublic === false;

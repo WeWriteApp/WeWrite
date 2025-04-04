@@ -9,7 +9,7 @@ import { Plus } from "lucide-react";
 import PageList from "./PageList";
 
 const AllPages = () => {
-  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  
+  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);
   const { user } = useContext(AuthContext);
   const router = useRouter();
 
@@ -43,7 +43,7 @@ const AllPages = () => {
       createButtonHref="/new"
       createButtonText="Create a page"
       showViewAll={true}
-      viewAllHref={`/user/${user.uid}`}
+      viewAllHref={`/u/${user.uid}`}
       viewAllText="View all"
       emptyState={
         <div className="flex justify-center">
