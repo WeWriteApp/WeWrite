@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
-import { app } from '../firebase/config';
-import { Loader } from '../components/Loader';
-import SingleProfileView from '../components/SingleProfileView';
+import { app } from '../../firebase/config';
+import { Loader } from '../../components/Loader';
+import SingleProfileView from '../../components/SingleProfileView';
 
 export default function UsernamePage({ params }) {
   const { username } = params;
@@ -36,17 +36,7 @@ export default function UsernamePage({ params }) {
           });
           setIsLoading(false);
         } else {
-          // Username not found, check if it's a user ID
-          const userRef = ref(rtdb, `users/${username}`);
-          const userSnapshot = await get(userRef);
-          
-          if (userSnapshot.exists()) {
-            // It's a user ID, redirect to /u/[id]
-            router.replace(`/u/${username}`);
-            return;
-          }
-          
-          // Not found
+          // Username not found
           setError('User not found');
           setIsLoading(false);
         }

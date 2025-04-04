@@ -1,5 +1,5 @@
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
-import { app } from '../firebase/config';
+import { app } from '../../firebase/config';
 
 export async function generateMetadata({ params }) {
   try {
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }) {
         openGraph: {
           title: `${displayName} on WeWrite`,
           description: `${displayName}'s profile on WeWrite`,
-          url: `${process.env.NEXT_PUBLIC_BASE_URL}/${username}`,
+          url: `${process.env.NEXT_PUBLIC_BASE_URL}/u/${username}`,
           siteName: 'WeWrite',
           type: 'profile',
         },

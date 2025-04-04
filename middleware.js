@@ -47,6 +47,17 @@ export function middleware(request) {
     return NextResponse.redirect(url);
   }
 
+  // Redirect /[username] to /u/[username]
+  if (path.match(/^\/[a-zA-Z0-9_-]+$/) && !path.startsWith('/u/') && !path.startsWith('/g/')) {
+    // Check if this is a username and not a page ID
+    // This is a simplified check - in production, you'd want to check against your database
+    const potentialUsername = path.substring(1);
+    if (potentialUsername.match(/^[a-zA-Z0-9_-]{3,30}$/)) {
+      url.pathname = `/u${path}`;
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Redirect /groups/[id] to /g/[id]
   if (path.startsWith('/groups/')) {
     const id = path.replace('/groups/', '');
