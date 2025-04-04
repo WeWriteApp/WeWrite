@@ -499,7 +499,7 @@ function SinglePageView({ params }) {
         />
       </PageProvider>
       <SiteFooter />
-      {!isEditing && <PledgeBar />}
+      <PledgeBar />
     </Layout>
   );
 }

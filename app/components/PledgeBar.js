@@ -64,7 +64,17 @@ const PledgeBar = () => {
 
   // Detect if we're on a page view
   useEffect(() => {
-    const isOnPageView = pathname && pathname.includes('/pages/');
+    // Check if we're on a page view with the new URL structure
+    // The new structure is just /[id] for pages
+    const isOnPageView = pathname && (
+      // Match the old URL structure for backward compatibility
+      pathname.includes('/pages/') ||
+      // Match the new URL structure: /[id] (but not /u/ or /g/ paths)
+      (pathname.match(/^\/[a-zA-Z0-9_-]+$/) &&
+       !pathname.startsWith('/u/') &&
+       !pathname.startsWith('/g/'))
+    );
+
     setIsPageView(isOnPageView);
 
     // If not on a page view, set loading to false
@@ -434,8 +444,8 @@ const PledgeBar = () => {
   return (
     <>
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 transition-transform duration-300 ${
-          visible ? 'translate-y-0' : 'translate-y-full'
+        className={`fixed bottom-4 left-0 right-0 z-50 flex justify-center transition-all duration-300 ${
+          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
       >
         <CompositionBar
@@ -448,7 +458,7 @@ const PledgeBar = () => {
           onPledgeChange={handlePledgeInteraction}
           onPledgeCustomAmount={handlePledgeCustomAmount}
           onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-black border border-gray-800 shadow-none py-0 px-0"
+          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md border border-border shadow-lg rounded-lg py-2 px-4 hover:shadow-xl transition-shadow"
         />
       </div>
 
