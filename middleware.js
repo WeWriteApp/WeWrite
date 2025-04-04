@@ -33,21 +33,21 @@ export function middleware(request) {
     }
   }
 
-  // Redirect /user/[id] to /u/[id]
+  // Redirect /user/[id] to /u/[slug]
   if (path.startsWith('/user/')) {
     const id = path.replace('/user/', '');
     url.pathname = `/u/${id}`;
     return NextResponse.redirect(url);
   }
 
-  // Redirect /users/[userId] to /u/[id]
+  // Redirect /users/[userId] to /u/[slug]
   if (path.startsWith('/users/')) {
     const id = path.replace('/users/', '');
     url.pathname = `/u/${id}`;
     return NextResponse.redirect(url);
   }
 
-  // Redirect /[username] to /u/[username]
+  // Redirect /[username] to /u/[slug]
   if (path.match(/^\/[a-zA-Z0-9_-]+$/) && !path.startsWith('/u/') && !path.startsWith('/g/')) {
     // Check if this is a username and not a page ID
     // This is a simplified check - in production, you'd want to check against your database
