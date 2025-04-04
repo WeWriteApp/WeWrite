@@ -165,7 +165,12 @@ function SinglePageView({ params }) {
 
         // Set page title for document title
         if (pageData.title) {
-          setTitle(pageData.title);
+          // If the page has a title of "Untitled", add a more descriptive suffix
+          if (pageData.title === "Untitled") {
+            setTitle(`Untitled (${pageData.id.substring(0, 6)})`);
+          } else {
+            setTitle(pageData.title);
+          }
         }
 
         if (data.versionData) {
