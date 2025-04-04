@@ -470,6 +470,7 @@ function SinglePageView({ params }) {
                     viewMode={lineMode}
                     onRenderComplete={handlePageFullyRendered}
                     setIsEditing={setIsEditing}
+                    canEdit={user?.uid === page?.userId}
                   />
                 </PageProvider>
               </div>

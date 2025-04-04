@@ -201,15 +201,15 @@ export const PillLink = ({
 
       {/* Pulse effect that radiates outward */}
       {isClicked && (
-        <div className="absolute -inset-6 pointer-events-none">
-          {/* First pulse ring - more aggressive */}
+        <div className="absolute inset-0 pointer-events-none overflow-visible">
+          {/* First pulse ring */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0.8, borderWidth: 2 }}
-            animate={{ scale: 2.2, opacity: 0, borderWidth: 1 }}
+            initial={{ scale: 1, opacity: 0.8 }}
+            animate={{ scale: 1.5, opacity: 0 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
             className={`
-              absolute inset-4
-              rounded-[16px]
+              absolute inset-0
+              rounded-[8px]
               border-2 border-solid
               border-primary
               blur-[1px]
@@ -217,14 +217,14 @@ export const PillLink = ({
             `}
           />
 
-          {/* Second pulse ring - more aggressive and faster */}
+          {/* Second pulse ring */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0.6, borderWidth: 2 }}
-            animate={{ scale: 2.8, opacity: 0, borderWidth: 1 }}
+            initial={{ scale: 1, opacity: 0.6 }}
+            animate={{ scale: 1.8, opacity: 0 }}
             transition={{ duration: 1.0, ease: "easeOut", delay: 0.1 }}
             className={`
-              absolute inset-4
-              rounded-[16px]
+              absolute inset-0
+              rounded-[8px]
               border-2 border-solid
               border-primary
               blur-[2px]
@@ -232,14 +232,14 @@ export const PillLink = ({
             `}
           />
 
-          {/* Third pulse ring - for extra effect */}
+          {/* Third pulse ring */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0.4, borderWidth: 2 }}
-            animate={{ scale: 3.2, opacity: 0, borderWidth: 1 }}
+            initial={{ scale: 1, opacity: 0.4 }}
+            animate={{ scale: 2.2, opacity: 0 }}
             transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
             className={`
-              absolute inset-4
-              rounded-[20px]
+              absolute inset-0
+              rounded-[8px]
               border-2 border-solid
               border-primary
               blur-[3px]
