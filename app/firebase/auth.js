@@ -36,19 +36,44 @@ export const logoutUser = async () => {
 
 export const addUsername = async (userId, username) => {
   try {
-    // Update the username in Firestore users collection
+    // Check if user document exists first
     const userDocRef = doc(db, 'users', userId);
-    await updateDoc(userDocRef, {
-      username: username
-    });
-    
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      // Update existing document
+      await updateDoc(userDocRef, {
+        username: username
+      });
+    } else {
+      // Create new document if it doesn't exist
+      await setDoc(userDocRef, {
+        username: username,
+        email: auth.currentUser?.email || '',
+        createdAt: new Date().toISOString()
+      });
+    }
+
     // Also update auth display name if current user
     if (auth.currentUser && auth.currentUser.uid === userId) {
       await updateProfile(auth.currentUser, {
         displayName: username
       });
     }
-    
+
+    // Add username to the usernames collection for uniqueness checking
+    try {
+      const usernamesRef = doc(db, 'usernames', username.toLowerCase());
+      await setDoc(usernamesRef, {
+        userId: userId,
+        username: username,
+        createdAt: new Date().toISOString()
+      });
+    } catch (usernameError) {
+      console.error("Error adding to usernames collection:", usernameError);
+      // Continue even if this fails, as the main username is set
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error updating username:", error);
@@ -58,16 +83,16 @@ export const addUsername = async (userId, username) => {
 
 export const getUserProfile = async (userId) => {
   if (!userId) return null;
-  
+
   try {
     // Try to get user from Firestore users collection
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
-    
+
     if (userDoc.exists()) {
       return userDoc.data();
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error fetching user profile:", error);
@@ -79,13 +104,13 @@ export const updateEmail = async (user, newEmail) => {
   try {
     // Update the email in Firebase Authentication
     await firebaseUpdateEmail(user, newEmail);
-    
+
     // Update the email in Firestore users collection
     const userDocRef = doc(db, 'users', user.uid);
     await updateDoc(userDocRef, {
       email: newEmail
     });
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error updating email:", error);
@@ -96,57 +121,57 @@ export const updateEmail = async (user, newEmail) => {
 export const checkUsernameAvailability = async (username) => {
   try {
     console.log('Checking username availability for:', username);
-    
+
     if (!username || username.length < 3) {
       console.log('Username too short');
       return { isAvailable: false, message: "Username must be at least 3 characters" };
     }
-    
+
     // Convert username to lowercase for case-insensitive check
     const normalizedUsername = username.toLowerCase();
     console.log('Normalized username:', normalizedUsername);
-    
+
     // Handle known test case specifically
     if (normalizedUsername === 'jamie') {
       console.log('Known username "jamie" detected - marking as unavailable');
-      return { 
+      return {
         isAvailable: false,
         message: "Username already taken",
         error: "USERNAME_TAKEN"
       };
     }
-    
+
     // Check if username contains only alphanumeric characters and underscores
     if (!/^[a-zA-Z0-9_]+$/.test(normalizedUsername)) {
       console.log('Username contains invalid characters');
       return { isAvailable: false, message: "Username can only contain letters, numbers, and underscores" };
     }
-    
+
     const userDoc = doc(db, 'usernames', normalizedUsername);
     console.log('Checking Firestore document:', `usernames/${normalizedUsername}`);
     const docSnap = await getDoc(userDoc);
-    
+
     const exists = docSnap.exists();
     console.log('Document exists?', exists);
-    
+
     if (exists) {
       console.log('Username is taken');
-      return { 
+      return {
         isAvailable: false,
         message: "Username already taken",
         error: "USERNAME_TAKEN"
       };
     }
-    
+
     console.log('Username is available');
-    return { 
+    return {
       isAvailable: true,
       message: "Username is available"
     };
   } catch (error) {
     console.error("Error checking username availability:", error);
-    return { 
-      isAvailable: false, 
+    return {
+      isAvailable: false,
       message: "Error checking username",
       error: "CHECK_ERROR"
     };

@@ -14,15 +14,32 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Helper function to get username from Firebase Realtime Database
+  // Helper function to get username from Firestore (primary) or Firebase Realtime Database (fallback)
   const getUsernameById = async (userId) => {
     try {
       if (!userId) return null;
-      
+
+      // First try to get username from Firestore (this is the primary source)
+      try {
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.username) {
+            return userData.username;
+          }
+        }
+      } catch (firestoreErr) {
+        console.error("Error fetching username from Firestore:", firestoreErr);
+        // Continue to try RTDB as fallback
+      }
+
+      // Fallback to RTDB if Firestore doesn't have the username
       const rtdb = getDatabase();
       const userRef = ref(rtdb, `users/${userId}`);
       const snapshot = await get(userRef);
-      
+
       if (snapshot.exists()) {
         const userData = snapshot.val();
         return userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
@@ -40,28 +57,28 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
     try {
       // If page doesn't belong to a group, it's accessible
       if (!pageData.groupId) return true;
-      
+
       // Get the group data
       const rtdb = getDatabase();
       const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
       const snapshot = await get(groupRef);
-      
+
       if (!snapshot.exists()) return true; // Group doesn't exist, allow access
-      
+
       const groupData = snapshot.val();
-      
+
       // If group is public, allow access
       if (groupData.isPublic) return true;
-      
+
       // If user is not logged in, deny access to private group content
       if (!user) return false;
-      
+
       // If user is the group owner, allow access
       if (groupData.owner === user.uid) return true;
-      
+
       // If user is a group member, allow access
       if (groupData.members && groupData.members[user.uid]) return true;
-      
+
       // Otherwise, deny access to private group content
       return false;
     } catch (err) {
@@ -75,10 +92,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Query to get recent pages
         let pagesQuery;
-        
+
         try {
           // If filtering by user, get all their pages (public and private if current user matches)
           if (filterUserId) {
@@ -109,60 +126,60 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
               limit(limitCount * 2)
             );
           }
-          
+
           const pagesSnapshot = await getDocs(pagesQuery);
-          
+
           if (pagesSnapshot.empty) {
             setActivities([]);
             setLoading(false);
             setHasMore(false);
             return;
           }
-          
+
           // Store the last document for pagination
           const lastDoc = pagesSnapshot.docs[pagesSnapshot.docs.length - 1];
           setLastVisible(lastDoc);
-          
+
           // Check if there might be more results
           setHasMore(pagesSnapshot.docs.length >= limitCount);
-          
+
           // Process each page to get its recent activity
           const activitiesPromises = pagesSnapshot.docs.map(async (doc) => {
             const pageData = { id: doc.id, ...doc.data() };
-            
+
             // Check if the page belongs to a private group and if the user has access
             const hasAccess = await checkPageGroupAccess(pageData);
             if (!hasAccess) return null;
-            
+
             try {
               // Get the two most recent versions of this page
               const versions = await getPageVersions(pageData.id, 2);
-              
+
               if (!versions || versions.length === 0) {
                 // No versions found
                 return null;
               }
-              
+
               const currentVersion = versions[0];
-              
+
               // Handle newly created pages (only one version)
               if (versions.length === 1) {
                 // If filtering by user, make sure this version was created by that user
                 if (filterUserId && currentVersion.userId !== filterUserId) {
                   return null;
                 }
-                
+
                 // Get the user who made the edit
                 let username = null;
                 let userId = null;
-                
+
                 // Try to get username from the version data first
                 if (currentVersion.userId) {
                   userId = currentVersion.userId;
                   // If we have userId, try to fetch username from the database
                   username = await getUsernameById(currentVersion.userId);
                 }
-                
+
                 return {
                   pageId: pageData.id,
                   pageName: pageData.title || "Untitled Page",
@@ -175,36 +192,36 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
                   isNewPage: true, // Flag to indicate this is a new page
                 };
               }
-              
+
               // For pages with multiple versions
               const previousVersion = versions[1];
-              
+
               // Skip if we don't have content to compare or if there are no changes
               if (!currentVersion.content || !previousVersion.content) {
                 return null;
               }
-              
+
               // Skip if content is identical
               if (currentVersion.content === previousVersion.content) {
                 return null;
               }
-              
+
               // If filtering by user, make sure this version was created by that user
               if (filterUserId && currentVersion.userId !== filterUserId) {
                 return null;
               }
-              
+
               // Get the user who made the edit
               let username = null;
               let userId = null;
-              
+
               // Try to get username from the version data first
               if (currentVersion.userId) {
                 userId = currentVersion.userId;
                 // If we have userId, try to fetch username from the database
                 username = await getUsernameById(currentVersion.userId);
               }
-              
+
               return {
                 pageId: pageData.id,
                 pageName: pageData.title || "Untitled Page",
@@ -220,17 +237,17 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
               return null;
             }
           });
-          
+
           // Wait for all promises to resolve
           const activityResults = await Promise.all(activitiesPromises);
-          
+
           // Filter out null results and limit to requested count
           const validActivities = activityResults
             .filter(activity => activity !== null)
             .slice(0, limitCount);
-          
+
           setActivities(validActivities);
-          
+
           // Update hasMore based on the number of valid activities
           setHasMore(validActivities.length >= limitCount && pagesSnapshot.docs.length > validActivities.length);
         } catch (err) {
@@ -240,7 +257,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
             details: err.message || "Unknown database error",
             code: err.code || "unknown"
           });
-          
+
           // For logged-out users, provide empty array instead of showing error
           if (!user) {
             setActivities([]);
@@ -257,20 +274,20 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
         setLoading(false);
       }
     };
-    
+
     fetchRecentActivity();
   }, [user, limitCount, filterUserId]);
 
   // Function to load more activities
   const loadMore = useCallback(async () => {
     if (!lastVisible || loadingMore) return;
-    
+
     try {
       setLoadingMore(true);
-      
+
       // Create query with startAfter
       let moreQuery;
-      
+
       if (filterUserId) {
         if (user && user.uid === filterUserId) {
           // User's own profile
@@ -302,56 +319,56 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
           limit(limitCount * 2)
         );
       }
-      
+
       const moreSnapshot = await getDocs(moreQuery);
-      
+
       if (moreSnapshot.empty) {
         setHasMore(false);
         setLoadingMore(false);
         return;
       }
-      
+
       // Store the last document for pagination
       const lastDoc = moreSnapshot.docs[moreSnapshot.docs.length - 1];
       setLastVisible(lastDoc);
-      
+
       // Process each page to get its recent activity
       const activitiesPromises = moreSnapshot.docs.map(async (doc) => {
         const pageData = { id: doc.id, ...doc.data() };
-        
+
         // Check if the page belongs to a private group and if the user has access
         const hasAccess = await checkPageGroupAccess(pageData);
         if (!hasAccess) return null;
-        
+
         try {
           // Get the two most recent versions of this page
           const versions = await getPageVersions(pageData.id, 2);
-          
+
           if (!versions || versions.length === 0) {
             // No versions found
             return null;
           }
-          
+
           const currentVersion = versions[0];
-          
+
           // Handle newly created pages (only one version)
           if (versions.length === 1) {
             // If filtering by user, make sure this version was created by that user
             if (filterUserId && currentVersion.userId !== filterUserId) {
               return null;
             }
-            
+
             // Get the user who made the edit
             let username = null;
             let userId = null;
-            
+
             // Try to get username from the version data first
             if (currentVersion.userId) {
               userId = currentVersion.userId;
               // If we have userId, try to fetch username from the database
               username = await getUsernameById(currentVersion.userId);
             }
-            
+
             return {
               pageId: pageData.id,
               pageName: pageData.title || "Untitled Page",
@@ -364,36 +381,36 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
               isNewPage: true, // Flag to indicate this is a new page
             };
           }
-          
+
           // For pages with multiple versions
           const previousVersion = versions[1];
-          
+
           // Skip if we don't have content to compare or if there are no changes
           if (!currentVersion.content || !previousVersion.content) {
             return null;
           }
-          
+
           // Skip if content is identical
           if (currentVersion.content === previousVersion.content) {
             return null;
           }
-          
+
           // If filtering by user, make sure this version was created by that user
           if (filterUserId && currentVersion.userId !== filterUserId) {
             return null;
           }
-          
+
           // Get the user who made the edit
           let username = null;
           let userId = null;
-          
+
           // Try to get username from the version data first
           if (currentVersion.userId) {
             userId = currentVersion.userId;
             // If we have userId, try to fetch username from the database
             username = await getUsernameById(currentVersion.userId);
           }
-          
+
           return {
             pageId: pageData.id,
             pageName: pageData.title || "Untitled Page",
@@ -409,21 +426,21 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
           return null;
         }
       });
-      
+
       // Wait for all promises to resolve
       const moreActivityResults = await Promise.all(activitiesPromises);
-      
+
       // Filter out null results and limit to requested count
       const validMoreActivities = moreActivityResults
         .filter(activity => activity !== null)
         .slice(0, limitCount);
-      
+
       // Add new activities to the existing ones
       setActivities(prevActivities => [...prevActivities, ...validMoreActivities]);
-      
+
       // Update hasMore based on the number of valid activities
       setHasMore(validMoreActivities.length >= limitCount && moreSnapshot.docs.length > validMoreActivities.length);
-      
+
     } catch (err) {
       console.error("Error loading more activities:", err);
     } finally {
