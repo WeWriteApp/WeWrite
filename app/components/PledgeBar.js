@@ -369,21 +369,27 @@ const PledgeBar = () => {
   if (isOwnPage) {
     return (
       <div
-        className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6 cursor-pointer"
-        onClick={() => setShowActivationModal(true)}
+        className={`fixed bottom-4 left-0 right-0 z-50 flex justify-center transition-all duration-300 ${
+          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        }`}
       >
-        <div className="flex justify-around">
-          <div className="text-center">
-            <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
-            <p className="text-xs text-foreground/40">Active Donors</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
-            <p className="text-xs text-foreground/40">Monthly Income</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-foreground/60">{pageStats.totalViews}</p>
-            <p className="text-xs text-foreground/40">Views</p>
+        <div
+          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
+          onClick={() => setShowActivationModal(true)}
+        >
+          <div className="flex justify-around py-4 px-6">
+            <div className="text-center">
+              <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
+              <p className="text-xs text-foreground/40">Active Donors</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
+              <p className="text-xs text-foreground/40">Monthly Income</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-foreground/60">{pageStats.totalViews}</p>
+              <p className="text-xs text-foreground/40">Views</p>
+            </div>
           </div>
         </div>
 

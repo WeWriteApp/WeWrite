@@ -9,6 +9,13 @@ import { Palette } from 'lucide-react';
 export default function AccentColorSelector() {
   const { accentColor, customColors, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
 
+  // State to track custom color names
+  const [customColorNames, setCustomColorNames] = useState({
+    [ACCENT_COLORS.CUSTOM1]: getColorNameWithFallback(customColors[ACCENT_COLORS.CUSTOM1], 0),
+    [ACCENT_COLORS.CUSTOM2]: getColorNameWithFallback(customColors[ACCENT_COLORS.CUSTOM2], 1),
+    [ACCENT_COLORS.CUSTOM3]: getColorNameWithFallback(customColors[ACCENT_COLORS.CUSTOM3], 2)
+  });
+
   const handleColorSelect = (color) => {
     console.log('Color selected:', color);
     changeAccentColor(color);
@@ -17,12 +24,25 @@ export default function AccentColorSelector() {
   const handleColorPickerChange = (customSlot) => (e) => {
     const hexColor = e.target.value;
     console.log('Color picker changed:', hexColor, 'for slot:', customSlot);
+
+    // Update the color name immediately
+    const index = customSlot === ACCENT_COLORS.CUSTOM1 ? 0 :
+                 customSlot === ACCENT_COLORS.CUSTOM2 ? 1 : 2;
+    const newName = getColorNameWithFallback(hexColor, index);
+
+    // Update the name in state
+    setCustomColorNames(prev => ({
+      ...prev,
+      [customSlot]: newName
+    }));
+
+    // Update the color value
     setCustomColor(customSlot, hexColor);
     changeAccentColor(customSlot, hexColor);
   };
 
-  // Get color name for each custom color
-  const getCustomColorName = (colorValue, index) => {
+  // Get color name for each custom color with fallback
+  function getColorNameWithFallback(colorValue, index) {
     try {
       // First try to get a name from the color naming function
       const name = getColorName(colorValue);
@@ -32,24 +52,24 @@ export default function AccentColorSelector() {
       // Fallback to numbered custom colors
       return `Custom ${index + 1}`;
     }
-  };
+  }
 
   const colorOptions = [
     { name: 'Blue', value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE] },
     { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
     { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
     {
-      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM1], 0),
+      name: customColorNames[ACCENT_COLORS.CUSTOM1],
       value: ACCENT_COLORS.CUSTOM1,
       color: customColors[ACCENT_COLORS.CUSTOM1]
     },
     {
-      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM2], 1),
+      name: customColorNames[ACCENT_COLORS.CUSTOM2],
       value: ACCENT_COLORS.CUSTOM2,
       color: customColors[ACCENT_COLORS.CUSTOM2]
     },
     {
-      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM3], 2),
+      name: customColorNames[ACCENT_COLORS.CUSTOM3],
       value: ACCENT_COLORS.CUSTOM3,
       color: customColors[ACCENT_COLORS.CUSTOM3]
     }
