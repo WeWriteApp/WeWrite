@@ -39,6 +39,8 @@ export const createReplyContent = ({
   switch (replyType) {
     case "standard":
     default:
+      // Create a properly formatted reply with the first paragraph containing the attribution
+      // and the second paragraph empty for the user to start typing their reply
       return [
         {
           type: "paragraph",
@@ -54,11 +56,11 @@ export const createReplyContent = ({
               type: "link",
               url: `/u/${userId || "anonymous"}`,
               children: [{ text: username || "Anonymous" }]
-            },
-            { text: "\n" } // Add newline character
+            }
           ]
         },
         {
+          // Second paragraph is empty, allowing the user to start typing at paragraph number 2
           type: "paragraph",
           children: [{ text: "" }]
         }
