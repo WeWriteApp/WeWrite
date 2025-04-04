@@ -1,13 +1,16 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import colorNamer from 'color-namer';
 
 // Define available accent colors
 export const ACCENT_COLORS = {
   RED: 'red',
   GREEN: 'green',
   BLUE: 'blue',
-  CUSTOM: 'custom'
+  CUSTOM1: 'custom1',
+  CUSTOM2: 'custom2',
+  CUSTOM3: 'custom3'
 };
 
 // Color values for each accent color
@@ -15,7 +18,32 @@ export const ACCENT_COLOR_VALUES = {
   [ACCENT_COLORS.RED]: 'hsl(0, 84%, 60%)',
   [ACCENT_COLORS.GREEN]: 'hsl(120, 84%, 60%)',
   [ACCENT_COLORS.BLUE]: '#1768FF',
-  [ACCENT_COLORS.CUSTOM]: '#1768FF' // Default to blue for custom
+  [ACCENT_COLORS.CUSTOM1]: '#FF5733', // Default to a coral/orange
+  [ACCENT_COLORS.CUSTOM2]: '#9B59B6', // Default to a purple
+  [ACCENT_COLORS.CUSTOM3]: '#3498DB'  // Default to a light blue
+};
+
+// Get a friendly name for a color
+export const getColorName = (hexColor) => {
+  try {
+    // Get color names from the library
+    const names = colorNamer(hexColor);
+
+    // Try to get a name from the 'ntc' list (Name That Color)
+    if (names.ntc && names.ntc.length > 0) {
+      return names.ntc[0].name;
+    }
+
+    // Fall back to the basic list
+    if (names.basic && names.basic.length > 0) {
+      return names.basic[0].name;
+    }
+
+    return 'Custom';
+  } catch (error) {
+    console.error('Error getting color name:', error);
+    return 'Custom';
+  }
 };
 
 // Calculate luminance to determine if text should be light or dark
@@ -85,7 +113,11 @@ const AccentColorContext = createContext();
 export function AccentColorProvider({ children }) {
   // Try to load from localStorage, default to blue
   const [accentColor, setAccentColor] = useState(ACCENT_COLORS.BLUE);
-  const [customColor, setCustomColor] = useState(ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE]);
+  const [customColors, setCustomColors] = useState({
+    [ACCENT_COLORS.CUSTOM1]: ACCENT_COLOR_VALUES[ACCENT_COLORS.CUSTOM1],
+    [ACCENT_COLORS.CUSTOM2]: ACCENT_COLOR_VALUES[ACCENT_COLORS.CUSTOM2],
+    [ACCENT_COLORS.CUSTOM3]: ACCENT_COLOR_VALUES[ACCENT_COLORS.CUSTOM3]
+  });
   const [textColor, setTextColor] = useState('#ffffff'); // Default text color
 
   // Function to convert hex to HSL
@@ -179,19 +211,36 @@ export function AccentColorProvider({ children }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedAccentColor = localStorage.getItem('accentColor');
-      const savedCustomColor = localStorage.getItem('customAccentColor');
+      const savedCustomColors = JSON.parse(localStorage.getItem('customAccentColors') || '{}');
 
       let colorToUse = accentColor;
-      let valueToUse = ACCENT_COLOR_VALUES[accentColor];
+      let valueToUse;
 
+      // Load saved accent color
       if (savedAccentColor && Object.values(ACCENT_COLORS).includes(savedAccentColor)) {
         colorToUse = savedAccentColor;
         setAccentColor(savedAccentColor);
       }
 
-      if (savedAccentColor === ACCENT_COLORS.CUSTOM && savedCustomColor) {
-        valueToUse = savedCustomColor;
-        setCustomColor(savedCustomColor);
+      // Load saved custom colors
+      const newCustomColors = { ...customColors };
+      let customColorsUpdated = false;
+
+      // Check each custom color slot
+      Object.keys(newCustomColors).forEach(key => {
+        if (savedCustomColors[key]) {
+          newCustomColors[key] = savedCustomColors[key];
+          customColorsUpdated = true;
+        }
+      });
+
+      if (customColorsUpdated) {
+        setCustomColors(newCustomColors);
+      }
+
+      // Determine the color value to use
+      if (colorToUse.startsWith('custom') && newCustomColors[colorToUse]) {
+        valueToUse = newCustomColors[colorToUse];
       } else {
         valueToUse = ACCENT_COLOR_VALUES[colorToUse];
       }
@@ -210,26 +259,51 @@ export function AccentColorProvider({ children }) {
 
     let valueToUse;
 
-    if (color === ACCENT_COLORS.CUSTOM && customColorValue) {
+    if (color.startsWith('custom') && customColorValue) {
+      // Update the specific custom color
       valueToUse = customColorValue;
-      setCustomColor(customColorValue);
-      localStorage.setItem('customAccentColor', customColorValue);
+
+      // Update custom colors state
+      const newCustomColors = { ...customColors, [color]: customColorValue };
+      setCustomColors(newCustomColors);
+
+      // Save all custom colors to localStorage
+      localStorage.setItem('customAccentColors', JSON.stringify(newCustomColors));
+    } else if (color.startsWith('custom')) {
+      // Use existing custom color
+      valueToUse = customColors[color] || ACCENT_COLOR_VALUES[color];
     } else {
+      // Use predefined color
       valueToUse = ACCENT_COLOR_VALUES[color];
     }
 
     updateCSSVariables(color, valueToUse);
   };
 
+  // Set a specific custom color
+  const setCustomColor = (customSlot, colorValue) => {
+    if (!customSlot.startsWith('custom')) return;
+
+    const newCustomColors = { ...customColors, [customSlot]: colorValue };
+    setCustomColors(newCustomColors);
+    localStorage.setItem('customAccentColors', JSON.stringify(newCustomColors));
+
+    // If this is the currently selected color, update the CSS variables
+    if (accentColor === customSlot) {
+      updateCSSVariables(customSlot, colorValue);
+    }
+  };
+
   return (
     <AccentColorContext.Provider
       value={{
         accentColor,
-        customColor,
+        customColors,
         textColor,
         changeAccentColor,
         setCustomColor,
-        getTextColorForBackground
+        getTextColorForBackground,
+        getColorName
       }}
     >
       {children}

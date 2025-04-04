@@ -1,33 +1,54 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES, getTextColorForBackground } from '../contexts/AccentColorContext';
+import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES, getTextColorForBackground, getColorName } from '../contexts/AccentColorContext';
 import { cn } from '../lib/utils';
 import { Label } from './ui/label';
 import { Palette } from 'lucide-react';
 
 export default function AccentColorSelector() {
-  const { accentColor, customColor, changeAccentColor, setCustomColor } = useAccentColor();
-  const [showCustomInput, setShowCustomInput] = useState(accentColor === ACCENT_COLORS.CUSTOM);
+  const { accentColor, customColors, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
 
   const handleColorSelect = (color) => {
     console.log('Color selected:', color);
     changeAccentColor(color);
-    setShowCustomInput(color === ACCENT_COLORS.CUSTOM);
   };
 
-  const handleColorPickerChange = (e) => {
+  const handleColorPickerChange = (customSlot) => (e) => {
     const hexColor = e.target.value;
-    console.log('Color picker changed:', hexColor);
-    setCustomColor(hexColor);
-    changeAccentColor(ACCENT_COLORS.CUSTOM, hexColor);
+    console.log('Color picker changed:', hexColor, 'for slot:', customSlot);
+    setCustomColor(customSlot, hexColor);
+    changeAccentColor(customSlot, hexColor);
+  };
+
+  // Get color name for each custom color
+  const getCustomColorName = (colorValue) => {
+    try {
+      return getColorName(colorValue);
+    } catch (error) {
+      return 'Custom';
+    }
   };
 
   const colorOptions = [
     { name: 'Blue', value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE] },
     { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
     { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
-    { name: 'Custom', value: ACCENT_COLORS.CUSTOM, color: customColor }
+    {
+      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM1]),
+      value: ACCENT_COLORS.CUSTOM1,
+      color: customColors[ACCENT_COLORS.CUSTOM1]
+    },
+    {
+      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM2]),
+      value: ACCENT_COLORS.CUSTOM2,
+      color: customColors[ACCENT_COLORS.CUSTOM2]
+    },
+    {
+      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM3]),
+      value: ACCENT_COLORS.CUSTOM3,
+      color: customColors[ACCENT_COLORS.CUSTOM3]
+    }
   ];
 
   return (
@@ -36,9 +57,9 @@ export default function AccentColorSelector() {
       <div className="space-y-1 mb-4">
         {colorOptions.map((option) => {
           // Calculate text color based on background color for better contrast
-          const textColor = option.value !== ACCENT_COLORS.CUSTOM
-            ? getTextColorForBackground(option.color)
-            : 'currentColor';
+          const textColor = option.value.startsWith('custom')
+            ? 'currentColor'
+            : getTextColorForBackground(option.color);
 
           return (
             <div key={option.value} className="flex items-center">
@@ -61,7 +82,7 @@ export default function AccentColorSelector() {
                   className="w-4 h-4 rounded-full mr-2"
                   style={{ backgroundColor: option.color }}
                 >
-                  {option.value === ACCENT_COLORS.CUSTOM && (
+                  {option.value.startsWith('custom') && (
                     <Palette className="h-4 w-4 text-white" />
                   )}
                 </div>
@@ -73,17 +94,17 @@ export default function AccentColorSelector() {
               </button>
 
               {/* Edit button for custom color */}
-              {option.value === ACCENT_COLORS.CUSTOM && (
-                <label htmlFor="native-color-picker" className="cursor-pointer p-2 hover:bg-accent rounded-full transition-colors">
+              {option.value.startsWith('custom') && (
+                <label htmlFor={`color-picker-${option.value}`} className="cursor-pointer p-2 hover:bg-accent rounded-full transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
                     <path d="m15 5 4 4"></path>
                   </svg>
                   <input
-                    id="native-color-picker"
+                    id={`color-picker-${option.value}`}
                     type="color"
-                    value={customColor.startsWith('#') ? customColor : '#3b82f6'}
-                    onChange={handleColorPickerChange}
+                    value={option.color.startsWith('#') ? option.color : '#3b82f6'}
+                    onChange={handleColorPickerChange(option.value)}
                     className="sr-only"
                   />
                 </label>
@@ -92,8 +113,6 @@ export default function AccentColorSelector() {
           );
         })}
       </div>
-
-      {/* Custom color section removed - now using browser's native color picker */}
     </div>
   );
 }
