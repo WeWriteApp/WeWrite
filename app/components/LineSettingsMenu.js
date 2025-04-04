@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Settings, AlignJustify, AlignLeft, Check } from 'lucide-react';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -20,26 +20,28 @@ import { Button } from './ui/button';
 import { useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import { MobileContext } from '../providers/MobileProvider';
+import { LineSettingsDrawer } from './LineSettingsDrawer';
 
 /**
  * LineSettingsMenu Component
- * 
+ *
  * A dropdown menu that allows users to switch between different paragraph modes.
- * 
+ *
  * Available Paragraph Modes:
  * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
  *    - Numbers positioned to the left of the text
  *    - Clear indent for each paragraph
  *    - Proper spacing between paragraphs
  *    - Standard text size (1rem/16px)
- * 
+ *
  * 2. Dense Mode: Collapses all paragraphs for a more comfortable reading experience
  *    - NO line breaks between paragraphs
  *    - Text wraps continuously as if newline characters were temporarily deleted
  *    - Paragraph numbers inserted inline within the continuous text
  *    - Only a small space separates paragraphs
  *    - Standard text size (1rem/16px)
- * 
+ *
  * Features:
  * - Animated menu items using framer-motion
  * - Visual icons to represent each paragraph mode
@@ -49,6 +51,7 @@ import { useTheme } from 'next-themes';
 export function LineSettingsMenu() {
   const { lineMode, setLineMode } = useLineSettings();
   const { theme } = useTheme();
+  const { isMobile } = useContext(MobileContext);
 
   // Handle mode change with animation
   const handleModeChange = (mode) => {
@@ -67,6 +70,12 @@ export function LineSettingsMenu() {
     }
   };
 
+  // Use drawer on mobile, dropdown on desktop
+  if (isMobile) {
+    return <LineSettingsDrawer />;
+  }
+
+  // Desktop dropdown menu
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -86,7 +95,7 @@ export function LineSettingsMenu() {
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
-            <DropdownMenuRadioItem 
+            <DropdownMenuRadioItem
               value={LINE_MODES.DENSE}
               className="cursor-pointer focus:bg-accent focus:text-accent-foreground data-[state=checked]:bg-accent/50"
             >
@@ -99,13 +108,13 @@ export function LineSettingsMenu() {
               )}
             </DropdownMenuRadioItem>
           </motion.div>
-          
+
           <motion.div
             whileHover={{ backgroundColor: "hsl(var(--accent)/0.1)" }}
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
           >
-            <DropdownMenuRadioItem 
+            <DropdownMenuRadioItem
               value={LINE_MODES.NORMAL}
               className="cursor-pointer focus:bg-accent focus:text-accent-foreground data-[state=checked]:bg-accent/50"
             >

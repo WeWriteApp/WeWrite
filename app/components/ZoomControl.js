@@ -132,8 +132,8 @@ export default function ZoomControl() {
     setShowControls(false);
   };
 
-  // Only render controls if user has zoomed
-  if (!showControls) return null;
+  // Always show reset button when zoomed
+  if (!showControls && zoomLevel === 100) return null;
 
   return (
     <div className="fixed bottom-20 right-6 z-50 flex flex-col gap-2">

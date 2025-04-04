@@ -27,6 +27,27 @@ body {
   overflow-x: hidden;
 }
 
+/* Improve layout when zoomed in */
+@media (max-width: 640px), (transform-scale: 1.2) {
+  .page-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-wrap: break-word;
+  }
+
+  /* Make elements squeeze together in a logical way */
+  .flex {
+    flex-wrap: wrap;
+  }
+
+  /* Ensure text doesn't overflow */
+  p, h1, h2, h3, h4, h5, h6, span, div {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}
+
 /* Custom Spinner Animation */
 .loader {
   color: hsl(var(--primary));
