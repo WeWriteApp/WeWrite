@@ -198,7 +198,7 @@ export function PageActions({
       {actualIsOwner && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="gap-2"
             disabled={isEditLoading}
@@ -246,7 +246,7 @@ export function PageActions({
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t-only pt-4 w-full">
         {/* Copy Link Button (always shown) */}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           className="gap-2"
           onClick={handleCopyLink}
@@ -259,7 +259,7 @@ export function PageActions({
         {user ? (
           // Logged-in user: Show direct reply button
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="gap-2"
             onClick={handleReply}
@@ -271,7 +271,7 @@ export function PageActions({
           // Logged-out user: Show reply button wrapped in AuthModal
           <AuthModal initialTab="login">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               className="gap-2"
               // No onClick needed here, AuthModal handles opening
@@ -286,7 +286,7 @@ export function PageActions({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               className="gap-2"
             >
