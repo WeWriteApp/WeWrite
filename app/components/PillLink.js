@@ -70,10 +70,25 @@ export const PillLink = ({
     ? "Private Page"
     : (label || children);
 
-  // Handle click animation
+  // Handle click animation and show loading state
   const handleClick = (e) => {
     setIsClicked(true);
-    // Don't prevent default - let the navigation happen naturally
+
+    // Show loading state immediately
+    if (typeof window !== 'undefined') {
+      // Add a loading overlay
+      const loadingOverlay = document.createElement('div');
+      loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+      loadingOverlay.id = 'navigation-loading-overlay';
+
+      const spinner = document.createElement('div');
+      spinner.className = 'loader loader-md';
+      loadingOverlay.appendChild(spinner);
+
+      document.body.appendChild(loadingOverlay);
+
+      // Don't prevent default - let the navigation happen naturally
+    }
   };
 
   const linkClasses = `

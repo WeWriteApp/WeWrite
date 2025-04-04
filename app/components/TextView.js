@@ -190,14 +190,37 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const handleActiveLine = (index) => {
     setActiveLineIndex(index);
     if (canEdit && setIsEditing) {
-      // Small delay to show the active line highlight before entering edit mode
+      // Show loading state immediately
+      if (typeof window !== 'undefined') {
+        // Add a loading overlay
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+        loadingOverlay.id = 'edit-loading-overlay';
+
+        const spinner = document.createElement('div');
+        spinner.className = 'loader loader-md';
+        loadingOverlay.appendChild(spinner);
+
+        document.body.appendChild(loadingOverlay);
+      }
+
+      // Set editing state immediately
+      setIsEditing(true);
+
+      // Remove loading overlay after a short delay
       setTimeout(() => {
-        setIsEditing(true);
-        // Show a toast notification to indicate edit mode
-        if (typeof window !== 'undefined' && window.toast) {
-          window.toast.info('Entering edit mode');
+        if (typeof window !== 'undefined') {
+          const overlay = document.getElementById('edit-loading-overlay');
+          if (overlay) {
+            overlay.remove();
+          }
+
+          // Show a toast notification to indicate edit mode
+          if (window.toast) {
+            window.toast.info('Entering edit mode');
+          }
         }
-      }, 150);
+      }, 300);
     }
   };
 
@@ -213,7 +236,36 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      onClick={() => canEdit && setIsEditing && setIsEditing(true)}
+      onClick={() => {
+        if (canEdit && setIsEditing) {
+          // Show loading state immediately
+          if (typeof window !== 'undefined') {
+            // Add a loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+            loadingOverlay.id = 'edit-loading-overlay';
+
+            const spinner = document.createElement('div');
+            spinner.className = 'loader loader-md';
+            loadingOverlay.appendChild(spinner);
+
+            document.body.appendChild(loadingOverlay);
+          }
+
+          // Set editing state immediately
+          setIsEditing(true);
+
+          // Remove loading overlay after a short delay
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              const overlay = document.getElementById('edit-loading-overlay');
+              if (overlay) {
+                overlay.remove();
+              }
+            }
+          }, 300);
+        }
+      }}
       title={canEdit ? "Click anywhere to edit" : ""}
     >
       {canEdit && (

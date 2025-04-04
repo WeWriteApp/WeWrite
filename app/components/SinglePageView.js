@@ -343,7 +343,9 @@ function SinglePageView({ params }) {
           <title>Loading... - WeWrite</title>
         </Head>
         <PageHeader />
-        <Loader />
+        <div className="flex items-center justify-center min-h-[50vh] w-full">
+          <div className="loader loader-lg"></div>
+        </div>
       </Layout>
     );
   }
