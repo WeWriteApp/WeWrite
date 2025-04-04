@@ -133,7 +133,7 @@ export default function ZoomControl() {
   };
 
   // Always show reset button when zoomed
-  if (!showControls && zoomLevel === 100) return null;
+  if (zoomLevel === 100) return null;
 
   return (
     <div className="fixed bottom-20 right-6 z-50 flex flex-col gap-2">

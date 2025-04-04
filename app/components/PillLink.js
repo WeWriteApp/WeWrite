@@ -48,7 +48,7 @@ export const PillLink = ({
 
   if (variant === "primary") {
     variantStyles = `
-      bg-primary text-white
+      bg-primary text-[var(--accent-text,white)]
       border-theme-light
       hover:bg-primary/80 hover:border-[rgba(255,255,255,0.3)]
     `;

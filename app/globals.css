@@ -28,7 +28,7 @@ body {
 }
 
 /* Improve layout when zoomed in */
-@media (max-width: 640px), (transform-scale: 1.2) {
+@media (max-width: 640px) {
   .page-content {
     width: 100% !important;
     max-width: 100% !important;
@@ -45,6 +45,46 @@ body {
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+}
+
+/* Styles for zoomed content */
+html[style*="transform: scale"] {
+  /* Ensure content flows properly when zoomed */
+  & body {
+    width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Make all containers fluid */
+  & .container, & .max-w-md, & .max-w-lg, & .max-w-xl, & .max-w-2xl, & .max-w-3xl, & .max-w-4xl, & .max-w-5xl, & .max-w-6xl, & .max-w-7xl {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Make all flex containers wrap */
+  & .flex {
+    flex-wrap: wrap;
+  }
+
+  /* Ensure text wraps properly */
+  & p, & h1, & h2, & h3, & h4, & h5, & h6, & span, & div, & button, & a {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Ensure grid layouts adapt */
+  & .grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+  }
+
+  /* Ensure images scale properly */
+  & img {
+    max-width: 100%;
+    height: auto;
   }
 }
 
