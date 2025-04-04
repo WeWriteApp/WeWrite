@@ -6,6 +6,7 @@ import { ShimmerEffect } from "./ui/skeleton";
 import { useTheme } from "next-themes";
 import { useAuth } from "../providers/AuthProvider";
 import { motion } from "framer-motion";
+import { useAccentColor } from "../contexts/AccentColorContext";
 
 
 
@@ -35,6 +36,7 @@ export const PillLink = ({
   const showLock = isPublic === false;
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { accentColor, customColor } = useAccentColor();
   const [isClicked, setIsClicked] = useState(false);
 
   if (isLoading) {
@@ -46,9 +48,9 @@ export const PillLink = ({
 
   if (variant === "primary") {
     variantStyles = `
-      bg-[#0057FF] text-white
+      bg-primary text-white
       border-theme-light
-      hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)]
+      hover:bg-primary/80 hover:border-[rgba(255,255,255,0.3)]
     `;
   } else if (variant === "secondary") {
     variantStyles = `
