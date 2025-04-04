@@ -4,6 +4,7 @@ import React from "react";
 import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
 import SimilarPages from "./SimilarPages";
+import PageViewCounter from "./PageViewCounter";
 
 /**
  * PageFooter Component
@@ -42,10 +43,11 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         />
       </div>
 
-      {/* Word and character count */}
-      {!isEditing && content && (
-        <div className="mt-4 mb-6">
-          <WordCounter content={content} />
+      {/* Word and character count + view counter */}
+      {!isEditing && (
+        <div className="mt-4 mb-6 flex flex-wrap gap-4 items-center">
+          {content && <WordCounter content={content} />}
+          <PageViewCounter pageId={page.id} />
         </div>
       )}
 

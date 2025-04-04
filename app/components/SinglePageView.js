@@ -4,6 +4,8 @@ import { useRouter, useParams } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
+import { recordPageView } from "../firebase/pageViews";
+import PageViewCounter from "./PageViewCounter";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
 import { createEditor } from "slate";
@@ -139,6 +141,14 @@ function SinglePageView({ params }) {
       user.uid === page.userId
     )
   });
+
+  // Record page view once when the component mounts
+  useEffect(() => {
+    if (params.id && !isLoading && page && isPublic) {
+      // Only record views for public pages that have loaded
+      recordPageView(params.id, user?.uid);
+    }
+  }, [params.id, isLoading, page, isPublic, user?.uid]);
 
   useEffect(() => {
     if (params.id) {
