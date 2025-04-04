@@ -22,7 +22,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
     title: "Support WeWrite",
     description: "⚡️ Donations aren't built yet! Please support us on OpenCollective so we can get this built!⚡️",
     action: {
-      href: "https://opencollective.com/wewrite-app/contribute/backer-77100",
+      href: "https://opencollective.com/wewrite-app",
       label: "Support us",
       external: true
     }
