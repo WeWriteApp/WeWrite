@@ -1,7 +1,19 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import colorNamer from 'color-namer';
+
+// Try to import color-namer, but provide a fallback if it fails
+let colorNamer;
+try {
+  colorNamer = require('color-namer');
+} catch (error) {
+  console.warn('color-namer package not available, using fallback color naming');
+  // Simple fallback function that returns a generic name
+  colorNamer = (hex) => ({
+    ntc: [{ name: 'Custom Color' }],
+    basic: [{ name: 'Custom' }]
+  });
+}
 
 // Define available accent colors
 export const ACCENT_COLORS = {
@@ -26,17 +38,81 @@ export const ACCENT_COLOR_VALUES = {
 // Get a friendly name for a color
 export const getColorName = (hexColor) => {
   try {
-    // Get color names from the library
-    const names = colorNamer(hexColor);
+    // Basic color name mapping for common colors
+    const basicColorMap = {
+      '#FF0000': 'Red',
+      '#00FF00': 'Green',
+      '#0000FF': 'Blue',
+      '#FFFF00': 'Yellow',
+      '#FF00FF': 'Magenta',
+      '#00FFFF': 'Cyan',
+      '#FF5733': 'Coral',
+      '#9B59B6': 'Purple',
+      '#3498DB': 'Sky Blue',
+      '#1768FF': 'Royal Blue',
+      '#000000': 'Black',
+      '#FFFFFF': 'White'
+    };
 
-    // Try to get a name from the 'ntc' list (Name That Color)
-    if (names.ntc && names.ntc.length > 0) {
-      return names.ntc[0].name;
+    // Normalize hex color
+    const normalizedHex = hexColor.toUpperCase();
+
+    // Check if it's a basic color we know
+    if (basicColorMap[normalizedHex]) {
+      return basicColorMap[normalizedHex];
     }
 
-    // Fall back to the basic list
-    if (names.basic && names.basic.length > 0) {
-      return names.basic[0].name;
+    // Try to get color names from the library
+    try {
+      const names = colorNamer(hexColor);
+
+      // Try to get a name from the 'ntc' list (Name That Color)
+      if (names.ntc && names.ntc.length > 0) {
+        return names.ntc[0].name;
+      }
+
+      // Fall back to the basic list
+      if (names.basic && names.basic.length > 0) {
+        return names.basic[0].name;
+      }
+    } catch (libraryError) {
+      console.warn('Color naming library error:', libraryError);
+      // Continue to fallback
+    }
+
+    // Fallback: Generate a name based on RGB values
+    if (hexColor.startsWith('#') && (hexColor.length === 7 || hexColor.length === 4)) {
+      let r, g, b;
+
+      if (hexColor.length === 7) {
+        r = parseInt(hexColor.substring(1, 3), 16);
+        g = parseInt(hexColor.substring(3, 5), 16);
+        b = parseInt(hexColor.substring(5, 7), 16);
+      } else {
+        // Handle shorthand hex (#RGB)
+        r = parseInt(hexColor.charAt(1) + hexColor.charAt(1), 16);
+        g = parseInt(hexColor.charAt(2) + hexColor.charAt(2), 16);
+        b = parseInt(hexColor.charAt(3) + hexColor.charAt(3), 16);
+      }
+
+      // Determine dominant color
+      const max = Math.max(r, g, b);
+      let colorName = 'Custom';
+
+      if (r === g && g === b) {
+        const brightness = r / 255;
+        if (brightness > 0.8) return 'White';
+        if (brightness < 0.2) return 'Black';
+        return `Gray (${Math.round(brightness * 100)}%)`;
+      }
+
+      if (max === r) colorName = 'Red';
+      else if (max === g) colorName = 'Green';
+      else if (max === b) colorName = 'Blue';
+
+      // Add intensity
+      const intensity = Math.round((max / 255) * 100);
+      return `${colorName} (${intensity}%)`;
     }
 
     return 'Custom';

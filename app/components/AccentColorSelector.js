@@ -22,11 +22,15 @@ export default function AccentColorSelector() {
   };
 
   // Get color name for each custom color
-  const getCustomColorName = (colorValue) => {
+  const getCustomColorName = (colorValue, index) => {
     try {
-      return getColorName(colorValue);
+      // First try to get a name from the color naming function
+      const name = getColorName(colorValue);
+      return name || `Custom ${index + 1}`;
     } catch (error) {
-      return 'Custom';
+      console.warn('Error getting color name:', error);
+      // Fallback to numbered custom colors
+      return `Custom ${index + 1}`;
     }
   };
 
@@ -35,17 +39,17 @@ export default function AccentColorSelector() {
     { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
     { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
     {
-      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM1]),
+      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM1], 0),
       value: ACCENT_COLORS.CUSTOM1,
       color: customColors[ACCENT_COLORS.CUSTOM1]
     },
     {
-      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM2]),
+      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM2], 1),
       value: ACCENT_COLORS.CUSTOM2,
       color: customColors[ACCENT_COLORS.CUSTOM2]
     },
     {
-      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM3]),
+      name: getCustomColorName(customColors[ACCENT_COLORS.CUSTOM3], 2),
       value: ACCENT_COLORS.CUSTOM3,
       color: customColors[ACCENT_COLORS.CUSTOM3]
     }
