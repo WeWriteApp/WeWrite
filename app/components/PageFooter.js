@@ -2,6 +2,8 @@
 
 import React from "react";
 import { PageActions } from "./PageActions";
+import WordCounter from "./WordCounter";
+import SimilarPages from "./SimilarPages";
 
 /**
  * PageFooter Component
@@ -29,14 +31,28 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
-      <PageActions
-        page={page}
-        content={content}
-        isOwner={isOwner}
-        isEditing={isEditing}
-        setIsEditing={setIsEditing}
-        className="action-buttons-container"
-      />
+      <div className="mb-6">
+        <PageActions
+          page={page}
+          content={content}
+          isOwner={isOwner}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          className="action-buttons-container"
+        />
+      </div>
+
+      {/* Word and character count */}
+      {!isEditing && content && (
+        <div className="mt-4 mb-6">
+          <WordCounter content={content} />
+        </div>
+      )}
+
+      {/* Similar pages section */}
+      {!isEditing && (
+        <SimilarPages currentPage={page} maxPages={3} />
+      )}
     </div>
   );
 }
