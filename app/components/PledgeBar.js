@@ -458,7 +458,7 @@ const PledgeBar = () => {
           onPledgeChange={handlePledgeInteraction}
           onPledgeCustomAmount={handlePledgeCustomAmount}
           onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md border border-border shadow-lg rounded-lg py-2 px-4 hover:shadow-xl transition-shadow"
+          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
         />
       </div>
 

@@ -43,12 +43,21 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-sm sm:max-w-md mx-auto rounded-lg border-border dark:border-border animate-in zoom-in-95 duration-300"
+        className="max-w-sm sm:max-w-md mx-auto rounded-lg border-border dark:border-border"
         hideCloseButton
         style={{
-          animationTimingFunction: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)' // Spring-like animation
+          animation: 'dialog-slide-in-bounce 400ms cubic-bezier(0.22, 1, 0.36, 1)',
+          transformOrigin: 'center center'
         }}
       >
+        <style jsx global>{`
+          @keyframes dialog-slide-in-bounce {
+            0% { opacity: 0; transform: translateY(20px) scale(0.96); }
+            40% { opacity: 1; transform: translateY(-8px) scale(1.01); }
+            70% { transform: translateY(4px) scale(0.99); }
+            100% { transform: translateY(0) scale(1); }
+          }
+        `}</style>
         <DialogHeader>
           <DialogTitle>
             {content.title}
