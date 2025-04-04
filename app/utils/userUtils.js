@@ -13,17 +13,43 @@ import { auth } from "../firebase/auth";
  */
 export const getUsernameById = async (userId) => {
   if (!userId) return "Anonymous";
-  
+
   try {
-    // Try to get user from Firestore users collection
+    // First try to get user from Firestore users collection
     const userDocRef = doc(db, "users", userId);
     const userDoc = await getDoc(userDocRef);
-    
+
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      return userData.username || "Anonymous";
+      if (userData.username) {
+        console.log(`Found username in Firestore: ${userData.username} for user ${userId}`);
+        return userData.username;
+      }
     }
-    
+
+    // If not found in Firestore or no username, try RTDB
+    try {
+      const { getDatabase, ref, get } = await import('firebase/database');
+      const { app } = await import('../firebase/config');
+      const rtdb = getDatabase(app);
+      const rtdbUserRef = ref(rtdb, `users/${userId}`);
+      const rtdbSnapshot = await get(rtdbUserRef);
+
+      if (rtdbSnapshot.exists()) {
+        const rtdbUserData = rtdbSnapshot.val();
+        if (rtdbUserData.username) {
+          console.log(`Found username in RTDB: ${rtdbUserData.username} for user ${userId}`);
+          return rtdbUserData.username;
+        }
+        if (rtdbUserData.displayName) {
+          console.log(`Found displayName in RTDB: ${rtdbUserData.displayName} for user ${userId}`);
+          return rtdbUserData.displayName;
+        }
+      }
+    } catch (rtdbError) {
+      console.error("Error fetching username from RTDB:", rtdbError);
+    }
+
     return "Anonymous";
   } catch (error) {
     console.error("Error fetching username by ID:", error);
@@ -38,7 +64,7 @@ export const getUsernameById = async (userId) => {
 export const getCurrentUsername = async () => {
   const currentUser = auth.currentUser;
   if (!currentUser) return "Anonymous";
-  
+
   return getUsernameById(currentUser.uid);
 };
 
@@ -50,12 +76,12 @@ export const getCurrentUsername = async () => {
  */
 export const ensurePageUsername = async (pageData) => {
   if (!pageData) return null;
-  
+
   // If page already has a valid username, return as is
   if (pageData.username && pageData.username !== "Anonymous") {
     return pageData;
   }
-  
+
   // Otherwise, try to fetch the username based on userId
   if (pageData.userId) {
     try {
@@ -68,6 +94,6 @@ export const ensurePageUsername = async (pageData) => {
       console.error("Error ensuring page username:", error);
     }
   }
-  
+
   return pageData;
 };

@@ -18,9 +18,30 @@ const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
   const router = useRouter();
   const [pageCount, setPageCount] = useState(0);
-  
+  const [username, setUsername] = useState(profile.username || 'Anonymous');
+
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
+
+  // Fetch username if not provided
+  useEffect(() => {
+    const fetchUsername = async () => {
+      if (profile.uid && (!profile.username || profile.username === 'Anonymous')) {
+        try {
+          const { getUsernameById } = await import('../utils/userUtils');
+          const fetchedUsername = await getUsernameById(profile.uid);
+          if (fetchedUsername && fetchedUsername !== 'Anonymous') {
+            setUsername(fetchedUsername);
+            console.log(`Fetched username for profile: ${fetchedUsername}`);
+          }
+        } catch (error) {
+          console.error('Error fetching username for profile:', error);
+        }
+      }
+    };
+
+    fetchUsername();
+  }, [profile.uid, profile.username]);
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
@@ -33,18 +54,18 @@ const SingleProfileView = ({ profile }) => {
               </Button>
             </Link>
           </div>
-          
+
           {/* Centered title */}
           <div className="flex items-center justify-center">
-            <h1 className="text-3xl font-semibold">{profile.username}</h1>
+            <h1 className="text-3xl font-semibold">{username}</h1>
           </div>
-          
+
           {/* Settings button - only visible for current user */}
           <div className="flex-1 flex justify-end">
             {isCurrentUser && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-9 w-9 rounded-full hover:bg-[rgba(255,255,255,0.1)]"
                 onClick={() => router.push('/account')}
               >
@@ -54,23 +75,23 @@ const SingleProfileView = ({ profile }) => {
             {!isCurrentUser && <div className="w-8" />}
           </div>
         </div>
-        
+
         {!user && (
           <div className="bg-primary/10 text-primary border border-primary/20 rounded-md p-4 mb-4">
             <p>
-              You are viewing this profile as a guest. 
+              You are viewing this profile as a guest.
               <Link href="/auth/login" className="ml-2 font-medium underline">
                 Log in
-              </Link> 
+              </Link>
               to interact with {profile.username}'s pages.
             </p>
           </div>
         )}
-        
+
         <div className="my-4">
-          <TypeaheadSearch 
-            userId={profile.uid} 
-            placeholder={`Search ${profile.username}'s pages...`}
+          <TypeaheadSearch
+            userId={profile.uid}
+            placeholder={`Search ${username}'s pages...`}
           />
         </div>
         <UserProfileTabs profile={profile} />

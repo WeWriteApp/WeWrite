@@ -93,34 +93,24 @@ const TypeaheadSearch = ({
     if (!pages || pages.length === 0) return pages;
 
     try {
-      // Create a set of unique userIds
-      const userIds = [...new Set(pages.filter(page => page.userId).map(page => page.userId))];
+      // Import the getUsernameById function
+      const { getUsernameById } = await import('../utils/userUtils');
 
-      // Get users from the realtime database
-      const db = getDatabase(app);
-      const usersRef = ref(db, 'users');
-
-      // Get all users at once for efficiency
-      const usersData = await new Promise((resolve) => {
-        onValue(usersRef, (snapshot) => {
-          resolve(snapshot.val() || {});
-        }, {
-          onlyOnce: true
-        });
-      });
-
-      // Map the pages with user information
-      return pages.map(page => {
+      // Process pages in parallel with Promise.all for better performance
+      return await Promise.all(pages.map(async (page) => {
         // For user's own pages, ensure we have the userId
         if (!page.userId && page.isOwned && user) {
           page.userId = user.uid;
         }
 
-        // If we have a userId, try to get the username from the database
-        let username = 'Anonymous';
-        if (page.userId && usersData[page.userId]) {
-          const userData = usersData[page.userId];
-          username = userData.username || userData.displayName || 'Anonymous';
+        // If we have a userId, get the username using our utility function
+        let username = page.username || 'Anonymous';
+        if (page.userId) {
+          try {
+            username = await getUsernameById(page.userId);
+          } catch (usernameError) {
+            console.error(`Error getting username for user ${page.userId}:`, usernameError);
+          }
         }
 
         return {
@@ -128,7 +118,7 @@ const TypeaheadSearch = ({
           userId: page.userId || (user ? user.uid : null),
           username: username
         };
-      });
+      }));
     } catch (error) {
       console.error("Error processing page usernames:", error);
 
