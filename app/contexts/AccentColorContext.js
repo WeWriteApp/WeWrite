@@ -5,22 +5,16 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 // Define available accent colors
 export const ACCENT_COLORS = {
   RED: 'red',
-  ORANGE: 'orange',
-  YELLOW: 'yellow',
   GREEN: 'green',
   BLUE: 'blue',
-  PURPLE: 'purple',
   CUSTOM: 'custom'
 };
 
 // Color values for each accent color
 export const ACCENT_COLOR_VALUES = {
   [ACCENT_COLORS.RED]: 'hsl(0, 84%, 60%)',
-  [ACCENT_COLORS.ORANGE]: 'hsl(30, 84%, 60%)',
-  [ACCENT_COLORS.YELLOW]: 'hsl(60, 84%, 60%)',
   [ACCENT_COLORS.GREEN]: 'hsl(120, 84%, 60%)',
   [ACCENT_COLORS.BLUE]: '#1768FF',
-  [ACCENT_COLORS.PURPLE]: 'hsl(270, 84%, 60%)',
   [ACCENT_COLORS.CUSTOM]: '#1768FF' // Default to blue for custom
 };
 

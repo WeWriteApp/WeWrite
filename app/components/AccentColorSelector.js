@@ -77,19 +77,16 @@ export default function AccentColorSelector() {
   };
 
   const colorOptions = [
-    { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
-    { name: 'Orange', value: ACCENT_COLORS.ORANGE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.ORANGE] },
-    { name: 'Yellow', value: ACCENT_COLORS.YELLOW, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.YELLOW] },
-    { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
     { name: 'Blue', value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE] },
-    { name: 'Purple', value: ACCENT_COLORS.PURPLE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.PURPLE] },
+    { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
+    { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
     { name: 'Custom', value: ACCENT_COLORS.CUSTOM, color: customColor }
   ];
 
   return (
     <div className="mb-8">
       <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
-      <div className="grid grid-cols-3 gap-2 mb-3">
+      <div className="grid grid-cols-2 gap-2 mb-3">
         {colorOptions.map((option) => (
           <button
             key={option.value}
