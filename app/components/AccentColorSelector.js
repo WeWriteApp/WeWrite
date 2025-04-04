@@ -1,20 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES, getTextColorForBackground, getColorName } from '../contexts/AccentColorContext';
 import { cn } from '../lib/utils';
 import { Label } from './ui/label';
 import { Palette } from 'lucide-react';
 
 export default function AccentColorSelector() {
-  const { accentColor, customColors, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
-
-  // State to track custom color names
-  const [customColorNames, setCustomColorNames] = useState({
-    [ACCENT_COLORS.CUSTOM1]: getColorNameWithFallback(customColors[ACCENT_COLORS.CUSTOM1], 0),
-    [ACCENT_COLORS.CUSTOM2]: getColorNameWithFallback(customColors[ACCENT_COLORS.CUSTOM2], 1),
-    [ACCENT_COLORS.CUSTOM3]: getColorNameWithFallback(customColors[ACCENT_COLORS.CUSTOM3], 2)
-  });
+  const { accentColor, customColors, colorNames, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
 
   const handleColorSelect = (color) => {
     console.log('Color selected:', color);
@@ -25,51 +18,27 @@ export default function AccentColorSelector() {
     const hexColor = e.target.value;
     console.log('Color picker changed:', hexColor, 'for slot:', customSlot);
 
-    // Update the color name immediately
-    const index = customSlot === ACCENT_COLORS.CUSTOM1 ? 0 :
-                 customSlot === ACCENT_COLORS.CUSTOM2 ? 1 : 2;
-    const newName = getColorNameWithFallback(hexColor, index);
-
-    // Update the name in state
-    setCustomColorNames(prev => ({
-      ...prev,
-      [customSlot]: newName
-    }));
-
-    // Update the color value
+    // Update the color value and name in the context
     setCustomColor(customSlot, hexColor);
     changeAccentColor(customSlot, hexColor);
   };
-
-  // Get color name for each custom color with fallback
-  function getColorNameWithFallback(colorValue, index) {
-    try {
-      // First try to get a name from the color naming function
-      const name = getColorName(colorValue);
-      return name || `Custom ${index + 1}`;
-    } catch (error) {
-      console.warn('Error getting color name:', error);
-      // Fallback to numbered custom colors
-      return `Custom ${index + 1}`;
-    }
-  }
 
   const colorOptions = [
     { name: 'Blue', value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE] },
     { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
     { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
     {
-      name: customColorNames[ACCENT_COLORS.CUSTOM1],
+      name: colorNames[ACCENT_COLORS.CUSTOM1] || 'Custom 1',
       value: ACCENT_COLORS.CUSTOM1,
       color: customColors[ACCENT_COLORS.CUSTOM1]
     },
     {
-      name: customColorNames[ACCENT_COLORS.CUSTOM2],
+      name: colorNames[ACCENT_COLORS.CUSTOM2] || 'Custom 2',
       value: ACCENT_COLORS.CUSTOM2,
       color: customColors[ACCENT_COLORS.CUSTOM2]
     },
     {
-      name: customColorNames[ACCENT_COLORS.CUSTOM3],
+      name: colorNames[ACCENT_COLORS.CUSTOM3] || 'Custom 3',
       value: ACCENT_COLORS.CUSTOM3,
       color: customColors[ACCENT_COLORS.CUSTOM3]
     }

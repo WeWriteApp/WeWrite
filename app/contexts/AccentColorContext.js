@@ -194,6 +194,12 @@ export function AccentColorProvider({ children }) {
     [ACCENT_COLORS.CUSTOM2]: ACCENT_COLOR_VALUES[ACCENT_COLORS.CUSTOM2],
     [ACCENT_COLORS.CUSTOM3]: ACCENT_COLOR_VALUES[ACCENT_COLORS.CUSTOM3]
   });
+  // Store color names
+  const [colorNames, setColorNames] = useState({
+    [ACCENT_COLORS.CUSTOM1]: 'Custom 1',
+    [ACCENT_COLORS.CUSTOM2]: 'Custom 2',
+    [ACCENT_COLORS.CUSTOM3]: 'Custom 3'
+  });
   const [textColor, setTextColor] = useState('#ffffff'); // Default text color
 
   // Function to convert hex to HSL
@@ -314,6 +320,27 @@ export function AccentColorProvider({ children }) {
         setCustomColors(newCustomColors);
       }
 
+      // Load saved color names
+      const savedColorNames = JSON.parse(localStorage.getItem('customColorNames') || '{}');
+      const newColorNames = { ...colorNames };
+      let colorNamesUpdated = false;
+
+      // Check each color name
+      Object.keys(newColorNames).forEach(key => {
+        if (savedColorNames[key]) {
+          newColorNames[key] = savedColorNames[key];
+          colorNamesUpdated = true;
+        } else if (newCustomColors[key]) {
+          // If we have a color but no saved name, generate one
+          newColorNames[key] = getColorName(newCustomColors[key]);
+          colorNamesUpdated = true;
+        }
+      });
+
+      if (colorNamesUpdated) {
+        setColorNames(newColorNames);
+      }
+
       // Determine the color value to use
       if (colorToUse.startsWith('custom') && newCustomColors[colorToUse]) {
         valueToUse = newCustomColors[colorToUse];
@@ -360,9 +387,16 @@ export function AccentColorProvider({ children }) {
   const setCustomColor = (customSlot, colorValue) => {
     if (!customSlot.startsWith('custom')) return;
 
+    // Update the custom color
     const newCustomColors = { ...customColors, [customSlot]: colorValue };
     setCustomColors(newCustomColors);
     localStorage.setItem('customAccentColors', JSON.stringify(newCustomColors));
+
+    // Update the color name
+    const colorName = getColorName(colorValue);
+    const newColorNames = { ...colorNames, [customSlot]: colorName };
+    setColorNames(newColorNames);
+    localStorage.setItem('customColorNames', JSON.stringify(newColorNames));
 
     // If this is the currently selected color, update the CSS variables
     if (accentColor === customSlot) {
@@ -375,6 +409,7 @@ export function AccentColorProvider({ children }) {
       value={{
         accentColor,
         customColors,
+        colorNames,
         textColor,
         changeAccentColor,
         setCustomColor,
