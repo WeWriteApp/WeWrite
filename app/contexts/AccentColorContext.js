@@ -181,8 +181,9 @@ export const getTextColorForBackground = (bgColor) => {
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
   // Return white for dark backgrounds, black for light backgrounds
-  // Using a higher threshold (0.55) to ensure better contrast for primary buttons
-  return luminance < 0.55 ? '#ffffff' : '#000000';
+  // Using a higher threshold (0.65) to ensure better contrast for primary buttons
+  // This ensures that even medium-dark colors will have white text for better readability
+  return luminance < 0.65 ? '#ffffff' : '#000000';
 };
 
 const AccentColorContext = createContext();
@@ -291,6 +292,12 @@ export function AccentColorProvider({ children }) {
 
     // Ensure primary button text has good contrast
     document.documentElement.style.setProperty('--primary-foreground', newTextColor);
+
+    // Also set the destructive button foreground to ensure contrast
+    document.documentElement.style.setProperty('--destructive-foreground', '#ffffff');
+
+    // Set button text colors explicitly for better contrast
+    document.documentElement.style.setProperty('--btn-text-color', newTextColor);
   };
 
   // Load saved accent color from localStorage on mount
