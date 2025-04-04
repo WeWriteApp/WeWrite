@@ -36,9 +36,10 @@ const TypeaheadSearch = ({
   placeholder = "Search...",
   radioSelection = false,
   selectedId = null,
-  editableOnly = false // New prop to filter for editable pages only
+  editableOnly = false, // New prop to filter for editable pages only
+  initialSearch = "" // New prop to set initial search value
 }) => {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
   const [pages, setPages] = useState({
@@ -56,17 +57,17 @@ const TypeaheadSearch = ({
   // Fetch user profile for a given userId
   const fetchUserProfile = async (userId) => {
     if (!userId) return null;
-    
+
     // Return from cache if available
     if (userProfiles[userId]) {
       return userProfiles[userId];
     }
-    
+
     try {
       // Get users from the realtime database
       const db = getDatabase(app);
       const userRef = ref(db, `users/${userId}`);
-      
+
       return new Promise((resolve) => {
         onValue(userRef, (snapshot) => {
           const userData = snapshot.val();
@@ -86,19 +87,19 @@ const TypeaheadSearch = ({
       return null;
     }
   };
-  
+
   // Process the fetched pages to include proper usernames
   const processPagesWithUsernames = async (pages) => {
     if (!pages || pages.length === 0) return pages;
-    
+
     try {
       // Create a set of unique userIds
       const userIds = [...new Set(pages.filter(page => page.userId).map(page => page.userId))];
-      
+
       // Get users from the realtime database
       const db = getDatabase(app);
       const usersRef = ref(db, 'users');
-      
+
       // Get all users at once for efficiency
       const usersData = await new Promise((resolve) => {
         onValue(usersRef, (snapshot) => {
@@ -107,21 +108,21 @@ const TypeaheadSearch = ({
           onlyOnce: true
         });
       });
-      
+
       // Map the pages with user information
       return pages.map(page => {
         // For user's own pages, ensure we have the userId
         if (!page.userId && page.isOwned && user) {
           page.userId = user.uid;
         }
-        
+
         // If we have a userId, try to get the username from the database
         let username = 'Anonymous';
         if (page.userId && usersData[page.userId]) {
           const userData = usersData[page.userId];
           username = userData.username || userData.displayName || 'Anonymous';
         }
-        
+
         return {
           ...page,
           userId: page.userId || (user ? user.uid : null),
@@ -130,7 +131,7 @@ const TypeaheadSearch = ({
       });
     } catch (error) {
       console.error("Error processing page usernames:", error);
-      
+
       // Fall back to returning the original pages if there was an error
       return pages.map(page => ({
         ...page,
@@ -173,20 +174,20 @@ const TypeaheadSearch = ({
 
         const queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
         console.log('Making API request to:', queryUrl);
-        
+
         // Add timeout to prevent infinite loading
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (increased from 10s)
-        
+
         // Add more comprehensive error handling for fetch
         try {
-          const response = await fetch(queryUrl, { 
+          const response = await fetch(queryUrl, {
             signal: controller.signal,
             cache: 'no-store' // Prevent caching of search results
           });
-          
+
           clearTimeout(timeoutId);
-          
+
           if (!response.ok) {
             console.error('TypeaheadSearch - API returned error:', response.status);
             const errorText = await response.text();
@@ -196,16 +197,16 @@ const TypeaheadSearch = ({
 
           const data = await response.json();
           console.log('TypeaheadSearch - API response:', data);
-          
+
           // Check if we received an error message
           if (data.error) {
             console.error('TypeaheadSearch - API returned error object:', data.error);
           }
-          
+
           // Process the results with usernames
           if (data && data.pages) {
             const processedPages = await processPagesWithUsernames(data.pages);
-            
+
             // Set the pages state with categorized results
             setPages({
               userPages: processedPages.filter(page => page.type === 'user' || page.isOwned),
@@ -392,7 +393,7 @@ const TypeaheadSearch = ({
                   onClick={() => {
                     // Indicate that we're creating a new page
                     setIsSearching(true);
-                    
+
                     // Use the createPage function to actually create a page in Firebase
                     import('../firebase/database').then(async ({ createPage }) => {
                       try {
@@ -402,7 +403,7 @@ const TypeaheadSearch = ({
                           setIsSearching(false);
                           return;
                         }
-                        
+
                         // Create a proper page with the search term as the title
                         const newPageData = {
                           title: search,
@@ -412,21 +413,21 @@ const TypeaheadSearch = ({
                             { type: "paragraph", children: [{ text: "" }] }
                           ])
                         };
-                        
+
                         // Actually create the page in the database
                         const newPageId = await createPage(newPageData);
-                        
+
                         if (newPageId) {
                           console.log("Created new page:", newPageId, "with title:", search);
-                          
+
                           // Return the newly created page with proper ID and title
-                          onSelect({ 
-                            id: newPageId, 
+                          onSelect({
+                            id: newPageId,
                             title: search,
                             isPublic: true,
                             userId: user.uid,
                           });
-                          
+
                           // Redirect to the edit view of the newly created page
                           router.push(`/pages/${newPageId}?edit=true`);
                         } else {
@@ -455,8 +456,8 @@ const TypeaheadSearch = ({
 const SingleItemLink = ({ page, search }) => {
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
-      <PillLink 
-        href={`/pages/${page.id}`} 
+      <PillLink
+        href={`/pages/${page.id}`}
         key={page.id}
         isPublic={page.isPublic}
         className="flex-shrink-0"
@@ -474,20 +475,20 @@ const SingleItemLink = ({ page, search }) => {
 
 const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSelected = false }) => {
   // Ensure we have a valid username to display (handle NULL values properly)
-  const displayName = page.username && page.username !== 'NULL' 
-    ? page.username 
+  const displayName = page.username && page.username !== 'NULL'
+    ? page.username
     : 'Anonymous';
-    
+
   if (radioSelection) {
     return (
-      <div 
+      <div
         className="flex items-center space-x-2 p-2 rounded hover:bg-accent/50 cursor-pointer"
         onClick={() => onSelect(page)}
       >
-        <input 
-          type="radio" 
-          id={`page-${page.id}`} 
-          name="page" 
+        <input
+          type="radio"
+          id={`page-${page.id}`}
+          name="page"
           className="h-4 w-4 text-primary border-muted-foreground"
           checked={isSelected}
           onChange={() => onSelect(page)}
@@ -501,7 +502,7 @@ const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSe
       </div>
     );
   }
-  
+
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button

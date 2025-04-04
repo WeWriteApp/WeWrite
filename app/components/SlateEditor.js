@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
+import TypeaheadSearch from "./TypeaheadSearch";
 
 // CSS for editor modes - ensures consistent styling with TextView
 const editorStyles = `
@@ -418,6 +419,50 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
   const handleSelection = item => {
     try {
+      // Handle creating a new page
+      if (item.isNewPage) {
+        // Create a new page with the given title
+        const newPageUrl = `/pages/new?title=${encodeURIComponent(item.pageTitle)}`;
+
+        if (selectedNodePath) {
+          // If editing an existing link
+          Transforms.setNodes(
+            editor,
+            {
+              ...item,
+              type: 'link',
+              url: newPageUrl,
+              children: [{ text: item.text }]
+            },
+            { at: selectedNodePath }
+          );
+        } else if (editor.selection) {
+          // If creating a new link
+          if (isLinkActive(editor)) {
+            unwrapLink(editor);
+          }
+
+          if (Range.isCollapsed(editor.selection)) {
+            // If no text is selected, insert the link text
+            Transforms.insertNodes(editor, {
+              type: 'link',
+              url: newPageUrl,
+              pageId: 'new',
+              pageTitle: item.pageTitle,
+              children: [{ text: item.text }],
+            });
+          } else {
+            // If text is selected, convert it to a link
+            wrapLink(editor, newPageUrl, 'new', item.pageTitle);
+          }
+        }
+
+        // Open the new page in a new tab
+        window.open(newPageUrl, '_blank');
+        return;
+      }
+
+      // Handle normal link selection
       if (selectedNodePath) {
         // If editing an existing link
         Transforms.setNodes(
@@ -705,10 +750,12 @@ const isLinkActive = (editor) => {
   }
 };
 
-// Simple LinkEditor component
+// Enhanced LinkEditor component with TypeaheadSearch
 const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', initialPageId = null, initialPageTitle = '' }) => {
   const [text, setText] = useState(initialText);
   const [url, setUrl] = useState('');
+  const [mode, setMode] = useState('page'); // 'page' or 'url'
+  const [searchText, setSearchText] = useState('');
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -717,7 +764,17 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
     }
   }, []);
 
-  const handleSubmit = (e) => {
+  // Handle selection from TypeaheadSearch
+  const handlePageSelect = (page) => {
+    onSelect({
+      text: text || page.title,
+      pageId: page.id,
+      pageTitle: page.title
+    });
+  };
+
+  // Handle URL submission
+  const handleUrlSubmit = (e) => {
     e.preventDefault();
 
     if (!url && !text) {
@@ -728,20 +785,49 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
     onSelect({
       text: text || url,
       url: url,
-      pageId: initialPageId,
-      pageTitle: initialPageTitle
+      pageId: null,
+      pageTitle: null
+    });
+  };
+
+  // Handle creating a new page
+  const handleCreatePage = () => {
+    onSelect({
+      text: searchText,
+      pageId: 'new',
+      pageTitle: searchText,
+      isNewPage: true
     });
   };
 
   return (
     <div
-      className="absolute z-[1000] bg-gray-900 border border-gray-700 rounded-md shadow-lg p-3 w-64"
+      className="absolute z-[1000] bg-background border border-border rounded-md shadow-lg p-3"
       style={{
         top: position.top + 'px',
         left: position.left + 'px',
+        width: '320px',
+        maxWidth: '90vw'
       }}
     >
-      <form onSubmit={handleSubmit}>
+      <div className="mb-3">
+        <div className="flex space-x-2 mb-2">
+          <button
+            type="button"
+            onClick={() => setMode('page')}
+            className={`px-3 py-1 text-sm rounded ${mode === 'page' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+          >
+            Link to Page
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('url')}
+            className={`px-3 py-1 text-sm rounded ${mode === 'url' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+          >
+            External URL
+          </button>
+        </div>
+
         <div className="mb-2">
           <input
             ref={inputRef}
@@ -749,34 +835,83 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
             placeholder="Link text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+            className="w-full p-2 bg-background border border-input rounded text-sm"
           />
         </div>
-        <div className="mb-3">
-          <input
-            type="text"
-            placeholder="URL"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-          />
-        </div>
-        <div className="flex justify-end space-x-2">
-          <button
-            type="button"
-            onClick={() => setShowLinkEditor(false)}
-            className="px-3 py-1 bg-gray-800 text-white text-sm rounded hover:bg-gray-700"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-500"
-          >
-            Save
-          </button>
-        </div>
-      </form>
+
+        {mode === 'url' ? (
+          <form onSubmit={handleUrlSubmit}>
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="URL"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="w-full p-2 bg-background border border-input rounded text-sm"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowLinkEditor(false)}
+                className="px-3 py-1 bg-muted text-sm rounded hover:bg-muted/80"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-1 bg-primary text-primary-foreground text-sm rounded hover:bg-primary/90"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div>
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="Search for a page..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full p-2 bg-background border border-input rounded text-sm"
+              />
+            </div>
+
+            {/* Always show create page button when there's search text */}
+            {searchText.length > 0 && (
+              <div className="mb-3">
+                <button
+                  onClick={handleCreatePage}
+                  className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center text-sm"
+                >
+                  Create new "{searchText}" page
+                </button>
+              </div>
+            )}
+
+            <div className="max-h-60 overflow-y-auto">
+              {searchText.length > 0 && (
+                <TypeaheadSearch
+                  onSelect={handlePageSelect}
+                  placeholder="Search for a page..."
+                  initialSearch={searchText}
+                />
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-3">
+              <button
+                type="button"
+                onClick={() => setShowLinkEditor(false)}
+                className="px-3 py-1 bg-muted text-sm rounded hover:bg-muted/80"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
