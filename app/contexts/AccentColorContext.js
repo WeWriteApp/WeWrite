@@ -372,6 +372,12 @@ export function AccentColorProvider({ children }) {
 
       // Save all custom colors to localStorage
       localStorage.setItem('customAccentColors', JSON.stringify(newCustomColors));
+
+      // Update the color name
+      const colorName = getColorName(customColorValue);
+      const newColorNames = { ...colorNames, [color]: colorName };
+      setColorNames(newColorNames);
+      localStorage.setItem('customColorNames', JSON.stringify(newColorNames));
     } else if (color.startsWith('custom')) {
       // Use existing custom color
       valueToUse = customColors[color] || ACCENT_COLOR_VALUES[color];

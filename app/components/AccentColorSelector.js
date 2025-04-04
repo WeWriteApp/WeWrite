@@ -14,6 +14,15 @@ export default function AccentColorSelector() {
     changeAccentColor(color);
   };
 
+  // Force re-render when colorNames change
+  const [, forceUpdate] = useState({});
+
+  useEffect(() => {
+    // This will trigger a re-render when colorNames change
+    forceUpdate({});
+    console.log('Color names updated:', colorNames);
+  }, [colorNames]);
+
   const handleColorPickerChange = (customSlot) => (e) => {
     const hexColor = e.target.value;
     console.log('Color picker changed:', hexColor, 'for slot:', customSlot);
@@ -23,7 +32,8 @@ export default function AccentColorSelector() {
     changeAccentColor(customSlot, hexColor);
   };
 
-  const colorOptions = [
+  // Use useMemo to recalculate colorOptions when dependencies change
+  const colorOptions = React.useMemo(() => [
     { name: 'Blue', value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE] },
     { name: 'Red', value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED] },
     { name: 'Green', value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN] },
@@ -42,7 +52,7 @@ export default function AccentColorSelector() {
       value: ACCENT_COLORS.CUSTOM3,
       color: customColors[ACCENT_COLORS.CUSTOM3]
     }
-  ];
+  ], [colorNames, customColors]);
 
   return (
     <div className="mb-8">
