@@ -63,7 +63,7 @@ export default function AccentColorSelector() {
     setTempColor(newColor);
   };
 
-  const handleCustomColorApply = (e) => {
+  const handleCustomColorApply = () => {
     console.log('Applying custom color:', tempColor);
     setCustomColor(tempColor);
     changeAccentColor(ACCENT_COLORS.CUSTOM, tempColor);
@@ -136,46 +136,89 @@ export default function AccentColorSelector() {
               <Label htmlFor="custom-color" className="text-sm font-medium mb-2 block text-muted-foreground">
                 Custom Color
               </Label>
-              <div className="flex items-center gap-3 p-2 bg-accent/30 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-accent/30 rounded-lg hover:bg-accent/50 transition-colors">
                 <div
-                  className="w-10 h-10 rounded-md cursor-pointer border border-input shadow-sm flex items-center justify-center"
+                  className="w-10 h-10 rounded-md cursor-pointer border border-input shadow-sm flex items-center justify-center relative group"
                   style={{ backgroundColor: tempColor }}
                 >
-                  <Palette className="h-5 w-5 opacity-0 hover:opacity-70 transition-opacity" style={{ color: getTextColorForBackground(tempColor) }} />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                    <Palette className="h-5 w-5 text-white drop-shadow-md" />
+                  </div>
                 </div>
-                <Input
-                  id="custom-color"
-                  type="text"
-                  value={tempColor}
-                  onChange={handleCustomColorChange}
-                  onBlur={handleCustomColorApply}
-                  placeholder="#1768FF or hsl(217, 91%, 60%)"
-                  className="h-10 text-sm flex-1 border-input/50"
-                />
+                <div className="flex-1 flex flex-col">
+                  <Input
+                    id="custom-color"
+                    type="text"
+                    value={tempColor}
+                    onChange={handleCustomColorChange}
+                    onBlur={handleCustomColorApply}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCustomColorApply();
+                        e.target.blur();
+                      }
+                    }}
+                    placeholder="#1768FF or hsl(217, 91%, 60%)"
+                    className="h-10 text-sm border-input/50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Click the color swatch to open color picker</p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1 px-1">Click the color swatch to open the color picker</p>
             </div>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-4 border border-input shadow-md">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="color-picker" className="text-sm font-medium">
-                Pick a custom color
-              </Label>
-              <div className="relative">
-                <input
-                  ref={colorPickerRef}
-                  id="color-picker"
-                  type="color"
-                  value={tempColor.startsWith('#') ? tempColor : '#3b82f6'}
-                  onChange={handleColorPickerChange}
-                  className="w-full h-40 cursor-pointer rounded-md"
+              <div className="flex items-center justify-between">
+                <Label htmlFor="color-picker" className="text-sm font-medium">
+                  Pick a custom color
+                </Label>
+                <div
+                  className="w-6 h-6 rounded-full border border-input flex items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => setIsColorPickerOpen(false)}
+                >
+                  <span className="text-xs">×</span>
+                </div>
+              </div>
+
+              <div className="relative bg-gradient-to-br from-white to-gray-200 dark:from-gray-700 dark:to-gray-900 p-4 rounded-lg">
+                {/* Color preview */}
+                <div
+                  className="w-full h-16 rounded-md mb-3 shadow-inner border border-input"
+                  style={{ backgroundColor: tempColor }}
                 />
-                <div className="mt-2 flex justify-between items-center">
-                  <div
-                    className="w-8 h-8 rounded-md border border-input"
-                    style={{ backgroundColor: tempColor }}
+
+                {/* Color picker */}
+                <div className="relative">
+                  <input
+                    ref={colorPickerRef}
+                    id="color-picker"
+                    type="color"
+                    value={tempColor.startsWith('#') ? tempColor : '#3b82f6'}
+                    onChange={handleColorPickerChange}
+                    className="w-full h-40 cursor-pointer rounded-md"
                   />
-                  <span className="text-sm font-mono">{tempColor}</span>
+                  <Palette className="absolute top-2 right-2 h-5 w-5 text-white drop-shadow-md pointer-events-none" />
+                </div>
+
+                {/* Color info */}
+                <div className="mt-3 flex justify-between items-center bg-background/80 backdrop-blur-sm p-2 rounded-md border border-input">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded-md border border-input shadow-sm"
+                      style={{ backgroundColor: tempColor }}
+                    />
+                    <span className="text-sm font-mono">{tempColor}</span>
+                  </div>
+
+                  <button
+                    className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                    onClick={() => {
+                      handleCustomColorApply();
+                      setIsColorPickerOpen(false);
+                    }}
+                  >
+                    Apply
+                  </button>
                 </div>
               </div>
             </div>
