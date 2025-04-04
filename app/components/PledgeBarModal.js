@@ -9,6 +9,8 @@ import {
   DialogClose,
   DialogHeader,
   DialogFooter,
+  DialogOverlay,
+  DialogPortal,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { SocialIcon } from "./ui/social-icon";
@@ -42,22 +44,32 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="max-w-sm sm:max-w-md mx-auto rounded-lg border-border dark:border-border"
-        hideCloseButton
-        style={{
-          animation: 'dialog-slide-in-bounce 400ms cubic-bezier(0.22, 1, 0.36, 1)',
-          transformOrigin: 'center center'
-        }}
-      >
-        <style jsx global>{`
-          @keyframes dialog-slide-in-bounce {
-            0% { opacity: 0; transform: translateY(20px) scale(0.96); }
-            40% { opacity: 1; transform: translateY(-8px) scale(1.01); }
-            70% { transform: translateY(4px) scale(0.99); }
-            100% { transform: translateY(0) scale(1); }
-          }
-        `}</style>
+      <style jsx global>{`
+        .support-modal-overlay {
+          animation: overlay-fade-in 200ms ease-out forwards !important;
+        }
+
+        @keyframes overlay-fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        .support-modal {
+          animation: elegant-fade-in 250ms ease-out forwards !important;
+        }
+
+        @keyframes elegant-fade-in {
+          0% { opacity: 0; transform: translate(-50%, -45%); }
+          100% { opacity: 1; transform: translate(-50%, -50%); }
+        }
+      `}</style>
+      <DialogPortal>
+        <DialogOverlay className="support-modal-overlay" />
+        <DialogContent
+          className="max-w-sm sm:max-w-md mx-auto rounded-lg border-border dark:border-border support-modal"
+          hideCloseButton
+        >
+
         <DialogHeader>
           <DialogTitle>
             {content.title}
@@ -129,6 +141,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
           </DialogFooter>
         </div>
       </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };
