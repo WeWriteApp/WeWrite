@@ -43,6 +43,7 @@ export const createReplyContent = ({
       // and the second paragraph empty for the user to start typing their reply
       return [
         {
+          // First paragraph with attribution line
           type: "paragraph",
           children: [
             { text: `Reply to ` },

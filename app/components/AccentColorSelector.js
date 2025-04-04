@@ -27,9 +27,14 @@ export default function AccentColorSelector() {
     const hexColor = e.target.value;
     console.log('Color picker changed:', hexColor, 'for slot:', customSlot);
 
-    // Update the color value and name in the context
+    // First update the custom color which will also update the name
     setCustomColor(customSlot, hexColor);
-    changeAccentColor(customSlot, hexColor);
+
+    // Then change the accent color to use this custom color
+    // We don't pass the color value here to avoid overriding the name
+    setTimeout(() => {
+      changeAccentColor(customSlot);
+    }, 0);
   };
 
   // Use useMemo to recalculate colorOptions when dependencies change

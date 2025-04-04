@@ -181,7 +181,8 @@ export const getTextColorForBackground = (bgColor) => {
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
   // Return white for dark backgrounds, black for light backgrounds
-  return luminance < 0.5 ? '#ffffff' : '#000000';
+  // Using a higher threshold (0.55) to ensure better contrast for primary buttons
+  return luminance < 0.55 ? '#ffffff' : '#000000';
 };
 
 const AccentColorContext = createContext();
@@ -287,6 +288,9 @@ export function AccentColorProvider({ children }) {
     const newTextColor = getTextColorForBackground(colorValue);
     setTextColor(newTextColor);
     document.documentElement.style.setProperty('--accent-text', newTextColor);
+
+    // Ensure primary button text has good contrast
+    document.documentElement.style.setProperty('--primary-foreground', newTextColor);
   };
 
   // Load saved accent color from localStorage on mount
@@ -393,16 +397,24 @@ export function AccentColorProvider({ children }) {
   const setCustomColor = (customSlot, colorValue) => {
     if (!customSlot.startsWith('custom')) return;
 
+    console.log('Setting custom color:', { customSlot, colorValue });
+
     // Update the custom color
     const newCustomColors = { ...customColors, [customSlot]: colorValue };
     setCustomColors(newCustomColors);
     localStorage.setItem('customAccentColors', JSON.stringify(newCustomColors));
 
-    // Update the color name
+    // Get the color name using the color naming library
     const colorName = getColorName(colorValue);
+    console.log('Generated color name:', colorName, 'for color:', colorValue);
+
+    // Update the color name in state
     const newColorNames = { ...colorNames, [customSlot]: colorName };
     setColorNames(newColorNames);
+
+    // Save to localStorage
     localStorage.setItem('customColorNames', JSON.stringify(newColorNames));
+    console.log('Updated color names:', newColorNames);
 
     // If this is the currently selected color, update the CSS variables
     if (accentColor === customSlot) {

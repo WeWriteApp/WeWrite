@@ -180,8 +180,8 @@ export function PageActions({
           initialContent
         });
 
-        // Ensure username param is encoded correctly
-        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${encodeURIComponent(replyInitiatorUsername)}`);
+        // Ensure username param is encoded correctly and include replyTo parameter
+        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${encodeURIComponent(replyInitiatorUsername)}&replyTo=${page.id}`);
       } catch (error) {
         console.error("Error navigating to new page:", error);
         toast.error("Failed to create reply");
