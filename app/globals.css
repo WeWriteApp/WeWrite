@@ -46,17 +46,17 @@
 
 /* Larger version of the loader */
 .loader-lg {
-  font-size: 20px;
+  font-size: 16px;
 }
 
 /* Medium version of the loader */
 .loader-md {
-  font-size: 15px;
+  font-size: 12px;
 }
 
 /* Small version of the loader */
 .loader-sm {
-  font-size: 8px;
+  font-size: 6px;
 }
 
 /* Theme-specific loader colors */

@@ -76,6 +76,12 @@ export const PillLink = ({
 
     // Show loading state immediately
     if (typeof window !== 'undefined') {
+      // Remove any existing loading overlays first
+      const existingOverlay = document.getElementById('navigation-loading-overlay');
+      if (existingOverlay) {
+        existingOverlay.remove();
+      }
+
       // Add a loading overlay
       const loadingOverlay = document.createElement('div');
       loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
@@ -86,6 +92,22 @@ export const PillLink = ({
       loadingOverlay.appendChild(spinner);
 
       document.body.appendChild(loadingOverlay);
+
+      // Set a timeout to remove the overlay after 10 seconds (failsafe)
+      setTimeout(() => {
+        const overlay = document.getElementById('navigation-loading-overlay');
+        if (overlay) {
+          overlay.remove();
+        }
+      }, 10000);
+
+      // Add event listener to remove the overlay when the page has loaded
+      window.addEventListener('load', () => {
+        const overlay = document.getElementById('navigation-loading-overlay');
+        if (overlay) {
+          overlay.remove();
+        }
+      }, { once: true });
 
       // Don't prevent default - let the navigation happen naturally
     }

@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from '../contexts/AccentColorContext';
+import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES, getTextColorForBackground } from '../contexts/AccentColorContext';
 import { cn } from '../lib/utils';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Palette } from 'lucide-react';
 
 export default function AccentColorSelector() {
   const { accentColor, customColor, changeAccentColor, setCustomColor } = useAccentColor();
@@ -86,67 +87,114 @@ export default function AccentColorSelector() {
   return (
     <div className="mb-8">
       <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {colorOptions.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => handleColorSelect(option.value)}
-            className={cn(
-              "flex flex-col items-center justify-center p-2 rounded-md transition-colors",
-              accentColor === option.value ? "ring-2 ring-primary" : "hover:bg-accent"
-            )}
-            style={{
-              backgroundColor: option.value === ACCENT_COLORS.CUSTOM
-                ? 'transparent'
-                : `${option.color}20` // 20% opacity version of the color
-            }}
-          >
-            <div
-              className="w-6 h-6 rounded-full mb-1"
-              style={{ backgroundColor: option.color }}
-            />
-            <span className="text-xs">{option.name}</span>
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {colorOptions.map((option) => {
+          // Calculate text color based on background color for better contrast
+          const textColor = option.value !== ACCENT_COLORS.CUSTOM
+            ? getTextColorForBackground(option.color)
+            : 'currentColor';
+
+          return (
+            <button
+              key={option.value}
+              onClick={() => handleColorSelect(option.value)}
+              className={cn(
+                "relative flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
+                accentColor === option.value
+                  ? "ring-2 ring-primary shadow-md"
+                  : "hover:bg-accent/50 hover:shadow-sm"
+              )}
+              style={{
+                backgroundColor: option.value === ACCENT_COLORS.CUSTOM
+                  ? 'transparent'
+                  : `${option.color}15` // 15% opacity version of the color
+              }}
+            >
+              {/* Color circle */}
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-full shadow-sm flex items-center justify-center",
+                  option.value === ACCENT_COLORS.CUSTOM ? "border border-input" : ""
+                )}
+                style={{
+                  backgroundColor: option.color,
+                }}
+              >
+                {option.value === ACCENT_COLORS.CUSTOM && (
+                  <Palette className="h-4 w-4" style={{ color: textColor }} />
+                )}
+              </div>
+
+              {/* Text */}
+              <span
+                className="text-sm font-medium"
+                style={{
+                  color: option.value !== ACCENT_COLORS.CUSTOM && option.value === accentColor
+                    ? textColor
+                    : 'currentColor'
+                }}
+              >
+                {option.name}
+              </span>
+
+              {/* Selected indicator */}
+              {accentColor === option.value && (
+                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary"></div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {showCustomInput && (
         <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
           <PopoverTrigger asChild>
-            <div className="px-2 mt-2">
-              <Label htmlFor="custom-color" className="text-xs mb-1 block">
-                Custom Color (click to open color picker)
+            <div className="px-3 mt-3">
+              <Label htmlFor="custom-color" className="text-sm font-medium mb-2 block text-muted-foreground">
+                Custom Color
               </Label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 p-2 bg-accent/30 rounded-lg">
                 <div
-                  className="w-8 h-8 rounded-md cursor-pointer border border-input"
+                  className="w-10 h-10 rounded-md cursor-pointer border border-input shadow-sm flex items-center justify-center"
                   style={{ backgroundColor: tempColor }}
-                />
+                >
+                  <Palette className="h-5 w-5 opacity-0 hover:opacity-70 transition-opacity" style={{ color: getTextColorForBackground(tempColor) }} />
+                </div>
                 <Input
                   id="custom-color"
                   type="text"
                   value={tempColor}
                   onChange={handleCustomColorChange}
                   onBlur={handleCustomColorApply}
-                  placeholder="hsl(217, 91%, 60%) or #3b82f6"
-                  className="h-8 text-xs flex-1"
+                  placeholder="#1768FF or hsl(217, 91%, 60%)"
+                  className="h-10 text-sm flex-1 border-input/50"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-1 px-1">Click the color swatch to open the color picker</p>
             </div>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="color-picker" className="text-xs">
-                Pick a color
+          <PopoverContent className="w-auto p-4 border border-input shadow-md">
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="color-picker" className="text-sm font-medium">
+                Pick a custom color
               </Label>
-              <input
-                ref={colorPickerRef}
-                id="color-picker"
-                type="color"
-                value={tempColor.startsWith('#') ? tempColor : '#3b82f6'}
-                onChange={handleColorPickerChange}
-                className="w-32 h-32 cursor-pointer"
-              />
+              <div className="relative">
+                <input
+                  ref={colorPickerRef}
+                  id="color-picker"
+                  type="color"
+                  value={tempColor.startsWith('#') ? tempColor : '#3b82f6'}
+                  onChange={handleColorPickerChange}
+                  className="w-full h-40 cursor-pointer rounded-md"
+                />
+                <div className="mt-2 flex justify-between items-center">
+                  <div
+                    className="w-8 h-8 rounded-md border border-input"
+                    style={{ backgroundColor: tempColor }}
+                  />
+                  <span className="text-sm font-mono">{tempColor}</span>
+                </div>
+              </div>
             </div>
           </PopoverContent>
         </Popover>
