@@ -8,24 +8,24 @@ import { updateUsername } from '../firebase/usernameHistory';
 export default function UsernameWarningBanner() {
   const { user, setUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Check if user exists and has no username or a generated username
-  const needsUsername = user && 
+  const needsUsername = user &&
     (!user.username || user.username.startsWith('user_') || user.username === '');
-  
+
   if (!needsUsername) return null;
-  
+
   const handleUsernameSet = async (username) => {
     try {
       // Update username in Firebase
       await updateUsername(user.uid, username);
-      
+
       // Update local user state
       setUser({
         ...user,
         username
       });
-      
+
       // Close modal
       setIsModalOpen(false);
     } catch (error) {
@@ -33,10 +33,10 @@ export default function UsernameWarningBanner() {
       alert('Failed to set username. Please try again.');
     }
   };
-  
+
   return (
     <>
-      <div 
+      <div
         className="w-full bg-red-600 text-white py-3 px-4 flex justify-between items-center cursor-pointer"
         onClick={() => setIsModalOpen(true)}
       >
@@ -47,8 +47,8 @@ export default function UsernameWarningBanner() {
           Click to set username
         </div>
       </div>
-      
-      <UsernameModal 
+
+      <UsernameModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         email={user?.email || ''}
@@ -56,4 +56,4 @@ export default function UsernameWarningBanner() {
       />
     </>
   );
-}'
+}
