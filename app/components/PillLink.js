@@ -93,13 +93,28 @@ export const PillLink = ({
 
       document.body.appendChild(loadingOverlay);
 
-      // Set a timeout to remove the overlay after 10 seconds (failsafe)
+      // Set a shorter timeout to remove the overlay (3 seconds)
       setTimeout(() => {
         const overlay = document.getElementById('navigation-loading-overlay');
         if (overlay) {
           overlay.remove();
         }
-      }, 10000);
+      }, 3000);
+
+      // Create a MutationObserver to detect when content has loaded
+      const observer = new MutationObserver((mutations) => {
+        // Check if main content has loaded
+        if (document.querySelector('main') && document.querySelector('main').children.length > 0) {
+          const overlay = document.getElementById('navigation-loading-overlay');
+          if (overlay) {
+            overlay.remove();
+          }
+          observer.disconnect();
+        }
+      });
+
+      // Start observing the document with the configured parameters
+      observer.observe(document.body, { childList: true, subtree: true });
 
       // Add event listener to remove the overlay when the page has loaded
       window.addEventListener('load', () => {
@@ -107,6 +122,7 @@ export const PillLink = ({
         if (overlay) {
           overlay.remove();
         }
+        observer.disconnect();
       }, { once: true });
 
       // Don't prevent default - let the navigation happen naturally

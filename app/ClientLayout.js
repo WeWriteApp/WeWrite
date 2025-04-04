@@ -15,10 +15,12 @@ import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 
-// ZoomControl removed
-
-// Dynamically import WindsurfOverlay with no SSR
+// Dynamically import components with no SSR
 const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
+  ssr: false
+});
+
+const UsernameWarningBanner = dynamic(() => import('./components/UsernameWarningBanner'), {
   ssr: false
 });
 
@@ -44,6 +46,7 @@ export default function ClientLayout({ children }) {
                       <LineSettingsProvider>
                       <Drawer />
                       <div className="flex flex-col min-h-screen bg-background pb-8">
+                        {!isAuthPage && <UsernameWarningBanner />}
                         <main className="flex-grow">
                           {children}
                         </main>

@@ -99,48 +99,31 @@ export default function AccentColorSelector() {
               key={option.value}
               onClick={() => handleColorSelect(option.value)}
               className={cn(
-                "relative flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
-                accentColor === option.value
-                  ? "ring-2 ring-primary shadow-md"
-                  : "hover:bg-accent/50 hover:shadow-sm"
+                "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
+                "hover:bg-accent hover:text-accent-foreground",
+                accentColor === option.value && "bg-accent text-accent-foreground"
               )}
-              style={{
-                backgroundColor: option.value === ACCENT_COLORS.CUSTOM
-                  ? 'transparent'
-                  : `${option.color}15` // 15% opacity version of the color
-              }}
             >
-              {/* Color circle */}
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-full shadow-sm flex items-center justify-center",
-                  option.value === ACCENT_COLORS.CUSTOM ? "border border-input" : ""
+              <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
+                {accentColor === option.value && (
+                  <div className="w-3 h-3 rounded-full bg-primary" />
                 )}
-                style={{
-                  backgroundColor: option.color,
-                }}
+              </div>
+
+              {/* Color indicator */}
+              <div
+                className="w-4 h-4 rounded-full mr-2"
+                style={{ backgroundColor: option.color }}
               >
                 {option.value === ACCENT_COLORS.CUSTOM && (
-                  <Palette className="h-4 w-4" style={{ color: textColor }} />
+                  <Palette className="h-4 w-4 text-white" />
                 )}
               </div>
 
               {/* Text */}
-              <span
-                className="text-sm font-medium"
-                style={{
-                  color: option.value !== ACCENT_COLORS.CUSTOM && option.value === accentColor
-                    ? textColor
-                    : 'currentColor'
-                }}
-              >
+              <span className="text-sm">
                 {option.name}
               </span>
-
-              {/* Selected indicator */}
-              {accentColor === option.value && (
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary"></div>
-              )}
             </button>
           );
         })}
