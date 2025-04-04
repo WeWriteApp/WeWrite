@@ -15,6 +15,11 @@ import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 
+// Dynamically import ZoomControl with no SSR
+const ZoomControl = dynamic(() => import('./components/ZoomControl'), {
+  ssr: false
+});
+
 // Dynamically import WindsurfOverlay with no SSR
 const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
   ssr: false
@@ -45,6 +50,7 @@ export default function ClientLayout({ children }) {
                         <main className="flex-grow">
                           {children}
                         </main>
+                        <ZoomControl />
                       </div>
                       {process.env.NODE_ENV === 'development' && (
                         <>
