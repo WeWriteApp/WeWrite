@@ -87,7 +87,7 @@ export default function AccentColorSelector() {
   return (
     <div className="mb-8">
       <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="space-y-1 mb-4">
         {colorOptions.map((option) => {
           // Calculate text color based on background color for better contrast
           const textColor = option.value !== ACCENT_COLORS.CUSTOM
@@ -99,7 +99,7 @@ export default function AccentColorSelector() {
               key={option.value}
               onClick={() => handleColorSelect(option.value)}
               className={cn(
-                "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
+                "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors",
                 "hover:bg-accent hover:text-accent-foreground",
                 accentColor === option.value && "bg-accent text-accent-foreground"
               )}
