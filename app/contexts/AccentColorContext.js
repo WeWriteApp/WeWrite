@@ -130,7 +130,6 @@ export function AccentColorProvider({ children }) {
     document.documentElement.style.setProperty('--primary-h', h);
     document.documentElement.style.setProperty('--primary-s', `${s}%`);
     document.documentElement.style.setProperty('--primary-l', `${l}%`);
-  }
   };
 
   // Change accent color and save to localStorage

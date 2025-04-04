@@ -92,8 +92,8 @@ export const PillLink = ({
     <div className="relative">
       {/* Link with squeeze animation */}
       <motion.div
-        animate={isClicked ? { scale: 0.95 } : { scale: 1 }}
-        transition={{ duration: 0.15, ease: "easeInOut" }}
+        animate={isClicked ? { scale: 0.92 } : { scale: 1 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
       >
         <Link
           href={href}
@@ -118,12 +118,12 @@ export const PillLink = ({
 
       {/* Pulse effect that radiates outward */}
       {isClicked && (
-        <div className="absolute -inset-4 pointer-events-none">
+        <div className="absolute -inset-6 pointer-events-none">
           {/* First pulse ring - more aggressive */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0.7, borderWidth: 2 }}
-            animate={{ scale: 1.8, opacity: 0, borderWidth: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            initial={{ scale: 0.95, opacity: 0.8, borderWidth: 2 }}
+            animate={{ scale: 2.2, opacity: 0, borderWidth: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className={`
               absolute inset-4
               rounded-[8px]
@@ -134,9 +134,9 @@ export const PillLink = ({
 
           {/* Second pulse ring - more aggressive and faster */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0.5, borderWidth: 2 }}
-            animate={{ scale: 2.2, opacity: 0, borderWidth: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+            initial={{ scale: 0.95, opacity: 0.6, borderWidth: 2 }}
+            animate={{ scale: 2.8, opacity: 0, borderWidth: 1 }}
+            transition={{ duration: 1.0, ease: "easeOut", delay: 0.1 }}
             className={`
               absolute inset-4
               rounded-[8px]
@@ -147,9 +147,9 @@ export const PillLink = ({
 
           {/* Third pulse ring - for extra effect */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0.3, borderWidth: 2 }}
-            animate={{ scale: 2.5, opacity: 0, borderWidth: 1 }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
+            initial={{ scale: 0.95, opacity: 0.4, borderWidth: 2 }}
+            animate={{ scale: 3.2, opacity: 0, borderWidth: 1 }}
+            transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
             className={`
               absolute inset-4
               rounded-[8px]
@@ -162,10 +162,10 @@ export const PillLink = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 1.5 }}
             onAnimationComplete={() => {
               // Reset the animation state if the user navigates back
-              setTimeout(() => setIsClicked(false), 100);
+              setTimeout(() => setIsClicked(false), 200);
             }}
           />
         </div>

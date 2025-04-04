@@ -246,7 +246,7 @@ export default function PageHeader({
           </div>
           {/* Scroll Progress Bar */}
           <div
-            className="absolute bottom-0 left-0 h-0.5 bg-blue-500 transition-all duration-120"
+            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-120"
             style={{ width: `${scrollProgress}%` }}
           />
         </div>
