@@ -6,9 +6,9 @@ import { Eye } from 'lucide-react';
 
 /**
  * PageViewCounter Component
- * 
+ *
  * Displays the total view count for a page and a sparkline of views over the past 24 hours.
- * 
+ *
  * @param {Object} props
  * @param {string} props.pageId - The ID of the page
  */
@@ -16,15 +16,22 @@ export default function PageViewCounter({ pageId }) {
   const [viewData, setViewData] = useState({ total: 0, hourly: [] });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use a ref to track if we've already fetched data
+  const dataFetched = React.useRef(false);
+
   useEffect(() => {
+    // Skip if no pageId or if we've already fetched data
+    if (!pageId || dataFetched.current) return;
+
     const fetchViewData = async () => {
-      if (!pageId) return;
-      
       setIsLoading(true);
       try {
+        // Mark that we're fetching data
+        dataFetched.current = true;
+
         // Get view data for the past 24 hours
         const data = await getPageViewsLast24Hours(pageId);
-        
+
         // If we don't have hourly data but we have a page, get the total views
         if (data.total === 0) {
           const totalViews = await getPageTotalViews(pageId);
@@ -34,6 +41,8 @@ export default function PageViewCounter({ pageId }) {
         }
       } catch (error) {
         console.error("Error fetching view data:", error);
+        // Reset the flag if there was an error so we can try again
+        dataFetched.current = false;
       } finally {
         setIsLoading(false);
       }
@@ -57,7 +66,7 @@ export default function PageViewCounter({ pageId }) {
 
     const hourlyData = viewData.hourly;
     const maxValue = Math.max(...hourlyData, 1); // Ensure we don't divide by zero
-    
+
     // Calculate points for the path
     const points = hourlyData.map((value, index) => {
       const x = padding + (index * (availableWidth / (hourlyData.length - 1)));
@@ -72,7 +81,7 @@ export default function PageViewCounter({ pageId }) {
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <Eye className="h-4 w-4" />
       <span>{isLoading ? '...' : viewData.total} views</span>
-      
+
       {/* Sparkline */}
       <svg width={width} height={height} className="text-primary">
         <path

@@ -142,11 +142,18 @@ function SinglePageView({ params }) {
     )
   });
 
-  // Record page view once when the component mounts
+  // Use a ref to track if we've already recorded a view for this page
+  const viewRecorded = useRef(false);
+
+  // Record page view once when the page has loaded
   useEffect(() => {
-    if (params.id && !isLoading && page && isPublic) {
-      // Only record views for public pages that have loaded
+    // Only proceed if we haven't recorded a view yet, the page is loaded, public, and we have the data
+    if (!viewRecorded.current && !isLoading && page && isPublic) {
+      // Mark that we've recorded the view to prevent duplicate recordings
+      viewRecorded.current = true;
+      // Record the page view
       recordPageView(params.id, user?.uid);
+      console.log('Recording page view for', params.id);
     }
   }, [params.id, isLoading, page, isPublic, user?.uid]);
 
