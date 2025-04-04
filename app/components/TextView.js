@@ -193,6 +193,10 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       // Small delay to show the active line highlight before entering edit mode
       setTimeout(() => {
         setIsEditing(true);
+        // Show a toast notification to indicate edit mode
+        if (typeof window !== 'undefined' && window.toast) {
+          window.toast.info('Entering edit mode');
+        }
       }, 150);
     }
   };
@@ -203,11 +207,21 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         effectiveMode === LINE_MODES.NORMAL ? 'items-start' : ''
       } ${
         isScrolled ? 'pb-16' : ''
+      } ${
+        canEdit ? 'relative' : ''
       }`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
+      onClick={() => canEdit && setIsEditing && setIsEditing(true)}
+      title={canEdit ? "Click anywhere to edit" : ""}
     >
+      {canEdit && (
+        <div className="absolute top-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 rounded-bl-md">
+          Click to edit
+        </div>
+      )}
+
       {!parsedContents && !isSearch && (
         <div className="p-6 text-muted-foreground">No content available</div>
       )}
@@ -439,7 +453,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
   return (
     <motion.div
       ref={paragraphRef}
-      className={`group relative ${spacingClass} ${canEdit ? 'cursor-text' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
+      className={`group relative ${spacingClass} ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -451,6 +465,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
       onClick={handleClick}
       onMouseEnter={() => canEdit && setLineHovered(true)}
       onMouseLeave={() => setLineHovered(false)}
+      title={canEdit ? "Click to edit" : ""}
     >
       {/* Normal mode - paragraph numbers create indentation */}
       <div className="flex">
@@ -475,7 +490,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
 
         {/* Paragraph content */}
         <div className="flex-1">
-          <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''}`}>
+          <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
             {node.children && node.children.map((child, i) => renderChild(child, i))}
             {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
           </p>
