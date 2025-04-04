@@ -467,6 +467,7 @@ function SinglePageView({ params }) {
                     content={editorState}
                     viewMode={lineMode}
                     onRenderComplete={handlePageFullyRendered}
+                    setIsEditing={setIsEditing}
                   />
                 </PageProvider>
               </div>

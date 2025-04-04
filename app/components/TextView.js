@@ -1,5 +1,5 @@
 import React from "react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { usePage } from "../contexts/PageContext";
 import SecureSyntaxHighlighter from "./SecureSyntaxHighlighter";
 import { useLineSettings } from "../contexts/LineSettingsContext";
@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import { getPageById } from "../firebase/database";
 import { LineSettingsProvider, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
+import { AuthContext } from "../providers/AuthProvider";
 
 /**
  * TextView Component - Renders text content with different paragraph modes
@@ -80,13 +81,24 @@ const getPageTitle = async (pageId) => {
   return null;
 };
 
-const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete }) => {
+const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete, setIsEditing }) => {
   const [parsedContents, setParsedContents] = useState(null);
   const [language, setLanguage] = useState(null);
   const { lineMode } = useLineSettings();
   const [loadedParagraphs, setLoadedParagraphs] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeLineIndex, setActiveLineIndex] = useState(null);
+  const { user } = useContext(AuthContext);
+  const { page } = usePage();
+
+  // Check if current user can edit this page
+  const canEdit = Boolean(
+    setIsEditing &&
+    user?.uid &&
+    page?.userId &&
+    user.uid === page.userId
+  );
 
   // Use lineMode from context as the primary mode
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
@@ -174,6 +186,17 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     }
   };
 
+  // Handle click to edit
+  const handleActiveLine = (index) => {
+    setActiveLineIndex(index);
+    if (canEdit && setIsEditing) {
+      // Small delay to show the active line highlight before entering edit mode
+      setTimeout(() => {
+        setIsEditing(true);
+      }, 150);
+    }
+  };
+
   return (
     <motion.div
       className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
@@ -195,13 +218,16 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
           language={language}
           loadedParagraphs={loadedParagraphs}
           effectiveMode={effectiveMode}
+          canEdit={canEdit}
+          activeLineIndex={activeLineIndex}
+          onActiveLine={handleActiveLine}
         />
       )}
     </motion.div>
   );
 };
 
-export const RenderContent = ({ contents, language, loadedParagraphs, effectiveMode }) => {
+export const RenderContent = ({ contents, language, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null }) => {
   // Try to use the page context, but provide a fallback if it's not available
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
@@ -296,7 +322,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
       <div className="w-full text-left">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
-            {loadedParagraphs.includes(index) && renderNode(node, mode, index)}
+            {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine)}
           </React.Fragment>
         ))}
       </div>
@@ -304,18 +330,28 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   }
 
   // If it's a single node, render it directly
-  return renderNode(contents, mode, 0);
+  return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine);
 };
 
 // Render content based on node type
-const renderNode = (node, mode, index) => {
+const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null) => {
   if (!node) return null;
 
   // Only use ParagraphNode for normal mode
   if (mode === LINE_MODES.NORMAL) {
     switch (node.type) {
       case nodeTypes.PARAGRAPH:
-        return <ParagraphNode key={index} node={node} effectiveMode={mode} index={index} />;
+        return (
+          <ParagraphNode
+            key={index}
+            node={node}
+            effectiveMode={mode}
+            index={index}
+            canEdit={canEdit}
+            isActive={activeLineIndex === index}
+            onActiveLine={onActiveLine}
+          />
+        );
       case nodeTypes.CODE_BLOCK:
         return <CodeBlockNode key={index} node={node} index={index} />;
       case nodeTypes.HEADING:
@@ -341,7 +377,7 @@ const renderNode = (node, mode, index) => {
  * - Standard text size (1rem/16px)
  * - Proper spacing between paragraphs
  */
-const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
+const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = false, isActive = false, onActiveLine = null }) => {
   const { lineMode } = useLineSettings();
   // Use lineMode from context if available, otherwise fall back to effectiveMode prop
   const mode = lineMode || (effectiveMode === 'dense' ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
@@ -354,6 +390,13 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
 
   // Only used for normal mode now
   const spacingClass = 'mb-2';
+
+  // Handle click to edit
+  const handleClick = () => {
+    if (canEdit && onActiveLine) {
+      onActiveLine(index);
+    }
+  };
 
   // Helper function to render child nodes
   const renderChild = (child, i) => {
@@ -396,7 +439,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
   return (
     <motion.div
       ref={paragraphRef}
-      className={`group relative ${spacingClass}`}
+      className={`group relative ${spacingClass} ${canEdit ? 'cursor-text' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -405,6 +448,9 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
         mass: ANIMATION_CONSTANTS.SPRING_MASS
       }}
+      onClick={handleClick}
+      onMouseEnter={() => canEdit && setLineHovered(true)}
+      onMouseLeave={() => setLineHovered(false)}
     >
       {/* Normal mode - paragraph numbers create indentation */}
       <div className="flex">
@@ -429,8 +475,9 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0 }) => {
 
         {/* Paragraph content */}
         <div className="flex-1">
-          <p className={`text-left ${TEXT_SIZE}`}>
+          <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''}`}>
             {node.children && node.children.map((child, i) => renderChild(child, i))}
+            {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
           </p>
         </div>
       </div>
