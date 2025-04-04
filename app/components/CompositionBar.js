@@ -83,7 +83,7 @@ const CompositionBar = ({
               )}
 
               <div
-                className="relative h-[56px] rounded-md overflow-hidden border-theme-medium bg-background shadow-sm cursor-pointer"
+                className="relative h-[56px] rounded-none overflow-hidden border border-gray-800 bg-black shadow-none cursor-pointer"
                 onClick={() => {
                   // If we have a subscription limit and would exceed it, show the limit modal
                   if (wouldExceedLimit && subscriptionAmount > 0) {
@@ -141,7 +141,7 @@ const CompositionBar = ({
                 {/* Controls */}
                 <div className="flex justify-between items-center h-full relative z-10">
                   <div
-                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 text-foreground/80 cursor-pointer border-r border-theme-medium"
+                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-gray-900 text-white cursor-pointer border-r border-gray-800"
                     onClick={() => {
                       console.log("Minus button clicked", {
                         onPledgeChange: !!onPledgeChange,
@@ -163,27 +163,27 @@ const CompositionBar = ({
                   </div>
 
                   <div
-                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground group transition-all hover:bg-foreground/5"
+                    className="flex-1 flex justify-center items-center cursor-pointer text-white group transition-all hover:bg-gray-900"
                     onClick={() => {
                       if (onPledgeCustomAmount) {
                         onPledgeCustomAmount(pledge.id);
                       }
                     }}
                   >
-                    <span className="text-sm opacity-70 mr-1">$</span>
+                    <span className="text-sm text-white mr-1">$</span>
                     <span className={cn(
-                      "text-3xl font-normal transition-all group-hover:scale-105",
-                      isExceeded ? "text-orange-600 dark:text-orange-400" : ""
+                      "text-3xl font-normal transition-all group-hover:scale-105 text-white",
+                      isExceeded ? "text-orange-400" : ""
                     )}>
-                      {isNaN(pledgeAmount) ? '0.10' : Number(pledgeAmount).toFixed(2)}
+                      {isNaN(pledgeAmount) ? '0.00' : Number(pledgeAmount).toFixed(2)}
                     </span>
-                    <span className="text-sm opacity-70 ml-1">/mo</span>
+                    <span className="text-sm text-white ml-1">/mo</span>
                   </div>
 
                   <div
                     className={cn(
-                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 cursor-pointer border-l border-theme-medium",
-                      wouldExceedLimit ? "text-orange-500/70" : "text-foreground/80"
+                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-gray-900 cursor-pointer border-l border-gray-800",
+                      wouldExceedLimit ? "text-orange-500/70" : "text-white"
                     )}
                     onClick={() => {
                       console.log("Plus button clicked", {
