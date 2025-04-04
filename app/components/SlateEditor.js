@@ -303,8 +303,23 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
       switch (element.type) {
         case ELEMENT_TYPES.LINK:
+          // Check if it's an external link (starts with http:// or https:// or www.)
+          const isExternal = element.url && (
+            element.url.startsWith('http://') ||
+            element.url.startsWith('https://') ||
+            element.url.startsWith('www.')
+          );
+
           return (
-            <a {...attributes} href={element.url || '#'} data-page-id={element.pageId} data-page-title={element.pageTitle} className="editor-link">
+            <a
+              {...attributes}
+              href={element.url || '#'}
+              data-page-id={element.pageId}
+              data-page-title={element.pageTitle}
+              className="editor-link"
+              target={isExternal ? "_blank" : undefined}
+              rel={isExternal ? "noopener noreferrer" : undefined}
+            >
               {children}
             </a>
           );
@@ -668,12 +683,27 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   const { url } = element;
   const editor = useSlate();
 
+  // Check if it's an external link (starts with http:// or https:// or www.)
+  const isExternal = url && (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('www.')
+  );
+
   const handleClick = (e) => {
     if (e.ctrlKey || e.metaKey) {
       // Allow default behavior (open link) when Ctrl/Cmd is pressed
       return;
     }
 
+    // If it's an external link and not in edit mode, open in new tab
+    if (isExternal && !ReactEditor.isFocused(editor)) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      e.preventDefault();
+      return;
+    }
+
+    // Otherwise, open the link editor
     e.preventDefault();
     openLinkEditor(element, ReactEditor.findPath(editor, element));
   };
@@ -683,6 +713,8 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
       {...attributes}
       href={url}
       className="text-blue-500 hover:text-blue-600 underline"
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={handleClick}
     >
       <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
