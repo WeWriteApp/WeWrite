@@ -6,7 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../firebase/config';
-import ClientPage from '../pages/[id]/client-page';
+import ClientPage from '../pages/[id]/client-page.tsx';
 import { Loader } from '../components/Loader';
 
 export default function GlobalIDPage({ params }) {
@@ -30,7 +30,7 @@ export default function GlobalIDPage({ params }) {
         const rtdb = getDatabase(app);
         const userRef = ref(rtdb, `users/${id}`);
         const userSnapshot = await get(userRef);
-        
+
         if (userSnapshot.exists()) {
           // Redirect to the user page
           router.replace(`/u/${id}`);
@@ -40,7 +40,7 @@ export default function GlobalIDPage({ params }) {
         // If not a page or user, check if it's a group
         const groupRef = ref(rtdb, `groups/${id}`);
         const groupSnapshot = await get(groupRef);
-        
+
         if (groupSnapshot.exists()) {
           // Redirect to the group page
           router.replace(`/g/${id}`);
