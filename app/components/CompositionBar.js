@@ -82,7 +82,19 @@ const CompositionBar = ({
                 </div>
               )}
 
-              <div className="relative h-[56px] rounded-full overflow-hidden border-theme-medium bg-background shadow-sm">
+              <div
+                className="relative h-[56px] rounded-full overflow-hidden border-theme-medium bg-background shadow-sm cursor-pointer"
+                onClick={() => {
+                  // If we have a subscription limit and would exceed it, show the limit modal
+                  if (wouldExceedLimit && subscriptionAmount > 0) {
+                    setActivePledgeId(pledge.id);
+                    setShowSubscriptionLimitModal(true);
+                  } else if (onPledgeChange) {
+                    // Otherwise, trigger the pledge change handler which will show the support modal
+                    onPledgeChange(pledge.id, 0);
+                  }
+                }}
+              >
                 {/* Other pledges background - always show regardless of percentage */}
                 <div
                   className="h-full absolute left-0 bg-muted"

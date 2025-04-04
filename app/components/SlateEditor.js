@@ -338,12 +338,18 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           }
 
           return (
-            <div {...attributes} className="flex items-start py-1 relative">
-              {/* Paragraph number - non-editable */}
+            <div {...attributes} className="flex py-1 relative">
+              {/* Paragraph number - non-editable, aligned with first line of text */}
               <span
                 contentEditable={false}
-                className="text-muted-foreground text-sm w-6 mr-2 text-right flex-shrink-0 select-none"
-                style={{ userSelect: 'none', pointerEvents: 'none' }}
+                className="text-muted-foreground text-sm w-6 mr-2 text-right flex-shrink-0 select-none flex items-center justify-end"
+                style={{
+                  userSelect: 'none',
+                  pointerEvents: 'none',
+                  height: '1.5rem',
+                  alignSelf: 'flex-start',
+                  paddingTop: '0.15rem'
+                }}
               >
                 {paragraphNumber}
               </span>
