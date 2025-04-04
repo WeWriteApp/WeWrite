@@ -56,24 +56,42 @@ html[style*="transform: scale"] {
     overflow-x: hidden;
   }
 
-  /* Make all containers fluid */
-  & .container, & .max-w-md, & .max-w-lg, & .max-w-xl, & .max-w-2xl, & .max-w-3xl, & .max-w-4xl, & .max-w-5xl, & .max-w-6xl, & .max-w-7xl {
+  /* Hide sidebar when zoomed */
+  & .sidebar {
+    display: none !important;
+  }
+
+  /* Make all containers fluid and full-width */
+  & .container, & .max-w-md, & .max-w-lg, & .max-w-xl, & .max-w-2xl, & .max-w-3xl, & .max-w-4xl, & .max-w-5xl, & .max-w-6xl, & .max-w-7xl,
+  & .w-full, & [class*="max-w-"], & [class*="w-"] {
     width: 100% !important;
     max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Ensure page content extends to edges */
+  & .page-content, & .single-page-view, & main, & article {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
 
   /* Make all flex containers wrap */
   & .flex {
-    flex-wrap: wrap;
+    flex-wrap: wrap !important;
   }
 
   /* Ensure text wraps properly */
   & p, & h1, & h2, & h3, & h4, & h5, & h6, & span, & div, & button, & a {
-    max-width: 100%;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
   }
 
   /* Ensure grid layouts adapt */
@@ -83,8 +101,14 @@ html[style*="transform: scale"] {
 
   /* Ensure images scale properly */
   & img {
-    max-width: 100%;
-    height: auto;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Ensure header is full width */
+  & header, & nav, & footer {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 

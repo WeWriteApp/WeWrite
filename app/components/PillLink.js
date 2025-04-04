@@ -126,9 +126,11 @@ export const PillLink = ({
             transition={{ duration: 0.8, ease: "easeOut" }}
             className={`
               absolute inset-4
-              rounded-[8px]
+              rounded-[16px]
               border-2 border-solid
               border-primary
+              blur-[1px]
+              shadow-[0_0_10px_rgba(var(--primary-h),var(--primary-s),var(--primary-l),0.5)]
             `}
           />
 
@@ -139,9 +141,11 @@ export const PillLink = ({
             transition={{ duration: 1.0, ease: "easeOut", delay: 0.1 }}
             className={`
               absolute inset-4
-              rounded-[8px]
+              rounded-[16px]
               border-2 border-solid
               border-primary
+              blur-[2px]
+              shadow-[0_0_15px_rgba(var(--primary-h),var(--primary-s),var(--primary-l),0.4)]
             `}
           />
 
@@ -152,9 +156,11 @@ export const PillLink = ({
             transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
             className={`
               absolute inset-4
-              rounded-[8px]
+              rounded-[20px]
               border-2 border-solid
               border-primary
+              blur-[3px]
+              shadow-[0_0_20px_rgba(var(--primary-h),var(--primary-s),var(--primary-l),0.3)]
             `}
           />
 

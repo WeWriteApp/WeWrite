@@ -443,7 +443,7 @@ function SinglePageView({ params }) {
         groupId={groupId}
         groupName={groupName}
       />
-      <div className="pb-24 px-2 sm:px-4 md:px-6">
+      <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
         {isEditing ? (
           <PageProvider>
             <LineSettingsProvider>
@@ -461,7 +461,7 @@ function SinglePageView({ params }) {
         ) : (
           <>
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
-              <div className={`page-content ${lineMode === LINE_MODES.DENSE ? 'max-w-full break-words' : ''}`}>
+              <div className="page-content w-full max-w-none break-words px-1">
                 <PageProvider>
                   <TextView
                     content={editorState}

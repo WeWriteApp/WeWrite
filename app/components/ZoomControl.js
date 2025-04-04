@@ -77,8 +77,8 @@ export default function ZoomControl() {
             document.documentElement.style.transformOrigin = 'top center';
             document.documentElement.style.height = `${10000 / newZoomLevel * 100}px`;
 
-            // Show zoom controls when user zooms
-            setShowControls(newZoomLevel !== 100);
+            // Always show controls when zoomed
+            setShowControls(true);
 
             // Update last pinch distance
             lastPinchDistanceRef.current = currentDistance;
@@ -136,7 +136,7 @@ export default function ZoomControl() {
   if (zoomLevel === 100) return null;
 
   return (
-    <div className="fixed bottom-20 right-6 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-20 right-6 z-[9999] flex flex-col gap-2">
       <Button
         variant="outline"
         size="icon"
@@ -159,7 +159,7 @@ export default function ZoomControl() {
 
       <Button
         variant="outline"
-        className="bg-background/80 backdrop-blur-sm shadow-lg border-theme-medium"
+        className="bg-background/80 backdrop-blur-sm shadow-lg border-theme-medium text-primary font-medium"
         onClick={resetZoom}
         aria-label="Reset Zoom"
       >
