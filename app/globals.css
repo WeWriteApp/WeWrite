@@ -2,10 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent iOS zoom on input focus */
+/* Prevent iOS zoom on input focus and support custom zoom */
 @media screen and (max-width: 768px) {
   input, textarea, select {
     font-size: 16px !important;
+  }
+
+  /* Support for browsers that don't support zoom property */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 }
 
