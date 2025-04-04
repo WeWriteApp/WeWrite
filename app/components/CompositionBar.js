@@ -141,7 +141,7 @@ const CompositionBar = ({
                 {/* Controls */}
                 <div className="flex justify-between items-center h-full relative z-10">
                   <div
-                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 text-foreground/80 cursor-pointer"
+                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 text-foreground/80 cursor-pointer border-r border-theme-medium"
                     onClick={() => {
                       console.log("Minus button clicked", {
                         onPledgeChange: !!onPledgeChange,
@@ -182,7 +182,7 @@ const CompositionBar = ({
 
                   <div
                     className={cn(
-                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 cursor-pointer",
+                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 cursor-pointer border-l border-theme-medium",
                       wouldExceedLimit ? "text-orange-500/70" : "text-foreground/80"
                     )}
                     onClick={() => {
