@@ -432,12 +432,12 @@ const PledgeBar = () => {
   };
 
   return (
-    <div
-      className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${
-        visible ? 'translate-y-0' : 'translate-y-full'
-      }`}
-    >
-      <div className="flex justify-center pb-4">
+    <>
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 transition-transform duration-300 ${
+          visible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
         <CompositionBar
           value={pledges[0]?.amount || 0}
           max={subscription?.amount || 100}
@@ -448,7 +448,7 @@ const PledgeBar = () => {
           onPledgeChange={handlePledgeInteraction}
           onPledgeCustomAmount={handlePledgeCustomAmount}
           onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6"
+          className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-md backdrop-blur-md border-theme-light py-4 px-6"
         />
       </div>
 
@@ -465,7 +465,7 @@ const PledgeBar = () => {
           {/* Custom amount modal content */}
         </div>
       )}
-    </div>
+    </>
   );
 };
 
