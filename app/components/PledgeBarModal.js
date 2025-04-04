@@ -43,7 +43,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-sm sm:max-w-md mx-auto animate-in fade-in-50 slide-in-from-bottom-8 duration-300 rounded-lg border-border dark:border-border"
+        className="max-w-sm sm:max-w-md mx-auto animate-in fade-in-50 slide-in-from-bottom-2 duration-200 rounded-lg border-border dark:border-border"
         hideCloseButton
       >
         <DialogHeader>
