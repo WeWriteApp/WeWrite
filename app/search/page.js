@@ -7,7 +7,7 @@ import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Copy, Link as LinkIcon } from 'lucide-react';
-import { useToast } from '../components/ui/use-toast';
+// import { useToast } from '../components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import Link from 'next/link';
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const { user } = useContext(AuthContext);
-  const { toast } = useToast();
+  // const { toast } = useToast();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState({ pages: [], users: [] });
   const [isLoading, setIsLoading] = useState(false);
@@ -53,18 +53,19 @@ export default function SearchPage() {
 
       const data = await response.json();
       console.log('Search results:', data);
-      
+
       setResults({
         pages: data.pages || [],
         users: data.users || []
       });
     } catch (error) {
       console.error('Error searching:', error);
-      toast({
-        title: "Search Error",
-        description: "There was a problem performing your search. Please try again.",
-        variant: "destructive"
-      });
+      console.error("Search Error: There was a problem performing your search.");
+      // toast({
+      //   title: "Search Error",
+      //   description: "There was a problem performing your search. Please try again.",
+      //   variant: "destructive"
+      // });
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +79,7 @@ export default function SearchPage() {
       const url = new URL(window.location);
       url.searchParams.set('q', query);
       window.history.pushState({}, '', url);
-      
+
       performSearch(query);
     }
   };
@@ -88,18 +89,20 @@ export default function SearchPage() {
     const url = new URL(window.location);
     navigator.clipboard.writeText(url.toString())
       .then(() => {
-        toast({
-          title: "Link Copied",
-          description: "Search URL copied to clipboard",
-        });
+        console.log("Link copied to clipboard");
+        // toast({
+        //   title: "Link Copied",
+        //   description: "Search URL copied to clipboard",
+        // });
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);
-        toast({
-          title: "Copy Failed",
-          description: "Could not copy the URL to clipboard",
-          variant: "destructive"
-        });
+        console.error("Could not copy the URL to clipboard");
+        // toast({
+        //   title: "Copy Failed",
+        //   description: "Could not copy the URL to clipboard",
+        //   variant: "destructive"
+        // });
       });
   };
 
@@ -131,9 +134,9 @@ export default function SearchPage() {
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Search</h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={copySearchUrl}
           className="flex items-center gap-2"
         >
@@ -158,8 +161,8 @@ export default function SearchPage() {
       {query && (
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
-            {isLoading 
-              ? "Searching..." 
+            {isLoading
+              ? "Searching..."
               : `Found ${totalResults} results for "${query}"`}
           </p>
         </div>
