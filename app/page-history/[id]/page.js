@@ -16,21 +16,21 @@ export default function PageHistoryPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  
+
   useEffect(() => {
     async function fetchData() {
       if (!id) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Fetch page details
         const pageData = await getPageById(id);
         setPage(pageData);
-        
+
         // Fetch page versions
         const pageVersions = await getPageVersions(id);
-        
+
         // Sort versions by timestamp in descending order (newest first)
         const sortedVersions = pageVersions.sort((a, b) => b.timestamp - a.timestamp);
         setVersions(sortedVersions);
@@ -41,14 +41,23 @@ export default function PageHistoryPage({ params }) {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, [id]);
-  
+
+  // Helper function to validate timestamp
+  const isValidTimestamp = (timestamp) => {
+    if (!timestamp) return false;
+
+    // Check if it's a valid number or string that can be parsed
+    const date = new Date(timestamp);
+    return !isNaN(date.getTime());
+  };
+
   const handleBackToPage = () => {
     router.push(`/${id}`);
   };
-  
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -58,7 +67,7 @@ export default function PageHistoryPage({ params }) {
       </DashboardLayout>
     );
   }
-  
+
   if (error) {
     return (
       <DashboardLayout>
@@ -76,7 +85,7 @@ export default function PageHistoryPage({ params }) {
       </DashboardLayout>
     );
   }
-  
+
   return (
     <DashboardLayout>
       <div className="p-4 max-w-4xl mx-auto">
@@ -89,13 +98,13 @@ export default function PageHistoryPage({ params }) {
             {page?.title || 'Page'} History
           </h1>
         </div>
-        
+
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl font-semibold">Change History</h2>
           </div>
-          
+
           {versions.length === 0 ? (
             <div className="text-center p-8 border rounded-md">
               <p className="text-muted-foreground">No history available for this page</p>
@@ -110,11 +119,13 @@ export default function PageHistoryPage({ params }) {
                         {version.action || 'Updated'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {version.username || 'Anonymous'} • {formatDistanceToNow(new Date(version.timestamp))} ago
+                        {version.username || 'Anonymous'} • {isValidTimestamp(version.timestamp) ? formatDistanceToNow(new Date(version.timestamp)) : 'some time'} ago
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(version.timestamp), 'PPpp')}
-                      </div>
+                      {isValidTimestamp(version.timestamp) && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(version.timestamp), 'PPpp')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

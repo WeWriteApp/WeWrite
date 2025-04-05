@@ -45,6 +45,15 @@ export default function RecentPageChanges({ pageId }) {
     fetchPageVersions();
   }, [pageId]);
 
+  // Helper function to validate timestamp
+  const isValidTimestamp = (timestamp) => {
+    if (!timestamp) return false;
+
+    // Check if it's a valid number or string that can be parsed
+    const date = new Date(timestamp);
+    return !isNaN(date.getTime());
+  };
+
   // Generate data for sparkline (last 24 hours of activity)
   const generateSparklineData = () => {
     if (versions.length === 0) return [0];
@@ -58,12 +67,18 @@ export default function RecentPageChanges({ pageId }) {
 
     // Count versions in each hourly bucket
     versions.forEach(version => {
-      const versionDate = new Date(version.timestamp);
-      if (versionDate >= yesterday && versionDate <= now) {
-        const hourDiff = 23 - Math.floor((now - versionDate) / (1000 * 60 * 60));
-        if (hourDiff >= 0 && hourDiff < 24) {
-          hourlyBuckets[hourDiff]++;
+      if (!isValidTimestamp(version.timestamp)) return;
+
+      try {
+        const versionDate = new Date(version.timestamp);
+        if (versionDate >= yesterday && versionDate <= now) {
+          const hourDiff = 23 - Math.floor((now - versionDate) / (1000 * 60 * 60));
+          if (hourDiff >= 0 && hourDiff < 24) {
+            hourlyBuckets[hourDiff]++;
+          }
         }
+      } catch (error) {
+        console.error('Error processing version timestamp:', error);
       }
     });
 
@@ -71,7 +86,10 @@ export default function RecentPageChanges({ pageId }) {
   };
 
   const sparklineData = generateSparklineData();
-  const mostRecentVersion = versions.length > 0 ? versions[0] : null;
+
+  // Find the most recent version with a valid timestamp
+  const validVersions = versions.filter(v => isValidTimestamp(v.timestamp));
+  const mostRecentVersion = validVersions.length > 0 ? validVersions[0] : null;
 
   const handleViewAllHistory = () => {
     router.push(`/page-history/${pageId}`);
@@ -118,7 +136,7 @@ export default function RecentPageChanges({ pageId }) {
                 {mostRecentVersion.action || 'Updated'}
               </div>
               <div className="text-sm text-muted-foreground">
-                {mostRecentVersion.username || 'Anonymous'} • {formatDistanceToNow(new Date(mostRecentVersion.timestamp))} ago
+                {mostRecentVersion.username || 'Anonymous'} • {mostRecentVersion.timestamp ? formatDistanceToNow(new Date(mostRecentVersion.timestamp)) : 'some time'} ago
               </div>
             </div>
           </div>
