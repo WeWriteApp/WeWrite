@@ -167,13 +167,13 @@ export default function PageList({
         <div className="relative">
           <div className="flex flex-wrap gap-2 justify-start items-start content-start">
             {displayPages.map((page) => (
-              <div key={page.id} className="flex-none">
+              <div key={page.id} className="flex-none max-w-full">
                 <PillLink
                   groupId={page.groupId}
                   href={`/${page.id}`}
                   isPublic={page.isPublic}
                   byline={page.authorName}
-                  className=""
+                  className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
                   isOwned={false}
                   isLoading={false}
                   label=""

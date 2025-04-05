@@ -166,6 +166,8 @@ export const PillLink = ({
     rounded-[8px]
     transition-colors duration-200
     shadow-sm
+    max-w-full
+    overflow-hidden
     ${variantStyles}
     ${groupId ? 'opacity-90' : ''}
     ${className || ''}
@@ -183,14 +185,14 @@ export const PillLink = ({
           onClick={handleClick}
           className={linkClasses}
         >
-          <div className="flex items-center gap-1.5 flex-nowrap">
+          <div className="flex items-center gap-1.5 flex-nowrap w-full overflow-hidden">
             {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-            <div className="flex flex-col min-w-0 max-w-full">
-              <span className="leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+            <div className="flex flex-col min-w-0 w-full overflow-hidden">
+              <span className="leading-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-full block">
                 {displayTitle}
               </span>
               {byline && (
-                <span className="text-xs opacity-75 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                <span className="text-xs opacity-75 leading-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-full block">
                   {byline}
                 </span>
               )}

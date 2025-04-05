@@ -202,10 +202,12 @@ export default function SearchPage() {
                   <div className="space-y-2">
                     {filtered.users.map(user => (
                       <div key={user.id} className="flex items-center">
-                        <PillLink href={`/u/${user.id}`}>
-                          {user.username}
-                        </PillLink>
-                        <span className="text-xs text-muted-foreground ml-2">
+                        <div className="flex-none max-w-[60%]">
+                          <PillLink href={`/u/${user.id}`} className="max-w-full">
+                            {user.username}
+                          </PillLink>
+                        </div>
+                        <span className="text-xs text-muted-foreground ml-2 truncate">
                           User
                         </span>
                       </div>
@@ -220,10 +222,12 @@ export default function SearchPage() {
                   <div className="space-y-2">
                     {filtered.pages.map(page => (
                       <div key={page.id} className="flex items-center">
-                        <PillLink href={`/${page.id}`}>
-                          {page.title}
-                        </PillLink>
-                        <span className="text-xs text-muted-foreground ml-2">
+                        <div className="flex-none max-w-[60%]">
+                          <PillLink href={`/${page.id}`} className="max-w-full">
+                            {page.title}
+                          </PillLink>
+                        </div>
+                        <span className="text-xs text-muted-foreground ml-2 truncate">
                           by {page.username || "Anonymous"}
                         </span>
                       </div>
@@ -261,10 +265,12 @@ export default function SearchPage() {
                 <div className="space-y-2">
                   {filtered.pages.map(page => (
                     <div key={page.id} className="flex items-center">
-                      <PillLink href={`/${page.id}`}>
-                        {page.title}
-                      </PillLink>
-                      <span className="text-xs text-muted-foreground ml-2">
+                      <div className="flex-none max-w-[60%]">
+                        <PillLink href={`/${page.id}`} className="max-w-full">
+                          {page.title}
+                        </PillLink>
+                      </div>
+                      <span className="text-xs text-muted-foreground ml-2 truncate">
                         by {page.username || "Anonymous"}
                       </span>
                     </div>

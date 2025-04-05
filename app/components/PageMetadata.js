@@ -75,7 +75,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   const [selectedOwner, setSelectedOwner] = useState('myself');
   const [groups, setGroups] = useState([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
-  
+
   // Add click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -116,7 +116,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         const groupsRef = ref(rtdb, 'groups');
         const snapshot = await get(groupsRef);
         const groupsData = snapshot.val();
-        
+
         if (!groupsData) {
           setGroups([]);
           setIsLoadingGroups(false);
@@ -132,7 +132,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
           }));
 
         setGroups(userGroups);
-        
+
         // If the page belongs to a group, select it
         if (page.groupId && userGroups.find(g => g.id === page.groupId)) {
           setSelectedOwner(`group-${page.groupId}`);
@@ -143,7 +143,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         console.error('Error fetching groups:', error);
         setGroups([]);
       }
-      
+
       setIsLoadingGroups(false);
     };
 
@@ -154,7 +154,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   useEffect(() => {
     if (user && page.id) {
       liveReadersService.trackReader(page.id, user.uid);
-      
+
       const unsubscribe = liveReadersService.subscribeToReaderCount(page.id, (count) => {
         setLiveReaders(count);
       });
@@ -241,7 +241,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         const pagesRef = collection(firestore, 'pages');
         const q = query(pagesRef, where('userId', '==', page.userId));
         const querySnapshot = await getDocs(q);
-        
+
         const pages = querySnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(p => p.id !== page.id)
@@ -262,7 +262,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
 
   return (
     <div className="bg-background rounded-2xl p-6 transition-all duration-300">
-      <div 
+      <div
         className="flex items-center gap-2 cursor-pointer mb-6"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
@@ -278,7 +278,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         {/* Skip the page owner section if hidePageOwner is true */}
         {!hidePageOwner && (
           <div ref={ownerMenuRef}>
-            <div 
+            <div
               onClick={() => setShowOwnerMenu(!showOwnerMenu)}
               className="cursor-pointer"
             >
@@ -295,7 +295,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
             {showOwnerMenu && (
               <div className="absolute mt-2 bg-background--light dark:bg-background rounded-2xl p-2 shadow-lg z-50">
                 <div className="space-y-2">
-                  <div 
+                  <div
                     className={`p-2 rounded-xl flex items-center gap-2 ${selectedOwner === 'myself' ? 'bg-[#0066FF]' : 'hover:bg-background--lighter dark:hover:bg-background--light'}`}
                     onClick={() => {
                       setSelectedOwner('myself');
@@ -347,12 +347,15 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
           ) : relatedPages.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {relatedPages.map(page => (
-                <PillLink 
-                  key={page.id} 
-                  href={`/pages/${page.id}`}
-                >
-                  {page.title}
-                </PillLink>
+                <div key={page.id} className="flex-none max-w-full">
+                  <PillLink
+                    key={page.id}
+                    href={`/pages/${page.id}`}
+                    className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+                  >
+                    {page.title}
+                  </PillLink>
+                </div>
               ))}
             </div>
           ) : (
@@ -364,37 +367,37 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(350px,1fr))] gap-4">
-          <MetadataItem 
+          <MetadataItem
             label="Live readers"
             value={liveReaders}
             sparklineData={liveReadersHistory}
           />
-          <MetadataItem 
+          <MetadataItem
             label="Recent changes"
             value={recentChanges}
             sparklineData={recentChangesHistory}
           />
-          <MetadataItem 
+          <MetadataItem
             label="Total readers"
             value={totalReaders.toLocaleString()}
             sparklineData={totalReadersHistory}
           />
-          <MetadataItem 
+          <MetadataItem
             label="Supporters"
             value={supportersStats.count > 0 ? supportersStats.count : "None"}
             sparklineData={supportersHistory}
           />
-          <MetadataItem 
+          <MetadataItem
             label="Editors"
             value={editorsCount > 0 ? editorsCount : "None"}
             sparklineData={editorsHistory}
           />
-          <MetadataItem 
+          <MetadataItem
             label="Page income"
             value={`$${supportersStats.totalAmount.toFixed(2)}/mo`}
             sparklineData={incomeHistory}
           />
-          <MetadataItem 
+          <MetadataItem
             label="Custom date"
             value={page.customDate || "None"}
             showChart={false}
