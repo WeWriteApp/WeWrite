@@ -235,7 +235,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
     // Check for @ symbol to trigger user search
     if (event.key === '@') {
-      // Don't prevent default here to allow the @ symbol to be typed
+      // Prevent default to NOT allow the @ symbol to be typed
+      event.preventDefault();
+
       // Show the link editor modal
       setShowLinkEditor(true);
 
@@ -340,7 +342,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
               data-page-title={element.pageTitle}
               data-user-id={isUserLink ? element.userId : undefined}
               data-username={isUserLink ? element.username : undefined}
-              className={`editor-link ${isUserLink ? 'user-link' : ''}`}
+              className={`editor-link ${isUserLink ? 'user-link' : 'page-link'}`}
               target={isExternal ? "_blank" : undefined}
               rel={isExternal ? "noopener noreferrer" : undefined}
             >
