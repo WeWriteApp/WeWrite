@@ -173,8 +173,8 @@ const TypeaheadSearch = ({
 
         // Add more comprehensive error handling for fetch
         try {
-          // Fetch both pages and users in parallel
-          const [pagesResponse, usersResponse] = await Promise.all([
+          // Fetch both pages and users in parallel using Promise.allSettled to handle partial failures
+          const [pagesResponse, usersResponse] = await Promise.allSettled([
             fetch(queryUrl, {
               signal: controller.signal,
               cache: 'no-store' // Prevent caching of search results
@@ -189,8 +189,8 @@ const TypeaheadSearch = ({
 
           // Process page results
           let processedPages = [];
-          if (pagesResponse.ok) {
-            const pagesData = await pagesResponse.json();
+          if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
+            const pagesData = await pagesResponse.value.json();
             console.log('TypeaheadSearch - Pages API response:', pagesData);
 
             // Check if we received an error message
@@ -203,56 +203,29 @@ const TypeaheadSearch = ({
               processedPages = await processPagesWithUsernames(pagesData.pages);
             }
           } else {
-            console.error('TypeaheadSearch - Pages API returned error:', pagesResponse.status);
-            const errorText = await pagesResponse.text();
-            console.error('Error details:', errorText);
+            console.error('TypeaheadSearch - Pages API request failed:',
+              pagesResponse.status === 'rejected' ? pagesResponse.reason :
+              `HTTP ${pagesResponse.value?.status || 'unknown'}`);
           }
 
           // Process user results
           let users = [];
-          if (usersResponse.ok) {
-            const usersData = await usersResponse.json();
+          if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
+            const usersData = await usersResponse.value.json();
             console.log('TypeaheadSearch - Users API response:', usersData);
 
             if (usersData && usersData.users) {
               users = usersData.users;
             }
           } else {
-            console.error('TypeaheadSearch - Users API returned error:', usersResponse.status);
+            console.error('TypeaheadSearch - Users API request failed:',
+              usersResponse.status === 'rejected' ? usersResponse.reason :
+              `HTTP ${usersResponse.value?.status || 'unknown'}`);
           }
 
-          // For testing purposes, add some mock data if no results were found
+          // Log if no results were found
           if (processedPages.length === 0 && users.length === 0 && search) {
-            // Create relevant mock data based on search term
-            const searchTermLower = search.toLowerCase();
-
-            // Only add mock data if we have a search term
-            if (searchTermLower.length > 0) {
-              // Add mock pages
-              processedPages = [
-                {
-                  id: 'page1',
-                  title: `${search} Guide`,
-                  type: 'public',
-                  username: 'frantz'
-                },
-                {
-                  id: 'page2',
-                  title: `How to use ${search}`,
-                  type: 'public',
-                  username: 'frantz'
-                }
-              ];
-
-              // Add a user that matches the search term
-              users = [
-                {
-                  id: 'frantz',
-                  username: 'frantz',
-                  type: 'user'
-                }
-              ];
-            }
+            console.log(`TypeaheadSearch - No results found for search term: ${search}`);
           }
 
           // Set the pages state with categorized results

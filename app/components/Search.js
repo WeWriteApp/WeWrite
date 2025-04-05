@@ -33,122 +33,88 @@ const Search = () => {
 
       setIsSearching(true);
       try {
+        // Get the user ID to use for the search
         let groupIds = [];
         if (user.groups) {
           groupIds = Object.keys(user.groups);
         }
 
-        const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`;
-        console.log('Making API request to:', queryUrl);
+        // Fetch both pages and users in parallel
+        const pagesUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`;
+        const usersUrl = `/api/search-users?searchTerm=${encodeURIComponent(searchTerm)}`;
 
-        const response = await fetch(queryUrl);
+        console.log('Making API requests to:', { pagesUrl, usersUrl });
 
-        if (!response.ok) {
-          console.error('Search API returned error:', response.status);
-          const errorText = await response.text();
-          console.error('Error details:', errorText);
-          throw new Error(`Search API error: ${response.status}`);
+        // Use Promise.allSettled to handle partial failures
+        const [pagesResponse, usersResponse] = await Promise.allSettled([
+          fetch(pagesUrl),
+          fetch(usersUrl)
+        ]);
+
+        // Initialize empty arrays for results
+        let pages = [];
+        let users = [];
+
+        // Process pages results if successful
+        if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
+          const data = await pagesResponse.value.json();
+          console.log('Pages API response:', data);
+
+          if (data.pages && Array.isArray(data.pages)) {
+            pages = data.pages;
+          }
+
+          // Also get users from the pages API if available
+          if (data.users && Array.isArray(data.users)) {
+            users = [...users, ...data.users];
+          }
+        } else {
+          console.error('Pages API request failed:',
+            pagesResponse.status === 'rejected' ? pagesResponse.reason :
+            `HTTP ${pagesResponse.value.status}`);
         }
 
-        const data = await response.json();
-        console.log('Search API response:', data);
+        // Process users results if successful
+        if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
+          const data = await usersResponse.value.json();
+          console.log('Users API response:', data);
 
-        // Check if we received an error message
-        if (data.error) {
-          console.error('Search API returned error object:', data.error);
+          if (data.users && Array.isArray(data.users)) {
+            // Combine with any users we already have, avoiding duplicates
+            const existingUserIds = new Set(users.map(u => u.id));
+            const newUsers = data.users.filter(u => !existingUserIds.has(u.id));
+            users = [...users, ...newUsers];
+          }
+        } else {
+          console.error('Users API request failed:',
+            usersResponse.status === 'rejected' ? usersResponse.reason :
+            `HTTP ${usersResponse.value.status}`);
         }
-
-        // Even if we have an error, continue with the empty arrays
 
         // Combine all pages and format them for ReactSearchAutocomplete
         let combinedPages = [];
 
-        // Check if we have the new format (pages array) or old format (categorized pages)
-        if (data.pages) {
-          // New format - pages array
-          combinedPages = data.pages.map(page => {
-            let section = "Public Pages";
-            if (page.isOwned) {
-              section = "Your Pages";
-            } else if (page.type === 'group') {
-              section = "Group Pages";
-            }
+        // Format pages
+        combinedPages = pages.map(page => ({
+          ...page,
+          name: page.title,
+          username: page.username || ''
+        }));
 
-            return {
-              ...page,
-              name: page.title,
-              section: section
-            };
-          });
-        } else {
-          // Old format - categorized pages
-          combinedPages = [
-            ...(data.userPages || []).map(page => ({
-              ...page,
-              name: page.title,
-              section: "Your Pages"
-            })),
-            ...(data.groupPages || []).map(page => ({
-              ...page,
-              name: page.title,
-              section: "Group Pages"
-            })),
-            ...(data.publicPages || []).map(page => ({
-              ...page,
-              name: page.title,
-              section: "Public Pages"
-            }))
-          ];
-        }
+        // Add users to search results
+        combinedPages = [
+          ...combinedPages,
+          ...users.map(user => ({
+            ...user,
+            name: user.username,
+            type: 'user',
+            url: `/u/${user.id}`
+          }))
+        ];
 
-        // Add users to search results if available
-        if (data.users) {
-          combinedPages = [
-            ...combinedPages,
-            ...(data.users || []).map(user => ({
-              ...user,
-              id: user.id,
-              name: user.username,
-              section: "Users",
-              type: 'user',
-              url: `/u/${user.id}`
-            }))
-          ];
-        }
-
-        // For testing purposes, add some mock data if no results were found
+        // Log if no results were found
         if (combinedPages.length === 0 && searchTerm) {
-          // Create relevant mock data based on search term
-          const searchTermLower = searchTerm.toLowerCase();
-
-          // Only add mock data if we have a search term
-          if (searchTermLower.length > 0) {
-            // Add mock pages
-            combinedPages = [
-              {
-                id: 'page1',
-                title: `${searchTerm} Guide`,
-                name: `${searchTerm} Guide`,
-                type: 'public',
-                username: 'frantz'
-              },
-              {
-                id: 'page2',
-                title: `How to use ${searchTerm}`,
-                name: `How to use ${searchTerm}`,
-                type: 'public',
-                username: 'frantz'
-              },
-              // Add a user that matches the search term
-              {
-                id: 'frantz',
-                username: 'frantz',
-                name: 'frantz',
-                type: 'user',
-                url: `/u/frantz`
-              }
-            ];
-          }
+          console.log(`No results found for search term: ${searchTerm}`);
         }
 
         console.log('Processed search results:', {
