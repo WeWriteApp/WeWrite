@@ -29,22 +29,22 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
   const isNewPage = activity.isNewPage;
 
   return (
-    <Link 
-      href={`/pages/${activity.pageId}`}
+    <Link
+      href={`/${activity.pageId}`}
       className={interactiveCard(
-        "w-full md:max-w-[400px] h-full", 
+        "w-full md:max-w-[400px] h-full",
         isCarousel && "h-full flex flex-col"
       )}
     >
       <div className="flex justify-between items-center gap-1.5 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <PillLink href={`/pages/${activity.pageId}`} variant="primary">
+          <PillLink href={`/${activity.pageId}`} variant="primary">
             {activity.pageName || "Untitled page"}
           </PillLink>
           <span className="text-xs text-muted-foreground">
             {isNewPage ? "created by" : "edited by"} {" "}
-            <Link 
-              href={`/user/${activity.userId}`} 
+            <Link
+              href={`/user/${activity.userId}`}
               className="hover:underline text-primary"
               onClick={(e) => e.stopPropagation()}
             >
@@ -56,7 +56,7 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
           {formatRelativeTime(activity.timestamp)}
         </span>
       </div>
-      
+
       <div className={cn(
         "mt-2 flex items-center justify-between gap-3",
         isCarousel && "flex-grow"

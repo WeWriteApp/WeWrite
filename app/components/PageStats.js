@@ -44,7 +44,7 @@ export default function PageStats({
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
               {viewData.length > 0 && (
-                <SimpleSparkline data={viewData} height={30} />
+                <SimpleSparkline data={viewData} height={30} color="hsl(var(--accent))" />
               )}
             </div>
             <span className="text-xs text-accent font-medium">24h</span>
@@ -70,7 +70,7 @@ export default function PageStats({
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
               {changeData.length > 0 && (
-                <SimpleSparkline data={changeData} height={30} />
+                <SimpleSparkline data={changeData} height={30} color="hsl(var(--accent))" />
               )}
             </div>
             <span className="text-xs text-accent font-medium">24h</span>
