@@ -19,6 +19,7 @@ export interface PageHeaderProps {
   isLoading?: boolean;
   groupId?: string;
   groupName?: string;
+  scrollDirection?: string;
 }
 
 export default function PageHeader({
@@ -27,7 +28,8 @@ export default function PageHeader({
   userId,
   isLoading = false,
   groupId,
-  groupName
+  groupName,
+  scrollDirection
 }: PageHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();

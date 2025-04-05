@@ -13,7 +13,7 @@ import { withHistory } from "slate-history";
 import { Slate, Editable, withReact } from "slate-react";
 import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "./layout/PublicLayout";
-import PageHeader from "./PageHeader";
+import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import PledgeBar from "./PledgeBar";
@@ -463,9 +463,9 @@ function SinglePageView({ params }) {
         username={page?.username || "Anonymous"}
         userId={page?.userId}
         isLoading={isLoading}
-        scrollDirection={scrollDirection}
         groupId={groupId}
         groupName={groupName}
+        scrollDirection={scrollDirection}
       />
       <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
         {isEditing ? (

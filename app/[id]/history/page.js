@@ -10,7 +10,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { Loader } from '../../components/Loader';
 import ActivityCard from '../../components/ActivityCard';
 import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDiff';
-import PageHeader from '../../components/PageHeader';
+import PageHeader from '../../components/PageHeader.tsx';
 
 export default function PageHistoryPage({ params }) {
   const { id } = params;
