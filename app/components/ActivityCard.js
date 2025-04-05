@@ -37,11 +37,13 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
       )}
     >
       <div className="flex justify-between items-center gap-1.5 mb-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <PillLink href={`/${activity.pageId}`} variant="primary">
-            {activity.pageName || "Untitled page"}
-          </PillLink>
-          <span className="text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-[70%]">
+          <div className="flex-none max-w-full">
+            <PillLink href={`/${activity.pageId}`} variant="primary" className="max-w-full">
+              {activity.pageName || "Untitled page"}
+            </PillLink>
+          </div>
+          <span className="text-xs text-muted-foreground truncate">
             {isNewPage ? "created by" : "edited by"} {" "}
             <Link
               href={`/user/${activity.userId}`}

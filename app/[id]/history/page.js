@@ -33,8 +33,13 @@ export default function PageHistoryPage({ params }) {
         setLoading(true);
 
         // Fetch page details
-        const pageData = await getPageById(id);
-        setPage(pageData);
+        const pageResult = await getPageById(id);
+        if (pageResult.error) {
+          setError(pageResult.error);
+          setLoading(false);
+          return;
+        }
+        setPage(pageResult.pageData);
 
         // Fetch page versions
         const pageVersions = await getPageVersions(id);
@@ -120,8 +125,15 @@ export default function PageHistoryPage({ params }) {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex justify-center items-center min-h-screen">
-          <Loader />
+        <div className="p-4 max-w-4xl mx-auto">
+          <PageHeader
+            title="Page History"
+            username="Loading..."
+            isLoading={true}
+          />
+          <div className="flex justify-center items-center min-h-[50vh]">
+            <Loader />
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -130,15 +142,21 @@ export default function PageHistoryPage({ params }) {
   if (error) {
     return (
       <DashboardLayout>
-        <div className="p-4">
+        <div className="p-4 max-w-4xl mx-auto">
+          <PageHeader
+            title="Page History"
+            username="Error"
+            isLoading={false}
+          />
           <div className="flex items-center mb-4">
             <Button variant="outline" size="lg" onClick={handleBackToPage} className="mr-2">
               <ChevronLeft className="h-5 w-5 mr-2" />
-              Back
+              Back to page
             </Button>
           </div>
-          <div className="text-destructive text-center p-8">
-            <p>{error}</p>
+          <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
+            <p className="font-medium">{error}</p>
+            <p className="text-sm mt-2 text-muted-foreground">Unable to load page history. Please try again later.</p>
           </div>
         </div>
       </DashboardLayout>
