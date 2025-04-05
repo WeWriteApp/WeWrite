@@ -944,8 +944,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
         }
       }}
     >
-      <div className="bg-background border border-border rounded-md shadow-lg p-5 w-full max-w-md mx-4">
-        <div className="mb-3">
+      <div className="bg-background border border-border rounded-md shadow-lg p-5 w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
+        <div className="flex-1 overflow-y-auto pr-1">
           <div className="flex space-x-2 mb-2">
             <button
               type="button"
@@ -975,8 +975,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
           </div>
 
           {mode === 'url' ? (
-            <form onSubmit={handleUrlSubmit}>
-              <div className="mb-3">
+            <form onSubmit={handleUrlSubmit} className="h-full flex flex-col">
+              <div className="mb-3 flex-1">
                 <input
                   type="text"
                   placeholder="URL"
@@ -985,7 +985,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                   className="w-full p-2 bg-background border border-input rounded text-sm"
                 />
               </div>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowLinkEditor(false)}
@@ -1002,8 +1002,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
               </div>
             </form>
           ) : (
-            <div>
-              <div className="mb-3">
+            <div className="h-full flex flex-col">
+              <div className="mb-3 flex-1">
                 <input
                   type="text"
                   placeholder="Search for a page..."
@@ -1035,7 +1035,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                 )}
               </div>
 
-              <div className="flex justify-end space-x-2 mt-3">
+              <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowLinkEditor(false)}

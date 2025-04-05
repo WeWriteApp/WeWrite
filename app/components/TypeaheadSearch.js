@@ -302,6 +302,14 @@ const TypeaheadSearch = ({
     }
   }, [onSelect]);
 
+  // Effect to trigger search when initialSearch is provided
+  useEffect(() => {
+    if (initialSearch && initialSearch.trim().length >= characterCount && user) {
+      console.log('TypeaheadSearch - Initial search triggered with:', initialSearch);
+      fetchResults(initialSearch.trim(), user);
+    }
+  }, [initialSearch, user, fetchResults]);
+
   const handleInputChange = (e) => {
     setSearch(e.target.value);
   };
