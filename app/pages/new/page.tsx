@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../providers/AuthProvider";
 import { db } from "../../firebase/config";
 import { collection, addDoc } from "firebase/firestore";
-import PageHeader from "../../components/PageHeader";
+import NavHeader from "../../components/NavHeader";
 import Button from "../../components/Button";
 import { PillLink } from "../../components/PillLink";
 import dynamic from 'next/dynamic';
@@ -99,9 +99,9 @@ export default function NewPage() {
         updatedAt: new Date().toISOString(),
         isPublic: true, // Default to public
       });
-      
+
       console.log("Page created successfully with ID:", doc.id);
-      
+
       // Redirect to the newly created page
       router.replace(`/pages/${doc.id}`);
     } catch (error) {
@@ -137,18 +137,18 @@ export default function NewPage() {
               className="w-full p-2 border rounded-md bg-background"
             />
           </div>
-          
+
           <div className="border rounded-md bg-card p-4">
             {initialContent && (
-              <SlateEditor 
+              <SlateEditor
                 // @ts-ignore - SlateEditor accepts these props but TypeScript doesn't recognize them with dynamic import
-                initialEditorState={initialContent} 
+                initialEditorState={initialContent}
                 setEditorState={setEditorState}
                 ref={editorRef}
               />
             )}
           </div>
-          
+
           <Button
             type="submit"
             disabled={isLoading}

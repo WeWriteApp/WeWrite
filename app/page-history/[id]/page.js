@@ -6,6 +6,7 @@ import { getPageVersions, getPageById } from '../../firebase/database';
 import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
+import NavHeader from '../../components/NavHeader';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Loader } from '../../components/Loader';
 
@@ -106,12 +107,11 @@ export default function PageHistoryPage({ params }) {
     return (
       <DashboardLayout>
         <div className="p-4">
-          <div className="flex items-center mb-4">
-            <Button variant="ghost" onClick={handleBackToPage} className="mr-2">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-          </div>
+          <NavHeader
+            title="Error"
+            backUrl={`/${id}`}
+            backLabel="Back to page"
+          />
           <div className="text-destructive text-center p-8">
             <p>{error}</p>
           </div>
@@ -123,15 +123,11 @@ export default function PageHistoryPage({ params }) {
   return (
     <DashboardLayout>
       <div className="p-4 max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" onClick={handleBackToPage} className="mr-2">
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back to page
-          </Button>
-          <h1 className="text-2xl font-bold flex-1 truncate">
-            Page History
-          </h1>
-        </div>
+        <NavHeader
+          title="Page History"
+          backUrl={`/${id}`}
+          backLabel="Back to page"
+        />
 
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-6">

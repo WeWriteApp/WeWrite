@@ -7,7 +7,7 @@ import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import ReactGA from 'react-ga4';
-import PageHeader from "../components/PageHeader";
+import PageHeader from "../components/PageHeader.tsx";
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 
