@@ -45,7 +45,8 @@ const TypeaheadSearch = ({
   const [pages, setPages] = useState({
     userPages: [],
     groupPages: [],
-    publicPages: []
+    publicPages: [],
+    users: []
   });
   const [isSearching, setIsSearching] = useState(false);
   const { theme } = useTheme();
@@ -163,7 +164,8 @@ const TypeaheadSearch = ({
         }
 
         const queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
-        console.log('Making API request to:', queryUrl);
+        const userSearchUrl = `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
+        console.log('Making API requests to:', { queryUrl, userSearchUrl });
 
         // Add timeout to prevent infinite loading
         const controller = new AbortController();
@@ -171,39 +173,61 @@ const TypeaheadSearch = ({
 
         // Add more comprehensive error handling for fetch
         try {
-          const response = await fetch(queryUrl, {
-            signal: controller.signal,
-            cache: 'no-store' // Prevent caching of search results
-          });
+          // Fetch both pages and users in parallel
+          const [pagesResponse, usersResponse] = await Promise.all([
+            fetch(queryUrl, {
+              signal: controller.signal,
+              cache: 'no-store' // Prevent caching of search results
+            }),
+            fetch(userSearchUrl, {
+              signal: controller.signal,
+              cache: 'no-store' // Prevent caching of search results
+            })
+          ]);
 
           clearTimeout(timeoutId);
 
-          if (!response.ok) {
-            console.error('TypeaheadSearch - API returned error:', response.status);
-            const errorText = await response.text();
+          // Process page results
+          let processedPages = [];
+          if (pagesResponse.ok) {
+            const pagesData = await pagesResponse.json();
+            console.log('TypeaheadSearch - Pages API response:', pagesData);
+
+            // Check if we received an error message
+            if (pagesData.error) {
+              console.error('TypeaheadSearch - Pages API returned error object:', pagesData.error);
+            }
+
+            // Process the results with usernames
+            if (pagesData && pagesData.pages) {
+              processedPages = await processPagesWithUsernames(pagesData.pages);
+            }
+          } else {
+            console.error('TypeaheadSearch - Pages API returned error:', pagesResponse.status);
+            const errorText = await pagesResponse.text();
             console.error('Error details:', errorText);
-            throw new Error(`Search API error: ${response.status}`);
           }
 
-          const data = await response.json();
-          console.log('TypeaheadSearch - API response:', data);
+          // Process user results
+          let users = [];
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            console.log('TypeaheadSearch - Users API response:', usersData);
 
-          // Check if we received an error message
-          if (data.error) {
-            console.error('TypeaheadSearch - API returned error object:', data.error);
+            if (usersData && usersData.users) {
+              users = usersData.users;
+            }
+          } else {
+            console.error('TypeaheadSearch - Users API returned error:', usersResponse.status);
           }
 
-          // Process the results with usernames
-          if (data && data.pages) {
-            const processedPages = await processPagesWithUsernames(data.pages);
-
-            // Set the pages state with categorized results
-            setPages({
-              userPages: processedPages.filter(page => page.type === 'user' || page.isOwned),
-              groupPages: processedPages.filter(page => page.type === 'group' && !page.isOwned),
-              publicPages: processedPages.filter(page => page.type === 'public' && !page.isOwned)
-            });
-          }
+          // Set the pages state with categorized results
+          setPages({
+            userPages: processedPages.filter(page => page.type === 'user' || page.isOwned),
+            groupPages: processedPages.filter(page => page.type === 'group' && !page.isOwned),
+            publicPages: processedPages.filter(page => page.type === 'public' && !page.isOwned),
+            users: users // Add the users to the state
+          });
         } catch (fetchError) {
           if (fetchError.name === 'AbortError') {
             console.error('Search request timed out after 15 seconds');
@@ -231,7 +255,8 @@ const TypeaheadSearch = ({
     setPages({
       userPages: [],
       groupPages: [],
-      publicPages: []
+      publicPages: [],
+      users: []
     });
     setIsSearching(false);
   };
@@ -302,6 +327,30 @@ const TypeaheadSearch = ({
           <Loader />
         ) : (
           <>
+            {/* User accounts section */}
+            {pages.users && pages.users.length > 0 && (
+              <div className="mb-2">
+                <div className="text-xs font-medium text-muted-foreground px-3 py-1 uppercase">Users</div>
+                {pages.users.map((user) =>
+                  onSelect ? (
+                    <UserItemButton
+                      user={user}
+                      search={search}
+                      onSelect={onSelect}
+                      key={user.id}
+                    />
+                  ) : (
+                    <UserItemLink
+                      user={user}
+                      search={search}
+                      key={user.id}
+                    />
+                  )
+                )}
+              </div>
+            )}
+
+            {/* User pages section */}
             {pages.userPages.length > 0 && (
               <div>
                 {pages.userPages
@@ -522,6 +571,45 @@ const highlightText = (text, searchTerm) => {
     ) : (
       part
     )
+  );
+};
+
+// User item components
+const UserItemLink = ({ user, search }) => {
+  return (
+    <div className="flex items-center w-full overflow-hidden my-1 px-3 py-1.5 hover:bg-accent/50 rounded-md">
+      <PillLink
+        href={`/u/${user.id}`}
+        key={user.id}
+        className="flex-shrink-0"
+      >
+        <span className="truncate">{highlightText(user.username, search)}</span>
+      </PillLink>
+      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+        User
+      </span>
+    </div>
+  );
+};
+
+const UserItemButton = ({ user, search, onSelect }) => {
+  return (
+    <div className="flex items-center w-full overflow-hidden my-1">
+      <button
+        onClick={() => onSelect({
+          id: user.id,
+          title: user.username,
+          type: 'user',
+          url: `/u/${user.id}`
+        })}
+        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
+      >
+        {highlightText(user.username, search)}
+      </button>
+      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+        User
+      </span>
+    </div>
   );
 };
 

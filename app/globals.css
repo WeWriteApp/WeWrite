@@ -31,6 +31,21 @@
   }
 }
 
+/* User links styling */
+.user-link {
+  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: 0 1px;
+  position: relative;
+}
+
+.user-link::before {
+  content: '@';
+  opacity: 0.7;
+  margin-right: 1px;
+}
+
 /* Custom Spinner Animation */
 .loader {
   color: hsl(var(--primary));

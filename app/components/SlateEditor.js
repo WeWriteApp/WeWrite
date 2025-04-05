@@ -310,13 +310,18 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             element.url.startsWith('www.')
           );
 
+          // Check if it's a user link
+          const isUserLink = element.isUser || (element.url && element.url.startsWith('/u/'));
+
           return (
             <a
               {...attributes}
               href={element.url || '#'}
               data-page-id={element.pageId}
               data-page-title={element.pageTitle}
-              className="editor-link"
+              data-user-id={isUserLink ? element.userId : undefined}
+              data-username={isUserLink ? element.username : undefined}
+              className={`editor-link ${isUserLink ? 'user-link' : ''}`}
               target={isExternal ? "_blank" : undefined}
               rel={isExternal ? "noopener noreferrer" : undefined}
             >
@@ -486,38 +491,85 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       // Handle normal link selection
       if (selectedNodePath) {
         // If editing an existing link
-        Transforms.setNodes(
-          editor,
-          {
-            ...item,
-            type: 'link',
-            url: item.pageId ? `/page/${item.pageId}` : item.url,
-            children: [{ text: item.text }]
-          },
-          { at: selectedNodePath }
-        );
+        if (item.isUser) {
+          // Handle user link
+          Transforms.setNodes(
+            editor,
+            {
+              ...item,
+              type: 'link',
+              url: item.url, // Already formatted as /u/{userId}
+              children: [{ text: item.text }]
+            },
+            { at: selectedNodePath }
+          );
+        } else {
+          // Handle page link
+          Transforms.setNodes(
+            editor,
+            {
+              ...item,
+              type: 'link',
+              url: item.pageId ? `/${item.pageId}` : item.url,
+              children: [{ text: item.text }]
+            },
+            { at: selectedNodePath }
+          );
+        }
       } else if (editor.selection) {
         // If creating a new link
         if (isLinkActive(editor)) {
           unwrapLink(editor);
         }
 
-        // Insert the link with the selected text or URL
-        const text = item.text || (item.pageId ? item.pageTitle : item.url);
-        const url = item.pageId ? `/page/${item.pageId}` : item.url;
+        if (item.isUser) {
+          // Handle user link
+          const text = item.text || item.username;
 
-        if (Range.isCollapsed(editor.selection)) {
-          // If no text is selected, insert the link text
-          Transforms.insertNodes(editor, {
-            type: 'link',
-            url,
-            pageId: item.pageId,
-            pageTitle: item.pageTitle,
-            children: [{ text }],
-          });
+          if (Range.isCollapsed(editor.selection)) {
+            // If no text is selected, insert the link text
+            Transforms.insertNodes(editor, {
+              type: 'link',
+              url: item.url,
+              isUser: true,
+              userId: item.userId,
+              username: item.username,
+              children: [{ text }],
+            });
+          } else {
+            // If text is selected, convert it to a link
+            const { selection } = editor;
+            Transforms.wrapNodes(
+              editor,
+              {
+                type: 'link',
+                url: item.url,
+                isUser: true,
+                userId: item.userId,
+                username: item.username,
+                children: [],
+              },
+              { split: true, at: selection }
+            );
+          }
         } else {
-          // If text is selected, convert it to a link
-          wrapLink(editor, url, item.pageId, item.pageTitle);
+          // Handle page link
+          const text = item.text || (item.pageId ? item.pageTitle : item.url);
+          const url = item.pageId ? `/${item.pageId}` : item.url;
+
+          if (Range.isCollapsed(editor.selection)) {
+            // If no text is selected, insert the link text
+            Transforms.insertNodes(editor, {
+              type: 'link',
+              url,
+              pageId: item.pageId,
+              pageTitle: item.pageTitle,
+              children: [{ text }],
+            });
+          } else {
+            // If text is selected, convert it to a link
+            wrapLink(editor, url, item.pageId, item.pageTitle);
+          }
         }
       }
     } catch (error) {
@@ -803,12 +855,25 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   }, []);
 
   // Handle selection from TypeaheadSearch
-  const handlePageSelect = (page) => {
-    onSelect({
-      text: text || page.title,
-      pageId: page.id,
-      pageTitle: page.title
-    });
+  const handlePageSelect = (item) => {
+    // Check if this is a user or a page
+    if (item.type === 'user') {
+      // Handle user selection
+      onSelect({
+        text: text || item.title, // item.title contains the username
+        url: `/u/${item.id}`,
+        isUser: true,
+        userId: item.id,
+        username: item.title
+      });
+    } else {
+      // Handle page selection
+      onSelect({
+        text: text || item.title,
+        pageId: item.id,
+        pageTitle: item.title
+      });
+    }
   };
 
   // Handle URL submission
