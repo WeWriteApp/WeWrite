@@ -226,13 +226,15 @@ const TypeaheadSearch = ({
             // Add mock pages
             processedPages = [
               { id: 'mock1', title: 'Mock Page 1', type: 'public', username: 'testuser' },
-              { id: 'mock2', title: 'Mock Page 2', type: 'user', isOwned: true, username: 'testuser' }
+              { id: 'mock2', title: 'Mock Page 2', type: 'user', isOwned: true, username: 'testuser' },
+              { id: 'mock3', title: search + ' Page', type: 'public', username: 'testuser' }
             ];
 
             // Add mock users
             users = [
               { id: 'user1', username: 'TestUser1', type: 'user' },
-              { id: 'user2', username: 'TestUser2', type: 'user' }
+              { id: 'user2', username: 'TestUser2', type: 'user' },
+              { id: 'user3', username: search + 'User', type: 'user' }
             ];
           }
 

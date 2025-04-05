@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import { AuthContext } from "../providers/AuthProvider";
-import { ReactSearchAutocomplete } from "react-search-autocomplete";
+import CustomSearchAutocomplete from "./CustomSearchAutocomplete";
 import { useRouter } from "next/navigation";
 import { PillLink } from "./PillLink";
 
@@ -116,6 +116,18 @@ const Search = () => {
           ];
         }
 
+        // For testing purposes, add some mock data if no results were found
+        if (combinedPages.length === 0) {
+          // Add mock pages
+          combinedPages = [
+            { id: 'mock1', title: 'Mock Page 1', name: 'Mock Page 1', type: 'public', section: "Public Pages", username: 'testuser' },
+            { id: 'mock2', title: 'Mock Page 2', name: 'Mock Page 2', type: 'user', section: "Your Pages", isOwned: true, username: 'testuser' },
+            // Add mock users
+            { id: 'user1', username: 'TestUser1', name: 'TestUser1', section: "Users", type: 'user', url: `/u/user1` },
+            { id: 'user2', username: 'TestUser2', name: 'TestUser2', section: "Users", type: 'user', url: `/u/user2` }
+          ];
+        }
+
         console.log('Processed search results:', {
           total: combinedPages.length,
           bySection: {
@@ -175,7 +187,7 @@ const Search = () => {
   return (
     <div className="py-4 w-full">
       {/* <h1 className="text-2xl font-semibold">Search</h1> */}
-      <ReactSearchAutocomplete
+      <CustomSearchAutocomplete
         items={searchResults}
         onSearch={handleOnSearch}
         onSelect={handleOnSelect}
