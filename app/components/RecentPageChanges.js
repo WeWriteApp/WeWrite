@@ -30,9 +30,31 @@ export default function RecentPageChanges({ pageId }) {
       try {
         setLoading(true);
         const pageVersions = await getPageVersions(pageId);
+        console.log('Raw page versions from database:', pageVersions);
 
-        // Sort versions by timestamp in descending order (newest first)
-        const sortedVersions = pageVersions.sort((a, b) => b.timestamp - a.timestamp);
+        // If no versions found, create a fallback version
+        let versionsToUse = pageVersions;
+        if (!pageVersions || pageVersions.length === 0) {
+          console.log('No versions found, creating fallback version');
+          versionsToUse = [{
+            id: 'fallback',
+            createdAt: new Date(),
+            action: 'Created',
+            username: 'System',
+            content: ''
+          }];
+        }
+
+        // Map createdAt to timestamp for consistency and sort by timestamp in descending order (newest first)
+        const sortedVersions = versionsToUse.map(version => ({
+          ...version,
+          timestamp: version.createdAt || version.timestamp || new Date()
+        })).sort((a, b) => {
+          const dateA = a.timestamp instanceof Date ? a.timestamp : new Date();
+          const dateB = b.timestamp instanceof Date ? b.timestamp : new Date();
+          return dateB - dateA;
+        });
+        console.log('Processed versions with timestamps:', sortedVersions);
         setVersions(sortedVersions);
       } catch (err) {
         console.error('Error fetching page versions:', err);

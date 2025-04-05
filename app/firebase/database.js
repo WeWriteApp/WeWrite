@@ -285,6 +285,7 @@ export const getVersionsByPageId = async (pageId) => {
 }
 
 export const getPageVersions = async (pageId, versionCount = 10) => {
+  console.log(`getPageVersions called with pageId: ${pageId}, versionCount: ${versionCount}`);
   try {
     if (!pageId) {
       console.error("getPageVersions called with invalid pageId:", pageId);
@@ -297,8 +298,10 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
     // First try to get all versions without ordering (to avoid index requirements)
     try {
       const versionsSnap = await getDocs(versionsRef);
+      console.log(`Found ${versionsSnap.size} version documents for pageId: ${pageId}`);
 
       if (versionsSnap.empty) {
+        console.log(`No versions found for pageId: ${pageId}`);
         return [];
       }
 
@@ -306,19 +309,26 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
       let versions = versionsSnap.docs.map((doc) => {
         try {
           const data = doc.data();
+          console.log(`Processing version doc ${doc.id}, data:`, data);
 
           // Handle different timestamp formats
           let createdAt = new Date();
           if (data.createdAt) {
+            console.log(`Version ${doc.id} has createdAt:`, data.createdAt);
             if (typeof data.createdAt === 'object' && data.createdAt.toDate) {
               createdAt = data.createdAt.toDate();
+              console.log(`  - Converted Firestore timestamp to Date:`, createdAt);
             } else if (data.createdAt.seconds && data.createdAt.nanoseconds) {
               // Firestore Timestamp format
               createdAt = new Date(data.createdAt.seconds * 1000);
+              console.log(`  - Converted seconds/nanoseconds to Date:`, createdAt);
             } else {
               // String or number format
               createdAt = new Date(data.createdAt);
+              console.log(`  - Converted string/number to Date:`, createdAt);
             }
+          } else {
+            console.log(`  - No createdAt found, using current date:`, createdAt);
           }
 
           return {
