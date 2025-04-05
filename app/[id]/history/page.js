@@ -147,11 +147,15 @@ export default function PageHistoryPage({ params }) {
   return (
     <DashboardLayout>
       <div className="p-4 max-w-4xl mx-auto">
-        <PageHeader
-          title="Page History"
-          backUrl={`/${id}`}
-          backLabel="Back to page"
-        />
+        <div className="flex items-center mb-6">
+          <Button variant="outline" size="lg" onClick={handleBackToPage} className="mr-2">
+            <ChevronLeft className="h-5 w-5 mr-2" />
+            Back to page
+          </Button>
+          <h1 className="text-2xl font-bold flex-1 truncate">
+            Page History
+          </h1>
+        </div>
 
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-6">

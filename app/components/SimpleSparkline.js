@@ -14,7 +14,7 @@ import React from 'react';
 export default function SimpleSparkline({
   data = [],
   height = 60,
-  color = "hsl(var(--accent))",
+  color = "#1768FF",
   strokeWidth = 1.5
 }) {
   if (!data || data.length === 0) {
