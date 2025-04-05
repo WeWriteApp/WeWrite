@@ -787,14 +787,22 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
     openLinkEditor(element, ReactEditor.findPath(editor, element));
   };
 
+  // Check if it's a user link
+  const isUserLink = element.isUser || (url && url.startsWith('/u/'));
+
+  // Check if it's a page link (not external and not user)
+  const isPageLink = !isExternal && !isUserLink;
+
   return (
     <a
       {...attributes}
       href={url}
-      className="text-blue-500 hover:text-blue-600 underline"
+      className={`editor-link ${isUserLink ? 'user-link' : ''} ${isPageLink ? 'page-link' : ''}`}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={handleClick}
+      data-page-id={element.pageId}
+      data-user-id={isUserLink ? element.userId : undefined}
     >
       <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
     </a>
@@ -926,14 +934,15 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
 
   return (
     <div
-      className="absolute z-[1000] bg-background border border-border rounded-md shadow-lg p-3"
-      style={{
-        top: position.top + 'px',
-        left: position.left + 'px',
-        width: '320px',
-        maxWidth: '90vw'
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50"
+      onClick={(e) => {
+        // Close the modal when clicking outside
+        if (e.target === e.currentTarget) {
+          setShowLinkEditor(false);
+        }
       }}
     >
+      <div className="bg-background border border-border rounded-md shadow-lg p-5 w-full max-w-md mx-4">
       <div className="mb-3">
         <div className="flex space-x-2 mb-2">
           <button

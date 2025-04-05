@@ -39,7 +39,7 @@
 }
 
 /* Pill link styling in editor */
-.editor-link[data-page-id] {
+.editor-link[data-page-id], .editor-link.page-link {
   background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
   border-radius: 12px;
   padding: 1px 6px;

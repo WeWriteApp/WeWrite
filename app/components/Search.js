@@ -139,7 +139,12 @@ const Search = () => {
   );
 
   const handleOnSelect = (item) => {
-    router.push(`/pages/${item.id}`);
+    console.log('Selected item:', item);
+    if (item.type === 'user') {
+      router.push(`/u/${item.id}`);
+    } else {
+      router.push(`/${item.id}`);
+    }
   }
 
   const handleOnSearch = (searchTerm) => {
@@ -154,7 +159,17 @@ const Search = () => {
       setSearchResults([]);
       return;
     }
+
+    // Fetch results for typeahead
     fetchResults(searchTerm);
+  }
+
+  // Handle Enter key press to navigate to search page
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      e.preventDefault();
+      router.push(`/search?q=${encodeURIComponent(e.target.value.trim())}`);
+    }
   }
 
   return (
@@ -164,9 +179,10 @@ const Search = () => {
         items={searchResults}
         onSearch={handleOnSearch}
         onSelect={handleOnSelect}
+        onKeyDown={handleKeyDown}
         autoFocus
         className="w-full searchbar"
-        placeholder="Search for a page"
+        placeholder="Search for pages, users..."
         styling={{
           height: "44px",
           border: "1px solid var(--input)",
