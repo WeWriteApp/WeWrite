@@ -129,14 +129,14 @@ export default function PageHistoryPage({ params }) {
             Back to page
           </Button>
           <h1 className="text-2xl font-bold flex-1 truncate">
-            {page?.title || 'Page'} History
+            Page History
           </h1>
         </div>
 
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-xl font-semibold">Change History</h2>
+          <div className="flex items-center gap-2 mb-6">
+            <Clock className="h-8 w-8 text-muted-foreground" />
+            <h2 className="text-2xl font-semibold">Change History</h2>
           </div>
 
           {versions.length === 0 ? (
@@ -146,21 +146,21 @@ export default function PageHistoryPage({ params }) {
           ) : (
             <div className="space-y-4">
               {versions.map((version, index) => (
-                <div key={index} className="p-4 border rounded-md">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">
-                        {version.action || 'Updated'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {version.username || 'Anonymous'} • {isValidTimestamp(version.timestamp) ? formatDistanceToNow(new Date(version.timestamp)) : 'some time'} ago
-                      </div>
-                      {isValidTimestamp(version.timestamp) && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(version.timestamp), 'PPpp')}
-                        </div>
-                      )}
+                <div key={index} className="p-6 border rounded-lg">
+                  <div className="flex flex-col">
+                    <div className="text-2xl font-medium mb-1">
+                      {version.action || 'Updated'}
                     </div>
+                    <div className="text-muted-foreground flex items-center gap-1 mb-1">
+                      <span>{version.username || 'Anonymous'}</span>
+                      <span className="text-xs">•</span>
+                      <span>{isValidTimestamp(version.timestamp) ? formatDistanceToNow(new Date(version.timestamp)) : 'some time'} ago</span>
+                    </div>
+                    {isValidTimestamp(version.timestamp) && (
+                      <div className="text-muted-foreground">
+                        {format(new Date(version.timestamp), 'MMM d, yyyy, h:mm:ss a')}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
