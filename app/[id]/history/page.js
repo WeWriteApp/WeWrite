@@ -10,6 +10,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { Loader } from '../../components/Loader';
 import ActivityCard from '../../components/ActivityCard';
 import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDiff';
+import PageHeader from '../../components/PageHeader';
 
 export default function PageHistoryPage({ params }) {
   const { id } = params;
@@ -147,15 +148,12 @@ export default function PageHistoryPage({ params }) {
   return (
     <DashboardLayout>
       <div className="p-4 max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <Button variant="outline" size="lg" onClick={handleBackToPage} className="mr-2">
-            <ChevronLeft className="h-5 w-5 mr-2" />
-            Back to page
-          </Button>
-          <h1 className="text-2xl font-bold flex-1 truncate">
-            Page History
-          </h1>
-        </div>
+        <PageHeader
+          title="Page History"
+          username={page?.username || "Anonymous"}
+          userId={page?.userId}
+          isLoading={loading}
+        />
 
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-6">
