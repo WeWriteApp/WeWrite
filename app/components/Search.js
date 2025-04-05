@@ -84,6 +84,7 @@ const Search = () => {
             const existingUserIds = new Set(users.map(u => u.id));
             const newUsers = data.users.filter(u => !existingUserIds.has(u.id));
             users = [...users, ...newUsers];
+            console.log('Combined users after API call:', users);
           }
         } else {
           console.error('Users API request failed:',
@@ -102,29 +103,44 @@ const Search = () => {
         }));
 
         // Add users to search results
+        const formattedUsers = users.map(user => ({
+          ...user,
+          name: user.username,
+          type: 'user',
+          url: `/u/${user.id}`
+        }));
+
+        console.log('Formatted users for search results:', formattedUsers);
+
         combinedPages = [
           ...combinedPages,
-          ...users.map(user => ({
-            ...user,
-            name: user.username,
-            type: 'user',
-            url: `/u/${user.id}`
-          }))
+          ...formattedUsers
         ];
 
-        // Log if no results were found
-        if (combinedPages.length === 0 && searchTerm) {
-          console.log(`No results found for search term: ${searchTerm}`);
+        console.log('Final combined search results:', combinedPages);
+
+        // If no results were found and we have a search term, add a fallback user result
+        if (combinedPages.length === 0 && searchTerm && searchTerm.length >= 2) {
+          console.log(`No results found for search term: ${searchTerm}, adding fallback`);
+
+          // Add a fallback user result that matches the search term
+          combinedPages.push({
+            id: 'fallback-user',
+            name: searchTerm,
+            username: searchTerm,
+            type: 'user',
+            url: `/search?q=${encodeURIComponent(searchTerm)}`,
+            isFallback: true
+          });
+
+          console.log('Added fallback result:', combinedPages);
         }
 
         console.log('Processed search results:', {
           total: combinedPages.length,
-          bySection: {
-            userPages: data.userPages?.length || 0,
-            groupPages: data.groupPages?.length || 0,
-            publicPages: data.publicPages?.length || 0
-          },
-          combinedPages
+          users: users.length,
+          pages: pages.length,
+          results: combinedPages
         });
 
         setSearchResults(combinedPages);

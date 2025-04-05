@@ -33,6 +33,7 @@ const CustomSearchAutocomplete = (props) => {
 
   // Custom formatResult function to highlight matches
   const formatResult = (item) => {
+    console.log('Formatting search result item:', item);
     return (
       <div className="flex items-center justify-between w-full">
         <div>

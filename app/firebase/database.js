@@ -1,4 +1,4 @@
-import { 
+import {
   getFirestore,
   addDoc,
   collection,
@@ -29,30 +29,30 @@ export const checkPageAccess = async (pageData, userId) => {
       error: "Page not found"
     };
   }
-  
+
   // Public pages are accessible to everyone
   if (pageData.isPublic) {
     return {
       hasAccess: true
     };
   }
-  
+
   // Private pages are accessible to their owners
   if (userId && pageData.userId === userId) {
     return {
       hasAccess: true
     };
   }
-  
+
   // Check if the page belongs to a group and if the user is a member of that group
   if (userId && pageData.groupId) {
     try {
       const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
       const groupSnapshot = await get(groupRef);
-      
+
       if (groupSnapshot.exists()) {
         const groupData = groupSnapshot.val();
-        
+
         // Check if the user is a member of the group
         if (groupData.members && groupData.members[userId]) {
           return {
@@ -64,7 +64,7 @@ export const checkPageAccess = async (pageData, userId) => {
       console.error("Error checking group membership:", error);
     }
   }
-  
+
   // Otherwise, access is denied
   return {
     hasAccess: false,
@@ -119,9 +119,9 @@ export const createPage = async (data) => {
     };
 
     console.log("Creating page with username:", username);
-    
+
     const pageRef = await addDoc(collection(db, "pages"), pageData);
-    
+
     // Ensure we have content before creating a version
     const versionData = {
       content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
@@ -132,7 +132,7 @@ export const createPage = async (data) => {
 
     // create a subcollection for versions
     const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
-    
+
     // take the version id and add it as the currentVersion on the page
     await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
 
@@ -154,15 +154,15 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
 
   // Get reference to the page document
   const pageRef = doc(db, "pages", pageId);
-  
+
   // Variables to store unsubscribe functions
   let unsubscribeVersion = null;
-  
+
   // Listen for changes to the page document
   const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
-      
+
       // Check access permissions (now async)
       try {
         const accessCheck = await checkPageAccess(pageData, userId);
@@ -194,7 +194,7 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
 
             // Send updated page and version data
             onPageUpdate({ pageData, versionData, links });
-          } 
+          }
         });
       } catch (error) {
         console.error("Error checking page access:", error);
@@ -229,7 +229,7 @@ export const getPageById = async (pageId, userId = null) => {
 
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
-      
+
       // Check if user has access to this page
       const accessCheck = await checkPageAccess(pageData, userId);
       if (!accessCheck.hasAccess) {
@@ -247,10 +247,10 @@ export const getPageById = async (pageId, userId = null) => {
 
       if (versionSnap.exists()) {
         const versionData = versionSnap.data();
-        
+
         // Extract links
         const links = extractLinksFromNodes(JSON.parse(versionData.content));
-        
+
         return { pageData, versionData, links };
       } else {
         return { pageData: null, error: "Version not found" };
@@ -278,7 +278,7 @@ export const getVersionsByPageId = async (pageId) => {
       }
     });
 
-    return versions;    
+    return versions;
   } catch (e) {
     return e;
   }
@@ -290,23 +290,23 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
       console.error("getPageVersions called with invalid pageId:", pageId);
       return [];
     }
-    
+
     const pageRef = doc(db, "pages", pageId);
     const versionsRef = collection(pageRef, "versions");
-    
+
     // First try to get all versions without ordering (to avoid index requirements)
     try {
       const versionsSnap = await getDocs(versionsRef);
-      
+
       if (versionsSnap.empty) {
         return [];
       }
-      
+
       // Convert the docs to an array of data objects
       let versions = versionsSnap.docs.map((doc) => {
         try {
           const data = doc.data();
-          
+
           // Handle different timestamp formats
           let createdAt = new Date();
           if (data.createdAt) {
@@ -320,7 +320,7 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
               createdAt = new Date(data.createdAt);
             }
           }
-          
+
           return {
             id: doc.id,
             ...data,
@@ -332,21 +332,21 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
           return null;
         }
       }).filter(version => version !== null);
-      
+
       // Sort manually by createdAt in descending order
       versions.sort((a, b) => {
         const dateA = a.createdAt instanceof Date ? a.createdAt : new Date();
         const dateB = b.createdAt instanceof Date ? b.createdAt : new Date();
         return dateB - dateA;
       });
-      
+
       // Limit to the requested number
       versions = versions.slice(0, versionCount);
-      
+
       return versions;
     } catch (innerError) {
       console.error("Error with simple version fetch, falling back:", innerError);
-      
+
       // Fallback to the original query (which might still fail if index doesn't exist)
       try {
         const versionsQuery = query(
@@ -354,18 +354,18 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
           orderBy("createdAt", "desc"),
           limit(versionCount)
         );
-        
+
         const versionsSnap = await getDocs(versionsQuery);
-        
+
         if (versionsSnap.empty) {
           return [];
         }
-        
+
         // add id of each version and convert timestamp strings to Date objects
         const versions = versionsSnap.docs.map((doc) => {
           try {
             const data = doc.data();
-            
+
             // Handle different timestamp formats
             let createdAt = new Date();
             if (data.createdAt) {
@@ -379,7 +379,7 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
                 createdAt = new Date(data.createdAt);
               }
             }
-            
+
             return {
               id: doc.id,
               ...data,
@@ -391,7 +391,7 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
             return null;
           }
         }).filter(version => version !== null);
-        
+
         return versions;
       } catch (queryError) {
         console.error("Error with fallback query:", queryError);
@@ -414,7 +414,7 @@ export const saveNewVersion = async (pageId, data) => {
     };
 
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
-    
+
     // set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
 
@@ -510,7 +510,7 @@ export const deletePage = async (pageId) => {
 export const createSubcollection = async (collectionName, docId, subcollectionName, data) => {
   try {
     const docRef = doc(db, collectionName, docId);
-    const subcollectionRef = collection(docRef, subcollectionName);    
+    const subcollectionRef = collection(docRef, subcollectionName);
     const subcollectionDocRef = await addDoc(subcollectionRef, data);
     return subcollectionDocRef.id;
   } catch (e) {
@@ -582,16 +582,16 @@ export const getUsernameByEmail = async (email) => {
 export const getPageStats = async (pageId) => {
   try {
     if (!pageId) return null;
-    
+
     const pageRef = doc(db, "pages", pageId);
     const pageSnapshot = await getDoc(pageRef);
-    
+
     if (!pageSnapshot.exists()) {
       return null;
     }
-    
+
     const pageData = pageSnapshot.data();
-    
+
     // Here we would fetch additional statistics from other subcollections
     // For now, return the basic stats from the page document
     return {
@@ -611,9 +611,9 @@ export const getPageStats = async (pageId) => {
 export const getEditablePagesByUser = async (userId, searchQuery = "") => {
   try {
     if (!userId) return [];
-    
+
     let pages = [];
-    
+
     // First get all pages owned by the user
     const userPagesQuery = query(
       collection(db, "pages"),
@@ -621,9 +621,9 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
       orderBy("lastModified", "desc"),
       limit(50)
     );
-    
+
     const userPagesSnapshot = await getDocs(userPagesQuery);
-    
+
     // Add user's own pages to the result
     userPagesSnapshot.forEach((doc) => {
       const data = doc.data();
@@ -632,37 +632,37 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
         ...data
       });
     });
-    
+
     // Get all groups the user is a member of
     const groupsRef = ref(rtdb, 'groups');
     const groupsSnapshot = await get(groupsRef);
-    
+
     if (groupsSnapshot.exists()) {
       const groups = groupsSnapshot.val();
-      
+
       // Find groups where user is a member
       const userGroups = Object.entries(groups)
-        .filter(([_, groupData]) => 
+        .filter(([_, groupData]) =>
           groupData.members && groupData.members[userId]
         )
         .map(([groupId, groupData]) => ({
           id: groupId,
           ...groupData
         }));
-      
+
       // For each group, get all pages
       for (const group of userGroups) {
         if (group.pages) {
           // Get detailed page data for each page in the group
           const groupPageIds = Object.keys(group.pages);
-          
+
           for (const pageId of groupPageIds) {
             // Check if we already have this page (user might own pages in their groups)
             if (!pages.some(p => p.id === pageId)) {
               // Get the page data from Firestore
               const pageRef = doc(db, "pages", pageId);
               const pageSnap = await getDoc(pageRef);
-              
+
               if (pageSnap.exists()) {
                 const pageData = pageSnap.data();
                 pages.push({
@@ -678,14 +678,14 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
         }
       }
     }
-    
+
     // Sort all pages by last modified date
     pages.sort((a, b) => {
       const dateA = new Date(a.lastModified || a.createdAt || 0);
       const dateB = new Date(b.lastModified || b.createdAt || 0);
       return dateB - dateA; // Descending order (newest first)
     });
-    
+
     // Client-side filtering for search
     if (searchQuery) {
       const normalizedQuery = searchQuery.toLowerCase();
@@ -694,7 +694,7 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
         return normalizedTitle.includes(normalizedQuery);
       });
     }
-    
+
     console.log(`Found ${pages.length} pages matching query "${searchQuery}" (including group pages)`);
     return pages;
   } catch (error) {
@@ -709,23 +709,23 @@ export async function getPageMetadata(pageId) {
     const { doc, getDoc, collection, query, orderBy, limit, getDocs } = await import('firebase/firestore');
     const pageRef = doc(db, 'pages', pageId);
     const pageSnapshot = await getDoc(pageRef);
-    
+
     if (!pageSnapshot.exists()) {
       return null;
     }
-    
+
     const pageData = {
       id: pageSnapshot.id,
       ...pageSnapshot.data()
     };
-    
+
     // If we have a currentVersion, fetch it to get the content for OG image
     if (pageData.currentVersion) {
       try {
         const versionsRef = collection(db, 'pages', pageId, 'versions');
         const versionDoc = doc(versionsRef, pageData.currentVersion);
         const versionSnapshot = await getDoc(versionDoc);
-        
+
         if (versionSnapshot.exists()) {
           pageData.content = versionSnapshot.data().content;
         }
@@ -733,7 +733,7 @@ export async function getPageMetadata(pageId) {
         console.error('Error fetching page content for OG image:', versionError);
       }
     }
-    
+
     return pageData;
   } catch (error) {
     console.error('Error fetching page metadata:', error);
@@ -749,14 +749,14 @@ export async function getCachedPageTitle(pageId) {
   if (pageTitleCache.has(pageId)) {
     return pageTitleCache.get(pageId);
   }
-  
+
   try {
     const metadata = await getPageMetadata(pageId);
     const title = metadata?.title || 'Untitled';
-    
+
     // Cache the title
     pageTitleCache.set(pageId, title);
-    
+
     return title;
   } catch (error) {
     console.error('Error fetching page title:', error);
@@ -767,28 +767,28 @@ export async function getCachedPageTitle(pageId) {
 // Function to prefetch and cache multiple page titles at once
 export async function prefetchPageTitles(pageIds) {
   if (!pageIds || pageIds.length === 0) return;
-  
+
   try {
     const { getDocs, query, collection, where } = await import('firebase/firestore');
-    
+
     // Filter out IDs that are already cached
     const uncachedIds = pageIds.filter(id => !pageTitleCache.has(id));
-    
+
     if (uncachedIds.length === 0) return;
-    
+
     // Batch fetch pages in chunks of 10 (Firestore limit for 'in' queries)
     const batchSize = 10;
     for (let i = 0; i < uncachedIds.length; i += batchSize) {
       const batch = uncachedIds.slice(i, i + batchSize);
-      
+
       // Create a query for this batch
       const q = query(
         collection(db, 'pages'),
         where('__name__', 'in', batch)
       );
-      
+
       const querySnapshot = await getDocs(q);
-      
+
       // Cache each page title
       querySnapshot.forEach(doc => {
         const data = doc.data();
@@ -804,14 +804,14 @@ export async function prefetchPageTitles(pageIds) {
 export const appendPageReference = async (targetPageId, sourcePageData) => {
   try {
     if (!targetPageId || !sourcePageData) return false;
-    
+
     // Get the current version of the target page
     const { pageData } = await getPageById(targetPageId);
-    
+
     if (!pageData) {
       throw new Error("Target page not found");
     }
-    
+
     // Get the current content from the page data
     let currentContent = [];
     if (pageData.content) {
@@ -825,7 +825,7 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
         currentContent = pageData.content;
       }
     }
-    
+
     // Create a reference paragraph to append
     const referenceNode = {
       type: "paragraph",
@@ -839,20 +839,20 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
         }
       ]
     };
-    
+
     // Append the reference to the content
     const newContent = [
       ...currentContent,
       { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
       referenceNode
     ];
-    
+
     // Update the page with the new content
     await updatePage(targetPageId, {
       content: JSON.stringify(newContent),
       lastModified: new Date().toISOString()
     });
-    
+
     return true;
   } catch (error) {
     console.error("Error appending page reference:", error);
@@ -868,7 +868,9 @@ export const searchUsers = async (searchQuery, limit = 10) => {
 
   try {
     const usersRef = collection(db, "users");
-    
+
+    console.log('Searching for users with query:', searchQuery);
+
     // Search by username (case insensitive)
     const usernameQuery = query(
       usersRef,
@@ -876,7 +878,7 @@ export const searchUsers = async (searchQuery, limit = 10) => {
       where("usernameLower", "<=", searchQuery.toLowerCase() + "\uf8ff"),
       limit(limit)
     );
-    
+
     // Search by email (case insensitive)
     const emailQuery = query(
       usersRef,
@@ -884,16 +886,16 @@ export const searchUsers = async (searchQuery, limit = 10) => {
       where("email", "<=", searchQuery.toLowerCase() + "\uf8ff"),
       limit(limit)
     );
-    
+
     // Execute both queries
     const [usernameResults, emailResults] = await Promise.all([
       getDocs(usernameQuery),
       getDocs(emailQuery)
     ]);
-    
+
     // Combine and deduplicate results
     const results = new Map();
-    
+
     usernameResults.forEach(doc => {
       const userData = doc.data();
       results.set(doc.id, {
@@ -903,7 +905,7 @@ export const searchUsers = async (searchQuery, limit = 10) => {
         photoURL: userData.photoURL || null
       });
     });
-    
+
     emailResults.forEach(doc => {
       if (!results.has(doc.id)) {
         const userData = doc.data();
@@ -915,8 +917,10 @@ export const searchUsers = async (searchQuery, limit = 10) => {
         });
       }
     });
-    
-    return Array.from(results.values());
+
+    const finalResults = Array.from(results.values());
+    console.log('Final user search results:', finalResults);
+    return finalResults;
   } catch (error) {
     console.error("Error searching users:", error);
     return [];
@@ -928,7 +932,7 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
     // Get user's own pages from Firestore
     const pagesRef = collection(db, "pages");
     let pageQuery;
-    
+
     if (includePrivate && userId === currentUserId) {
       // If viewing own profile and includePrivate is true, get all pages
       pageQuery = query(
@@ -945,57 +949,57 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
         orderBy("lastModified", "desc")
       );
     }
-    
+
     const pagesSnapshot = await getDocs(pageQuery);
     const pages = [];
-    
+
     pagesSnapshot.forEach((doc) => {
       pages.push({
         id: doc.id,
         ...doc.data()
       });
     });
-    
+
     // Get pages from groups the user is a member of
     const rtdb = getDatabase();
     const groupsRef = ref(rtdb, 'groups');
     const groupsSnapshot = await get(groupsRef);
-    
+
     if (groupsSnapshot.exists()) {
       const groups = groupsSnapshot.val();
-      
+
       // Find groups where user is a member
       const userGroups = Object.entries(groups)
-        .filter(([_, groupData]) => 
+        .filter(([_, groupData]) =>
           groupData.members && groupData.members[userId]
         )
         .map(([groupId, groupData]) => ({
           id: groupId,
           ...groupData
         }));
-      
+
       // For each group, get all pages
       for (const group of userGroups) {
         // Skip private groups if the current user is not a member or owner
         if (!group.isPublic && currentUserId !== userId) {
           // If current user is not the group owner and not a member, skip this group
-          if (group.owner !== currentUserId && 
+          if (group.owner !== currentUserId &&
               (!group.members || !group.members[currentUserId])) {
             continue;
           }
         }
-        
+
         if (group.pages) {
           // Get detailed page data for each page in the group
           const groupPageIds = Object.keys(group.pages);
-          
+
           for (const pageId of groupPageIds) {
             // Check if we already have this page (user might own pages in their groups)
             if (!pages.some(p => p.id === pageId)) {
               // Get the page data from Firestore
               const pageRef = doc(db, "pages", pageId);
               const pageSnap = await getDoc(pageRef);
-              
+
               if (pageSnap.exists()) {
                 const pageData = pageSnap.data();
                 pages.push({
@@ -1011,14 +1015,14 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
         }
       }
     }
-    
+
     // Sort all pages by last modified date
     pages.sort((a, b) => {
       const dateA = new Date(a.lastModified || a.createdAt || 0);
       const dateB = new Date(b.lastModified || b.createdAt || 0);
       return dateB - dateA; // Descending order (newest first)
     });
-    
+
     return pages;
   } catch (error) {
     console.error("Error getting user pages:", error);
