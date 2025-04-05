@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
 import SimilarPages from "./SimilarPages";
-import PageViewCounter from "./PageViewCounter";
-import RecentPageChanges from "./RecentPageChanges";
+import PageStats from "./PageStats";
+import { getPageViewsLast24Hours, getPageTotalViews } from "../firebase/pageViews";
+import { getPageVersions } from "../firebase/database";
 
 /**
  * PageFooter Component
@@ -29,6 +30,65 @@ import RecentPageChanges from "./RecentPageChanges";
  * @param {Function} setIsEditing - Function to toggle edit mode
  */
 export default function PageFooter({ page, content, isOwner, isEditing, setIsEditing }) {
+  const [viewData, setViewData] = useState({ total: 0, hourly: [] });
+  const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!page || !page.id) return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch view data
+        const views = await getPageViewsLast24Hours(page.id);
+        if (views.total === 0) {
+          const totalViews = await getPageTotalViews(page.id);
+          setViewData({ total: totalViews, hourly: Array(24).fill(0) });
+        } else {
+          setViewData(views);
+        }
+
+        // Fetch version data
+        const versions = await getPageVersions(page.id);
+
+        // Generate hourly data for changes
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        // Create 24 hourly buckets
+        const hourlyBuckets = Array(24).fill(0);
+
+        // Count versions in each hourly bucket
+        versions.forEach(version => {
+          if (version.createdAt) {
+            const versionDate = version.createdAt instanceof Date ?
+              version.createdAt : new Date(version.createdAt);
+
+            if (versionDate >= yesterday && versionDate <= now) {
+              const hourDiff = 23 - Math.floor((now - versionDate) / (1000 * 60 * 60));
+              if (hourDiff >= 0 && hourDiff < 24) {
+                hourlyBuckets[hourDiff]++;
+              }
+            }
+          }
+        });
+
+        setChangeData({
+          count: versions.length,
+          hourly: hourlyBuckets
+        });
+      } catch (error) {
+        console.error("Error fetching page stats:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [page]);
+
   if (!page) return null;
 
   return (
@@ -44,11 +104,10 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         />
       </div>
 
-      {/* Word and character count + view counter */}
-      {!isEditing && (
+      {/* Word and character count */}
+      {!isEditing && content && (
         <div className="mt-4 mb-6 flex flex-wrap gap-4 items-center">
-          {content && <WordCounter content={content} />}
-          <PageViewCounter pageId={page.id} />
+          <WordCounter content={content} />
         </div>
       )}
 
@@ -57,9 +116,15 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         <SimilarPages currentPage={page} maxPages={3} />
       )}
 
-      {/* Recent page changes section */}
+      {/* Page stats section */}
       {!isEditing && (
-        <RecentPageChanges pageId={page.id} />
+        <PageStats
+          viewCount={viewData.total}
+          viewData={viewData.hourly}
+          changeCount={changeData.count}
+          changeData={changeData.hourly}
+          pageId={page.id}
+        />
       )}
     </div>
   );
