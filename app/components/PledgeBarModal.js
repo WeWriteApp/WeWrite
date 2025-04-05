@@ -19,8 +19,8 @@ import { DollarSign } from "lucide-react";
 
 const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
   const content = isSignedIn ? {
-    title: "Support WeWrite",
-    description: "⚡️ Donations aren't built yet! Please support us on OpenCollective so we can get this built!⚡️",
+    title: "This feature is coming soon!",
+    description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can support us on OpenCollective!",
     action: {
       href: "https://opencollective.com/wewrite-app",
       label: "Support us",
