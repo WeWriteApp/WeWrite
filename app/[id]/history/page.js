@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Clock } from 'lucide-react';
-import DashboardLayout from '../../components/DashboardLayout';
+import DashboardLayout from '../../DashboardLayout';
 import { getPageById } from '../../firebase/database';
 import { getPageVersions } from '../../firebase/database';
 import PageHeader from '../../components/PageHeader';
