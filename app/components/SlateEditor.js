@@ -1044,6 +1044,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
               </div>
             </div>
           )}
+        </div>
       </div>
     </div>
   );
