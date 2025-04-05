@@ -37,7 +37,7 @@ export default function PageStats({
       <div className="flex items-center justify-between p-4 rounded-lg border-accent/20 border bg-accent/10 text-card-foreground shadow-sm">
         <div className="flex items-center gap-2">
           <Eye className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Total readers</span>
+          <span className="text-sm font-medium">Views</span>
         </div>
 
         <div className="flex items-center gap-2">
