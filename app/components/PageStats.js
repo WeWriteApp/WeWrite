@@ -47,10 +47,10 @@ export default function PageStats({
                 <SimpleSparkline data={viewData} height={30} color="#1768FF" />
               )}
             </div>
-            <span className="text-xs text-accent font-medium">24h</span>
+            <span className="text-xs font-medium" style={{ color: '#1768FF' }}>24h</span>
           </div>
 
-          <div className="bg-primary text-primary-foreground text-sm font-medium px-2 py-1 rounded-md">
+          <div className="bg-[#1768FF] text-white text-sm font-medium px-2 py-1 rounded-md">
             {viewCount.toLocaleString()}
           </div>
         </div>
@@ -73,10 +73,10 @@ export default function PageStats({
                 <SimpleSparkline data={changeData} height={30} color="#1768FF" />
               )}
             </div>
-            <span className="text-xs text-accent font-medium">24h</span>
+            <span className="text-xs font-medium" style={{ color: '#1768FF' }}>24h</span>
           </div>
 
-          <div className="bg-primary text-primary-foreground text-sm font-medium px-2 py-1 rounded-md">
+          <div className="bg-[#1768FF] text-white text-sm font-medium px-2 py-1 rounded-md">
             {changeCount}
           </div>
         </div>
