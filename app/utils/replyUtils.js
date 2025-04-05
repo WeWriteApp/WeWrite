@@ -60,6 +60,10 @@ export const createReplyContent = ({
         },
         {
           type: "paragraph",
+          children: [{ text: "I'm responding to this page because..." }]
+        },
+        {
+          type: "paragraph",
           children: [{ text: "" }]
         }
       ];
