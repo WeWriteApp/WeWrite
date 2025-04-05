@@ -3,6 +3,7 @@ import { createEditor, Editor, Transforms, Range, Point, Path, Element as SlateE
 import { Slate, Editable, ReactEditor, withReact, useSelected, useSlate, useSlateStatic, useReadOnly } from "slate-react";
 import { withHistory } from "slate-history";
 import { AnimatePresence, motion } from "framer-motion";
+import { Link as LinkIcon } from "lucide-react";
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
@@ -230,6 +231,24 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       event.preventDefault();
       setShowLinkEditor(false);
       return;
+    }
+
+    // Check for @ symbol to trigger user search
+    if (event.key === '@') {
+      // Don't prevent default here to allow the @ symbol to be typed
+      // Show the link editor modal
+      setShowLinkEditor(true);
+
+      // Get cursor position for the link editor
+      const domSelection = window.getSelection();
+      if (domSelection.rangeCount > 0) {
+        const range = domSelection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setLinkEditorPosition({
+          left: rect.left,
+          top: rect.bottom + window.scrollY,
+        });
+      }
     }
 
     // Check if we're on a line with special mode settings
@@ -615,6 +634,8 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           onInsert={onInsert}
           onDiscard={onDiscard}
           onSave={onSave}
+          setShowLinkEditor={setShowLinkEditor}
+          setLinkEditorPosition={setLinkEditorPosition}
         />
 
         {/* iOS-compatible toolbar that stays above keyboard */}
@@ -1020,7 +1041,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
 };
 
 // Keyboard-aware toolbar that stays above the keyboard
-const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
+const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave, setShowLinkEditor, setLinkEditorPosition }) => {
   const editor = useSlateStatic();
   const [toolbarPosition, setToolbarPosition] = useState(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false); // Basic state, might need refinement
@@ -1134,9 +1155,33 @@ const KeyboardAwareToolbar = ({ onInsert, onDiscard, onSave }) => {
           </button> */}
 
         {/* Add other formatting buttons here */}
+        <button
+          className="p-1 hover:bg-muted rounded flex items-center justify-center"
+          onMouseDown={(event) => {
+            event.preventDefault(); // Prevent editor losing focus
+            // Show the link editor modal
+            const { selection } = editor;
+            if (selection) {
+              const domSelection = window.getSelection();
+              if (domSelection.rangeCount > 0) {
+                const range = domSelection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                // Set position and show link editor
+                setLinkEditorPosition({
+                  left: rect.left,
+                  top: rect.bottom + window.scrollY,
+                });
+                setShowLinkEditor(true);
+              }
+            }
+          }}
+          title="Insert Link"
+        >
+          <LinkIcon className="h-4 w-4" />
+        </button>
 
         {/* Separator */}
-        {/* <div className="border-l border-border h-4 mx-1"></div> */}
+        <div className="border-l border-border h-4 mx-1"></div>
 
         {/* Insert/Save/Discard Buttons */}
         {showInsert && (

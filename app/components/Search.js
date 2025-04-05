@@ -40,9 +40,9 @@ const Search = () => {
 
         const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`;
         console.log('Making API request to:', queryUrl);
-        
+
         const response = await fetch(queryUrl);
-        
+
         if (!response.ok) {
           console.error('Search API returned error:', response.status);
           const errorText = await response.text();
@@ -52,32 +52,69 @@ const Search = () => {
 
         const data = await response.json();
         console.log('Search API response:', data);
-        
+
         // Check if we received an error message
         if (data.error) {
           console.error('Search API returned error object:', data.error);
         }
-        
+
         // Even if we have an error, continue with the empty arrays
-        
+
         // Combine all pages and format them for ReactSearchAutocomplete
-        const combinedPages = [
-          ...(data.userPages || []).map(page => ({
-            ...page,
-            name: page.title,
-            section: "Your Pages"
-          })),
-          ...(data.groupPages || []).map(page => ({
-            ...page,
-            name: page.title,
-            section: "Group Pages"
-          })),
-          ...(data.publicPages || []).map(page => ({
-            ...page,
-            name: page.title,
-            section: "Public Pages"
-          }))
-        ];
+        let combinedPages = [];
+
+        // Check if we have the new format (pages array) or old format (categorized pages)
+        if (data.pages) {
+          // New format - pages array
+          combinedPages = data.pages.map(page => {
+            let section = "Public Pages";
+            if (page.isOwned) {
+              section = "Your Pages";
+            } else if (page.type === 'group') {
+              section = "Group Pages";
+            }
+
+            return {
+              ...page,
+              name: page.title,
+              section: section
+            };
+          });
+        } else {
+          // Old format - categorized pages
+          combinedPages = [
+            ...(data.userPages || []).map(page => ({
+              ...page,
+              name: page.title,
+              section: "Your Pages"
+            })),
+            ...(data.groupPages || []).map(page => ({
+              ...page,
+              name: page.title,
+              section: "Group Pages"
+            })),
+            ...(data.publicPages || []).map(page => ({
+              ...page,
+              name: page.title,
+              section: "Public Pages"
+            }))
+          ];
+        }
+
+        // Add users to search results if available
+        if (data.users) {
+          combinedPages = [
+            ...combinedPages,
+            ...(data.users || []).map(user => ({
+              ...user,
+              id: user.id,
+              name: user.username,
+              section: "Users",
+              type: 'user',
+              url: `/u/${user.id}`
+            }))
+          ];
+        }
 
         console.log('Processed search results:', {
           total: combinedPages.length,
@@ -111,7 +148,7 @@ const Search = () => {
       length: searchTerm?.length,
       trimmed: searchTerm?.trim()?.length
     });
-    
+
     if (!searchTerm?.trim()) {
       console.log('Empty search term, clearing results');
       setSearchResults([]);
@@ -145,14 +182,14 @@ const Search = () => {
           clearIconMargin: "3px 14px 0 0",
           searchIconMargin: "0 0 0 12px"
         }}
-        fuseOptions={{ 
+        fuseOptions={{
           minMatchCharLength: 2,
         }}
         formatResult={(item) => {
           return (
-            <PillLink 
-              href={`/pages/${item.id}`} 
-              isPublic={item.isPublic} 
+            <PillLink
+              href={`/pages/${item.id}`}
+              isPublic={item.isPublic}
               key={item.id}
               isOwned={item.section === "Your Pages"}
               className="max-w-full"
