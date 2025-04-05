@@ -5,6 +5,7 @@ import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
 import SimilarPages from "./SimilarPages";
 import PageViewCounter from "./PageViewCounter";
+import RecentPageChanges from "./RecentPageChanges";
 
 /**
  * PageFooter Component
@@ -54,6 +55,11 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
       {/* Similar pages section */}
       {!isEditing && (
         <SimilarPages currentPage={page} maxPages={3} />
+      )}
+
+      {/* Recent page changes section */}
+      {!isEditing && (
+        <RecentPageChanges pageId={page.id} />
       )}
     </div>
   );
