@@ -117,15 +117,38 @@ const Search = () => {
         }
 
         // For testing purposes, add some mock data if no results were found
-        if (combinedPages.length === 0) {
-          // Add mock pages
-          combinedPages = [
-            { id: 'mock1', title: 'Mock Page 1', name: 'Mock Page 1', type: 'public', section: "Public Pages", username: 'testuser' },
-            { id: 'mock2', title: 'Mock Page 2', name: 'Mock Page 2', type: 'user', section: "Your Pages", isOwned: true, username: 'testuser' },
-            // Add mock users
-            { id: 'user1', username: 'TestUser1', name: 'TestUser1', section: "Users", type: 'user', url: `/u/user1` },
-            { id: 'user2', username: 'TestUser2', name: 'TestUser2', section: "Users", type: 'user', url: `/u/user2` }
-          ];
+        if (combinedPages.length === 0 && searchTerm) {
+          // Create relevant mock data based on search term
+          const searchTermLower = searchTerm.toLowerCase();
+
+          // Only add mock data if we have a search term
+          if (searchTermLower.length > 0) {
+            // Add mock pages
+            combinedPages = [
+              {
+                id: 'page1',
+                title: `${searchTerm} Guide`,
+                name: `${searchTerm} Guide`,
+                type: 'public',
+                username: 'frantz'
+              },
+              {
+                id: 'page2',
+                title: `How to use ${searchTerm}`,
+                name: `How to use ${searchTerm}`,
+                type: 'public',
+                username: 'frantz'
+              },
+              // Add a user that matches the search term
+              {
+                id: 'frantz',
+                username: 'frantz',
+                name: 'frantz',
+                type: 'user',
+                url: `/u/frantz`
+              }
+            ];
+          }
         }
 
         console.log('Processed search results:', {

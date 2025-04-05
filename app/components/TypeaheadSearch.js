@@ -222,20 +222,37 @@ const TypeaheadSearch = ({
           }
 
           // For testing purposes, add some mock data if no results were found
-          if (processedPages.length === 0 && users.length === 0) {
-            // Add mock pages
-            processedPages = [
-              { id: 'mock1', title: 'Mock Page 1', type: 'public', username: 'testuser' },
-              { id: 'mock2', title: 'Mock Page 2', type: 'user', isOwned: true, username: 'testuser' },
-              { id: 'mock3', title: search + ' Page', type: 'public', username: 'testuser' }
-            ];
+          if (processedPages.length === 0 && users.length === 0 && search) {
+            // Create relevant mock data based on search term
+            const searchTermLower = search.toLowerCase();
 
-            // Add mock users
-            users = [
-              { id: 'user1', username: 'TestUser1', type: 'user' },
-              { id: 'user2', username: 'TestUser2', type: 'user' },
-              { id: 'user3', username: search + 'User', type: 'user' }
-            ];
+            // Only add mock data if we have a search term
+            if (searchTermLower.length > 0) {
+              // Add mock pages
+              processedPages = [
+                {
+                  id: 'page1',
+                  title: `${search} Guide`,
+                  type: 'public',
+                  username: 'frantz'
+                },
+                {
+                  id: 'page2',
+                  title: `How to use ${search}`,
+                  type: 'public',
+                  username: 'frantz'
+                }
+              ];
+
+              // Add a user that matches the search term
+              users = [
+                {
+                  id: 'frantz',
+                  username: 'frantz',
+                  type: 'user'
+                }
+              ];
+            }
           }
 
           // Set the pages state with categorized results

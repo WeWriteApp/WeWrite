@@ -37,8 +37,11 @@ const CustomSearchAutocomplete = (props) => {
       <div className="flex items-center justify-between w-full">
         <div>
           <HighlightedText text={item.name} highlight={searchTerm} />
-          {item.section && (
-            <span className="text-xs text-muted-foreground ml-2">{item.section}</span>
+          {item.type === 'user' && (
+            <span className="text-xs text-muted-foreground ml-2">User</span>
+          )}
+          {item.username && !item.type && (
+            <span className="text-xs text-muted-foreground ml-2">by {item.username}</span>
           )}
         </div>
       </div>
