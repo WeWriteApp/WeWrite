@@ -235,6 +235,9 @@ const Form = ({ Page, setPage, isReply }) => {
           console.log("Title input focused");
         }
       }, 300);
+
+      // We don't set initialContent for replies anymore since PageEditor handles it
+      // This prevents conflicts between the two content sources
     } else {
       // For non-replies, still use the title parameter if available
       const titleParam = searchParams.get('title');
@@ -422,7 +425,7 @@ const Form = ({ Page, setPage, isReply }) => {
     <PageEditor
       title={Page.title}
       setTitle={(newTitle) => setPage({ ...Page, title: newTitle })}
-      initialContent={initialContent}
+      initialContent={isReply ? null : initialContent}
       onContentChange={setEditorState}
       isPublic={Page.isPublic}
       setIsPublic={(newValue) => setPage({ ...Page, isPublic: newValue })}

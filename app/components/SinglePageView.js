@@ -521,7 +521,7 @@ function SinglePageView({ params }) {
         />
       </PageProvider>
       <SiteFooter />
-      <PledgeBar />
+      {!isEditing && <PledgeBar />}
     </Layout>
   );
 }

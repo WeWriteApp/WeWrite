@@ -14,7 +14,7 @@
 .page-link,
 [data-slate-editor] a.page-link,
 [data-slate-editor] a.editor-link.page-link {
-  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1) !important;
+  background-color: var(--primary) !important;
   border-radius: 8px !important;
   padding: 1px 6px !important;
   margin: 0 1px !important;
@@ -24,9 +24,10 @@
   align-items: center !important;
   font-size: 0.9375rem !important;
   line-height: 1.5 !important;
-  color: var(--accent-color, #1768FF) !important;
-  border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2) !important;
+  color: var(--primary-foreground, white) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-weight: 500 !important;
+  text-shadow: none !important;
 }
 
 /* User links styling - consistent across edit and view modes */
@@ -34,7 +35,7 @@
 .editor-link.user-link,
 [data-slate-editor] a.user-link,
 [data-slate-editor] a.editor-link.user-link {
-  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1) !important;
+  background-color: var(--primary) !important;
   border-radius: 8px !important;
   padding: 1px 6px !important;
   margin: 0 1px !important;
@@ -45,9 +46,10 @@
   align-items: center !important;
   font-size: 0.9375rem !important;
   line-height: 1.5 !important;
-  color: var(--accent-color, #1768FF) !important;
-  border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2) !important;
+  color: var(--primary-foreground, white) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-weight: 500 !important;
+  text-shadow: none !important;
 }
 
 /* Add @ symbol before user links - more specific selectors */
