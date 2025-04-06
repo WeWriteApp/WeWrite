@@ -5,6 +5,7 @@ import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
 import SimilarPages from "./SimilarPages";
 import PageStats from "./PageStats";
+import ConstructionChip from "./ConstructionChip";
 import { getPageViewsLast24Hours, getPageTotalViews } from "../firebase/pageViews";
 import { getPageVersions } from "../firebase/database";
 
@@ -126,6 +127,9 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
           pageId={page.id}
         />
       )}
+
+      {/* Construction chip - always visible except in edit mode */}
+      {!isEditing && <ConstructionChip />}
     </div>
   );
 }

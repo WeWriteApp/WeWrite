@@ -17,8 +17,9 @@ import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
 import { DollarSign } from "lucide-react";
 
-const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
-  const content = isSignedIn ? {
+const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
+  // Use customContent if provided, otherwise use default content based on sign-in status
+  const content = customContent || (isSignedIn ? {
     title: "This feature is coming soon!",
     description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can support us on OpenCollective!",
     action: {
@@ -34,7 +35,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
       label: "Sign in",
       external: false
     }
-  };
+  });
 
   // Sort social links in the specified order: twitter, youtube, instagram
   const sortedSocialLinks = [...socialLinks].sort((a, b) => {
