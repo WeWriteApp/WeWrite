@@ -14,6 +14,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
 import { Globe } from "lucide-react";
+import { createReplyAttribution } from "../utils/linkUtils";
 
 /**
  * New Page Component
@@ -199,12 +200,16 @@ const Form = ({ Page, setPage, isReply }) => {
 
   // Helper function to set fallback content
   const setFallbackContent = () => {
+    // Create a simple fallback content with just text
     const defaultContent = [
       {
         type: "paragraph",
         children: [{ text: "Replying to page" }]
       }
     ];
+
+    // Set the content
+    console.log("Using fallback content:", JSON.stringify(defaultContent, null, 2));
     setInitialContent(defaultContent);
     if (setEditorState) {
       setEditorState(defaultContent);
@@ -297,31 +302,14 @@ const Form = ({ Page, setPage, isReply }) => {
             console.log("Found original page:", originalPage);
 
             // Create a direct reply content structure with proper attribution
+            // using the utility function for consistent structure
             const directReplyContent = [
-              {
-                type: "paragraph",
-                children: [
-                  { text: "Replying to " },
-                  {
-                    type: "link",
-                    url: `/${replyToParam}`,
-                    pageId: replyToParam,
-                    pageTitle: originalPage.title || "Untitled",
-                    className: "page-link",
-                    children: [{ text: originalPage.title || "Untitled" }]
-                  },
-                  { text: " by " },
-                  {
-                    type: "link",
-                    url: `/u/${originalPage.userId || "anonymous"}`,
-                    isUser: true,
-                    userId: originalPage.userId || "anonymous",
-                    username: originalPage.username || "Anonymous",
-                    className: "user-link",
-                    children: [{ text: originalPage.username || "Anonymous" }]
-                  }
-                ]
-              }
+              createReplyAttribution({
+                pageId: replyToParam,
+                pageTitle: originalPage.title,
+                userId: originalPage.userId,
+                username: originalPage.username || "Anonymous"
+              })
             ];
 
             // Set the content directly

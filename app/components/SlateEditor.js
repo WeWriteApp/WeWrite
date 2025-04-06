@@ -440,9 +440,23 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
           // Use custom className if provided, otherwise use default classes
           // Ensure consistent styling with the rest of the product
-          const className = element.className ?
-            `editor-link ${element.className}` :
-            isUserLink ? 'editor-link user-link' : 'editor-link page-link';
+          // Add both editor-link and specific class to ensure styling is applied
+          let className = 'editor-link';
+
+          if (element.className) {
+            className += ` ${element.className}`;
+          } else if (isUserLink) {
+            className += ' user-link';
+          } else {
+            className += ' page-link';
+          }
+
+          // Ensure we have the right class for styling
+          if (isUserLink && !className.includes('user-link')) {
+            className += ' user-link';
+          } else if (!isUserLink && !className.includes('page-link')) {
+            className += ' page-link';
+          }
 
           // Add more debug logging for user links
           if (isUserLink) {
@@ -728,6 +742,34 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
     <Slate editor={editor} initialValue={value} onChange={onChange}>
       {/* Add custom styles */}
       <style dangerouslySetInnerHTML={{ __html: editorStyles }} />
+
+      {/* Add critical styles directly to ensure they're applied */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        /* Critical pill link styles that must be applied */
+        .slate-editor-container a[data-page-id],
+        .slate-editor-container a.page-link,
+        .slate-editor-container a.editor-link.page-link {
+          background-color: #1768FF !important;
+          color: white !important;
+          border-radius: 8px !important;
+          padding: 1px 6px !important;
+          margin: 0 1px !important;
+          display: inline-flex !important;
+          white-space: nowrap !important;
+        }
+
+        .slate-editor-container a.user-link,
+        .slate-editor-container a[data-user-id],
+        .slate-editor-container a.editor-link.user-link {
+          background-color: #1768FF !important;
+          color: white !important;
+          border-radius: 8px !important;
+          padding: 1px 6px !important;
+          margin: 0 1px !important;
+          display: inline-flex !important;
+          white-space: nowrap !important;
+        }
+      ` }} />
 
       <div className={`slate-editor-container ${styles.slateEditor}`} style={{ position: 'relative', paddingBottom: '60px' }}>
         {/* Conditionally render LinkEditor */}

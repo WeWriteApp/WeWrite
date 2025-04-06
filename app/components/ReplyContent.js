@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createReplyContent } from '../utils/replyUtils';
+import { createReplyAttribution } from '../utils/linkUtils';
 import SlateEditor from './SlateEditor';
 // Note: We're using the centralized styles from editor-styles.css
 // which is imported by SlateEditor
@@ -85,33 +86,18 @@ export default function ReplyContent({
             }
           }
 
-          // Create reply content with attribution
+          // Create reply content with attribution using the utility function
           const replyContent = [
-            {
-              type: "paragraph",
-              children: [
-                { text: "Replying to " },
-                {
-                  type: "link",
-                  url: `/${originalPage.id}`,
-                  pageId: originalPage.id,
-                  pageTitle: originalPage.title || "Untitled",
-                  className: "page-link",
-                  children: [{ text: originalPage.title || "Untitled" }]
-                },
-                { text: " by " },
-                {
-                  type: "link",
-                  url: `/u/${originalPage.userId || "anonymous"}`,
-                  isUser: true,
-                  userId: originalPage.userId || "anonymous",
-                  username: displayUsername || "Anonymous",
-                  className: "user-link",
-                  children: [{ text: displayUsername || "Anonymous" }]
-                }
-              ]
-            }
+            createReplyAttribution({
+              pageId: originalPage.id,
+              pageTitle: originalPage.title,
+              userId: originalPage.userId,
+              username: displayUsername
+            })
           ];
+
+          // Log the created content for debugging
+          console.log("Created reply content with utility function:", JSON.stringify(replyContent, null, 2));
 
           // Log the content structure for debugging
           console.log("Created reply content with pill links:", JSON.stringify(replyContent, null, 2));
@@ -182,6 +168,33 @@ export default function ReplyContent({
 
   return (
     <div className="reply-editor-container">
+      {/* Add critical styles directly to ensure they're applied */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        /* Critical pill link styles that must be applied */
+        .reply-editor-container a[data-page-id],
+        .reply-editor-container a.page-link,
+        .reply-editor-container a.editor-link.page-link {
+          background-color: #1768FF !important;
+          color: white !important;
+          border-radius: 8px !important;
+          padding: 1px 6px !important;
+          margin: 0 1px !important;
+          display: inline-flex !important;
+          white-space: nowrap !important;
+        }
+
+        .reply-editor-container a.user-link,
+        .reply-editor-container a[data-user-id],
+        .reply-editor-container a.editor-link.user-link {
+          background-color: #1768FF !important;
+          color: white !important;
+          border-radius: 8px !important;
+          padding: 1px 6px !important;
+          margin: 0 1px !important;
+          display: inline-flex !important;
+          white-space: nowrap !important;
+        }
+      ` }} />
       <SlateEditor
         initialContent={content}
         onContentChange={handleContentChange}

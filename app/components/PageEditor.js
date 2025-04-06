@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
+import { createReplyAttribution } from "../utils/linkUtils";
 
 /**
  * PageEditor Component
@@ -138,31 +139,14 @@ const PageEditor = ({
             }
 
             // Create a direct reply content structure with proper attribution
+            // using the utility function for consistent structure
             const content = [
-              {
-                type: "paragraph",
-                children: [
-                  { text: "Replying to " },
-                  {
-                    type: "link",
-                    url: `/${replyToId}`,
-                    pageId: replyToId,
-                    pageTitle: originalPage.title || "Untitled",
-                    className: "page-link",
-                    children: [{ text: originalPage.title || "Untitled" }]
-                  },
-                  { text: " by " },
-                  {
-                    type: "link",
-                    url: `/u/${originalPage.userId || "anonymous"}`,
-                    isUser: true,
-                    userId: originalPage.userId || "anonymous",
-                    username: displayUsername,
-                    children: [{ text: displayUsername }],
-                    className: "user-link"
-                  }
-                ]
-              }
+              createReplyAttribution({
+                pageId: replyToId,
+                pageTitle: originalPage.title,
+                userId: originalPage.userId,
+                username: displayUsername
+              })
             ];
 
             // Log the final content structure with username

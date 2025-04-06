@@ -24,8 +24,17 @@
 [data-slate-editor] a.page-link,
 [data-slate-editor] a.editor-link.page-link,
 [data-slate-node="element"] a[data-page-id],
-[data-slate-node="element"] a.page-link {
-  background-color: var(--primary);
+[data-slate-node="element"] a.page-link,
+/* Additional selectors for Slate editor */
+.slate-editor-container a[data-page-id],
+.slate-editor-container a.page-link,
+.reply-editor-container a[data-page-id],
+.reply-editor-container a.page-link,
+.editable-container a[data-page-id],
+.editable-container a.page-link {
+  /* Use direct color values with fallbacks to CSS variables */
+  background-color: #1768FF;
+  background-color: var(--primary, #1768FF);
   border-radius: 8px;
   padding: 1px 6px;
   margin: 0 1px;
@@ -35,6 +44,7 @@
   align-items: center;
   font-size: 0.9375rem;
   line-height: 1.5;
+  color: white;
   color: var(--primary-foreground, white);
   border: 1px solid rgba(255, 255, 255, 0.2);
   font-weight: 500;
@@ -52,8 +62,17 @@
 [data-slate-editor] a[data-user-id],
 [data-slate-editor] a.editor-link.user-link,
 [data-slate-node="element"] a.user-link,
-[data-slate-node="element"] a[data-user-id] {
-  background-color: var(--primary);
+[data-slate-node="element"] a[data-user-id],
+/* Additional selectors for Slate editor */
+.slate-editor-container a.user-link,
+.slate-editor-container a[data-user-id],
+.reply-editor-container a.user-link,
+.reply-editor-container a[data-user-id],
+.editable-container a.user-link,
+.editable-container a[data-user-id] {
+  /* Use direct color values with fallbacks to CSS variables */
+  background-color: #1768FF;
+  background-color: var(--primary, #1768FF);
   border-radius: 8px;
   padding: 1px 6px;
   margin: 0 1px;
@@ -64,6 +83,7 @@
   align-items: center;
   font-size: 0.9375rem;
   line-height: 1.5;
+  color: white;
   color: var(--primary-foreground, white);
   border: 1px solid rgba(255, 255, 255, 0.2);
   font-weight: 500;
