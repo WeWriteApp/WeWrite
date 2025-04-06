@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { createReplyContent } from '../utils/replyUtils';
 import SlateEditor from './SlateEditor';
+import './reply-styles.css';
 
 /**
  * ReplyContent Component
@@ -94,7 +95,7 @@ export default function ReplyContent({
                   url: `/${originalPage.id}`,
                   pageId: originalPage.id,
                   pageTitle: originalPage.title || "Untitled",
-                  className: "page-link",
+                  className: "page-link editor-link",
                   children: [{ text: originalPage.title || "Untitled" }]
                 },
                 { text: " by " },
@@ -104,12 +105,15 @@ export default function ReplyContent({
                   isUser: true,
                   userId: originalPage.userId || "anonymous",
                   username: displayUsername || "Anonymous",
-                  className: "user-link",
+                  className: "user-link editor-link",
                   children: [{ text: displayUsername || "Anonymous" }]
                 }
               ]
             }
           ];
+
+          // Log the content structure for debugging
+          console.log("Created reply content with pill links:", JSON.stringify(replyContent, null, 2));
 
           console.log("Created reply content:", replyContent);
           setContent(replyContent);
@@ -176,11 +180,54 @@ export default function ReplyContent({
   }
 
   return (
-    <SlateEditor
-      initialContent={content}
-      onContentChange={handleContentChange}
-      onSave={onSave}
-      onDiscard={onCancel}
-    />
+    <div className="reply-editor-wrapper">
+      <style jsx global>{`
+        /* Inline styles to ensure pill links are visible */
+        .reply-editor-wrapper [data-slate-editor] a.page-link,
+        .reply-editor-wrapper [data-slate-editor] a[data-page-id],
+        .reply-editor-wrapper [data-slate-editor] a.editor-link.page-link {
+          background-color: var(--primary, #1768FF) !important;
+          border-radius: 8px !important;
+          padding: 1px 6px !important;
+          margin: 0 1px !important;
+          border-bottom: none !important;
+          white-space: nowrap !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          font-size: 0.9375rem !important;
+          line-height: 1.5 !important;
+          color: white !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          font-weight: 500 !important;
+          text-shadow: none !important;
+        }
+
+        .reply-editor-wrapper [data-slate-editor] a.user-link,
+        .reply-editor-wrapper [data-slate-editor] a[data-user-id],
+        .reply-editor-wrapper [data-slate-editor] a.editor-link.user-link {
+          background-color: var(--primary, #1768FF) !important;
+          border-radius: 8px !important;
+          padding: 1px 6px !important;
+          margin: 0 1px !important;
+          position: relative !important;
+          border-bottom: none !important;
+          white-space: nowrap !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          font-size: 0.9375rem !important;
+          line-height: 1.5 !important;
+          color: white !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          font-weight: 500 !important;
+          text-shadow: none !important;
+        }
+      `}</style>
+      <SlateEditor
+        initialContent={content}
+        onContentChange={handleContentChange}
+        onSave={onSave}
+        onDiscard={onCancel}
+      />
+    </div>
   );
 }
