@@ -93,7 +93,65 @@ const Form = ({ Page, setPage, isReply }) => {
       }
     }
 
-    if (contentParam) {
+    // If this is a reply, set up the reply content directly
+    if (isReply && replyToParam) {
+      // Import the database module to get page details
+      import('../firebase/database').then(({ getPageById }) => {
+        getPageById(replyToParam).then(originalPage => {
+          if (originalPage) {
+            console.log("Found original page:", originalPage);
+
+            // Create a direct reply content structure with proper attribution
+            const directReplyContent = [
+              {
+                type: "paragraph",
+                children: [
+                  { text: "Replying to " },
+                  {
+                    type: "link",
+                    url: `/${replyToParam}`,
+                    children: [{ text: originalPage.title || "Untitled" }]
+                  },
+                  { text: " by " },
+                  {
+                    type: "link",
+                    url: `/u/${originalPage.userId || "anonymous"}`,
+                    children: [{ text: originalPage.username || "Anonymous" }]
+                  }
+                ]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "I'm responding to this page because..." }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
+              }
+            ];
+
+            // Set the content directly
+            console.log("Setting direct reply content:", JSON.stringify(directReplyContent, null, 2));
+            setInitialContent(directReplyContent);
+            if (setEditorState) {
+              setEditorState(directReplyContent);
+            }
+          } else {
+            // Fallback if original page not found
+            console.error("Original page not found, using fallback content");
+            setFallbackContent();
+          }
+        }).catch(error => {
+          console.error("Error fetching original page:", error);
+          setFallbackContent();
+        });
+      });
+    } else if (contentParam) {
+      // Process content parameter if not a reply or if we have content param
       try {
         const decodedContent = decodeURIComponent(contentParam);
         console.log("Received encoded content:", contentParam);
@@ -116,87 +174,47 @@ const Form = ({ Page, setPage, isReply }) => {
             }
           } else {
             console.error("Invalid content structure:", parsedContent);
-            // Set a default content structure with attribution
-            const defaultContent = [
-              {
-                type: "paragraph",
-                children: [{ text: "Replying to page" }]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "" }]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "I'm responding to this page because..." }]
-              }
-            ];
-            setInitialContent(defaultContent);
-            if (setEditorState) {
-              setEditorState(defaultContent);
-            }
+            setFallbackContent();
           }
         } catch (parseError) {
           console.error("Error parsing content JSON:", parseError);
-          // Set a default content structure
-          const defaultContent = [
-            {
-              type: "paragraph",
-              children: [{ text: "Replying to page" }]
-            },
-            {
-              type: "paragraph",
-              children: [{ text: "" }]
-            },
-            {
-              type: "paragraph",
-              children: [{ text: "I'm responding to this page because..." }]
-            }
-          ];
-          setInitialContent(defaultContent);
-          if (setEditorState) {
-            setEditorState(defaultContent);
-          }
-        }
-
-        // If this is a reply and we have a replyTo parameter, fetch the original page content
-        if (isReply && replyToParam && initialContent) {
-          // Find the blockquote in the content
-          const blockquoteIndex = initialContent.findIndex(node => node.type === 'blockquote');
-
-          if (blockquoteIndex !== -1) {
-            // Fetch the original page content
-            import('../firebase/database').then(({ getPageById }) => {
-              getPageById(replyToParam).then(originalPage => {
-                if (originalPage && originalPage.content) {
-                  try {
-                    // Parse the original content
-                    const originalContent = typeof originalPage.content === 'string'
-                      ? JSON.parse(originalPage.content)
-                      : originalPage.content;
-
-                    // Keep the existing blockquote text which should already contain
-                    // "Reply to [page title] by [username]"
-                    // No need to modify it as it's already set correctly in PageActions
-
-                    // Update the initialContent
-                    setInitialContent([...initialContent]);
-
-                    console.log("Updated reply content with original page reference:", initialContent);
-                  } catch (error) {
-                    console.error("Error parsing original page content:", error);
-                  }
-                }
-              }).catch(error => {
-                console.error("Error fetching original page:", error);
-              });
-            });
-          }
+          setFallbackContent();
         }
       } catch (error) {
-        console.error("Error parsing initial content:", error);
+        console.error("Error decoding content parameter:", error);
+        setFallbackContent();
       }
+    } else if (isReply) {
+      // If it's a reply but we don't have content or replyTo, use fallback
+      setFallbackContent();
     }
+  }, [searchParams, setPage, setEditorState, isReply]);
+
+  // Helper function to set fallback content
+  const setFallbackContent = () => {
+    const defaultContent = [
+      {
+        type: "paragraph",
+        children: [{ text: "Replying to page" }]
+      },
+      {
+        type: "paragraph",
+        children: [{ text: "" }]
+      },
+      {
+        type: "paragraph",
+        children: [{ text: "I'm responding to this page because..." }]
+      },
+      {
+        type: "paragraph",
+        children: [{ text: "" }]
+      }
+    ];
+    setInitialContent(defaultContent);
+    if (setEditorState) {
+      setEditorState(defaultContent);
+    }
+  };
   }, [searchParams, setPage, setEditorState, isReply]);
 
   const handleSubmit = async (e) => {

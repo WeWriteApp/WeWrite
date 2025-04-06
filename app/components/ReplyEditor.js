@@ -23,6 +23,9 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
   // Flag to track if we've positioned the cursor
   const cursorPositioned = useRef(false);
 
+  // Log the initialContent to help with debugging
+  console.log("ReplyEditor received initialContent:", initialContent);
+
   // Forward ref to access the Slate editor instance
   const forwardRef = (editor) => {
     editorRef.current = editor;
