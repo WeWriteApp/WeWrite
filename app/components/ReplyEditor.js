@@ -37,12 +37,12 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
       // Use a timeout to ensure the editor is fully initialized
       const timer = setTimeout(() => {
         try {
-          // Position cursor at the beginning of the second paragraph
-          if (initialContent.length >= 2 && editorRef.current) {
+          // Position cursor at the beginning of the third paragraph (after the attribution and blank line)
+          if (initialContent.length >= 3 && editorRef.current) {
             const editor = editorRef.current;
 
-            // Create a point at the start of the second paragraph
-            const point = { path: [1, 0], offset: 0 };
+            // Create a point at the start of the third paragraph (index 2)
+            const point = { path: [2, 0], offset: 0 };
 
             // Set the selection to that point
             Transforms.select(editor, point);
@@ -53,7 +53,7 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
               editorElement.focus();
             }
 
-            console.log('Cursor positioned at second paragraph');
+            console.log('Cursor positioned at response paragraph');
           }
         } catch (error) {
           console.error('Error positioning cursor:', error);
@@ -64,14 +64,22 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
     }
   }, [initialContent]);
 
-  // Custom onChange handler to prevent editing the first paragraph
+  // Custom onChange handler to prevent editing the attribution line and blank line
   const handleChange = (value) => {
-    // Check if the first paragraph (attribution line) was modified
+    // Check if the attribution line or blank line was modified
     if (initialContent && value.length > 0 && initialContent.length > 0) {
-      // If the first paragraph was changed, restore it
+      // If the first paragraph (attribution line) was changed, restore it
       if (JSON.stringify(value[0]) !== JSON.stringify(initialContent[0])) {
         console.log('Preventing edit of attribution line');
         value[0] = initialContent[0];
+      }
+
+      // If the second paragraph (blank line) was changed, restore it
+      if (initialContent.length > 1 && value.length > 1) {
+        if (JSON.stringify(value[1]) !== JSON.stringify(initialContent[1])) {
+          console.log('Preventing edit of blank line');
+          value[1] = initialContent[1];
+        }
       }
     }
 

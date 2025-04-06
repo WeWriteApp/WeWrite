@@ -43,7 +43,7 @@ export const createReplyContent = ({
         {
           type: "paragraph",
           children: [
-            { text: `Reply to ` },
+            { text: `Replying to ` },
             {
               type: "link",
               url: `/${pageId}`,
@@ -54,9 +54,12 @@ export const createReplyContent = ({
               type: "link",
               url: `/u/${userId || "anonymous"}`,
               children: [{ text: username || "Anonymous" }]
-            },
-            { text: "\n" } // Add newline character
+            }
           ]
+        },
+        {
+          type: "paragraph",
+          children: [{ text: "" }]
         },
         {
           type: "paragraph",
