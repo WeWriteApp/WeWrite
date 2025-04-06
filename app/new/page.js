@@ -99,23 +99,70 @@ const Form = ({ Page, setPage, isReply }) => {
         console.log("Received encoded content:", contentParam);
         console.log("Decoded content:", decodedContent);
 
-        const parsedContent = JSON.parse(decodedContent);
-        console.log("Setting initial content (FULL):", JSON.stringify(parsedContent, null, 2));
+        try {
+          const parsedContent = JSON.parse(decodedContent);
+          console.log("Setting initial content (FULL):", JSON.stringify(parsedContent, null, 2));
 
-        // Always set the initialContent first to ensure it's available
-        setInitialContent(parsedContent);
-        console.log("initialContent set to:", parsedContent);
+          // Validate the parsed content structure
+          if (Array.isArray(parsedContent) && parsedContent.length > 0) {
+            // Always set the initialContent first to ensure it's available
+            setInitialContent(parsedContent);
+            console.log("initialContent set to:", parsedContent);
 
-        // Also set the editor state immediately
-        if (setEditorState) {
-          console.log("Setting editor state directly");
-          setEditorState(parsedContent);
+            // Also set the editor state immediately
+            if (setEditorState) {
+              console.log("Setting editor state directly");
+              setEditorState(parsedContent);
+            }
+          } else {
+            console.error("Invalid content structure:", parsedContent);
+            // Set a default content structure with attribution
+            const defaultContent = [
+              {
+                type: "paragraph",
+                children: [{ text: "Replying to page" }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "I'm responding to this page because..." }]
+              }
+            ];
+            setInitialContent(defaultContent);
+            if (setEditorState) {
+              setEditorState(defaultContent);
+            }
+          }
+        } catch (parseError) {
+          console.error("Error parsing content JSON:", parseError);
+          // Set a default content structure
+          const defaultContent = [
+            {
+              type: "paragraph",
+              children: [{ text: "Replying to page" }]
+            },
+            {
+              type: "paragraph",
+              children: [{ text: "" }]
+            },
+            {
+              type: "paragraph",
+              children: [{ text: "I'm responding to this page because..." }]
+            }
+          ];
+          setInitialContent(defaultContent);
+          if (setEditorState) {
+            setEditorState(defaultContent);
+          }
         }
 
         // If this is a reply and we have a replyTo parameter, fetch the original page content
-        if (isReply && replyToParam && parsedContent) {
+        if (isReply && replyToParam && initialContent) {
           // Find the blockquote in the content
-          const blockquoteIndex = parsedContent.findIndex(node => node.type === 'blockquote');
+          const blockquoteIndex = initialContent.findIndex(node => node.type === 'blockquote');
 
           if (blockquoteIndex !== -1) {
             // Fetch the original page content
@@ -133,9 +180,9 @@ const Form = ({ Page, setPage, isReply }) => {
                     // No need to modify it as it's already set correctly in PageActions
 
                     // Update the initialContent
-                    setInitialContent([...parsedContent]);
+                    setInitialContent([...initialContent]);
 
-                    console.log("Updated reply content with original page reference:", parsedContent);
+                    console.log("Updated reply content with original page reference:", initialContent);
                   } catch (error) {
                     console.error("Error parsing original page content:", error);
                   }

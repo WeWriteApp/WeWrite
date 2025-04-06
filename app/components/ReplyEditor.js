@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import SlateEditor from './SlateEditor';
 import { createEditor, Transforms, Editor, Range, Path, Point } from 'slate';
+import { ReactEditor } from 'slate-react';
 
 /**
  * ReplyEditor Component
@@ -41,24 +42,51 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
           if (initialContent.length >= 3 && editorRef.current) {
             const editor = editorRef.current;
 
-            // Create a point at the start of the third paragraph (index 2)
-            const point = { path: [2, 0], offset: 0 };
+            // Check if the editor has the necessary methods
+            if (editor && typeof editor.selection !== 'undefined') {
+              // Create a point at the start of the third paragraph (index 2)
+              const point = { path: [2, 0], offset: 0 };
 
-            // Set the selection to that point
-            Transforms.select(editor, point);
+              // Use ReactEditor to focus and select
+              try {
+                // Make sure the editor is focusable
+                if (ReactEditor.isFocusable(editor)) {
+                  ReactEditor.focus(editor);
+                  Transforms.select(editor, point);
+                  console.log('Cursor positioned at response paragraph using ReactEditor');
+                } else {
+                  console.warn('Editor is not focusable');
+                  // Fallback to direct DOM manipulation
+                  const editorElement = document.querySelector('[data-slate-editor=true]');
+                  if (editorElement) {
+                    editorElement.focus();
+                    console.log('Editor focused via DOM');
+                  }
+                }
+              } catch (reactEditorError) {
+                console.error('Error using ReactEditor:', reactEditorError);
 
-            // Force focus on the editor
-            const editorElement = document.querySelector('[data-slate-editor=true]');
-            if (editorElement) {
-              editorElement.focus();
+                // Fallback to direct DOM manipulation
+                const editorElement = document.querySelector('[data-slate-editor=true]');
+                if (editorElement) {
+                  editorElement.focus();
+                  console.log('Editor focused via DOM');
+                }
+              }
+            } else {
+              console.warn('Editor instance missing selection capability');
+              // Fallback to direct DOM focus
+              const editorElement = document.querySelector('[data-slate-editor=true]');
+              if (editorElement) {
+                editorElement.focus();
+                console.log('Editor focused via DOM (fallback)');
+              }
             }
-
-            console.log('Cursor positioned at response paragraph');
           }
         } catch (error) {
           console.error('Error positioning cursor:', error);
         }
-      }, 300); // Increased timeout for better reliability
+      }, 500); // Increased timeout for better reliability
 
       return () => clearTimeout(timer);
     }
