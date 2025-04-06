@@ -6,20 +6,20 @@ import SlateEditor from './SlateEditor';
 
 /**
  * ReplyContent Component
- * 
+ *
  * A specialized component for handling reply content with pre-filled attribution text.
  * This component ensures that the attribution line is always displayed and protected.
- * 
+ *
  * @param {Object} props
  * @param {string} props.replyToId - ID of the page being replied to
  * @param {Function} props.onContentChange - Function to update the editor state
  * @param {Function} props.onSave - Function to handle saving
  * @param {Function} props.onCancel - Function to handle cancellation
  */
-export default function ReplyContent({ 
-  replyToId, 
-  onContentChange, 
-  onSave, 
+export default function ReplyContent({
+  replyToId,
+  onContentChange,
+  onSave,
   onCancel,
   initialContent = null
 }) {
@@ -40,7 +40,7 @@ export default function ReplyContent({
       console.log("Using provided initialContent for reply:", initialContent);
       setContent(initialContent);
       setLoading(false);
-      
+
       // Notify parent component
       if (onContentChange) {
         onContentChange(initialContent);
@@ -60,7 +60,7 @@ export default function ReplyContent({
 
           // Get username from the page or user record
           let displayUsername = originalPage.username || "Anonymous";
-          
+
           if (originalPage.userId) {
             try {
               // Try to get username from RTDB
@@ -92,9 +92,26 @@ export default function ReplyContent({
             replyType: "standard"
           });
 
+          // Ensure the links have the proper styling
+          if (replyContent.length > 0 && replyContent[0].children) {
+            // Make sure the page link has the page-link class
+            const pageLinkIndex = replyContent[0].children.findIndex(child =>
+              child.type === 'link' && child.pageId);
+            if (pageLinkIndex >= 0) {
+              replyContent[0].children[pageLinkIndex].className = 'page-link';
+            }
+
+            // Make sure the user link has the user-link class
+            const userLinkIndex = replyContent[0].children.findIndex(child =>
+              child.type === 'link' && child.isUser);
+            if (userLinkIndex >= 0) {
+              replyContent[0].children[userLinkIndex].className = 'user-link';
+            }
+          }
+
           console.log("Created reply content:", replyContent);
           setContent(replyContent);
-          
+
           // Notify parent component
           if (onContentChange) {
             onContentChange(replyContent);
@@ -123,19 +140,11 @@ export default function ReplyContent({
         console.log('Protecting attribution line from changes');
         value[0] = content[0];
       }
-
-      // Preserve the blank line after attribution (second paragraph)
-      if (content.length > 1 && value.length > 1) {
-        if (JSON.stringify(value[1]) !== JSON.stringify(content[1])) {
-          console.log('Protecting blank line from changes');
-          value[1] = content[1];
-        }
-      }
     }
 
     // Update local state
     setContent(value);
-    
+
     // Notify parent component
     if (onContentChange) {
       onContentChange(value);
@@ -150,7 +159,7 @@ export default function ReplyContent({
     return (
       <div className="p-4 text-center text-destructive">
         <p>{error}</p>
-        <button 
+        <button
           className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md"
           onClick={onCancel}
         >

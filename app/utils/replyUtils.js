@@ -47,6 +47,10 @@ export const createReplyContent = ({
             {
               type: "link",
               url: `/${pageId}`,
+              pageId: pageId,
+              pageTitle: pageTitle || "Untitled",
+              type: "link",
+              className: "page-link",
               children: [{ text: pageTitle || "Untitled" }]
             },
             { text: ` by ` },
@@ -60,18 +64,6 @@ export const createReplyContent = ({
               children: [{ text: username || "Anonymous" }]
             }
           ]
-        },
-        {
-          type: "paragraph",
-          children: [{ text: "" }]
-        },
-        {
-          type: "paragraph",
-          children: [{ text: "I'm responding to this page because..." }]
-        },
-        {
-          type: "paragraph",
-          children: [{ text: "" }]
         }
       ];
   }
