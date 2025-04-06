@@ -415,66 +415,9 @@ const Form = ({ Page, setPage, isReply }) => {
     }
   };
 
-  // For reply pages, we still use the TestReplyEditor for now
-  if (isReply) {
-    return (
-      <div className="px-4 sm:px-6 md:px-8">
-        <div className="mb-4">
-          <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
-          <input
-            id="title"
-            type="text"
-            value={Page.title}
-            placeholder="Enter page title..."
-            onChange={(e) => setPage({ ...Page, title: e.target.value })}
-            className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            autoComplete="off"
-            ref={titleInputRef}
-            autoFocus={true}
-          />
-        </div>
+  // Get the replyTo parameter
+  const replyToId = searchParams.get('replyTo');
 
-        <div className="min-h-[300px] border border-input rounded-md bg-background mb-4">
-          <TestReplyEditor setEditorState={setEditorState} />
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isPublic"
-              checked={Page.isPublic}
-              onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
-              className="h-4 w-4 text-primary border-input rounded focus:ring-primary"
-              autoComplete="off"
-            />
-            <label htmlFor="isPublic" className="text-sm text-foreground">Public</label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSubmit}
-              disabled={!Page.title || !editorState || isSaving}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              type="button"
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={() => router.push("/pages")}
-              className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
-              type="button"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-        {error && <p className="text-red-500">{error}</p>}
-      </div>
-    );
-  }
-
-  // For regular new pages, use the PageEditor component
   return (
     <PageEditor
       title={Page.title}
@@ -488,6 +431,8 @@ const Form = ({ Page, setPage, isReply }) => {
       isSaving={isSaving}
       error={error}
       isNewPage={true}
+      isReply={isReply}
+      replyToId={replyToId}
     />
   );
 };
