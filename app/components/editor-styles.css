@@ -2,54 +2,49 @@
 
 /* Base link styling */
 .editor-link {
-  color: var(--accent-color, #1768FF);
+  color: var(--primary);
   text-decoration: none;
-  border-bottom: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.3);
   transition: all 0.2s ease;
 }
 
 /* Pill link styling for page links - consistent across edit and view modes */
 .editor-link[data-page-id],
 .editor-link.page-link,
-.page-link,
-[data-slate-editor] a.page-link,
-[data-slate-editor] a.editor-link.page-link {
-  background-color: var(--primary) !important;
-  border-radius: 8px !important;
-  padding: 1px 6px !important;
-  margin: 0 1px !important;
-  border-bottom: none !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  font-size: 0.9375rem !important;
-  line-height: 1.5 !important;
-  color: var(--primary-foreground, white) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  font-weight: 500 !important;
-  text-shadow: none !important;
+.page-link {
+  background-color: var(--primary);
+  border-radius: 8px;
+  padding: 1px 6px;
+  margin: 0 1px;
+  border-bottom: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--primary-foreground, white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  text-shadow: none;
 }
 
 /* User links styling - consistent across edit and view modes */
 .user-link,
-.editor-link.user-link,
-[data-slate-editor] a.user-link,
-[data-slate-editor] a.editor-link.user-link {
-  background-color: var(--primary) !important;
-  border-radius: 8px !important;
-  padding: 1px 6px !important;
-  margin: 0 1px !important;
-  position: relative !important;
-  border-bottom: none !important;
-  white-space: nowrap !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  font-size: 0.9375rem !important;
-  line-height: 1.5 !important;
-  color: var(--primary-foreground, white) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  font-weight: 500 !important;
-  text-shadow: none !important;
+.editor-link.user-link {
+  background-color: var(--primary);
+  border-radius: 8px;
+  padding: 1px 6px;
+  margin: 0 1px;
+  position: relative;
+  border-bottom: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--primary-foreground, white);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  text-shadow: none;
 }
 
 /* Add @ symbol before user links - more specific selectors */
@@ -73,15 +68,15 @@ a[data-username]::before,
 .editor-link:hover,
 .page-link:hover,
 .user-link:hover {
-  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.15);
-  color: var(--accent-color, #1768FF);
+  background-color: var(--primary-hover, hsl(var(--primary) / 0.8));
+  color: var(--primary-foreground, white);
 }
 
 /* Active states */
 .editor-link:active,
 .page-link:active,
 .user-link:active {
-  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.2);
+  background-color: var(--primary-active, hsl(var(--primary) / 0.7));
 }
 
 /* Dark mode adjustments */

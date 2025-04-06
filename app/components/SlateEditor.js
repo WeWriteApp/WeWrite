@@ -11,6 +11,7 @@ import TypeaheadSearch from "./TypeaheadSearch";
 
 // Import custom editor styles for consistent pill links
 import "./editor-styles.css";
+import styles from "./slate-editor.module.css";
 
 // CSS for editor modes - ensures consistent styling with TextView
 const editorStyles = `
@@ -737,7 +738,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       {/* Add custom styles */}
       <style dangerouslySetInnerHTML={{ __html: editorStyles }} />
 
-      <div className="slate-editor-container" style={{ position: 'relative', paddingBottom: '60px' }}>
+      <div className={`slate-editor-container ${styles.slateEditor}`} style={{ position: 'relative', paddingBottom: '60px' }}>
         {/* Conditionally render LinkEditor */}
         {showLinkEditor && linkEditorPosition && (
           <LinkEditor
@@ -1399,7 +1400,7 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
   return (
     <motion.div
-      className={`editable-container p-2 flex-grow`}
+      className={`editable-container p-2 flex-grow ${styles.slateEditor}`}
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
