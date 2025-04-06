@@ -222,6 +222,7 @@ const Form = ({ Page, setPage, isReply }) => {
   useEffect(() => {
     const contentParam = searchParams.get('initialContent');
     const replyToParam = searchParams.get('replyTo');
+    console.log("URL parameters:", { contentParam: !!contentParam, replyToParam, isReply });
 
     // For replies, we don't want to pre-fill the title
     if (isReply) {
@@ -236,8 +237,17 @@ const Form = ({ Page, setPage, isReply }) => {
         }
       }, 300);
 
-      // We don't set initialContent for replies anymore since PageEditor handles it
-      // This prevents conflicts between the two content sources
+      // For replies, we need to parse the initialContent parameter
+      if (contentParam) {
+        try {
+          const decodedContent = JSON.parse(decodeURIComponent(contentParam));
+          console.log("Decoded reply content from URL:", decodedContent);
+          setInitialContent(decodedContent);
+          setEditorState(decodedContent);
+        } catch (error) {
+          console.error("Error parsing initialContent for reply:", error);
+        }
+      }
     } else {
       // For non-replies, still use the title parameter if available
       const titleParam = searchParams.get('title');

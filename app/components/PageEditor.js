@@ -70,7 +70,8 @@ const PageEditor = ({
 
   // Fetch original page data for reply functionality
   useEffect(() => {
-    if (isReply && replyToId) {
+    // Only fetch original page data if we don't already have initialContent
+    if (isReply && replyToId && !initialContent) {
       console.log("Fetching original page for reply with ID:", replyToId);
       // Set a flag to indicate we're loading reply content
       setLoadingReplyContent(true);
@@ -213,7 +214,6 @@ const PageEditor = ({
   }, []);
 
   // Update currentEditorValue when the initialContent prop changes
-  // But don't override reply content if it's already been set or is loading
   useEffect(() => {
     console.log("initialContent changed, checking if we should update editor value", {
       initialContent: !!initialContent,
@@ -222,11 +222,18 @@ const PageEditor = ({
       loadingReplyContent
     });
 
-    if (initialContent && (!isReply || (!replyContent && !loadingReplyContent))) {
+    if (initialContent) {
+      // For replies, we want to use the initialContent directly if it's provided
+      // This ensures the pre-filled attribution text is displayed
       console.log("Setting editor value from initialContent");
       setCurrentEditorValue(initialContent);
+
+      // If this is a reply with initialContent, we don't need to fetch the original page
+      if (isReply) {
+        setLoadingReplyContent(false);
+      }
     }
-  }, [initialContent, isReply, replyContent, loadingReplyContent]);
+  }, [initialContent, isReply]);
 
   // Position cursor for reply content
   useEffect(() => {
@@ -378,10 +385,10 @@ const PageEditor = ({
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
       <div className="mt-8 mb-16">
-        {/* Responsive layout for controls - on mobile: public/private on left, save/cancel on right */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        {/* Responsive layout for controls - public/private on left, save/cancel on right (same row on all devices) */}
+        <div className="flex flex-row justify-between items-center gap-4 w-full">
           {/* Public/Private switcher - left aligned */}
-          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input self-start sm:self-auto">
+          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
             {isPublic ? (
               <Globe className="h-4 w-4 text-green-500" />
             ) : (
@@ -398,7 +405,7 @@ const PageEditor = ({
           </div>
 
           {/* Save/Cancel buttons - right aligned */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex items-center gap-2">
             <Button
               onClick={onCancel}
               variant="outline"
