@@ -79,7 +79,34 @@ const deserialize = (content) => {
           );
 
           if (hasValidStructure) {
-            return parsed;
+            // Process link elements to ensure they have the correct structure
+            const processedContent = parsed.map(node => {
+              // Process paragraph children to handle links
+              if (node.type === 'paragraph' && Array.isArray(node.children)) {
+                return {
+                  ...node,
+                  children: node.children.map(child => {
+                    // Ensure link elements have the correct structure
+                    if (child.type === 'link') {
+                      return {
+                        ...child,
+                        // Ensure url property exists
+                        url: child.url || '#',
+                        // Ensure children is an array with at least one text node
+                        children: Array.isArray(child.children) && child.children.length > 0
+                          ? child.children
+                          : [{ text: child.text || '' }]
+                      };
+                    }
+                    return child;
+                  })
+                };
+              }
+              return node;
+            });
+
+            console.log("Processed content for links:", JSON.stringify(processedContent, null, 2));
+            return processedContent;
           } else {
             console.warn("Content has invalid Slate structure, using default");
             return defaultValue;
@@ -107,7 +134,34 @@ const deserialize = (content) => {
       );
 
       if (hasValidStructure) {
-        return content;
+        // Process link elements to ensure they have the correct structure
+        const processedContent = content.map(node => {
+          // Process paragraph children to handle links
+          if (node.type === 'paragraph' && Array.isArray(node.children)) {
+            return {
+              ...node,
+              children: node.children.map(child => {
+                // Ensure link elements have the correct structure
+                if (child.type === 'link') {
+                  return {
+                    ...child,
+                    // Ensure url property exists
+                    url: child.url || '#',
+                    // Ensure children is an array with at least one text node
+                    children: Array.isArray(child.children) && child.children.length > 0
+                      ? child.children
+                      : [{ text: child.text || '' }]
+                  };
+                }
+                return child;
+              })
+            };
+          }
+          return node;
+        });
+
+        console.log("Processed array content for links:", JSON.stringify(processedContent, null, 2));
+        return processedContent;
       } else {
         console.warn("Array content has invalid Slate structure, using default");
         return defaultValue;
@@ -324,6 +378,12 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
       switch (element.type) {
         case ELEMENT_TYPES.LINK:
+          // Ensure element has a valid URL
+          if (!element.url) {
+            console.warn('Link element missing URL:', element);
+            element.url = '#';
+          }
+
           // Check if it's an external link (starts with http:// or https:// or www.)
           const isExternal = element.url && (
             element.url.startsWith('http://') ||
@@ -334,17 +394,27 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           // Check if it's a user link
           const isUserLink = element.isUser || (element.url && element.url.startsWith('/u/'));
 
+          // Add debug logging
+          console.log('Rendering link element:', {
+            url: element.url,
+            isExternal,
+            isUserLink,
+            pageId: element.pageId,
+            children: element.children
+          });
+
           return (
             <a
               {...attributes}
-              href={element.url || '#'}
+              href={element.url}
               data-page-id={element.pageId}
               data-page-title={element.pageTitle}
               data-user-id={isUserLink ? element.userId : undefined}
               data-username={isUserLink ? element.username : undefined}
-              className={`editor-link ${isUserLink ? 'user-link' : 'page-link'}`}
+              className={`editor-link ${isUserLink ? 'user-link text-blue-600 hover:underline' : 'page-link text-blue-600 hover:underline'}`}
               target={isExternal ? "_blank" : undefined}
               rel={isExternal ? "noopener noreferrer" : undefined}
+              style={{ color: '#1768FF', textDecoration: 'none' }}
             >
               {children}
             </a>
