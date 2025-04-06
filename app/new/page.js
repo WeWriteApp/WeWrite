@@ -15,6 +15,7 @@ import { Button } from "../components/ui/button";
 import { Switch } from "../components/ui/switch";
 import { Globe } from "lucide-react";
 import { createReplyAttribution } from "../utils/linkUtils";
+import { getUsernameById } from "../utils/userUtils";
 
 /**
  * New Page Component
@@ -297,9 +298,55 @@ const Form = ({ Page, setPage, isReply }) => {
     if (isReply && replyToParam) {
       // Import the database module to get page details
       import('../firebase/database').then(({ getPageById }) => {
-        getPageById(replyToParam).then(originalPage => {
+        getPageById(replyToParam).then(async (originalPage) => {
           if (originalPage) {
             console.log("Found original page:", originalPage);
+
+            // Properly fetch the username using the utility function
+            let displayUsername = "Anonymous";
+
+            // First check if the page object already has a username
+            if (originalPage.username && originalPage.username !== "Anonymous") {
+              displayUsername = originalPage.username;
+              console.log("Using username from page object:", displayUsername);
+            } else if (originalPage.userId) {
+              try {
+                // Use the utility function to get the username
+                const fetchedUsername = await getUsernameById(originalPage.userId);
+                if (fetchedUsername && fetchedUsername !== "Anonymous") {
+                  displayUsername = fetchedUsername;
+                  console.log("Fetched username from utility:", displayUsername);
+                }
+
+                // If still Anonymous, try to get username from RTDB directly
+                if (displayUsername === "Anonymous") {
+                  try {
+                    const { getDatabase, ref, get } = await import('firebase/database');
+                    const { app } = await import('../firebase/config');
+                    const rtdb = getDatabase(app);
+                    const rtdbUserRef = ref(rtdb, `users/${originalPage.userId}`);
+                    const rtdbSnapshot = await get(rtdbUserRef);
+
+                    if (rtdbSnapshot.exists()) {
+                      const rtdbUserData = rtdbSnapshot.val();
+                      if (rtdbUserData.username) {
+                        displayUsername = rtdbUserData.username;
+                        console.log("Using username from RTDB:", displayUsername);
+                      } else if (rtdbUserData.displayName) {
+                        displayUsername = rtdbUserData.displayName;
+                        console.log("Using displayName from RTDB:", displayUsername);
+                      }
+                    }
+                  } catch (rtdbError) {
+                    console.error("Error fetching username from RTDB:", rtdbError);
+                  }
+                }
+              } catch (error) {
+                console.error("Error fetching username:", error);
+              }
+            }
+
+            console.log("Final username to use in reply attribution:", displayUsername);
 
             // Create a direct reply content structure with proper attribution
             // using the utility function for consistent structure
@@ -308,7 +355,7 @@ const Form = ({ Page, setPage, isReply }) => {
                 pageId: replyToParam,
                 pageTitle: originalPage.title,
                 userId: originalPage.userId,
-                username: originalPage.username || "Anonymous"
+                username: displayUsername
               })
             ];
 

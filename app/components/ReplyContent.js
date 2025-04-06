@@ -62,29 +62,52 @@ export default function ReplyContent({
           console.log("Found original page for reply:", originalPage);
 
           // Get username from the page or user record
-          let displayUsername = originalPage.username || "Anonymous";
+          let displayUsername = "Anonymous";
 
-          if (originalPage.userId) {
+          // First check if the page object already has a username
+          if (originalPage.username && originalPage.username !== "Anonymous") {
+            displayUsername = originalPage.username;
+            console.log("Using username from page object:", displayUsername);
+          } else if (originalPage.userId) {
             try {
-              // Try to get username from RTDB
-              const { getDatabase, ref, get } = await import('firebase/database');
-              const { app } = await import('../firebase/config');
-              const rtdb = getDatabase(app);
-              const rtdbUserRef = ref(rtdb, `users/${originalPage.userId}`);
-              const rtdbSnapshot = await get(rtdbUserRef);
+              // Use the utility function to get the username
+              const { getUsernameById } = await import('../utils/userUtils');
+              const fetchedUsername = await getUsernameById(originalPage.userId);
+              if (fetchedUsername && fetchedUsername !== "Anonymous") {
+                displayUsername = fetchedUsername;
+                console.log("Fetched username from utility:", displayUsername);
+              }
 
-              if (rtdbSnapshot.exists()) {
-                const rtdbUserData = rtdbSnapshot.val();
-                if (rtdbUserData.username) {
-                  displayUsername = rtdbUserData.username;
-                } else if (rtdbUserData.displayName) {
-                  displayUsername = rtdbUserData.displayName;
+              // If still Anonymous, try to get username from RTDB directly
+              if (displayUsername === "Anonymous") {
+                try {
+                  // Try to get username from RTDB
+                  const { getDatabase, ref, get } = await import('firebase/database');
+                  const { app } = await import('../firebase/config');
+                  const rtdb = getDatabase(app);
+                  const rtdbUserRef = ref(rtdb, `users/${originalPage.userId}`);
+                  const rtdbSnapshot = await get(rtdbUserRef);
+
+                  if (rtdbSnapshot.exists()) {
+                    const rtdbUserData = rtdbSnapshot.val();
+                    if (rtdbUserData.username) {
+                      displayUsername = rtdbUserData.username;
+                      console.log("Using username from RTDB:", displayUsername);
+                    } else if (rtdbUserData.displayName) {
+                      displayUsername = rtdbUserData.displayName;
+                      console.log("Using displayName from RTDB:", displayUsername);
+                    }
+                  }
+                } catch (rtdbError) {
+                  console.error("Error fetching username from RTDB:", rtdbError);
                 }
               }
             } catch (error) {
               console.error("Error fetching username:", error);
             }
           }
+
+          console.log("Final username to use in reply attribution:", displayUsername);
 
           // Create reply content with attribution using the utility function
           const replyContent = [
