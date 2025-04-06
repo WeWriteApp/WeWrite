@@ -20,16 +20,16 @@ const ConstructionChip = () => {
         onClick={() => setShowModal(true)}
       >
         <div
-          className="flex items-center gap-1.5 px-3 py-1.5 text-orange-800 dark:text-orange-300
-                    bg-orange-50 dark:bg-orange-950/10 border border-orange-300/30 dark:border-orange-500/30
-                    rounded-md cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/20
-                    transition-colors text-sm"
+          className="flex items-center gap-1.5 px-2.5 py-1 text-orange-800 dark:text-orange-300
+                    border border-orange-300/30 dark:border-orange-500/30
+                    rounded cursor-pointer hover:bg-orange-100/10 dark:hover:bg-orange-900/20
+                    transition-colors text-xs"
           style={{
             backgroundColor: 'rgba(255, 237, 213, 0.1)', /* 10% orange fill */
             borderColor: 'rgba(251, 146, 60, 0.3)', /* 30% orange stroke */
           }}
         >
-          <Construction className="h-3.5 w-3.5" />
+          <Construction className="h-3 w-3" />
           <span className="font-normal">WeWrite is under construction</span>
         </div>
       </div>
