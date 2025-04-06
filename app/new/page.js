@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import SlateEditor from "../components/SlateEditor";
 import ReplyEditor from "../components/ReplyEditor";
 import TestReplyEditor from "../components/TestReplyEditor";
@@ -73,6 +73,9 @@ const Form = ({ Page, setPage, isReply }) => {
   const [initialContent, setInitialContent] = useState(null);
   const [error, setError] = useState(null);
   const analytics = useWeWriteAnalytics();
+
+  // Reference to the title input element for focusing
+  const titleInputRef = useRef(null);
 
   // Get username from URL parameters if available (for replies), otherwise use user data
   const urlUsername = searchParams.get('username');
@@ -218,16 +221,31 @@ const Form = ({ Page, setPage, isReply }) => {
   };
 
   useEffect(() => {
-    const titleParam = searchParams.get('title');
     const contentParam = searchParams.get('initialContent');
     const replyToParam = searchParams.get('replyTo');
 
-    if (titleParam) {
-      try {
-        const decodedTitle = decodeURIComponent(titleParam);
-        setPage(prev => ({ ...prev, title: decodedTitle }));
-      } catch (error) {
-        console.error("Error decoding title parameter:", error);
+    // For replies, we don't want to pre-fill the title
+    if (isReply) {
+      // Clear any existing title
+      setPage(prev => ({ ...prev, title: "" }));
+
+      // Focus the title input after a short delay to ensure the component is fully rendered
+      setTimeout(() => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          console.log("Title input focused");
+        }
+      }, 300);
+    } else {
+      // For non-replies, still use the title parameter if available
+      const titleParam = searchParams.get('title');
+      if (titleParam) {
+        try {
+          const decodedTitle = decodeURIComponent(titleParam);
+          setPage(prev => ({ ...prev, title: decodedTitle }));
+        } catch (error) {
+          console.error("Error decoding title parameter:", error);
+        }
       }
     }
 
@@ -410,6 +428,8 @@ const Form = ({ Page, setPage, isReply }) => {
             onChange={(e) => setPage({ ...Page, title: e.target.value })}
             className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             autoComplete="off"
+            ref={titleInputRef}
+            autoFocus={isReply}
           />
         </div>
 

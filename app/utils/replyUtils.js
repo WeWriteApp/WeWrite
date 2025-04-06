@@ -53,6 +53,10 @@ export const createReplyContent = ({
             {
               type: "link",
               url: `/u/${userId || "anonymous"}`,
+              isUser: true,
+              userId: userId || "anonymous",
+              username: username || "Anonymous",
+              className: "user-link",
               children: [{ text: username || "Anonymous" }]
             }
           ]
