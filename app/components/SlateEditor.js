@@ -450,7 +450,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           // Ensure consistent styling with the rest of the product
           const className = element.className ?
             `editor-link ${element.className}` :
-            `editor-link ${isUserLink ? 'user-link' : ''} ${!isUserLink ? 'page-link' : ''}`;
+            isUserLink ? 'editor-link user-link' : 'editor-link page-link';
 
           // Add more debug logging for user links
           if (isUserLink) {
@@ -925,7 +925,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   // Ensure consistent styling with the rest of the product
   const className = element.className ?
     `editor-link ${element.className}` :
-    `editor-link ${isUserLink ? 'user-link' : ''} ${isPageLink ? 'page-link' : ''}`;
+    isUserLink ? 'editor-link user-link' : 'editor-link page-link';
 
   // Add more debug logging for user links
   if (isUserLink) {

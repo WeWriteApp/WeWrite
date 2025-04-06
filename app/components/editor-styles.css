@@ -12,38 +12,42 @@
 .editor-link[data-page-id],
 .editor-link.page-link,
 .page-link,
-[data-slate-editor] a.page-link {
-  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
-  border-radius: 8px;
-  padding: 1px 6px;
-  margin: 0 1px;
-  border-bottom: none;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--accent-color, #1768FF);
-  border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2);
+[data-slate-editor] a.page-link,
+[data-slate-editor] a.editor-link.page-link {
+  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1) !important;
+  border-radius: 8px !important;
+  padding: 1px 6px !important;
+  margin: 0 1px !important;
+  border-bottom: none !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.5 !important;
+  color: var(--accent-color, #1768FF) !important;
+  border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2) !important;
+  font-weight: 500 !important;
 }
 
 /* User links styling - consistent across edit and view modes */
 .user-link,
 .editor-link.user-link,
-[data-slate-editor] a.user-link {
-  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
-  border-radius: 8px;
-  padding: 1px 6px;
-  margin: 0 1px;
-  position: relative;
-  border-bottom: none;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--accent-color, #1768FF);
-  border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2);
+[data-slate-editor] a.user-link,
+[data-slate-editor] a.editor-link.user-link {
+  background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1) !important;
+  border-radius: 8px !important;
+  padding: 1px 6px !important;
+  margin: 0 1px !important;
+  position: relative !important;
+  border-bottom: none !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.5 !important;
+  color: var(--accent-color, #1768FF) !important;
+  border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2) !important;
+  font-weight: 500 !important;
 }
 
 /* Add @ symbol before user links - more specific selectors */
