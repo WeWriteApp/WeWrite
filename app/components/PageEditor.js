@@ -169,12 +169,10 @@ const PageEditor = ({
             // Set the reply content
             setReplyContent(content);
 
-            // Also update the current editor value if no initialContent was provided
-            if (!initialContent) {
-              setCurrentEditorValue(content);
-              if (onContentChange) {
-                onContentChange(content);
-              }
+            // Always update the current editor value for replies
+            setCurrentEditorValue(content);
+            if (onContentChange) {
+              onContentChange(content);
             }
           }
         }).catch(error => {
@@ -182,7 +180,7 @@ const PageEditor = ({
         });
       });
     }
-  }, [isReply, replyToId, initialContent, onContentChange]);
+  }, [isReply, replyToId, onContentChange]);
 
   // Focus the editor when entering edit mode
   useEffect(() => {
@@ -345,46 +343,42 @@ const PageEditor = ({
         onInsert={handleInsertLink}
       />
 
-      {/* Fixed bottom toolbar with public/private switcher and save/cancel buttons */}
+      {/* Public/Private switcher at the bottom of the page */}
+      <div className="mt-8 mb-16 flex justify-center">
+        <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
+          {isPublic ? (
+            <Globe className="h-4 w-4 text-green-500" />
+          ) : (
+            <Lock className="h-4 w-4 text-amber-500" />
+          )}
+          <span className="text-sm font-medium">
+            {isPublic ? "Public" : "Private"}
+          </span>
+          <Switch
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
+            aria-label="Toggle page visibility"
+          />
+        </div>
+      </div>
+
+      {/* Save/Cancel buttons at the bottom */}
       <div className="fixed bottom-4 left-0 right-0 flex justify-center z-10">
-        <div className="flex items-center gap-4 bg-background/90 backdrop-blur-md shadow-lg p-2 rounded-lg border border-input">
-          {/* Public/Private switcher */}
-          <div className="flex items-center gap-2">
-            {isPublic ? (
-              <Globe className="h-4 w-4 text-green-500" />
-            ) : (
-              <Lock className="h-4 w-4 text-amber-500" />
-            )}
-            <span className="text-sm font-medium">
-              {isPublic ? "Public" : "Private"}
-            </span>
-            <Switch
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-              aria-label="Toggle page visibility"
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="h-6 w-px bg-border"></div>
-
-          {/* Save/Cancel buttons */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-            <Button
-              onClick={onCancel}
-              variant="outline"
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            >
-              Cancel
-            </Button>
-          </div>
+        <div className="flex items-center gap-2 bg-background/90 backdrop-blur-md shadow-lg p-2 rounded-lg border border-input">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            onClick={onCancel}
+            variant="outline"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+          >
+            Cancel
+          </Button>
         </div>
       </div>
 

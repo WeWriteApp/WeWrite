@@ -769,11 +769,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           setLinkEditorPosition={setLinkEditorPosition}
         />
 
-        {/* iOS-compatible toolbar that stays above keyboard */}
-        <FixedBottomToolbar
-          onSave={onSave}
-          onDiscard={onDiscard}
-        />
+        {/* Removed iOS-compatible toolbar to avoid duplicate buttons */}
       </div>
     </Slate>
   );
