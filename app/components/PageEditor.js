@@ -146,6 +146,9 @@ const PageEditor = ({
                   {
                     type: "link",
                     url: `/${replyToId}`,
+                    pageId: replyToId,
+                    pageTitle: originalPage.title || "Untitled",
+                    className: "page-link",
                     children: [{ text: originalPage.title || "Untitled" }]
                   },
                   { text: " by " },
@@ -159,18 +162,6 @@ const PageEditor = ({
                     className: "user-link"
                   }
                 ]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "" }]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "I'm responding to this page because..." }]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "" }]
               }
             ];
 

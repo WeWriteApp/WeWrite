@@ -203,18 +203,6 @@ const Form = ({ Page, setPage, isReply }) => {
       {
         type: "paragraph",
         children: [{ text: "Replying to page" }]
-      },
-      {
-        type: "paragraph",
-        children: [{ text: "" }]
-      },
-      {
-        type: "paragraph",
-        children: [{ text: "I'm responding to this page because..." }]
-      },
-      {
-        type: "paragraph",
-        children: [{ text: "" }]
       }
     ];
     setInitialContent(defaultContent);
@@ -317,6 +305,9 @@ const Form = ({ Page, setPage, isReply }) => {
                   {
                     type: "link",
                     url: `/${replyToParam}`,
+                    pageId: replyToParam,
+                    pageTitle: originalPage.title || "Untitled",
+                    className: "page-link",
                     children: [{ text: originalPage.title || "Untitled" }]
                   },
                   { text: " by " },
@@ -330,18 +321,6 @@ const Form = ({ Page, setPage, isReply }) => {
                     children: [{ text: originalPage.username || "Anonymous" }]
                   }
                 ]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "" }]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "I'm responding to this page because..." }]
-              },
-              {
-                type: "paragraph",
-                children: [{ text: "" }]
               }
             ];
 

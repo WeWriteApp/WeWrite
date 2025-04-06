@@ -84,30 +84,32 @@ export default function ReplyContent({
           }
 
           // Create reply content with attribution
-          const replyContent = createReplyContent({
-            pageId: originalPage.id,
-            pageTitle: originalPage.title,
-            userId: originalPage.userId,
-            username: displayUsername,
-            replyType: "standard"
-          });
-
-          // Ensure the links have the proper styling
-          if (replyContent.length > 0 && replyContent[0].children) {
-            // Make sure the page link has the page-link class
-            const pageLinkIndex = replyContent[0].children.findIndex(child =>
-              child.type === 'link' && child.pageId);
-            if (pageLinkIndex >= 0) {
-              replyContent[0].children[pageLinkIndex].className = 'page-link';
+          const replyContent = [
+            {
+              type: "paragraph",
+              children: [
+                { text: "Replying to " },
+                {
+                  type: "link",
+                  url: `/${originalPage.id}`,
+                  pageId: originalPage.id,
+                  pageTitle: originalPage.title || "Untitled",
+                  className: "page-link",
+                  children: [{ text: originalPage.title || "Untitled" }]
+                },
+                { text: " by " },
+                {
+                  type: "link",
+                  url: `/u/${originalPage.userId || "anonymous"}`,
+                  isUser: true,
+                  userId: originalPage.userId || "anonymous",
+                  username: displayUsername || "Anonymous",
+                  className: "user-link",
+                  children: [{ text: displayUsername || "Anonymous" }]
+                }
+              ]
             }
-
-            // Make sure the user link has the user-link class
-            const userLinkIndex = replyContent[0].children.findIndex(child =>
-              child.type === 'link' && child.isUser);
-            if (userLinkIndex >= 0) {
-              replyContent[0].children[userLinkIndex].className = 'user-link';
-            }
-          }
+          ];
 
           console.log("Created reply content:", replyContent);
           setContent(replyContent);
