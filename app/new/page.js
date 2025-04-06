@@ -2,6 +2,7 @@
 import { useContext, useEffect, useState } from "react";
 import SlateEditor from "../components/SlateEditor";
 import ReplyEditor from "../components/ReplyEditor";
+import TestReplyEditor from "../components/TestReplyEditor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
@@ -416,7 +417,7 @@ const Form = ({ Page, setPage, isReply }) => {
           <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
           <div className="min-h-[300px] border border-input rounded-md bg-background">
             {isReply ? (
-              <ReplyEditor setEditorState={setEditorState} initialContent={initialContent} />
+              <TestReplyEditor setEditorState={setEditorState} />
             ) : (
               <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
             )}

@@ -193,9 +193,19 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
   // Log initialContent and deserialized result
   console.log("SlateEditor received initialContent:", initialContent);
+
+  // Force a more detailed log of the initialContent
+  if (initialContent) {
+    try {
+      console.log("SlateEditor initialContent detailed:", JSON.stringify(initialContent, null, 2));
+    } catch (e) {
+      console.error("Error stringifying initialContent:", e);
+    }
+  }
+
   const deserializedValue = useMemo(() => {
     const result = deserialize(initialContent);
-    console.log("Deserialized initialContent:", JSON.stringify(result));
+    console.log("Deserialized initialContent:", JSON.stringify(result, null, 2));
     return result;
   }, [initialContent]);
 
