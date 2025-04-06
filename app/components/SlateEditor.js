@@ -34,14 +34,11 @@ const editorStyles = `
     text-decoration: none;
   }
 
-  /* Match pill link styling */
+  /* Match pill link styling - use the same styles as editor-styles.css */
   [data-slate-editor] a.page-link,
   [data-slate-editor] a.user-link {
-    background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
-    border-radius: 8px;
-    padding: 1px 6px;
-    margin: 0 1px;
-    border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2);
+    /* These styles are now imported from editor-styles.css */
+    /* This ensures consistent styling between edit and view modes */
   }
 
   .editor-normal {
@@ -450,9 +447,10 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           });
 
           // Use custom className if provided, otherwise use default classes
+          // Ensure consistent styling with the rest of the product
           const className = element.className ?
             `editor-link ${element.className}` :
-            `editor-link ${isUserLink ? 'user-link' : 'page-link'}`;
+            `editor-link ${isUserLink ? 'user-link' : ''} ${!isUserLink ? 'page-link' : ''}`;
 
           // Add more debug logging for user links
           if (isUserLink) {
@@ -924,6 +922,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   const isPageLink = !isExternal && !isUserLink;
 
   // Use custom className if provided, otherwise use default classes
+  // Ensure consistent styling with the rest of the product
   const className = element.className ?
     `editor-link ${element.className}` :
     `editor-link ${isUserLink ? 'user-link' : ''} ${isPageLink ? 'page-link' : ''}`;

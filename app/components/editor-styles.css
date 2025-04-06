@@ -8,10 +8,11 @@
   transition: all 0.2s ease;
 }
 
-/* Pill link styling for page links */
+/* Pill link styling for page links - consistent across edit and view modes */
 .editor-link[data-page-id],
 .editor-link.page-link,
-.page-link {
+.page-link,
+[data-slate-editor] a.page-link {
   background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
   border-radius: 8px;
   padding: 1px 6px;
@@ -26,9 +27,10 @@
   border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2);
 }
 
-/* User links styling */
+/* User links styling - consistent across edit and view modes */
 .user-link,
-.editor-link.user-link {
+.editor-link.user-link,
+[data-slate-editor] a.user-link {
   background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
   border-radius: 8px;
   padding: 1px 6px;
@@ -52,7 +54,10 @@ a.editor-link.user-link::before,
 [data-user-id]::before,
 [data-username]::before,
 a[data-user-id]::before,
-a[data-username]::before {
+a[data-username]::before,
+[data-slate-editor] a.user-link::before,
+[data-slate-editor] a[data-user-id]::before,
+[data-slate-editor] a[data-username]::before {
   content: '@';
   opacity: 0.7;
   margin-right: 1px;
