@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Clock, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import SimpleSparkline from './SimpleSparkline';
+import { useAccentColor, ACCENT_COLOR_VALUES } from '../contexts/AccentColorContext';
 
 /**
  * RecentPageChanges Component
@@ -22,6 +23,17 @@ export default function RecentPageChanges({ pageId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
+  const { accentColor, customColors } = useAccentColor();
+
+  // Get the actual color value based on the selected accent color
+  const getAccentColorValue = () => {
+    if (accentColor.startsWith('custom')) {
+      return customColors[accentColor];
+    }
+    return ACCENT_COLOR_VALUES[accentColor] || '#1768FF';
+  };
+
+  const accentColorValue = getAccentColorValue();
 
   useEffect(() => {
     async function fetchPageVersions() {
@@ -114,7 +126,7 @@ export default function RecentPageChanges({ pageId }) {
   const mostRecentVersion = validVersions.length > 0 ? validVersions[0] : null;
 
   const handleViewAllHistory = () => {
-    router.push(`/page-history/${pageId}`);
+    router.push(`/${pageId}/history`);
   };
 
   if (loading) {
@@ -143,8 +155,8 @@ export default function RecentPageChanges({ pageId }) {
 
       {/* Sparkline chart */}
       <div className="mb-4 h-16 w-full">
-        <SimpleSparkline data={sparklineData} height={60} />
-        <div className="text-xs text-muted-foreground mt-1 text-center">
+        <SimpleSparkline data={sparklineData} height={60} color={accentColorValue} />
+        <div className="text-xs mt-1 text-center" style={{ color: accentColorValue }}>
           Activity over the past 24 hours
         </div>
       </div>
@@ -168,11 +180,12 @@ export default function RecentPageChanges({ pageId }) {
       {/* View all history button */}
       <Button
         variant="outline"
-        className="w-full flex items-center justify-center gap-1"
+        size="lg"
+        className="w-full flex items-center justify-center gap-2"
         onClick={handleViewAllHistory}
       >
         View all page history
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-5 w-5" />
       </Button>
     </div>
   );

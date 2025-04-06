@@ -4,6 +4,7 @@ import React from 'react';
 import { Eye, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from './SimpleSparkline';
+import { useAccentColor, ACCENT_COLOR_VALUES } from '../contexts/AccentColorContext';
 
 /**
  * PageStats Component
@@ -26,6 +27,17 @@ export default function PageStats({
   pageId
 }) {
   const router = useRouter();
+  const { accentColor, customColors } = useAccentColor();
+
+  // Get the actual color value based on the selected accent color
+  const getAccentColorValue = () => {
+    if (accentColor.startsWith('custom')) {
+      return customColors[accentColor];
+    }
+    return ACCENT_COLOR_VALUES[accentColor] || '#1768FF';
+  };
+
+  const accentColorValue = getAccentColorValue();
 
   const handleViewHistory = () => {
     router.push(`/${pageId}/history`);
@@ -44,13 +56,13 @@ export default function PageStats({
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
               {viewData.length > 0 && (
-                <SimpleSparkline data={viewData} height={30} color="#1768FF" />
+                <SimpleSparkline data={viewData} height={30} color={accentColorValue} />
               )}
             </div>
-            <span className="text-xs font-medium" style={{ color: '#1768FF' }}>24h</span>
+            <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
           </div>
 
-          <div className="bg-[#1768FF] text-white text-sm font-medium px-2 py-1 rounded-md">
+          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
             {viewCount.toLocaleString()}
           </div>
         </div>
@@ -70,13 +82,13 @@ export default function PageStats({
           <div className="flex items-center gap-1">
             <div className="h-8 w-16 relative">
               {changeData.length > 0 && (
-                <SimpleSparkline data={changeData} height={30} color="#1768FF" />
+                <SimpleSparkline data={changeData} height={30} color={accentColorValue} />
               )}
             </div>
-            <span className="text-xs font-medium" style={{ color: '#1768FF' }}>24h</span>
+            <span className="text-xs font-medium" style={{ color: accentColorValue }}>24h</span>
           </div>
 
-          <div className="bg-[#1768FF] text-white text-sm font-medium px-2 py-1 rounded-md">
+          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
             {changeCount}
           </div>
         </div>
