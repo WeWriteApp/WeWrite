@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import SlateEditor from './SlateEditor';
 import { ReactEditor } from 'slate-react';
 import { Transforms } from 'slate';
+import { useSearchParams } from 'next/navigation';
 
 /**
  * TestReplyEditor Component
@@ -17,33 +18,101 @@ export default function TestReplyEditor({ setEditorState }) {
 
   // Flag to track if we've positioned the cursor
   const cursorPositioned = useRef(false);
-  // Hardcoded test content with attribution and links - only two lines
-  const testContent = [
-    {
-      type: "paragraph",
-      children: [
-        { text: "Replying to " },
-        {
-          type: "link",
-          url: "/test-page-id",
-          children: [{ text: "Test Page Title" }]
-        },
-        { text: " by " },
-        {
-          type: "link",
-          url: "/u/test-user-id",
-          children: [{ text: "Test User" }]
-        }
-      ]
-    },
-    {
-      type: "paragraph",
-      children: [{ text: "" }]
+
+  // Get URL parameters for the reply
+  const searchParams = useSearchParams();
+  const replyToParam = searchParams.get('replyTo');
+  const pageTitle = searchParams.get('title') ?
+    decodeURIComponent(searchParams.get('title')).replace(/^Re: "(.*)"$/, '$1') :
+    "Untitled";
+
+  // State for the content
+  const [replyContent, setReplyContent] = useState(null);
+
+  // Fetch the original page data
+  useEffect(() => {
+    if (replyToParam) {
+      // Import the database module to get page details
+      import('../firebase/database').then(({ getPageById }) => {
+        getPageById(replyToParam).then(originalPage => {
+          if (originalPage) {
+            console.log("Found original page:", originalPage);
+
+            // Create a direct reply content structure with proper attribution
+            const content = [
+              {
+                type: "paragraph",
+                children: [
+                  { text: "Replying to " },
+                  {
+                    type: "link",
+                    url: `/${replyToParam}`,
+                    children: [{ text: originalPage.title || pageTitle }]
+                  },
+                  { text: " by " },
+                  {
+                    type: "link",
+                    url: `/u/${originalPage.userId || "anonymous"}`,
+                    children: [{ text: originalPage.username || "Anonymous" }]
+                  }
+                ]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
+              }
+            ];
+
+            // Set the content
+            setReplyContent(content);
+
+            // Also set the editor state
+            if (setEditorState) {
+              setEditorState(content);
+            }
+          } else {
+            // Fallback if original page not found
+            console.error("Original page not found, using fallback content");
+            setFallbackContent();
+          }
+        }).catch(error => {
+          console.error("Error fetching original page:", error);
+          setFallbackContent();
+        });
+      });
+    } else {
+      // If no replyTo parameter, use fallback
+      setFallbackContent();
     }
-  ];
+  }, [replyToParam, pageTitle, setEditorState]);
+
+  // Helper function to set fallback content
+  const setFallbackContent = () => {
+    const fallbackContent = [
+      {
+        type: "paragraph",
+        children: [
+          { text: "Replying to page" }
+        ]
+      },
+      {
+        type: "paragraph",
+        children: [{ text: "" }]
+      }
+    ];
+
+    setReplyContent(fallbackContent);
+    if (setEditorState) {
+      setEditorState(fallbackContent);
+    }
+  };
 
   // Log the content to help with debugging
-  console.log("TestReplyEditor using hardcoded content:", JSON.stringify(testContent, null, 2));
+  useEffect(() => {
+    if (replyContent) {
+      console.log("TestReplyEditor using content:", JSON.stringify(replyContent, null, 2));
+    }
+  }, [replyContent]);
 
   // Forward ref to access the Slate editor instance
   const forwardRef = (editor) => {
@@ -51,17 +120,12 @@ export default function TestReplyEditor({ setEditorState }) {
     return editor;
   };
 
-  // Pass the content to the parent component
-  useEffect(() => {
-    if (setEditorState) {
-      setEditorState(testContent);
-    }
-  }, [setEditorState, testContent]);
+  // This is now handled in the content fetching effect
 
   // Position cursor at the second line
   useEffect(() => {
-    // Only run this once when the component mounts
-    if (!cursorPositioned.current) {
+    // Only run this when the component mounts and content is available
+    if (replyContent && !cursorPositioned.current && editorRef.current) {
       // Set cursor positioned flag to prevent multiple positioning attempts
       cursorPositioned.current = true;
 
@@ -69,48 +133,37 @@ export default function TestReplyEditor({ setEditorState }) {
       const timer = setTimeout(() => {
         try {
           // Position cursor at the beginning of the second paragraph
-          if (editorRef.current) {
-            const editor = editorRef.current;
+          const editor = editorRef.current;
 
-            // Check if the editor has the necessary methods
-            if (editor && typeof editor.selection !== 'undefined') {
-              // Create a point at the start of the second paragraph (index 1)
-              const point = { path: [1, 0], offset: 0 };
+          // Check if the editor has the necessary methods
+          if (editor && typeof editor.selection !== 'undefined') {
+            // Create a point at the start of the second paragraph (index 1)
+            const point = { path: [1, 0], offset: 0 };
 
-              // Use ReactEditor to focus and select
-              try {
-                // Make sure the editor is focusable
-                if (ReactEditor.isFocusable(editor)) {
-                  ReactEditor.focus(editor);
-                  Transforms.select(editor, point);
-                  console.log('Cursor positioned at second paragraph using ReactEditor');
-                } else {
-                  console.warn('Editor is not focusable');
-                  // Fallback to direct DOM manipulation
-                  const editorElement = document.querySelector('[data-slate-editor=true]');
-                  if (editorElement) {
-                    editorElement.focus();
-                    console.log('Editor focused via DOM');
-                  }
-                }
-              } catch (reactEditorError) {
-                console.error('Error using ReactEditor:', reactEditorError);
+            // Use ReactEditor to focus and select
+            try {
+              // Focus the editor
+              ReactEditor.focus(editor);
+              // Set the selection to the second paragraph
+              Transforms.select(editor, point);
+              console.log('Cursor positioned at second paragraph using ReactEditor');
+            } catch (reactEditorError) {
+              console.error('Error using ReactEditor:', reactEditorError);
 
-                // Fallback to direct DOM manipulation
-                const editorElement = document.querySelector('[data-slate-editor=true]');
-                if (editorElement) {
-                  editorElement.focus();
-                  console.log('Editor focused via DOM');
-                }
-              }
-            } else {
-              console.warn('Editor instance missing selection capability');
-              // Fallback to direct DOM focus
+              // Fallback to direct DOM manipulation
               const editorElement = document.querySelector('[data-slate-editor=true]');
               if (editorElement) {
                 editorElement.focus();
-                console.log('Editor focused via DOM (fallback)');
+                console.log('Editor focused via DOM');
               }
+            }
+          } else {
+            console.warn('Editor instance missing selection capability');
+            // Fallback to direct DOM focus
+            const editorElement = document.querySelector('[data-slate-editor=true]');
+            if (editorElement) {
+              editorElement.focus();
+              console.log('Editor focused via DOM (fallback)');
             }
           }
         } catch (error) {
@@ -120,18 +173,18 @@ export default function TestReplyEditor({ setEditorState }) {
 
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [replyContent]);
 
   // Custom onChange handler to prevent editing the attribution line
   const handleChange = (value) => {
-    // Ensure the first two paragraphs remain unchanged
-    if (value.length > 0) {
+    // Only apply protection if we have content
+    if (replyContent && value.length > 0) {
       // Keep the attribution line unchanged
-      value[0] = testContent[0];
+      value[0] = replyContent[0];
 
       // Keep the blank line unchanged
-      if (value.length > 1) {
-        value[1] = testContent[1];
+      if (value.length > 1 && replyContent.length > 1) {
+        value[1] = replyContent[1];
       }
     }
 
@@ -141,10 +194,15 @@ export default function TestReplyEditor({ setEditorState }) {
     }
   };
 
+  // Only render the editor when we have content
+  if (!replyContent) {
+    return <div className="p-4 text-center">Loading reply content...</div>;
+  }
+
   return (
     <SlateEditor
       ref={forwardRef}
-      initialContent={testContent}
+      initialContent={replyContent}
       onContentChange={handleChange}
     />
   );
