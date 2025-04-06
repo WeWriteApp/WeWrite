@@ -9,6 +9,9 @@ import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import TypeaheadSearch from "./TypeaheadSearch";
 
+// Import custom editor styles for consistent pill links
+import "./editor-styles.css";
+
 // CSS for editor modes - ensures consistent styling with TextView
 const editorStyles = `
   .editor-normal {
@@ -421,10 +424,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
               data-page-title={element.pageTitle}
               data-user-id={isUserLink ? element.userId : undefined}
               data-username={isUserLink ? element.username : undefined}
-              className={`editor-link ${isUserLink ? 'user-link text-blue-600 hover:underline' : 'page-link text-blue-600 hover:underline'}`}
+              className={`editor-link ${isUserLink ? 'user-link' : 'page-link'}`}
               target={isExternal ? "_blank" : undefined}
               rel={isExternal ? "noopener noreferrer" : undefined}
-              style={{ color: '#1768FF', textDecoration: 'none' }}
             >
               {children}
             </a>
@@ -884,7 +886,9 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
       rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={handleClick}
       data-page-id={element.pageId}
+      data-page-title={element.pageTitle}
       data-user-id={isUserLink ? element.userId : undefined}
+      data-username={isUserLink ? element.username : undefined}
     >
       <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
     </a>

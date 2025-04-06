@@ -43,8 +43,24 @@ export default function TestReplyEditor({ setEditorState }) {
             let displayUsername = "Anonymous";
             if (originalPage.userId) {
               try {
-                displayUsername = await getUsernameById(originalPage.userId);
-                console.log("Fetched username:", displayUsername);
+                // First try to get username from RTDB directly
+                const { getDatabase, ref, get } = await import('firebase/database');
+                const { app } = await import('../firebase/config');
+                const rtdb = getDatabase(app);
+                const rtdbUserRef = ref(rtdb, `users/${originalPage.userId}`);
+                const rtdbSnapshot = await get(rtdbUserRef);
+
+                if (rtdbSnapshot.exists()) {
+                  const rtdbUserData = rtdbSnapshot.val();
+                  if (rtdbUserData.username) {
+                    displayUsername = rtdbUserData.username;
+                    console.log(`Found username in RTDB: ${displayUsername}`);
+                  }
+                } else {
+                  // If not in RTDB, try the utility function
+                  displayUsername = await getUsernameById(originalPage.userId);
+                  console.log("Fetched username from utility:", displayUsername);
+                }
               } catch (error) {
                 console.error("Error fetching username:", error);
                 // Fallback to page's stored username if available
