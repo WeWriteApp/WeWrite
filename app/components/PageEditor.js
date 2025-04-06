@@ -70,6 +70,7 @@ const PageEditor = ({
   // Fetch original page data for reply functionality
   useEffect(() => {
     if (isReply && replyToId) {
+      console.log("Fetching original page for reply with ID:", replyToId);
       // Import the database module to get page details
       import('../firebase/database').then(({ getPageById }) => {
         getPageById(replyToId).then(async (originalPage) => {
@@ -98,6 +99,7 @@ const PageEditor = ({
                   const rtdbUserData = rtdbSnapshot.val();
                   if (rtdbUserData.username) {
                     displayUsername = rtdbUserData.username;
+                    console.log("Using username from RTDB:", displayUsername);
                     console.log(`Found username in RTDB: ${displayUsername}`);
                   } else if (rtdbUserData.displayName) {
                     displayUsername = rtdbUserData.displayName;
@@ -178,9 +180,13 @@ const PageEditor = ({
             setReplyContent(content);
 
             // Always update the current editor value for replies
+            // This is crucial for the reply content to appear
             setCurrentEditorValue(content);
+
+            // Also notify parent component about the content change
             if (onContentChange) {
               onContentChange(content);
+              console.log("Notified parent component about reply content");
             }
           }
         }).catch(error => {
@@ -198,16 +204,18 @@ const PageEditor = ({
   }, []);
 
   // Update currentEditorValue when the initialContent prop changes
+  // But don't override reply content if it's already been set
   useEffect(() => {
-    if (initialContent) {
+    if (initialContent && (!isReply || !replyContent)) {
       setCurrentEditorValue(initialContent);
     }
-  }, [initialContent]);
+  }, [initialContent, isReply, replyContent]);
 
   // Position cursor for reply content
   useEffect(() => {
     // Only run this when reply content is available and cursor hasn't been positioned yet
-    if (replyContent && !cursorPositioned.current && editorRef.current) {
+    if (isReply && replyContent && !cursorPositioned.current && editorRef.current) {
+      console.log("Attempting to position cursor for reply content");
       // Set cursor positioned flag to prevent multiple positioning attempts
       cursorPositioned.current = true;
 

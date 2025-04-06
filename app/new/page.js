@@ -420,6 +420,7 @@ const Form = ({ Page, setPage, isReply }) => {
 
   // Get the replyTo parameter
   const replyToId = searchParams.get('replyTo');
+  console.log("Reply to ID from URL parameters:", replyToId);
 
   return (
     <PageEditor
