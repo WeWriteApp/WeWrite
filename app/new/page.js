@@ -272,6 +272,10 @@ const Form = ({ Page, setPage, isReply }) => {
                   {
                     type: "link",
                     url: `/u/${originalPage.userId || "anonymous"}`,
+                    isUser: true,
+                    userId: originalPage.userId || "anonymous",
+                    username: originalPage.username || "Anonymous",
+                    className: "user-link",
                     children: [{ text: originalPage.username || "Anonymous" }]
                   }
                 ]

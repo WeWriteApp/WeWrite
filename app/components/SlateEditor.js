@@ -14,6 +14,36 @@ import "./editor-styles.css";
 
 // CSS for editor modes - ensures consistent styling with TextView
 const editorStyles = `
+  /* WYSIWYG styling to match the original page view */
+  [data-slate-editor] {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--foreground);
+    background-color: var(--background);
+  }
+
+  /* Match paragraph styling */
+  [data-slate-editor] p {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Match link styling */
+  [data-slate-editor] a {
+    color: var(--accent-color, #1768FF);
+    text-decoration: none;
+  }
+
+  /* Match pill link styling */
+  [data-slate-editor] a.page-link,
+  [data-slate-editor] a.user-link {
+    background-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.1);
+    border-radius: 8px;
+    padding: 1px 6px;
+    margin: 0 1px;
+    border: 1px solid rgba(var(--accent-color-rgb, 23, 104, 255), 0.2);
+  }
+
   .editor-normal {
     /* Normal mode styling */
     line-height: 1.6;

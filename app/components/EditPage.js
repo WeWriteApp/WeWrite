@@ -7,8 +7,9 @@ import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Globe, Lock } from "lucide-react";
 import { Button } from "./ui/button";
+import { Switch } from "./ui/switch";
 import { usePage } from "../contexts/PageContext";
 
 const EditPage = ({
@@ -27,11 +28,14 @@ const EditPage = ({
   );
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
+  const [isPublic, setIsPublic] = useState(page?.isPublic !== false);
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
+  const [titleError, setTitleError] = useState(false);
   const { logError } = useLogging();
   const editorRef = useRef(null);
+  const titleInputRef = useRef(null);
 
   // Use keyboard shortcuts
   useKeyboardShortcuts({
@@ -46,7 +50,12 @@ const EditPage = ({
     if (page?.groupId) {
       setGroupId(page.groupId);
     }
-  }, [page?.groupId]);
+
+    // Update isPublic state when page changes
+    if (page) {
+      setIsPublic(page.isPublic !== false);
+    }
+  }, [page]);
 
   useEffect(() => {
     // Focus the editor when entering edit mode
@@ -98,10 +107,20 @@ const EditPage = ({
       return;
     }
 
-    if (!title || title.length === 0) {
+    if (!title || title.trim().length === 0) {
       console.log("Title is required");
+      setTitleError(true);
+
+      // Focus the title input
+      if (titleInputRef.current) {
+        titleInputRef.current.focus();
+      }
+
       return;
     }
+
+    // Clear any title error
+    setTitleError(false);
 
     setIsSaving(true);
     try {
@@ -120,7 +139,7 @@ const EditPage = ({
         // update the page content
         await updateDoc("pages", page.id, {
           title: title,
-          isPublic: page.isPublic,
+          isPublic: isPublic,
           groupId: groupId,
           lastModified: updateTime,
         });
@@ -174,13 +193,39 @@ const EditPage = ({
     <div className="editor-container" style={{ paddingBottom: '60px' }}>
       <div className="mb-4">
         <input
+          ref={titleInputRef}
           type="text"
-          defaultValue={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal"
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            if (e.target.value.trim().length > 0) {
+              setTitleError(false);
+            }
+          }}
+          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
           placeholder="Enter a title..."
           autoComplete="off"
           style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+        />
+        {titleError && (
+          <p className="text-destructive text-sm mt-1">Title is required</p>
+        )}
+      </div>
+
+      {/* Public/Private switcher */}
+      <div className="mb-4 flex items-center gap-2 bg-muted p-2 rounded-lg w-fit">
+        {isPublic ? (
+          <Globe className="h-4 w-4 text-green-500" />
+        ) : (
+          <Lock className="h-4 w-4 text-amber-500" />
+        )}
+        <span className="text-sm font-medium">
+          {isPublic ? "Public" : "Private"}
+        </span>
+        <Switch
+          checked={isPublic}
+          onCheckedChange={setIsPublic}
+          aria-label="Toggle page visibility"
         />
       </div>
 

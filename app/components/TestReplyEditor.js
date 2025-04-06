@@ -86,6 +86,12 @@ export default function TestReplyEditor({ setEditorState }) {
               }
             }
 
+            // Ensure we have a valid username
+            if (displayUsername === "Anonymous" && originalPage.username) {
+              displayUsername = originalPage.username;
+              console.log("Using username directly from page object:", displayUsername);
+            }
+
             // Create a direct reply content structure with proper attribution
             const content = [
               {
