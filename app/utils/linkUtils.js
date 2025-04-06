@@ -1,6 +1,6 @@
 /**
  * Link Utilities
- * 
+ *
  * This module provides utility functions for creating consistent link structures
  * across the application. It ensures that all links have the necessary properties
  * for proper styling and functionality.
@@ -8,7 +8,7 @@
 
 /**
  * Creates a standardized page link structure
- * 
+ *
  * @param {Object} options - Configuration options for the page link
  * @param {string} options.pageId - ID of the page
  * @param {string} options.pageTitle - Title of the page
@@ -32,7 +32,7 @@ export const createPageLink = ({
 
 /**
  * Creates a standardized user link structure
- * 
+ *
  * @param {Object} options - Configuration options for the user link
  * @param {string} options.userId - ID of the user
  * @param {string} options.username - Username to display
@@ -44,20 +44,26 @@ export const createUserLink = ({
   username = "Anonymous",
   url = null
 }) => {
+  // Ensure we have a valid username to display
+  const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+
+  // Log the username being used
+  console.log(`Creating user link with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
+
   return {
     type: "link",
     url: url || `/u/${userId || "anonymous"}`,
     isUser: true,
     userId: userId || "anonymous",
-    username: username || "Anonymous",
+    username: displayUsername,
     className: "user-link",
-    children: [{ text: username || "Anonymous" }]
+    children: [{ text: displayUsername }]
   };
 };
 
 /**
  * Creates a standardized reply attribution line
- * 
+ *
  * @param {Object} options - Configuration options for the reply
  * @param {string} options.pageId - ID of the original page
  * @param {string} options.pageTitle - Title of the original page

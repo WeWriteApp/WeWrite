@@ -460,10 +460,18 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
           // Add more debug logging for user links
           if (isUserLink) {
+            // Ensure the children text matches the username
+            if (element.username && element.children && element.children.length > 0 &&
+                element.children[0].text !== element.username) {
+              console.log(`Fixing mismatched username: children text "${element.children[0].text}" vs username "${element.username}"`);
+              element.children[0].text = element.username;
+            }
+
             console.log('Rendering USER link with:', {
               username: element.username,
               userId: element.userId,
-              className
+              className,
+              childrenText: element.children?.[0]?.text
             });
           }
 
@@ -963,10 +971,18 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
 
   // Add more debug logging for user links
   if (isUserLink) {
+    // Ensure the children text matches the username
+    if (element.username && element.children && element.children.length > 0 &&
+        element.children[0].text !== element.username) {
+      console.log(`LinkElement: Fixing mismatched username: children text "${element.children[0].text}" vs username "${element.username}"`);
+      element.children[0].text = element.username;
+    }
+
     console.log('LinkElement rendering USER link with:', {
       username: element.username,
       userId: element.userId,
-      className
+      className,
+      childrenText: element.children?.[0]?.text
     });
   }
 
