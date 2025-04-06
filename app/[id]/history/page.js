@@ -88,7 +88,7 @@ export default function PageHistoryPage({ params }) {
           return {
             id: version.id || `version-${index}`,
             pageId: id,
-            pageName: pageData?.title || 'Untitled',
+            pageName: pageResult.pageData?.title || 'Untitled',
             userId: version.userId || 'anonymous',
             username: version.username || 'Anonymous',
             timestamp: version.timestamp,
@@ -172,6 +172,13 @@ export default function PageHistoryPage({ params }) {
           userId={page?.userId}
           isLoading={loading}
         />
+
+        <div className="flex items-center mb-4">
+          <Button variant="outline" size="lg" onClick={handleBackToPage} className="mr-2">
+            <ChevronLeft className="h-5 w-5 mr-2" />
+            Back to page
+          </Button>
+        </div>
 
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-6">
