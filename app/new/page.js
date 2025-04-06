@@ -10,6 +10,10 @@ import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 import PageEditor from "../components/PageEditor";
 import TestReplyEditor from "../components/TestReplyEditor";
+import dynamic from 'next/dynamic';
+import { Button } from "../components/ui/button";
+import { Switch } from "../components/ui/switch";
+import { Globe } from "lucide-react";
 
 /**
  * New Page Component
@@ -467,6 +471,78 @@ const Form = ({ Page, setPage, isReply }) => {
   const replyToId = searchParams.get('replyTo');
   console.log("Reply to ID from URL parameters:", replyToId);
 
+  // For replies, use the specialized ReplyContent component
+  if (isReply) {
+    // Import the ReplyContent component dynamically
+    const ReplyContent = dynamic(() => import('../components/ReplyContent'), { ssr: false });
+
+    return (
+      <div className="w-full">
+        <div className="mb-4">
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={Page.title}
+            onChange={(e) => setPage({ ...Page, title: e.target.value })}
+            className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal"
+            placeholder="Enter a title..."
+            autoComplete="off"
+            style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+            autoFocus
+          />
+        </div>
+
+        <ReplyContent
+          replyToId={replyToId}
+          initialContent={initialContent}
+          onContentChange={setEditorState}
+          onSave={handleSubmit}
+          onCancel={() => router.push("/pages")}
+        />
+
+        <div className="mt-8 mb-16">
+          <div className="flex flex-row justify-between items-center gap-4 w-full">
+            <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
+              <Globe className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">
+                {Page.isPublic ? "Public" : "Private"}
+              </span>
+              <Switch
+                checked={Page.isPublic}
+                onCheckedChange={(newValue) => setPage({ ...Page, isPublic: newValue })}
+                aria-label="Toggle page visibility"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => router.push("/pages")}
+                variant="outline"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="fixed top-4 right-4 bg-destructive/10 p-4 rounded-md shadow-md">
+            <p className="text-destructive font-medium">{error}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // For regular new pages, use the standard PageEditor
   return (
     <PageEditor
       title={Page.title}
@@ -480,8 +556,6 @@ const Form = ({ Page, setPage, isReply }) => {
       isSaving={isSaving}
       error={error}
       isNewPage={true}
-      isReply={isReply}
-      replyToId={replyToId}
     />
   );
 };
