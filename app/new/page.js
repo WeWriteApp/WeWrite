@@ -1,8 +1,5 @@
 "use client";
 import { useContext, useEffect, useState, useRef } from "react";
-import SlateEditor from "../components/SlateEditor";
-import ReplyEditor from "../components/ReplyEditor";
-import TestReplyEditor from "../components/TestReplyEditor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
@@ -11,6 +8,8 @@ import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader.tsx";
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
+import PageEditor from "../components/PageEditor";
+import TestReplyEditor from "../components/TestReplyEditor";
 
 /**
  * New Page Component
@@ -416,13 +415,11 @@ const Form = ({ Page, setPage, isReply }) => {
     }
   };
 
-  return (
-    <form
-      className="space-y-6 px-4 sm:px-6 md:px-8"
-      onSubmit={handleSubmit}
-    >
-      <div className="space-y-6">
-        <div className="max-w-2xl">
+  // For reply pages, we still use the TestReplyEditor for now
+  if (isReply) {
+    return (
+      <div className="px-4 sm:px-6 md:px-8">
+        <div className="mb-4">
           <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
           <input
             id="title"
@@ -433,51 +430,65 @@ const Form = ({ Page, setPage, isReply }) => {
             className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             autoComplete="off"
             ref={titleInputRef}
-            autoFocus={isReply}
+            autoFocus={true}
           />
         </div>
 
-        <div>
-          <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
-          <div className="min-h-[300px] border border-input rounded-md bg-background">
-            {isReply ? (
-              <TestReplyEditor setEditorState={setEditorState} />
-            ) : (
-              <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
-            )}
+        <div className="min-h-[300px] border border-input rounded-md bg-background mb-4">
+          <TestReplyEditor setEditorState={setEditorState} />
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isPublic"
+              checked={Page.isPublic}
+              onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
+              className="h-4 w-4 text-primary border-input rounded focus:ring-primary"
+              autoComplete="off"
+            />
+            <label htmlFor="isPublic" className="text-sm text-foreground">Public</label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={!Page.title || !editorState || isSaving}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => router.push("/pages")}
+              className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
+              type="button"
+            >
+              Cancel
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="isPublic"
-            checked={Page.isPublic}
-            onChange={(e) => setPage({ ...Page, isPublic: e.target.checked })}
-            className="h-4 w-4 text-primary border-input rounded focus:ring-primary"
-            autoComplete="off"
-          />
-          <label htmlFor="isPublic" className="text-sm text-foreground">Public</label>
-        </div>
+        {error && <p className="text-red-500">{error}</p>}
       </div>
+    );
+  }
 
-      <div className="flex items-center gap-2">
-        <button
-          disabled={!Page.title || !editorState || isSaving}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          type="submit"
-        >
-          {isSaving ? "Saving..." : "Save"}
-        </button>
-        <button
-          onClick={() => router.push("/pages")}
-          className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-      {error && <p className="text-red-500">{error}</p>}
-    </form>
+  // For regular new pages, use the PageEditor component
+  return (
+    <PageEditor
+      title={Page.title}
+      setTitle={(newTitle) => setPage({ ...Page, title: newTitle })}
+      initialContent={initialContent}
+      onContentChange={setEditorState}
+      isPublic={Page.isPublic}
+      setIsPublic={(newValue) => setPage({ ...Page, isPublic: newValue })}
+      onSave={handleSubmit}
+      onCancel={() => router.push("/pages")}
+      isSaving={isSaving}
+      error={error}
+      isNewPage={true}
+    />
   );
 };
 

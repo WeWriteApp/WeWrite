@@ -1,16 +1,13 @@
 "use client";
-import React, { useEffect, useState, useContext, useRef } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { saveNewVersion, updateDoc } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import { GroupsContext } from "../providers/GroupsProvider";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
-import SlateEditor from "./SlateEditor";
 import { useLogging } from "../providers/LoggingProvider";
-import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { X, Loader2, Globe, Lock } from "lucide-react";
-import { Button } from "./ui/button";
-import { Switch } from "./ui/switch";
+import { X, Loader2 } from "lucide-react";
 import { usePage } from "../contexts/PageContext";
+import PageEditor from "./PageEditor";
 
 const EditPage = ({
   isEditing,
@@ -22,29 +19,20 @@ const EditPage = ({
   editorError
 }) => {
   const { setIsEditMode } = usePage();
-  // Ensure initial state is always a valid Slate structure
-  const [currentEditorValue, setCurrentEditorValue] = useState(() =>
-    current || [{ type: 'paragraph', children: [{ text: '' }] }]
-  );
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
   const [isPublic, setIsPublic] = useState(page?.isPublic !== false);
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
-  const [titleError, setTitleError] = useState(false);
+  const [error, setError] = useState(editorError);
   const { logError } = useLogging();
-  const editorRef = useRef(null);
-  const titleInputRef = useRef(null);
 
-  // Use keyboard shortcuts
-  useKeyboardShortcuts({
-    isEditing,
-    setIsEditing,
-    canEdit: false, // Disable "Enter to edit" in edit mode
-    handleSave: !isSaving ? handleSave : null, // Only allow save when not already saving
-    isSaving
-  });
+  // Set edit mode in PageContext when component mounts
+  useEffect(() => {
+    setIsEditMode(true);
+    return () => setIsEditMode(false);
+  }, [setIsEditMode]);
 
   useEffect(() => {
     if (page?.groupId) {
@@ -56,29 +44,6 @@ const EditPage = ({
       setIsPublic(page.isPublic !== false);
     }
   }, [page]);
-
-  useEffect(() => {
-    // Focus the editor when entering edit mode
-    if (editorRef.current) {
-      editorRef.current.focus();
-    }
-
-    // Set edit mode in PageContext
-    setIsEditMode(true);
-
-    // Cleanup when component unmounts
-    return () => {
-      setIsEditMode(false);
-    };
-  }, [setIsEditMode]);
-
-  useEffect(() => {
-    // Update currentEditorValue when the `current` prop changes (e.g., initial load)
-    if (current) { // Only update if `current` is truthy
-      // Consider adding a deep comparison here if needed to avoid unnecessary updates
-      setCurrentEditorValue(current);
-    }
-  }, [current]);
 
   useEffect(() => {
     if (!groups) return;
@@ -101,34 +66,19 @@ const EditPage = ({
     setGroupId(item.id);
   };
 
-  async function handleSave() {
+  // Handle save action
+  const handleSave = async (editorContent) => {
     if (!user) {
-      console.log("User not authenticated");
+      setError("User not authenticated");
       return;
     }
-
-    if (!title || title.trim().length === 0) {
-      console.log("Title is required");
-      setTitleError(true);
-
-      // Focus the title input
-      if (titleInputRef.current) {
-        titleInputRef.current.focus();
-      }
-
-      return;
-    }
-
-    // Clear any title error
-    setTitleError(false);
 
     setIsSaving(true);
     try {
-      // convert the editorState to JSON
-      // Use the latest value from the editor captured in `currentEditorValue`
-      const editorStateJSON = JSON.stringify(currentEditorValue);
+      // Convert the editorState to JSON
+      const editorStateJSON = JSON.stringify(editorContent);
 
-      // save the new version
+      // Save the new version
       const result = await saveNewVersion(page.id, {
         content: editorStateJSON,
         userId: user.uid,
@@ -136,7 +86,7 @@ const EditPage = ({
 
       if (result) {
         let updateTime = new Date().toISOString();
-        // update the page content
+        // Update the page content
         await updateDoc("pages", page.id, {
           title: title,
           isPublic: isPublic,
@@ -146,40 +96,22 @@ const EditPage = ({
 
         setIsEditing(false);
       } else {
-        console.log("Error saving new version");
+        setError("Error saving new version");
       }
     } catch (error) {
-      console.log("Error saving new version", error);
+      console.error("Error saving new version", error);
+      setError("Failed to save: " + error.message);
       await logError(error, "EditPage.js");
     } finally {
       setIsSaving(false);
     }
-  }
-
-  const removeGroup = () => {
-    setGroupId(null);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
   };
 
-  const handleInsertLink = () => {
-    // Simulate @ key press to trigger link editor
-    if (editorRef.current) {
-      editorRef.current.focus();
-      const atEvent = new KeyboardEvent('keydown', {
-        key: '@',
-        code: 'KeyAT',
-        keyCode: 50,
-        which: 50,
-        bubbles: true
-      });
-      document.activeElement.dispatchEvent(atEvent);
-    }
-  };
-
-  // Display the error message if provided, otherwise check for editorState
+  // Display error message if provided
   if (editorError) {
     return (
       <div className="bg-destructive/10 p-4 rounded-md mb-4">
@@ -190,55 +122,19 @@ const EditPage = ({
   }
 
   return (
-    <div className="editor-container" style={{ paddingBottom: '60px' }}>
-      <div className="mb-4">
-        <input
-          ref={titleInputRef}
-          type="text"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            if (e.target.value.trim().length > 0) {
-              setTitleError(false);
-            }
-          }}
-          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
-          placeholder="Enter a title..."
-          autoComplete="off"
-          style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
-        />
-        {titleError && (
-          <p className="text-destructive text-sm mt-1">Title is required</p>
-        )}
-      </div>
-
-      {/* Public/Private switcher */}
-      <div className="mb-4 flex items-center gap-2 bg-muted p-2 rounded-lg w-fit">
-        {isPublic ? (
-          <Globe className="h-4 w-4 text-green-500" />
-        ) : (
-          <Lock className="h-4 w-4 text-amber-500" />
-        )}
-        <span className="text-sm font-medium">
-          {isPublic ? "Public" : "Private"}
-        </span>
-        <Switch
-          checked={isPublic}
-          onCheckedChange={setIsPublic}
-          aria-label="Toggle page visibility"
-        />
-      </div>
-
-      {/* Simple SlateEditor with no nested containers */}
-      <SlateEditor
-        ref={editorRef}
-        initialContent={currentEditorValue}
-        onContentChange={setCurrentEditorValue}
-        onSave={!isSaving ? handleSave : null}
-        onDiscard={handleCancel}
-        onInsert={handleInsertLink}
-      />
-    </div>
+    <PageEditor
+      title={title}
+      setTitle={setTitle}
+      initialContent={current}
+      onContentChange={(content) => {}}
+      isPublic={isPublic}
+      setIsPublic={setIsPublic}
+      onSave={() => handleSave(current)}
+      onCancel={handleCancel}
+      isSaving={isSaving}
+      error={error}
+      isNewPage={false}
+    />
   );
 };
 
