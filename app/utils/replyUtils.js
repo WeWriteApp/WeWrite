@@ -39,6 +39,12 @@ export const createReplyContent = ({
   switch (replyType) {
     case "standard":
     default:
+      // Ensure we have a valid username to display
+      const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+
+      // Log the username being used
+      console.log(`Creating reply content with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
+
       return [
         {
           type: "paragraph",
@@ -49,7 +55,6 @@ export const createReplyContent = ({
               url: `/${pageId}`,
               pageId: pageId,
               pageTitle: pageTitle || "Untitled",
-              type: "link",
               className: "page-link",
               children: [{ text: pageTitle || "Untitled" }]
             },
@@ -59,9 +64,9 @@ export const createReplyContent = ({
               url: `/u/${userId || "anonymous"}`,
               isUser: true,
               userId: userId || "anonymous",
-              username: username || "Anonymous",
+              username: displayUsername,
               className: "user-link",
-              children: [{ text: username || "Anonymous" }]
+              children: [{ text: displayUsername }]
             }
           ]
         }

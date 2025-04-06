@@ -153,8 +153,15 @@ const PageEditor = ({
             console.log("Final reply content with username:", JSON.stringify(content, null, 2));
             console.log("Username being used:", displayUsername);
 
-            // Force the username to be displayed without the @ symbol in the text
-            content[0].children[3].children[0].text = displayUsername;
+            // Ensure the user link has the correct text content
+            if (content[0].children[3].children && content[0].children[3].children[0]) {
+              // Force the username to be displayed correctly in the text
+              content[0].children[3].children[0].text = displayUsername;
+              console.log("Forced username in text content:", displayUsername);
+            }
+
+            // Double-check the user link structure
+            console.log("User link structure:", JSON.stringify(content[0].children[3], null, 2));
 
             // Set the reply content
             setReplyContent(content);

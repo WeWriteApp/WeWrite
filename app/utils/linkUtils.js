@@ -77,13 +77,22 @@ export const createReplyAttribution = ({
   userId = "anonymous",
   username = "Anonymous"
 }) => {
+  // Log the username being used in the attribution
+  console.log(`Creating reply attribution with username: ${username}, userId: ${userId}`);
+
+  // Create the user link with explicit username
+  const userLink = createUserLink({ userId, username });
+
+  // Log the created user link to verify structure
+  console.log('Created user link for attribution:', JSON.stringify(userLink, null, 2));
+
   return {
     type: "paragraph",
     children: [
       { text: "Replying to " },
       createPageLink({ pageId, pageTitle }),
       { text: " by " },
-      createUserLink({ userId, username })
+      userLink
     ]
   };
 };

@@ -110,15 +110,37 @@ const deserialize = (content) => {
                   children: node.children.map(child => {
                     // Ensure link elements have the correct structure
                     if (child.type === 'link') {
-                      return {
-                        ...child,
-                        // Ensure url property exists
-                        url: child.url || '#',
-                        // Ensure children is an array with at least one text node
-                        children: Array.isArray(child.children) && child.children.length > 0
-                          ? child.children
-                          : [{ text: child.text || '' }]
-                      };
+                      // Special handling for user links
+                      if (child.isUser || child.userId || child.username ||
+                          (child.url && child.url.startsWith('/u/'))) {
+
+                        // Ensure username is used as text content
+                        const displayUsername = child.username || 'Anonymous';
+                        console.log(`Processing user link: username=${displayUsername}, userId=${child.userId}`);
+
+                        return {
+                          ...child,
+                          // Ensure url property exists
+                          url: child.url || `/u/${child.userId || 'anonymous'}`,
+                          // Mark as user link
+                          isUser: true,
+                          // Ensure username is set
+                          username: displayUsername,
+                          // Force children text to match username
+                          children: [{ text: displayUsername }]
+                        };
+                      } else {
+                        // Regular link processing
+                        return {
+                          ...child,
+                          // Ensure url property exists
+                          url: child.url || '#',
+                          // Ensure children is an array with at least one text node
+                          children: Array.isArray(child.children) && child.children.length > 0
+                            ? child.children
+                            : [{ text: child.text || '' }]
+                        };
+                      }
                     }
                     return child;
                   })
