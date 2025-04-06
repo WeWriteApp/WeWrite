@@ -215,6 +215,116 @@ const Form = ({ Page, setPage, isReply }) => {
       setEditorState(defaultContent);
     }
   };
+
+  useEffect(() => {
+    const titleParam = searchParams.get('title');
+    const contentParam = searchParams.get('initialContent');
+    const replyToParam = searchParams.get('replyTo');
+
+    if (titleParam) {
+      try {
+        const decodedTitle = decodeURIComponent(titleParam);
+        setPage(prev => ({ ...prev, title: decodedTitle }));
+      } catch (error) {
+        console.error("Error decoding title parameter:", error);
+      }
+    }
+
+    // If this is a reply, set up the reply content directly
+    if (isReply && replyToParam) {
+      // Import the database module to get page details
+      import('../firebase/database').then(({ getPageById }) => {
+        getPageById(replyToParam).then(originalPage => {
+          if (originalPage) {
+            console.log("Found original page:", originalPage);
+
+            // Create a direct reply content structure with proper attribution
+            const directReplyContent = [
+              {
+                type: "paragraph",
+                children: [
+                  { text: "Replying to " },
+                  {
+                    type: "link",
+                    url: `/${replyToParam}`,
+                    children: [{ text: originalPage.title || "Untitled" }]
+                  },
+                  { text: " by " },
+                  {
+                    type: "link",
+                    url: `/u/${originalPage.userId || "anonymous"}`,
+                    children: [{ text: originalPage.username || "Anonymous" }]
+                  }
+                ]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "I'm responding to this page because..." }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
+              }
+            ];
+
+            // Set the content directly
+            console.log("Setting direct reply content:", JSON.stringify(directReplyContent, null, 2));
+            setInitialContent(directReplyContent);
+            if (setEditorState) {
+              setEditorState(directReplyContent);
+            }
+          } else {
+            // Fallback if original page not found
+            console.error("Original page not found, using fallback content");
+            setFallbackContent();
+          }
+        }).catch(error => {
+          console.error("Error fetching original page:", error);
+          setFallbackContent();
+        });
+      });
+    } else if (contentParam) {
+      // Process content parameter if not a reply or if we have content param
+      try {
+        const decodedContent = decodeURIComponent(contentParam);
+        console.log("Received encoded content:", contentParam);
+        console.log("Decoded content:", decodedContent);
+
+        try {
+          const parsedContent = JSON.parse(decodedContent);
+          console.log("Setting initial content (FULL):", JSON.stringify(parsedContent, null, 2));
+
+          // Validate the parsed content structure
+          if (Array.isArray(parsedContent) && parsedContent.length > 0) {
+            // Always set the initialContent first to ensure it's available
+            setInitialContent(parsedContent);
+            console.log("initialContent set to:", parsedContent);
+
+            // Also set the editor state immediately
+            if (setEditorState) {
+              console.log("Setting editor state directly");
+              setEditorState(parsedContent);
+            }
+          } else {
+            console.error("Invalid content structure:", parsedContent);
+            setFallbackContent();
+          }
+        } catch (parseError) {
+          console.error("Error parsing content JSON:", parseError);
+          setFallbackContent();
+        }
+      } catch (error) {
+        console.error("Error decoding content parameter:", error);
+        setFallbackContent();
+      }
+    } else if (isReply) {
+      // If it's a reply but we don't have content or replyTo, use fallback
+      setFallbackContent();
+    }
   }, [searchParams, setPage, setEditorState, isReply]);
 
   const handleSubmit = async (e) => {
