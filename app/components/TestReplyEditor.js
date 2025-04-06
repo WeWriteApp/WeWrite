@@ -41,6 +41,12 @@ export default function TestReplyEditor({ setEditorState }) {
 
             // Get the actual username using the utility function
             let displayUsername = "Anonymous";
+
+            // First check if the page object already has a username
+            if (originalPage.username && originalPage.username !== "Anonymous") {
+              displayUsername = originalPage.username;
+              console.log("Using username from page object:", displayUsername);
+            }
             if (originalPage.userId) {
               try {
                 // First try to get username from RTDB directly
@@ -55,11 +61,23 @@ export default function TestReplyEditor({ setEditorState }) {
                   if (rtdbUserData.username) {
                     displayUsername = rtdbUserData.username;
                     console.log(`Found username in RTDB: ${displayUsername}`);
+                  } else if (rtdbUserData.displayName) {
+                    displayUsername = rtdbUserData.displayName;
+                    console.log(`Found displayName in RTDB: ${displayUsername}`);
                   }
-                } else {
-                  // If not in RTDB, try the utility function
-                  displayUsername = await getUsernameById(originalPage.userId);
-                  console.log("Fetched username from utility:", displayUsername);
+                }
+
+                // If still Anonymous, try the utility function
+                if (displayUsername === "Anonymous") {
+                  try {
+                    const utilityUsername = await getUsernameById(originalPage.userId);
+                    if (utilityUsername && utilityUsername !== "Anonymous") {
+                      displayUsername = utilityUsername;
+                      console.log("Fetched username from utility:", displayUsername);
+                    }
+                  } catch (utilityError) {
+                    console.error("Error fetching from utility:", utilityError);
+                  }
                 }
               } catch (error) {
                 console.error("Error fetching username:", error);
@@ -83,6 +101,9 @@ export default function TestReplyEditor({ setEditorState }) {
                   {
                     type: "link",
                     url: `/u/${originalPage.userId || "anonymous"}`,
+                    isUser: true,
+                    userId: originalPage.userId,
+                    username: displayUsername,
                     children: [{ text: displayUsername }]
                   }
                 ]
@@ -92,6 +113,10 @@ export default function TestReplyEditor({ setEditorState }) {
                 children: [{ text: "" }]
               }
             ];
+
+            // Log the final content structure with username
+            console.log("Final reply content with username:", JSON.stringify(content, null, 2));
+            console.log("Username being used:", displayUsername);
 
             // Set the content
             setReplyContent(content);

@@ -404,8 +404,11 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             element.url.startsWith('www.')
           );
 
-          // Check if it's a user link
-          const isUserLink = element.isUser || (element.url && element.url.startsWith('/u/'));
+          // Check if it's a user link - more robust check
+          const isUserLink = element.isUser ||
+                           (element.url && element.url.startsWith('/u/')) ||
+                           (element.username) ||
+                           (element.userId);
 
           // Add debug logging
           console.log('Rendering link element:', {
@@ -871,8 +874,11 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
     openLinkEditor(element, ReactEditor.findPath(editor, element));
   };
 
-  // Check if it's a user link
-  const isUserLink = element.isUser || (url && url.startsWith('/u/'));
+  // Check if it's a user link - more robust check
+  const isUserLink = element.isUser ||
+                   (url && url.startsWith('/u/')) ||
+                   (element.username) ||
+                   (element.userId);
 
   // Check if it's a page link (not external and not user)
   const isPageLink = !isExternal && !isUserLink;
