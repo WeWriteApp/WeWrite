@@ -5,6 +5,7 @@ import SlateEditor from './SlateEditor';
 import { ReactEditor } from 'slate-react';
 import { Transforms } from 'slate';
 import { useSearchParams } from 'next/navigation';
+import { getUsernameById } from '../utils/userUtils';
 
 /**
  * TestReplyEditor Component
@@ -34,9 +35,22 @@ export default function TestReplyEditor({ setEditorState }) {
     if (replyToParam) {
       // Import the database module to get page details
       import('../firebase/database').then(({ getPageById }) => {
-        getPageById(replyToParam).then(originalPage => {
+        getPageById(replyToParam).then(async (originalPage) => {
           if (originalPage) {
             console.log("Found original page:", originalPage);
+
+            // Get the actual username using the utility function
+            let displayUsername = "Anonymous";
+            if (originalPage.userId) {
+              try {
+                displayUsername = await getUsernameById(originalPage.userId);
+                console.log("Fetched username:", displayUsername);
+              } catch (error) {
+                console.error("Error fetching username:", error);
+                // Fallback to page's stored username if available
+                displayUsername = originalPage.username || "Anonymous";
+              }
+            }
 
             // Create a direct reply content structure with proper attribution
             const content = [
@@ -53,7 +67,7 @@ export default function TestReplyEditor({ setEditorState }) {
                   {
                     type: "link",
                     url: `/u/${originalPage.userId || "anonymous"}`,
-                    children: [{ text: originalPage.username || "Anonymous" }]
+                    children: [{ text: displayUsername }]
                   }
                 ]
               },
