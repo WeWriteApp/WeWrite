@@ -419,6 +419,20 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             children: element.children
           });
 
+          // Use custom className if provided, otherwise use default classes
+          const className = element.className ?
+            `editor-link ${element.className}` :
+            `editor-link ${isUserLink ? 'user-link' : 'page-link'}`;
+
+          // Add more debug logging for user links
+          if (isUserLink) {
+            console.log('Rendering USER link with:', {
+              username: element.username,
+              userId: element.userId,
+              className
+            });
+          }
+
           return (
             <a
               {...attributes}
@@ -427,7 +441,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
               data-page-title={element.pageTitle}
               data-user-id={isUserLink ? element.userId : undefined}
               data-username={isUserLink ? element.username : undefined}
-              className={`editor-link ${isUserLink ? 'user-link' : 'page-link'}`}
+              className={className}
               target={isExternal ? "_blank" : undefined}
               rel={isExternal ? "noopener noreferrer" : undefined}
             >
@@ -883,11 +897,25 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   // Check if it's a page link (not external and not user)
   const isPageLink = !isExternal && !isUserLink;
 
+  // Use custom className if provided, otherwise use default classes
+  const className = element.className ?
+    `editor-link ${element.className}` :
+    `editor-link ${isUserLink ? 'user-link' : ''} ${isPageLink ? 'page-link' : ''}`;
+
+  // Add more debug logging for user links
+  if (isUserLink) {
+    console.log('LinkElement rendering USER link with:', {
+      username: element.username,
+      userId: element.userId,
+      className
+    });
+  }
+
   return (
     <a
       {...attributes}
       href={url}
-      className={`editor-link ${isUserLink ? 'user-link' : ''} ${isPageLink ? 'page-link' : ''}`}
+      className={className}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={handleClick}

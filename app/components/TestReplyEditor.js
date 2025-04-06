@@ -102,9 +102,11 @@ export default function TestReplyEditor({ setEditorState }) {
                     type: "link",
                     url: `/u/${originalPage.userId || "anonymous"}`,
                     isUser: true,
-                    userId: originalPage.userId,
+                    userId: originalPage.userId || "anonymous",
                     username: displayUsername,
-                    children: [{ text: displayUsername }]
+                    children: [{ text: displayUsername }],
+                    // Add explicit class name to ensure proper styling
+                    className: "user-link"
                   }
                 ]
               },
@@ -117,6 +119,15 @@ export default function TestReplyEditor({ setEditorState }) {
             // Log the final content structure with username
             console.log("Final reply content with username:", JSON.stringify(content, null, 2));
             console.log("Username being used:", displayUsername);
+
+            // Force the username to be displayed without the @ symbol in the text
+            // The @ symbol will be added by CSS
+            content[0].children[3].children[0].text = displayUsername;
+
+            // Ensure the user link has all necessary attributes
+            content[0].children[3].type = "link";
+            content[0].children[3].isUser = true;
+            content[0].children[3].className = "user-link";
 
             // Set the content
             setReplyContent(content);
