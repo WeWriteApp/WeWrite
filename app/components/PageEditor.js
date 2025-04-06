@@ -70,8 +70,8 @@ const PageEditor = ({
 
   // Fetch original page data for reply functionality
   useEffect(() => {
-    // Only fetch original page data if we don't already have initialContent
-    if (isReply && replyToId && !initialContent) {
+    // Only fetch original page data if we don't already have initialContent or replyContent
+    if (isReply && replyToId && !initialContent && !replyContent) {
       console.log("Fetching original page for reply with ID:", replyToId);
       // Set a flag to indicate we're loading reply content
       setLoadingReplyContent(true);
@@ -223,14 +223,17 @@ const PageEditor = ({
     });
 
     if (initialContent) {
-      // For replies, we want to use the initialContent directly if it's provided
+      // Always use the initialContent directly if it's provided
       // This ensures the pre-filled attribution text is displayed
-      console.log("Setting editor value from initialContent");
+      console.log("Setting editor value from initialContent", initialContent);
       setCurrentEditorValue(initialContent);
 
       // If this is a reply with initialContent, we don't need to fetch the original page
+      // and we should store the initialContent as replyContent to protect it
       if (isReply) {
+        setReplyContent(initialContent);
         setLoadingReplyContent(false);
+        console.log("Stored initialContent as replyContent for protection", initialContent);
       }
     }
   }, [initialContent, isReply]);

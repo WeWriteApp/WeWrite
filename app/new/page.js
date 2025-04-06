@@ -244,9 +244,44 @@ const Form = ({ Page, setPage, isReply }) => {
           console.log("Decoded reply content from URL:", decodedContent);
           setInitialContent(decodedContent);
           setEditorState(decodedContent);
+
+          // Log the content to verify it's being set correctly
+          console.log("Set initialContent and editorState for reply:", {
+            initialContent: decodedContent,
+            editorState: decodedContent
+          });
         } catch (error) {
           console.error("Error parsing initialContent for reply:", error);
         }
+      } else {
+        console.warn("No initialContent parameter found for reply");
+
+        // If no initialContent parameter is provided, create a default reply content
+        // This is a fallback in case the URL parameters are lost
+        import('../utils/replyUtils').then(({ createReplyContent }) => {
+          if (replyToParam) {
+            // Import the database module to get page details
+            import('../firebase/database').then(({ getPageById }) => {
+              getPageById(replyToParam).then(originalPage => {
+                if (originalPage) {
+                  const content = createReplyContent({
+                    pageId: originalPage.id,
+                    pageTitle: originalPage.title,
+                    userId: originalPage.userId,
+                    username: originalPage.username,
+                    replyType: "standard"
+                  });
+
+                  console.log("Created fallback reply content:", content);
+                  setInitialContent(content);
+                  setEditorState(content);
+                }
+              }).catch(error => {
+                console.error("Error fetching original page for fallback reply:", error);
+              });
+            });
+          }
+        });
       }
     } else {
       // For non-replies, still use the title parameter if available
@@ -436,7 +471,7 @@ const Form = ({ Page, setPage, isReply }) => {
     <PageEditor
       title={Page.title}
       setTitle={(newTitle) => setPage({ ...Page, title: newTitle })}
-      initialContent={isReply ? null : initialContent}
+      initialContent={initialContent}
       onContentChange={setEditorState}
       isPublic={Page.isPublic}
       setIsPublic={(newValue) => setPage({ ...Page, isPublic: newValue })}
