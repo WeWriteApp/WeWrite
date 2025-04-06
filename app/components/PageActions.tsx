@@ -255,31 +255,33 @@ export function PageActions({
           Copy Link
         </Button>
 
-        {/* Conditional Reply Button */}
-        {user ? (
-          // Logged-in user: Show direct reply button
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handleReply}
-          >
-            <Reply className="h-4 w-4" />
-            Reply to Page
-          </Button>
-        ) : (
-          // Logged-out user: Show reply button wrapped in AuthModal
-          <AuthModal initialTab="login">
+        {/* Conditional Reply Button - only show for non-owners */}
+        {!actualIsOwner && (
+          user ? (
+            // Logged-in user (non-owner): Show direct reply button
             <Button
               variant="outline"
               size="sm"
               className="gap-2"
-              // No onClick needed here, AuthModal handles opening
+              onClick={handleReply}
             >
               <Reply className="h-4 w-4" />
               Reply to Page
             </Button>
-          </AuthModal>
+          ) : (
+            // Logged-out user: Show reply button wrapped in AuthModal
+            <AuthModal initialTab="login">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                // No onClick needed here, AuthModal handles opening
+              >
+                <Reply className="h-4 w-4" />
+                Reply to Page
+              </Button>
+            </AuthModal>
+          )
         )}
 
         {/* Layout Dropdown (always shown) */}
