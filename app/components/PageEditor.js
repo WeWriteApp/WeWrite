@@ -156,6 +156,14 @@ const PageEditor = ({
               {
                 type: "paragraph",
                 children: [{ text: "" }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "I'm responding to this page because..." }]
+              },
+              {
+                type: "paragraph",
+                children: [{ text: "" }]
               }
             ];
 
@@ -210,16 +218,16 @@ const PageEditor = ({
 
           // Check if the editor has the necessary methods
           if (editor && typeof editor.selection !== 'undefined') {
-            // Create a point at the start of the second paragraph (index 1)
-            const point = { path: [1, 0], offset: 0 };
+            // Create a point at the start of the third paragraph (index 2) where "I'm responding..." is
+            const point = { path: [2, 0], offset: 0 };
 
             // Use ReactEditor to focus and select
             try {
               // Focus the editor
               ReactEditor.focus(editor);
-              // Set the selection to the second paragraph
+              // Set the selection to the third paragraph
               Transforms.select(editor, point);
-              console.log('Cursor positioned at second paragraph for reply');
+              console.log('Cursor positioned at third paragraph for reply');
             } catch (reactEditorError) {
               console.error('Error using ReactEditor:', reactEditorError);
 
