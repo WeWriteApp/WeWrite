@@ -6,7 +6,7 @@ import PledgeBarModal from './PledgeBarModal';
 
 /**
  * ConstructionChip Component
- * 
+ *
  * Displays an orange chip that says "WeWrite is under construction"
  * When clicked, it opens a modified support modal
  */
@@ -15,20 +15,29 @@ const ConstructionChip = () => {
 
   return (
     <>
-      <div 
-        className="w-full flex justify-center my-6"
+      <div
+        className="w-full flex justify-center my-4"
         onClick={() => setShowModal(true)}
       >
-        <div className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-full cursor-pointer hover:bg-orange-600 transition-colors shadow-md">
-          <Construction className="h-4 w-4" />
-          <span className="font-medium">WeWrite is under construction</span>
+        <div
+          className="flex items-center gap-1.5 px-3 py-1.5 text-orange-800 dark:text-orange-300
+                    bg-orange-50 dark:bg-orange-950/10 border border-orange-300/30 dark:border-orange-500/30
+                    rounded-md cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/20
+                    transition-colors text-sm"
+          style={{
+            backgroundColor: 'rgba(255, 237, 213, 0.1)', /* 10% orange fill */
+            borderColor: 'rgba(251, 146, 60, 0.3)', /* 30% orange stroke */
+          }}
+        >
+          <Construction className="h-3.5 w-3.5" />
+          <span className="font-normal">WeWrite is under construction</span>
         </div>
       </div>
 
       {/* Custom PledgeBarModal with construction message */}
-      <ConstructionModal 
-        isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
+      <ConstructionModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
       />
     </>
   );
@@ -36,7 +45,7 @@ const ConstructionChip = () => {
 
 /**
  * ConstructionModal Component
- * 
+ *
  * A modified version of PledgeBarModal specifically for the construction message
  */
 const ConstructionModal = ({ isOpen, onClose }) => {
@@ -58,10 +67,10 @@ const ConstructionModal = ({ isOpen, onClose }) => {
   });
 
   return (
-    <PledgeBarModal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      isSignedIn={true} 
+    <PledgeBarModal
+      isOpen={isOpen}
+      onClose={onClose}
+      isSignedIn={true}
       customContent={customContent}
     />
   );
