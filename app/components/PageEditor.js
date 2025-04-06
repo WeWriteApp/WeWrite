@@ -52,6 +52,7 @@ const PageEditor = ({
   );
   const [titleError, setTitleError] = useState(false);
   const [replyContent, setReplyContent] = useState(null);
+  const [loadingReplyContent, setLoadingReplyContent] = useState(false);
   const { user } = useContext(AuthContext);
   const editorRef = useRef(null);
   const titleInputRef = useRef(null);
@@ -71,6 +72,9 @@ const PageEditor = ({
   useEffect(() => {
     if (isReply && replyToId) {
       console.log("Fetching original page for reply with ID:", replyToId);
+      // Set a flag to indicate we're loading reply content
+      setLoadingReplyContent(true);
+
       // Import the database module to get page details
       import('../firebase/database').then(({ getPageById }) => {
         getPageById(replyToId).then(async (originalPage) => {
@@ -188,9 +192,14 @@ const PageEditor = ({
               onContentChange(content);
               console.log("Notified parent component about reply content");
             }
+
+            // Set loading flag to false
+            setLoadingReplyContent(false);
+            console.log("Reply content loaded successfully");
           }
         }).catch(error => {
           console.error("Error fetching original page for reply:", error);
+          setLoadingReplyContent(false);
         });
       });
     }
@@ -204,12 +213,20 @@ const PageEditor = ({
   }, []);
 
   // Update currentEditorValue when the initialContent prop changes
-  // But don't override reply content if it's already been set
+  // But don't override reply content if it's already been set or is loading
   useEffect(() => {
-    if (initialContent && (!isReply || !replyContent)) {
+    console.log("initialContent changed, checking if we should update editor value", {
+      initialContent: !!initialContent,
+      isReply,
+      replyContent: !!replyContent,
+      loadingReplyContent
+    });
+
+    if (initialContent && (!isReply || (!replyContent && !loadingReplyContent))) {
+      console.log("Setting editor value from initialContent");
       setCurrentEditorValue(initialContent);
     }
-  }, [initialContent, isReply, replyContent]);
+  }, [initialContent, isReply, replyContent, loadingReplyContent]);
 
   // Position cursor for reply content
   useEffect(() => {
@@ -361,9 +378,10 @@ const PageEditor = ({
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
       <div className="mt-8 mb-16">
-        {/* Public/Private switcher */}
-        <div className="flex justify-center mb-4">
-          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
+        {/* Responsive layout for controls - on mobile: public/private on left, save/cancel on right */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          {/* Public/Private switcher - left aligned */}
+          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input self-start sm:self-auto">
             {isPublic ? (
               <Globe className="h-4 w-4 text-green-500" />
             ) : (
@@ -378,24 +396,22 @@ const PageEditor = ({
               aria-label="Toggle page visibility"
             />
           </div>
-        </div>
 
-        {/* Save/Cancel buttons */}
-        <div className="flex justify-center">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
+          {/* Save/Cancel buttons - right aligned */}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <Button
               onClick={onCancel}
               variant="outline"
               className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
             >
               Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
