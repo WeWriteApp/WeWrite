@@ -10,7 +10,7 @@ import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/L
 import TypeaheadSearch from "./TypeaheadSearch";
 
 // Import custom editor styles for consistent pill links
-import "./editor-styles.css";
+import "./editor-styles.css"; // This is the single source of truth for pill link styling
 import styles from "./slate-editor.module.css";
 
 // CSS for editor modes - ensures consistent styling with TextView
@@ -29,18 +29,9 @@ const editorStyles = `
     margin-bottom: 0.5rem;
   }
 
-  /* Match link styling */
-  [data-slate-editor] a {
-    color: var(--accent-color, #1768FF);
-    text-decoration: none;
-  }
-
-  /* Match pill link styling - use the same styles as editor-styles.css */
-  [data-slate-editor] a.page-link,
-  [data-slate-editor] a.user-link {
-    /* These styles are now imported from editor-styles.css */
-    /* This ensures consistent styling between edit and view modes */
-  }
+  /* Note: All link styling is now centralized in editor-styles.css */
+  /* This ensures consistent styling across the entire application */
+  /* No need to duplicate styles here */
 
   .editor-normal {
     /* Normal mode styling */

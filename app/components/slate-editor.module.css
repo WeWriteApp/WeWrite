@@ -6,50 +6,9 @@
   width: 100%;
 }
 
-/* Link styling within the editor */
-.slateEditor :global([data-slate-editor] a) {
-  color: var(--primary);
-  text-decoration: none;
-}
-
-/* Page links styling */
-.slateEditor :global([data-slate-editor] a.page-link),
-.slateEditor :global([data-slate-editor] a.editor-link.page-link) {
-  background-color: var(--primary);
-  border-radius: 8px;
-  padding: 1px 6px;
-  margin: 0 1px;
-  border-bottom: none;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--primary-foreground, white);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-weight: 500;
-  text-shadow: none;
-}
-
-/* User links styling */
-.slateEditor :global([data-slate-editor] a.user-link),
-.slateEditor :global([data-slate-editor] a.editor-link.user-link) {
-  background-color: var(--primary);
-  border-radius: 8px;
-  padding: 1px 6px;
-  margin: 0 1px;
-  position: relative;
-  border-bottom: none;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: var(--primary-foreground, white);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-weight: 500;
-  text-shadow: none;
-}
+/* Note: All link styling is now centralized in editor-styles.css */
+/* This ensures consistent styling across the entire application */
+/* No need to duplicate styles here */
 
 /* Add @ symbol before user links */
 .slateEditor :global([data-slate-editor] a.user-link)::before,

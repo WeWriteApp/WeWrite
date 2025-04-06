@@ -148,7 +148,7 @@ const PageEditor = ({
                     url: `/${replyToId}`,
                     pageId: replyToId,
                     pageTitle: originalPage.title || "Untitled",
-                    className: "page-link editor-link",
+                    className: "page-link",
                     children: [{ text: originalPage.title || "Untitled" }]
                   },
                   { text: " by " },
@@ -159,7 +159,7 @@ const PageEditor = ({
                     userId: originalPage.userId || "anonymous",
                     username: displayUsername,
                     children: [{ text: displayUsername }],
-                    className: "user-link editor-link"
+                    className: "user-link"
                   }
                 ]
               }

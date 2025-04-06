@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { createReplyContent } from '../utils/replyUtils';
 import SlateEditor from './SlateEditor';
-import './reply-styles.css';
+// Note: We're using the centralized styles from editor-styles.css
+// which is imported by SlateEditor
 
 /**
  * ReplyContent Component
@@ -95,7 +96,7 @@ export default function ReplyContent({
                   url: `/${originalPage.id}`,
                   pageId: originalPage.id,
                   pageTitle: originalPage.title || "Untitled",
-                  className: "page-link editor-link",
+                  className: "page-link",
                   children: [{ text: originalPage.title || "Untitled" }]
                 },
                 { text: " by " },
@@ -105,7 +106,7 @@ export default function ReplyContent({
                   isUser: true,
                   userId: originalPage.userId || "anonymous",
                   username: displayUsername || "Anonymous",
-                  className: "user-link editor-link",
+                  className: "user-link",
                   children: [{ text: displayUsername || "Anonymous" }]
                 }
               ]
@@ -180,48 +181,7 @@ export default function ReplyContent({
   }
 
   return (
-    <div className="reply-editor-wrapper">
-      <style jsx global>{`
-        /* Inline styles to ensure pill links are visible */
-        .reply-editor-wrapper [data-slate-editor] a.page-link,
-        .reply-editor-wrapper [data-slate-editor] a[data-page-id],
-        .reply-editor-wrapper [data-slate-editor] a.editor-link.page-link {
-          background-color: var(--primary, #1768FF) !important;
-          border-radius: 8px !important;
-          padding: 1px 6px !important;
-          margin: 0 1px !important;
-          border-bottom: none !important;
-          white-space: nowrap !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          font-size: 0.9375rem !important;
-          line-height: 1.5 !important;
-          color: white !important;
-          border: 1px solid rgba(255, 255, 255, 0.2) !important;
-          font-weight: 500 !important;
-          text-shadow: none !important;
-        }
-
-        .reply-editor-wrapper [data-slate-editor] a.user-link,
-        .reply-editor-wrapper [data-slate-editor] a[data-user-id],
-        .reply-editor-wrapper [data-slate-editor] a.editor-link.user-link {
-          background-color: var(--primary, #1768FF) !important;
-          border-radius: 8px !important;
-          padding: 1px 6px !important;
-          margin: 0 1px !important;
-          position: relative !important;
-          border-bottom: none !important;
-          white-space: nowrap !important;
-          display: inline-flex !important;
-          align-items: center !important;
-          font-size: 0.9375rem !important;
-          line-height: 1.5 !important;
-          color: white !important;
-          border: 1px solid rgba(255, 255, 255, 0.2) !important;
-          font-weight: 500 !important;
-          text-shadow: none !important;
-        }
-      `}</style>
+    <div className="reply-editor-container">
       <SlateEditor
         initialContent={content}
         onContentChange={handleContentChange}

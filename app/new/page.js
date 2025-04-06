@@ -307,7 +307,7 @@ const Form = ({ Page, setPage, isReply }) => {
                     url: `/${replyToParam}`,
                     pageId: replyToParam,
                     pageTitle: originalPage.title || "Untitled",
-                    className: "page-link editor-link",
+                    className: "page-link",
                     children: [{ text: originalPage.title || "Untitled" }]
                   },
                   { text: " by " },
@@ -317,7 +317,7 @@ const Form = ({ Page, setPage, isReply }) => {
                     isUser: true,
                     userId: originalPage.userId || "anonymous",
                     username: originalPage.username || "Anonymous",
-                    className: "user-link editor-link",
+                    className: "user-link",
                     children: [{ text: originalPage.username || "Anonymous" }]
                   }
                 ]

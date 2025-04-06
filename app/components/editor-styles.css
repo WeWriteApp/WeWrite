@@ -1,16 +1,30 @@
-/* Editor link styling for consistent appearance in edit and view modes */
+/* CENTRALIZED PILL LINK STYLING
+ * This is the single source of truth for pill link styling in WeWrite
+ * All components should import and use these styles
+ */
 
 /* Base link styling */
-.editor-link {
+.editor-link,
+[data-slate-editor] a,
+[data-slate-node="element"] a {
   color: var(--primary);
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
-/* Pill link styling for page links - consistent across edit and view modes */
+/*
+ * PILL LINK STYLING FOR PAGE LINKS
+ * These styles apply to all page links across the application
+ * The high specificity ensures they work in all contexts
+ */
 .editor-link[data-page-id],
 .editor-link.page-link,
-.page-link {
+.page-link,
+[data-slate-editor] a[data-page-id],
+[data-slate-editor] a.page-link,
+[data-slate-editor] a.editor-link.page-link,
+[data-slate-node="element"] a[data-page-id],
+[data-slate-node="element"] a.page-link {
   background-color: var(--primary);
   border-radius: 8px;
   padding: 1px 6px;
@@ -27,9 +41,18 @@
   text-shadow: none;
 }
 
-/* User links styling - consistent across edit and view modes */
+/*
+ * USER LINK STYLING
+ * These styles apply to all user links across the application
+ * The high specificity ensures they work in all contexts
+ */
 .user-link,
-.editor-link.user-link {
+.editor-link.user-link,
+[data-slate-editor] a.user-link,
+[data-slate-editor] a[data-user-id],
+[data-slate-editor] a.editor-link.user-link,
+[data-slate-node="element"] a.user-link,
+[data-slate-node="element"] a[data-user-id] {
   background-color: var(--primary);
   border-radius: 8px;
   padding: 1px 6px;
