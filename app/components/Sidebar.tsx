@@ -132,7 +132,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full p-6">
+        <div className="flex flex-col h-full p-6 pb-24">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
             <Button

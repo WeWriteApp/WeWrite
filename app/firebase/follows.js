@@ -103,10 +103,23 @@ export const unfollowPage = async (userId, pageId) => {
   try {
     // Remove the page from the user's followed pages
     const userFollowsRef = doc(db, 'userFollows', userId);
-    await updateDoc(userFollowsRef, {
-      followedPages: arrayRemove(pageId),
-      updatedAt: serverTimestamp()
-    });
+
+    // Check if the document exists first
+    const userFollowsDoc = await getDoc(userFollowsRef);
+
+    if (userFollowsDoc.exists()) {
+      await updateDoc(userFollowsRef, {
+        followedPages: arrayRemove(pageId),
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      console.warn('User follows document does not exist for user:', userId);
+      // Create an empty document if it doesn't exist
+      await setDoc(userFollowsRef, {
+        followedPages: [],
+        updatedAt: serverTimestamp()
+      });
+    }
 
     // Decrement the follower count for the page
     const pageRef = doc(db, 'pages', pageId);

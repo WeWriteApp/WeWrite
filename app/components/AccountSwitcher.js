@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMultiAccount } from "../providers/MultiAccountProvider";
 import { Button } from "./ui/button";
+import { auth } from "../firebase/config";
+import { signOut } from "firebase/auth";
 import { User, LogOut, UserPlus, AlertCircle } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,12 +42,20 @@ export function AccountSwitcher() {
     }
   };
 
-  const handleAddAccount = () => {
+  const handleAddAccount = async () => {
     if (isAtMaxAccounts) {
       setIsDialogOpen(true);
     } else {
-      // Sign out and redirect to login page
-      router.push("/auth/login");
+      try {
+        // Sign out current user first
+        await signOut(auth);
+        // Then redirect to login page
+        router.push("/auth/login");
+      } catch (error) {
+        console.error("Error signing out:", error);
+        // Still try to redirect even if sign out fails
+        router.push("/auth/login");
+      }
     }
   };
 
@@ -82,7 +92,7 @@ export function AccountSwitcher() {
               </div>
             </Button>
           ))}
-          
+
           <Button
             variant="ghost"
             className="w-full justify-start text-sm px-2 py-1.5 h-auto"

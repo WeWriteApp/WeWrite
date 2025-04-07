@@ -37,7 +37,7 @@ const ActivitySkeleton = () => {
  * @param {string} userId - Optional user ID to filter activities by (default: null)
  */
 const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
-  const [viewMode, setViewMode] = useState('all'); // 'all' or 'following'
+  const [viewMode, setViewMode] = useState('following'); // Default to 'following' instead of 'all'
   const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
     limit,
     userId,
