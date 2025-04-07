@@ -514,12 +514,15 @@ const Form = ({ Page, setPage, isReply }) => {
             value={Page.title}
             onChange={(e) => setPage({ ...Page, title: e.target.value })}
             className="w-full mt-1 text-3xl font-semibold bg-background text-foreground border border-input/30 focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal"
-            placeholder="Enter a title..."
+            placeholder="Title your reply..."
             autoComplete="off"
             style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
             autoFocus
           />
         </div>
+
+        {/* Add separator line between title and content */}
+        <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
         <ReplyContent
           replyToId={replyToId}
@@ -553,8 +556,8 @@ const Form = ({ Page, setPage, isReply }) => {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={isSaving}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={isSaving || !Page.title.trim() || !editorState || editorState.length === 0}
+                variant="default"
               >
                 {isSaving ? "Saving..." : "Save"}
               </Button>

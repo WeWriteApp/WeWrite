@@ -218,6 +218,9 @@ export default function ReplyContent({
           white-space: nowrap !important;
         }
       ` }} />
+      {/* Add separator line between actions and content */}
+      <div className="w-full h-px bg-border dark:bg-border my-4"></div>
+
       <SlateEditor
         initialContent={content}
         onContentChange={handleContentChange}
