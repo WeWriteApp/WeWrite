@@ -112,34 +112,52 @@ export const PillLink = ({
         existingOverlay.remove();
       }
 
-      // Add a loading overlay
+      // Add a loading overlay - immediately after interaction
       const loadingOverlay = document.createElement('div');
-      loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+      loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center';
       loadingOverlay.id = 'navigation-loading-overlay';
 
       const spinner = document.createElement('div');
-      spinner.className = 'loader loader-md';
+      spinner.className = 'loader loader-md'; // Use medium size loader
       loadingOverlay.appendChild(spinner);
+
+      // Add a message element
+      const message = document.createElement('p');
+      message.className = 'text-sm font-medium text-foreground mt-3';
+      message.textContent = 'Loading...';
+      loadingOverlay.appendChild(message);
 
       document.body.appendChild(loadingOverlay);
 
-      // Set a shorter timeout to remove the overlay (3 seconds)
+      // Set a longer timeout to remove the overlay (5 seconds) as fallback
       setTimeout(() => {
         const overlay = document.getElementById('navigation-loading-overlay');
         if (overlay) {
           overlay.remove();
         }
-      }, 3000);
+      }, 5000);
 
       // Create a MutationObserver to detect when content has loaded
       const observer = new MutationObserver((mutations) => {
-        // Check if main content has loaded
-        if (document.querySelector('main') && document.querySelector('main').children.length > 0) {
-          const overlay = document.getElementById('navigation-loading-overlay');
-          if (overlay) {
-            overlay.remove();
-          }
-          observer.disconnect();
+        // Check if main content has loaded and has children (content)
+        if (document.querySelector('main') && document.querySelector('main').children.length > 1) {
+          // Wait a small amount of time to ensure content is rendered
+          setTimeout(() => {
+            const overlay = document.getElementById('navigation-loading-overlay');
+            if (overlay) {
+              // Fade out the overlay
+              overlay.style.transition = 'opacity 0.3s ease-out';
+              overlay.style.opacity = '0';
+
+              // Remove after transition
+              setTimeout(() => {
+                if (overlay && overlay.parentNode) {
+                  overlay.remove();
+                }
+              }, 300);
+            }
+            observer.disconnect();
+          }, 200); // Small delay to ensure content is visible
         }
       });
 
@@ -150,7 +168,14 @@ export const PillLink = ({
       window.addEventListener('load', () => {
         const overlay = document.getElementById('navigation-loading-overlay');
         if (overlay) {
-          overlay.remove();
+          overlay.style.transition = 'opacity 0.3s ease-out';
+          overlay.style.opacity = '0';
+
+          setTimeout(() => {
+            if (overlay && overlay.parentNode) {
+              overlay.remove();
+            }
+          }, 300);
         }
         observer.disconnect();
       }, { once: true });

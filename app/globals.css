@@ -37,7 +37,7 @@
 
 /* Custom Spinner Animation */
 .loader {
-  color: hsl(var(--primary));
+  color: hsl(var(--primary)); /* Blue in light mode (from primary color) */
   font-size: 10px;
   width: 1em;
   height: 1em;
@@ -50,12 +50,12 @@
 
 /* Larger version of the loader */
 .loader-lg {
-  font-size: 16px;
+  font-size: 14px; /* Slightly smaller than before */
 }
 
 /* Medium version of the loader */
 .loader-md {
-  font-size: 12px;
+  font-size: 10px; /* Smaller size as per user preference */
 }
 
 /* Small version of the loader */
@@ -65,11 +65,11 @@
 
 /* Theme-specific loader colors */
 .loader {
-  color: hsl(var(--primary));
+  color: hsl(var(--primary)); /* Blue in light mode (from primary color) */
 }
 
 .dark .loader {
-  color: white;
+  color: white; /* White in dark mode as per user preference */
 }
 
 /* iOS-compatible keyboard toolbar styles - base styles applied inline */

@@ -35,7 +35,7 @@ export function LoadingButton({
     >
       {isLoading ? (
         <div className="flex items-center justify-center gap-2">
-          <div className="loader"></div>
+          <div className="loader loader-sm"></div>
           {loadingText || children}
         </div>
       ) : (

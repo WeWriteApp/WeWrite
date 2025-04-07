@@ -443,15 +443,29 @@ const Form = ({ Page, setPage, isReply }) => {
       const username = urlUsername || user.displayName || user.username || 'Anonymous';
       console.log("Final username to use:", username);
 
+      // Ensure we have valid editor state
+      let contentToSave;
+      if (editorState) {
+        console.log("Using existing editor state");
+        contentToSave = JSON.stringify(editorState);
+      } else if (initialContent) {
+        console.log("Using initial content as fallback");
+        contentToSave = JSON.stringify(initialContent);
+      } else {
+        console.log("Using empty content as fallback");
+        contentToSave = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
+      }
+
       const data = {
         ...Page,
-        content: JSON.stringify(editorState),
+        content: contentToSave,
         userId: user.uid,
         username: username,
         lastModified: updateTime,
         isReply: isReply || false, // Add flag to indicate this is a reply page
       };
 
+      console.log("Saving page with data:", data);
       const res = await createPage(data);
       if (res) {
         // Track with existing ReactGA for backward compatibility
@@ -469,10 +483,11 @@ const Form = ({ Page, setPage, isReply }) => {
         });
 
         setIsSaving(false);
-        router.push(`/pages/${res}`);
+        router.push(`/${res}`); // Use the new URL format
       } else {
         setIsSaving(false);
         console.log("Error creating page");
+        setError("Failed to create page. Please try again.");
       }
     } catch (error) {
       setIsSaving(false);

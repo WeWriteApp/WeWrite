@@ -37,13 +37,13 @@ export function PageLoader({
         transition: { duration: 0.2 }
       } : {})}
     >
-      <div className="flex flex-col items-center gap-4 text-center px-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        {/* Custom multi-shadow spinner */}
+      <div className="flex flex-col items-center gap-3 text-center px-4 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        {/* Custom multi-shadow spinner - smaller size as per user preference */}
         <div className="loader loader-md"></div>
 
-        {/* Optional message */}
+        {/* Optional message - slightly smaller text */}
         {message && (
-          <p className="text-base sm:text-lg font-medium text-foreground">{message}</p>
+          <p className="text-sm sm:text-base font-medium text-foreground">{message}</p>
         )}
       </div>
     </Container>

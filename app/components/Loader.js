@@ -6,9 +6,9 @@ export const Loader = ({ children, show = false, message }) => {
 
   if (show || loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] w-full">
-        <div className="loader loader-lg"></div>
-        {message && <p className="mt-4 text-muted-foreground">{message}</p>}
+      <div className="flex flex-col items-center justify-center min-h-[50vh] w-full">
+        <div className="loader loader-md"></div>
+        {message && <p className="mt-3 text-sm text-muted-foreground">{message}</p>}
       </div>
     );
   }
