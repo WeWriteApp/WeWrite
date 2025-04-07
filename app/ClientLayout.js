@@ -11,6 +11,7 @@ import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { RecentPagesProvider } from "./contexts/RecentPagesContext";
 import { LineSettingsProvider } from "./contexts/LineSettingsContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
+import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -38,12 +39,13 @@ export default function ClientLayout({ children }) {
       <AccentColorProvider>
         <LoggingProvider>
           <DataProvider>
-            <AuthProvider>
-              <PortfolioProvider>
-                <RecentPagesProvider>
-                  <MobileProvider>
-                    <DrawerProvider>
-                      <LineSettingsProvider>
+            <MultiAccountProvider>
+              <AuthProvider>
+                <PortfolioProvider>
+                  <RecentPagesProvider>
+                    <MobileProvider>
+                      <DrawerProvider>
+                        <LineSettingsProvider>
                       <Drawer />
                       <div className="flex flex-col min-h-screen bg-background pb-8">
                         {!isAuthPage && <UsernameWarningBanner />}
@@ -57,12 +59,13 @@ export default function ClientLayout({ children }) {
                           <WindsurfOverlay />
                         </>
                       )}
-                      </LineSettingsProvider>
-                    </DrawerProvider>
-                  </MobileProvider>
-                </RecentPagesProvider>
-              </PortfolioProvider>
-            </AuthProvider>
+                        </LineSettingsProvider>
+                      </DrawerProvider>
+                    </MobileProvider>
+                  </RecentPagesProvider>
+                </PortfolioProvider>
+              </AuthProvider>
+            </MultiAccountProvider>
           </DataProvider>
         </LoggingProvider>
       </AccentColorProvider>

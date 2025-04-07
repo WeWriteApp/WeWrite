@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { X } from "lucide-react"
+import { X, Settings } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
@@ -9,10 +9,16 @@ import { cn } from "../lib/utils"
 import { Button } from "./ui/button"
 import { useTheme } from "next-themes"
 import dynamic from 'next/dynamic'
+import { useMultiAccount } from "../providers/MultiAccountProvider"
 
-// Dynamically import AccentColorSelector with no SSR to avoid hydration issues
+// Dynamically import components with no SSR to avoid hydration issues
 const AccentColorSelector = dynamic(
   () => import('./AccentColorSelector'),
+  { ssr: false }
+)
+
+const AccountSwitcher = dynamic(
+  () => import('./AccountSwitcher').then(mod => ({ default: mod.AccountSwitcher })),
   { ssr: false }
 )
 
@@ -168,30 +174,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <AccentColorSelector />
           </div>
 
-          {/* Account and Logout buttons at bottom */}
+          {/* Account Switcher and Settings buttons at bottom */}
           <div className="mt-auto pt-4 border-t border-border">
+            {/* Account Switcher */}
+            <AccountSwitcher />
+
+            {/* Settings Button */}
             <Button
               variant="ghost"
               className="w-full justify-start text-foreground hover:bg-accent mb-2"
               onClick={() => router.push('/account')}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-4 mr-2"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              <span>Account</span>
+              <Settings className="size-4 mr-2" />
+              <span>Settings</span>
             </Button>
+
+            {/* Logout Button */}
             <Button
               variant="ghost"
               className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
