@@ -37,7 +37,12 @@ const ActivitySkeleton = () => {
  * @param {string} userId - Optional user ID to filter activities by (default: null)
  */
 const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
-  const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(limit, userId);
+  const [viewMode, setViewMode] = useState('all'); // 'all' or 'following'
+  const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
+    limit,
+    userId,
+    viewMode === 'following'
+  );
   const { user } = useContext(AuthContext);
   const carouselRef = useRef(null);
   const [followedPages, setFollowedPages] = useState([]);
@@ -92,6 +97,29 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           <Clock className="h-4 w-4" />
           <h2 className="text-lg font-semibold">Recent activity</h2>
         </div>
+
+        {/* View mode switch - only show when user is logged in */}
+        {user && (
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              onClick={() => setViewMode('all')}
+              className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'all'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted hover:bg-muted/80'}`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setViewMode('following')}
+              className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'following'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted hover:bg-muted/80'}`}
+            >
+              Following
+            </button>
+          </div>
+        )}
+
         {/* Only show carousel controls on homepage (not activity page or user profile) */}
         {!useGridLayout && (
           <div className="hidden md:flex items-center gap-2">

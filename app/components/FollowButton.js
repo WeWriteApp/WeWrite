@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Check, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../providers/AuthProvider';
+import { useContext } from 'react';
+import { AuthContext } from '../providers/AuthProvider';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import { followPage, unfollowPage, isFollowingPage } from '../firebase/follows';
  * @param {string} props.className - Additional CSS classes
  */
 export default function FollowButton({ pageId, pageTitle = "this page", className = "" }) {
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);

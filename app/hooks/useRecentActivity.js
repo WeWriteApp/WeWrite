@@ -5,7 +5,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 
-const useRecentActivity = (limitCount = 10, filterUserId = null) => {
+const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -95,6 +95,26 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
 
         // Query to get recent pages
         let pagesQuery;
+        let followedPageIds = [];
+
+        // If followedOnly is true, get the list of pages the user follows
+        if (followedOnly && user) {
+          try {
+            const { getFollowedPages } = await import('../firebase/follows');
+            followedPageIds = await getFollowedPages(user.uid);
+
+            if (followedPageIds.length === 0) {
+              // If user doesn't follow any pages, return empty results
+              setActivities([]);
+              setLoading(false);
+              setHasMore(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error fetching followed pages:', err);
+            // Continue with normal query if there's an error
+          }
+        }
 
         try {
           // If filtering by user, get all their pages (public and private if current user matches)
@@ -117,6 +137,21 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
                 limit(limitCount * 2)
               );
             }
+          } else if (followedOnly && followedPageIds.length > 0) {
+            // Filter by followed pages
+            // Firestore doesn't support array contains with multiple values directly
+            // So we need to use 'in' operator with batches if there are many followed pages
+
+            // For simplicity, we'll limit to the first 10 followed pages
+            // In a production app, you'd implement batching for larger lists
+            const pagesToQuery = followedPageIds.slice(0, 10);
+
+            pagesQuery = query(
+              collection(db, "pages"),
+              where("__name__", "in", pagesToQuery),
+              orderBy("lastModified", "desc"),
+              limit(limitCount * 2)
+            );
           } else {
             // No user filter, show public pages for everyone
             pagesQuery = query(
@@ -276,7 +311,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
     };
 
     fetchRecentActivity();
-  }, [user, limitCount, filterUserId]);
+  }, [user, limitCount, filterUserId, followedOnly]);
 
   // Function to load more activities
   const loadMore = useCallback(async () => {
@@ -308,6 +343,32 @@ const useRecentActivity = (limitCount = 10, filterUserId = null) => {
             startAfter(lastVisible),
             limit(limitCount * 2)
           );
+        }
+      } else if (followedOnly && user) {
+        // Get followed pages
+        try {
+          const { getFollowedPages } = await import('../firebase/follows');
+          const followedPageIds = await getFollowedPages(user.uid);
+
+          if (followedPageIds.length === 0) {
+            setLoadingMore(false);
+            return;
+          }
+
+          // For simplicity, we'll limit to the first 10 followed pages
+          const pagesToQuery = followedPageIds.slice(0, 10);
+
+          moreQuery = query(
+            collection(db, "pages"),
+            where("__name__", "in", pagesToQuery),
+            orderBy("lastModified", "desc"),
+            startAfter(lastVisible),
+            limit(limitCount * 2)
+          );
+        } catch (err) {
+          console.error('Error fetching followed pages:', err);
+          setLoadingMore(false);
+          return;
         }
       } else {
         // No user filter

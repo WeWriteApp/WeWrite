@@ -227,3 +227,30 @@ export const getPageFollowerCount = async (pageId) => {
     return 0;
   }
 };
+
+/**
+ * Get the count of pages a user follows
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<number>} - The number of pages the user follows
+ */
+export const getUserFollowingCount = async (userId) => {
+  if (!userId) {
+    return 0;
+  }
+
+  try {
+    const userFollowsRef = doc(db, 'userFollows', userId);
+    const userFollowsDoc = await getDoc(userFollowsRef);
+
+    if (userFollowsDoc.exists()) {
+      const data = userFollowsDoc.data();
+      return data.followedPages?.length || 0;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error('Error getting user following count:', error);
+    return 0;
+  }
+};

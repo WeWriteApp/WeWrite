@@ -10,15 +10,18 @@ import {
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
 import { useAuth } from "../providers/AuthProvider";
-import { Loader, Settings, ChevronLeft } from "lucide-react";
+import { Loader, Settings, ChevronLeft, Heart } from "lucide-react";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
+import { getUserFollowingCount } from "../firebase/follows";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
   const router = useRouter();
   const [pageCount, setPageCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [username, setUsername] = useState(profile.username || 'Anonymous');
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
@@ -42,6 +45,25 @@ const SingleProfileView = ({ profile }) => {
 
     fetchUsername();
   }, [profile.uid, profile.username]);
+
+  // Fetch following count
+  useEffect(() => {
+    const fetchFollowingCount = async () => {
+      if (profile.uid) {
+        try {
+          setIsLoadingStats(true);
+          const count = await getUserFollowingCount(profile.uid);
+          setFollowingCount(count);
+        } catch (error) {
+          console.error('Error fetching following count:', error);
+        } finally {
+          setIsLoadingStats(false);
+        }
+      }
+    };
+
+    fetchFollowingCount();
+  }, [profile.uid]);
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
@@ -73,6 +95,25 @@ const SingleProfileView = ({ profile }) => {
               </Button>
             )}
             {!isCurrentUser && <div className="w-8" />}
+          </div>
+        </div>
+
+        {/* User stats */}
+        <div className="flex flex-wrap gap-4 items-center justify-center mb-4">
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-semibold">{profile.pagesCreated || 0}</span>
+            <span className="text-xs text-muted-foreground">pages</span>
+          </div>
+
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-semibold">
+              {isLoadingStats ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                followingCount
+              )}
+            </span>
+            <span className="text-xs text-muted-foreground">following</span>
           </div>
         </div>
 
