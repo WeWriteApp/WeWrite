@@ -327,9 +327,14 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
   }, [deserializedValue]); // Removed dependencies like `value` and `onContentChange` to prevent loops
 
   const onChange = value => {
-    setValue(value); // Update internal state first
-    if (onContentChange) {
-      onContentChange(value);
+    // Ensure value is valid before updating
+    if (value && Array.isArray(value)) {
+      setValue(value); // Update internal state first
+      if (onContentChange) {
+        onContentChange(value);
+      }
+    } else {
+      console.error('Invalid editor value:', value);
     }
   };
 

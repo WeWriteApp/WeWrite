@@ -487,13 +487,15 @@ function SinglePageView({ params }) {
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
               <div className="page-content w-full max-w-none break-words px-1">
                 <PageProvider>
-                  <TextView
-                    content={editorState}
-                    viewMode={lineMode}
-                    onRenderComplete={handlePageFullyRendered}
-                    setIsEditing={setIsEditing}
-                    canEdit={user?.uid === page?.userId}
-                  />
+                  <LineSettingsProvider>
+                    <TextView
+                      content={editorState}
+                      viewMode={lineMode}
+                      onRenderComplete={handlePageFullyRendered}
+                      setIsEditing={setIsEditing}
+                      canEdit={user?.uid === page?.userId}
+                    />
+                  </LineSettingsProvider>
                 </PageProvider>
               </div>
             </div>
@@ -512,13 +514,15 @@ function SinglePageView({ params }) {
         )}
       </div>
       <PageProvider>
-        <PageFooter
-          page={page}
-          content={editorState}
-          isOwner={user?.uid === page?.userId}
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
-        />
+        <LineSettingsProvider>
+          <PageFooter
+            page={page}
+            content={editorState}
+            isOwner={user?.uid === page?.userId}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+          />
+        </LineSettingsProvider>
       </PageProvider>
       <SiteFooter />
       {!isEditing && <PledgeBar />}

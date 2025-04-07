@@ -73,6 +73,12 @@ const EditPage = ({
       return;
     }
 
+    // Ensure we have valid editor content
+    if (!editorContent || !Array.isArray(editorContent) || editorContent.length === 0) {
+      setError("Invalid editor content. Please try again.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Convert the editorState to JSON
@@ -126,10 +132,13 @@ const EditPage = ({
       title={title}
       setTitle={setTitle}
       initialContent={current}
-      onContentChange={(content) => {}}
+      onContentChange={(content) => {
+        // Store the updated content in a ref or state if needed
+        console.log('Content updated in EditPage');
+      }}
       isPublic={isPublic}
       setIsPublic={setIsPublic}
-      onSave={() => handleSave(current)}
+      onSave={(editorContent) => handleSave(editorContent || current)}
       onCancel={handleCancel}
       isSaving={isSaving}
       error={error}

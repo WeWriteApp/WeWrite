@@ -309,12 +309,18 @@ const PageEditor = ({
       return;
     }
 
+    // Validate editor content
+    if (!currentEditorValue || !Array.isArray(currentEditorValue) || currentEditorValue.length === 0) {
+      console.log("Editor content is invalid");
+      return;
+    }
+
     // Clear any title error
     setTitleError(false);
 
-    // Call the provided onSave function
+    // Call the provided onSave function with the current editor value
     if (onSave) {
-      onSave();
+      onSave(currentEditorValue);
     }
   }
 
