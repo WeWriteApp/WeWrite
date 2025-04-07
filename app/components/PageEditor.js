@@ -348,7 +348,7 @@ const PageEditor = ({
             }
           }}
           className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
-          placeholder="Enter a title..."
+          placeholder={isReply ? "Title your reply..." : "Enter a title..."}
           autoComplete="off"
           style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
           autoFocus={isNewPage}
@@ -357,6 +357,9 @@ const PageEditor = ({
           <p className="text-destructive text-sm mt-1">Title is required</p>
         )}
       </div>
+
+      {/* Add separator line between actions and content */}
+      <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
       {/* Simple SlateEditor with no nested containers */}
       <SlateEditor
@@ -400,8 +403,8 @@ const PageEditor = ({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={isSaving || !title.trim() || !editorContent || editorContent.length === 0}
+              variant="default"
             >
               {isSaving ? "Saving..." : "Save"}
             </Button>

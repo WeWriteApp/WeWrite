@@ -21,9 +21,9 @@ export const getUsernameById = async (userId) => {
 
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      if (userData.username) {
+      if (userData.username && userData.username.trim() !== "") {
         console.log(`Found username in Firestore: ${userData.username} for user ${userId}`);
-        return userData.username;
+        return userData.username.trim();
       }
     }
 
@@ -37,17 +37,31 @@ export const getUsernameById = async (userId) => {
 
       if (rtdbSnapshot.exists()) {
         const rtdbUserData = rtdbSnapshot.val();
-        if (rtdbUserData.username) {
+        if (rtdbUserData.username && rtdbUserData.username.trim() !== "") {
           console.log(`Found username in RTDB: ${rtdbUserData.username} for user ${userId}`);
-          return rtdbUserData.username;
+          return rtdbUserData.username.trim();
         }
-        if (rtdbUserData.displayName) {
+        if (rtdbUserData.displayName && rtdbUserData.displayName.trim() !== "") {
           console.log(`Found displayName in RTDB: ${rtdbUserData.displayName} for user ${userId}`);
-          return rtdbUserData.displayName;
+          return rtdbUserData.displayName.trim();
         }
       }
     } catch (rtdbError) {
       console.error("Error fetching username from RTDB:", rtdbError);
+    }
+
+    // Try to get the user from auth directly
+    try {
+      const { auth } = await import('../firebase/auth');
+      const authUser = auth.currentUser;
+      if (authUser && authUser.uid === userId) {
+        if (authUser.displayName && authUser.displayName.trim() !== "") {
+          console.log(`Found displayName in auth: ${authUser.displayName} for user ${userId}`);
+          return authUser.displayName.trim();
+        }
+      }
+    } catch (authError) {
+      console.error("Error fetching username from auth:", authError);
     }
 
     return "Anonymous";

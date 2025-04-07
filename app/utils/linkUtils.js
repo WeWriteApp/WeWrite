@@ -45,7 +45,12 @@ export const createUserLink = ({
   url = null
 }) => {
   // Ensure we have a valid username to display
-  const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+  // Trim whitespace and ensure it's not empty or just "Anonymous"
+  const displayUsername = username &&
+    typeof username === 'string' &&
+    username.trim() !== "" &&
+    username.trim() !== "Anonymous" ?
+    username.trim() : "Anonymous";
 
   // Log the username being used
   console.log(`Creating user link with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
@@ -77,11 +82,18 @@ export const createReplyAttribution = ({
   userId = "anonymous",
   username = "Anonymous"
 }) => {
+  // Ensure we have a valid username
+  const displayUsername = username &&
+    typeof username === 'string' &&
+    username.trim() !== "" &&
+    username.trim() !== "Anonymous" ?
+    username.trim() : "Anonymous";
+
   // Log the username being used in the attribution
-  console.log(`Creating reply attribution with username: ${username}, userId: ${userId}`);
+  console.log(`Creating reply attribution with username: ${displayUsername}, userId: ${userId}, pageTitle: ${pageTitle}, pageId: ${pageId}`);
 
   // Create the user link with explicit username
-  const userLink = createUserLink({ userId, username });
+  const userLink = createUserLink({ userId, username: displayUsername });
 
   // Log the created user link to verify structure
   console.log('Created user link for attribution:', JSON.stringify(userLink, null, 2));
