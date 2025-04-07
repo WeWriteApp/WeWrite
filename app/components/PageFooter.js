@@ -112,6 +112,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
           <FollowButton
             pageId={page.id}
             pageTitle={page.title}
+            pageOwnerId={page.userId}
             className="ml-auto"
           />
         )}

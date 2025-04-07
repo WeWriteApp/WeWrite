@@ -254,3 +254,111 @@ export const getUserFollowingCount = async (userId) => {
     return 0;
   }
 };
+
+/**
+ * Get the count of followers for a user
+ * This counts unique users who follow any page created by this user
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<number>} - The number of unique followers
+ */
+export const getUserFollowerCount = async (userId) => {
+  if (!userId) {
+    return 0;
+  }
+
+  try {
+    // First get all pages created by this user
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('userId', '==', userId)
+    );
+
+    const pagesSnapshot = await getDocs(pagesQuery);
+
+    if (pagesSnapshot.empty) {
+      return 0;
+    }
+
+    // Get all page IDs created by this user
+    const pageIds = pagesSnapshot.docs.map(doc => doc.id);
+
+    // For each page, get the followers
+    const uniqueFollowers = new Set();
+
+    // Query the pageFollowers collection for all followers of these pages
+    // We need to do this in batches since Firestore 'in' queries are limited to 10 items
+    const batchSize = 10;
+    for (let i = 0; i < pageIds.length; i += batchSize) {
+      const batch = pageIds.slice(i, i + batchSize);
+
+      const followersQuery = query(
+        collection(db, 'pageFollowers'),
+        where('pageId', 'in', batch),
+        where('deleted', '==', undefined) // Only count non-deleted follows
+      );
+
+      const followersSnapshot = await getDocs(followersQuery);
+
+      // Add each unique follower to the set
+      followersSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.userId && data.userId !== userId) { // Don't count self-follows
+          uniqueFollowers.add(data.userId);
+        }
+      });
+    }
+
+    return uniqueFollowers.size;
+  } catch (error) {
+    console.error('Error getting user follower count:', error);
+    return 0;
+  }
+};
+
+/**
+ * Unfollow all pages by a specific user
+ * This is useful for removing self-follows
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<{success: boolean, count: number}>} - Result with success status and count of unfollowed pages
+ */
+export const unfollowAllPagesByUser = async (userId) => {
+  if (!userId) {
+    return { success: false, count: 0 };
+  }
+
+  try {
+    // Get all pages the user is following
+    const followedPages = await getFollowedPages(userId);
+
+    if (followedPages.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Get all pages created by this user
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('userId', '==', userId)
+    );
+
+    const pagesSnapshot = await getDocs(pagesQuery);
+    const userPageIds = pagesSnapshot.docs.map(doc => doc.id);
+
+    // Find self-follows (pages created by the user that they are also following)
+    const selfFollows = followedPages.filter(pageId => userPageIds.includes(pageId));
+
+    if (selfFollows.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Unfollow each self-followed page
+    const unfollowPromises = selfFollows.map(pageId => unfollowPage(userId, pageId));
+    await Promise.all(unfollowPromises);
+
+    return { success: true, count: selfFollows.length };
+  } catch (error) {
+    console.error('Error unfollowing all pages by user:', error);
+    return { success: false, count: 0 };
+  }
+};

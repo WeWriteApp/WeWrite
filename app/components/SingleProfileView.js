@@ -13,13 +13,13 @@ import { useAuth } from "../providers/AuthProvider";
 import { Loader, Settings, ChevronLeft, Heart } from "lucide-react";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
-import { getUserFollowingCount } from "../firebase/follows";
+import { getUserFollowerCount } from "../firebase/follows";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
   const router = useRouter();
   const [pageCount, setPageCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
+  const [followerCount, setFollowerCount] = useState(0);
   const [username, setUsername] = useState(profile.username || 'Anonymous');
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
@@ -46,23 +46,38 @@ const SingleProfileView = ({ profile }) => {
     fetchUsername();
   }, [profile.uid, profile.username]);
 
-  // Fetch following count
+  // Fetch follower count and page count
   useEffect(() => {
-    const fetchFollowingCount = async () => {
+    const fetchStats = async () => {
       if (profile.uid) {
         try {
           setIsLoadingStats(true);
-          const count = await getUserFollowingCount(profile.uid);
-          setFollowingCount(count);
+
+          // Get follower count
+          const count = await getUserFollowerCount(profile.uid);
+          setFollowerCount(count);
+
+          // Get page count from Firestore
+          const { collection, query, where, getDocs } = await import('firebase/firestore');
+          const { db } = await import('../firebase/database');
+
+          const pagesQuery = query(
+            collection(db, 'pages'),
+            where('userId', '==', profile.uid)
+          );
+
+          const pagesSnapshot = await getDocs(pagesQuery);
+          setPageCount(pagesSnapshot.size);
+
         } catch (error) {
-          console.error('Error fetching following count:', error);
+          console.error('Error fetching user stats:', error);
         } finally {
           setIsLoadingStats(false);
         }
       }
     };
 
-    fetchFollowingCount();
+    fetchStats();
   }, [profile.uid]);
 
   return (
@@ -101,7 +116,13 @@ const SingleProfileView = ({ profile }) => {
         {/* User stats */}
         <div className="flex flex-wrap gap-4 items-center justify-center mb-4">
           <div className="flex flex-col items-center">
-            <span className="text-lg font-semibold">{profile.pagesCreated || 0}</span>
+            <span className="text-lg font-semibold">
+              {isLoadingStats ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                pageCount
+              )}
+            </span>
             <span className="text-xs text-muted-foreground">pages</span>
           </div>
 
@@ -110,10 +131,10 @@ const SingleProfileView = ({ profile }) => {
               {isLoadingStats ? (
                 <Loader className="h-4 w-4 animate-spin" />
               ) : (
-                followingCount
+                followerCount
               )}
             </span>
-            <span className="text-xs text-muted-foreground">following</span>
+            <span className="text-xs text-muted-foreground">followers</span>
           </div>
         </div>
 

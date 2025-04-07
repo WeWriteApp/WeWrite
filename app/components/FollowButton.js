@@ -28,7 +28,7 @@ import { followPage, unfollowPage, isFollowingPage } from '../firebase/follows';
  * @param {string} props.pageTitle - The title of the page (for notifications)
  * @param {string} props.className - Additional CSS classes
  */
-export default function FollowButton({ pageId, pageTitle = "this page", className = "" }) {
+export default function FollowButton({ pageId, pageTitle = "this page", className = "", pageOwnerId }) {
   const { user } = useContext(AuthContext);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +38,12 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
   // Check if the user is already following the page
   useEffect(() => {
     if (!user || !pageId) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Prevent following own pages
+    if (pageOwnerId && user.uid === pageOwnerId) {
       setIsLoading(false);
       return;
     }
@@ -62,6 +68,16 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       toast({
         title: "Sign in required",
         description: "You need to sign in to follow pages",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Prevent following own pages
+    if (pageOwnerId && user.uid === pageOwnerId) {
+      toast({
+        title: "Cannot follow own page",
+        description: "You cannot follow your own pages",
         variant: "destructive"
       });
       return;
