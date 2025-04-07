@@ -146,11 +146,31 @@ export const unfollowPage = async (userId, pageId) => {
     }
 
     // Remove the record from the pageFollowers collection
-    const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
-    await setDoc(pageFollowerRef, {
-      deleted: true,
-      deletedAt: serverTimestamp()
-    }, { merge: true });
+    try {
+      const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
+
+      // Check if the document exists first
+      const pageFollowerDoc = await getDoc(pageFollowerRef);
+
+      // If it exists, mark as deleted; if not, create a new deleted record
+      if (pageFollowerDoc.exists()) {
+        await updateDoc(pageFollowerRef, {
+          deleted: true,
+          deletedAt: serverTimestamp()
+        });
+      } else {
+        await setDoc(pageFollowerRef, {
+          pageId,
+          userId,
+          deleted: true,
+          deletedAt: serverTimestamp(),
+          followedAt: serverTimestamp() // Add this for consistency
+        });
+      }
+    } catch (err) {
+      // Log but don't throw - we want the unfollow to succeed even if this part fails
+      console.warn('Error updating pageFollowers record:', err);
+    }
 
     return true;
   } catch (error) {

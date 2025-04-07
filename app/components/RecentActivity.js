@@ -37,7 +37,18 @@ const ActivitySkeleton = () => {
  * @param {string} userId - Optional user ID to filter activities by (default: null)
  */
 const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
-  const [viewMode, setViewMode] = useState('following'); // Default to 'following' instead of 'all'
+  // Determine if we're on the activity page by checking props or using pathname
+  const isInActivityPage = isActivityPage || typeof window !== "undefined" && window.location.pathname === "/activity";
+  // Also check if we're in a user profile (determined by having userId passed and not being in activity page)
+  const isInUserProfile = userId && !isInActivityPage;
+
+  // Set default view mode based on context:
+  // - 'following' for homepage
+  // - 'all' for user profiles
+  // - 'all' for activity page
+  const defaultViewMode = isInUserProfile || isActivityPage ? 'all' : 'following';
+
+  const [viewMode, setViewMode] = useState(defaultViewMode);
   const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
     limit,
     userId,
@@ -88,10 +99,6 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     }
   };
 
-  // Determine if we're on the activity page by checking props or using pathname
-  const isInActivityPage = isActivityPage || typeof window !== "undefined" && window.location.pathname === "/activity";
-  // Also check if we're in a user profile (determined by having userId passed and not being in activity page)
-  const isInUserProfile = userId && !isInActivityPage;
   // Use grid layout in activity page or user profile
   const useGridLayout = isInActivityPage || isInUserProfile;
   // Determine if we're on the homepage

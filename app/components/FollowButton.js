@@ -120,7 +120,11 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
   const handleUnfollow = async () => {
     try {
       setIsLoading(true);
+
+      // Attempt to unfollow the page
       await unfollowPage(user.uid, pageId);
+
+      // Update UI state regardless of backend success
       setIsFollowing(false);
       setShowUnfollowDialog(false);
 
@@ -131,10 +135,15 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       });
     } catch (error) {
       console.error("Error unfollowing page:", error);
+
+      // Still update the UI state to prevent the user from getting stuck
+      setIsFollowing(false);
+      setShowUnfollowDialog(false);
+
       toast({
-        title: "Error",
-        description: "Failed to unfollow page. Please try again.",
-        variant: "destructive"
+        title: "Warning",
+        description: "There was an issue unfollowing this page, but we've updated your view.",
+        variant: "warning"
       });
     } finally {
       setIsLoading(false);
