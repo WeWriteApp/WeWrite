@@ -5,23 +5,23 @@ import { Button } from './ui/button';
 import { Check, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../providers/AuthProvider';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter
 } from './ui/dialog';
-import { toast } from './ui/toast';
+import { toast } from 'sonner';
 import { followPage, unfollowPage, isFollowingPage } from '../firebase/follows';
 
 /**
  * FollowButton Component
- * 
+ *
  * Displays a button to follow/unfollow a page with animation
  * Shows a confirmation dialog when unfollowing
- * 
+ *
  * @param {Object} props
  * @param {string} props.pageId - The ID of the page to follow/unfollow
  * @param {string} props.pageTitle - The title of the page (for notifications)
@@ -75,13 +75,13 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
         await followPage(user.uid, pageId);
         setIsFollowing(true);
         setAnimateCheck(true);
-        
+
         toast({
           title: "Page followed",
           description: `You are now following "${pageTitle}"`,
           variant: "success"
         });
-        
+
         // Reset animation after it completes
         setTimeout(() => {
           setAnimateCheck(false);
@@ -106,7 +106,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       await unfollowPage(user.uid, pageId);
       setIsFollowing(false);
       setShowUnfollowDialog(false);
-      
+
       toast({
         title: "Page unfollowed",
         description: `You are no longer following "${pageTitle}"`,
