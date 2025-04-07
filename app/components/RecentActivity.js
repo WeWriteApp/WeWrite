@@ -52,13 +52,20 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   useEffect(() => {
     if (!user) {
       setIsLoadingFollows(false);
+      setFollowedPages([]);
       return;
     }
 
     const fetchFollowedPages = async () => {
       try {
+        setIsLoadingFollows(true);
         const pages = await getFollowedPages(user.uid);
         setFollowedPages(pages);
+
+        // If user has no followed pages and we're in following mode, switch to all
+        if (pages.length === 0 && viewMode === 'following') {
+          setViewMode('all');
+        }
       } catch (error) {
         console.error('Error fetching followed pages:', error);
       } finally {
@@ -67,7 +74,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     };
 
     fetchFollowedPages();
-  }, [user]);
+  }, [user, viewMode]);
 
   const scrollLeft = () => {
     if (carouselRef.current) {
@@ -111,11 +118,17 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
             </button>
             <button
               onClick={() => setViewMode('following')}
+              disabled={isLoadingFollows || followedPages.length === 0}
               className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'following'
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'}`}
+                : followedPages.length === 0
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                  : 'bg-muted hover:bg-muted/80'}`}
             >
               Following
+              {isLoadingFollows && (
+                <span className="ml-1 inline-block h-3 w-3 animate-pulse rounded-full bg-current opacity-70"></span>
+              )}
             </button>
           </div>
         )}
@@ -175,13 +188,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
         {!loading && !error && activities.length === 0 && (
           <div className="py-4">
-            {!isLoadingFollows && followedPages.length === 0 ? (
-              <ActivityEmptyState />
-            ) : (
-              <div className="text-center p-6 text-muted-foreground">
-                <p>No recent activity to show</p>
-              </div>
-            )}
+            <ActivityEmptyState mode={viewMode} />
           </div>
         )}
 
@@ -228,13 +235,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
         {!loading && !error && activities.length === 0 && (
           <div className="py-4">
-            {!isLoadingFollows && followedPages.length === 0 ? (
-              <ActivityEmptyState />
-            ) : (
-              <div className="text-center p-6 text-muted-foreground">
-                <p>No recent activity to show</p>
-              </div>
-            )}
+            <ActivityEmptyState mode={viewMode} />
           </div>
         )}
 

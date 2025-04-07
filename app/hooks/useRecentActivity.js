@@ -98,7 +98,15 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
         let followedPageIds = [];
 
         // If followedOnly is true, get the list of pages the user follows
-        if (followedOnly && user) {
+        if (followedOnly) {
+          if (!user) {
+            // If not logged in but in following mode, return empty results
+            setActivities([]);
+            setLoading(false);
+            setHasMore(false);
+            return;
+          }
+
           try {
             const { getFollowedPages } = await import('../firebase/follows');
             followedPageIds = await getFollowedPages(user.uid);
@@ -112,7 +120,11 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             }
           } catch (err) {
             console.error('Error fetching followed pages:', err);
-            // Continue with normal query if there's an error
+            // Return empty results on error in following mode
+            setActivities([]);
+            setLoading(false);
+            setHasMore(false);
+            return;
           }
         }
 
@@ -344,7 +356,14 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             limit(limitCount * 2)
           );
         }
-      } else if (followedOnly && user) {
+      } else if (followedOnly) {
+        // In following mode
+        if (!user) {
+          // Not logged in
+          setLoadingMore(false);
+          return;
+        }
+
         // Get followed pages
         try {
           const { getFollowedPages } = await import('../firebase/follows');
