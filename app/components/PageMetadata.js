@@ -3,13 +3,15 @@ import { PillLink } from './PillLink';
 import { db, rtdb } from '../firebase/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { ref, get, onValue } from 'firebase/database';
-import { Loader2, Check, Users, ChevronRight, ChevronDown } from "lucide-react";
+import { Loader2, Check, Users, ChevronRight, ChevronDown, Heart } from "lucide-react";
 import { liveReadersService } from '../services/LiveReadersService';
 import { pageStatsService } from '../services/PageStatsService';
 import { pledgeService } from '../services/PledgeService';
 import { AuthContext } from '../providers/AuthProvider';
 import User from './UserBadge';
 import Sparkline from './Sparkline';
+import FollowButton from './FollowButton';
+import { getPageFollowerCount } from '../firebase/follows';
 
 // MetadataItem component for the dark card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
@@ -102,6 +104,8 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   const [supportersHistory, setSupportersHistory] = useState([]);
   const [editorsHistory, setEditorsHistory] = useState([]);
   const [incomeHistory, setIncomeHistory] = useState([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followerHistory, setFollowerHistory] = useState([]);
 
   // Fetch user's groups
   useEffect(() => {
@@ -197,6 +201,25 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         editorsUnsubscribe?.();
         supportersUnsubscribe?.();
       };
+    }
+  }, [page.id]);
+
+  // Fetch follower count
+  useEffect(() => {
+    if (page.id) {
+      const fetchFollowerCount = async () => {
+        try {
+          const count = await getPageFollowerCount(page.id);
+          setFollowerCount(count);
+          // Create a simple history array for the sparkline
+          // In a real implementation, you would track this over time
+          setFollowerHistory(Array(24).fill(count));
+        } catch (error) {
+          console.error('Error fetching follower count:', error);
+        }
+      };
+
+      fetchFollowerCount();
     }
   }, [page.id]);
 
@@ -396,6 +419,11 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
             label="Page income"
             value={`$${supportersStats.totalAmount.toFixed(2)}/mo`}
             sparklineData={incomeHistory}
+          />
+          <MetadataItem
+            label="Followers"
+            value={followerCount > 0 ? followerCount : "None"}
+            sparklineData={followerHistory}
           />
           <MetadataItem
             label="Custom date"

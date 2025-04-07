@@ -6,11 +6,12 @@ import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Copy, Link as LinkIcon } from 'lucide-react';
+import { Copy, Link as LinkIcon, Search } from 'lucide-react';
 // import { useToast } from '../components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
+import SearchRecommendations from '../components/SearchRecommendations';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -157,6 +158,20 @@ export default function SearchPage() {
           <Button type="submit">Search</Button>
         </div>
       </form>
+
+      {/* Show recommendations when there's no query */}
+      {!query && (
+        <SearchRecommendations
+          onSelect={(recommendation) => {
+            setQuery(recommendation);
+            performSearch(recommendation);
+            // Update URL with search query
+            const url = new URL(window.location);
+            url.searchParams.set('q', recommendation);
+            window.history.pushState({}, '', url);
+          }}
+        />
+      )}
 
       {query && (
         <div className="mb-4">

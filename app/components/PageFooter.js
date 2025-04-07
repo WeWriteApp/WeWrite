@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
 import SimilarPages from "./SimilarPages";
 import PageStats from "./PageStats";
 import ConstructionChip from "./ConstructionChip";
+import FollowButton from "./FollowButton";
 import { getPageViewsLast24Hours, getPageTotalViews } from "../firebase/pageViews";
 import { getPageVersions } from "../firebase/database";
+import { AuthContext } from "../providers/AuthProvider";
 
 /**
  * PageFooter Component
@@ -31,6 +33,7 @@ import { getPageVersions } from "../firebase/database";
  * @param {Function} setIsEditing - Function to toggle edit mode
  */
 export default function PageFooter({ page, content, isOwner, isEditing, setIsEditing }) {
+  const { user } = useContext(AuthContext);
   const [viewData, setViewData] = useState({ total: 0, hourly: [] });
   const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
   const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +97,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <PageActions
           page={page}
           content={content}
@@ -103,6 +106,15 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
           setIsEditing={setIsEditing}
           className="action-buttons-container"
         />
+
+        {/* Follow button - only show when not editing and not the owner */}
+        {!isEditing && !isOwner && user && (
+          <FollowButton
+            pageId={page.id}
+            pageTitle={page.title}
+            className="ml-auto"
+          />
+        )}
       </div>
 
       {/* Word and character count */}

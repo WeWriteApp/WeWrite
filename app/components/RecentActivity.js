@@ -1,12 +1,14 @@
 "use client";
-import React, { useRef, useContext } from "react";
+import React, { useRef, useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info } from "lucide-react";
 import useRecentActivity from "../hooks/useRecentActivity";
 import ActivityCard from "./ActivityCard";
+import ActivityEmptyState from "./ActivityEmptyState";
 import { Button } from "./ui/button";
 import { PulseLoader } from "react-spinners";
 import { AuthContext } from "../providers/AuthProvider";
+import { getFollowedPages } from "../firebase/follows";
 
 const ActivitySkeleton = () => {
   return (
@@ -38,6 +40,29 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(limit, userId);
   const { user } = useContext(AuthContext);
   const carouselRef = useRef(null);
+  const [followedPages, setFollowedPages] = useState([]);
+  const [isLoadingFollows, setIsLoadingFollows] = useState(true);
+
+  // Check if the user is following any pages
+  useEffect(() => {
+    if (!user) {
+      setIsLoadingFollows(false);
+      return;
+    }
+
+    const fetchFollowedPages = async () => {
+      try {
+        const pages = await getFollowedPages(user.uid);
+        setFollowedPages(pages);
+      } catch (error) {
+        console.error('Error fetching followed pages:', error);
+      } finally {
+        setIsLoadingFollows(false);
+      }
+    };
+
+    fetchFollowedPages();
+  }, [user]);
 
   const scrollLeft = () => {
     if (carouselRef.current) {
@@ -121,8 +146,14 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
 
         {!loading && !error && activities.length === 0 && (
-          <div className="text-center p-6 text-muted-foreground">
-            <p>No recent activity to show</p>
+          <div className="py-4">
+            {!isLoadingFollows && followedPages.length === 0 ? (
+              <ActivityEmptyState />
+            ) : (
+              <div className="text-center p-6 text-muted-foreground">
+                <p>No recent activity to show</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -168,8 +199,14 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
 
         {!loading && !error && activities.length === 0 && (
-          <div className="text-center p-6 text-muted-foreground">
-            <p>No recent activity to show</p>
+          <div className="py-4">
+            {!isLoadingFollows && followedPages.length === 0 ? (
+              <ActivityEmptyState />
+            ) : (
+              <div className="text-center p-6 text-muted-foreground">
+                <p>No recent activity to show</p>
+              </div>
+            )}
           </div>
         )}
 
