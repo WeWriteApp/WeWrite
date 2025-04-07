@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { createReplyContent } from '../utils/replyUtils';
-import { createReplyAttribution } from '../utils/linkUtils';
 import SlateEditor from './SlateEditor';
+import { prepareReplyContent, validateReplyContent } from '../utils/replyManager';
 // Note: We're using the centralized styles from editor-styles.css
 // which is imported by SlateEditor
 
@@ -55,115 +54,36 @@ export default function ReplyContent({
     console.log("Fetching original page for reply:", replyToId);
     setLoading(true);
 
-    // Import the database module to get page details
-    import('../firebase/database').then(({ getPageById }) => {
-      getPageById(replyToId).then(async (originalPage) => {
-        if (originalPage) {
-          console.log("Found original page for reply:", originalPage);
+    // Use the centralized reply manager to prepare the reply content
+    prepareReplyContent(replyToId)
+      .then(({ replyContent }) => {
+        console.log("Created reply content:", replyContent);
+        setContent(replyContent);
 
-          // Get username from the page or user record
-          let displayUsername = "Anonymous";
-
-          // First check if the page object already has a username
-          if (originalPage.username && originalPage.username !== "Anonymous") {
-            displayUsername = originalPage.username;
-            console.log("Using username from page object:", displayUsername);
-          } else if (originalPage.userId) {
-            try {
-              // Use the utility function to get the username
-              const { getUsernameById } = await import('../utils/userUtils');
-              const fetchedUsername = await getUsernameById(originalPage.userId);
-              if (fetchedUsername && fetchedUsername !== "Anonymous") {
-                displayUsername = fetchedUsername;
-                console.log("Fetched username from utility:", displayUsername);
-              }
-
-              // If still Anonymous, try to get username from RTDB directly
-              if (displayUsername === "Anonymous") {
-                try {
-                  // Try to get username from RTDB
-                  const { getDatabase, ref, get } = await import('firebase/database');
-                  const { app } = await import('../firebase/config');
-                  const rtdb = getDatabase(app);
-                  const rtdbUserRef = ref(rtdb, `users/${originalPage.userId}`);
-                  const rtdbSnapshot = await get(rtdbUserRef);
-
-                  if (rtdbSnapshot.exists()) {
-                    const rtdbUserData = rtdbSnapshot.val();
-                    if (rtdbUserData.username) {
-                      displayUsername = rtdbUserData.username;
-                      console.log("Using username from RTDB:", displayUsername);
-                    } else if (rtdbUserData.displayName) {
-                      displayUsername = rtdbUserData.displayName;
-                      console.log("Using displayName from RTDB:", displayUsername);
-                    }
-                  }
-                } catch (rtdbError) {
-                  console.error("Error fetching username from RTDB:", rtdbError);
-                }
-              }
-            } catch (error) {
-              console.error("Error fetching username:", error);
-            }
-          }
-
-          console.log("Final username to use in reply attribution:", displayUsername);
-
-          // Create reply content with attribution using the utility function
-          const replyContent = [
-            createReplyAttribution({
-              pageId: originalPage.id,
-              pageTitle: originalPage.title,
-              userId: originalPage.userId,
-              username: displayUsername
-            })
-          ];
-
-          // Log the created content for debugging
-          console.log("Created reply content with utility function:", JSON.stringify(replyContent, null, 2));
-
-          // Log the content structure for debugging
-          console.log("Created reply content with pill links:", JSON.stringify(replyContent, null, 2));
-
-          console.log("Created reply content:", replyContent);
-          setContent(replyContent);
-
-          // Notify parent component
-          if (onContentChange) {
-            onContentChange(replyContent);
-          }
-        } else {
-          setError("Could not find the original page");
+        // Notify parent component
+        if (onContentChange) {
+          onContentChange(replyContent);
         }
         setLoading(false);
-      }).catch(error => {
-        console.error("Error fetching original page:", error);
-        setError("Error fetching original page: " + error.message);
+      })
+      .catch(error => {
+        console.error("Error preparing reply content:", error);
+        setError(error.message || "Error preparing reply content");
         setLoading(false);
       });
-    }).catch(error => {
-      console.error("Error importing database module:", error);
-      setError("Error loading database module: " + error.message);
-      setLoading(false);
-    });
   }, [replyToId, initialContent, onContentChange]);
 
   // Custom onChange handler to protect the attribution line
   const handleContentChange = (value) => {
-    if (content && value.length > 0 && content.length > 0) {
-      // Always preserve the attribution line (first paragraph)
-      if (JSON.stringify(value[0]) !== JSON.stringify(content[0])) {
-        console.log('Protecting attribution line from changes');
-        value[0] = content[0];
-      }
-    }
+    // Use the centralized validation function
+    const validatedContent = validateReplyContent(content, value);
 
     // Update local state
-    setContent(value);
+    setContent(validatedContent);
 
     // Notify parent component
     if (onContentChange) {
-      onContentChange(value);
+      onContentChange(validatedContent);
     }
   };
 
@@ -218,9 +138,6 @@ export default function ReplyContent({
           white-space: nowrap !important;
         }
       ` }} />
-      {/* Add separator line between actions and content */}
-      <div className="w-full h-px bg-border dark:bg-border my-4"></div>
-
       <SlateEditor
         initialContent={content}
         onContentChange={handleContentChange}
