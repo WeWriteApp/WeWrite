@@ -1,13 +1,13 @@
 "use client";
 
 import { db } from './database';
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  arrayUnion, 
-  arrayRemove, 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
   increment,
   collection,
   query,
@@ -18,7 +18,7 @@ import {
 
 /**
  * Follow a page
- * 
+ *
  * @param {string} userId - The ID of the user following the page
  * @param {string} pageId - The ID of the page to follow
  * @returns {Promise<void>}
@@ -51,9 +51,27 @@ export const followPage = async (userId, pageId) => {
 
     // Increment the follower count for the page
     const pageRef = doc(db, 'pages', pageId);
-    await updateDoc(pageRef, {
-      followerCount: increment(1)
-    });
+    const pageDoc = await getDoc(pageRef);
+
+    if (pageDoc.exists()) {
+      const pageData = pageDoc.data();
+
+      // Check if followerCount field exists
+      if (typeof pageData.followerCount === 'undefined') {
+        // Initialize followerCount to 1 if it doesn't exist
+        await updateDoc(pageRef, {
+          followerCount: 1
+        });
+      } else {
+        // Increment existing followerCount
+        await updateDoc(pageRef, {
+          followerCount: increment(1)
+        });
+      }
+    } else {
+      // If the page document doesn't exist, we can't follow it
+      throw new Error('Page not found');
+    }
 
     // Add a record to the pageFollowers collection
     const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
@@ -72,7 +90,7 @@ export const followPage = async (userId, pageId) => {
 
 /**
  * Unfollow a page
- * 
+ *
  * @param {string} userId - The ID of the user unfollowing the page
  * @param {string} pageId - The ID of the page to unfollow
  * @returns {Promise<void>}
@@ -92,9 +110,27 @@ export const unfollowPage = async (userId, pageId) => {
 
     // Decrement the follower count for the page
     const pageRef = doc(db, 'pages', pageId);
-    await updateDoc(pageRef, {
-      followerCount: increment(-1)
-    });
+    const pageDoc = await getDoc(pageRef);
+
+    if (pageDoc.exists()) {
+      const pageData = pageDoc.data();
+
+      // Check if followerCount field exists
+      if (typeof pageData.followerCount === 'undefined' || pageData.followerCount <= 0) {
+        // If followerCount doesn't exist or is already 0, set it to 0
+        await updateDoc(pageRef, {
+          followerCount: 0
+        });
+      } else {
+        // Decrement existing followerCount
+        await updateDoc(pageRef, {
+          followerCount: increment(-1)
+        });
+      }
+    } else {
+      // If the page document doesn't exist, we can't unfollow it
+      throw new Error('Page not found');
+    }
 
     // Remove the record from the pageFollowers collection
     const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
@@ -112,7 +148,7 @@ export const unfollowPage = async (userId, pageId) => {
 
 /**
  * Check if a user is following a page
- * 
+ *
  * @param {string} userId - The ID of the user
  * @param {string} pageId - The ID of the page
  * @returns {Promise<boolean>} - True if the user is following the page
@@ -140,7 +176,7 @@ export const isFollowingPage = async (userId, pageId) => {
 
 /**
  * Get all pages followed by a user
- * 
+ *
  * @param {string} userId - The ID of the user
  * @returns {Promise<Array<string>>} - Array of page IDs
  */
@@ -167,7 +203,7 @@ export const getFollowedPages = async (userId) => {
 
 /**
  * Get the follower count for a page
- * 
+ *
  * @param {string} pageId - The ID of the page
  * @returns {Promise<number>} - The number of followers
  */
