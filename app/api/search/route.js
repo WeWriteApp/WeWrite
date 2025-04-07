@@ -225,14 +225,10 @@ export async function GET(request) {
       }, { status: 200 });
     }
 
-    const { searchParams } = new URL(request.url);
-
-    // Extract query parameters from the URL
-    const userId = searchParams.get("userId");
-    const groupIds = searchParams.get("groupIds")
-      ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
-      : []; // Handle multiple groupIds or empty array, filter out empty strings
-    const searchTerm = searchParams.get("searchTerm");
+    // Ensure searchTerm is properly handled if not provided
+    const searchTermFormatted = searchTerm
+      ? `%${searchTerm.toLowerCase().trim()}%`
+      : "%";
 
     if (!userId) {
       return NextResponse.json(
@@ -245,10 +241,7 @@ export async function GET(request) {
       );
     }
 
-    // Ensure searchTerm is properly handled if not provided
-    const searchTermFormatted = searchTerm
-      ? `%${searchTerm.toLowerCase().trim()}%`
-      : "%";
+    // searchTermFormatted is already defined above
 
     // Let's also verify the data exists with a simpler query
     const verifyQuery = `
