@@ -39,19 +39,26 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
     if (isAtMaxAccounts) {
       setIsMaxAccountsDialogOpen(true);
     } else {
-      // Store current auth state in session storage
-      if (currentAccount) {
-        sessionStorage.setItem('returnToAccount', JSON.stringify({
-          uid: currentAccount.uid,
-          email: currentAccount.email
-        }));
+      try {
+        // Store current auth state in session storage
+        if (currentAccount) {
+          sessionStorage.setItem('returnToAccount', JSON.stringify({
+            uid: currentAccount.uid,
+            email: currentAccount.email
+          }));
+        }
+
+        // Close the modal first
+        onClose();
+
+        // Navigate to login page with special parameter
+        // Use window.location.href for a full page navigation to avoid Next.js router issues
+        window.location.href = "/auth/login?mode=addAccount";
+      } catch (error) {
+        console.error("Error navigating to add account:", error);
+        // Fallback to router.push if there's an error
+        router.push("/auth/login?mode=addAccount");
       }
-
-      // Close the modal first
-      onClose();
-
-      // Navigate to login page with special parameter
-      router.push("/auth/login?mode=addAccount");
     }
   };
 

@@ -1,0 +1,251 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  FilePlus, 
+  Shuffle, 
+  User, 
+  Palette,
+  Home
+} from "lucide-react";
+import { Button } from "./ui/button";
+import { cn } from "../lib/utils";
+import { useTheme } from "next-themes";
+import { useAuth } from "../providers/AuthProvider";
+import { AccentColorSelector } from "./AccentColorSelector";
+
+// Define navigation levels
+type NavLevel = "main" | "themes";
+
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+  hasSubmenu?: boolean;
+}
+
+function NavItem({ icon, label, onClick, hasSubmenu = false }: NavItemProps) {
+  return (
+    <Button
+      variant="ghost"
+      className="w-full justify-between text-sm px-3 py-2.5 h-auto"
+      onClick={onClick}
+    >
+      <div className="flex items-center">
+        <div className="mr-2">{icon}</div>
+        <span>{label}</span>
+      </div>
+      {hasSubmenu && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+    </Button>
+  );
+}
+
+export function SidebarNavigation() {
+  const [currentLevel, setCurrentLevel] = useState<NavLevel>("main");
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
+
+  // Function to handle navigation events
+  const trackEvent = (eventName: string, eventData: any = {}) => {
+    console.log(`Navigation event: ${eventName}`, eventData);
+    // Here you would typically send this to your analytics service
+    // Example: analytics.track(eventName, eventData);
+  };
+
+  // Handle new page creation
+  const handleNewPage = () => {
+    trackEvent("new_page_clicked");
+    router.push("/new");
+  };
+
+  // Handle random page navigation
+  const handleRandomPage = () => {
+    trackEvent("random_page_clicked");
+    // This would typically fetch a random page ID from your backend
+    // For now, we'll just navigate to a placeholder
+    router.push("/random");
+  };
+
+  // Handle profile navigation
+  const handleProfile = () => {
+    if (!user) return;
+    
+    trackEvent("profile_clicked", { userId: user.uid });
+    router.push(`/u/${user.uid}`);
+  };
+
+  // Theme options
+  const themeOptions = [
+    {
+      value: "light",
+      label: "Light",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mr-2 h-5 w-5 text-foreground"
+        >
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="M4.93 4.93l1.41 1.41"></path>
+          <path d="M17.66 17.66l1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="M6.34 17.66l-1.41 1.41"></path>
+          <path d="M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+      )
+    },
+    {
+      value: "dark",
+      label: "Dark",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mr-2 h-5 w-5 text-foreground"
+        >
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+        </svg>
+      )
+    },
+    {
+      value: "system",
+      label: "System",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mr-2 h-5 w-5 text-foreground"
+        >
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+      )
+    }
+  ];
+
+  // Render the appropriate level
+  if (currentLevel === "themes") {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setCurrentLevel("main");
+              trackEvent("navigation_back_to_main");
+            }}
+            className="h-8 w-8 mr-2"
+            aria-label="Back to main menu"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h3 className="text-lg font-medium">Theme Settings</h3>
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme Mode</h3>
+          {themeOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                setTheme(option.value);
+                trackEvent("theme_changed", { theme: option.value });
+              }}
+              className={cn(
+                "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
+                "hover:bg-accent hover:text-accent-foreground",
+                theme === option.value && "bg-accent text-accent-foreground"
+              )}
+            >
+              <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
+                {theme === option.value && (
+                  <div className="w-3 h-3 rounded-full bg-primary" />
+                )}
+              </div>
+              {option.icon}
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
+          <AccentColorSelector />
+        </div>
+      </div>
+    );
+  }
+
+  // Main navigation level
+  return (
+    <div className="flex flex-col h-full">
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Navigation</h3>
+        
+        <NavItem 
+          icon={<Home className="h-4 w-4" />} 
+          label="Home" 
+          onClick={() => {
+            router.push("/");
+            trackEvent("home_clicked");
+          }} 
+        />
+        
+        <NavItem 
+          icon={<FilePlus className="h-4 w-4" />} 
+          label="New Page" 
+          onClick={handleNewPage} 
+        />
+        
+        <NavItem 
+          icon={<Shuffle className="h-4 w-4" />} 
+          label="Random Page" 
+          onClick={handleRandomPage} 
+        />
+        
+        <NavItem 
+          icon={<User className="h-4 w-4" />} 
+          label="My Profile" 
+          onClick={handleProfile} 
+        />
+      </div>
+
+      <div className="mb-6">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Appearance</h3>
+        <NavItem 
+          icon={<Palette className="h-4 w-4" />} 
+          label="Themes" 
+          hasSubmenu={true}
+          onClick={() => {
+            setCurrentLevel("themes");
+            trackEvent("themes_submenu_opened");
+          }} 
+        />
+      </div>
+    </div>
+  );
+}

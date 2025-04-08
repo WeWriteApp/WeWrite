@@ -7,16 +7,11 @@ import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
 import { cn } from "../lib/utils"
 import { Button } from "./ui/button"
-import { useTheme } from "next-themes"
 import dynamic from 'next/dynamic'
 import { useMultiAccount } from "../providers/MultiAccountProvider"
+import { SidebarNavigation } from "./SidebarNavigation"
 
 // Dynamically import components with no SSR to avoid hydration issues
-const AccentColorSelector = dynamic(
-  () => import('./AccentColorSelector'),
-  { ssr: false }
-)
-
 const AccountSwitcher = dynamic(
   () => import('./AccountSwitcher').then(mod => ({ default: mod.AccountSwitcher })),
   { ssr: false }
@@ -29,7 +24,6 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
 
   const handleLogout = async () => {
     try {
@@ -39,79 +33,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       console.error("Error signing out:", error)
     }
   }
-
-  const themeOptions = [
-    {
-      value: "light",
-      label: "Light",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-5 w-5 text-foreground"
-        >
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-      )
-    },
-    {
-      value: "dark",
-      label: "Dark",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-5 w-5 text-foreground"
-        >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-      )
-    },
-    {
-      value: "system",
-      label: "System",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-5 w-5 text-foreground"
-        >
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-          <line x1="8" y1="21" x2="16" y2="21"></line>
-          <line x1="12" y1="17" x2="12" y2="21"></line>
-        </svg>
-      )
-    }
-  ]
 
   return (
     <>
@@ -147,31 +68,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           <div className="flex-1">
-            <div className="mb-8">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
-              {themeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  className={cn(
-                    "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    theme === option.value && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
-                    {theme === option.value && (
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  {option.icon}
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Accent Color Selector */}
-            <AccentColorSelector />
+            {/* New Multi-level Navigation */}
+            <SidebarNavigation />
           </div>
 
           {/* Account Switcher and Settings buttons at bottom */}

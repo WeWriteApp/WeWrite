@@ -177,12 +177,39 @@ export const fetchUsernameForPage = async (pageData) => {
 export const validateReplyContent = (originalContent, newContent) => {
   if (!originalContent || !newContent) return newContent;
 
-  if (originalContent.length > 0 && newContent.length > 0) {
-    // Always preserve the attribution line (first paragraph)
-    if (JSON.stringify(newContent[0]) !== JSON.stringify(originalContent[0])) {
-      console.log('Protecting attribution line from changes');
-      newContent[0] = originalContent[0];
-    }
+  // Ensure we have the original content to work with
+  if (!originalContent.length) return newContent;
+
+  // Get the original attribution line
+  const attributionLine = originalContent[0];
+
+  // Check if the attribution line is missing or modified
+  if (newContent.length === 0) {
+    // If content is empty, restore the attribution line
+    console.log('Content empty, restoring attribution line');
+    return [attributionLine];
+  }
+
+  // Check if the first line is the attribution line
+  const firstLine = newContent[0];
+  const isFirstLineAttribution =
+    firstLine &&
+    firstLine.type === 'paragraph' &&
+    firstLine.children &&
+    firstLine.children.some(child =>
+      child.type === 'link' && (child.pageId || child.isUser)
+    );
+
+  if (!isFirstLineAttribution) {
+    // Attribution line is missing, add it back
+    console.log('Attribution line missing, restoring it');
+    return [attributionLine, ...newContent];
+  }
+
+  // If the attribution line exists but might be modified, restore the original
+  if (JSON.stringify(firstLine) !== JSON.stringify(attributionLine)) {
+    console.log('Attribution line modified, restoring original');
+    newContent[0] = attributionLine;
   }
 
   return newContent;

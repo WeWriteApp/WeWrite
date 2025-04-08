@@ -169,23 +169,10 @@ export default function ReplyContent({
         }
       ` }} />
 
-      {/* Display the attribution line separately */}
-      <ReplyAttribution
-        pageId={pageId}
-        pageTitle={pageTitle}
-        userId={userId}
-      />
-
-      {/* Add a blank line after the attribution */}
-      <div className="h-4"></div>
-
+      {/* Use the SlateEditor with the full content including attribution line */}
       <SlateEditor
-        initialContent={content.slice(1)} // Skip the attribution line
-        onContentChange={(newContent) => {
-          // Add the attribution line back when sending to parent
-          const fullContent = [content[0], ...newContent];
-          handleContentChange(fullContent);
-        }}
+        initialContent={content}
+        onContentChange={handleContentChange}
         onSave={onSave}
         onDiscard={onCancel}
       />
