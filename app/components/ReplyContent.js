@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import SlateEditor from './SlateEditor';
+import ReplyAttribution from './ReplyAttribution';
 import { prepareReplyContent, validateReplyContent } from '../utils/replyManager';
 // Note: We're using the centralized styles from editor-styles.css
 // which is imported by SlateEditor
@@ -109,6 +110,35 @@ export default function ReplyContent({
     return <div className="p-4 text-center">No content available for reply</div>;
   }
 
+  // Extract page and user information from the first paragraph (attribution line)
+  const extractAttributionInfo = () => {
+    if (!content || !content[0] || !content[0].children) {
+      return { pageId: replyToId, pageTitle: "Untitled", userId: null };
+    }
+
+    try {
+      // The attribution line structure should be:
+      // [text, pageLink, text, userLink]
+      const children = content[0].children;
+
+      // Extract page info from the page link (index 1)
+      const pageLink = children[1];
+      const pageId = pageLink?.pageId || replyToId;
+      const pageTitle = pageLink?.pageTitle || pageLink?.children?.[0]?.text || "Untitled";
+
+      // Extract user info from the user link (index 3)
+      const userLink = children[3];
+      const userId = userLink?.userId || null;
+
+      return { pageId, pageTitle, userId };
+    } catch (error) {
+      console.error("Error extracting attribution info:", error);
+      return { pageId: replyToId, pageTitle: "Untitled", userId: null };
+    }
+  };
+
+  const { pageId, pageTitle, userId } = extractAttributionInfo();
+
   return (
     <div className="reply-editor-container">
       {/* Add critical styles directly to ensure they're applied */}
@@ -138,9 +168,24 @@ export default function ReplyContent({
           white-space: nowrap !important;
         }
       ` }} />
+
+      {/* Display the attribution line separately */}
+      <ReplyAttribution
+        pageId={pageId}
+        pageTitle={pageTitle}
+        userId={userId}
+      />
+
+      {/* Add a blank line after the attribution */}
+      <div className="h-4"></div>
+
       <SlateEditor
-        initialContent={content}
-        onContentChange={handleContentChange}
+        initialContent={content.slice(1)} // Skip the attribution line
+        onContentChange={(newContent) => {
+          // Add the attribution line back when sending to parent
+          const fullContent = [content[0], ...newContent];
+          handleContentChange(fullContent);
+        }}
         onSave={onSave}
         onDiscard={onCancel}
       />

@@ -99,8 +99,12 @@ export async function GET(request) {
       if (userData.username) {
         username = userData.username;
         console.log(`API: Username found in RTDB: ${username}`);
+      } else if (userData.displayName) {
+        // Use displayName if username is not available
+        username = userData.displayName;
+        console.log(`API: Using displayName from RTDB: ${username}`);
       } else {
-        console.log(`API: No username field in RTDB for user ID: ${userId}`);
+        console.log(`API: No username or displayName field in RTDB for user ID: ${userId}`);
 
         // Try to get username from Firestore first
         try {
@@ -116,9 +120,15 @@ export async function GET(request) {
                 username: username
               });
               console.log(`API: Updated RTDB with Firestore username: ${username}`);
+            } else if (firestoreData.displayName) {
+              // Use displayName if username is not available
+              username = firestoreData.displayName;
+              console.log(`API: Using displayName from Firestore: ${username}`);
 
-              // Skip the fallback logic
-              return;
+              // Update RTDB with the displayName for consistency
+              await rtdb.ref(`users/${userId}`).update({
+                displayName: username
+              });
             }
           }
         } catch (firestoreErr) {
@@ -165,12 +175,30 @@ export async function GET(request) {
       // Don't fail the whole request, just log the error
     }
 
+    // If username is still 'Unknown', try to use a better fallback
+    if (username === 'Unknown' && userData) {
+      // Try email without domain as a last resort
+      if (userData.email) {
+        const emailUsername = userData.email.split('@')[0];
+        if (emailUsername) {
+          username = emailUsername;
+          console.log(`API: Using email username as fallback: ${username}`);
+        }
+      }
+    }
+
+    // Make sure we never return 'Unknown' to the client
+    if (username === 'Unknown') {
+      username = `user_${userId.substring(0, 8)}`;
+    }
+
     return NextResponse.json({
       username,
       history,
       debug: {
         userDataKeys: userData ? Object.keys(userData) : [],
         hasUsername: userData ? !!userData.username : false,
+        hasDisplayName: userData ? !!userData.displayName : false,
         rtdbExists: !!userSnapshot.exists()
       }
     }, { headers });
