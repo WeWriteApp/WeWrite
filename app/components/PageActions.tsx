@@ -196,11 +196,11 @@ export function PageActions({
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit button always, Delete button only in edit mode */}
       {actualIsOwner && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row items-stretch md:items-center md:justify-end gap-3 mb-3 w-full">
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 w-full md:w-auto"
             disabled={isEditLoading}
             onClick={() => {
               if (isEditing) {
@@ -232,7 +232,7 @@ export function PageActions({
             <Button
               variant="destructive"
               size="sm"
-              className="gap-2"
+              className="gap-2 w-full md:w-auto"
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4" />
@@ -243,12 +243,12 @@ export function PageActions({
       )}
 
       {/* Actions available to all users - Copy, Reply, Layout */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t-only pt-4 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row flex-wrap items-stretch md:items-center gap-3 border-t-only pt-4 w-full">
         {/* Copy Link Button (always shown) */}
         <Button
           variant="outline"
           size="sm"
-          className="gap-2"
+          className="gap-2 w-full md:w-auto"
           onClick={handleCopyLink}
         >
           <Link2 className="h-4 w-4" />
@@ -262,7 +262,7 @@ export function PageActions({
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 w-full md:w-auto"
               onClick={handleReply}
             >
               <Reply className="h-4 w-4" />
@@ -274,7 +274,7 @@ export function PageActions({
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="gap-2 w-full md:w-auto"
                 // No onClick needed here, AuthModal handles opening
               >
                 <Reply className="h-4 w-4" />
@@ -290,7 +290,7 @@ export function PageActions({
             <Button
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 w-full md:w-auto"
             >
               <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode
