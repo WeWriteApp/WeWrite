@@ -1107,6 +1107,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
 
   // Handle selection from TypeaheadSearch
   const handlePageSelect = (item) => {
+    // Update the search text when an item is selected
+    setSearchText(item.title || '');
+
     // Check if this is a user or a page
     if (item.type === 'user') {
       // Handle user selection
@@ -1223,35 +1226,24 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
             </form>
           ) : (
             <div className="h-full flex flex-col">
-              <div className="mb-3 flex-1">
-                <input
-                  type="text"
+              <div className="flex-1 flex flex-col">
+                <TypeaheadSearch
+                  onSelect={handlePageSelect}
                   placeholder="Search for a page..."
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  className="w-full p-2 bg-background border border-input rounded text-sm"
+                  initialSearch={searchText}
+                  setShowResults={() => {}}
                 />
-              </div>
 
-              {/* Always show create page button when there's search text */}
-              {searchText.length > 0 && (
-                <div className="mb-3">
-                  <button
-                    onClick={handleCreatePage}
-                    className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center text-sm"
-                  >
-                    Create new "{searchText}" page
-                  </button>
-                </div>
-              )}
-
-              <div className="max-h-60 overflow-y-auto">
+                {/* Always show create page button when there's search text */}
                 {searchText.length > 0 && (
-                  <TypeaheadSearch
-                    onSelect={handlePageSelect}
-                    placeholder="Search for a page..."
-                    initialSearch={searchText}
-                  />
+                  <div className="mt-3">
+                    <button
+                      onClick={handleCreatePage}
+                      className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center text-sm"
+                    >
+                      Create new "{searchText}" page
+                    </button>
+                  </div>
                 )}
               </div>
 

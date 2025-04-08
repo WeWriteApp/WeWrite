@@ -196,10 +196,10 @@ export function PageActions({
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit button always, Delete button only in edit mode */}
       {actualIsOwner && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row items-stretch md:items-center md:justify-end gap-3 mb-3 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row items-stretch md:items-center justify-center md:justify-end gap-3 mb-3 w-full">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             className="gap-2 w-full md:w-auto"
             disabled={isEditLoading}
             onClick={() => {
@@ -231,7 +231,7 @@ export function PageActions({
           {isEditing && (
             <Button
               variant="destructive"
-              size="sm"
+              size="md"
               className="gap-2 w-full md:w-auto"
               onClick={handleDelete}
             >
@@ -243,11 +243,11 @@ export function PageActions({
       )}
 
       {/* Actions available to all users - Copy, Reply, Layout */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row flex-wrap items-stretch md:items-center gap-3 border-t-only pt-4 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 border-t-only pt-4 w-full">
         {/* Copy Link Button (always shown) */}
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           className="gap-2 w-full md:w-auto"
           onClick={handleCopyLink}
         >
@@ -261,7 +261,7 @@ export function PageActions({
             // Logged-in user (non-owner): Show direct reply button
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               className="gap-2 w-full md:w-auto"
               onClick={handleReply}
             >
@@ -273,7 +273,7 @@ export function PageActions({
             <AuthModal initialTab="login">
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 className="gap-2 w-full md:w-auto"
                 // No onClick needed here, AuthModal handles opening
               >
@@ -289,7 +289,7 @@ export function PageActions({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               className="gap-2 w-full md:w-auto"
             >
               <LayoutPanelLeft className="h-4 w-4" />

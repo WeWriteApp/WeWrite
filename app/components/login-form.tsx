@@ -22,6 +22,14 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [isAddAccountMode, setIsAddAccountMode] = useState(false)
+
+  // Check if we're in add account mode
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const mode = searchParams.get('mode')
+    setIsAddAccountMode(mode === 'addAccount')
+  }, [])
 
   // Validate form inputs
   useEffect(() => {
@@ -46,16 +54,33 @@ export function LoginForm({
         // Show redirect overlay
         setIsRedirecting(true)
 
-        // Increase timeout to allow auth state to fully propagate
-        // and ensure cookies are properly set
-        localStorage.setItem('authRedirectPending', 'true')
+        // Check if we need to return to a previous account
+        if (isAddAccountMode) {
+          // Clear the add account mode flag
+          const returnToAccount = sessionStorage.getItem('returnToAccount')
+          sessionStorage.removeItem('returnToAccount')
 
-        setTimeout(() => {
-          localStorage.removeItem('authRedirectPending')
-          router.push("/")
-          // Force a refresh of the page to ensure auth state is recognized
-          router.refresh()
-        }, 1500)
+          // Increase timeout to allow auth state to fully propagate
+          // and ensure cookies are properly set
+          localStorage.setItem('authRedirectPending', 'true')
+
+          setTimeout(() => {
+            localStorage.removeItem('authRedirectPending')
+            router.push("/")
+            // Force a refresh of the page to ensure auth state is recognized
+            router.refresh()
+          }, 1500)
+        } else {
+          // Regular login flow
+          localStorage.setItem('authRedirectPending', 'true')
+
+          setTimeout(() => {
+            localStorage.removeItem('authRedirectPending')
+            router.push("/")
+            // Force a refresh of the page to ensure auth state is recognized
+            router.refresh()
+          }, 1500)
+        }
       } else {
         // Error handling
         const errorCode = result.code || ""

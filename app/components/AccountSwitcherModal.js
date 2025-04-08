@@ -39,18 +39,19 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
     if (isAtMaxAccounts) {
       setIsMaxAccountsDialogOpen(true);
     } else {
-      try {
-        // Sign out current user first
-        await signOut(auth);
-        // Then redirect to login page
-        router.push("/auth/login");
-        onClose();
-      } catch (error) {
-        console.error("Error signing out:", error);
-        // Still try to redirect even if sign out fails
-        router.push("/auth/login");
-        onClose();
+      // Store current auth state in session storage
+      if (currentAccount) {
+        sessionStorage.setItem('returnToAccount', JSON.stringify({
+          uid: currentAccount.uid,
+          email: currentAccount.email
+        }));
       }
+
+      // Close the modal first
+      onClose();
+
+      // Navigate to login page with special parameter
+      router.push("/auth/login?mode=addAccount");
     }
   };
 
@@ -64,7 +65,7 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
               Select an account to switch to or add a new account
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-2 py-4">
             {sortedAccounts.map((account) => (
               <Button
