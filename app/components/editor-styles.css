@@ -95,13 +95,13 @@
 .editor-link.user-link::before,
 a.user-link::before,
 a.editor-link.user-link::before,
-[data-user-id]::before,
-[data-username]::before,
-a[data-user-id]::before,
-a[data-username]::before,
+[data-user-id]:not([data-page-id])::before,
+[data-username]:not([data-page-id])::before,
+a[data-user-id]:not([data-page-id])::before,
+a[data-username]:not([data-page-id])::before,
 [data-slate-editor] a.user-link::before,
-[data-slate-editor] a[data-user-id]::before,
-[data-slate-editor] a[data-username]::before {
+[data-slate-editor] a[data-user-id]:not([data-page-id])::before,
+[data-slate-editor] a[data-username]:not([data-page-id])::before {
   content: '@';
   opacity: 0.7;
   margin-right: 1px;

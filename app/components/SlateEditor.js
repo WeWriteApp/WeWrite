@@ -1121,9 +1121,10 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
         username: item.title
       });
     } else {
-      // Handle page selection
+      // Handle page selection - use direct URL to avoid user not found error
       onSelect({
         text: text || item.title,
+        url: `/${item.id}`, // Direct URL to the page
         pageId: item.id,
         pageTitle: item.title
       });

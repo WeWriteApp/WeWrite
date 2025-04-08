@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Loader, ChevronLeft } from "lucide-react";
+import { Loader, ChevronLeft, Share2 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Sheet, SheetTrigger } from "./ui/sheet";
 import { Sidebar } from "./ui/sidebar";
@@ -19,7 +19,7 @@ export interface PageHeaderProps {
   isLoading?: boolean;
   groupId?: string;
   groupName?: string;
-  scrollDirection?: string;
+  scrollDirection?: 'up' | 'down' | null;
 }
 
 export default function PageHeader({
@@ -34,6 +34,7 @@ export default function PageHeader({
   const router = useRouter();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showTooltip, setShowTooltip] = React.useState(false);
   const [headerHeight, setHeaderHeight] = React.useState(0);
@@ -101,9 +102,22 @@ export default function PageHeader({
   }, [title, isScrolled]);
 
   React.useEffect(() => {
+    let lastScrollY = window.scrollY;
+
     const handleScroll = () => {
       const scrollPosition = window.scrollY;
+      const scrollingDown = scrollPosition > lastScrollY;
+      lastScrollY = scrollPosition;
+
+      // Set scrolled state
       setIsScrolled(scrollPosition > 0);
+
+      // Set expanded state based on scroll direction
+      if (scrollDirection === 'up' || !scrollingDown) {
+        setIsExpanded(true);
+      } else if (scrollDirection === 'down' || scrollingDown) {
+        setIsExpanded(false);
+      }
 
       // Calculate scroll progress
       const windowHeight = window.innerHeight;
@@ -143,7 +157,7 @@ export default function PageHeader({
         window.removeEventListener('scrollend', () => {});
       }
     };
-  }, []);
+  }, [scrollDirection]);
 
   // Function to handle back button click
   const handleBackClick = (e: React.MouseEvent) => {
@@ -165,6 +179,39 @@ export default function PageHeader({
     router.push('/');
   };
 
+  // Handle share button click
+  const handleShare = async () => {
+    const url = window.location.href;
+    const pageTitle = title || 'Untitled Page';
+
+    try {
+      if (navigator.share) {
+        // Use Web Share API if available
+        await navigator.share({
+          title: pageTitle,
+          text: `Check out this page: ${pageTitle}`,
+          url: url
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied to clipboard');
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback to clipboard if sharing fails
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied to clipboard');
+      } catch (clipboardError) {
+        toast.error('Could not share or copy link');
+      }
+    }
+  };
+
+  // Determine if we should show the expanded header
+  const shouldShowExpandedHeader = !isScrolled || isExpanded;
+
   return (
     <>
       <header
@@ -173,7 +220,7 @@ export default function PageHeader({
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
-        }`}
+        } ${shouldShowExpandedHeader ? 'translate-y-0' : '-translate-y-full'}`}
       >
         <div className="relative mx-auto px-2 md:px-4">
           <div className="flex items-center justify-between py-1">
@@ -190,6 +237,21 @@ export default function PageHeader({
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
+            </div>
+
+            {/* Right Side - Share Button (only in expanded header) */}
+            <div className="flex items-center gap-2">
+              {!isScrolled && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={handleShare}
+                  title="Share"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {/* Center - Title and Author */}

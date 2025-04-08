@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef, useContext, useEffect, useState } from "react";
+import { getContrastAwareClasses } from "../utils/contrastUtils";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info } from "lucide-react";
 import useRecentActivity from "../hooks/useRecentActivity";
@@ -117,20 +118,16 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           <div className="flex items-center gap-2 text-sm">
             <button
               onClick={() => setViewMode('all')}
-              className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'all'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'}`}
+              className={`px-3 py-1 rounded-full transition-colors ${getContrastAwareClasses(viewMode === 'all')}`}
             >
               All
             </button>
             <button
               onClick={() => setViewMode('following')}
               disabled={isLoadingFollows || followedPages.length === 0}
-              className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'following'
-                ? 'bg-primary text-primary-foreground'
-                : followedPages.length === 0
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-                  : 'bg-muted hover:bg-muted/80'}`}
+              className={`px-3 py-1 rounded-full transition-colors ${followedPages.length === 0
+                ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                : getContrastAwareClasses(viewMode === 'following')}`}
             >
               Following
               {isLoadingFollows && (

@@ -739,6 +739,25 @@ export default function AccountPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Logout Button */}
+              <div className="mt-6 pt-4 border-t border-border">
+                <Button
+                  variant="destructive"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    try {
+                      await signOut(auth);
+                      router.push('/');
+                    } catch (error) {
+                      console.error('Error signing out:', error);
+                    }
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Log out</span>
+                </Button>
+              </div>
             </div>
           </section>
 
@@ -760,27 +779,7 @@ export default function AccountPage() {
             </Alert>
           </section>
 
-          {/* Logout Section */}
-          <section>
-            <h3 className="text-base font-medium mb-4">Account Actions</h3>
-            <div className="bg-background rounded-lg border border-border p-4">
-              <Button
-                variant="destructive"
-                className="w-full flex items-center justify-center gap-2"
-                onClick={async () => {
-                  try {
-                    await signOut(auth);
-                    router.push('/');
-                  } catch (error) {
-                    console.error('Error signing out:', error);
-                  }
-                }}
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Log out</span>
-              </Button>
-            </div>
-          </section>
+
 
           {/* Social Media Section */}
           <section>

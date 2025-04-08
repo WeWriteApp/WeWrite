@@ -106,12 +106,25 @@ export function SidebarNavigation() {
         });
       });
 
+      console.log(`Found ${pages.length} pages for random selection`);
+
+      if (pages.length === 0) {
+        console.error('No pages found after filtering');
+        setIsRandomLoading(false);
+        toast.error("No pages available for random selection");
+        return;
+      }
+
       // Select a random page
       const randomIndex = Math.floor(Math.random() * pages.length);
       const randomPage = pages[randomIndex];
 
-      // Navigate to the random page
-      window.location.href = `/${randomPage.id}`;
+      console.log(`Selected random page: ${randomPage.id} - ${randomPage.title || 'Untitled'}`);
+
+      // Navigate to the random page - use direct window.location for more reliable navigation
+      const pageUrl = `/${randomPage.id}`;
+      console.log(`Navigating to: ${pageUrl}`);
+      window.location.href = pageUrl;
 
       // We don't reset loading state here because we're navigating away
     } catch (error) {
