@@ -521,9 +521,6 @@ const Form = ({ Page, setPage, isReply }) => {
           />
         </div>
 
-        {/* Add separator line between title and content */}
-        <div className="w-full h-px bg-border dark:bg-border my-4"></div>
-
         <ReplyContent
           replyToId={replyToId}
           initialContent={initialContent}
@@ -532,7 +529,10 @@ const Form = ({ Page, setPage, isReply }) => {
           onCancel={() => router.push("/pages")}
         />
 
-        <div className="mt-8 mb-16">
+        {/* Add separator line between content and buttons */}
+        <div className="w-full h-px bg-border dark:bg-border my-4"></div>
+
+        <div className="mt-4 mb-16">
           <div className="flex flex-row justify-between items-center gap-4 w-full">
             <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
               <Globe className="h-4 w-4 text-green-500" />
