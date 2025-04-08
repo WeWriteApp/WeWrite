@@ -16,21 +16,21 @@ const ConstructionChip = () => {
   return (
     <>
       <div
-        className="w-full flex justify-center my-4"
+        className="w-full flex justify-center my-6"
         onClick={() => setShowModal(true)}
       >
         <div
-          className="flex items-center gap-1.5 px-2.5 py-1 text-orange-800 dark:text-orange-300
-                    border border-orange-300/30 dark:border-orange-500/30
-                    rounded cursor-pointer hover:bg-orange-100/10 dark:hover:bg-orange-900/20
-                    transition-colors text-xs"
+          className="flex items-center gap-2 px-4 py-2 text-orange-800 dark:text-orange-300
+                    border border-orange-400/40 dark:border-orange-500/40
+                    rounded-md cursor-pointer hover:bg-orange-100/20 dark:hover:bg-orange-900/30
+                    transition-colors text-sm shadow-sm"
           style={{
-            backgroundColor: 'rgba(255, 237, 213, 0.1)', /* 10% orange fill */
-            borderColor: 'rgba(251, 146, 60, 0.3)', /* 30% orange stroke */
+            backgroundColor: 'rgba(255, 237, 213, 0.2)', /* 20% orange fill - brighter */
+            borderColor: 'rgba(251, 146, 60, 0.4)', /* 40% orange stroke - more saturated */
           }}
         >
-          <Construction className="h-3 w-3" />
-          <span className="font-normal">WeWrite is under construction</span>
+          <Construction className="h-4 w-4" />
+          <span className="font-medium">WeWrite is under construction</span>
         </div>
       </div>
 

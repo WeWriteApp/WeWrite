@@ -483,7 +483,7 @@ const TypeaheadSearch = ({
                           });
 
                           // Redirect to the edit view of the newly created page
-                          router.push(`/pages/${newPageId}?edit=true`);
+                          router.push(`/${newPageId}?edit=true`);
                         } else {
                           console.error("Failed to create new page");
                         }

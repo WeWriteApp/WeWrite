@@ -430,18 +430,9 @@ const PledgeBar = () => {
   const handlePledgeInteraction = (pledgeId, change) => {
     console.log("handlePledgeInteraction called", { isOwnPage, user, pledgeId, change });
 
-    if (!user) {
-      setShowActivationModal(true);
-      return;
-    }
-
-    if (!subscription || subscription.status !== 'active') {
-      setShowActivationModal(true);
-      return;
-    }
-
-    // If we have an active subscription, handle the pledge change
-    handlePledgeAmountChange(pledgeId, change);
+    // Always show the activation modal for now, since the feature isn't fully implemented
+    setShowActivationModal(true);
+    return;
   };
 
   return (

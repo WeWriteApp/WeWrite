@@ -998,11 +998,12 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
 
   // Add more debug logging for user links
   if (isUserLink) {
-    // Ensure the children text matches the username
+    // Ensure the children text matches the username without @ prefix
+    const displayUsername = element.username || '';
     if (element.username && element.children && element.children.length > 0 &&
-        element.children[0].text !== element.username) {
-      console.log(`LinkElement: Fixing mismatched username: children text "${element.children[0].text}" vs username "${element.username}"`);
-      element.children[0].text = element.username;
+        element.children[0].text !== displayUsername) {
+      console.log(`LinkElement: Fixing mismatched username: children text "${element.children[0].text}" vs username "${displayUsername}"`);
+      element.children[0].text = displayUsername;
     }
 
     console.log('LinkElement rendering USER link with:', {

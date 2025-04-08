@@ -469,11 +469,25 @@ export default function AccountPage() {
     if (!user) return;
 
     try {
+      // First, refresh the user token to ensure we have the latest state
+      await user.reload();
+
+      // Send verification email
       await sendEmailVerification(user);
-      alert('Verification email sent! Please check your inbox.');
+
+      // Show success message using toast instead of alert
+      toast.success('Verification email sent! Please check your inbox.');
     } catch (error) {
       console.error('Error sending verification email:', error);
-      alert('Failed to send verification email. Please try again later.');
+
+      // Handle specific error cases
+      if (error.code === 'auth/too-many-requests') {
+        toast.error('Too many requests. Please try again later.');
+      } else if (error.code === 'auth/requires-recent-login') {
+        toast.error('For security reasons, please log out and log back in before requesting a verification email.');
+      } else {
+        toast.error('Failed to send verification email. Please try again later.');
+      }
     }
   };
 

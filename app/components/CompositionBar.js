@@ -55,7 +55,7 @@ const CompositionBar = ({
   });
 
   return (
-    <div className={cn("w-full relative", className)}>
+    <div className={cn("w-full relative pointer-events-none", className)}>
       <div className="w-full flex flex-col gap-4">
         {pledges.map((pledge) => {
           const pledgeAmount = Number(pledge.amount || 0);

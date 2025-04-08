@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
-import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft } from "lucide-react";
+import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deletePage } from "../firebase/database";
@@ -33,6 +33,7 @@ import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
 import { AuthModal } from "./AuthModal";
+import FollowButton from "./FollowButton";
 
 /**
  * PageActions Component
@@ -242,8 +243,31 @@ export function PageActions({
         </div>
       )}
 
-      {/* Actions available to all users - Copy, Reply, Layout */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 border-t-only pt-4 w-full">
+      {/* Actions available to all users - Follow, Copy, Reply, Layout */}
+      <div className="grid grid-cols-1 gap-3 border-t-only pt-4 w-full">
+        {/* Follow Button - only show for non-owners */}
+        {!actualIsOwner && (
+          user ? (
+            <FollowButton
+              pageId={page.id}
+              pageTitle={page.title || 'Untitled Page'}
+              pageOwnerId={page.userId}
+              className="w-full"
+            />
+          ) : (
+            <AuthModal initialTab="login">
+              <Button
+                variant="default"
+                size="md"
+                className="gap-2 w-full"
+              >
+                <Heart className="h-4 w-4" />
+                Follow
+              </Button>
+            </AuthModal>
+          )
+        )}
+
         {/* Copy Link Button (always shown) */}
         <Button
           variant="outline"

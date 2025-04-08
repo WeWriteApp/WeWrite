@@ -254,11 +254,16 @@ export default function PageHeader({
               </Button>
             </div>
 
-            {/* Center - Title */}
-            <div className="flex-1 text-center">
-              <h1 className="text-lg font-semibold truncate max-w-[60vw] mx-auto">
+            {/* Center - Title and Author */}
+            <div className="flex-1 text-center flex flex-col items-center">
+              <h1 className="text-lg font-semibold truncate max-w-[60vw] mx-auto transition-all duration-300">
                 {title || 'Untitled Page'}
               </h1>
+              {displayUsername && (
+                <p className="text-xs text-muted-foreground mt-1 transition-all duration-300">
+                  by {displayUsername}
+                </p>
+              )}
             </div>
 
             {/* Right Side - Share Button */}
@@ -275,14 +280,14 @@ export default function PageHeader({
             </div>
           </div>
 
-          {/* Collapsed Header - Only visible when scrolled down */}
-          <div className={`flex items-center justify-between py-1 transition-all duration-300 ${isScrolled && !shouldShowExpandedHeader ? 'opacity-100 max-h-12' : 'opacity-0 max-h-0 overflow-hidden pointer-events-none'}`}>
+          {/* Collapsed Header - Only visible when scrolled down - thinner for immersive reading */}
+          <div className={`flex items-center justify-between py-0.5 transition-all duration-300 ${isScrolled && !shouldShowExpandedHeader ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden pointer-events-none'}`}>
             {/* Center - Title and Author */}
             <div className="flex-1 flex justify-start items-center">
-              <div className={`text-left space-y-0 transition-all duration-120 ${
+              <div className={`text-left space-y-0 transition-all duration-300 transform ${
                 isScrolled ? "max-w-[85vw] flex flex-row items-center gap-2" : "max-w-full"
               }`}>
-                <h1 className={`font-semibold transition-all duration-120 ${
+                <h1 className={`font-semibold transition-all duration-300 transform ${
                   isScrolled
                     ? "text-base truncate max-w-[70vw]"
                     : "text-2xl mb-0.5"
