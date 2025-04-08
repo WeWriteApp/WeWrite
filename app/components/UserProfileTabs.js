@@ -306,22 +306,6 @@ export default function UserProfileTabs({ profile }) {
 
               <TabsContent value="following" className="mt-0">
                 <AnimatedTabsContent activeTab={activeTab}>
-                  <div className="mb-4 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUnfollowAll}
-                      disabled={isUnfollowingAll}
-                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      {isUnfollowingAll ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <UserMinus className="h-4 w-4" />
-                      )}
-                      Unfollow my pages
-                    </Button>
-                  </div>
                   <FollowedPagesList userId={profile?.uid} showUnfollowButtons={true} />
                 </AnimatedTabsContent>
               </TabsContent>

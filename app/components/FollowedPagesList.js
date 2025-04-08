@@ -26,7 +26,7 @@ export default function FollowedPagesList({ userId, showUnfollowButtons = true, 
   const [error, setError] = useState(null);
   const [unfollowingIds, setUnfollowingIds] = useState([]);
   const { user } = useAuth();
-  
+
   // Check if this is the current user's list
   const isCurrentUser = user && user.uid === userId;
 
@@ -85,21 +85,21 @@ export default function FollowedPagesList({ userId, showUnfollowButtons = true, 
 
   const handleUnfollow = async (pageId, pageTitle) => {
     if (!user) return;
-    
+
     // Add to unfollowing state to show loading
     setUnfollowingIds(prev => [...prev, pageId]);
-    
+
     try {
       await unfollowPage(user.uid, pageId);
-      
+
       // Remove the page from the list
       setPages(prev => prev.filter(page => page.id !== pageId));
-      
+
       // Call the callback if provided
       if (onUnfollow) {
         onUnfollow(pageId);
       }
-      
+
       toast.success(`Unfollowed "${pageTitle || 'Untitled Page'}"`);
     } catch (error) {
       console.error('Error unfollowing page:', error);
@@ -135,7 +135,7 @@ export default function FollowedPagesList({ userId, showUnfollowButtons = true, 
         </div>
         <h3 className="text-lg font-medium mb-2">No followed pages yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
-          {isCurrentUser 
+          {isCurrentUser
             ? "When you follow pages, they'll appear here so you can easily find them later."
             : "This user hasn't followed any pages yet."}
         </p>
@@ -161,12 +161,12 @@ export default function FollowedPagesList({ userId, showUnfollowButtons = true, 
                 {page.title || 'Untitled Page'}
               </PillLink>
             </div>
-            
+
             {showUnfollowButtons && isCurrentUser && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 rounded-full"
                 onClick={() => handleUnfollow(page.id, page.title)}
                 disabled={unfollowingIds.includes(page.id)}
                 title="Unfollow page"

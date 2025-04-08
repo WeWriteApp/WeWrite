@@ -183,13 +183,21 @@ export default function PageHeader({
   const handleShare = async () => {
     const url = window.location.href;
     const pageTitle = title || 'Untitled Page';
+    const twitterShareText = `Read ${pageTitle} on @WeWriteApp ${url}`;
 
     try {
+      // Check if it's a Twitter/X share intent
+      if (navigator.userAgent.includes('Twitter') || navigator.userAgent.includes('X App')) {
+        // Open Twitter intent URL directly
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterShareText)}`, '_blank');
+        return;
+      }
+
       if (navigator.share) {
         // Use Web Share API if available
         await navigator.share({
           title: pageTitle,
-          text: `Check out this page: ${pageTitle}`,
+          text: twitterShareText,
           url: url
         });
       } else {

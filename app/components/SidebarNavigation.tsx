@@ -177,6 +177,12 @@ export function SidebarNavigation() {
             onClick={() => {
               router.push("/");
               trackEvent("home_clicked");
+              // Close the sidebar when clicking home
+              if (typeof window !== 'undefined') {
+                // Dispatch a custom event that Sidebar.tsx can listen for
+                const event = new CustomEvent('closeSidebar');
+                window.dispatchEvent(event);
+              }
             }}
           />
 
@@ -264,7 +270,6 @@ export function SidebarNavigation() {
         </div>
 
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
           {/* Wrap AccentColorSelector in error boundary */}
           <React.Suspense fallback={<div className="p-3 text-sm text-muted-foreground">Loading color options...</div>}>
             <AccentColorSelector />

@@ -200,7 +200,7 @@ export function PageActions({
           <Button
             variant="outline"
             size="md"
-            className="gap-2 w-full md:w-auto"
+            className="gap-2 w-full"
             disabled={isEditLoading}
             onClick={() => {
               if (isEditing) {
@@ -232,7 +232,7 @@ export function PageActions({
             <Button
               variant="destructive"
               size="md"
-              className="gap-2 w-full md:w-auto"
+              className="gap-2 w-full"
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4" />

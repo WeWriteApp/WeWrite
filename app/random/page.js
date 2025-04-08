@@ -13,18 +13,27 @@ export default function RandomPage() {
     const fetchRandomPage = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/random-page');
+        console.log('Fetching random page from API');
+
+        // Add a cache-busting parameter to avoid caching issues
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/random-page?t=${timestamp}`);
 
         if (!response.ok) {
-          throw new Error('Failed to fetch random page');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API response not OK:', response.status, errorData);
+          throw new Error(errorData.error || 'Failed to fetch random page');
         }
 
         const data = await response.json();
+        console.log('Random page data received:', data);
 
         if (data.pageId) {
+          console.log(`Navigating to random page: /${data.pageId}`);
           // Navigate to the random page using window.location for more reliable navigation
           window.location.href = `/${data.pageId}`;
         } else {
+          console.error('No pageId in response:', data);
           setError('No pages found');
           setIsLoading(false);
         }
@@ -36,7 +45,7 @@ export default function RandomPage() {
     };
 
     fetchRandomPage();
-  }, [router]);
+  }, []);
 
   if (error) {
     return (

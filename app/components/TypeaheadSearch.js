@@ -511,7 +511,7 @@ const SingleItemLink = ({ page, search }) => {
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <PillLink
-        href={`/pages/${page.id}`}
+        href={`/${page.id}`}
         key={page.id}
         isPublic={page.isPublic}
         className="flex-shrink-0"

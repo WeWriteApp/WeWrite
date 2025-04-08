@@ -9,6 +9,8 @@ import { collection, query, where, limit, getDocs } from 'firebase/firestore';
  */
 export async function GET() {
   try {
+    console.log('Random page API called');
+
     // Query for public pages
     const pagesRef = collection(db, 'pages');
     const publicPagesQuery = query(
@@ -18,9 +20,11 @@ export async function GET() {
       limit(100) // Limit to 100 pages for performance
     );
 
+    console.log('Executing Firestore query for random page');
     const snapshot = await getDocs(publicPagesQuery);
 
     if (snapshot.empty) {
+      console.error('No pages found in the database');
       return NextResponse.json({ error: 'No pages found' }, { status: 404 });
     }
 
@@ -33,9 +37,18 @@ export async function GET() {
       });
     });
 
+    console.log(`Found ${pages.length} pages for random selection`);
+
+    if (pages.length === 0) {
+      console.error('No valid pages found after filtering');
+      return NextResponse.json({ error: 'No valid pages found' }, { status: 404 });
+    }
+
     // Select a random page
     const randomIndex = Math.floor(Math.random() * pages.length);
     const randomPage = pages[randomIndex];
+
+    console.log(`Selected random page: ${randomPage.id} - ${randomPage.title || 'Untitled'}`);
 
     return NextResponse.json({
       pageId: randomPage.id,

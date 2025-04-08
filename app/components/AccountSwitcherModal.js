@@ -65,7 +65,7 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md mx-4">
           <DialogHeader>
             <DialogTitle>Switch Account</DialogTitle>
             <DialogDescription>

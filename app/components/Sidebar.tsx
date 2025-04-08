@@ -25,6 +25,21 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter()
 
+  // Listen for the custom closeSidebar event
+  React.useEffect(() => {
+    const handleCloseSidebar = () => {
+      if (isOpen) {
+        onClose();
+      }
+    };
+
+    window.addEventListener('closeSidebar', handleCloseSidebar);
+
+    return () => {
+      window.removeEventListener('closeSidebar', handleCloseSidebar);
+    };
+  }, [isOpen, onClose]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth)
