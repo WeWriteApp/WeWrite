@@ -14,16 +14,16 @@ export default function RandomPage() {
       try {
         setIsLoading(true);
         const response = await fetch('/api/random-page');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch random page');
         }
-        
+
         const data = await response.json();
-        
+
         if (data.pageId) {
-          // Navigate to the random page
-          router.push(`/${data.pageId}`);
+          // Navigate to the random page using window.location for more reliable navigation
+          window.location.href = `/${data.pageId}`;
         } else {
           setError('No pages found');
           setIsLoading(false);
@@ -43,7 +43,7 @@ export default function RandomPage() {
       <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
         <h1 className="text-2xl font-bold mb-4">Error</h1>
         <p className="text-muted-foreground mb-4">{error}</p>
-        <button 
+        <button
           className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
           onClick={() => router.push('/')}
         >

@@ -53,28 +53,30 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-full p-6 pb-24">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-muted"
-              aria-label="Close sidebar"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+        <div className="flex flex-col h-full relative">
+          {/* Header - Fixed at top */}
+          <div className="sticky top-0 z-10 bg-background p-6 pb-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-8 w-8 rounded-full hover:bg-muted"
+                aria-label="Close sidebar"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
-          <div className="flex-1">
-            {/* New Multi-level Navigation */}
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-20">
             <SidebarNavigation />
           </div>
 
-          {/* Account Switcher at bottom */}
-          <div className="mt-auto pt-4 border-t border-border">
-            {/* Account Switcher */}
+          {/* Account Switcher - Fixed at bottom */}
+          <div className="sticky bottom-0 bg-background pt-2 pb-4 px-6 border-t border-border">
             <AccountSwitcher />
           </div>
         </div>

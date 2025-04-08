@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import usePages from "../hooks/usePages";
 import UsernameHistory from "./UsernameHistory";
 import FollowedPages from "./FollowedPages";
+import FollowedPagesList from "./FollowedPagesList";
 import { unfollowAllPagesByUser } from "../firebase/follows";
 import { toast } from "sonner";
 
@@ -321,7 +322,7 @@ export default function UserProfileTabs({ profile }) {
                       Unfollow my pages
                     </Button>
                   </div>
-                  <FollowedPages userId={profile?.uid} limit={20} />
+                  <FollowedPagesList userId={profile?.uid} showUnfollowButtons={true} />
                 </AnimatedTabsContent>
               </TabsContent>
             </>

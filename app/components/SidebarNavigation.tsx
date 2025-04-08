@@ -73,67 +73,16 @@ export function SidebarNavigation() {
   };
 
   // Handle random page navigation
-  const handleRandomPage = async () => {
+  const handleRandomPage = () => {
     if (isRandomLoading) return; // Prevent multiple clicks
 
     setIsRandomLoading(true);
     trackEvent("random_page_clicked");
 
-    try {
-      // Query for public pages
-      const pagesRef = collection(db, 'pages');
-      const publicPagesQuery = query(
-        pagesRef,
-        where('isPublic', '==', true),
-        where('deleted', '==', false),
-        limit(100) // Limit to 100 pages for performance
-      );
+    // Use the dedicated random page route
+    window.location.href = "/random";
 
-      const snapshot = await getDocs(publicPagesQuery);
-
-      if (snapshot.empty) {
-        console.error('No pages found');
-        setIsRandomLoading(false);
-        return;
-      }
-
-      // Convert to array
-      const pages = [];
-      snapshot.forEach(doc => {
-        pages.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-
-      console.log(`Found ${pages.length} pages for random selection`);
-
-      if (pages.length === 0) {
-        console.error('No pages found after filtering');
-        setIsRandomLoading(false);
-        toast.error("No pages available for random selection");
-        return;
-      }
-
-      // Select a random page
-      const randomIndex = Math.floor(Math.random() * pages.length);
-      const randomPage = pages[randomIndex];
-
-      console.log(`Selected random page: ${randomPage.id} - ${randomPage.title || 'Untitled'}`);
-
-      // Navigate to the random page - use direct window.location.replace for more reliable navigation
-      const pageUrl = `/${randomPage.id}`;
-      console.log(`Navigating to: ${pageUrl}`);
-
-      // Use replace instead of href to avoid issues with browser history
-      window.location.replace(pageUrl);
-
-      // We don't reset loading state here because we're navigating away
-    } catch (error) {
-      console.error('Error getting random page:', error);
-      setIsRandomLoading(false);
-      toast.error("Failed to find a random page. Please try again.");
-    }
+    // We don't reset loading state here because we're navigating away
   };
 
   // Handle profile navigation

@@ -11,6 +11,7 @@ import { AccountSwitcherModal } from "./AccountSwitcherModal";
 export function AccountSwitcher() {
   const { currentAccount } = useMultiAccount();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <>
@@ -18,14 +19,11 @@ export function AccountSwitcher() {
         <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">Account</h3>
         <Button
           variant="ghost"
-          className="w-full justify-between text-sm px-2 py-1.5 h-auto"
+          className="w-full justify-between text-sm px-2 py-1.5 h-auto hover:bg-accent rounded-md"
           onClick={() => setIsModalOpen(true)}
         >
           <div className="flex items-center gap-2 w-full overflow-hidden">
-            <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium truncate">
                 {currentAccount?.username || currentAccount?.email?.split('@')[0] || 'Account'}
               </p>
@@ -33,7 +31,7 @@ export function AccountSwitcher() {
                 {currentAccount?.email || ''}
               </p>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           </div>
         </Button>
       </div>

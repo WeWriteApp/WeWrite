@@ -79,7 +79,7 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
                 key={account.uid}
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start text-sm px-2 py-1.5 h-auto",
+                  "w-full justify-start text-sm px-2 py-1.5 h-auto hover:bg-accent rounded-md",
                   currentAccount?.uid === account.uid && "bg-accent text-accent-foreground"
                 )}
                 onClick={() => {
@@ -94,10 +94,7 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
                 }}
               >
                 <div className="flex items-center gap-2 w-full overflow-hidden">
-                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 text-left">
                     <p className="text-sm font-medium truncate">
                       {account.username || account.email.split('@')[0]}
                     </p>

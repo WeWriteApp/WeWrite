@@ -10,16 +10,16 @@
 export const isLightColor = (hexColor) => {
   // Remove # if present
   const color = hexColor.replace('#', '');
-  
+
   // Convert to RGB
   const r = parseInt(color.substr(0, 2), 16);
   const g = parseInt(color.substr(2, 2), 16);
   const b = parseInt(color.substr(4, 2), 16);
-  
+
   // Calculate luminance using the formula for relative luminance in the sRGB color space
   // See: https://www.w3.org/TR/WCAG20/#relativeluminancedef
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
+
   // Return true if light (luminance > 0.5), false if dark
   return luminance > 0.5;
 };
@@ -39,18 +39,18 @@ export const getContrastText = (bgColorClass) => {
     'bg-muted': '#F1F5F9', // Light blue-gray
     'bg-destructive': '#EF4444', // Red
   };
-  
+
   // Extract the base class (e.g., 'bg-primary' from 'bg-primary hover:bg-primary/90')
   const baseClass = bgColorClass.split(' ')[0];
-  
+
   // Get the hex color for this class
   const hexColor = colorMap[baseClass];
-  
+
   // If we don't have a mapping, default to dark text
   if (!hexColor) {
     return 'text-foreground';
   }
-  
+
   // Return appropriate text color based on background lightness
   return isLightColor(hexColor) ? 'text-foreground' : 'text-primary-foreground';
 };
@@ -64,12 +64,9 @@ export const getContrastText = (bgColorClass) => {
  */
 export const getContrastAwareClasses = (isActive, activeClass = 'bg-primary', inactiveClass = 'bg-muted') => {
   if (isActive) {
-    // For active state, determine text color based on background
-    const textClass = isLightColor(activeClass.includes('#') ? activeClass : '#1768FF') 
-      ? 'text-foreground' 
-      : 'text-primary-foreground';
-    
-    return `${activeClass} ${textClass}`;
+    // For active state, always use white text for better contrast
+    // Primary color is typically dark enough to warrant white text
+    return `${activeClass} text-primary-foreground`;
   } else {
     // For inactive state
     return `${inactiveClass} text-muted-foreground hover:bg-muted/80`;

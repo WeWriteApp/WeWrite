@@ -224,10 +224,11 @@ export default function PageHeader({
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
-        } ${shouldShowExpandedHeader ? 'translate-y-0' : '-translate-y-full'}`}
+        }`}
       >
         <div className="relative mx-auto px-2 md:px-4">
-          <div className="flex items-center justify-between py-1">
+          {/* Expanded Header - Only visible when not scrolled or when scrolling up */}
+          <div className={`flex items-center justify-between py-2 transition-all duration-300 ${shouldShowExpandedHeader ? 'opacity-100 max-h-16' : 'opacity-0 max-h-0 overflow-hidden pointer-events-none'}`}>
             {/* Left Side - Back Button */}
             <div className="flex items-center gap-2">
               <Button
@@ -239,6 +240,13 @@ export default function PageHeader({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+            </div>
+
+            {/* Center - Title */}
+            <div className="flex-1 text-center">
+              <h1 className="text-lg font-semibold truncate max-w-[60vw] mx-auto">
+                {title || 'Untitled Page'}
+              </h1>
             </div>
 
             {/* Right Side - Share Button */}
@@ -253,9 +261,12 @@ export default function PageHeader({
                 <Share2 className="h-4 w-4" />
               </Button>
             </div>
+          </div>
 
+          {/* Collapsed Header - Only visible when scrolled down */}
+          <div className={`flex items-center justify-between py-1 transition-all duration-300 ${isScrolled && !shouldShowExpandedHeader ? 'opacity-100 max-h-12' : 'opacity-0 max-h-0 overflow-hidden pointer-events-none'}`}>
             {/* Center - Title and Author */}
-            <div className="flex-1 flex justify-start items-center ml-4">
+            <div className="flex-1 flex justify-start items-center">
               <div className={`text-left space-y-0 transition-all duration-120 ${
                 isScrolled ? "max-w-[85vw] flex flex-row items-center gap-2" : "max-w-full"
               }`}>
