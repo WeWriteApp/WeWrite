@@ -2,12 +2,12 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  FilePlus, 
-  Shuffle, 
-  User, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  FilePlus,
+  Shuffle,
+  User,
   Palette,
   Home
 } from "lucide-react";
@@ -15,7 +15,13 @@ import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import { useTheme } from "next-themes";
 import { useAuth } from "../providers/AuthProvider";
-import { AccentColorSelector } from "./AccentColorSelector";
+import dynamic from 'next/dynamic';
+
+// Dynamically import AccentColorSelector to avoid hydration issues
+const AccentColorSelector = dynamic(
+  () => import('./AccentColorSelector'),
+  { ssr: false }
+);
 
 // Define navigation levels
 type NavLevel = "main" | "themes";
@@ -73,7 +79,7 @@ export function SidebarNavigation() {
   // Handle profile navigation
   const handleProfile = () => {
     if (!user) return;
-    
+
     trackEvent("profile_clicked", { userId: user.uid });
     router.push(`/u/${user.uid}`);
   };
@@ -194,7 +200,10 @@ export function SidebarNavigation() {
 
         <div className="mb-6">
           <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Accent Color</h3>
-          <AccentColorSelector />
+          {/* Wrap AccentColorSelector in error boundary */}
+          <React.Suspense fallback={<div className="p-3 text-sm text-muted-foreground">Loading color options...</div>}>
+            <AccentColorSelector />
+          </React.Suspense>
         </div>
       </div>
     );
@@ -205,45 +214,45 @@ export function SidebarNavigation() {
     <div className="flex flex-col h-full">
       <div className="mb-6">
         <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Navigation</h3>
-        
-        <NavItem 
-          icon={<Home className="h-4 w-4" />} 
-          label="Home" 
+
+        <NavItem
+          icon={<Home className="h-4 w-4" />}
+          label="Home"
           onClick={() => {
             router.push("/");
             trackEvent("home_clicked");
-          }} 
+          }}
         />
-        
-        <NavItem 
-          icon={<FilePlus className="h-4 w-4" />} 
-          label="New Page" 
-          onClick={handleNewPage} 
+
+        <NavItem
+          icon={<FilePlus className="h-4 w-4" />}
+          label="New Page"
+          onClick={handleNewPage}
         />
-        
-        <NavItem 
-          icon={<Shuffle className="h-4 w-4" />} 
-          label="Random Page" 
-          onClick={handleRandomPage} 
+
+        <NavItem
+          icon={<Shuffle className="h-4 w-4" />}
+          label="Random Page"
+          onClick={handleRandomPage}
         />
-        
-        <NavItem 
-          icon={<User className="h-4 w-4" />} 
-          label="My Profile" 
-          onClick={handleProfile} 
+
+        <NavItem
+          icon={<User className="h-4 w-4" />}
+          label="My Profile"
+          onClick={handleProfile}
         />
       </div>
 
       <div className="mb-6">
         <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Appearance</h3>
-        <NavItem 
-          icon={<Palette className="h-4 w-4" />} 
-          label="Themes" 
+        <NavItem
+          icon={<Palette className="h-4 w-4" />}
+          label="Themes"
           hasSubmenu={true}
           onClick={() => {
             setCurrentLevel("themes");
             trackEvent("themes_submenu_opened");
-          }} 
+          }}
         />
       </div>
     </div>
