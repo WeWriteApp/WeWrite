@@ -5,6 +5,7 @@ import { auth } from "../firebase/config";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { PasswordModal } from "../components/PasswordModal";
 
 // Maximum number of accounts that can be stored
 const MAX_ACCOUNTS = 5;
@@ -26,6 +27,12 @@ export const MultiAccountProvider = ({ children }) => {
   const [accounts, setAccounts] = useState([]);
   const [currentAccount, setCurrentAccount] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // State for password modal
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [accountToSwitch, setAccountToSwitch] = useState(null);
+  const [passwordError, setPasswordError] = useState(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Load saved accounts from localStorage on mount
   useEffect(() => {
@@ -53,7 +60,7 @@ export const MultiAccountProvider = ({ children }) => {
         try {
           // Get user data from Firestore
           const userDoc = await getDoc(doc(db, "users", user.uid));
-          
+
           let userData = {
             uid: user.uid,
             email: user.email,
@@ -70,7 +77,7 @@ export const MultiAccountProvider = ({ children }) => {
           }
 
           setCurrentAccount(userData);
-          
+
           // Update accounts list if this is a new account
           updateAccountsList(userData);
         } catch (error) {
@@ -86,7 +93,7 @@ export const MultiAccountProvider = ({ children }) => {
       } else {
         setCurrentAccount(null);
       }
-      
+
       setLoading(false);
     });
 
@@ -105,7 +112,7 @@ export const MultiAccountProvider = ({ children }) => {
     setAccounts(prevAccounts => {
       // Check if this account already exists in the list
       const existingIndex = prevAccounts.findIndex(acc => acc.uid === userData.uid);
-      
+
       if (existingIndex >= 0) {
         // Update existing account
         const updatedAccounts = [...prevAccounts];
@@ -121,54 +128,81 @@ export const MultiAccountProvider = ({ children }) => {
           ...userData,
           lastUsed: new Date().toISOString()
         };
-        
+
         // If we're at the limit, don't add a new account
         if (prevAccounts.length >= MAX_ACCOUNTS) {
           console.warn(`Maximum account limit (${MAX_ACCOUNTS}) reached. Cannot add more accounts.`);
           return prevAccounts;
         }
-        
+
         return [...prevAccounts, newAccount];
       }
     });
+  };
+
+  // Handle password submission from modal
+  const handlePasswordSubmit = async (password) => {
+    if (!accountToSwitch || !accountToSwitch.email) {
+      setPasswordError("Account information is missing");
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setPasswordError(null);
+
+    try {
+      // Sign in with the selected account
+      await signInWithEmailAndPassword(auth, accountToSwitch.email, password);
+
+      // Update the last used timestamp
+      setAccounts(prevAccounts =>
+        prevAccounts.map(acc =>
+          acc.uid === accountToSwitch.uid
+            ? { ...acc, lastUsed: new Date().toISOString() }
+            : acc
+        )
+      );
+
+      // Close modal and reset state
+      setPasswordModalOpen(false);
+      setAccountToSwitch(null);
+      setIsAuthenticating(false);
+
+      return true;
+    } catch (error) {
+      console.error("Error switching account:", error);
+      setPasswordError("Invalid password. Please try again.");
+      setIsAuthenticating(false);
+      return false;
+    }
   };
 
   // Switch to a different account
   const switchAccount = async (accountId) => {
     // First sign out of the current account
     await signOut(auth);
-    
+
     // Find the account to switch to
-    const accountToSwitch = accounts.find(acc => acc.uid === accountId);
-    if (!accountToSwitch || !accountToSwitch.email) {
+    const account = accounts.find(acc => acc.uid === accountId);
+    if (!account || !account.email) {
       throw new Error("Account not found or missing email");
     }
-    
-    // We need to prompt for password since we don't store passwords
-    const password = prompt(`Enter password for ${accountToSwitch.email}:`);
-    if (!password) {
-      return false; // User cancelled
-    }
-    
-    try {
-      // Sign in with the selected account
-      await signInWithEmailAndPassword(auth, accountToSwitch.email, password);
-      
-      // Update the last used timestamp
-      setAccounts(prevAccounts => 
-        prevAccounts.map(acc => 
-          acc.uid === accountId 
-            ? { ...acc, lastUsed: new Date().toISOString() } 
-            : acc
-        )
-      );
-      
-      return true;
-    } catch (error) {
-      console.error("Error switching account:", error);
-      alert("Failed to sign in. Please check your password and try again.");
-      return false;
-    }
+
+    // Set the account to switch to and open the password modal
+    setAccountToSwitch(account);
+    setPasswordModalOpen(true);
+
+    // Return a promise that will be resolved when the modal is closed
+    return new Promise((resolve) => {
+      // We'll resolve this promise when the authentication is complete
+      // The actual authentication happens in handlePasswordSubmit
+      const checkInterval = setInterval(() => {
+        if (!passwordModalOpen) {
+          clearInterval(checkInterval);
+          resolve(true);
+        }
+      }, 500);
+    });
   };
 
   // Remove an account from the list
@@ -192,6 +226,21 @@ export const MultiAccountProvider = ({ children }) => {
 
   return (
     <MultiAccountContext.Provider value={value}>
+      {/* Password Modal */}
+      {passwordModalOpen && accountToSwitch && (
+        <PasswordModal
+          isOpen={passwordModalOpen}
+          onClose={() => {
+            setPasswordModalOpen(false);
+            setAccountToSwitch(null);
+            setPasswordError(null);
+          }}
+          onSubmit={handlePasswordSubmit}
+          email={accountToSwitch.email}
+          isLoading={isAuthenticating}
+          error={passwordError}
+        />
+      )}
       {children}
     </MultiAccountContext.Provider>
   );
