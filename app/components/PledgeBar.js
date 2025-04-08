@@ -453,19 +453,25 @@ const PledgeBar = () => {
         className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
+        onClick={() => setShowActivationModal(true)}
       >
-        <CompositionBar
-          value={pledges[0]?.amount || 0}
-          max={subscription?.amount || 100}
-          onChange={() => {}}
-          disabled={false}
-          pledges={pledges}
-          subscriptionAmount={subscription?.amount || 0}
-          onPledgeChange={handlePledgeInteraction}
-          onPledgeCustomAmount={handlePledgeCustomAmount}
-          onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
-        />
+        <div className="w-full max-w-md mx-auto cursor-pointer">
+          <CompositionBar
+            value={pledges[0]?.amount || 0}
+            max={subscription?.amount || 100}
+            onChange={() => {}}
+            disabled={false}
+            pledges={pledges}
+            subscriptionAmount={subscription?.amount || 0}
+            onPledgeChange={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
+            onPledgeCustomAmount={(e) => {
+              e.stopPropagation(); // Prevent clicks from bubbling up
+              handlePledgeCustomAmount(e);
+            }}
+            onDeletePledge={() => {}}
+            className="w-full bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
+          />
+        </div>
       </div>
 
       {/* Pledge Modal */}

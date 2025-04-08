@@ -51,6 +51,7 @@ function NavItem({ icon, label, onClick, hasSubmenu = false }: NavItemProps) {
 
 export function SidebarNavigation() {
   const [currentLevel, setCurrentLevel] = useState<NavLevel>("main");
+  const [isRandomLoading, setIsRandomLoading] = useState(false);
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
@@ -70,6 +71,9 @@ export function SidebarNavigation() {
 
   // Handle random page navigation
   const handleRandomPage = async () => {
+    if (isRandomLoading) return; // Prevent multiple clicks
+
+    setIsRandomLoading(true);
     trackEvent("random_page_clicked");
 
     try {
@@ -90,6 +94,7 @@ export function SidebarNavigation() {
 
       if (snapshot.empty) {
         console.error('No pages found');
+        setIsRandomLoading(false);
         return;
       }
 
@@ -108,10 +113,13 @@ export function SidebarNavigation() {
 
       // Navigate to the random page
       router.push(`/${randomPage.id}`);
+
+      // We don't reset loading state here because we're navigating away
     } catch (error) {
       console.error('Error getting random page:', error);
       // Fallback to the random page route
       router.push("/random");
+      // We don't reset loading state here because we're navigating away
     }
   };
 
@@ -191,10 +199,66 @@ export function SidebarNavigation() {
     }
   ];
 
-  // Render the appropriate level
-  if (currentLevel === "themes") {
-    return (
-      <div className="flex flex-col h-full">
+  // Render the appropriate level with animation
+  return (
+    <div className="relative overflow-hidden h-full">
+      {/* Main Navigation */}
+      <div
+        className={`absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out ${currentLevel === "themes" ? "-translate-x-full" : "translate-x-0"}`}
+      >
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Navigation</h3>
+
+          <NavItem
+            icon={<Home className="h-4 w-4" />}
+            label="Home"
+            onClick={() => {
+              router.push("/");
+              trackEvent("home_clicked");
+            }}
+          />
+
+          <NavItem
+            icon={<FilePlus className="h-4 w-4" />}
+            label="New Page"
+            onClick={handleNewPage}
+          />
+
+          <NavItem
+            icon={isRandomLoading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <Shuffle className="h-4 w-4" />
+            )}
+            label={isRandomLoading ? "Loading..." : "Random Page"}
+            onClick={handleRandomPage}
+          />
+
+          <NavItem
+            icon={<User className="h-4 w-4" />}
+            label="My Profile"
+            onClick={handleProfile}
+          />
+        </div>
+
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Appearance</h3>
+          <NavItem
+            icon={<Palette className="h-4 w-4" />}
+            label="Themes"
+            hasSubmenu={true}
+            onClick={() => {
+              setCurrentLevel("themes");
+              trackEvent("themes_submenu_opened");
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Themes Submenu */}
+      <div
+        className={`absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out ${currentLevel === "themes" ? "translate-x-0" : "translate-x-full"}`}
+      >
         <div className="flex items-center mb-6">
           <Button
             variant="ghost"
@@ -244,55 +308,6 @@ export function SidebarNavigation() {
             <AccentColorSelector />
           </React.Suspense>
         </div>
-      </div>
-    );
-  }
-
-  // Main navigation level
-  return (
-    <div className="flex flex-col h-full">
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Navigation</h3>
-
-        <NavItem
-          icon={<Home className="h-4 w-4" />}
-          label="Home"
-          onClick={() => {
-            router.push("/");
-            trackEvent("home_clicked");
-          }}
-        />
-
-        <NavItem
-          icon={<FilePlus className="h-4 w-4" />}
-          label="New Page"
-          onClick={handleNewPage}
-        />
-
-        <NavItem
-          icon={<Shuffle className="h-4 w-4" />}
-          label="Random Page"
-          onClick={handleRandomPage}
-        />
-
-        <NavItem
-          icon={<User className="h-4 w-4" />}
-          label="My Profile"
-          onClick={handleProfile}
-        />
-      </div>
-
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Appearance</h3>
-        <NavItem
-          icon={<Palette className="h-4 w-4" />}
-          label="Themes"
-          hasSubmenu={true}
-          onClick={() => {
-            setCurrentLevel("themes");
-            trackEvent("themes_submenu_opened");
-          }}
-        />
       </div>
     </div>
   );
