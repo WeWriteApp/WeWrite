@@ -75,11 +75,25 @@ export const followPage = async (userId, pageId) => {
 
     // Add a record to the pageFollowers collection
     const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
-    await setDoc(pageFollowerRef, {
-      pageId,
-      userId,
-      followedAt: serverTimestamp()
-    });
+
+    // Check if the document already exists
+    const pageFollowerDoc = await getDoc(pageFollowerRef);
+
+    if (pageFollowerDoc.exists()) {
+      // If it exists, update it to ensure it's not marked as deleted
+      await updateDoc(pageFollowerRef, {
+        deleted: false,
+        followedAt: serverTimestamp()
+      });
+    } else {
+      // Create a new document with deleted explicitly set to false
+      await setDoc(pageFollowerRef, {
+        pageId,
+        userId,
+        deleted: false,
+        followedAt: serverTimestamp()
+      });
+    }
 
     return true;
   } catch (error) {
@@ -192,15 +206,31 @@ export const isFollowingPage = async (userId, pageId) => {
   }
 
   try {
+    // First check the userFollows collection
     const userFollowsRef = doc(db, 'userFollows', userId);
     const userFollowsDoc = await getDoc(userFollowsRef);
 
+    let isFollowing = false;
+
     if (userFollowsDoc.exists()) {
       const data = userFollowsDoc.data();
-      return data.followedPages && data.followedPages.includes(pageId);
+      isFollowing = data.followedPages && data.followedPages.includes(pageId);
     }
 
-    return false;
+    // If not found in userFollows, also check the pageFollowers collection
+    // This ensures consistency between the two collections
+    if (!isFollowing) {
+      const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
+      const pageFollowerDoc = await getDoc(pageFollowerRef);
+
+      if (pageFollowerDoc.exists()) {
+        const data = pageFollowerDoc.data();
+        // Only consider it a follow if not marked as deleted
+        isFollowing = data.deleted !== true;
+      }
+    }
+
+    return isFollowing;
   } catch (error) {
     console.error('Error checking if following page:', error);
     return false;
@@ -337,8 +367,13 @@ export const getUserFollowerCount = async (userId) => {
       // Add each unique follower to the set, filtering out deleted ones
       followersSnapshot.forEach(doc => {
         const data = doc.data();
-        // Only count followers where deleted is not true and don't count self-follows
-        if (data.userId && data.userId !== userId && data.deleted !== true) {
+        // Only count followers where:
+        // 1. They have a valid userId
+        // 2. It's not a self-follow
+        // 3. The follow is not marked as deleted (deleted === false or deleted field doesn't exist)
+        if (data.userId &&
+            data.userId !== userId &&
+            (data.deleted === false || data.deleted === undefined)) {
           uniqueFollowers.add(data.userId);
         }
       });
