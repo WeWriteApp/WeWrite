@@ -1,5 +1,6 @@
 "use client";
 import React, { useContext, useState, useEffect } from "react";
+import UserActivitySparkline from "./UserActivitySparkline";
 import { PillLink } from "./PillLink";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -135,6 +136,17 @@ const SingleProfileView = ({ profile }) => {
               )}
             </span>
             <span className="text-xs text-muted-foreground">followers</span>
+          </div>
+        </div>
+
+        {/* Activity Sparkline */}
+        <div className="flex flex-col items-center justify-center mb-6 px-4">
+          <div className="w-full max-w-xs">
+            <UserActivitySparkline userId={profile.uid} className="mb-1" />
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <span>Recent Activity</span>
+              <span>Last 14 days</span>
+            </div>
           </div>
         </div>
 

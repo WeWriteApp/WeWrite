@@ -121,10 +121,12 @@ export function SidebarNavigation() {
 
       console.log(`Selected random page: ${randomPage.id} - ${randomPage.title || 'Untitled'}`);
 
-      // Navigate to the random page - use direct window.location for more reliable navigation
+      // Navigate to the random page - use direct window.location.replace for more reliable navigation
       const pageUrl = `/${randomPage.id}`;
       console.log(`Navigating to: ${pageUrl}`);
-      window.location.href = pageUrl;
+
+      // Use replace instead of href to avoid issues with browser history
+      window.location.replace(pageUrl);
 
       // We don't reset loading state here because we're navigating away
     } catch (error) {

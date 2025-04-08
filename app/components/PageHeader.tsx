@@ -199,12 +199,16 @@ export default function PageHeader({
       }
     } catch (error) {
       console.error('Error sharing:', error);
-      // Fallback to clipboard if sharing fails
-      try {
-        await navigator.clipboard.writeText(url);
-        toast.success('Link copied to clipboard');
-      } catch (clipboardError) {
-        toast.error('Could not share or copy link');
+
+      // Don't show error toast if user aborted the share
+      if (error.name !== 'AbortError') {
+        // Fallback to clipboard if sharing fails
+        try {
+          await navigator.clipboard.writeText(url);
+          toast.success('Link copied to clipboard');
+        } catch (clipboardError) {
+          toast.error('Could not share or copy link');
+        }
       }
     }
   };
@@ -227,31 +231,27 @@ export default function PageHeader({
             {/* Left Side - Back Button */}
             <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className={`md:mr-2 text-foreground transition-opacity duration-120 ${
-                  isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
-                }`}
+                className="h-8 w-8 rounded-full"
                 onClick={handleBackClick}
                 title="Go back"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Right Side - Share Button (only in expanded header) */}
+            {/* Right Side - Share Button */}
             <div className="flex items-center gap-2">
-              {!isScrolled && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 rounded-full"
-                  onClick={handleShare}
-                  title="Share"
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={handleShare}
+                title="Share"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
 
             {/* Center - Title and Author */}

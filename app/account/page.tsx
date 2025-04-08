@@ -6,7 +6,7 @@ import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
 import { useAuth } from '../providers/AuthProvider';
-import { signOut } from 'firebase/auth';
+import { signOut, sendEmailVerification, updateEmail } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import {
   getUserSubscription,
@@ -101,6 +101,7 @@ export default function AccountPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [nextPaymentDate, setNextPaymentDate] = useState<Date | null>(null);
   const [timeUntilPayment, setTimeUntilPayment] = useState('');
@@ -277,8 +278,9 @@ export default function AccountPage() {
         console.error("Error loading user profile:", err);
       }
 
-      // Set user email
+      // Set user email and verification status
       setEmail(user.email || '');
+      setIsEmailVerified(user.emailVerified || false);
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -434,12 +436,18 @@ export default function AccountPage() {
 
     try {
       // Update email in Firebase Authentication
-      await updateFirebaseEmail(user, newEmail);
+      await updateEmail(user, newEmail);
 
       // Update email in state
       setEmail(newEmail);
 
-      alert('Email updated successfully!');
+      // Reset verification status
+      setIsEmailVerified(false);
+
+      // Send verification email
+      await sendEmailVerification(user);
+
+      alert('Email updated successfully! Please check your inbox to verify your new email address.');
     } catch (error) {
       console.error('Error updating email:', error);
 
@@ -454,6 +462,18 @@ export default function AccountPage() {
         setEmailError('Failed to update email. Please try again.');
         alert('Failed to update email. Please try again.');
       }
+    }
+  };
+
+  const handleSendVerificationEmail = async () => {
+    if (!user) return;
+
+    try {
+      await sendEmailVerification(user);
+      alert('Verification email sent! Please check your inbox.');
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      alert('Failed to send verification email. Please try again later.');
     }
   };
 
@@ -726,9 +746,39 @@ export default function AccountPage() {
 
               <div>
                 <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start">
                   <div>
                     <p className="text-foreground">{email || 'No email set'}</p>
+
+                    {/* Email verification status */}
+                    {email && (
+                      <div className="mt-1 flex items-center">
+                        {isEmailVerified ? (
+                          <p className="text-xs text-green-500 flex items-center">
+                            <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Email verified
+                          </p>
+                        ) : (
+                          <div className="flex flex-col">
+                            <p className="text-xs text-amber-500 flex items-center">
+                              <svg className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Email not verified
+                            </p>
+                            <button
+                              onClick={handleSendVerificationEmail}
+                              className="text-xs text-primary mt-1 hover:underline"
+                            >
+                              Resend verification email
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
                   </div>
                   <button
