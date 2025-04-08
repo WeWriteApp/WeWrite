@@ -87,11 +87,11 @@ export default function AccentColorSelector() {
 
                 {/* Color indicator */}
                 <div
-                  className="w-4 h-4 rounded-full mr-2"
+                  className="w-4 h-4 rounded-full mr-2 flex items-center justify-center"
                   style={{ backgroundColor: option.color }}
                 >
                   {option.value.startsWith('custom') && (
-                    <Palette className="h-4 w-4 text-white" />
+                    <Palette className="h-3 w-3 text-white opacity-70" />
                   )}
                 </div>
 
@@ -103,7 +103,7 @@ export default function AccentColorSelector() {
 
               {/* Edit button for custom color */}
               {option.value.startsWith('custom') && (
-                <label htmlFor={`color-picker-${option.value}`} className="cursor-pointer p-2 hover:bg-accent rounded-full transition-colors">
+                <label htmlFor={`color-picker-${option.value}`} className="cursor-pointer p-2 hover:bg-accent rounded-full transition-colors flex items-center justify-center">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
                     <path d="m15 5 4 4"></path>

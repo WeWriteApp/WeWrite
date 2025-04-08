@@ -183,7 +183,11 @@ export default function PageHeader({
   const handleShare = async () => {
     const url = window.location.href;
     const pageTitle = title || 'Untitled Page';
-    const twitterShareText = `Read ${pageTitle} on @WeWriteApp ${url}`;
+    const username = displayUsername || 'Anonymous';
+
+    // Format share text with quotes around title and include username
+    const twitterShareText = `Check out "${pageTitle}" by ${username} on @WeWriteApp ${url}`;
+    const generalShareText = `Check out "${pageTitle}" by ${username} on WeWrite ${url}`;
 
     try {
       // Check if it's a Twitter/X share intent
@@ -197,7 +201,7 @@ export default function PageHeader({
         // Use Web Share API if available
         await navigator.share({
           title: pageTitle,
-          text: twitterShareText,
+          text: generalShareText,
           url: url
         });
       } else {

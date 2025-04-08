@@ -637,7 +637,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       // Handle creating a new page
       if (item.isNewPage) {
         // Create a new page with the given title
-        const newPageUrl = `/pages/new?title=${encodeURIComponent(item.pageTitle)}`;
+        const newPageUrl = `/new?title=${encodeURIComponent(item.pageTitle)}`;
 
         if (selectedNodePath) {
           // If editing an existing link
@@ -1013,6 +1013,30 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
     });
   }
 
+  // Prevent cursor selection inside links by making the entire link act as a single unit
+  const handleKeyDown = (e) => {
+    // If Backspace or Delete is pressed, delete the entire link
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      const path = ReactEditor.findPath(editor, element);
+      Transforms.removeNodes(editor, { at: path });
+      return;
+    }
+
+    // For arrow keys, prevent cursor from moving inside the link
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const path = ReactEditor.findPath(editor, element);
+
+      // Move cursor to before or after the link based on arrow direction
+      if (e.key === 'ArrowLeft') {
+        Transforms.select(editor, Editor.before(editor, path));
+      } else {
+        Transforms.select(editor, Editor.after(editor, path));
+      }
+    }
+  };
+
   return (
     <a
       {...attributes}
@@ -1021,12 +1045,16 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       data-page-id={element.pageId}
       data-page-title={element.pageTitle}
       data-user-id={isUserLink ? element.userId : undefined}
       data-username={isUserLink ? element.username : undefined}
+      contentEditable={false} // Make the link not directly editable
     >
-      <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
+      <span contentEditable={false}>
+        <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
+      </span>
     </a>
   );
 };

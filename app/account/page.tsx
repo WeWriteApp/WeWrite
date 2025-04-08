@@ -811,16 +811,16 @@ export default function AccountPage() {
             </div>
           </section>
 
-          {/* OpenCollective Section */}
+          {/* Subscription & Payouts Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Support WeWrite</h3>
-            <Alert className="bg-primary/10 border-primary/20">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <AlertTitle className="text-primary">Payments Coming Soon</AlertTitle>
-              <AlertDescription className="text-primary/90">
-                <p className="mb-4">We're working on implementing payments. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
-                <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
-                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+            <h3 className="text-base font-medium mb-4">Subscription & Payouts</h3>
+            <Alert className="bg-green-500/10 border-green-500/20">
+              <AlertCircle className="h-4 w-4 text-green-500" />
+              <AlertTitle className="text-green-500">Coming Soon</AlertTitle>
+              <AlertDescription className="text-green-500/90">
+                <p className="mb-4">We're working on implementing subscription and payout features. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
+                <Button asChild className="bg-green-600 hover:bg-green-700 text-white w-full">
+                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full">
                     <DollarSign className="h-4 w-4" />
                     Support on OpenCollective
                   </a>
