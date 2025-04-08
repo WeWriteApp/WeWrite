@@ -6,6 +6,7 @@ import { GroupsContext } from "../providers/GroupsProvider";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
 import { useLogging } from "../providers/LoggingProvider";
 import { X, Loader2 } from "lucide-react";
+import { Button } from "./ui/button";
 import { usePage } from "../contexts/PageContext";
 import PageEditor from "./PageEditor";
 
@@ -120,9 +121,26 @@ const EditPage = ({
   // Display error message if provided
   if (editorError) {
     return (
-      <div className="bg-destructive/10 p-4 rounded-md mb-4">
-        <p className="text-destructive font-medium">{editorError}</p>
-        <p className="text-sm text-muted-foreground mt-2">Try refreshing the page or contact support if this issue persists.</p>
+      <div className="bg-destructive/10 dark:bg-destructive/20 p-6 rounded-lg mb-6 border border-destructive/30 shadow-sm">
+        <h3 className="text-lg font-semibold text-destructive mb-2">Error Loading Editor</h3>
+        <p className="text-destructive/90 font-medium mb-4">{editorError}</p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={handleCancel}
+          >
+            Cancel Editing
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground mt-4">If this issue persists, please contact support.</p>
       </div>
     );
   }

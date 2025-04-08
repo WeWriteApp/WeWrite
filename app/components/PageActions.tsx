@@ -130,9 +130,22 @@ export function PageActions({
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this page? This action cannot be undone.")) {
       try {
-        await deletePage(page.id);
-        toast.success("Page deleted successfully");
+        // Immediately update UI state to prevent rendering errors
+        if (setIsEditing) {
+          setIsEditing(false);
+        }
+
+        // Show loading toast
+        const toastId = toast.loading("Deleting page...");
+
+        // Navigate away first to prevent rendering errors
         router.push("/");
+
+        // Then delete the page in the background
+        await deletePage(page.id);
+
+        // Update the toast
+        toast.success("Page deleted successfully", { id: toastId });
       } catch (error) {
         console.error("Error deleting page:", error);
         toast.error("Failed to delete page");

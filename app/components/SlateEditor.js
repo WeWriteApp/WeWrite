@@ -585,8 +585,16 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       }
     } catch (error) {
       console.error("Error rendering element:", error, "Element:", JSON.stringify(element));
-      // Fallback rendering on error
-      return <div {...attributes} style={{ backgroundColor: 'rgba(255,0,0,0.1)', border: '1px solid red', padding: '2px' }}>Error rendering node. {children}</div>;
+      // Fallback rendering on error with more helpful message
+      return (
+        <div
+          {...attributes}
+          className="bg-red-100/20 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded p-2 my-1"
+        >
+          <span className="text-red-600 dark:text-red-400 font-medium">Error rendering content.</span>
+          {children}
+        </div>
+      );
     }
   }, [editor, lineMode]); // Updated dependencies
 
@@ -1520,6 +1528,10 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 // Custom Leaf component for text formatting
 const Leaf = ({ attributes, children, leaf }) => {
   try {
+    if (!leaf) {
+      return <span {...attributes}>{children}</span>;
+    }
+
     if (leaf.bold) {
       children = <strong>{children}</strong>;
     }

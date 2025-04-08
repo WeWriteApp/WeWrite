@@ -11,7 +11,8 @@ import {
   query,
   where,
   orderBy,
-  limit
+  limit,
+  writeBatch
 } from "firebase/firestore";
 
 import { app } from "./config";
@@ -497,22 +498,46 @@ export const removeDoc = async (collectionName, docName) => {
 export const deletePage = async (pageId) => {
   // remove page and the versions subcollection
   try {
+    if (!pageId) {
+      console.error("deletePage called with invalid pageId");
+      throw new Error("Invalid page ID");
+    }
+
+    console.log(`Deleting page ${pageId} and its versions`);
     const pageRef = doc(db, "pages", pageId);
+
+    // First check if the page exists
+    const pageSnap = await getDoc(pageRef);
+    if (!pageSnap.exists()) {
+      console.warn(`Page ${pageId} does not exist, nothing to delete`);
+      return true; // Return success since the end state is as expected
+    }
+
+    // Get all versions
     const versionsRef = collection(pageRef, "versions");
     const versionsSnap = await getDocs(versionsRef);
+    console.log(`Found ${versionsSnap.size} versions to delete`);
 
-    // delete all versions
-    versionsSnap.forEach(async (doc) => {
-      await deleteDoc(doc.ref);
+    // Delete all versions using a batch for better atomicity
+    const batch = writeBatch(db);
+    let versionCount = 0;
+
+    versionsSnap.forEach((doc) => {
+      batch.delete(doc.ref);
+      versionCount++;
     });
 
-    // delete the page
-    await deleteDoc(pageRef);
+    // Add the page deletion to the batch
+    batch.delete(pageRef);
+
+    // Commit the batch
+    await batch.commit();
+    console.log(`Successfully deleted page ${pageId} and ${versionCount} versions`);
 
     return true;
   } catch (e) {
-    console.log(e);
-    return e;
+    console.error(`Error deleting page ${pageId}:`, e);
+    throw e; // Re-throw to allow proper error handling upstream
   }
 }
 

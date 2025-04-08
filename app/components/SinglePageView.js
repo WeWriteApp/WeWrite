@@ -300,11 +300,14 @@ function SinglePageView({ params }) {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center py-12">
-          <h1 className="text-2xl font-bold mb-4">Page not found</h1>
-          <p className="text-muted-foreground mb-6">This page may have been deleted or never existed.</p>
-          <Link href="/">
-            <Button>Go Home</Button>
-          </Link>
+          <div className="bg-background border border-border rounded-lg p-8 shadow-sm max-w-md w-full text-center">
+            <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold mb-4">Page not found</h1>
+            <p className="text-muted-foreground mb-6">This page may have been deleted or never existed.</p>
+            <Link href="/">
+              <Button className="w-full">Go Home</Button>
+            </Link>
+          </div>
         </div>
       </Layout>
     );
