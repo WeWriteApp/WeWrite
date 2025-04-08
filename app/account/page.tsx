@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut } from 'lucide-react';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
 import { useAuth } from '../providers/AuthProvider';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase/config';
 import {
   getUserSubscription,
   updateSubscription,
@@ -756,6 +758,28 @@ export default function AccountPage() {
                 </Button>
               </AlertDescription>
             </Alert>
+          </section>
+
+          {/* Logout Section */}
+          <section>
+            <h3 className="text-base font-medium mb-4">Account Actions</h3>
+            <div className="bg-background rounded-lg border border-border p-4">
+              <Button
+                variant="destructive"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={async () => {
+                  try {
+                    await signOut(auth);
+                    router.push('/');
+                  } catch (error) {
+                    console.error('Error signing out:', error);
+                  }
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Log out</span>
+              </Button>
+            </div>
           </section>
 
           {/* Social Media Section */}

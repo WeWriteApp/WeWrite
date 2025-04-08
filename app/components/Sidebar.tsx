@@ -49,7 +49,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-theme-medium border-r-only z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto",
+          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-theme-medium border-r-only z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto pb-24",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -72,45 +72,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <SidebarNavigation />
           </div>
 
-          {/* Account Switcher and Settings buttons at bottom */}
+          {/* Account Switcher at bottom */}
           <div className="mt-auto pt-4 border-t border-border">
             {/* Account Switcher */}
             <AccountSwitcher />
-
-            {/* Settings Button */}
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-foreground hover:bg-accent mb-2"
-              onClick={() => router.push('/account')}
-            >
-              <Settings className="size-4 mr-2" />
-              <span>Settings</span>
-            </Button>
-
-            {/* Logout Button */}
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleLogout}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5 mr-2 text-destructive"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
-              <span>Log out</span>
-            </Button>
           </div>
         </div>
       </div>

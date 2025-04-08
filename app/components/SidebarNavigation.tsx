@@ -16,6 +16,9 @@ import { cn } from "../lib/utils";
 import { useTheme } from "next-themes";
 import { useAuth } from "../providers/AuthProvider";
 import dynamic from 'next/dynamic';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { toast } from 'sonner';
 
 // Dynamically import AccentColorSelector to avoid hydration issues
 const AccentColorSelector = dynamic(
@@ -77,10 +80,6 @@ export function SidebarNavigation() {
     trackEvent("random_page_clicked");
 
     try {
-      // Directly fetch a random page from the database
-      const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../firebase/config');
-
       // Query for public pages
       const pagesRef = collection(db, 'pages');
       const publicPagesQuery = query(
@@ -112,14 +111,13 @@ export function SidebarNavigation() {
       const randomPage = pages[randomIndex];
 
       // Navigate to the random page
-      router.push(`/${randomPage.id}`);
+      window.location.href = `/${randomPage.id}`;
 
       // We don't reset loading state here because we're navigating away
     } catch (error) {
       console.error('Error getting random page:', error);
-      // Fallback to the random page route
-      router.push("/random");
-      // We don't reset loading state here because we're navigating away
+      setIsRandomLoading(false);
+      toast.error("Failed to find a random page. Please try again.");
     }
   };
 

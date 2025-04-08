@@ -86,6 +86,12 @@ export default function ReplyContent({
     if (onContentChange) {
       onContentChange(validatedContent);
     }
+
+    // Log the content structure to help with debugging
+    if (validatedContent && validatedContent.length > 0) {
+      const firstParagraph = validatedContent[0];
+      console.log('Reply attribution structure:', JSON.stringify(firstParagraph, null, 2));
+    }
   };
 
   if (loading) {

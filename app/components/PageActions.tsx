@@ -248,7 +248,7 @@ export function PageActions({
         <Button
           variant="outline"
           size="md"
-          className="gap-2 w-full md:w-auto"
+          className="gap-2 w-full"
           onClick={handleCopyLink}
         >
           <Link2 className="h-4 w-4" />
@@ -262,7 +262,7 @@ export function PageActions({
             <Button
               variant="outline"
               size="md"
-              className="gap-2 w-full md:w-auto"
+              className="gap-2 w-full"
               onClick={handleReply}
             >
               <Reply className="h-4 w-4" />
@@ -274,7 +274,7 @@ export function PageActions({
               <Button
                 variant="outline"
                 size="md"
-                className="gap-2 w-full md:w-auto"
+                className="gap-2 w-full"
                 // No onClick needed here, AuthModal handles opening
               >
                 <Reply className="h-4 w-4" />
@@ -290,7 +290,7 @@ export function PageActions({
             <Button
               variant="outline"
               size="md"
-              className="gap-2 w-full md:w-auto"
+              className="gap-2 w-full"
             >
               <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode

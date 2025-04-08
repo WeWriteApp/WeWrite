@@ -107,8 +107,8 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
           className="action-buttons-container"
         />
 
-        {/* Follow button - only show when not editing and not the owner */}
-        {!isEditing && !isOwner && user && (
+        {/* Follow button - only show when not editing, not the owner, and not viewing own page */}
+        {!isEditing && !isOwner && user && user.uid !== page.userId && (
           <FollowButton
             pageId={page.id}
             pageTitle={page.title}

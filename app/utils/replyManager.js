@@ -32,7 +32,39 @@ export const prepareReplyContent = async (pageId) => {
     }
 
     // Get username from the page or user record
-    let displayUsername = await fetchUsernameForPage(pageData);
+    let displayUsername = "Anonymous";
+
+    // Try to get the username from the API first (most reliable)
+    try {
+      if (pageData.userId) {
+        const apiUsername = await fetchUsernameFromApi(pageData.userId);
+        if (apiUsername && apiUsername !== "Anonymous") {
+          displayUsername = apiUsername;
+          console.log("Using username from API for reply attribution:", displayUsername);
+        }
+      }
+    } catch (apiError) {
+      console.error("Error fetching username from API:", apiError);
+    }
+
+    // If still Anonymous, try the utility function
+    if (displayUsername === "Anonymous" && pageData.userId) {
+      try {
+        const utilityUsername = await getUsernameById(pageData.userId);
+        if (utilityUsername && utilityUsername !== "Anonymous") {
+          displayUsername = utilityUsername;
+          console.log("Using username from utility for reply attribution:", displayUsername);
+        }
+      } catch (utilityError) {
+        console.error("Error fetching from utility:", utilityError);
+      }
+    }
+
+    // If still Anonymous, use the username from the page data if available
+    if (displayUsername === "Anonymous" && pageData.username) {
+      displayUsername = pageData.username;
+      console.log("Using username from page data for reply attribution:", displayUsername);
+    }
 
     console.log("Final username to use in reply attribution:", displayUsername);
 

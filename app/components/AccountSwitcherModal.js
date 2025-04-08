@@ -82,7 +82,16 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
                   "w-full justify-start text-sm px-2 py-1.5 h-auto",
                   currentAccount?.uid === account.uid && "bg-accent text-accent-foreground"
                 )}
-                onClick={() => currentAccount?.uid !== account.uid && handleSwitchAccount(account.uid)}
+                onClick={() => {
+                  if (currentAccount?.uid === account.uid) {
+                    // Navigate to account settings if clicking on current account
+                    router.push('/account');
+                    onClose();
+                  } else {
+                    // Switch to the selected account
+                    handleSwitchAccount(account.uid);
+                  }
+                }}
               >
                 <div className="flex items-center gap-2 w-full overflow-hidden">
                   <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">

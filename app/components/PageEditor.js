@@ -288,6 +288,12 @@ const PageEditor = ({
       return;
     }
 
+    // Ensure we have valid content
+    if (!currentEditorValue || currentEditorValue.length === 0) {
+      console.log("Content is required");
+      return;
+    }
+
     // Validate editor content
     if (!currentEditorValue || !Array.isArray(currentEditorValue) || currentEditorValue.length === 0) {
       console.log("Editor content is invalid");
@@ -358,10 +364,10 @@ const PageEditor = ({
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
       <div className="mt-8 mb-16">
-        {/* Responsive layout for controls - public/private on left, save/cancel on right (same row on all devices) */}
-        <div className="flex flex-row justify-between items-center gap-4 w-full">
+        {/* Responsive layout for controls - stacked on mobile, side by side on desktop */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full">
           {/* Public/Private switcher - left aligned */}
-          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
+          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input w-full md:w-auto">
             {isPublic ? (
               <Globe className="h-4 w-4 text-green-500" />
             ) : (
@@ -389,7 +395,7 @@ const PageEditor = ({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
+              disabled={isSaving || !title.trim()}
               variant="default"
               size="md"
               className="w-full md:w-auto"
