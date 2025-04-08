@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
+import { fetchUsernameFromApi } from "../utils/apiUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 
 /**
@@ -83,68 +84,46 @@ const PageEditor = ({
           if (originalPage) {
             console.log("Found original page for reply:", originalPage);
 
-            // Get the actual username using the utility function
+            // Get the actual username using multiple sources for reliability
             let displayUsername = "Anonymous";
 
             // First check if the page object already has a username
-            if (originalPage.username && originalPage.username !== "Anonymous") {
-              displayUsername = originalPage.username;
+            if (originalPage.pageData && originalPage.pageData.username && originalPage.pageData.username !== "Anonymous") {
+              displayUsername = originalPage.pageData.username;
               console.log("Using username from page object:", displayUsername);
             }
 
-            if (originalPage.userId) {
+            // Get the user ID from the page data
+            const userId = originalPage.pageData ? originalPage.pageData.userId : null;
+
+            if (userId) {
               try {
-                // First try to get username from RTDB directly
-                const { getDatabase, ref, get } = await import('firebase/database');
-                const { app } = await import('../firebase/config');
-                const rtdb = getDatabase(app);
-                const rtdbUserRef = ref(rtdb, `users/${originalPage.userId}`);
-                const rtdbSnapshot = await get(rtdbUserRef);
-
-                if (rtdbSnapshot.exists()) {
-                  const rtdbUserData = rtdbSnapshot.val();
-                  if (rtdbUserData.username) {
-                    displayUsername = rtdbUserData.username;
-                    console.log("Using username from RTDB:", displayUsername);
-                    console.log(`Found username in RTDB: ${displayUsername}`);
-                  } else if (rtdbUserData.displayName) {
-                    displayUsername = rtdbUserData.displayName;
-                    console.log(`Found displayName in RTDB: ${displayUsername}`);
-                  }
-                }
-
-                // If still Anonymous, try the utility function
-                if (displayUsername === "Anonymous") {
-                  try {
-                    const utilityUsername = await getUsernameById(originalPage.userId);
-                    if (utilityUsername && utilityUsername !== "Anonymous") {
-                      displayUsername = utilityUsername;
-                      console.log("Fetched username from utility:", displayUsername);
-                    }
-                  } catch (utilityError) {
-                    console.error("Error fetching from utility:", utilityError);
+                // Try the API first (most reliable)
+                const apiUsername = await fetchUsernameFromApi(userId);
+                if (apiUsername && apiUsername !== "Anonymous") {
+                  displayUsername = apiUsername;
+                  console.log("Using username from API:", displayUsername);
+                } else {
+                  // If API fails, try the utility function
+                  const utilityUsername = await getUsernameById(userId);
+                  if (utilityUsername && utilityUsername !== "Anonymous") {
+                    displayUsername = utilityUsername;
+                    console.log("Using username from utility:", displayUsername);
                   }
                 }
               } catch (error) {
                 console.error("Error fetching username:", error);
-                // Fallback to page's stored username if available
-                displayUsername = originalPage.username || "Anonymous";
               }
-            }
-
-            // Ensure we have a valid username
-            if (displayUsername === "Anonymous" && originalPage.username) {
-              displayUsername = originalPage.username;
-              console.log("Using username directly from page object:", displayUsername);
             }
 
             // Create a direct reply content structure with proper attribution
             // using the utility function for consistent structure
+            const pageTitle = originalPage.pageData ? originalPage.pageData.title : "Untitled";
             const content = [
               createReplyAttribution({
                 pageId: replyToId,
-                pageTitle: originalPage.title,
-                userId: originalPage.userId,
+                pageTitle: pageTitle,
+                userId: userId,
                 username: displayUsername
               })
             ];

@@ -55,7 +55,8 @@ export const createUserLink = ({
   // Log the username being used
   console.log(`Creating user link with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
 
-  return {
+  // Create the user link object
+  const userLink = {
     type: "link",
     url: url || `/u/${userId || "anonymous"}`,
     isUser: true,
@@ -64,6 +65,13 @@ export const createUserLink = ({
     className: "user-link",
     children: [{ text: displayUsername }]
   };
+
+  // Double-check that the text content matches the username
+  if (userLink.children[0].text !== displayUsername) {
+    userLink.children[0].text = displayUsername;
+  }
+
+  return userLink;
 };
 
 /**
@@ -95,16 +103,28 @@ export const createReplyAttribution = ({
   // Create the user link with explicit username
   const userLink = createUserLink({ userId, username: displayUsername });
 
-  // Log the created user link to verify structure
-  console.log('Created user link for attribution:', JSON.stringify(userLink, null, 2));
+  // Create the page link
+  const pageLink = createPageLink({ pageId, pageTitle });
 
-  return {
+  // Log the created links to verify structure
+  console.log('Created user link for attribution:', JSON.stringify(userLink, null, 2));
+  console.log('Created page link for attribution:', JSON.stringify(pageLink, null, 2));
+
+  // Create the attribution paragraph
+  const attribution = {
     type: "paragraph",
     children: [
       { text: "Replying to " },
-      createPageLink({ pageId, pageTitle }),
+      pageLink,
       { text: " by " },
       userLink
     ]
   };
+
+  // Double-check that the user link text content matches the username
+  if (attribution.children[3].children[0].text !== displayUsername) {
+    attribution.children[3].children[0].text = displayUsername;
+  }
+
+  return attribution;
 };
