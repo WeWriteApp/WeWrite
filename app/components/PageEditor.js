@@ -377,12 +377,13 @@ const PageEditor = ({
             />
           </div>
 
-          {/* Save/Cancel buttons - right aligned */}
-          <div className="flex items-center gap-2">
+          {/* Save/Cancel buttons - centered on mobile, right aligned on desktop */}
+          <div className="flex items-center justify-center md:justify-end gap-2 w-full">
             <Button
               onClick={onCancel}
               variant="outline"
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              size="md"
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80 w-full md:w-auto"
             >
               Cancel
             </Button>
@@ -390,6 +391,8 @@ const PageEditor = ({
               onClick={handleSave}
               disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
               variant="default"
+              size="md"
+              className="w-full md:w-auto"
             >
               {isSaving ? "Saving..." : "Save"}
             </Button>

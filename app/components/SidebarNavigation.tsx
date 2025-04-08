@@ -69,11 +69,50 @@ export function SidebarNavigation() {
   };
 
   // Handle random page navigation
-  const handleRandomPage = () => {
+  const handleRandomPage = async () => {
     trackEvent("random_page_clicked");
-    // This would typically fetch a random page ID from your backend
-    // For now, we'll just navigate to a placeholder
-    router.push("/random");
+
+    try {
+      // Directly fetch a random page from the database
+      const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../firebase/config');
+
+      // Query for public pages
+      const pagesRef = collection(db, 'pages');
+      const publicPagesQuery = query(
+        pagesRef,
+        where('isPublic', '==', true),
+        where('deleted', '==', false),
+        limit(100) // Limit to 100 pages for performance
+      );
+
+      const snapshot = await getDocs(publicPagesQuery);
+
+      if (snapshot.empty) {
+        console.error('No pages found');
+        return;
+      }
+
+      // Convert to array
+      const pages = [];
+      snapshot.forEach(doc => {
+        pages.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      // Select a random page
+      const randomIndex = Math.floor(Math.random() * pages.length);
+      const randomPage = pages[randomIndex];
+
+      // Navigate to the random page
+      router.push(`/${randomPage.id}`);
+    } catch (error) {
+      console.error('Error getting random page:', error);
+      // Fallback to the random page route
+      router.push("/random");
+    }
   };
 
   // Handle profile navigation

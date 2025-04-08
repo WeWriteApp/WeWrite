@@ -1,12 +1,10 @@
-"use server";
-
 import { NextResponse } from 'next/server';
 import { db } from '../../firebase/config';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 
 /**
  * API route to get a random page
- * 
+ *
  * @returns {Promise<NextResponse>} - Response with a random page ID
  */
 export async function GET() {
@@ -21,7 +19,7 @@ export async function GET() {
     );
 
     const snapshot = await getDocs(publicPagesQuery);
-    
+
     if (snapshot.empty) {
       return NextResponse.json({ error: 'No pages found' }, { status: 404 });
     }
@@ -39,7 +37,7 @@ export async function GET() {
     const randomIndex = Math.floor(Math.random() * pages.length);
     const randomPage = pages[randomIndex];
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       pageId: randomPage.id,
       title: randomPage.title || 'Untitled'
     });
