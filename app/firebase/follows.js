@@ -325,18 +325,20 @@ export const getUserFollowerCount = async (userId) => {
     for (let i = 0; i < pageIds.length; i += batchSize) {
       const batch = pageIds.slice(i, i + batchSize);
 
+      // We can't query for undefined values in Firestore
+      // Instead, we'll query for all followers and filter out deleted ones in code
       const followersQuery = query(
         collection(db, 'pageFollowers'),
-        where('pageId', 'in', batch),
-        where('deleted', '==', undefined) // Only count non-deleted follows
+        where('pageId', 'in', batch)
       );
 
       const followersSnapshot = await getDocs(followersQuery);
 
-      // Add each unique follower to the set
+      // Add each unique follower to the set, filtering out deleted ones
       followersSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.userId && data.userId !== userId) { // Don't count self-follows
+        // Only count followers where deleted is not true and don't count self-follows
+        if (data.userId && data.userId !== userId && data.deleted !== true) {
           uniqueFollowers.add(data.userId);
         }
       });
