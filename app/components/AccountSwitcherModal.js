@@ -113,13 +113,17 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
               variant="outline"
               className="w-full justify-start text-sm mt-4"
               onClick={handleAddAccount}
-              disabled={isAtMaxAccounts}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full">
                 <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
                   <UserPlus className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <span>Add account</span>
+                <span className="flex-grow">Add account</span>
+                {isAtMaxAccounts && (
+                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    {accounts.length}/{maxAccounts}
+                  </span>
+                )}
               </div>
             </Button>
           </div>
@@ -138,13 +142,45 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
               You can only log in to {maxAccounts} accounts at a time. To access another account, sign out of one first.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="sm:justify-start">
+
+          <div className="py-4">
+            <div className="space-y-2 mb-4">
+              <h4 className="text-sm font-medium">Your current accounts:</h4>
+              {sortedAccounts.map((account) => (
+                <div key={account.uid} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <span className="text-sm truncate max-w-[180px]">{account.email}</span>
+                  </div>
+                  {currentAccount?.uid === account.uid && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Current</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
             <Button
               type="button"
-              variant="secondary"
-              onClick={() => setIsMaxAccountsDialogOpen(false)}
+              variant="default"
+              onClick={() => {
+                setIsMaxAccountsDialogOpen(false);
+                router.push('/account?action=logout');
+              }}
+              className="w-full"
             >
-              Close
+              Go to Account Settings
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsMaxAccountsDialogOpen(false)}
+              className="w-full"
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
