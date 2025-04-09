@@ -690,28 +690,56 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         // If editing an existing link
         if (item.isUser) {
           // Handle user link
-          Transforms.setNodes(
-            editor,
-            {
-              ...item,
-              type: 'link',
-              url: item.url, // Already formatted as /u/{userId}
-              children: [{ text: item.text }]
-            },
-            { at: selectedNodePath }
-          );
+          try {
+            // First update the node properties
+            Transforms.setNodes(
+              editor,
+              {
+                ...item,
+                type: 'link',
+                url: item.url, // Already formatted as /u/{userId}
+              },
+              { at: selectedNodePath }
+            );
+
+            // Then separately update the text content to avoid @ symbol issues
+            const displayText = item.text || item.username;
+            const textPath = [...selectedNodePath, 0]; // Path to the text node inside the link
+
+            // Make sure the text doesn't have @ prefix
+            const cleanText = displayText.startsWith('@') ? displayText.substring(1) : displayText;
+
+            // Update the text node
+            Transforms.insertText(editor, cleanText, { at: textPath });
+          } catch (error) {
+            console.error("Error updating user link:", error);
+          }
         } else {
           // Handle page link
-          Transforms.setNodes(
-            editor,
-            {
-              ...item,
-              type: 'link',
-              url: item.pageId ? `/${item.pageId}` : item.url,
-              children: [{ text: item.text }]
-            },
-            { at: selectedNodePath }
-          );
+          try {
+            // First update the node properties
+            Transforms.setNodes(
+              editor,
+              {
+                ...item,
+                type: 'link',
+                url: item.pageId ? `/${item.pageId}` : item.url,
+              },
+              { at: selectedNodePath }
+            );
+
+            // Then separately update the text content
+            const displayText = item.text || (item.pageId ? item.pageTitle : item.url);
+            const textPath = [...selectedNodePath, 0]; // Path to the text node inside the link
+
+            // Make sure the text doesn't have @ prefix
+            const cleanText = displayText.startsWith('@') ? displayText.substring(1) : displayText;
+
+            // Update the text node
+            Transforms.insertText(editor, cleanText, { at: textPath });
+          } catch (error) {
+            console.error("Error updating page link:", error);
+          }
         }
       } else if (editor.selection) {
         // If creating a new link
@@ -750,9 +778,12 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             );
           }
         } else {
-          // Handle page link
+          // Handle page or external link
           const text = item.text || (item.pageId ? item.pageTitle : item.url);
           const url = item.pageId ? `/${item.pageId}` : item.url;
+
+          // Make sure the text doesn't have @ prefix
+          const cleanText = text.startsWith('@') ? text.substring(1) : text;
 
           if (Range.isCollapsed(editor.selection)) {
             // If no text is selected, insert the link text
@@ -761,11 +792,11 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
               url,
               pageId: item.pageId,
               pageTitle: item.pageTitle,
-              children: [{ text }],
+              children: [{ text: cleanText }],
             });
           } else {
             // If text is selected, convert it to a link
-            wrapLink(editor, url, item.pageId, item.pageTitle);
+            wrapLink(editor, url, item.pageId, item.pageTitle, cleanText);
           }
         }
       }
@@ -916,19 +947,33 @@ const withLinks = (editor) => {
   return editor
 }
 
-const wrapLink = (editor, url, pageId, pageTitle) => {
+const wrapLink = (editor, url, pageId, pageTitle, displayText) => {
   if (isLinkActive(editor)) {
     unwrapLink(editor);
   }
 
   const { selection } = editor;
   const isCollapsed = selection && Range.isCollapsed(selection);
+
+  // Determine the display text
+  let text = displayText || url;
+
+  // If it's a page link and no display text is provided, use the page title
+  if (pageId && pageTitle && !displayText) {
+    text = pageTitle;
+  }
+
+  // Make sure the text doesn't have @ prefix
+  if (text && text.startsWith('@')) {
+    text = text.substring(1);
+  }
+
   const linkElement = {
     type: "link",
     url,
     pageId,
     pageTitle,
-    children: isCollapsed ? [{ text: url }] : [],
+    children: isCollapsed ? [{ text }] : [],
   };
 
   if (isCollapsed) {
@@ -977,14 +1022,21 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
       return;
     }
 
-    // If it's an external link and not in edit mode, open in new tab
-    if (isExternal && !ReactEditor.isFocused(editor)) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-      e.preventDefault();
+    // If editor is not focused (read-only mode), navigate to the link
+    if (!ReactEditor.isFocused(editor)) {
+      if (isExternal) {
+        // External links open in new tab
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        // Internal links use client-side navigation
+        e.preventDefault();
+        // Use window.location for internal navigation to ensure proper page loading
+        window.location.href = url;
+      }
       return;
     }
 
-    // Otherwise, open the link editor
+    // In edit mode, open the link editor
     e.preventDefault();
     openLinkEditor(element, ReactEditor.findPath(editor, element));
   };
@@ -1004,45 +1056,76 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
     `editor-link ${element.className}` :
     isUserLink ? 'editor-link user-link' : 'editor-link page-link';
 
-  // Add more debug logging for user links
-  if (isUserLink) {
-    // Ensure the children text matches the username without @ prefix
-    const displayUsername = element.username || '';
-    if (element.username && element.children && element.children.length > 0 &&
-        element.children[0].text !== displayUsername) {
-      console.log(`LinkElement: Fixing mismatched username: children text "${element.children[0].text}" vs username "${displayUsername}"`);
-      element.children[0].text = displayUsername;
+  // Fix display text for links
+  if (element.children && element.children.length > 0) {
+    // For user links, ensure the children text matches the username without @ prefix
+    if (isUserLink) {
+      const displayUsername = element.username || '';
+      // Remove @ prefix if it exists
+      if (element.children[0].text && element.children[0].text.startsWith('@')) {
+        element.children[0].text = element.children[0].text.substring(1);
+      }
+      // Ensure username is displayed correctly
+      if (element.username && element.children[0].text !== displayUsername) {
+        element.children[0].text = displayUsername;
+      }
     }
 
-    console.log('LinkElement rendering USER link with:', {
-      username: element.username,
-      userId: element.userId,
-      className,
-      childrenText: element.children?.[0]?.text
-    });
+    // For page links, ensure the @ symbol is removed
+    if (!isUserLink && !isExternal && element.children[0].text) {
+      if (element.children[0].text.startsWith('@')) {
+        element.children[0].text = element.children[0].text.substring(1);
+      }
+    }
   }
 
   // Prevent cursor selection inside links by making the entire link act as a single unit
   const handleKeyDown = (e) => {
-    // If Backspace or Delete is pressed, delete the entire link
-    if (e.key === 'Backspace' || e.key === 'Delete') {
-      e.preventDefault();
-      const path = ReactEditor.findPath(editor, element);
-      Transforms.removeNodes(editor, { at: path });
-      return;
-    }
+    try {
+      // If Backspace or Delete is pressed, delete the entire link
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        const path = ReactEditor.findPath(editor, element);
 
-    // For arrow keys, prevent cursor from moving inside the link
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      const path = ReactEditor.findPath(editor, element);
-
-      // Move cursor to before or after the link based on arrow direction
-      if (e.key === 'ArrowLeft') {
-        Transforms.select(editor, Editor.before(editor, path));
-      } else {
-        Transforms.select(editor, Editor.after(editor, path));
+        // Safely remove the node
+        try {
+          Transforms.removeNodes(editor, { at: path });
+          // Position cursor at the deletion point
+          const point = Editor.before(editor, path);
+          if (point) {
+            Transforms.select(editor, point);
+          }
+        } catch (removeError) {
+          console.error('Error removing link node:', removeError);
+          // Fallback: try to unwrap the link instead
+          try {
+            Transforms.unwrapNodes(editor, {
+              at: path,
+              match: n => n.type === 'link'
+            });
+          } catch (unwrapError) {
+            console.error('Error unwrapping link node:', unwrapError);
+          }
+        }
+        return;
       }
+
+      // For arrow keys, prevent cursor from moving inside the link
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const path = ReactEditor.findPath(editor, element);
+
+        // Move cursor to before or after the link based on arrow direction
+        if (e.key === 'ArrowLeft') {
+          const point = Editor.before(editor, path);
+          if (point) Transforms.select(editor, point);
+        } else {
+          const point = Editor.after(editor, path);
+          if (point) Transforms.select(editor, point);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling key event in link:', error);
     }
   };
 
