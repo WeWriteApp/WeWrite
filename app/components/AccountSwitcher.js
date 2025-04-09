@@ -15,8 +15,8 @@ export function AccountSwitcher() {
 
   return (
     <>
-      <div className="mb-2">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">Account</h3>
+      <div className="mb-1">
+        <h3 className="text-sm font-medium text-muted-foreground mb-1 px-2">Account</h3>
         <Button
           variant="ghost"
           className="w-full justify-between text-sm px-2 py-1.5 h-auto hover:bg-accent rounded-md"

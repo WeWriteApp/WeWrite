@@ -64,7 +64,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-theme-medium border-r-only z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-y-auto pb-24",
+          "fixed top-0 left-0 bottom-0 w-[280px] bg-background border-theme-medium border-r-only z-[1000] transition-transform duration-300 ease-in-out shadow-lg h-[100vh] overflow-hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -86,12 +86,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-6 pb-20">
+          <div className="flex-1 overflow-y-auto px-6 pb-0 scrollbar-hide">
             <SidebarNavigation />
           </div>
 
           {/* Account Switcher - Fixed at bottom */}
-          <div className="sticky bottom-0 bg-background pt-2 pb-4 px-6 border-t border-border">
+          <div className="sticky bottom-0 bg-background pt-0 pb-2 px-6 border-t border-border">
             <AccountSwitcher />
           </div>
         </div>

@@ -91,13 +91,13 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
                 key={link.platform}
                 variant="outline"
                 asChild
-                className="w-full justify-start text-foreground hover:text-foreground"
+                className="w-full justify-center text-foreground hover:text-foreground"
               >
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2"
+                  className="flex items-center justify-center gap-2 w-full"
                 >
                   <SocialIcon platform={link.platform} className="h-5 w-5" />
                   <span>{link.label}</span>

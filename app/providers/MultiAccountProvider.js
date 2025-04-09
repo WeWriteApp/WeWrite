@@ -202,6 +202,44 @@ export const MultiAccountProvider = ({ children }) => {
       throw new Error("Account not found or missing email");
     }
 
+    // Check if the account is already logged in
+    // We can determine this by checking if the account is in the accounts list
+    // and has a lastUsed timestamp that's recent (within the last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const isRecentlyUsed = account.lastUsed && new Date(account.lastUsed) > thirtyDaysAgo;
+
+    if (isRecentlyUsed) {
+      try {
+        // First sign out of the current account
+        await signOut(auth);
+
+        // For accounts we've used recently, we'll try to sign in without a password
+        // This uses the browser's session persistence
+        // We'll use a special method that doesn't require a password
+        // This is a mock implementation - in a real app, you'd use a token-based auth system
+
+        // Update the last used timestamp
+        setAccounts(prevAccounts =>
+          prevAccounts.map(acc =>
+            acc.uid === accountId
+              ? { ...acc, lastUsed: new Date().toISOString() }
+              : acc
+          )
+        );
+
+        // Set the current account directly
+        // This is a workaround - in a real implementation, you'd use a proper auth method
+        // that doesn't require a password for already logged-in accounts
+        setCurrentAccount(account);
+
+        return true;
+      } catch (error) {
+        console.error("Error switching to recently used account:", error);
+        // If direct switching fails, fall back to credential-based auth
+      }
+    }
+
     // Check if we have a stored credential for this account
     const storedCredentials = localStorage.getItem('wewrite_credentials');
     let credentials = {};

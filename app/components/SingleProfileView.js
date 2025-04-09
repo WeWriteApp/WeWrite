@@ -159,17 +159,6 @@ const SingleProfileView = ({ profile }) => {
             </span>
             <span className="text-xs text-muted-foreground">donors</span>
           </div>
-
-          <div className="flex flex-col items-center">
-            <span className="text-lg font-semibold">
-              {isLoadingStats ? (
-                <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
-              ) : (
-                donorCount
-              )}
-            </span>
-            <span className="text-xs text-muted-foreground">donors</span>
-          </div>
         </div>
 
         {/* Activity Sparkline */}

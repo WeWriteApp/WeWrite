@@ -6,8 +6,8 @@ interface SocialIconProps {
 }
 
 export function SocialIcon({ platform, className = "mr-2 size-4" }: SocialIconProps) {
-  // All icons will be white for better visibility against colored backgrounds
-  const iconClassName = `${className} text-white`;
+  // Use current text color for better visibility in both light and dark modes
+  const iconClassName = `${className} text-current`;
 
   switch (platform) {
     case 'twitter':

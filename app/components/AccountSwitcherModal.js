@@ -14,7 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogPortal,
+  DialogOverlay,
 } from "./ui/dialog";
+import "../styles/modal-animations.css";
 import { cn } from "../lib/utils";
 
 export function AccountSwitcherModal({ isOpen, onClose }) {
@@ -73,13 +76,15 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md mx-4 rounded-lg overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Switch Account</DialogTitle>
-            <DialogDescription>
-              Select an account to switch to or add a new account
-            </DialogDescription>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogOverlay className="support-modal-overlay" />
+          <DialogContent className="sm:max-w-md mx-auto rounded-lg overflow-hidden border-border dark:border-border support-modal">
+            <DialogHeader>
+              <DialogTitle>Switch Account</DialogTitle>
+              <DialogDescription>
+                Select an account to switch to or add a new account
+              </DialogDescription>
+            </DialogHeader>
 
           <div className="space-y-2 py-4">
             {sortedAccounts.map((account) => (

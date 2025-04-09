@@ -16,30 +16,52 @@ export default function SortPreferenceChart() {
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState('all');
   const [showOnlyChanged, setShowOnlyChanged] = useState(false);
-  
+
   // Fetch sort preference data
   useEffect(() => {
     const fetchSortPreferences = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // In a real implementation, this would query a dedicated collection
-        // For now, we'll generate mock data
-        const mockData = [
-          { id: 'newest', name: 'Newest', count: 85, changedFromDefault: false },
-          { id: 'oldest', name: 'Oldest', count: 12, changedFromDefault: true },
-          { id: 'recently_edited', name: 'Recently Edited', count: 28, changedFromDefault: true },
-          { id: 'most_views', name: 'Most Views', count: 35, changedFromDefault: true },
-          { id: 'alpha_asc', name: 'A-Z', count: 18, changedFromDefault: true },
-          { id: 'alpha_desc', name: 'Z-A', count: 7, changedFromDefault: true },
-        ];
-        
+        // For now, we'll generate realistic data based on time range
+        let mockData;
+
+        if (timeRange === 'week') {
+          mockData = [
+            { id: 'newest', name: 'Newest', count: 32, changedFromDefault: false },
+            { id: 'oldest', name: 'Oldest', count: 5, changedFromDefault: true },
+            { id: 'recently_edited', name: 'Recently Edited', count: 12, changedFromDefault: true },
+            { id: 'most_views', name: 'Most Views', count: 18, changedFromDefault: true },
+            { id: 'alpha_asc', name: 'A-Z', count: 7, changedFromDefault: true },
+            { id: 'alpha_desc', name: 'Z-A', count: 3, changedFromDefault: true },
+          ];
+        } else if (timeRange === 'month') {
+          mockData = [
+            { id: 'newest', name: 'Newest', count: 58, changedFromDefault: false },
+            { id: 'oldest', name: 'Oldest', count: 9, changedFromDefault: true },
+            { id: 'recently_edited', name: 'Recently Edited', count: 21, changedFromDefault: true },
+            { id: 'most_views', name: 'Most Views', count: 27, changedFromDefault: true },
+            { id: 'alpha_asc', name: 'A-Z', count: 14, changedFromDefault: true },
+            { id: 'alpha_desc', name: 'Z-A', count: 5, changedFromDefault: true },
+          ];
+        } else { // all time
+          mockData = [
+            { id: 'newest', name: 'Newest', count: 85, changedFromDefault: false },
+            { id: 'oldest', name: 'Oldest', count: 12, changedFromDefault: true },
+            { id: 'recently_edited', name: 'Recently Edited', count: 28, changedFromDefault: true },
+            { id: 'most_views', name: 'Most Views', count: 35, changedFromDefault: true },
+            { id: 'alpha_asc', name: 'A-Z', count: 18, changedFromDefault: true },
+            { id: 'alpha_desc', name: 'Z-A', count: 7, changedFromDefault: true },
+          ];
+        }
+
         // Filter data if showing only changed preferences
-        const filteredData = showOnlyChanged 
+        const filteredData = showOnlyChanged
           ? mockData.filter(item => item.changedFromDefault)
           : mockData;
-        
+
         setSortData(filteredData);
       } catch (error) {
         console.error('Error fetching sort preferences:', error);
@@ -48,16 +70,16 @@ export default function SortPreferenceChart() {
         setLoading(false);
       }
     };
-    
+
     fetchSortPreferences();
   }, [timeRange, showOnlyChanged]);
-  
+
   // Format data for the chart
   const chartData = sortData.map(item => ({
     name: item.name,
     users: item.count
   }));
-  
+
   return (
     <Card>
       <CardHeader>
@@ -78,17 +100,17 @@ export default function SortPreferenceChart() {
               <TabsTrigger value="week">Past Week</TabsTrigger>
             </TabsList>
           </Tabs>
-          
+
           <div className="flex items-center space-x-2">
-            <Switch 
-              id="show-changed" 
-              checked={showOnlyChanged} 
-              onCheckedChange={setShowOnlyChanged} 
+            <Switch
+              id="show-changed"
+              checked={showOnlyChanged}
+              onCheckedChange={setShowOnlyChanged}
             />
             <Label htmlFor="show-changed">Show only changed from default</Label>
           </div>
         </div>
-        
+
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
