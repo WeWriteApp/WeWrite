@@ -4,13 +4,15 @@ import Image from "next/image";
 import { AuthContext } from "../providers/AuthProvider";
 import { collection, getDocs, Timestamp, query, limit } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
-import { Trophy, Clock, ChevronRight, Info, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
+import { Trophy, Clock, ChevronRight, Info, AlertTriangle, ChevronUp, ChevronDown, Activity } from "lucide-react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { rtdb } from "../firebase/rtdb";
 import { db } from "../firebase/config";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import SimpleSparkline from "./SimpleSparkline";
+import { getUserActivityData } from "../firebase/activity";
 import { PillLink } from "./PillLink";
 
 const UserListSkeleton = () => {
@@ -50,6 +52,7 @@ const TopUsers = () => {
   const [errorDetails, setErrorDetails] = useState("");
   const { user } = useContext(AuthContext);
   const [sortDirection, setSortDirection] = useState("desc"); // "desc" or "asc"
+  const [userActivityData, setUserActivityData] = useState({});
 
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === "desc" ? "asc" : "desc");
@@ -137,6 +140,25 @@ const TopUsers = () => {
                   console.log('TopUsers: Processed users:', {
                     allTimeUserCount: sortedAllTimeUsers.length,
                   });
+
+                  // Fetch activity data for each user
+                  const fetchActivityData = async () => {
+                    const activityData = {};
+
+                    for (const user of sortedAllTimeUsers) {
+                      try {
+                        const userData = await getUserActivityData(user.id);
+                        activityData[user.id] = userData;
+                      } catch (err) {
+                        console.error(`Error fetching activity data for user ${user.id}:`, err);
+                        activityData[user.id] = Array(14).fill(0);
+                      }
+                    }
+
+                    setUserActivityData(activityData);
+                  };
+
+                  fetchActivityData();
 
                   setAllTimeUsers(sortedAllTimeUsers);
                   setLoading(false);
@@ -233,6 +255,12 @@ const TopUsers = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
+                  <TableHead>
+                    <div className="flex items-center justify-center gap-1">
+                      <Activity className="h-4 w-4" />
+                      <span className="sr-only">Activity</span>
+                    </div>
+                  </TableHead>
                   <TableHead className="text-right cursor-pointer" onClick={toggleSortDirection}>
                     <div className="flex items-center justify-end gap-1">
                       Pages
@@ -261,6 +289,32 @@ const TopUsers = () => {
                           </TooltipTrigger>
                           <TooltipContent>
                             <span>View user's pages</span>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
+                    <TableCell>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="h-8 w-24">
+                              {userActivityData[user.id] ? (
+                                <SimpleSparkline
+                                  data={userActivityData[user.id]}
+                                  height={32}
+                                  width={96}
+                                  color="#1768FF"
+                                  showArea={true}
+                                />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center">
+                                  <span className="text-xs text-muted-foreground">Loading...</span>
+                                </div>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span>Activity over the last 14 days</span>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
