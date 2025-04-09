@@ -361,15 +361,31 @@ function SinglePageView({ params }) {
     );
   }
 
+  // Show basic layout even while loading, but with loading indicators for content
   if (isLoading) {
     return (
       <Layout>
         <Head>
           <title>Loading... - WeWrite</title>
         </Head>
-        <PageHeader />
-        <div className="flex items-center justify-center min-h-[50vh] w-full">
-          <div className="loader loader-lg"></div>
+        <PageHeader isLoading={true} />
+        <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
+          <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
+            <div className="page-content w-full max-w-none break-words px-1">
+              <div className="animate-pulse space-y-4 py-8">
+                <div className="h-8 bg-muted/30 rounded w-3/4 mx-auto"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted/30 rounded w-full"></div>
+                  <div className="h-4 bg-muted/30 rounded w-5/6"></div>
+                  <div className="h-4 bg-muted/30 rounded w-4/6"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted/30 rounded w-full"></div>
+                  <div className="h-4 bg-muted/30 rounded w-3/4"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </Layout>
     );

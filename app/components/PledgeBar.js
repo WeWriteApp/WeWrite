@@ -374,7 +374,7 @@ const PledgeBar = () => {
         }`}
       >
         <div
-          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
+          className="w-full max-w-md mx-auto bg-background dark:bg-background/30 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-xl cursor-pointer"
           onClick={() => setShowActivationModal(true)}
         >
           <div className="flex justify-around py-4 px-6">
@@ -443,7 +443,7 @@ const PledgeBar = () => {
         }`}
         onClick={() => setShowActivationModal(true)}
       >
-        <div className="w-full max-w-md mx-auto cursor-pointer">
+        <div className="w-full max-w-md mx-auto cursor-pointer shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden">
           <CompositionBar
             value={pledges[0]?.amount || 0}
             max={subscription?.amount || 100}
@@ -457,7 +457,7 @@ const PledgeBar = () => {
               handlePledgeCustomAmount(e);
             }}
             onDeletePledge={() => {}}
-            className="w-full bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
+            className="w-full bg-background dark:bg-background/30 backdrop-blur-md"
           />
         </div>
       </div>

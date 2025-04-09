@@ -83,7 +83,7 @@ const CompositionBar = ({
               )}
 
               <div
-                className="relative h-[56px] rounded-lg overflow-hidden border border-border bg-background dark:bg-black shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="relative h-[56px] rounded-xl overflow-hidden border border-border bg-background dark:bg-background/30 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => {
                   // If we have a subscription limit and would exceed it, show the limit modal
                   if (wouldExceedLimit && subscriptionAmount > 0) {

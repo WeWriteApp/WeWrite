@@ -27,7 +27,7 @@ export function PageLoader({
     <Container
       className={cn(
         "flex flex-col items-center justify-center",
-        fullScreen ? "fixed inset-0 bg-background/80 backdrop-blur-sm z-50" : "h-full w-full py-8",
+        fullScreen ? "fixed inset-0 bg-background z-50" : "h-full w-full py-8",
         className
       )}
       {...(fullScreen ? {
