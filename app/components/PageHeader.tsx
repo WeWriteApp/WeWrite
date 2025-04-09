@@ -261,7 +261,13 @@ export default function PageHeader({
               </h1>
               {displayUsername && (
                 <p className="text-xs text-muted-foreground mt-1 transition-all duration-300">
-                  by {displayUsername}
+                  by {userId ? (
+                    <Link href={`/user/${userId}`} className="hover:underline">
+                      <span data-component-name="PageHeader">{displayUsername}</span>
+                    </Link>
+                  ) : (
+                    <span data-component-name="PageHeader">{displayUsername}</span>
+                  )}
                 </p>
               )}
             </div>

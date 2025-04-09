@@ -416,9 +416,12 @@ const Form = ({ Page, setPage, isReply }) => {
   }, [searchParams, setPage, setEditorState, isReply]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     setIsSaving(true);
     setError(null);
+    console.log("Submitting new page with title:", Page.title);
 
     if (!user) {
       setError("You must be logged in to create a page");

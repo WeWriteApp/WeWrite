@@ -154,6 +154,23 @@ export const MultiAccountProvider = ({ children }) => {
       // Sign in with the selected account
       await signInWithEmailAndPassword(auth, accountToSwitch.email, password);
 
+      // Store the credential for future use
+      const storedCredentials = localStorage.getItem('wewrite_credentials');
+      let credentials = {};
+
+      if (storedCredentials) {
+        try {
+          credentials = JSON.parse(storedCredentials);
+        } catch (error) {
+          console.error("Error parsing stored credentials:", error);
+          credentials = {};
+        }
+      }
+
+      // Add or update the credential for this account
+      credentials[accountToSwitch.uid] = password;
+      localStorage.setItem('wewrite_credentials', JSON.stringify(credentials));
+
       // Update the last used timestamp
       setAccounts(prevAccounts =>
         prevAccounts.map(acc =>
@@ -179,14 +196,56 @@ export const MultiAccountProvider = ({ children }) => {
 
   // Switch to a different account
   const switchAccount = async (accountId) => {
-    // First sign out of the current account
-    await signOut(auth);
-
     // Find the account to switch to
     const account = accounts.find(acc => acc.uid === accountId);
     if (!account || !account.email) {
       throw new Error("Account not found or missing email");
     }
+
+    // Check if we have a stored credential for this account
+    const storedCredentials = localStorage.getItem('wewrite_credentials');
+    let credentials = {};
+
+    if (storedCredentials) {
+      try {
+        credentials = JSON.parse(storedCredentials);
+      } catch (error) {
+        console.error("Error parsing stored credentials:", error);
+        credentials = {};
+      }
+    }
+
+    // If we have a stored credential for this account, use it
+    if (credentials[accountId]) {
+      try {
+        // First sign out of the current account
+        await signOut(auth);
+
+        // Sign in with the stored credential
+        await signInWithEmailAndPassword(auth, account.email, credentials[accountId]);
+
+        // Update the last used timestamp
+        setAccounts(prevAccounts =>
+          prevAccounts.map(acc =>
+            acc.uid === accountId
+              ? { ...acc, lastUsed: new Date().toISOString() }
+              : acc
+          )
+        );
+
+        return true;
+      } catch (error) {
+        console.error("Error using stored credential:", error);
+        // If the stored credential fails, fall back to password modal
+        // Remove the invalid credential
+        delete credentials[accountId];
+        localStorage.setItem('wewrite_credentials', JSON.stringify(credentials));
+      }
+    }
+
+    // If we don't have a stored credential or it failed, use the password modal
+    // First sign out of the current account
+    await signOut(auth);
 
     // Set the account to switch to and open the password modal
     setAccountToSwitch(account);

@@ -305,7 +305,10 @@ const PageEditor = ({
 
     // Call the provided onSave function with the current editor value
     if (onSave) {
+      console.log("Calling onSave with editor value:", currentEditorValue);
       onSave(currentEditorValue);
+    } else {
+      console.error("No onSave function provided to PageEditor");
     }
   }
 
