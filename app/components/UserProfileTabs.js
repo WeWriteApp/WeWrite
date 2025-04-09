@@ -3,7 +3,8 @@ import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Heart, UserMinus, FileText2 } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Heart, UserMinus, FileText2, SortAsc } from "lucide-react";
+import PageSortDropdown from "./PageSortDropdown";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -81,6 +82,9 @@ export default function UserProfileTabs({ profile }) {
   const isCurrentUser = user && profile && user.uid === profile.uid;
   const [loadingError, setLoadingError] = useState(null);
   const [isUnfollowingAll, setIsUnfollowingAll] = useState(false);
+  const [sortOption, setSortOption] = useState("newest");
+  const [sortedPages, setSortedPages] = useState([]);
+  const [sortedPrivatePages, setSortedPrivatePages] = useState([]);
 
   // Use the usePages hook to get the user's pages
   const {
@@ -127,6 +131,73 @@ export default function UserProfileTabs({ profile }) {
       setLoadingError("Failed to load more private pages. Please try again.");
     }
   };
+
+  // Sort pages based on the selected sort option
+  useEffect(() => {
+    if (!pages || !privatePages) return;
+
+    // Create a copy of the pages arrays to avoid mutating the original
+    let sortedPublicPages = [...pages];
+    let sortedUserPrivatePages = [...privatePages];
+
+    // Apply sorting based on the selected option
+    switch (sortOption) {
+      case 'newest':
+        // Sort by creation date (newest first)
+        sortedPublicPages.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        sortedUserPrivatePages.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        break;
+      case 'oldest':
+        // Sort by creation date (oldest first)
+        sortedPublicPages.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        sortedUserPrivatePages.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        break;
+      case 'recently_edited':
+        // Sort by last modified date
+        sortedPublicPages.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+        sortedUserPrivatePages.sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+        break;
+      case 'most_views':
+        // Sort by view count
+        sortedPublicPages.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+        sortedUserPrivatePages.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+        break;
+      case 'alpha_asc':
+        // Sort alphabetically (A-Z)
+        sortedPublicPages.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        sortedUserPrivatePages.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        break;
+      case 'alpha_desc':
+        // Sort alphabetically (Z-A)
+        sortedPublicPages.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+        sortedUserPrivatePages.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+        break;
+      default:
+        // Default to newest
+        sortedPublicPages.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        sortedUserPrivatePages.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    // Update the sorted pages state
+    setSortedPages(sortedPublicPages);
+    setSortedPrivatePages(sortedUserPrivatePages);
+
+    // Track sort preference for admin analytics
+    if (user && sortOption !== 'newest') {
+      try {
+        // Record that the user changed their sort preference
+        const analytics = window.firebase?.analytics?.();
+        if (analytics) {
+          analytics.logEvent('sort_preference_changed', {
+            sort_option: sortOption,
+            user_id: user.uid
+          });
+        }
+      } catch (error) {
+        console.error('Error tracking sort preference:', error);
+      }
+    }
+  }, [pages, privatePages, sortOption, user]);
 
   // Unfollow all self-followed pages
   const handleUnfollowAll = async () => {
@@ -245,7 +316,10 @@ export default function UserProfileTabs({ profile }) {
                 </div>
               ) : (
                 <>
-                  <PageList pageList={pages} emptyMessage="No public pages yet" />
+                  <div className="flex justify-end mb-4">
+                    <PageSortDropdown value={sortOption} onValueChange={setSortOption} />
+                  </div>
+                  <PageList pageList={sortedPages.length > 0 ? sortedPages : pages} emptyMessage="No public pages yet" />
                   {loadingError && (
                     <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                       {loadingError}
@@ -294,7 +368,10 @@ export default function UserProfileTabs({ profile }) {
                     </div>
                   ) : (
                     <>
-                      <PageList pageList={privatePages} emptyMessage="No private pages yet" />
+                      <div className="flex justify-end mb-4">
+                        <PageSortDropdown value={sortOption} onValueChange={setSortOption} />
+                      </div>
+                      <PageList pageList={sortedPrivatePages.length > 0 ? sortedPrivatePages : privatePages} emptyMessage="No private pages yet" />
                       {loadingError && (
                         <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                           {loadingError}

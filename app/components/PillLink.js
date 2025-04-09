@@ -274,6 +274,32 @@ export const PillLink = ({
             `}
           />
 
+          {/* Enhanced Ripple effect */}
+          <motion.div
+            initial={{ scale: 0, opacity: 0.9 }}
+            animate={{ scale: 4, opacity: 0 }}
+            transition={{ duration: 1.0, ease: "easeOut" }}
+            className={`
+              absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+              w-5 h-5 rounded-full
+              bg-primary
+              shadow-[0_0_25px_rgba(var(--primary-h),var(--primary-s),var(--primary-l),0.7)]
+            `}
+          />
+
+          {/* Secondary ripple for layered effect */}
+          <motion.div
+            initial={{ scale: 0, opacity: 0.7 }}
+            animate={{ scale: 3, opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
+            className={`
+              absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+              w-3 h-3 rounded-full
+              bg-primary
+              shadow-[0_0_15px_rgba(var(--primary-h),var(--primary-s),var(--primary-l),0.6)]
+            `}
+          />
+
           {/* Reset animation state */}
           <motion.div
             initial={{ opacity: 0 }}

@@ -81,9 +81,30 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         </DialogHeader>
 
         <div className="py-3">
+          <style jsx global>{`
+            @keyframes gradientAnimation {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+            .animated-gradient-button {
+              background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
+              background-size: 200% 100%;
+              animation: gradientAnimation 3s ease infinite;
+              color: white;
+              font-weight: 500;
+              transition: all 0.3s ease;
+              border: none;
+              box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+            }
+            .animated-gradient-button:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+            }
+          `}</style>
           <Button
             asChild
-            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+            className={`w-full ${isSignedIn ? 'animated-gradient-button' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >
@@ -102,30 +123,23 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         {/* Social Links Section */}
         <div className="pt-4 border-t-only">
           <h3 className="text-sm font-medium mb-3 text-center">Follow us for updates</h3>
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex justify-center gap-4 w-full">
             {sortedSocialLinks.map((link) => (
               <Button
                 key={link.platform}
                 variant="outline"
+                size="icon"
                 asChild
-                className={`w-full justify-center ${
-                  link.platform === 'twitter'
-                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white'
-                    : link.platform === 'youtube'
-                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white'
-                    : link.platform === 'instagram'
-                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white'
-                    : ''
-                }`}
+                className="rounded-full border-2 h-10 w-10 p-0"
               >
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2"
+                  title={link.label}
+                  aria-label={link.label}
                 >
                   <SocialIcon platform={link.platform} className="h-5 w-5" />
-                  <span>{link.label}</span>
                 </a>
               </Button>
             ))}

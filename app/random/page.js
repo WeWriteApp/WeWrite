@@ -39,6 +39,18 @@ export default function RandomPage() {
           console.log(`Navigating to random page: /${data.pageId}`);
           // Navigate to the random page using window.location for more reliable navigation
           window.location.href = `/${data.pageId}`;
+
+          // Prefetch the next random page in the background
+          // This will help ensure the cache is always filled
+          setTimeout(() => {
+            fetch(`/api/random-page?prefetch=true&t=${Date.now()}`, {
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            }).catch(err => console.log('Background prefetch error:', err));
+          }, 1000);
         } else {
           console.error('No pageId in response:', data);
           setError('No pages found');

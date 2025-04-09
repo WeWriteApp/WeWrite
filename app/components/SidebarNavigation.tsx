@@ -73,16 +73,41 @@ export function SidebarNavigation() {
   };
 
   // Handle random page navigation
-  const handleRandomPage = () => {
+  const handleRandomPage = async () => {
     if (isRandomLoading) return; // Prevent multiple clicks
 
     setIsRandomLoading(true);
     trackEvent("random_page_clicked");
 
-    // Use the dedicated random page route
-    window.location.href = "/random";
+    try {
+      // Add a cache-busting parameter to avoid caching issues
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/random-page?t=${timestamp}`, {
+        // Add cache control headers
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
 
-    // We don't reset loading state here because we're navigating away
+      if (!response.ok) {
+        throw new Error('Failed to fetch random page');
+      }
+
+      const data = await response.json();
+
+      if (data.pageId) {
+        // Navigate to the random page
+        window.location.href = `/${data.pageId}`;
+      } else {
+        throw new Error('No page ID returned');
+      }
+    } catch (error) {
+      console.error('Error fetching random page:', error);
+      toast.error('Failed to find a random page');
+      setIsRandomLoading(false);
+    }
   };
 
   // Handle profile navigation
@@ -163,7 +188,7 @@ export function SidebarNavigation() {
 
   // Render the appropriate level with animation
   return (
-    <div className="relative overflow-hidden h-full">
+    <div className="relative overflow-hidden h-full" onScroll={(e) => e.stopPropagation()}>
       {/* Main Navigation */}
       <div
         className={`absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out ${currentLevel === "themes" ? "-translate-x-full" : "translate-x-0"}`}

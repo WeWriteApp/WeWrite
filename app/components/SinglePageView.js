@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
+import pageCacheService from "../services/PageCacheService";
 import { recordPageView } from "../firebase/pageViews";
 import PageViewCounter from "./PageViewCounter";
 import { AuthContext } from "../providers/AuthProvider";
@@ -161,6 +162,68 @@ function SinglePageView({ params }) {
     if (params.id) {
       setIsLoading(true);
 
+      // First try to get the page from cache
+      const loadPage = async () => {
+        try {
+          // Check if the page is in the cache
+          const cachedPage = await pageCacheService.getPage(params.id);
+
+          if (cachedPage) {
+            console.log("Using cached page data for", params.id);
+
+            // Process the cached page data
+            let pageData = cachedPage;
+
+            // Ensure the page has a valid username
+            pageData = await ensurePageUsername(pageData);
+
+            // Update state with cached data
+            setPage(pageData);
+            setIsPublic(pageData.isPublic || false);
+            setGroupId(pageData.groupId || null);
+            setGroupName(pageData.groupName || null);
+
+            // Set page title
+            if (pageData.title) {
+              if (pageData.title === "Untitled") {
+                setTitle(`Untitled (${pageData.id.substring(0, 6)})`);
+              } else {
+                setTitle(pageData.title);
+              }
+            }
+
+            // Process content if available
+            if (pageData.currentVersion && pageData.currentVersion.content) {
+              try {
+                const contentString = pageData.currentVersion.content;
+                const parsedContent = typeof contentString === 'string'
+                  ? JSON.parse(contentString)
+                  : contentString;
+
+                setEditorState(parsedContent);
+                setEditorError(null);
+
+                // Prefetch linked pages
+                pageCacheService.prefetchLinkedPages(parsedContent);
+              } catch (error) {
+                console.error("Error parsing cached content:", error);
+                setEditorError("There was an error loading the editor. Please try refreshing the page.");
+              }
+            }
+
+            // Set loading to false since we have data from cache
+            setIsLoading(false);
+          }
+        } catch (error) {
+          console.error("Error loading page from cache:", error);
+          // Continue with normal loading if cache fails
+        }
+      };
+
+      // Try to load from cache first
+      loadPage();
+
+      // Then subscribe to real-time updates
       const unsubscribe = listenToPageById(params.id, async (data) => {
         if (data.error) {
           setError(data.error);
@@ -174,6 +237,9 @@ function SinglePageView({ params }) {
         pageData = await ensurePageUsername(pageData);
 
         console.log("Page data with ensured username:", pageData);
+
+        // Add to cache for future use
+        pageCacheService.addToCache(params.id, pageData);
 
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
@@ -199,6 +265,9 @@ function SinglePageView({ params }) {
 
             setEditorState(parsedContent);
             setEditorError(null); // Clear any previous errors
+
+            // Prefetch linked pages
+            pageCacheService.prefetchLinkedPages(parsedContent);
           } catch (error) {
             console.error("Error parsing content:", error);
             setEditorError("There was an error loading the editor. Please try refreshing the page.");

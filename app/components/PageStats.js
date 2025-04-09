@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Eye, Clock, Heart, BarChart2 } from 'lucide-react';
+import { Eye, Clock, Heart, BarChart2, DollarSign } from 'lucide-react';
+import PledgeBarModal from './PledgeBarModal';
+import { getContrastAwareStyle } from '../utils/metadataUtils';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from './SimpleSparkline';
 import { useAccentColor, ACCENT_COLOR_VALUES } from '../contexts/AccentColorContext';
@@ -34,6 +36,8 @@ export default function PageStats({
 }) {
   const [followerCount, setFollowerCount] = useState(0);
   const [followerData, setFollowerData] = useState([]);
+  const [donorCount, setDonorCount] = useState(0);
+  const [donorData, setDonorData] = useState([]);
   const [timeRange, setTimeRange] = useState('24h'); // '24h' or 'all'
   const router = useRouter();
   const { accentColor, customColors } = useAccentColor();
@@ -47,6 +51,9 @@ export default function PageStats({
   };
 
   const accentColorValue = getAccentColorValue();
+
+  // State for the feature coming soon modal
+  const [showDonorModal, setShowDonorModal] = useState(false);
 
   // Fetch follower count and data when component mounts or timeRange changes
   useEffect(() => {
@@ -74,6 +81,22 @@ export default function PageStats({
     }
   }, [pageId, timeRange]);
 
+  // Generate donor data (placeholder for now)
+  useEffect(() => {
+    // Generate placeholder data for donors
+    // In a real implementation, this would fetch from the database
+    const generateDonorData = () => {
+      // Always return 0 for now as the feature is coming soon
+      setDonorCount(0);
+
+      // Generate a flat line of zeros for the sparkline
+      const data = Array(24).fill(0);
+      setDonorData(data);
+    };
+
+    generateDonorData();
+  }, [timeRange]);
+
   const handleViewHistory = () => {
     router.push(`/${pageId}/history`);
   };
@@ -96,7 +119,7 @@ export default function PageStats({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Views Card */}
         <div className="flex items-center justify-between p-4 rounded-lg border-accent/20 border bg-accent/10 text-card-foreground shadow-sm">
         <div className="flex items-center gap-2">
@@ -114,7 +137,7 @@ export default function PageStats({
             <span className="text-xs font-medium" style={{ color: accentColorValue }}>{timeRange}</span>
           </div>
 
-          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+          <div className="text-sm font-medium px-2 py-1 rounded-md" style={getContrastAwareStyle(accentColorValue)}>
             {viewCount.toLocaleString()}
           </div>
         </div>
@@ -140,7 +163,7 @@ export default function PageStats({
             <span className="text-xs font-medium" style={{ color: accentColorValue }}>{timeRange}</span>
           </div>
 
-          <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+          <div className="text-sm font-medium px-2 py-1 rounded-md" style={getContrastAwareStyle(accentColorValue)}>
             {changeCount}
           </div>
         </div>
@@ -163,12 +186,56 @@ export default function PageStats({
               <span className="text-xs font-medium" style={{ color: accentColorValue }}>{timeRange}</span>
             </div>
 
-            <div className="text-white text-sm font-medium px-2 py-1 rounded-md" style={{ backgroundColor: accentColorValue }}>
+            <div className="text-sm font-medium px-2 py-1 rounded-md" style={getContrastAwareStyle(accentColorValue)}>
               {followerCount}
             </div>
           </div>
         </div>
+
+        {/* Donors Card - Clickable to show "coming soon" modal */}
+        <div
+          className="flex items-center justify-between p-4 rounded-lg border-accent/20 border bg-accent/10 text-card-foreground shadow-sm cursor-pointer hover:bg-accent/20 transition-colors"
+          onClick={() => setShowDonorModal(true)}
+        >
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Donors</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <div className="h-8 w-16 relative">
+                {donorData.length > 0 && (
+                  <SimpleSparkline data={donorData} height={30} color={accentColorValue} />
+                )}
+              </div>
+              <span className="text-xs font-medium" style={{ color: accentColorValue }}>{timeRange}</span>
+            </div>
+
+            <div className="text-sm font-medium px-2 py-1 rounded-md" style={getContrastAwareStyle(accentColorValue)}>
+              {donorCount}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Feature Coming Soon Modal */}
+      {showDonorModal && (
+        <PledgeBarModal
+          isOpen={showDonorModal}
+          onClose={() => setShowDonorModal(false)}
+          isSignedIn={true}
+          customContent={{
+            title: "Donor support coming soon!",
+            description: "Soon you'll be able to see who has donated to this page and how much they've contributed. We're still building this functionality, and if you'd like to help us get there sooner, you can support us!",
+            action: {
+              href: "https://opencollective.com/wewrite-app",
+              label: "Support us",
+              external: true
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

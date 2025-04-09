@@ -44,23 +44,37 @@ const PledgeBar = () => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      // Synchronize with header collapse - hide as soon as scrolling starts
+      if (currentScrollY > 10) {
         // Scrolling down - hide the bar
         setVisible(false);
       } else {
-        // Scrolling up - show the bar
+        // At top - show the bar
         setVisible(true);
       }
 
       setLastScrollY(currentScrollY);
     };
 
+    // Add spring animation effect
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .pledge-bar-spring {
+        transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      }
+    `;
+    document.head.appendChild(style);
+
     window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Initial check
+    handleScroll();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      document.head.removeChild(style);
     };
-  }, [lastScrollY]);
+  }, []);
 
   // Detect if we're on a page view
   useEffect(() => {
@@ -369,7 +383,7 @@ const PledgeBar = () => {
   if (isOwnPage) {
     return (
       <div
-        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 pledge-bar-spring ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
       >
@@ -438,7 +452,7 @@ const PledgeBar = () => {
   return (
     <>
       <div
-        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 pledge-bar-spring ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
         onClick={() => setShowActivationModal(true)}
