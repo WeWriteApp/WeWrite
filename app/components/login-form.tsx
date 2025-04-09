@@ -28,7 +28,18 @@ export function LoginForm({
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
     const mode = searchParams.get('mode')
-    setIsAddAccountMode(mode === 'addAccount')
+    const isAddMode = mode === 'addAccount'
+    setIsAddAccountMode(isAddMode)
+
+    // If we're in add account mode, update the UI to reflect this
+    if (isAddMode) {
+      console.log('Login form detected add account mode')
+      // Check if we have the flag in localStorage
+      const isAddingNewAccount = localStorage.getItem('addingNewAccount') === 'true'
+      if (isAddingNewAccount) {
+        console.log('Adding new account confirmed via localStorage flag')
+      }
+    }
   }, [])
 
   // Validate form inputs
@@ -56,9 +67,12 @@ export function LoginForm({
 
         // Check if we need to return to a previous account
         if (isAddAccountMode) {
-          // Clear the add account mode flag
+          // Clear the add account mode flags
           const returnToAccount = sessionStorage.getItem('returnToAccount')
           sessionStorage.removeItem('returnToAccount')
+          localStorage.removeItem('addingNewAccount')
+
+          console.log('Successfully added new account, redirecting to home')
 
           // Increase timeout to allow auth state to fully propagate
           // and ensure cookies are properly set
@@ -111,7 +125,14 @@ export function LoginForm({
         onSubmit={handleSubmit}
       >
       <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Log in</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+          {isAddAccountMode ? "Add a new account" : "Log in"}
+        </h1>
+        {isAddAccountMode && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Sign in with a different email to add another account
+          </p>
+        )}
       </div>
       <div className="grid gap-3 sm:gap-4">
         <div className="grid gap-2">
@@ -164,11 +185,11 @@ export function LoginForm({
               "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
           )}
           isLoading={isLoading}
-          loadingText="Signing in..."
+          loadingText={isAddAccountMode ? "Adding account..." : "Signing in..."}
           disabled={!isFormValid}
           tabIndex={4}
         >
-          Login
+          {isAddAccountMode ? "Add Account" : "Login"}
         </LoadingButton>
       </div>
       <div className="text-center text-sm sm:text-base text-muted-foreground mt-2">

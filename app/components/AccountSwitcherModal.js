@@ -40,6 +40,9 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
       setIsMaxAccountsDialogOpen(true);
     } else {
       try {
+        // First, sign out the current user
+        await signOut(auth);
+
         // Store current auth state in session storage
         if (currentAccount) {
           sessionStorage.setItem('returnToAccount', JSON.stringify({
@@ -51,13 +54,18 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
         // Close the modal first
         onClose();
 
-        // Navigate to login page with special parameter
-        // Use window.location.href for a full page navigation to avoid Next.js router issues
+        // Add a flag to localStorage to indicate we're adding a new account
+        localStorage.setItem('addingNewAccount', 'true');
+
+        // Force a full page navigation to the login page
         window.location.href = "/auth/login?mode=addAccount";
+
+        // Log for debugging
+        console.log("Navigating to login page for adding a new account");
       } catch (error) {
         console.error("Error navigating to add account:", error);
-        // Fallback to router.push if there's an error
-        router.push("/auth/login?mode=addAccount");
+        // Show an error message
+        alert("There was an error signing out. Please try again.");
       }
     }
   };
