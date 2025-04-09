@@ -62,11 +62,29 @@ export const followPage = async (userId, pageId) => {
         await updateDoc(pageRef, {
           followerCount: 1
         });
+
+        // Update the page data with the new follower count
+        pageData.followerCount = 1;
       } else {
         // Increment existing followerCount
+        const newCount = pageData.followerCount + 1;
         await updateDoc(pageRef, {
-          followerCount: increment(1)
+          followerCount: newCount
         });
+
+        // Update the page data with the new follower count
+        pageData.followerCount = newCount;
+      }
+
+      // Dispatch a custom event to notify components that follower count has changed
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('followerCountChanged', {
+          detail: {
+            pageId,
+            followerCount: pageData.followerCount
+          }
+        });
+        window.dispatchEvent(event);
       }
     } else {
       // If the page document doesn't exist, we can't follow it
@@ -148,11 +166,29 @@ export const unfollowPage = async (userId, pageId) => {
         await updateDoc(pageRef, {
           followerCount: 0
         });
+
+        // Update the page data with the new follower count
+        pageData.followerCount = 0;
       } else {
         // Decrement existing followerCount
+        const newCount = Math.max(0, pageData.followerCount - 1);
         await updateDoc(pageRef, {
-          followerCount: increment(-1)
+          followerCount: newCount
         });
+
+        // Update the page data with the new follower count
+        pageData.followerCount = newCount;
+      }
+
+      // Dispatch a custom event to notify components that follower count has changed
+      if (typeof window !== 'undefined') {
+        const event = new CustomEvent('followerCountChanged', {
+          detail: {
+            pageId,
+            followerCount: pageData.followerCount
+          }
+        });
+        window.dispatchEvent(event);
       }
     } else {
       // If the page document doesn't exist, we can't unfollow it

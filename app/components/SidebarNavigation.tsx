@@ -9,7 +9,8 @@ import {
   Shuffle,
   User,
   Palette,
-  Home
+  Home,
+  Clock
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
@@ -20,14 +21,19 @@ import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'sonner';
 
-// Dynamically import AccentColorSelector to avoid hydration issues
+// Dynamically import components to avoid hydration issues
 const AccentColorSelector = dynamic(
   () => import('./AccentColorSelector'),
   { ssr: false }
 );
 
+const ReadingHistory = dynamic(
+  () => import('./ReadingHistory'),
+  { ssr: false }
+);
+
 // Define navigation levels
-type NavLevel = "main" | "themes";
+type NavLevel = "main" | "themes" | "history";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -242,6 +248,16 @@ export function SidebarNavigation() {
             label="My Profile"
             onClick={handleProfile}
           />
+
+          <NavItem
+            icon={<Clock className="h-4 w-4" />}
+            label="Reading History"
+            hasSubmenu={true}
+            onClick={() => {
+              setCurrentLevel("history");
+              trackEvent("history_submenu_opened");
+            }}
+          />
         </div>
 
         <div className="mb-6">
@@ -309,6 +325,31 @@ export function SidebarNavigation() {
           <React.Suspense fallback={<div className="p-3 text-sm text-muted-foreground">Loading color options...</div>}>
             <AccentColorSelector />
           </React.Suspense>
+        </div>
+      </div>
+
+      {/* Reading History Submenu */}
+      <div
+        className={`absolute inset-0 flex flex-col h-full overflow-y-auto transition-transform duration-300 ease-in-out ${currentLevel === "history" ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="flex items-center mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setCurrentLevel("main");
+              trackEvent("navigation_back_to_main");
+            }}
+            className="h-8 w-8 mr-2"
+            aria-label="Back to main menu"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h3 className="text-lg font-medium">Reading History</h3>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <ReadingHistory />
         </div>
       </div>
     </div>

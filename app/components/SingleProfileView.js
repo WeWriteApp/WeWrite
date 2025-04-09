@@ -170,17 +170,6 @@ const SingleProfileView = ({ profile }) => {
           </div>
         </div>
 
-        {/* Activity Sparkline */}
-        <div className="flex flex-col items-center justify-center mb-6 px-4">
-          <div className="w-full max-w-xs">
-            <UserActivitySparkline userId={profile.uid} className="mb-1" />
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <span>Recent Activity</span>
-              <span>Last 14 days</span>
-            </div>
-          </div>
-        </div>
-
         {!user && (
           <div className="bg-primary/10 text-primary border border-primary/20 rounded-md p-4 mb-4">
             <p>

@@ -41,6 +41,7 @@ export const createReplyContent = ({
     default:
       // Ensure we have a valid username to display
       const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+      const displayTitle = pageTitle && pageTitle !== "Untitled" ? pageTitle : "Untitled";
 
       // Log the username being used
       console.log(`Creating reply content with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
@@ -54,9 +55,9 @@ export const createReplyContent = ({
               type: "link",
               url: `/${pageId}`,
               pageId: pageId,
-              pageTitle: pageTitle || "Untitled",
+              pageTitle: displayTitle,
               className: "page-link",
-              children: [{ text: pageTitle || "Untitled" }]
+              children: [{ text: displayTitle }]
             },
             { text: ` by ` },
             {

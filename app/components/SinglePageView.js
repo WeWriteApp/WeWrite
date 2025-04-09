@@ -6,6 +6,7 @@ import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
 import pageCacheService from "../services/PageCacheService";
 import { recordPageView } from "../firebase/pageViews";
+import { trackPageView } from "../firebase/readingHistory";
 import PageViewCounter from "./PageViewCounter";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
@@ -146,17 +147,60 @@ function SinglePageView({ params }) {
   // Use a ref to track if we've already recorded a view for this page
   const viewRecorded = useRef(false);
 
-  // Record page view once when the page has loaded
+  // Get follower count
+  useEffect(() => {
+    if (params.id) {
+      getPageFollowerCount(params.id)
+        .then(count => {
+          setFollowerCount(count);
+        })
+        .catch(error => {
+          console.error("Error getting follower count:", error);
+        });
+
+      // Listen for follower count changes
+      const handleFollowerCountChanged = (event) => {
+        if (event.detail.pageId === params.id) {
+          setFollowerCount(event.detail.followerCount);
+        }
+      };
+
+      window.addEventListener('followerCountChanged', handleFollowerCountChanged);
+
+      return () => {
+        window.removeEventListener('followerCountChanged', handleFollowerCountChanged);
+      };
+    }
+  }, [params.id]);
+
+  // Record page view and track reading history once when the page has loaded
   useEffect(() => {
     // Only proceed if we haven't recorded a view yet, the page is loaded, public, and we have the data
     if (!viewRecorded.current && !isLoading && page && isPublic) {
       // Mark that we've recorded the view to prevent duplicate recordings
       viewRecorded.current = true;
+
       // Record the page view
       recordPageView(params.id, user?.uid);
       console.log('Recording page view for', params.id);
+
+      // Track reading history if user is logged in
+      if (user?.uid) {
+        // Get the page owner's username
+        const pageOwnerName = page.username || 'Anonymous';
+
+        // Track the page view in reading history
+        trackPageView(
+          user.uid,
+          params.id,
+          page.title || 'Untitled',
+          page.userId || '',
+          pageOwnerName
+        );
+        console.log('Tracking page in reading history:', params.id);
+      }
     }
-  }, [params.id, isLoading, page, isPublic, user?.uid]);
+  }, [params.id, isLoading, page, isPublic, user]);
 
   useEffect(() => {
     if (params.id) {

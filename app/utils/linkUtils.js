@@ -20,13 +20,20 @@ export const createPageLink = ({
   pageTitle = "Untitled",
   url = null
 }) => {
+  // Ensure we have a valid page title
+  const displayTitle = pageTitle &&
+    typeof pageTitle === 'string' &&
+    pageTitle.trim() !== "" &&
+    pageTitle.trim() !== "Untitled" ?
+    pageTitle.trim() : "Untitled";
+
   return {
     type: "link",
     url: url || `/${pageId}`,
     pageId,
-    pageTitle: pageTitle || "Untitled",
+    pageTitle: displayTitle,
     className: "page-link",
-    children: [{ text: pageTitle || "Untitled" }]
+    children: [{ text: displayTitle }]
   };
 };
 
