@@ -276,15 +276,40 @@ export const getPageFollowerCount = async (pageId) => {
   }
 
   try {
+    // First check the pages collection for the cached follower count
     const pageRef = doc(db, 'pages', pageId);
     const pageDoc = await getDoc(pageRef);
 
     if (pageDoc.exists()) {
       const data = pageDoc.data();
-      return data.followerCount || 0;
+      // If we have a follower count and it's greater than 0, return it
+      if (data.followerCount && data.followerCount > 0) {
+        return data.followerCount;
+      }
     }
 
-    return 0;
+    // If no followers found in the page document or count is 0,
+    // check the userFollows collection to get an accurate count
+    const userFollowsRef = collection(db, 'userFollows');
+    const userFollowsQuery = query(userFollowsRef);
+    const userFollowsSnapshot = await getDocs(userFollowsQuery);
+
+    let count = 0;
+    userFollowsSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.followedPages && data.followedPages.includes(pageId)) {
+        count++;
+      }
+    });
+
+    // Update the page document with the accurate count
+    if (pageDoc.exists() && count > 0) {
+      await updateDoc(pageRef, {
+        followerCount: count
+      });
+    }
+
+    return count;
   } catch (error) {
     console.error('Error getting page follower count:', error);
     return 0;

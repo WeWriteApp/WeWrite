@@ -443,6 +443,34 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             element.url = '#';
           }
 
+          // Check if this is a deleted page link (Error rendering content)
+          if (element.url === 'Error rendering content' ||
+              (element.children && element.children[0] &&
+               element.children[0].text === 'Error rendering content')) {
+            // Replace the link with plain text
+            try {
+              const path = ReactEditor.findPath(editor, element);
+              const textContent = element.pageTitle || 'Deleted page';
+
+              // Use setTimeout to avoid modifying the editor during render
+              setTimeout(() => {
+                try {
+                  // Remove the link node
+                  Transforms.removeNodes(editor, { at: path });
+                  // Insert plain text at the same position
+                  Transforms.insertText(editor, textContent, { at: path });
+                } catch (err) {
+                  console.error('Error replacing deleted page link:', err);
+                }
+              }, 0);
+            } catch (pathError) {
+              console.error('Error finding path for deleted page link:', pathError);
+            }
+
+            // Return a temporary placeholder
+            return <span {...attributes} className="text-muted-foreground">{children}</span>;
+          }
+
           // Check if it's an external link (starts with http:// or https:// or www.)
           const isExternal = element.url && (
             element.url.startsWith('http://') ||
@@ -966,6 +994,15 @@ const wrapLink = (editor, url, pageId, pageTitle, displayText) => {
   // Make sure the text doesn't have @ prefix
   if (text && text.startsWith('@')) {
     text = text.substring(1);
+  }
+
+  // If the URL contains 'Error rendering content', don't create the link
+  if (text === 'Error rendering content' || url === 'Error rendering content') {
+    // Just insert plain text instead
+    if (isCollapsed) {
+      Transforms.insertText(editor, text);
+    }
+    return;
   }
 
   const linkElement = {

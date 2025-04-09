@@ -101,13 +101,16 @@ export default function SortPreferenceChart() {
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
             <Switch
               id="show-changed"
               checked={showOnlyChanged}
               onCheckedChange={setShowOnlyChanged}
             />
-            <Label htmlFor="show-changed">Show only changed from default</Label>
+            <Label htmlFor="show-changed" className="text-sm sm:text-base">
+              <span className="hidden sm:inline">Show only changed from default</span>
+              <span className="sm:hidden">Changed only</span>
+            </Label>
           </div>
         </div>
 

@@ -12,6 +12,29 @@ import { getPageVersions } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 
 /**
+ * Format a date as a relative time string (e.g., "2 hours ago")
+ * @param {Date} date - The date to format
+ * @returns {string} - A human-readable relative time string
+ */
+const formatRelativeTime = (date) => {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffMonth / 12);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin} ${diffMin === 1 ? 'minute' : 'minutes'} ago`;
+  if (diffHour < 24) return `${diffHour} ${diffHour === 1 ? 'hour' : 'hours'} ago`;
+  if (diffDay < 30) return `${diffDay} ${diffDay === 1 ? 'day' : 'days'} ago`;
+  if (diffMonth < 12) return `${diffMonth} ${diffMonth === 1 ? 'month' : 'months'} ago`;
+  return `${diffYear} ${diffYear === 1 ? 'year' : 'years'} ago`;
+};
+
+/**
  * PageFooter Component
  *
  * This component serves as a container for the PageActions component,
@@ -112,6 +135,14 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
       {!isEditing && content && (
         <div className="mt-4 mb-6 flex flex-wrap gap-4 items-center">
           <WordCounter content={content} />
+          {page.lastModified && (
+            <>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">
+                last edited {formatRelativeTime(new Date(page.lastModified))}
+              </span>
+            </>
+          )}
         </div>
       )}
 

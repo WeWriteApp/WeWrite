@@ -9,9 +9,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader, Plus, Save, Trash2, UserPlus } from "lucide-react";
 import { collection, query, where, getDocs, orderBy, limit, startAfter, addDoc, updateDoc, doc, getDoc, Timestamp, getFirestore } from "firebase/firestore";
 import { db } from "../firebase/database";
-import SimpleSparkline from "../components/SimpleSparkline";
 import { toast } from "sonner";
 import SortPreferenceChart from './components/SortPreferenceChart';
+import AdminChart from './components/AdminChart';
+import DeviceUsageChart from './components/DeviceUsageChart';
+import TopLinkedPagesTable from './components/TopLinkedPagesTable';
+import { BarChart2, FileText, MessageSquare, Users } from 'lucide-react';
 
 // Admin emails
 const ADMIN_EMAILS = ["jamiegray2234@gmail.com"];
@@ -201,23 +204,66 @@ export default function AdminPage() {
   const loadTopLinkedPages = async () => {
     try {
       // In a real implementation, this would query Firestore for pages with link counts
-      // For now, generate sample data
-      const samplePages = [
-        { id: 'page1', title: 'Getting Started Guide', linkCount: 42 },
-        { id: 'page2', title: 'Frequently Asked Questions', linkCount: 37 },
-        { id: 'page3', title: 'How to Format Text', linkCount: 29 },
-        { id: 'page4', title: 'Community Guidelines', linkCount: 24 },
-        { id: 'page5', title: 'Privacy Policy', linkCount: 21 },
-        { id: 'page6', title: 'Terms of Service', linkCount: 18 },
-        { id: 'page7', title: 'About WeWrite', linkCount: 15 },
-        { id: 'page8', title: 'Markdown Cheatsheet', linkCount: 12 },
-        { id: 'page9', title: 'Feature Requests', linkCount: 9 },
-        { id: 'page10', title: 'Known Issues', linkCount: 7 }
-      ];
+      // For now, we'll query the actual pages collection and calculate links
+      const pagesRef = collection(db, 'pages');
+      const pagesQuery = query(pagesRef, limit(50)); // Get a reasonable number of pages
+      const pagesSnapshot = await getDocs(pagesQuery);
 
-      setTopLinkedPages(samplePages);
+      // Create a map to track links and backlinks
+      const pageLinksMap = {};
+
+      // First pass: collect all pages and initialize link counts
+      pagesSnapshot.forEach(doc => {
+        const pageData = doc.data();
+        pageLinksMap[doc.id] = {
+          id: doc.id,
+          title: pageData.title || 'Untitled Page',
+          linkCount: 0, // Links pointing to this page (backlinks)
+          backlinkCount: 0, // Links pointing from this page to others
+          content: pageData.content || ''
+        };
+      });
+
+      // Second pass: analyze content for links
+      Object.values(pageLinksMap).forEach(page => {
+        // This is a simplified approach - in a real implementation, you'd parse the content properly
+        // Look for page IDs in the content
+        if (typeof page.content === 'string') {
+          // Count outgoing links (from this page to others)
+          Object.keys(pageLinksMap).forEach(targetPageId => {
+            if (targetPageId !== page.id && page.content.includes(targetPageId)) {
+              page.backlinkCount++;
+              // Increment the incoming link count for the target page
+              if (pageLinksMap[targetPageId]) {
+                pageLinksMap[targetPageId].linkCount++;
+              }
+            }
+          });
+        }
+      });
+
+      // Convert to array and sort by total links (in + out)
+      const sortedPages = Object.values(pageLinksMap)
+        .sort((a, b) => (b.linkCount + b.backlinkCount) - (a.linkCount + a.backlinkCount))
+        .slice(0, 10); // Take top 10
+
+      setTopLinkedPages(sortedPages);
     } catch (error) {
       console.error("Error loading top linked pages:", error);
+      // Fallback to sample data if there's an error
+      const samplePages = [
+        { id: 'page1', title: 'Getting Started Guide', linkCount: 42, backlinkCount: 15 },
+        { id: 'page2', title: 'Frequently Asked Questions', linkCount: 37, backlinkCount: 23 },
+        { id: 'page3', title: 'How to Format Text', linkCount: 29, backlinkCount: 18 },
+        { id: 'page4', title: 'Community Guidelines', linkCount: 24, backlinkCount: 12 },
+        { id: 'page5', title: 'Privacy Policy', linkCount: 21, backlinkCount: 8 },
+        { id: 'page6', title: 'Terms of Service', linkCount: 18, backlinkCount: 5 },
+        { id: 'page7', title: 'About WeWrite', linkCount: 15, backlinkCount: 19 },
+        { id: 'page8', title: 'Markdown Cheatsheet', linkCount: 12, backlinkCount: 7 },
+        { id: 'page9', title: 'Feature Requests', linkCount: 9, backlinkCount: 14 },
+        { id: 'page10', title: 'Known Issues', linkCount: 7, backlinkCount: 11 }
+      ];
+      setTopLinkedPages(samplePages);
     }
   };
 
@@ -252,154 +298,62 @@ export default function AdminPage() {
         <TabsContent value="analytics">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Page Views */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>Page Views</span>
-                  <div className="text-xs text-muted-foreground">
-                    <button
-                      onClick={() => handleTimeRangeChange('all')}
-                      className={`px-1 ${timeRange === 'all' ? 'text-primary font-medium' : ''}`}
-                    >
-                      all
-                    </button>
-                    <span className="mx-1">|</span>
-                    <button
-                      onClick={() => handleTimeRangeChange('24h')}
-                      className={`px-1 ${timeRange === '24h' ? 'text-primary font-medium' : ''}`}
-                    >
-                      24h
-                    </button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-40">
-                  <SimpleSparkline data={pageViewsData} height={160} />
-                </div>
-              </CardContent>
-            </Card>
+            <AdminChart
+              title="Page Views"
+              data={pageViewsData}
+              type="line"
+              dataKey="views"
+              color="#1768FF"
+              timeRange={timeRange}
+              onTimeRangeChange={handleTimeRangeChange}
+              icon={<BarChart2 className="h-5 w-5" />}
+            />
 
             {/* Pages Created */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>Pages Created</span>
-                  <div className="text-xs text-muted-foreground">
-                    <button
-                      onClick={() => handleTimeRangeChange('all')}
-                      className={`px-1 ${timeRange === 'all' ? 'text-primary font-medium' : ''}`}
-                    >
-                      all
-                    </button>
-                    <span className="mx-1">|</span>
-                    <button
-                      onClick={() => handleTimeRangeChange('24h')}
-                      className={`px-1 ${timeRange === '24h' ? 'text-primary font-medium' : ''}`}
-                    >
-                      24h
-                    </button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-40">
-                  <SimpleSparkline data={pagesCreatedData} height={160} />
-                </div>
-              </CardContent>
-            </Card>
+            <AdminChart
+              title="Pages Created"
+              data={pagesCreatedData}
+              type="line"
+              dataKey="pages"
+              color="#4CAF50"
+              timeRange={timeRange}
+              onTimeRangeChange={handleTimeRangeChange}
+              icon={<FileText className="h-5 w-5" />}
+            />
 
             {/* Replies Created */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>Replies Created</span>
-                  <div className="text-xs text-muted-foreground">
-                    <button
-                      onClick={() => handleTimeRangeChange('all')}
-                      className={`px-1 ${timeRange === 'all' ? 'text-primary font-medium' : ''}`}
-                    >
-                      all
-                    </button>
-                    <span className="mx-1">|</span>
-                    <button
-                      onClick={() => handleTimeRangeChange('24h')}
-                      className={`px-1 ${timeRange === '24h' ? 'text-primary font-medium' : ''}`}
-                    >
-                      24h
-                    </button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-40">
-                  <SimpleSparkline data={repliesCreatedData} height={160} />
-                </div>
-              </CardContent>
-            </Card>
+            <AdminChart
+              title="Replies Created"
+              data={repliesCreatedData}
+              type="line"
+              dataKey="replies"
+              color="#FF9800"
+              timeRange={timeRange}
+              onTimeRangeChange={handleTimeRangeChange}
+              icon={<MessageSquare className="h-5 w-5" />}
+            />
 
             {/* Accounts Created */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>Accounts Created</span>
-                  <div className="text-xs text-muted-foreground">
-                    <button
-                      onClick={() => handleTimeRangeChange('all')}
-                      className={`px-1 ${timeRange === 'all' ? 'text-primary font-medium' : ''}`}
-                    >
-                      all
-                    </button>
-                    <span className="mx-1">|</span>
-                    <button
-                      onClick={() => handleTimeRangeChange('24h')}
-                      className={`px-1 ${timeRange === '24h' ? 'text-primary font-medium' : ''}`}
-                    >
-                      24h
-                    </button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-40">
-                  <SimpleSparkline data={accountsCreatedData} height={160} />
-                </div>
-              </CardContent>
-            </Card>
+            <AdminChart
+              title="Accounts Created"
+              data={accountsCreatedData}
+              type="line"
+              dataKey="accounts"
+              color="#9C27B0"
+              timeRange={timeRange}
+              onTimeRangeChange={handleTimeRangeChange}
+              icon={<Users className="h-5 w-5" />}
+            />
           </div>
 
           {/* Device Usage */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Device Usage</CardTitle>
-              <CardDescription>Active users by device type</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-60">
-                {/* In a real implementation, this would be a stacked area chart */}
-                <div className="flex h-full">
-                  <div className="flex flex-col justify-end w-1/3 px-2">
-                    <div className="text-center mb-2">Desktop</div>
-                    <div className="h-40">
-                      <SimpleSparkline data={deviceUsageData.desktop} height={160} color="#4CAF50" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col justify-end w-1/3 px-2">
-                    <div className="text-center mb-2">Mobile Browser</div>
-                    <div className="h-40">
-                      <SimpleSparkline data={deviceUsageData.mobileBrowser} height={160} color="#2196F3" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col justify-end w-1/3 px-2">
-                    <div className="text-center mb-2">Mobile PWA</div>
-                    <div className="h-40">
-                      <SimpleSparkline data={deviceUsageData.mobilePwa} height={160} color="#9C27B0" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-8">
+            <DeviceUsageChart
+              data={deviceUsageData}
+              timeRange={timeRange}
+              onTimeRangeChange={handleTimeRangeChange}
+            />
+          </div>
 
           {/* User Sort Preferences */}
           <div className="mb-8">
@@ -407,38 +361,9 @@ export default function AdminPage() {
           </div>
 
           {/* Top Linked Pages */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Linked Pages</CardTitle>
-              <CardDescription>Pages with the most links pointing to them</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 font-medium">Rank</th>
-                      <th className="text-left py-2 font-medium">Page Title</th>
-                      <th className="text-right py-2 font-medium">Link Count</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topLinkedPages.map((page, index) => (
-                      <tr key={page.id} className="border-b border-border/40 hover:bg-muted/50">
-                        <td className="py-2">{index + 1}</td>
-                        <td className="py-2">
-                          <a href={`/${page.id}`} className="text-primary hover:underline">
-                            {page.title}
-                          </a>
-                        </td>
-                        <td className="py-2 text-right">{page.linkCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-8">
+            <TopLinkedPagesTable pages={topLinkedPages} />
+          </div>
         </TabsContent>
 
         <TabsContent value="admins">

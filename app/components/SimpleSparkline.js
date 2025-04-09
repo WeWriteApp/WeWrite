@@ -37,7 +37,7 @@ export default function SimpleSparkline({
     const x = (index / (data.length - 1)) * width;
     // For zero values, always position at the bottom of the graph
     // This ensures zero values are displayed at the bottom, not raised
-    const y = value === 0
+    const y = value === 0 || maxValue === 0
       ? height - padding // Position at bottom
       : graphHeight - ((value / maxValue) * graphHeight) + padding;
     return `${x},${y}`;
@@ -50,7 +50,7 @@ export default function SimpleSparkline({
       const x = (index / (data.length - 1)) * width;
       // For zero values, always position at the bottom of the graph
       // This ensures zero values are displayed at the bottom, not raised
-      const y = value === 0
+      const y = value === 0 || maxValue === 0
         ? height - padding // Position at bottom
         : graphHeight - ((value / maxValue) * graphHeight) + padding;
       return `${x},${y}`;
