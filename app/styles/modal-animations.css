@@ -1,0 +1,17 @@
+.support-modal-overlay {
+  animation: overlay-fade-in 200ms ease-out forwards !important;
+}
+
+@keyframes overlay-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.support-modal {
+  animation: elegant-fade-in 250ms ease-out forwards !important;
+}
+
+@keyframes elegant-fade-in {
+  0% { opacity: 0; transform: translate(-50%, -45%); }
+  100% { opacity: 1; transform: translate(-50%, -50%); }
+}

@@ -16,6 +16,8 @@ import { Button } from "./ui/button";
 import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
 import { DollarSign } from "lucide-react";
+import "../styles/gradient-button.css";
+import "../styles/modal-animations.css";
 
 const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
   // Use customContent if provided, otherwise use default content based on sign-in status
@@ -45,25 +47,6 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <style jsx global>{`
-        .support-modal-overlay {
-          animation: overlay-fade-in 200ms ease-out forwards !important;
-        }
-
-        @keyframes overlay-fade-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-
-        .support-modal {
-          animation: elegant-fade-in 250ms ease-out forwards !important;
-        }
-
-        @keyframes elegant-fade-in {
-          0% { opacity: 0; transform: translate(-50%, -45%); }
-          100% { opacity: 1; transform: translate(-50%, -50%); }
-        }
-      `}</style>
       <DialogPortal>
         <DialogOverlay className="support-modal-overlay" />
         <DialogContent
@@ -81,27 +64,6 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         </DialogHeader>
 
         <div className="py-3">
-          <style jsx global>{`
-            @keyframes gradientAnimation {
-              0% { background-position: 0% 50%; }
-              50% { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-            .animated-gradient-button {
-              background: linear-gradient(90deg, #3498db, #2ecc71, #3498db);
-              background-size: 200% 100%;
-              animation: gradientAnimation 3s ease infinite;
-              color: white;
-              font-weight: 500;
-              transition: all 0.3s ease;
-              border: none;
-              box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
-            }
-            .animated-gradient-button:hover {
-              transform: translateY(-1px);
-              box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
-            }
-          `}</style>
           <Button
             asChild
             className={`w-full ${isSignedIn ? 'animated-gradient-button' : ''}`}
