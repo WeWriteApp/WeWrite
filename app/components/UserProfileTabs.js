@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Heart, UserMinus } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Heart, UserMinus, FileText2 } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import FollowedPages from "./FollowedPages";
 import FollowedPagesList from "./FollowedPagesList";
 import { unfollowAllPagesByUser } from "../firebase/follows";
 import { toast } from "sonner";
+import BioEditor from "./BioEditor";
 
 // Wrapper component for animated tabs content
 function AnimatedTabsContent({ children, activeTab }) {
@@ -96,7 +97,7 @@ export default function UserProfileTabs({ profile }) {
   } = usePages(profile?.uid, true, user?.uid);
 
   // Determine which tabs to show
-  const visibleTabs = ["activity", "pages"];
+  const visibleTabs = ["activity", "pages", "bio"];
   if (isCurrentUser) {
     visibleTabs.push("private");
     visibleTabs.push("following");
@@ -197,6 +198,14 @@ export default function UserProfileTabs({ profile }) {
                 <span>Pages</span>
               </TabsTrigger>
 
+              <TabsTrigger
+                value="bio"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <User className="h-4 w-4" />
+                <span>Bio</span>
+              </TabsTrigger>
+
               {isCurrentUser && (
                 <>
                   <TabsTrigger
@@ -262,6 +271,16 @@ export default function UserProfileTabs({ profile }) {
                   )}
                 </>
               )}
+            </AnimatedTabsContent>
+          </TabsContent>
+
+          <TabsContent value="bio" className="mt-0">
+            <AnimatedTabsContent activeTab={activeTab}>
+              <BioEditor
+                userId={profile?.uid}
+                initialContent={profile?.bio}
+                isCurrentUser={isCurrentUser}
+              />
             </AnimatedTabsContent>
           </TabsContent>
 
