@@ -6,7 +6,7 @@ import WordCounter from "./WordCounter";
 import SimilarPages from "./SimilarPages";
 import PageStats from "./PageStats";
 import ConstructionChip from "./ConstructionChip";
-import FollowButton from "./FollowButton";
+
 import { getPageViewsLast24Hours, getPageTotalViews } from "../firebase/pageViews";
 import { getPageVersions } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
@@ -97,25 +97,15 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6">
         <PageActions
           page={page}
           content={content}
           isOwner={isOwner}
           isEditing={isEditing}
           setIsEditing={setIsEditing}
-          className="action-buttons-container"
+          className="action-buttons-container w-full"
         />
-
-        {/* Follow button - only show when not editing, not the owner, and not viewing own page */}
-        {!isEditing && !isOwner && user && user.uid !== page.userId && (
-          <FollowButton
-            pageId={page.id}
-            pageTitle={page.title}
-            pageOwnerId={page.userId}
-            className="ml-auto"
-          />
-        )}
       </div>
 
       {/* Word and character count */}

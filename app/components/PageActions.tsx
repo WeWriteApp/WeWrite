@@ -210,7 +210,7 @@ export function PageActions({
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit button always, Delete button only in edit mode */}
       {actualIsOwner && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row items-stretch md:items-center justify-center md:justify-end gap-3 mb-3 w-full">
+        <div className="grid grid-cols-1 gap-3 mb-3 w-full">
           <Button
             variant="outline"
             size="md"

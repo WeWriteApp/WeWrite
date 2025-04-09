@@ -71,18 +71,28 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
                 <span className="text-muted-foreground dark:text-slate-300">...</span>
                 <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.beforeContext}</span>
                 {textDiff.preview.isNew ? (
-                  <span className="bg-green-50 dark:bg-green-900/40 text-green-500 dark:text-green-300 px-0.5 rounded">
-                    {textDiff.preview.highlightedText}
-                  </span>
+                  <>
+                    <span className="bg-green-50 dark:bg-green-900/40 text-green-500 dark:text-green-300 px-0.5 rounded">
+                      {textDiff.preview.highlightedText}
+                    </span>
+                    <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.afterContext}</span>
+                    <span className="bg-green-50 dark:bg-green-900/40 text-green-500 dark:text-green-300 px-0.5 rounded">...</span>
+                  </>
                 ) : textDiff.preview.isRemoved ? (
-                  <span className="bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 px-0.5 rounded line-through">
-                    {textDiff.preview.highlightedText}
-                  </span>
+                  <>
+                    <span className="bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 px-0.5 rounded line-through">
+                      {textDiff.preview.highlightedText}
+                    </span>
+                    <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.afterContext}</span>
+                    <span className="bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 px-0.5 rounded line-through">...</span>
+                  </>
                 ) : (
-                  <span className="dark:text-white">{textDiff.preview.highlightedText}</span>
+                  <>
+                    <span className="dark:text-white">{textDiff.preview.highlightedText}</span>
+                    <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.afterContext}</span>
+                    <span className="text-muted-foreground dark:text-slate-300">...</span>
+                  </>
                 )}
-                <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.afterContext}</span>
-                <span className="text-muted-foreground dark:text-slate-300">...</span>
               </div>
             </div>
           )}
