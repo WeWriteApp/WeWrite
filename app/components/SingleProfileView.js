@@ -47,28 +47,38 @@ const SingleProfileView = ({ profile }) => {
     fetchUsername();
   }, [profile.uid, profile.username]);
 
-  // Fetch follower count and page count
+  // Fetch follower count and page count with optimized loading
   useEffect(() => {
     const fetchStats = async () => {
       if (profile.uid) {
         try {
           setIsLoadingStats(true);
 
-          // Get follower count
-          const count = await getUserFollowerCount(profile.uid);
-          setFollowerCount(count);
+          // Use Promise.all to fetch both stats in parallel
+          const [followerCountPromise, pageCountPromise] = await Promise.all([
+            // Get follower count
+            getUserFollowerCount(profile.uid),
 
-          // Get page count from Firestore
-          const { collection, query, where, getDocs } = await import('firebase/firestore');
-          const { db } = await import('../firebase/database');
+            // Get page count from Firestore
+            (async () => {
+              const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
+              const { db } = await import('../firebase/database');
 
-          const pagesQuery = query(
-            collection(db, 'pages'),
-            where('userId', '==', profile.uid)
-          );
+              // Use a more efficient query with limit
+              const pagesQuery = query(
+                collection(db, 'pages'),
+                where('userId', '==', profile.uid),
+                limit(100) // Limit to 100 pages for performance
+              );
 
-          const pagesSnapshot = await getDocs(pagesQuery);
-          setPageCount(pagesSnapshot.size);
+              const pagesSnapshot = await getDocs(pagesQuery);
+              return pagesSnapshot.size;
+            })()
+          ]);
+
+          // Update state with results
+          setFollowerCount(followerCountPromise);
+          setPageCount(pageCountPromise);
 
         } catch (error) {
           console.error('Error fetching user stats:', error);
@@ -119,7 +129,7 @@ const SingleProfileView = ({ profile }) => {
           <div className="flex flex-col items-center">
             <span className="text-lg font-semibold">
               {isLoadingStats ? (
-                <Loader className="h-4 w-4 animate-spin" />
+                <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
               ) : (
                 pageCount
               )}
@@ -130,7 +140,7 @@ const SingleProfileView = ({ profile }) => {
           <div className="flex flex-col items-center">
             <span className="text-lg font-semibold">
               {isLoadingStats ? (
-                <Loader className="h-4 w-4 animate-spin" />
+                <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
               ) : (
                 followerCount
               )}

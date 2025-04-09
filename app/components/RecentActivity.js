@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 import { PulseLoader } from "react-spinners";
 import { AuthContext } from "../providers/AuthProvider";
 import { getFollowedPages } from "../firebase/follows";
+import SimpleSparkline from "./SimpleSparkline";
 
 const ActivitySkeleton = () => {
   return (
@@ -50,7 +51,8 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   const defaultViewMode = isInUserProfile || isActivityPage ? 'all' : 'following';
 
   const [viewMode, setViewMode] = useState(defaultViewMode);
-  const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
+  const [timeRange, setTimeRange] = useState('all');
+  const { activities, activityData, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
     limit,
     userId,
     viewMode === 'following'
@@ -112,6 +114,19 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           <Clock className="h-4 w-4" />
           <h2 className="text-lg font-semibold">Recent activity</h2>
         </div>
+
+        {/* Activity Sparkline */}
+        {!loading && !error && activityData && activityData.length > 0 && (
+          <div className="hidden md:block w-32 h-8">
+            <SimpleSparkline
+              data={activityData}
+              height={24}
+              showTimeToggle={true}
+              timeRange={timeRange}
+              onTimeRangeChange={setTimeRange}
+            />
+          </div>
+        )}
 
         {/* View mode switch - only show when user is logged in */}
         {user && (

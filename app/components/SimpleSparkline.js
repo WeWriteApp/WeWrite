@@ -10,12 +10,18 @@ import React from 'react';
  * @param {number} props.height - Height of the sparkline
  * @param {string} props.color - Color of the line
  * @param {number} props.strokeWidth - Width of the line
+ * @param {boolean} props.showTimeToggle - Whether to show the time range toggle
+ * @param {string} props.timeRange - Current time range ('all' or '24h')
+ * @param {Function} props.onTimeRangeChange - Callback when time range changes
  */
 export default function SimpleSparkline({
   data = [],
   height = 60,
   color = "#1768FF",
-  strokeWidth = 1.5
+  strokeWidth = 1.5,
+  showTimeToggle = false,
+  timeRange = 'all',
+  onTimeRangeChange = () => {}
 }) {
   if (!data || data.length === 0) {
     return <div style={{ height: `${height}px` }} className="w-full"></div>;
@@ -45,7 +51,7 @@ export default function SimpleSparkline({
   ].join(' ');
 
   return (
-    <div className="w-full" style={{ height: `${height}px` }}>
+    <div className="w-full" style={{ height: `${height + (showTimeToggle ? 20 : 0)}px` }}>
       <svg width="100%" height={height} preserveAspectRatio="none" viewBox={`0 0 ${width} ${height}`}>
         {/* Area under the line with very slight opacity */}
         <polygon
@@ -66,6 +72,25 @@ export default function SimpleSparkline({
 
         {/* No dots for data points - just the line */}
       </svg>
+
+      {/* Time range toggle */}
+      {showTimeToggle && (
+        <div className="flex justify-end mt-1 text-xs text-muted-foreground">
+          <button
+            onClick={() => onTimeRangeChange('all')}
+            className={`px-1 ${timeRange === 'all' ? 'text-primary font-medium' : ''}`}
+          >
+            all
+          </button>
+          <span className="mx-1">|</span>
+          <button
+            onClick={() => onTimeRangeChange('24h')}
+            className={`px-1 ${timeRange === '24h' ? 'text-primary font-medium' : ''}`}
+          >
+            24h
+          </button>
+        </div>
+      )}
     </div>
   );
 }

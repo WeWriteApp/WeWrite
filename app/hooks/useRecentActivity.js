@@ -8,6 +8,7 @@ import { getDatabase, ref, get } from "firebase/database";
 const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
+  const [activityData, setActivityData] = useState([]);
   const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
   const [lastVisible, setLastVisible] = useState(null);
@@ -293,7 +294,34 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             .filter(activity => activity !== null)
             .slice(0, limitCount);
 
+          // Generate sparkline data - count activities by day for the last 14 days
+          const activityByDay = {};
+          const now = new Date();
+
+          // Initialize the last 14 days with 0 counts
+          for (let i = 13; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            const dateKey = date.toISOString().split('T')[0];
+            activityByDay[dateKey] = 0;
+          }
+
+          // Count activities by day
+          validActivities.forEach(activity => {
+            if (activity.timestamp) {
+              const activityDate = new Date(activity.timestamp);
+              const dateKey = activityDate.toISOString().split('T')[0];
+              if (activityByDay[dateKey] !== undefined) {
+                activityByDay[dateKey]++;
+              }
+            }
+          });
+
+          // Convert activity map to array for sparkline
+          const sparklineData = Object.values(activityByDay);
+
           setActivities(validActivities);
+          setActivityData(sparklineData);
 
           // Update hasMore based on the number of valid activities
           setHasMore(validActivities.length >= limitCount && pagesSnapshot.docs.length > validActivities.length);
@@ -528,7 +556,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     }
   }, [lastVisible, loadingMore, limitCount, filterUserId, user]);
 
-  return { activities, loading, error, hasMore, loadingMore, loadMore };
+  return { activities, activityData, loading, error, hasMore, loadingMore, loadMore };
 };
 
 export default useRecentActivity;
