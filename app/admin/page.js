@@ -6,7 +6,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
-import { Loader, Plus, Save, Trash2, UserPlus } from "lucide-react";
+import { Loader, Plus, Save, Trash2, UserPlus, RefreshCw } from "lucide-react";
+import { syncAnalyticsData } from "./syncAnalytics";
 import { collection, query, where, getDocs, orderBy, limit, startAfter, addDoc, updateDoc, doc, getDoc, Timestamp, getFirestore } from "firebase/firestore";
 import { db } from "../firebase/database";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ export default function AdminPage() {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [adminEmails, setAdminEmails] = useState([]);
   const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+  const [isSyncingAnalytics, setIsSyncingAnalytics] = useState(false);
 
   // Analytics data
   const [pageViewsData, setPageViewsData] = useState([]);
@@ -136,14 +138,118 @@ export default function AdminPage() {
   // Load analytics data
   const loadAnalyticsData = async () => {
     try {
-      // Generate sample data for now
-      // In a real implementation, this would fetch from Firestore
-      generateSampleData();
+      // Fetch real analytics data from Firestore
+      await fetchRealAnalyticsData();
 
       // Load top linked pages
       await loadTopLinkedPages();
     } catch (error) {
       console.error("Error loading analytics data:", error);
+      // Fallback to sample data if real data fetch fails
+      generateSampleData();
+    }
+  };
+
+  // Fetch real analytics data from Firestore
+  const fetchRealAnalyticsData = async () => {
+    try {
+      // Get the last 30 days of analytics data
+      const days = 30;
+      const now = new Date();
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - days);
+
+      // Format dates for Firestore queries
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = now.toISOString().split('T')[0];
+
+      // Query analytics collection for page views
+      const analyticsRef = collection(db, 'analytics');
+      const analyticsQuery = query(
+        analyticsRef,
+        where('date', '>=', startDateStr),
+        where('date', '<=', endDateStr),
+        orderBy('date', 'asc')
+      );
+
+      const analyticsSnapshot = await getDocs(analyticsQuery);
+
+      // Initialize arrays for each metric
+      const pageViews = Array(days).fill(0);
+      const pagesCreated = Array(days).fill(0);
+      const repliesCreated = Array(days).fill(0);
+      const accountsCreated = Array(days).fill(0);
+      const desktop = Array(days).fill(0);
+      const mobileBrowser = Array(days).fill(0);
+      const mobilePwa = Array(days).fill(0);
+
+      // Process analytics data
+      analyticsSnapshot.forEach(doc => {
+        const data = doc.data();
+        const date = new Date(data.date);
+        const dayIndex = Math.floor((date - startDate) / (24 * 60 * 60 * 1000));
+
+        if (dayIndex >= 0 && dayIndex < days) {
+          // Page views
+          pageViews[dayIndex] = data.pageViews || 0;
+
+          // Pages created
+          pagesCreated[dayIndex] = data.pagesCreated || 0;
+
+          // Replies created
+          repliesCreated[dayIndex] = data.repliesCreated || 0;
+
+          // Accounts created
+          accountsCreated[dayIndex] = data.accountsCreated || 0;
+
+          // Device usage
+          desktop[dayIndex] = data.deviceUsage?.desktop || 0;
+          mobileBrowser[dayIndex] = data.deviceUsage?.mobileBrowser || 0;
+          mobilePwa[dayIndex] = data.deviceUsage?.mobilePwa || 0;
+        }
+      });
+
+      // If we have no data, fall back to sample data
+      if (analyticsSnapshot.empty) {
+        throw new Error('No analytics data found');
+      }
+
+      // Update state with real data
+      setPageViewsData(pageViews);
+      setPagesCreatedData(pagesCreated);
+      setRepliesCreatedData(repliesCreated);
+      setAccountsCreatedData(accountsCreated);
+      setDeviceUsageData({
+        desktop,
+        mobileBrowser,
+        mobilePwa
+      });
+
+      console.log('Loaded real analytics data');
+    } catch (error) {
+      console.error('Error fetching real analytics data:', error);
+      throw error; // Re-throw to trigger fallback
+    }
+  };
+
+  // Handle syncing analytics data with Google Analytics and Vercel
+  const handleSyncAnalytics = async () => {
+    setIsSyncingAnalytics(true);
+    try {
+      const result = await syncAnalyticsData();
+
+      if (result.success) {
+        toast.success(result.message);
+        // Reload analytics data to show the updated data
+        await fetchRealAnalyticsData();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error syncing analytics data:', error);
+      toast.error('Failed to sync analytics data');
+    } finally {
+      setIsSyncingAnalytics(false);
     }
   };
 
@@ -296,6 +402,27 @@ export default function AdminPage() {
         </TabsList>
 
         <TabsContent value="analytics">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Analytics Dashboard</h2>
+            <Button
+              onClick={handleSyncAnalytics}
+              disabled={isSyncingAnalytics}
+              className="flex items-center gap-2"
+            >
+              {isSyncingAnalytics ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Sync with GA & Vercel
+                </>
+              )}
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Page Views */}
             <AdminChart

@@ -202,6 +202,12 @@ export const MultiAccountProvider = ({ children }) => {
       throw new Error("Account not found or missing email");
     }
 
+    // Check if this is the current account
+    if (currentAccount?.uid === accountId) {
+      // Already on this account, just return success
+      return true;
+    }
+
     // Check if the account is already logged in
     // We can determine this by checking if the account is in the accounts list
     // and has a lastUsed timestamp that's recent (within the last 30 days)
@@ -211,13 +217,8 @@ export const MultiAccountProvider = ({ children }) => {
 
     if (isRecentlyUsed) {
       try {
-        // First sign out of the current account
-        await signOut(auth);
-
-        // For accounts we've used recently, we'll try to sign in without a password
-        // This uses the browser's session persistence
-        // We'll use a special method that doesn't require a password
-        // This is a mock implementation - in a real app, you'd use a token-based auth system
+        // For accounts we've used recently, we'll try to switch directly without signing out
+        // This is more user-friendly and avoids unnecessary authentication
 
         // Update the last used timestamp
         setAccounts(prevAccounts =>
@@ -229,9 +230,13 @@ export const MultiAccountProvider = ({ children }) => {
         );
 
         // Set the current account directly
-        // This is a workaround - in a real implementation, you'd use a proper auth method
-        // that doesn't require a password for already logged-in accounts
         setCurrentAccount(account);
+
+        // Store the current account in localStorage
+        localStorage.setItem('currentAccount', JSON.stringify(account));
+
+        // Redirect to home page to ensure proper state refresh
+        window.location.href = '/';
 
         return true;
       } catch (error) {

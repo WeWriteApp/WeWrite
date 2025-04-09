@@ -11,10 +11,11 @@ import {
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
 import { useAuth } from "../providers/AuthProvider";
-import { Loader, Settings, ChevronLeft, Heart } from "lucide-react";
+import { Loader, Settings, ChevronLeft, Heart, DollarSign } from "lucide-react";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount } from "../firebase/follows";
+import PledgeBarModal from "./PledgeBarModal";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ const SingleProfileView = ({ profile }) => {
   const [donorCount, setDonorCount] = useState(0); // Added donor count
   const [username, setUsername] = useState(profile.username || 'Anonymous');
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [showDonorModal, setShowDonorModal] = useState(false);
 
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
@@ -149,7 +151,11 @@ const SingleProfileView = ({ profile }) => {
             <span className="text-xs text-muted-foreground">followers</span>
           </div>
 
-          <div className="flex flex-col items-center">
+          <div
+            className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setShowDonorModal(true)}
+            title="View donors"
+          >
             <span className="text-lg font-semibold">
               {isLoadingStats ? (
                 <div className="h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
@@ -157,7 +163,10 @@ const SingleProfileView = ({ profile }) => {
                 donorCount
               )}
             </span>
-            <span className="text-xs text-muted-foreground">donors</span>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <DollarSign className="h-3 w-3" />
+              donors
+            </span>
           </div>
         </div>
 
@@ -191,6 +200,22 @@ const SingleProfileView = ({ profile }) => {
           />
         </div>
         <UserProfileTabs profile={profile} />
+
+        {/* Donors Modal */}
+        <PledgeBarModal
+          isOpen={showDonorModal}
+          onClose={() => setShowDonorModal(false)}
+          isSignedIn={!!user}
+          customContent={{
+            title: "Ability to donate coming soon!",
+            description: "Soon you'll be able to support this creator directly through WeWrite. We're still building this functionality, and if you'd like to help us get there sooner, you can support us!",
+            action: {
+              href: "https://opencollective.com/wewrite-app",
+              label: "Support WeWrite",
+              external: true
+            }
+          }}
+        />
       </div>
     </ProfilePagesProvider>
   );

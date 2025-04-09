@@ -287,7 +287,7 @@ export default function PageHeader({
           </div>
 
           {/* Collapsed Header - Only visible when scrolled down - thinner for immersive reading */}
-          <div className={`flex items-center justify-between py-0.5 transition-all duration-300 ${isScrolled && !shouldShowExpandedHeader ? 'opacity-100 max-h-8' : 'opacity-0 max-h-0 overflow-hidden pointer-events-none'}`}>
+          <div className={`flex items-center justify-between py-0 transition-all duration-300 ${isScrolled && !shouldShowExpandedHeader ? 'opacity-100 max-h-5' : 'opacity-0 max-h-0 overflow-hidden pointer-events-none'}`}>
             {/* Center - Title and Author */}
             <div className="flex-1 flex justify-start items-center">
               <div className={`text-left space-y-0 transition-all duration-300 transform ${
@@ -295,7 +295,7 @@ export default function PageHeader({
               }`}>
                 <h1 className={`font-semibold transition-all duration-300 transform ${
                   isScrolled
-                    ? "text-base truncate max-w-[70vw]"
+                    ? "text-sm truncate max-w-[70vw]"
                     : "text-2xl mb-0.5"
                 }`}>
                   {isLoading ? (
@@ -309,7 +309,7 @@ export default function PageHeader({
                 </h1>
                 <p className={`text-muted-foreground transition-all duration-120 ${
                   isScrolled
-                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block"
+                    ? "text-[10px] mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block"
                     : "text-sm mt-0.5 truncate"
                 }`}>
                   {isLoading ? (

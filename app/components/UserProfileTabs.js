@@ -77,7 +77,7 @@ function PageList({ pageList, emptyMessage }) {
 }
 
 export default function UserProfileTabs({ profile }) {
-  const [activeTab, setActiveTab] = useState("activity");
+  const [activeTab, setActiveTab] = useState("bio");
   const { user } = useContext(AuthContext);
   const isCurrentUser = user && profile && user.uid === profile.uid;
   const [loadingError, setLoadingError] = useState(null);
@@ -101,7 +101,7 @@ export default function UserProfileTabs({ profile }) {
   } = usePages(profile?.uid, true, user?.uid);
 
   // Determine which tabs to show
-  const visibleTabs = ["activity", "pages", "bio"];
+  const visibleTabs = ["bio", "activity", "pages"];
   if (isCurrentUser) {
     visibleTabs.push("private");
     visibleTabs.push("following");
@@ -249,10 +249,18 @@ export default function UserProfileTabs({ profile }) {
 
   return (
     <div className="mt-6">
-      <Tabs defaultValue="activity" onValueChange={handleTabChange} className="w-full">
+      <Tabs defaultValue="bio" onValueChange={handleTabChange} className="w-full">
         <div className="relative border-b border-border/40 mb-4">
           <div className="overflow-x-auto scrollbar-hide">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start">
+              <TabsTrigger
+                value="bio"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <User className="h-4 w-4" />
+                <span>Bio</span>
+              </TabsTrigger>
+
               <TabsTrigger
                 value="activity"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
@@ -267,14 +275,6 @@ export default function UserProfileTabs({ profile }) {
               >
                 <FileText className="h-4 w-4" />
                 <span>Pages</span>
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="bio"
-                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-              >
-                <User className="h-4 w-4" />
-                <span>Bio</span>
               </TabsTrigger>
 
               {isCurrentUser && (

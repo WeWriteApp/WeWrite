@@ -4,13 +4,15 @@ import { Button } from "./ui/button";
 import { Loader, Save, Edit, X } from "lucide-react";
 import SlateEditor from "./SlateEditor";
 import { updateDoc } from "../firebase/database";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase/config";
 import { toast } from "sonner";
 
 /**
  * BioEditor Component
- * 
+ *
  * A component for editing a user's bio using the SlateEditor
- * 
+ *
  * @param {Object} props
  * @param {string} props.userId - The user ID
  * @param {Object} props.initialContent - Initial content for the editor
@@ -40,21 +42,43 @@ export default function BioEditor({ userId, initialContent, isCurrentUser }) {
     }
   }, [initialContent]);
 
+  // Log the current state for debugging
+  useEffect(() => {
+    console.log('BioEditor: Current content state:', {
+      userId,
+      initialContent,
+      editorContent,
+      isCurrentUser
+    });
+  }, [userId, initialContent, editorContent, isCurrentUser]);
+
   // Handle save
   const handleSave = async () => {
     if (!userId) return;
-    
+
     setIsSaving(true);
     try {
       // Convert the editorContent to JSON string
       const bioContent = JSON.stringify(editorContent);
-      
+
+      console.log('BioEditor: Saving bio content:', {
+        userId,
+        bioContent
+      });
+
       // Update the user's bio in Firestore
       await updateDoc("users", userId, {
         bio: bioContent,
         lastModified: new Date().toISOString()
       });
-      
+
+      // Update the user document in the 'users' collection to ensure persistence
+      const userDocRef = doc(db, 'users', userId);
+      await setDoc(userDocRef, {
+        bio: bioContent,
+        lastModified: new Date().toISOString()
+      }, { merge: true });
+
       setIsEditing(false);
       toast.success("Bio updated successfully");
     } catch (error) {
@@ -89,7 +113,7 @@ export default function BioEditor({ userId, initialContent, isCurrentUser }) {
     return (
       <div className="relative">
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          {editorContent && editorContent.length > 0 && editorContent.some(node => 
+          {editorContent && editorContent.length > 0 && editorContent.some(node =>
             node.children && node.children.some(child => child.text && child.text.trim().length > 0)
           ) ? (
             <div className="p-4 border border-border/40 rounded-lg bg-card/50">
@@ -104,7 +128,7 @@ export default function BioEditor({ userId, initialContent, isCurrentUser }) {
             </div>
           )}
         </div>
-        
+
         {isCurrentUser && (
           <Button
             variant="outline"
@@ -155,7 +179,7 @@ export default function BioEditor({ userId, initialContent, isCurrentUser }) {
           </Button>
         </div>
       </div>
-      
+
       <SlateEditor
         ref={editorRef}
         initialContent={editorContent}

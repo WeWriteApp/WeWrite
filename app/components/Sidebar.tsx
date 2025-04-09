@@ -69,7 +69,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         )}
       >
         <div className="flex flex-col h-full relative">
-          {/* Header - Fixed at top */}
+          {/* Header with Account Switcher - Fixed at top */}
           <div className="sticky top-0 z-10 bg-background p-6 pb-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-foreground">WeWrite</h2>
@@ -83,16 +83,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <X className="h-5 w-5" />
               </Button>
             </div>
+
+            {/* Account Switcher at the top */}
+            <div className="mb-4">
+              <AccountSwitcher />
+            </div>
           </div>
 
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-6 pb-0 scrollbar-hide">
+          {/* Scrollable content - Single stack */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 pb-6 scrollbar-hide">
             <SidebarNavigation />
-          </div>
-
-          {/* Account Switcher - Fixed at bottom */}
-          <div className="sticky bottom-0 bg-background pt-0 pb-2 px-6 border-t border-border">
-            <AccountSwitcher />
           </div>
         </div>
       </div>

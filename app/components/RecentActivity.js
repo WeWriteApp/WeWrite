@@ -45,12 +45,36 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   const isInUserProfile = userId && !isInActivityPage;
 
   // Set default view mode based on context:
-  // - 'following' for homepage
+  // - 'following' for homepage (or persisted value from localStorage)
   // - 'all' for user profiles
   // - 'all' for activity page
-  const defaultViewMode = isInUserProfile || isActivityPage ? 'all' : 'following';
+  const getDefaultViewMode = () => {
+    // For user profiles and activity page, always use 'all'
+    if (isInUserProfile || isActivityPage) return 'all';
 
-  const [viewMode, setViewMode] = useState(defaultViewMode);
+    // For homepage, try to get persisted value from localStorage
+    if (typeof window !== 'undefined') {
+      const savedViewMode = localStorage.getItem('homePageViewMode');
+      if (savedViewMode === 'all' || savedViewMode === 'following') {
+        return savedViewMode;
+      }
+    }
+
+    // Default to 'following' if no saved preference
+    return 'following';
+  };
+
+  const [viewMode, setViewMode] = useState(getDefaultViewMode());
+
+  // Persist view mode to localStorage when it changes (only for homepage)
+  const updateViewMode = (newMode) => {
+    setViewMode(newMode);
+
+    // Only persist for homepage
+    if (!isInUserProfile && !isActivityPage && typeof window !== 'undefined') {
+      localStorage.setItem('homePageViewMode', newMode);
+    }
+  };
   const [timeRange, setTimeRange] = useState('all');
   const { activities, activityData, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
     limit,
@@ -132,13 +156,13 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         {user && (
           <div className="flex items-center gap-2 text-sm">
             <button
-              onClick={() => setViewMode('all')}
+              onClick={() => updateViewMode('all')}
               className={`px-3 py-1 rounded-full transition-colors ${getContrastAwareClasses(viewMode === 'all')}`}
             >
               All
             </button>
             <button
-              onClick={() => setViewMode('following')}
+              onClick={() => updateViewMode('following')}
               disabled={isLoadingFollows || followedPages.length === 0}
               className={`px-3 py-1 rounded-full transition-colors ${followedPages.length === 0
                 ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'

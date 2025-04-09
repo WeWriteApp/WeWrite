@@ -1093,26 +1093,21 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
     `editor-link ${element.className}` :
     isUserLink ? 'editor-link user-link' : 'editor-link page-link';
 
-  // Fix display text for links
-  if (element.children && element.children.length > 0) {
-    // For user links, ensure the children text matches the username without @ prefix
-    if (isUserLink) {
-      const displayUsername = element.username || '';
-      // Remove @ prefix if it exists
-      if (element.children[0].text && element.children[0].text.startsWith('@')) {
-        element.children[0].text = element.children[0].text.substring(1);
-      }
-      // Ensure username is displayed correctly
-      if (element.username && element.children[0].text !== displayUsername) {
-        element.children[0].text = displayUsername;
-      }
+  // Always remove @ symbol from all link types
+  if (element.children && element.children.length > 0 && element.children[0].text) {
+    // Remove @ prefix if it exists for any link type
+    if (element.children[0].text.startsWith('@')) {
+      element.children[0].text = element.children[0].text.substring(1);
     }
 
-    // For page links, ensure the @ symbol is removed
-    if (!isUserLink && !isExternal && element.children[0].text) {
-      if (element.children[0].text.startsWith('@')) {
-        element.children[0].text = element.children[0].text.substring(1);
-      }
+    // For user links, ensure the children text matches the username
+    if (isUserLink && element.username && element.children[0].text !== element.username) {
+      element.children[0].text = element.username;
+    }
+
+    // For page links, ensure the text matches the page title if available
+    if (isPageLink && element.pageTitle && element.children[0].text !== element.pageTitle) {
+      element.children[0].text = element.pageTitle;
     }
   }
 

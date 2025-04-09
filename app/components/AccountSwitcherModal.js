@@ -6,7 +6,7 @@ import { useMultiAccount } from "../providers/MultiAccountProvider";
 import { Button } from "./ui/button";
 import { auth } from "../firebase/config";
 import { signOut } from "firebase/auth";
-import { User, UserPlus, AlertCircle } from "lucide-react";
+import { User, UserPlus, AlertCircle, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -115,6 +115,7 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
                       {account.email}
                     </p>
                   </div>
+                  <Settings className="h-4 w-4 text-muted-foreground flex-shrink-0 mr-1" />
                   {currentAccount?.uid === account.uid && (
                     <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                   )}
