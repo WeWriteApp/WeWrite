@@ -16,9 +16,10 @@ export async function GET() {
     const publicPagesQuery = query(
       pagesRef,
       where('isPublic', '==', true),
-      where('deleted', '==', false),
       limit(100) // Limit to 100 pages for performance
     );
+
+    // Note: We removed the 'deleted' field check since it's not present in all documents
 
     console.log('Executing Firestore query for random page');
     const snapshot = await getDocs(publicPagesQuery);
@@ -28,12 +29,17 @@ export async function GET() {
       return NextResponse.json({ error: 'No pages found' }, { status: 404 });
     }
 
-    // Convert to array
+    // Convert to array and filter out any potentially deleted pages
     const pages = [];
     snapshot.forEach(doc => {
+      const data = doc.data();
+      // Skip any pages that might be marked as deleted
+      if (data.deleted === true) {
+        return;
+      }
       pages.push({
         id: doc.id,
-        ...doc.data()
+        ...data
       });
     });
 
