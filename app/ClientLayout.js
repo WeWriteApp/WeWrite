@@ -12,6 +12,7 @@ import { RecentPagesProvider } from "./contexts/RecentPagesContext";
 import { LineSettingsProvider } from "./contexts/LineSettingsContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
+import { TrackingProvider } from "./providers/TrackingProvider";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -41,29 +42,31 @@ export default function ClientLayout({ children }) {
           <DataProvider>
             <MultiAccountProvider>
               <AuthProvider>
-                <PortfolioProvider>
-                  <RecentPagesProvider>
-                    <MobileProvider>
-                      <DrawerProvider>
-                        <LineSettingsProvider>
-                      <Drawer />
-                      <div className="flex flex-col min-h-screen bg-background pb-8">
-                        {!isAuthPage && <UsernameWarningBanner />}
-                        <main className="flex-grow">
-                          {children}
-                        </main>
-                      </div>
-                      {process.env.NODE_ENV === 'development' && (
-                        <>
-                          {/* <GADebugger /> */}
-                          <WindsurfOverlay />
-                        </>
-                      )}
-                        </LineSettingsProvider>
-                      </DrawerProvider>
-                    </MobileProvider>
-                  </RecentPagesProvider>
-                </PortfolioProvider>
+                <TrackingProvider>
+                  <PortfolioProvider>
+                    <RecentPagesProvider>
+                      <MobileProvider>
+                        <DrawerProvider>
+                          <LineSettingsProvider>
+                        <Drawer />
+                        <div className="flex flex-col min-h-screen bg-background pb-8">
+                          {!isAuthPage && <UsernameWarningBanner />}
+                          <main className="flex-grow">
+                            {children}
+                          </main>
+                        </div>
+                        {process.env.NODE_ENV === 'development' && (
+                          <>
+                            {/* <GADebugger /> */}
+                            <WindsurfOverlay />
+                          </>
+                        )}
+                          </LineSettingsProvider>
+                        </DrawerProvider>
+                      </MobileProvider>
+                    </RecentPagesProvider>
+                  </PortfolioProvider>
+                </TrackingProvider>
               </AuthProvider>
             </MultiAccountProvider>
           </DataProvider>
