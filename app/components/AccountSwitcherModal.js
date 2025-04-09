@@ -141,11 +141,14 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
             </Button>
           </div>
         </DialogContent>
+        </DialogPortal>
       </Dialog>
 
       {/* Max accounts dialog */}
       <Dialog open={isMaxAccountsDialogOpen} onOpenChange={setIsMaxAccountsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogPortal>
+          <DialogOverlay className="support-modal-overlay" />
+          <DialogContent className="sm:max-w-md mx-auto rounded-lg overflow-hidden border-border dark:border-border support-modal">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" />
@@ -197,6 +200,7 @@ export function AccountSwitcherModal({ isOpen, onClose }) {
             </Button>
           </DialogFooter>
         </DialogContent>
+        </DialogPortal>
       </Dialog>
     </>
   );
