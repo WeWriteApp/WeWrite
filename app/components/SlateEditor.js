@@ -1043,7 +1043,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
 
   // Check if it's a user link - more robust check
   const isUserLink = element.isUser ||
-                   (url && url.startsWith('/u/')) ||
+                   (url && (url.startsWith('/u/') || url.startsWith('/user/') || url.startsWith('/users/'))) ||
                    (element.username) ||
                    (element.userId);
 
@@ -1129,10 +1129,22 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
     }
   };
 
+  // Ensure user links always use the /u/ format
+  let finalUrl = url;
+  if (isUserLink && element.userId) {
+    // Convert any old format URLs to the new format
+    if (url.startsWith('/user/') || url.startsWith('/users/')) {
+      finalUrl = `/u/${element.userId}`;
+    } else if (!url.startsWith('/u/')) {
+      // If it doesn't start with /u/ already, make sure it does
+      finalUrl = `/u/${element.userId}`;
+    }
+  }
+
   return (
     <a
       {...attributes}
-      href={url}
+      href={finalUrl}
       className={className}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}

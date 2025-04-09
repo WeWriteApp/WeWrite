@@ -77,7 +77,17 @@ export function SidebarNavigation() {
     if (isRandomLoading) return; // Prevent multiple clicks
 
     setIsRandomLoading(true);
+
+    // Track the event in our analytics
     trackEvent("random_page_clicked");
+
+    // Also track in Google Analytics if available
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'random_page_clicked', {
+        'event_category': 'navigation',
+        'event_label': 'sidebar'
+      });
+    }
 
     try {
       // Add a cache-busting parameter to avoid caching issues
@@ -188,7 +198,7 @@ export function SidebarNavigation() {
 
   // Render the appropriate level with animation
   return (
-    <div className="relative overflow-hidden h-full" onScroll={(e) => e.stopPropagation()}>
+    <div className="relative overflow-y-auto h-full" onScroll={(e) => e.stopPropagation()}>
       {/* Main Navigation */}
       <div
         className={`absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out ${currentLevel === "themes" ? "-translate-x-full" : "translate-x-0"}`}
@@ -250,7 +260,7 @@ export function SidebarNavigation() {
 
       {/* Themes Submenu */}
       <div
-        className={`absolute inset-0 flex flex-col h-full transition-transform duration-300 ease-in-out ${currentLevel === "themes" ? "translate-x-0" : "translate-x-full"}`}
+        className={`absolute inset-0 flex flex-col h-full overflow-y-auto transition-transform duration-300 ease-in-out ${currentLevel === "themes" ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex items-center mb-6">
           <Button
@@ -294,7 +304,7 @@ export function SidebarNavigation() {
           ))}
         </div>
 
-        <div className="mb-6">
+        <div className="mb-16">
           {/* Wrap AccentColorSelector in error boundary */}
           <React.Suspense fallback={<div className="p-3 text-sm text-muted-foreground">Loading color options...</div>}>
             <AccentColorSelector />

@@ -114,7 +114,7 @@ export const PillLink = ({
 
       // Add a loading overlay - immediately after interaction
       const loadingOverlay = document.createElement('div');
-      loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center';
+      loadingOverlay.className = 'fixed inset-0 bg-background z-50 flex flex-col items-center justify-center';
       loadingOverlay.id = 'navigation-loading-overlay';
 
       const spinner = document.createElement('div');

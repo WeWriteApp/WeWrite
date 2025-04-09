@@ -35,7 +35,11 @@ export default function SimpleSparkline({
   // Generate points for the polyline
   const points = data.map((value, index) => {
     const x = (index / (data.length - 1)) * width;
-    const y = graphHeight - ((value / maxValue) * graphHeight) + padding;
+    // For zero values, always position at the bottom of the graph
+    // This ensures zero values are displayed at the bottom, not raised
+    const y = value === 0
+      ? height - padding // Position at bottom
+      : graphHeight - ((value / maxValue) * graphHeight) + padding;
     return `${x},${y}`;
   }).join(' ');
 
@@ -44,7 +48,11 @@ export default function SimpleSparkline({
     `0,${height}`, // Bottom left
     ...data.map((value, index) => {
       const x = (index / (data.length - 1)) * width;
-      const y = graphHeight - ((value / maxValue) * graphHeight) + padding;
+      // For zero values, always position at the bottom of the graph
+      // This ensures zero values are displayed at the bottom, not raised
+      const y = value === 0
+        ? height - padding // Position at bottom
+        : graphHeight - ((value / maxValue) * graphHeight) + padding;
       return `${x},${y}`;
     }),
     `${width},${height}` // Bottom right

@@ -843,7 +843,20 @@ export default function AccountPage() {
             </Alert>
           </section>
 
-
+          {/* Admin Analytics - Only visible for jamiegray2234@gmail.com */}
+          {user && user.email === 'jamiegray2234@gmail.com' && (
+            <section>
+              <h3 className="text-base font-medium mb-4">Admin</h3>
+              <div className="space-y-4 bg-background rounded-lg border border-border p-4">
+                <Button
+                  onClick={() => router.push('/admin')}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  View Analytics Dashboard
+                </Button>
+              </div>
+            </section>
+          )}
 
           {/* Social Media Section */}
           <section>

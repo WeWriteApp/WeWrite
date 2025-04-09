@@ -85,23 +85,22 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         {/* Social Links Section */}
         <div className="pt-4 border-t-only">
           <h3 className="text-sm font-medium mb-3 text-center">Follow us for updates</h3>
-          <div className="flex justify-center gap-4 w-full">
+          <div className="flex flex-col gap-2 w-full">
             {sortedSocialLinks.map((link) => (
               <Button
                 key={link.platform}
                 variant="outline"
-                size="icon"
                 asChild
-                className="rounded-full border-2 h-10 w-10 p-0"
+                className="w-full justify-start text-foreground hover:text-foreground"
               >
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title={link.label}
-                  aria-label={link.label}
+                  className="flex items-center gap-2"
                 >
                   <SocialIcon platform={link.platform} className="h-5 w-5" />
+                  <span>{link.label}</span>
                 </a>
               </Button>
             ))}

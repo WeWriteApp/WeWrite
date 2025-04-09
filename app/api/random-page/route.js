@@ -11,6 +11,9 @@ let pageCache = [];
 let lastCacheRefill = 0;
 const CACHE_LIFETIME = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+// Force a new random page on each request
+let lastServedPageId = null;
+
 /**
  * Shuffle an array in place using the Fisher-Yates algorithm
  * @param {Array} array The array to shuffle
@@ -27,7 +30,7 @@ function shuffleArray(array) {
  *
  * @returns {Promise<NextResponse>} - Response with a random page ID
  */
-export async function GET() {
+export async function GET(req) {
   try {
     console.log('Random page API called');
 
@@ -108,11 +111,21 @@ export async function GET() {
       pageCache = pages;
     }
 
-    // Get a page from the cache
-    const randomPage = pageCache.shift();
+    // Get a page from the cache that's not the same as the last one served
+    let randomPage;
+
+    // If we have more than one page in the cache and the first one is the same as the last served,
+    // move it to the end of the array
+    if (pageCache.length > 1 && pageCache[0].id === lastServedPageId) {
+      const firstPage = pageCache.shift();
+      pageCache.push(firstPage);
+    }
+
+    randomPage = pageCache.shift();
 
     // Add the page ID to the used set
     usedPageIds.add(randomPage.id);
+    lastServedPageId = randomPage.id;
 
     // If the used set is too large, remove the oldest entries
     if (usedPageIds.size > MAX_USED_PAGE_IDS) {
@@ -122,6 +135,14 @@ export async function GET() {
     }
 
     console.log(`Selected random page: ${randomPage.id} - ${randomPage.title}`);
+
+    // Track this in analytics if the prefetch parameter is not set
+    // (prefetch requests shouldn't count as actual random page views)
+    const isPrefetch = req?.nextUrl?.searchParams?.get('prefetch') === 'true';
+    if (!isPrefetch) {
+      // In a real implementation, you would log this to your analytics service
+      console.log('Random page viewed:', randomPage.id);
+    }
 
     return NextResponse.json({
       pageId: randomPage.id,
