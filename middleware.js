@@ -33,17 +33,17 @@ export function middleware(request) {
     }
   }
 
-  // Redirect /user/[id] to /u/[slug]
-  if (path.startsWith('/user/')) {
-    const id = path.replace('/user/', '');
-    url.pathname = `/u/${id}`;
+  // Redirect /u/[slug] to /user/[id]
+  if (path.startsWith('/u/')) {
+    const id = path.replace('/u/', '');
+    url.pathname = `/user/${id}`;
     return NextResponse.redirect(url);
   }
 
-  // Redirect /users/[userId] to /u/[slug]
+  // Redirect /users/[userId] to /user/[id]
   if (path.startsWith('/users/')) {
     const id = path.replace('/users/', '');
-    url.pathname = `/u/${id}`;
+    url.pathname = `/user/${id}`;
     return NextResponse.redirect(url);
   }
 
@@ -51,12 +51,19 @@ export function middleware(request) {
   // Instead, we'll let the /[id] route handle the logic of determining
   // whether it's a page, user, or group
 
-  // Redirect /groups/[id] to /g/[id]
+  // Redirect /g/[id] to /group/[id]
+  if (path.startsWith('/g/')) {
+    const id = path.replace('/g/', '');
+    url.pathname = `/group/${id}`;
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect /groups/[id] to /group/[id]
   if (path.startsWith('/groups/')) {
     const id = path.replace('/groups/', '');
     // Don't redirect /groups/new
     if (id !== 'new') {
-      url.pathname = `/g/${id}`;
+      url.pathname = `/group/${id}`;
       return NextResponse.redirect(url);
     }
   }

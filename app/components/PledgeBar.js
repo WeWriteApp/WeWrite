@@ -44,13 +44,13 @@ const PledgeBar = () => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Synchronize with header collapse - hide as soon as scrolling starts
-      if (currentScrollY > 10) {
+      // Show the bar when scrolling up, hide when scrolling down
+      if (currentScrollY < lastScrollY) {
+        // Scrolling up - show the bar
+        setVisible(true);
+      } else if (currentScrollY > lastScrollY) {
         // Scrolling down - hide the bar
         setVisible(false);
-      } else {
-        // At top - show the bar
-        setVisible(true);
       }
 
       setLastScrollY(currentScrollY);

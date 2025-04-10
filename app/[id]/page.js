@@ -29,21 +29,35 @@ export default function GlobalIDPage({ params }) {
         // If not a page, check if it's a user ID
         const rtdb = getDatabase(app);
         const userRef = ref(rtdb, `users/${id}`);
-        const userSnapshot = await get(userRef);
+        let userSnapshot;
 
-        if (userSnapshot.exists()) {
+        try {
+          userSnapshot = await get(userRef);
+        } catch (userError) {
+          console.error("Error checking if ID is a user:", userError);
+          // Continue to check if it's a group
+        }
+
+        if (userSnapshot && userSnapshot.exists()) {
           // Redirect to the user page
-          router.replace(`/u/${id}`);
+          router.replace(`/user/${id}`);
           return;
         }
 
         // If not a page or user, check if it's a group
         const groupRef = ref(rtdb, `groups/${id}`);
-        const groupSnapshot = await get(groupRef);
+        let groupSnapshot;
 
-        if (groupSnapshot.exists()) {
+        try {
+          groupSnapshot = await get(groupRef);
+        } catch (groupError) {
+          console.error("Error checking if ID is a group:", groupError);
+          // Continue to not-found
+        }
+
+        if (groupSnapshot && groupSnapshot.exists()) {
           // Redirect to the group page
-          router.replace(`/g/${id}`);
+          router.replace(`/group/${id}`);
           return;
         }
 

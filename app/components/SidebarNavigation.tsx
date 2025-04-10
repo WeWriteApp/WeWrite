@@ -27,13 +27,10 @@ const AccentColorSelector = dynamic(
   { ssr: false }
 );
 
-const ReadingHistory = dynamic(
-  () => import('./ReadingHistory'),
-  { ssr: false }
-);
+// Reading History component is now a dedicated page at /reading-history
 
 // Define navigation levels
-type NavLevel = "main" | "themes" | "history";
+type NavLevel = "main" | "themes";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -252,10 +249,15 @@ export function SidebarNavigation() {
           <NavItem
             icon={<Clock className="h-4 w-4" />}
             label="Reading History"
-            hasSubmenu={true}
             onClick={() => {
-              setCurrentLevel("history");
-              trackEvent("history_submenu_opened");
+              router.push("/reading-history");
+              trackEvent("reading_history_clicked");
+              // Close the sidebar when clicking reading history
+              if (typeof window !== 'undefined') {
+                // Dispatch a custom event that Sidebar.tsx can listen for
+                const event = new CustomEvent('closeSidebar');
+                window.dispatchEvent(event);
+              }
             }}
           />
         </div>
@@ -328,30 +330,7 @@ export function SidebarNavigation() {
         </div>
       </div>
 
-      {/* Reading History Submenu */}
-      <div
-        className={`absolute inset-0 flex flex-col h-full overflow-y-auto transition-transform duration-300 ease-in-out ${currentLevel === "history" ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setCurrentLevel("main");
-              trackEvent("navigation_back_to_main");
-            }}
-            className="h-8 w-8 mr-2"
-            aria-label="Back to main menu"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h3 className="text-lg font-medium">Reading History</h3>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <ReadingHistory />
-        </div>
-      </div>
+      {/* Reading History Submenu removed - now using a dedicated page */}
     </div>
   );
 }

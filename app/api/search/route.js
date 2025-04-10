@@ -93,6 +93,31 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = []) {
     // Format search term for case-insensitive search
     const searchTermLower = searchTerm.toLowerCase().trim();
 
+    // Helper function to sort results with exact matches first
+    const sortWithExactMatchesFirst = (pages) => {
+      return pages.sort((a, b) => {
+        const aTitle = a.title.toLowerCase();
+        const bTitle = b.title.toLowerCase();
+
+        // Check for exact matches
+        const aExactMatch = aTitle === searchTermLower;
+        const bExactMatch = bTitle === searchTermLower;
+
+        if (aExactMatch && !bExactMatch) return -1;
+        if (!aExactMatch && bExactMatch) return 1;
+
+        // Check for starts with
+        const aStartsWith = aTitle.startsWith(searchTermLower);
+        const bStartsWith = bTitle.startsWith(searchTermLower);
+
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+
+        // Default to most recently modified
+        return 0;
+      });
+    };
+
     // Get user's own pages
     const userPagesQuery = query(
       collection(db, 'pages'),
@@ -148,8 +173,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = []) {
       }
     });
 
+    // Sort results with exact matches first
+    const sortedUserPages = sortWithExactMatchesFirst(userPages);
+    const sortedPublicPages = sortWithExactMatchesFirst(publicPages);
+
     // Combine and return results
-    return [...userPages, ...publicPages.slice(0, 10)];
+    return [...sortedUserPages, ...sortedPublicPages.slice(0, 10)];
   } catch (error) {
     console.error('Error in Firestore fallback search:', error);
     return [];

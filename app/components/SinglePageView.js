@@ -180,24 +180,34 @@ function SinglePageView({ params }) {
       // Mark that we've recorded the view to prevent duplicate recordings
       viewRecorded.current = true;
 
-      // Record the page view
-      recordPageView(params.id, user?.uid);
-      console.log('Recording page view for', params.id);
+      try {
+        // Record the page view
+        recordPageView(params.id, user?.uid);
+        console.log('Recording page view for', params.id);
+      } catch (error) {
+        // Don't let page view errors affect page viewing
+        console.error('Error recording page view:', error);
+      }
 
       // Track reading history if user is logged in
       if (user?.uid) {
-        // Get the page owner's username
-        const pageOwnerName = page.username || 'Anonymous';
+        try {
+          // Get the page owner's username
+          const pageOwnerName = page.username || 'Anonymous';
 
-        // Track the page view in reading history
-        trackPageView(
-          user.uid,
-          params.id,
-          page.title || 'Untitled',
-          page.userId || '',
-          pageOwnerName
-        );
-        console.log('Tracking page in reading history:', params.id);
+          // Track the page view in reading history
+          trackPageView(
+            user.uid,
+            params.id,
+            page.title || 'Untitled',
+            page.userId || '',
+            pageOwnerName
+          );
+          console.log('Tracking page in reading history:', params.id);
+        } catch (error) {
+          // Don't let reading history errors affect page viewing
+          console.error('Error tracking page in reading history:', error);
+        }
       }
     }
   }, [params.id, isLoading, page, isPublic, user]);
@@ -511,35 +521,23 @@ function SinglePageView({ params }) {
           <title>Error - WeWrite</title>
         </Head>
         <PageHeader />
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            Error
-          </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 text-red-500"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-            <span className="text-lg text-text">
-              {error}
-            </span>
-            <Link href="/">
-              <button className="bg-background text-button-text px-4 py-2 rounded-full">
-                Go back
-              </button>
-            </Link>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center">
+          <div className="bg-destructive/10 text-destructive p-6 rounded-lg max-w-md w-full">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+            <h1 className="text-2xl font-semibold mb-4">
+              Error Loading Page
+            </h1>
+            <p className="mb-6">{error}</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+              <Button variant="default" asChild>
+                <Link href="/">
+                  Go Home
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </Layout>

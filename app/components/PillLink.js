@@ -41,23 +41,29 @@ export const PillLink = ({
       }
     }
 
-    // Convert user URLs
-    if (href.startsWith('/user/')) {
-      const userId = href.replace('/user/', '');
-      href = `/u/${userId}`;
+    // Convert old user URLs to new format
+    if (href.startsWith('/u/')) {
+      const userId = href.replace('/u/', '');
+      href = `/user/${userId}`;
     }
 
-    // Convert users URLs
+    // Convert users URLs to new format
     if (href.startsWith('/users/')) {
       const userId = href.replace('/users/', '');
-      href = `/u/${userId}`;
+      href = `/user/${userId}`;
     }
 
-    // Convert group URLs
+    // Convert old group URLs to new format
+    if (href.startsWith('/g/')) {
+      const groupId = href.replace('/g/', '');
+      href = `/group/${groupId}`;
+    }
+
+    // Convert groups URLs to new format
     if (href.startsWith('/groups/')) {
       const groupId = href.replace('/groups/', '');
       if (groupId !== 'new') {
-        href = `/g/${groupId}`;
+        href = `/group/${groupId}`;
       }
     }
   }

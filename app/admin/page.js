@@ -15,7 +15,13 @@ import SortPreferenceChart from './components/SortPreferenceChart';
 import AdminChart from './components/AdminChart';
 import DeviceUsageChart from './components/DeviceUsageChart';
 import TopLinkedPagesTable from './components/TopLinkedPagesTable';
-import { BarChart2, FileText, MessageSquare, Users } from 'lucide-react';
+import RawEventFeed from './components/RawEventFeed';
+import LiveUsersMap from './components/LiveUsersMap';
+import RecentPageViewsCard from './components/RecentPageViewsCard';
+import RecentPagesCreatedCard from './components/RecentPagesCreatedCard';
+import RecentRepliesCard from './components/RecentRepliesCard';
+import RecentAccountsCard from './components/RecentAccountsCard';
+import { BarChart2, FileText, MessageSquare, Users, ArrowLeft } from 'lucide-react';
 
 // Admin emails
 const ADMIN_EMAILS = ["jamiegray2234@gmail.com"];
@@ -393,7 +399,17 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Button
+          variant="outline"
+          onClick={() => router.push('/account')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Account
+        </Button>
+      </div>
 
       <Tabs defaultValue="analytics">
         <TabsList className="mb-6">
@@ -490,6 +506,25 @@ export default function AdminPage() {
           {/* Top Linked Pages */}
           <div className="mb-8">
             <TopLinkedPagesTable pages={topLinkedPages} />
+          </div>
+
+          {/* Live Users Map */}
+          <div className="mb-8">
+            <LiveUsersMap />
+          </div>
+
+          {/* Raw Event Feed */}
+          <div className="mb-8">
+            <RawEventFeed />
+          </div>
+
+          {/* Recent Activity Cards */}
+          <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <RecentPageViewsCard />
+            <RecentPagesCreatedCard />
+            <RecentRepliesCard />
+            <RecentAccountsCard />
           </div>
         </TabsContent>
 

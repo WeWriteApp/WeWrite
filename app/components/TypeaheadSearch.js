@@ -36,8 +36,10 @@ const TypeaheadSearch = ({
   placeholder = "Search...",
   radioSelection = false,
   selectedId = null,
-  editableOnly = false, // New prop to filter for editable pages only
-  initialSearch = "" // New prop to set initial search value
+  editableOnly = false, // Filter for editable pages only
+  initialSearch = "", // Set initial search value
+  userSearchOnly = false, // Only search for users
+  pageSearchOnly = false // Only search for pages
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -173,17 +175,45 @@ const TypeaheadSearch = ({
 
         // Add more comprehensive error handling for fetch
         try {
-          // Fetch both pages and users in parallel using Promise.allSettled to handle partial failures
-          const [pagesResponse, usersResponse] = await Promise.allSettled([
-            fetch(queryUrl, {
-              signal: controller.signal,
-              cache: 'no-store' // Prevent caching of search results
-            }),
-            fetch(userSearchUrl, {
-              signal: controller.signal,
-              cache: 'no-store' // Prevent caching of search results
-            })
-          ]);
+          // Determine which requests to make based on search type
+          const requests = [];
+          let pagesResponse = { status: 'rejected' };
+          let usersResponse = { status: 'rejected' };
+
+          // Only fetch pages if not in user-only mode
+          if (!userSearchOnly) {
+            requests.push(
+              fetch(queryUrl, {
+                signal: controller.signal,
+                cache: 'no-store' // Prevent caching of search results
+              })
+            );
+          }
+
+          // Only fetch users if not in page-only mode
+          if (!pageSearchOnly) {
+            requests.push(
+              fetch(userSearchUrl, {
+                signal: controller.signal,
+                cache: 'no-store' // Prevent caching of search results
+              })
+            );
+          }
+
+          // Fetch data in parallel using Promise.allSettled to handle partial failures
+          const responses = await Promise.allSettled(requests);
+
+          // Assign responses to the appropriate variables
+          if (responses.length > 0) {
+            if (!userSearchOnly) {
+              pagesResponse = responses[0];
+              if (responses.length > 1) {
+                usersResponse = responses[1];
+              }
+            } else {
+              usersResponse = responses[0];
+            }
+          }
 
           clearTimeout(timeoutId);
 

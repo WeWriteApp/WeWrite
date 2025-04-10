@@ -17,7 +17,7 @@ const User = ({ uid }) => {
   }, [uid]);
   return (
     <Link href={`/user/${uid}`} className="text-text underline">
-      {profile.username}
+      {profile.username || 'Anonymous'}
     </Link>
   );
 }

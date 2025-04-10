@@ -9,30 +9,8 @@ import { AuthContext } from "../providers/AuthProvider";
 import { LineSettingsProvider, useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import TypeaheadSearch from "./TypeaheadSearch";
 
-// Import custom editor styles for consistent pill links
-import "./editor-styles.css"; // This is the single source of truth for pill link styling
-import styles from "./slate-editor.module.css";
-
 // CSS for editor modes - ensures consistent styling with TextView
 const editorStyles = `
-  /* WYSIWYG styling to match the original page view */
-  [data-slate-editor] {
-    font-family: var(--font-sans);
-    font-size: 1rem;
-    line-height: 1.6;
-    color: var(--foreground);
-    background-color: var(--background);
-  }
-
-  /* Match paragraph styling */
-  [data-slate-editor] p {
-    margin-bottom: 0.5rem;
-  }
-
-  /* Note: All link styling is now centralized in editor-styles.css */
-  /* This ensures consistent styling across the entire application */
-  /* No need to duplicate styles here */
-
   .editor-normal {
     /* Normal mode styling */
     line-height: 1.6;
@@ -101,56 +79,7 @@ const deserialize = (content) => {
           );
 
           if (hasValidStructure) {
-            // Process link elements to ensure they have the correct structure
-            const processedContent = parsed.map(node => {
-              // Process paragraph children to handle links
-              if (node.type === 'paragraph' && Array.isArray(node.children)) {
-                return {
-                  ...node,
-                  children: node.children.map(child => {
-                    // Ensure link elements have the correct structure
-                    if (child.type === 'link') {
-                      // Special handling for user links
-                      if (child.isUser || child.userId || child.username ||
-                          (child.url && child.url.startsWith('/u/'))) {
-
-                        // Ensure username is used as text content
-                        const displayUsername = child.username || 'Anonymous';
-                        console.log(`Processing user link: username=${displayUsername}, userId=${child.userId}`);
-
-                        return {
-                          ...child,
-                          // Ensure url property exists
-                          url: child.url || `/u/${child.userId || 'anonymous'}`,
-                          // Mark as user link
-                          isUser: true,
-                          // Ensure username is set
-                          username: displayUsername,
-                          // Force children text to match username
-                          children: [{ text: displayUsername }]
-                        };
-                      } else {
-                        // Regular link processing
-                        return {
-                          ...child,
-                          // Ensure url property exists
-                          url: child.url || '#',
-                          // Ensure children is an array with at least one text node
-                          children: Array.isArray(child.children) && child.children.length > 0
-                            ? child.children
-                            : [{ text: child.text || '' }]
-                        };
-                      }
-                    }
-                    return child;
-                  })
-                };
-              }
-              return node;
-            });
-
-            console.log("Processed content for links:", JSON.stringify(processedContent, null, 2));
-            return processedContent;
+            return parsed;
           } else {
             console.warn("Content has invalid Slate structure, using default");
             return defaultValue;
@@ -178,34 +107,7 @@ const deserialize = (content) => {
       );
 
       if (hasValidStructure) {
-        // Process link elements to ensure they have the correct structure
-        const processedContent = content.map(node => {
-          // Process paragraph children to handle links
-          if (node.type === 'paragraph' && Array.isArray(node.children)) {
-            return {
-              ...node,
-              children: node.children.map(child => {
-                // Ensure link elements have the correct structure
-                if (child.type === 'link') {
-                  return {
-                    ...child,
-                    // Ensure url property exists
-                    url: child.url || '#',
-                    // Ensure children is an array with at least one text node
-                    children: Array.isArray(child.children) && child.children.length > 0
-                      ? child.children
-                      : [{ text: child.text || '' }]
-                  };
-                }
-                return child;
-              })
-            };
-          }
-          return node;
-        });
-
-        console.log("Processed array content for links:", JSON.stringify(processedContent, null, 2));
-        return processedContent;
+        return content;
       } else {
         console.warn("Array content has invalid Slate structure, using default");
         return defaultValue;
@@ -237,19 +139,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
   // Log initialContent and deserialized result
   console.log("SlateEditor received initialContent:", initialContent);
-
-  // Force a more detailed log of the initialContent
-  if (initialContent) {
-    try {
-      console.log("SlateEditor initialContent detailed:", JSON.stringify(initialContent, null, 2));
-    } catch (e) {
-      console.error("Error stringifying initialContent:", e);
-    }
-  }
-
   const deserializedValue = useMemo(() => {
     const result = deserialize(initialContent);
-    console.log("Deserialized initialContent:", JSON.stringify(result, null, 2));
+    console.log("Deserialized initialContent:", JSON.stringify(result));
     return result;
   }, [initialContent]);
 
@@ -327,14 +219,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
   }, [deserializedValue]); // Removed dependencies like `value` and `onContentChange` to prevent loops
 
   const onChange = value => {
-    // Ensure value is valid before updating
-    if (value && Array.isArray(value)) {
-      setValue(value); // Update internal state first
-      if (onContentChange) {
-        onContentChange(value);
-      }
-    } else {
-      console.error('Invalid editor value:', value);
+    setValue(value); // Update internal state first
+    if (onContentChange) {
+      onContentChange(value);
     }
   };
 
@@ -346,30 +233,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       return;
     }
 
-    // Check for Backspace or Delete key to handle link deletion
-    if ((event.key === 'Backspace' || event.key === 'Delete') && editor.selection) {
-      // Get the node at the current selection
-      const [node, path] = Editor.node(editor, editor.selection);
-
-      // Check if we're at the edge of a link node
-      const [linkNode, linkPath] = Editor.above(editor, {
-        at: editor.selection,
-        match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'link'
-      }) || [null, null];
-
-      if (linkNode) {
-        // We're at a link, delete the entire link
-        event.preventDefault();
-        Transforms.removeNodes(editor, { at: linkPath });
-        return;
-      }
-    }
-
     // Check for @ symbol to trigger user search
     if (event.key === '@') {
-      // Prevent default to NOT allow the @ symbol to be typed
-      event.preventDefault();
-
+      // Don't prevent default here to allow the @ symbol to be typed
       // Show the link editor modal
       setShowLinkEditor(true);
 
@@ -456,40 +322,6 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
       switch (element.type) {
         case ELEMENT_TYPES.LINK:
-          // Ensure element has a valid URL
-          if (!element.url) {
-            console.warn('Link element missing URL:', element);
-            element.url = '#';
-          }
-
-          // Check if this is a deleted page link (Error rendering content)
-          if (element.url === 'Error rendering content' ||
-              (element.children && element.children[0] &&
-               element.children[0].text === 'Error rendering content')) {
-            // Replace the link with plain text
-            try {
-              const path = ReactEditor.findPath(editor, element);
-              const textContent = element.pageTitle || 'Deleted page';
-
-              // Use setTimeout to avoid modifying the editor during render
-              setTimeout(() => {
-                try {
-                  // Remove the link node
-                  Transforms.removeNodes(editor, { at: path });
-                  // Insert plain text at the same position
-                  Transforms.insertText(editor, textContent, { at: path });
-                } catch (err) {
-                  console.error('Error replacing deleted page link:', err);
-                }
-              }, 0);
-            } catch (pathError) {
-              console.error('Error finding path for deleted page link:', pathError);
-            }
-
-            // Return a temporary placeholder
-            return <span {...attributes} className="text-muted-foreground">{children}</span>;
-          }
-
           // Check if it's an external link (starts with http:// or https:// or www.)
           const isExternal = element.url && (
             element.url.startsWith('http://') ||
@@ -497,67 +329,18 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             element.url.startsWith('www.')
           );
 
-          // Check if it's a user link - more robust check
-          const isUserLink = element.isUser ||
-                           (element.url && element.url.startsWith('/u/')) ||
-                           (element.username) ||
-                           (element.userId);
-
-          // Add debug logging
-          console.log('Rendering link element:', {
-            url: element.url,
-            isExternal,
-            isUserLink,
-            pageId: element.pageId,
-            children: element.children
-          });
-
-          // Use custom className if provided, otherwise use default classes
-          // Ensure consistent styling with the rest of the product
-          // Add both editor-link and specific class to ensure styling is applied
-          let className = 'editor-link';
-
-          if (element.className) {
-            className += ` ${element.className}`;
-          } else if (isUserLink) {
-            className += ' user-link';
-          } else {
-            className += ' page-link';
-          }
-
-          // Ensure we have the right class for styling
-          if (isUserLink && !className.includes('user-link')) {
-            className += ' user-link';
-          } else if (!isUserLink && !className.includes('page-link')) {
-            className += ' page-link';
-          }
-
-          // Add more debug logging for user links
-          if (isUserLink) {
-            // Ensure the children text matches the username
-            if (element.username && element.children && element.children.length > 0 &&
-                element.children[0].text !== element.username) {
-              console.log(`Fixing mismatched username: children text "${element.children[0].text}" vs username "${element.username}"`);
-              element.children[0].text = element.username;
-            }
-
-            console.log('Rendering USER link with:', {
-              username: element.username,
-              userId: element.userId,
-              className,
-              childrenText: element.children?.[0]?.text
-            });
-          }
+          // Check if it's a user link
+          const isUserLink = element.isUser || (element.url && element.url.startsWith('/u/'));
 
           return (
             <a
               {...attributes}
-              href={element.url}
+              href={element.url || '#'}
               data-page-id={element.pageId}
               data-page-title={element.pageTitle}
               data-user-id={isUserLink ? element.userId : undefined}
               data-username={isUserLink ? element.username : undefined}
-              className={className}
+              className={`editor-link ${isUserLink ? 'user-link' : ''}`}
               target={isExternal ? "_blank" : undefined}
               rel={isExternal ? "noopener noreferrer" : undefined}
             >
@@ -632,16 +415,8 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       }
     } catch (error) {
       console.error("Error rendering element:", error, "Element:", JSON.stringify(element));
-      // Fallback rendering on error with more helpful message
-      return (
-        <div
-          {...attributes}
-          className="bg-red-100/20 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded p-2 my-1"
-        >
-          <span className="text-red-600 dark:text-red-400 font-medium">Error rendering content.</span>
-          {children}
-        </div>
-      );
+      // Fallback rendering on error
+      return <div {...attributes} style={{ backgroundColor: 'rgba(255,0,0,0.1)', border: '1px solid red', padding: '2px' }}>Error rendering node. {children}</div>;
     }
   }, [editor, lineMode]); // Updated dependencies
 
@@ -692,7 +467,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       // Handle creating a new page
       if (item.isNewPage) {
         // Create a new page with the given title
-        const newPageUrl = `/new?title=${encodeURIComponent(item.pageTitle)}`;
+        const newPageUrl = `/pages/new?title=${encodeURIComponent(item.pageTitle)}`;
 
         if (selectedNodePath) {
           // If editing an existing link
@@ -737,56 +512,28 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
         // If editing an existing link
         if (item.isUser) {
           // Handle user link
-          try {
-            // First update the node properties
-            Transforms.setNodes(
-              editor,
-              {
-                ...item,
-                type: 'link',
-                url: item.url, // Already formatted as /u/{userId}
-              },
-              { at: selectedNodePath }
-            );
-
-            // Then separately update the text content to avoid @ symbol issues
-            const displayText = item.text || item.username;
-            const textPath = [...selectedNodePath, 0]; // Path to the text node inside the link
-
-            // Make sure the text doesn't have @ prefix
-            const cleanText = displayText.startsWith('@') ? displayText.substring(1) : displayText;
-
-            // Update the text node
-            Transforms.insertText(editor, cleanText, { at: textPath });
-          } catch (error) {
-            console.error("Error updating user link:", error);
-          }
+          Transforms.setNodes(
+            editor,
+            {
+              ...item,
+              type: 'link',
+              url: item.url, // Already formatted as /u/{userId}
+              children: [{ text: item.text }]
+            },
+            { at: selectedNodePath }
+          );
         } else {
           // Handle page link
-          try {
-            // First update the node properties
-            Transforms.setNodes(
-              editor,
-              {
-                ...item,
-                type: 'link',
-                url: item.pageId ? `/${item.pageId}` : item.url,
-              },
-              { at: selectedNodePath }
-            );
-
-            // Then separately update the text content
-            const displayText = item.text || (item.pageId ? item.pageTitle : item.url);
-            const textPath = [...selectedNodePath, 0]; // Path to the text node inside the link
-
-            // Make sure the text doesn't have @ prefix
-            const cleanText = displayText.startsWith('@') ? displayText.substring(1) : displayText;
-
-            // Update the text node
-            Transforms.insertText(editor, cleanText, { at: textPath });
-          } catch (error) {
-            console.error("Error updating page link:", error);
-          }
+          Transforms.setNodes(
+            editor,
+            {
+              ...item,
+              type: 'link',
+              url: item.pageId ? `/${item.pageId}` : item.url,
+              children: [{ text: item.text }]
+            },
+            { at: selectedNodePath }
+          );
         }
       } else if (editor.selection) {
         // If creating a new link
@@ -825,12 +572,9 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
             );
           }
         } else {
-          // Handle page or external link
+          // Handle page link
           const text = item.text || (item.pageId ? item.pageTitle : item.url);
           const url = item.pageId ? `/${item.pageId}` : item.url;
-
-          // Make sure the text doesn't have @ prefix
-          const cleanText = text.startsWith('@') ? text.substring(1) : text;
 
           if (Range.isCollapsed(editor.selection)) {
             // If no text is selected, insert the link text
@@ -839,11 +583,11 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
               url,
               pageId: item.pageId,
               pageTitle: item.pageTitle,
-              children: [{ text: cleanText }],
+              children: [{ text }],
             });
           } else {
             // If text is selected, convert it to a link
-            wrapLink(editor, url, item.pageId, item.pageTitle, cleanText);
+            wrapLink(editor, url, item.pageId, item.pageTitle);
           }
         }
       }
@@ -864,35 +608,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       {/* Add custom styles */}
       <style dangerouslySetInnerHTML={{ __html: editorStyles }} />
 
-      {/* Add critical styles directly to ensure they're applied */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        /* Critical pill link styles that must be applied */
-        .slate-editor-container a[data-page-id],
-        .slate-editor-container a.page-link,
-        .slate-editor-container a.editor-link.page-link {
-          background-color: #1768FF !important;
-          color: white !important;
-          border-radius: 8px !important;
-          padding: 1px 6px !important;
-          margin: 0 1px !important;
-          display: inline-flex !important;
-          white-space: nowrap !important;
-        }
-
-        .slate-editor-container a.user-link,
-        .slate-editor-container a[data-user-id],
-        .slate-editor-container a.editor-link.user-link {
-          background-color: #1768FF !important;
-          color: white !important;
-          border-radius: 8px !important;
-          padding: 1px 6px !important;
-          margin: 0 1px !important;
-          display: inline-flex !important;
-          white-space: nowrap !important;
-        }
-      ` }} />
-
-      <div className={`slate-editor-container ${styles.slateEditor}`} style={{ position: 'relative', paddingBottom: '60px' }}>
+      <div className="slate-editor-container" style={{ position: 'relative', paddingBottom: '60px' }}>
         {/* Conditionally render LinkEditor */}
         {showLinkEditor && linkEditorPosition && (
           <LinkEditor
@@ -922,7 +638,11 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           setLinkEditorPosition={setLinkEditorPosition}
         />
 
-        {/* Removed iOS-compatible toolbar to avoid duplicate buttons */}
+        {/* iOS-compatible toolbar that stays above keyboard */}
+        <FixedBottomToolbar
+          onSave={onSave}
+          onDiscard={onDiscard}
+        />
       </div>
     </Slate>
   );
@@ -994,42 +714,19 @@ const withLinks = (editor) => {
   return editor
 }
 
-const wrapLink = (editor, url, pageId, pageTitle, displayText) => {
+const wrapLink = (editor, url, pageId, pageTitle) => {
   if (isLinkActive(editor)) {
     unwrapLink(editor);
   }
 
   const { selection } = editor;
   const isCollapsed = selection && Range.isCollapsed(selection);
-
-  // Determine the display text
-  let text = displayText || url;
-
-  // If it's a page link and no display text is provided, use the page title
-  if (pageId && pageTitle && !displayText) {
-    text = pageTitle;
-  }
-
-  // Make sure the text doesn't have @ prefix
-  if (text && text.startsWith('@')) {
-    text = text.substring(1);
-  }
-
-  // If the URL contains 'Error rendering content', don't create the link
-  if (text === 'Error rendering content' || url === 'Error rendering content') {
-    // Just insert plain text instead
-    if (isCollapsed) {
-      Transforms.insertText(editor, text);
-    }
-    return;
-  }
-
   const linkElement = {
     type: "link",
     url,
     pageId,
     pageTitle,
-    children: isCollapsed ? [{ text }] : [],
+    children: isCollapsed ? [{ text: url }] : [],
   };
 
   if (isCollapsed) {
@@ -1078,143 +775,36 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
       return;
     }
 
-    // If editor is not focused (read-only mode), navigate to the link
-    if (!ReactEditor.isFocused(editor)) {
-      if (isExternal) {
-        // External links open in new tab
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } else {
-        // Internal links use client-side navigation
-        e.preventDefault();
-        // Use window.location for internal navigation to ensure proper page loading
-        window.location.href = url;
-      }
+    // If it's an external link and not in edit mode, open in new tab
+    if (isExternal && !ReactEditor.isFocused(editor)) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      e.preventDefault();
       return;
     }
 
-    // In edit mode, open the link editor
+    // Otherwise, open the link editor
     e.preventDefault();
     openLinkEditor(element, ReactEditor.findPath(editor, element));
   };
 
-  // Check if it's a user link - more robust check
-  const isUserLink = element.isUser ||
-                   (url && (url.startsWith('/user/') || url.startsWith('/u/') || url.startsWith('/users/'))) ||
-                   (element.username) ||
-                   (element.userId);
+  // Check if it's a user link
+  const isUserLink = element.isUser || (url && url.startsWith('/u/'));
 
   // Check if it's a page link (not external and not user)
   const isPageLink = !isExternal && !isUserLink;
 
-  // Use custom className if provided, otherwise use default classes
-  // Ensure consistent styling with the rest of the product
-  const className = element.className ?
-    `editor-link ${element.className}` :
-    isUserLink ? 'editor-link user-link' : 'editor-link page-link';
-
-  // Always remove @ symbol from all link types
-  if (element.children && element.children.length > 0 && element.children[0].text) {
-    // Remove @ prefix if it exists for any link type
-    if (element.children[0].text.startsWith('@')) {
-      element.children[0].text = element.children[0].text.substring(1);
-    }
-
-    // For user links, ensure the children text matches the username
-    if (isUserLink && element.username && element.children[0].text !== element.username) {
-      element.children[0].text = element.username;
-    }
-
-    // For page links, ensure the text matches the page title if available
-    if (isPageLink && element.pageTitle && element.children[0].text !== element.pageTitle) {
-      element.children[0].text = element.pageTitle;
-    }
-  }
-
-  // Prevent cursor selection inside links by making the entire link act as a single unit
-  const handleKeyDown = (e) => {
-    try {
-      // If Backspace or Delete is pressed, delete the entire link
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        const path = ReactEditor.findPath(editor, element);
-
-        // Safely remove the node
-        try {
-          // First, select the node to ensure proper cursor positioning after deletion
-          Transforms.select(editor, path);
-
-          // Then remove the node
-          Transforms.removeNodes(editor, { at: path });
-
-          // Position cursor at the deletion point
-          const point = Editor.before(editor, path);
-          if (point) {
-            Transforms.select(editor, point);
-          }
-        } catch (removeError) {
-          console.error('Error removing link node:', removeError);
-          // Fallback: try to unwrap the link instead
-          try {
-            Transforms.unwrapNodes(editor, {
-              at: path,
-              match: n => n.type === 'link'
-            });
-          } catch (unwrapError) {
-            console.error('Error unwrapping link node:', unwrapError);
-          }
-        }
-        return;
-      }
-
-      // For arrow keys, prevent cursor from moving inside the link
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        e.preventDefault();
-        const path = ReactEditor.findPath(editor, element);
-
-        // Move cursor to before or after the link based on arrow direction
-        if (e.key === 'ArrowLeft') {
-          const point = Editor.before(editor, path);
-          if (point) Transforms.select(editor, point);
-        } else {
-          const point = Editor.after(editor, path);
-          if (point) Transforms.select(editor, point);
-        }
-      }
-    } catch (error) {
-      console.error('Error handling key event in link:', error);
-    }
-  };
-
-  // Ensure user links always use the /user/ format
-  let finalUrl = url;
-  if (isUserLink && element.userId) {
-    // Convert any old format URLs to the new format
-    if (url.startsWith('/u/') || url.startsWith('/users/')) {
-      finalUrl = `/user/${element.userId}`;
-    } else if (!url.startsWith('/user/')) {
-      // If it doesn't start with /user/ already, make sure it does
-      finalUrl = `/user/${element.userId}`;
-    }
-  }
-
   return (
     <a
       {...attributes}
-      href={finalUrl}
-      className={className}
+      href={url}
+      className={`editor-link ${isUserLink ? 'user-link' : ''} ${isPageLink ? 'page-link' : ''}`}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
       data-page-id={element.pageId}
-      data-page-title={element.pageTitle}
       data-user-id={isUserLink ? element.userId : undefined}
-      data-username={isUserLink ? element.username : undefined}
-      contentEditable={false} // Make the link not directly editable
     >
-      <span contentEditable={false}>
-        <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
-      </span>
+      <InlineChromiumBugfix>{children}</InlineChromiumBugfix>
     </a>
   );
 };
@@ -1295,24 +885,20 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
 
   // Handle selection from TypeaheadSearch
   const handlePageSelect = (item) => {
-    // Update the search text when an item is selected
-    setSearchText(item.title || '');
-
     // Check if this is a user or a page
     if (item.type === 'user') {
       // Handle user selection
       onSelect({
-        text: '@' + item.title, // Always prefix username with @ for user links
+        text: text || item.title, // item.title contains the username
         url: `/u/${item.id}`,
         isUser: true,
         userId: item.id,
         username: item.title
       });
     } else {
-      // Handle page selection - use direct URL to avoid user not found error
+      // Handle page selection
       onSelect({
-        text: item.title, // Always use page title as text for consistency
-        url: `/${item.id}`, // Direct URL to the page
+        text: text || item.title,
         pageId: item.id,
         pageTitle: item.title
       });
@@ -1356,8 +942,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
         }
       }}
     >
-      <div className="bg-background border border-border rounded-md shadow-lg p-5 w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
-        <div className="flex-1 overflow-y-auto pr-1">
+      <div className="bg-background border border-border rounded-md shadow-lg p-5 w-full max-w-md mx-4">
+        <div className="mb-3">
           <div className="flex space-x-2 mb-2">
             <button
               type="button"
@@ -1368,13 +954,6 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
             </button>
             <button
               type="button"
-              onClick={() => setMode('user')}
-              className={`px-3 py-1 text-sm rounded ${mode === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-            >
-              Link to User
-            </button>
-            <button
-              type="button"
               onClick={() => setMode('url')}
               className={`px-3 py-1 text-sm rounded ${mode === 'url' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
             >
@@ -1382,9 +961,20 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
             </button>
           </div>
 
+          <div className="mb-2">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Link text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full p-2 bg-background border border-input rounded text-sm"
+            />
+          </div>
+
           {mode === 'url' ? (
-            <form onSubmit={handleUrlSubmit} className="h-full flex flex-col">
-              <div className="mb-3 flex-1">
+            <form onSubmit={handleUrlSubmit}>
+              <div className="mb-3">
                 <input
                   type="text"
                   placeholder="URL"
@@ -1393,7 +983,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                   className="w-full p-2 bg-background border border-input rounded text-sm"
                 />
               </div>
-              <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
+              <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={() => setShowLinkEditor(false)}
@@ -1409,52 +999,41 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                 </button>
               </div>
             </form>
-          ) : mode === 'user' ? (
-            <div className="h-full flex flex-col">
-              <div className="flex-1 flex flex-col">
-                <TypeaheadSearch
-                  onSelect={handlePageSelect}
-                  placeholder="Search for a user..."
-                  initialSearch={searchText}
-                  setShowResults={() => {}}
-                  userSearchOnly={true}
-                />
-              </div>
-              <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowLinkEditor(false)}
-                  className="px-3 py-1 bg-muted text-sm rounded hover:bg-muted/80"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
           ) : (
-            <div className="h-full flex flex-col">
-              <div className="flex-1 flex flex-col">
-                <TypeaheadSearch
-                  onSelect={handlePageSelect}
+            <div>
+              <div className="mb-3">
+                <input
+                  type="text"
                   placeholder="Search for a page..."
-                  initialSearch={searchText}
-                  setShowResults={() => {}}
-                  pageSearchOnly={true}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="w-full p-2 bg-background border border-input rounded text-sm"
                 />
+              </div>
 
-                {/* Always show create page button when there's search text */}
+              {/* Always show create page button when there's search text */}
+              {searchText.length > 0 && (
+                <div className="mb-3">
+                  <button
+                    onClick={handleCreatePage}
+                    className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center text-sm"
+                  >
+                    Create new "{searchText}" page
+                  </button>
+                </div>
+              )}
+
+              <div className="max-h-60 overflow-y-auto">
                 {searchText.length > 0 && (
-                  <div className="mt-3">
-                    <button
-                      onClick={handleCreatePage}
-                      className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center text-sm"
-                    >
-                      Create new "{searchText}" page
-                    </button>
-                  </div>
+                  <TypeaheadSearch
+                    onSelect={handlePageSelect}
+                    placeholder="Search for a page..."
+                    initialSearch={searchText}
+                  />
                 )}
               </div>
 
-              <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
+              <div className="flex justify-end space-x-2 mt-3">
                 <button
                   type="button"
                   onClick={() => setShowLinkEditor(false)}
@@ -1465,7 +1044,6 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
               </div>
             </div>
           )}
-        </div>
       </div>
     </div>
   );
@@ -1675,7 +1253,7 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
   return (
     <motion.div
-      className={`editable-container p-2 flex-grow ${styles.slateEditor}`}
+      className={`editable-container p-2 flex-grow`}
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
@@ -1697,10 +1275,6 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 // Custom Leaf component for text formatting
 const Leaf = ({ attributes, children, leaf }) => {
   try {
-    if (!leaf) {
-      return <span {...attributes}>{children}</span>;
-    }
-
     if (leaf.bold) {
       children = <strong>{children}</strong>;
     }
