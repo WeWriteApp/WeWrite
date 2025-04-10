@@ -16,6 +16,14 @@
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "changedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "readingHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
     }
   ]
 }

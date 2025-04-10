@@ -26,17 +26,17 @@ export const isPwa = () => {
 export const getDeviceType = () => {
   if (typeof window !== 'undefined') {
     const userAgent = window.navigator.userAgent;
-    
+
     // Check for tablets first (some tablets report as both mobile and tablet)
     if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent)) {
       return 'tablet';
     }
-    
+
     // Check for mobile devices
     if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(userAgent)) {
       return 'mobile';
     }
-    
+
     // Default to desktop
     return 'desktop';
   }
@@ -50,7 +50,7 @@ export const getDeviceType = () => {
 export const getDeviceContext = () => {
   const deviceType = getDeviceType();
   const isPwaApp = isPwa();
-  
+
   return {
     deviceType,
     isPwa: isPwaApp,
@@ -67,11 +67,11 @@ export const getDeviceContext = () => {
  */
 export const trackUserSession = async (userId) => {
   if (!userId) return;
-  
+
   try {
     const deviceContext = getDeviceContext();
     const sessionId = `${userId}_${Date.now()}`;
-    
+
     // Store session data
     await setDoc(doc(db, "sessions", sessionId), {
       userId,
@@ -82,20 +82,33 @@ export const trackUserSession = async (userId) => {
       startTime: serverTimestamp(),
       lastActive: serverTimestamp()
     });
-    
-    // Update device usage counts
-    const deviceStatsRef = doc(db, "stats", "deviceUsage");
-    await updateDoc(deviceStatsRef, {
-      [`${deviceContext.category}Count`]: increment(1),
-      [`${deviceContext.deviceType}Count`]: increment(1),
-      lastUpdated: serverTimestamp()
-    });
-    
+
+    // Update device usage counts - first check if the document exists
+    try {
+      const deviceStatsRef = doc(db, "stats", "deviceUsage");
+
+      // Create the document if it doesn't exist
+      await setDoc(deviceStatsRef, {
+        [`${deviceContext.category}Count`]: increment(1),
+        [`${deviceContext.deviceType}Count`]: increment(1),
+        lastUpdated: serverTimestamp(),
+        // Initialize other counts to 0 if they don't exist
+        desktopCount: increment(0),
+        mobileCount: increment(0),
+        tabletCount: increment(0),
+        mobilePwaCount: increment(0),
+        mobileBrowserCount: increment(0)
+      }, { merge: true }); // Use merge to only update the specified fields
+    } catch (statsError) {
+      console.warn("Error updating device stats, but session was created:", statsError);
+      // Continue execution since the main session was created
+    }
+
     // Store the session ID in localStorage for later reference
     if (typeof window !== 'undefined') {
       localStorage.setItem('wewrite_session_id', sessionId);
     }
-    
+
     return sessionId;
   } catch (error) {
     console.error("Error tracking user session:", error);
@@ -110,11 +123,11 @@ export const trackUserSession = async (userId) => {
  */
 export const trackPageView = async (pageId, userId = null) => {
   if (!pageId) return;
-  
+
   try {
     const deviceContext = getDeviceContext();
     const viewId = `${pageId}_${Date.now()}`;
-    
+
     // Store page view data
     await setDoc(doc(db, "pageViews", viewId), {
       pageId,
@@ -124,21 +137,37 @@ export const trackPageView = async (pageId, userId = null) => {
       category: deviceContext.category,
       timestamp: serverTimestamp()
     });
-    
-    // Update page view count
-    const pageStatsRef = doc(db, "pages", pageId);
-    await updateDoc(pageStatsRef, {
-      viewCount: increment(1),
-      lastViewed: serverTimestamp()
-    });
-    
-    // Update global stats
-    const globalStatsRef = doc(db, "stats", "pageViews");
-    await updateDoc(globalStatsRef, {
-      totalViews: increment(1),
-      [`${deviceContext.category}Views`]: increment(1),
-      lastUpdated: serverTimestamp()
-    });
+
+    // Update page view count - check if the page exists first
+    try {
+      const pageStatsRef = doc(db, "pages", pageId);
+      await updateDoc(pageStatsRef, {
+        viewCount: increment(1),
+        lastViewed: serverTimestamp()
+      });
+    } catch (pageError) {
+      console.warn(`Error updating page stats for ${pageId}:`, pageError);
+      // Continue execution to update global stats
+    }
+
+    // Update global stats - create the document if it doesn't exist
+    try {
+      const globalStatsRef = doc(db, "stats", "pageViews");
+
+      // Use setDoc with merge to create the document if it doesn't exist
+      await setDoc(globalStatsRef, {
+        totalViews: increment(1),
+        [`${deviceContext.category}Views`]: increment(1),
+        lastUpdated: serverTimestamp(),
+        // Initialize other view counts if they don't exist
+        desktopViews: increment(0),
+        mobileViews: increment(0),
+        mobilePwaViews: increment(0),
+        mobileBrowserViews: increment(0)
+      }, { merge: true });
+    } catch (statsError) {
+      console.warn("Error updating global page view stats:", statsError);
+    }
   } catch (error) {
     console.error("Error tracking page view:", error);
   }
@@ -159,11 +188,11 @@ export const initializeTracking = () => {
         });
       });
     }
-    
+
     // Track initial page load
     const deviceContext = getDeviceContext();
     console.log('Device context:', deviceContext);
-    
+
     // We'll track the user session when they log in
   }
 };
