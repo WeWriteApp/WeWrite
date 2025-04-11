@@ -39,7 +39,9 @@ export const checkPageAccess = async (pageData, userId) => {
   }
 
   // Private pages are accessible to their owners
-  if (userId && pageData.userId === userId) {
+  // Make sure we're comparing strings to strings or IDs to IDs
+  if (userId && pageData.userId && pageData.userId === userId) {
+    console.log(`User ${userId} is the owner of page ${pageData.id}, granting access`);
     return {
       hasAccess: true
     };
@@ -67,6 +69,7 @@ export const checkPageAccess = async (pageData, userId) => {
   }
 
   // Otherwise, access is denied
+  console.log(`Access denied to page ${pageData.id} for user ${userId || 'anonymous'}. Page owner: ${pageData.userId}`);
   return {
     hasAccess: false,
     error: "Access denied: This page is private and can only be viewed by its owner or group members"

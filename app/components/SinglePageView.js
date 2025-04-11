@@ -177,8 +177,9 @@ function SinglePageView({ params }) {
 
   // Record page view and track reading history once when the page has loaded
   useEffect(() => {
-    // Only proceed if we haven't recorded a view yet, the page is loaded, public, and we have the data
-    if (!viewRecorded.current && !isLoading && page && isPublic) {
+    // Only proceed if we haven't recorded a view yet, the page is loaded, and we have the data
+    // Allow viewing both public pages and private pages that the user owns
+    if (!viewRecorded.current && !isLoading && page && (isPublic || (user?.uid === page.userId))) {
       // Mark that we've recorded the view to prevent duplicate recordings
       viewRecorded.current = true;
 
@@ -280,6 +281,8 @@ function SinglePageView({ params }) {
       loadPage();
 
       // Then subscribe to real-time updates
+      // Pass the user ID to ensure the user can access their own private pages
+      const currentUserId = user?.uid;
       const unsubscribe = listenToPageById(params.id, async (data) => {
         if (data.error) {
           setError(data.error);
@@ -546,7 +549,8 @@ function SinglePageView({ params }) {
     );
   }
 
-  if (!isPublic && (!user || user.uid !== page.userId)) {
+  // Only show the private page message if the page is private AND the user is not the owner
+  if (!isPublic && (!user || (user.uid !== page.userId))) {
     return (
       <Layout>
         <Head>
