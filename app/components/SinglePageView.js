@@ -334,13 +334,13 @@ function SinglePageView({ params }) {
         }
 
         setIsLoading(false);
-      });
+      }, currentUserId);
 
       return () => {
         unsubscribe();
       };
     }
-  }, [params.id]);
+  }, [params.id, user]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
@@ -602,71 +602,62 @@ function SinglePageView({ params }) {
         groupId={groupId}
         groupName={groupName}
         scrollDirection={scrollDirection}
+        isScrolled={isScrolled}
       />
-      <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
-        {isEditing ? (
-          <PageProvider>
-            <LineSettingsProvider>
-              <EditPage
-                isEditing={isEditing}
-                setIsEditing={setIsEditing}
-                page={page}
-                title={title}
-                setTitle={setTitle}
-                current={editorState}
-                editorError={editorError}
-              />
-            </LineSettingsProvider>
-          </PageProvider>
-        ) : (
-          <>
+
+      <PageProvider value={{ page, isEditing, setIsEditing }}>
+        <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
+          {isEditing ? (
+            <EditPage
+              pageId={params.id}
+              initialContent={editorState}
+              onCancel={() => setIsEditing(false)}
+              onSave={() => setIsEditing(false)}
+              isPublic={isPublic}
+              setIsPublic={setIsPublic}
+              title={title}
+              setTitle={setTitle}
+            />
+          ) : (
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
               <div className="page-content w-full max-w-none break-words px-1">
-                <PageProvider>
-                  <LineSettingsProvider>
-                    <TextView
-                      content={editorState}
-                      viewMode={lineMode}
-                      onRenderComplete={handlePageFullyRendered}
-                      setIsEditing={setIsEditing}
-                      canEdit={user?.uid === page?.userId}
-                    />
-                  </LineSettingsProvider>
-                </PageProvider>
-              </div>
-            </div>
-
-            {/* Page Controls - Only show after content is fully rendered */}
-            {pageFullyRendered && (
-              <div className="mt-8 flex flex-col gap-4">
-                {user && user.uid === page.userId && !isEditing && (
-                  <div className="mt-8">
-                    {/* ActionRow removed - now using PageFooter with PageActions instead */}
+                {editorError ? (
+                  <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-4 rounded-lg my-4">
+                    <p className="font-medium">Error loading content</p>
+                    <p className="text-sm">{editorError}</p>
                   </div>
+                ) : (
+                  <TextView
+                    content={editorState}
+                    onFullyRendered={handlePageFullyRendered}
+                    lineMode={lineMode}
+                  />
                 )}
               </div>
-            )}
-          </>
-        )}
-      </div>
-      <PageProvider>
-        <LineSettingsProvider>
-          <PageFooter
-            page={page}
-            content={editorState}
-            isOwner={user?.uid === page?.userId}
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-          />
-        </LineSettingsProvider>
+
+              <PageFooter
+                page={page}
+                content={editorState}
+                isOwner={user?.uid === page.userId}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                followerCount={followerCount}
+                className="mt-8"
+              />
+            </div>
+          )}
+        </div>
       </PageProvider>
+
       <SiteFooter />
-      {!isEditing && <PledgeBar />}
     </Layout>
   );
 }
 
-// AddToPageDialog component has been moved to PageActions.tsx
-// This implementation is no longer used and has been removed to avoid duplication
-
-export default SinglePageView;
+export default function SinglePageViewWithLineSettings(props) {
+  return (
+    <LineSettingsProvider>
+      <SinglePageView {...props} />
+    </LineSettingsProvider>
+  );
+}
