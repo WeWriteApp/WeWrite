@@ -107,7 +107,7 @@ const Search = () => {
           ...user,
           name: user.username,
           type: 'user',
-          url: `/u/${user.id}`
+          url: `/user/${user.id}`
         }));
 
         console.log('Formatted users for search results:', formattedUsers);
@@ -158,7 +158,7 @@ const Search = () => {
   const handleOnSelect = (item) => {
     console.log('Selected item:', item);
     if (item.type === 'user') {
-      router.push(`/u/${item.id}`);
+      router.push(`/user/${item.id}`);
     } else {
       router.push(`/${item.id}`);
     }

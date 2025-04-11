@@ -218,7 +218,7 @@ export default function SearchPage() {
                     {filtered.users.map(user => (
                       <div key={user.id} className="flex items-center">
                         <div className="flex-none max-w-[60%]">
-                          <PillLink href={`/u/${user.id}`} className="max-w-full">
+                          <PillLink href={`/user/${user.id}`} className="max-w-full">
                             {user.username}
                           </PillLink>
                         </div>
@@ -320,7 +320,7 @@ export default function SearchPage() {
                 <div className="space-y-2">
                   {filtered.users.map(user => (
                     <div key={user.id} className="flex items-center">
-                      <PillLink href={`/u/${user.id}`}>
+                      <PillLink href={`/user/${user.id}`}>
                         {user.username}
                       </PillLink>
                       <span className="text-xs text-muted-foreground ml-2">

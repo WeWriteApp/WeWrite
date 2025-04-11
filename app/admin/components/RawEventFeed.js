@@ -10,7 +10,7 @@ import { db } from '../../firebase/config';
 
 /**
  * RawEventFeed Component
- * 
+ *
  * Displays a real-time feed of system events from Firebase
  */
 export default function RawEventFeed() {
@@ -29,7 +29,7 @@ export default function RawEventFeed() {
       // Create base query
       let eventsQuery;
       const eventsRef = collection(db, 'events');
-      
+
       // Filter by event type if not 'all'
       if (eventType !== 'all') {
         eventsQuery = query(
@@ -47,7 +47,7 @@ export default function RawEventFeed() {
       }
 
       const snapshot = await getDocs(eventsQuery);
-      
+
       if (snapshot.empty) {
         setEvents([]);
         setLoading(false);
@@ -78,15 +78,15 @@ export default function RawEventFeed() {
   // Format timestamp
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return 'Unknown';
-    
+
     const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-    
+
     // If today, show time only
     const now = new Date();
     if (date.toDateString() === now.toDateString()) {
       return date.toLocaleTimeString();
     }
-    
+
     // Otherwise show date and time
     return date.toLocaleString();
   };
@@ -102,7 +102,7 @@ export default function RawEventFeed() {
       'reply_created': 'text-orange-500',
       'error': 'text-red-500'
     };
-    
+
     return colors[type] || 'text-gray-500';
   };
 
@@ -128,7 +128,7 @@ export default function RawEventFeed() {
               <TabsTrigger value="error">Errors</TabsTrigger>
             </TabsList>
           </Tabs>
-          
+
           <Button
             onClick={fetchEvents}
             disabled={loading}
@@ -177,7 +177,7 @@ export default function RawEventFeed() {
                     </td>
                     <td className="p-2 text-sm">
                       {event.userId ? (
-                        <a href={`/u/${event.username || event.userId}`} className="hover:underline">
+                        <a href={`/user/${event.username || event.userId}`} className="hover:underline">
                           {event.username || event.userId.substring(0, 8)}
                         </a>
                       ) : (

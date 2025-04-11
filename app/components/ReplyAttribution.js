@@ -30,7 +30,7 @@ export default function ReplyAttribution({ pageId, pageTitle, userId }) {
       try {
         console.log(`ReplyAttribution: Fetching username for user ID: ${userId}`);
         const apiUsername = await fetchUsernameFromApi(userId);
-        
+
         if (apiUsername && apiUsername !== "Anonymous") {
           console.log(`ReplyAttribution: API returned username: ${apiUsername}`);
           setUsername(apiUsername);
@@ -52,15 +52,15 @@ export default function ReplyAttribution({ pageId, pageTitle, userId }) {
   return (
     <div className="reply-attribution py-2 text-muted-foreground">
       <span>Replying to </span>
-      <a 
-        href={`/${pageId}`} 
+      <a
+        href={`/${pageId}`}
         className="page-link bg-primary text-primary-foreground px-2 py-0.5 rounded-md mx-1"
       >
         {pageTitle || "Untitled"}
       </a>
       <span> by </span>
-      <a 
-        href={`/u/${userId || "anonymous"}`} 
+      <a
+        href={`/user/${userId || "anonymous"}`}
         className="user-link bg-primary text-primary-foreground px-2 py-0.5 rounded-md mx-1"
       >
         {isLoading ? "Loading..." : username}

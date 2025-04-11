@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 /**
  * RecentAccountsCard Component
- * 
+ *
  * Displays a list of recently created user accounts
  */
 export default function RecentAccountsCard() {
@@ -32,7 +32,7 @@ export default function RecentAccountsCard() {
       );
 
       const snapshot = await getDocs(usersQuery);
-      
+
       if (snapshot.empty) {
         setAccounts([]);
         setLoading(false);
@@ -112,8 +112,8 @@ export default function RecentAccountsCard() {
             {accounts.map(account => (
               <div key={account.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
                 <div className="flex-1 min-w-0">
-                  <a 
-                    href={`/u/${account.username || account.id}`} 
+                  <a
+                    href={`/user/${account.username || account.id}`}
                     className="text-sm font-medium hover:underline truncate block"
                   >
                     {account.username || account.email || account.id.substring(0, 8)}

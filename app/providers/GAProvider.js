@@ -79,7 +79,7 @@ export default function GAProvider({ children }) {
       pageTitle = pageTitleMap[pathname];
     }
     // Handle dynamic routes
-    else if (pathname.match(/^\/u\/[\w-]+$/)) {
+    else if (pathname.match(/^\/user\/[\w-]+$/)) {
       // For user profile pages with new URL structure
       const username = document.querySelector('h1')?.textContent;
       if (username) {
@@ -88,7 +88,7 @@ export default function GAProvider({ children }) {
         pageTitle = 'WeWrite - User Profile';
       }
     }
-    else if (pathname.match(/^\/g\/[\w-]+$/)) {
+    else if (pathname.match(/^\/group\/[\w-]+$/)) {
       // For group pages with new URL structure
       const groupName = document.querySelector('h1')?.textContent;
       if (groupName) {
@@ -98,7 +98,7 @@ export default function GAProvider({ children }) {
       }
     }
     // Match the new URL structure for pages: /[id]
-    else if (pathname.match(/^\/[\w-]+$/) && !pathname.startsWith('/u/') && !pathname.startsWith('/g/')) {
+    else if (pathname.match(/^\/[\w-]+$/) && !pathname.startsWith('/user/') && !pathname.startsWith('/group/')) {
       // For content pages, get a specific title
       const contentTitle = document.querySelector('h1')?.textContent;
       if (contentTitle && contentTitle !== 'Untitled') {

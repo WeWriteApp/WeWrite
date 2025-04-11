@@ -9,7 +9,7 @@ import { db } from '../../firebase/config';
 
 /**
  * LiveUsersMap Component
- * 
+ *
  * Displays a world map with dots representing active users
  */
 export default function LiveUsersMap() {
@@ -26,7 +26,7 @@ export default function LiveUsersMap() {
       // Get sessions active in the last 15 minutes
       const fifteenMinutesAgo = new Date();
       fifteenMinutesAgo.setMinutes(fifteenMinutesAgo.getMinutes() - 15);
-      
+
       const sessionsRef = collection(db, 'sessions');
       const sessionsQuery = query(
         sessionsRef,
@@ -36,7 +36,7 @@ export default function LiveUsersMap() {
       );
 
       const snapshot = await getDocs(sessionsQuery);
-      
+
       if (snapshot.empty) {
         setActiveUsers([]);
         setLoading(false);
@@ -62,23 +62,23 @@ export default function LiveUsersMap() {
   // Initial fetch
   useEffect(() => {
     fetchActiveUsers();
-    
+
     // Refresh every 60 seconds
     const interval = setInterval(fetchActiveUsers, 60000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
   // Format time ago
   const formatTimeAgo = (date) => {
     if (!date) return 'Unknown';
-    
+
     const seconds = Math.floor((new Date() - date) / 1000);
-    
+
     if (seconds < 60) return `${seconds}s ago`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    
+
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
@@ -129,17 +129,17 @@ export default function LiveUsersMap() {
             <div className="relative h-64 border rounded-md bg-muted/30 overflow-hidden">
               {/* Simple world map background */}
               <div className="absolute inset-0 opacity-20 bg-[url('/world-map-outline.svg')] bg-center bg-no-repeat bg-contain"></div>
-              
+
               {/* User dots */}
               {activeUsers.map(user => {
                 // Generate random position if no location data
                 const lat = user.location?.latitude || Math.random() * 180 - 90;
                 const lng = user.location?.longitude || Math.random() * 360 - 180;
-                
+
                 // Convert lat/lng to x/y coordinates (simple equirectangular projection)
                 const x = ((lng + 180) / 360) * 100; // 0-100%
                 const y = ((90 - lat) / 180) * 100;  // 0-100%
-                
+
                 return (
                   <div
                     key={user.id}
@@ -154,7 +154,7 @@ export default function LiveUsersMap() {
                 );
               })}
             </div>
-            
+
             {/* Active Users List */}
             <div className="overflow-y-auto max-h-[200px] border rounded-md">
               <table className="w-full">
@@ -171,7 +171,7 @@ export default function LiveUsersMap() {
                     <tr key={user.id} className="border-b border-border/40 hover:bg-muted/50">
                       <td className="p-2 text-sm">
                         {user.userId ? (
-                          <a href={`/u/${user.username || user.userId}`} className="hover:underline">
+                          <a href={`/user/${user.username || user.userId}`} className="hover:underline">
                             {user.username || user.userId.substring(0, 8)}
                           </a>
                         ) : (

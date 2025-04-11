@@ -128,7 +128,7 @@ export function SidebarNavigation() {
     if (!user) return;
 
     trackEvent("profile_clicked", { userId: user.uid });
-    router.push(`/u/${user.uid}`);
+    router.push(`/user/${user.uid}`);
   };
 
   // Theme options

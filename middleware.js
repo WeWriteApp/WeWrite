@@ -15,7 +15,7 @@ export function middleware(request) {
 
   // Define paths that always require authentication
   const requiresAuth = path === "/new" ||
-                      path === "/groups/new" ||
+                      path === "/group/new" ||
                       path.startsWith("/dashboard");
 
   // Get the token from the cookies
@@ -61,8 +61,11 @@ export function middleware(request) {
   // Redirect /groups/[id] to /group/[id]
   if (path.startsWith('/groups/')) {
     const id = path.replace('/groups/', '');
-    // Don't redirect /groups/new
-    if (id !== 'new') {
+    // Special case for /groups/new
+    if (id === 'new') {
+      url.pathname = `/group/new`;
+      return NextResponse.redirect(url);
+    } else {
       url.pathname = `/group/${id}`;
       return NextResponse.redirect(url);
     }

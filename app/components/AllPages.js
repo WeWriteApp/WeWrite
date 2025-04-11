@@ -43,7 +43,7 @@ const AllPages = () => {
       createButtonHref="/new"
       createButtonText="Create a page"
       showViewAll={true}
-      viewAllHref={`/u/${user.uid}`}
+      viewAllHref={`/user/${user.uid}`}
       viewAllText="View all"
       emptyState={
         <div className="flex justify-center">

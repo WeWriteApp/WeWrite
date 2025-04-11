@@ -112,7 +112,7 @@ const deserialize = (content) => {
                     if (child.type === 'link') {
                       // Special handling for user links
                       if (child.isUser || child.userId || child.username ||
-                          (child.url && child.url.startsWith('/u/'))) {
+                          (child.url && child.url.startsWith('/user/'))) {
 
                         // Ensure username is used as text content
                         const displayUsername = child.username || 'Anonymous';
@@ -121,7 +121,7 @@ const deserialize = (content) => {
                         return {
                           ...child,
                           // Ensure url property exists
-                          url: child.url || `/u/${child.userId || 'anonymous'}`,
+                          url: child.url || `/user/${child.userId || 'anonymous'}`,
                           // Mark as user link
                           isUser: true,
                           // Ensure username is set
@@ -499,7 +499,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
 
           // Check if it's a user link - more robust check
           const isUserLink = element.isUser ||
-                           (element.url && element.url.startsWith('/u/')) ||
+                           (element.url && element.url.startsWith('/user/')) ||
                            (element.username) ||
                            (element.userId);
 
@@ -744,7 +744,7 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
               {
                 ...item,
                 type: 'link',
-                url: item.url, // Already formatted as /u/{userId}
+                url: item.url, // Already formatted as /user/{userId}
               },
               { at: selectedNodePath }
             );
@@ -1099,7 +1099,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
 
   // Check if it's a user link - more robust check
   const isUserLink = element.isUser ||
-                   (url && (url.startsWith('/user/') || url.startsWith('/u/') || url.startsWith('/users/'))) ||
+                   (url && (url.startsWith('/user/') || url.startsWith('/users/'))) ||
                    (element.username) ||
                    (element.userId);
 
@@ -1189,7 +1189,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   let finalUrl = url;
   if (isUserLink && element.userId) {
     // Convert any old format URLs to the new format
-    if (url.startsWith('/u/') || url.startsWith('/users/')) {
+    if (url.startsWith('/user/') || url.startsWith('/users/')) {
       finalUrl = `/user/${element.userId}`;
     } else if (!url.startsWith('/user/')) {
       // If it doesn't start with /user/ already, make sure it does
@@ -1303,7 +1303,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
       // Handle user selection
       onSelect({
         text: '@' + item.title, // Always prefix username with @ for user links
-        url: `/u/${item.id}`,
+        url: `/user/${item.id}`,
         isUser: true,
         userId: item.id,
         username: item.title

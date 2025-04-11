@@ -321,7 +321,7 @@ export default function PageHeader({
                     <>
                       {isScrolled ? "•" : ""}{" "}
                       {groupId && groupName ? (
-                        <Link href={`/groups/${groupId}`} className="hover:underline">
+                        <Link href={`/group/${groupId}`} className="hover:underline">
                           <span data-component-name="PageHeader">in {groupName}</span>
                         </Link>
                       ) : (

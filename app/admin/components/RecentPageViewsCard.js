@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 /**
  * RecentPageViewsCard Component
- * 
+ *
  * Displays a list of recently viewed pages
  */
 export default function RecentPageViewsCard() {
@@ -32,7 +32,7 @@ export default function RecentPageViewsCard() {
       );
 
       const snapshot = await getDocs(pageViewsQuery);
-      
+
       if (snapshot.empty) {
         setPageViews([]);
         setLoading(false);
@@ -112,8 +112,8 @@ export default function RecentPageViewsCard() {
             {pageViews.map(view => (
               <div key={view.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
                 <div className="flex-1 min-w-0">
-                  <a 
-                    href={`/${view.pageId}`} 
+                  <a
+                    href={`/${view.pageId}`}
                     className="text-sm font-medium hover:underline truncate block"
                   >
                     {view.pageTitle || view.pageId}
@@ -121,7 +121,7 @@ export default function RecentPageViewsCard() {
                   <div className="flex items-center text-xs text-muted-foreground">
                     <span className="truncate">
                       {view.userId ? (
-                        <a href={`/u/${view.username || view.userId}`} className="hover:underline">
+                        <a href={`/user/${view.username || view.userId}`} className="hover:underline">
                           {view.username || view.userId.substring(0, 8)}
                         </a>
                       ) : (

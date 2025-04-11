@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 /**
  * RecentPagesCreatedCard Component
- * 
+ *
  * Displays a list of recently created pages
  */
 export default function RecentPagesCreatedCard() {
@@ -32,7 +32,7 @@ export default function RecentPagesCreatedCard() {
       );
 
       const snapshot = await getDocs(pagesQuery);
-      
+
       if (snapshot.empty) {
         setPages([]);
         setLoading(false);
@@ -112,8 +112,8 @@ export default function RecentPagesCreatedCard() {
             {pages.map(page => (
               <div key={page.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
                 <div className="flex-1 min-w-0">
-                  <a 
-                    href={`/${page.id}`} 
+                  <a
+                    href={`/${page.id}`}
                     className="text-sm font-medium hover:underline truncate block"
                   >
                     {page.title || 'Untitled'}
@@ -121,7 +121,7 @@ export default function RecentPagesCreatedCard() {
                   <div className="flex items-center text-xs text-muted-foreground">
                     <span className="truncate">
                       {page.userId ? (
-                        <a href={`/u/${page.username || page.userId}`} className="hover:underline">
+                        <a href={`/user/${page.username || page.userId}`} className="hover:underline">
                           {page.username || page.userId.substring(0, 8)}
                         </a>
                       ) : (

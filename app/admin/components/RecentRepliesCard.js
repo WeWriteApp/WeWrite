@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 /**
  * RecentRepliesCard Component
- * 
+ *
  * Displays a list of recently created replies
  */
 export default function RecentRepliesCard() {
@@ -32,7 +32,7 @@ export default function RecentRepliesCard() {
       );
 
       const snapshot = await getDocs(repliesQuery);
-      
+
       if (snapshot.empty) {
         setReplies([]);
         setLoading(false);
@@ -112,8 +112,8 @@ export default function RecentRepliesCard() {
             {replies.map(reply => (
               <div key={reply.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
                 <div className="flex-1 min-w-0">
-                  <a 
-                    href={`/${reply.pageId}`} 
+                  <a
+                    href={`/${reply.pageId}`}
                     className="text-sm font-medium hover:underline truncate block"
                   >
                     {reply.pageTitle || 'Reply to page'}
@@ -121,7 +121,7 @@ export default function RecentRepliesCard() {
                   <div className="flex items-center text-xs text-muted-foreground">
                     <span className="truncate">
                       {reply.userId ? (
-                        <a href={`/u/${reply.username || reply.userId}`} className="hover:underline">
+                        <a href={`/user/${reply.username || reply.userId}`} className="hover:underline">
                           {reply.username || reply.userId.substring(0, 8)}
                         </a>
                       ) : (

@@ -7,6 +7,7 @@ import { listenToPageById, getPageVersions } from "../firebase/database";
 import pageCacheService from "../services/PageCacheService";
 import { recordPageView } from "../firebase/pageViews";
 import { trackPageView } from "../firebase/readingHistory";
+import { getPageFollowerCount } from "../firebase/follows";
 import PageViewCounter from "./PageViewCounter";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
@@ -94,6 +95,7 @@ function SinglePageView({ params }) {
   const [error, setError] = useState(null);
   const [pageFullyRendered, setPageFullyRendered] = useState(false);
   const [title, setTitle] = useState(null);
+  const [followerCount, setFollowerCount] = useState(0);
   const { user } = useContext(AuthContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
   const { lineMode } = useLineSettings();

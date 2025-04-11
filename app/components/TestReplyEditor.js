@@ -106,7 +106,7 @@ export default function TestReplyEditor({ setEditorState }) {
                   { text: " by " },
                   {
                     type: "link",
-                    url: `/u/${originalPage.userId || "anonymous"}`,
+                    url: `/user/${originalPage.userId || "anonymous"}`,
                     isUser: true,
                     userId: originalPage.userId || "anonymous",
                     username: displayUsername,
