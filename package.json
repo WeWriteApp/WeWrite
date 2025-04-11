@@ -9,7 +9,8 @@
     "build": "rm -rf .next && SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -rf .next node_modules/.cache"
+    "clean": "rm -rf .next node_modules/.cache",
+    "pushv": "./scripts/push-and-open-vercel.sh"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

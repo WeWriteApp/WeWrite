@@ -5,7 +5,7 @@ WeWrite is a social wiki where every page you write is a fundraiser. Learn more 
 
 ![17E8B098-9821-4C3F-8A5C-72A6B0042A1B_1_105_c](https://github.com/user-attachments/assets/ce72dc43-145b-43c0-b525-967a523902ca)
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app). 
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
 
@@ -23,6 +23,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Development Workflow
+
+### Pushing to Vercel
+
+To push your changes to the remote repository and automatically open the Vercel deployments page, use:
+
+```bash
+npm run pushv origin dev
+```
+
+This will push your changes to the specified remote and branch (e.g., `origin dev`), and then open the Vercel deployments page at https://vercel.com/wewrite-apps-projects/wewrite-next-js/deployments.
+
+Alternatively, you can use the Git alias we've set up:
+
+```bash
+git pushv origin dev
+```
+
 
 ## Tools & Platforms
 
@@ -36,13 +54,13 @@ Currently, the database is in test mode with no security rules. This will be upd
 - Authentication
 	- Built-in authentciation for email and password was used for th MVP. This is extendable to a variety of other auth types, but for now this works well.
 - Functions
-	- Powerful serverless functions that can be hosted as both APIs and be triggered from database activities. A great example would be when an invite is sent, this can trigger invites to be added to multiple collections, notification sends, etc. 
+	- Powerful serverless functions that can be hosted as both APIs and be triggered from database activities. A great example would be when an invite is sent, this can trigger invites to be added to multiple collections, notification sends, etc.
 
 ### Vercel
-Vercel is a hosting platform for javascript projects. They are the creators and managers of NextJS -- which is the server side rendering engine of the MVP application. This is also where domain name assignment occurs. 
+Vercel is a hosting platform for javascript projects. They are the creators and managers of NextJS -- which is the server side rendering engine of the MVP application. This is also where domain name assignment occurs.
 
 ### Github
-Github, as all devs know, handles the source code. Vercel is connected to the Github repo and auto deploys when configured to do so.  
+Github, as all devs know, handles the source code. Vercel is connected to the Github repo and auto deploys when configured to do so.
 
 ### Lexical Editor
 This is the editor that is used to create pages. It is built and maintained as an open-source project by Facebook. It has tons of extensible features and is a great tool for creating a WYSIWYG editor that also allows for custom components. Documentation for this can be found [here](https://lexical.dev/docs/intro). At the time of writing, this is our current selection, but SlateJS is also a great option. Found [here](https://www.slatejs.org/)
