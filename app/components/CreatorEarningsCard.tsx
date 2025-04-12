@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, Users } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
 import { useRouter } from 'next/navigation';
 import { getEstimatedEarnings } from '../services/stripeConnectService';
 
@@ -10,7 +10,7 @@ interface CreatorEarningsCardProps {
   isCreator: boolean;
 }
 
-const CreatorEarningsCard: React.FC<CreatorEarningsCardProps> = ({ 
+const CreatorEarningsCard: React.FC<CreatorEarningsCardProps> = ({
   creatorId,
   isCreator
 }) => {
@@ -66,7 +66,7 @@ const CreatorEarningsCard: React.FC<CreatorEarningsCardProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                 <div className="flex items-center mb-1">
@@ -75,7 +75,7 @@ const CreatorEarningsCard: React.FC<CreatorEarningsCardProps> = ({
                 </div>
                 <p className="text-lg font-semibold">{earnings?.donorCount || 0}</p>
               </div>
-              
+
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                 <div className="flex items-center mb-1">
                   <TrendingUp className="h-4 w-4 text-muted-foreground mr-1" />
@@ -88,7 +88,7 @@ const CreatorEarningsCard: React.FC<CreatorEarningsCardProps> = ({
         )}
       </CardContent>
       <CardFooter>
-        <Button 
+        <Button
           onClick={() => router.push('/account/payouts')}
           className="w-full"
           variant="outline"

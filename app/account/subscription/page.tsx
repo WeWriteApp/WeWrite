@@ -6,7 +6,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { ArrowLeft, ArrowRight, Medal, Award, Diamond } from 'lucide-react';
 import Link from 'next/link';
 import { getUserSubscription } from '../../firebase/subscription';
-import { Button } from '../../ui/button';
+import { Button } from '../../components/ui/button';
 import SubscriptionTierSelector from '../../components/SubscriptionTierSelector';
 
 // Define the Subscription interface

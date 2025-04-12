@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { ArrowLeft, ExternalLink, AlertCircle, CheckCircle, DollarSign, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '../../ui/button';
+import { Button } from '../../components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -95,7 +95,7 @@ export default function PayoutsPage() {
           Back to Account
         </Link>
       </div>
-      
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Creator Payouts</h1>
         <p className="text-gray-500 dark:text-gray-400">
@@ -120,7 +120,7 @@ export default function PayoutsPage() {
             <TabsTrigger value="history">Payout History</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="overview" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
@@ -136,7 +136,7 @@ export default function PayoutsPage() {
                       <p className="text-sm text-muted-foreground text-center mb-4">
                         You need to set up your Stripe Connect account to receive payouts.
                       </p>
-                      <Button 
+                      <Button
                         onClick={handleCreateAccount}
                         className="w-full"
                       >
@@ -150,7 +150,7 @@ export default function PayoutsPage() {
                       <p className="text-sm text-muted-foreground text-center mb-4">
                         You need to complete your Stripe Connect onboarding to receive payouts.
                       </p>
-                      <Button 
+                      <Button
                         onClick={handleContinueOnboarding}
                         className="w-full"
                       >
@@ -164,7 +164,7 @@ export default function PayoutsPage() {
                       <p className="text-sm text-muted-foreground text-center mb-4">
                         Your Stripe Connect account is set up and ready to receive payouts.
                       </p>
-                      <Button 
+                      <Button
                         onClick={handleViewDashboard}
                         variant="outline"
                         className="w-full flex items-center justify-center"
@@ -176,7 +176,7 @@ export default function PayoutsPage() {
                   )}
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Earnings Overview</CardTitle>
@@ -205,8 +205,8 @@ export default function PayoutsPage() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className="w-full text-sm"
                     onClick={() => setActiveTab('history')}
                   >
@@ -215,7 +215,7 @@ export default function PayoutsPage() {
                 </CardFooter>
               </Card>
             </div>
-            
+
             <div className="mt-6">
               <Card>
                 <CardHeader>
@@ -235,7 +235,7 @@ export default function PayoutsPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start gap-3">
                       <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-2 mt-1">
                         <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -247,7 +247,7 @@ export default function PayoutsPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start gap-3">
                       <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-2 mt-1">
                         <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -264,7 +264,7 @@ export default function PayoutsPage() {
               </Card>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="history" className="mt-6">
             <Card>
               <CardHeader>
@@ -276,7 +276,7 @@ export default function PayoutsPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="settings" className="mt-6">
             <Card>
               <CardHeader>
@@ -291,7 +291,7 @@ export default function PayoutsPage() {
                     <p className="text-sm text-muted-foreground text-center mb-4">
                       You need to set up your Stripe Connect account to manage payout settings.
                     </p>
-                    <Button 
+                    <Button
                       onClick={handleCreateAccount}
                       className="w-full"
                     >
@@ -305,7 +305,7 @@ export default function PayoutsPage() {
                     <p className="text-sm text-muted-foreground text-center mb-4">
                       You need to complete your Stripe Connect onboarding to manage payout settings.
                     </p>
-                    <Button 
+                    <Button
                       onClick={handleContinueOnboarding}
                       className="w-full"
                     >
@@ -316,7 +316,7 @@ export default function PayoutsPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">Manage Payout Settings</span>
-                      <Button 
+                      <Button
                         onClick={handleViewDashboard}
                         variant="outline"
                         size="sm"
@@ -345,7 +345,7 @@ function calculateCurrentMonthEarnings(payouts: any[]): number {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
-  
+
   return payouts
     .filter(payout => {
       if (!payout.payoutDate) return false;
@@ -362,7 +362,7 @@ function calculateTotalEarnings(payouts: any[]): number {
 function getNextPayoutDate(): string {
   const now = new Date();
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   // Format the date as Month Day, Year
   return lastDayOfMonth.toLocaleDateString('en-US', {
     month: 'long',

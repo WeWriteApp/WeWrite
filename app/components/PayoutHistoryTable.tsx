@@ -6,8 +6,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/table";
-import { Badge } from "../ui/badge";
+} from "./ui/table";
+import { Badge } from "./ui/badge";
 
 interface Payout {
   id: string;
@@ -28,7 +28,7 @@ interface PayoutHistoryTableProps {
 const PayoutHistoryTable: React.FC<PayoutHistoryTableProps> = ({ payouts }) => {
   // Sort payouts by date (newest first)
   const sortedPayouts = [...payouts].sort((a, b) => {
-    return new Date(b.payoutDate || b.createdAt).getTime() - 
+    return new Date(b.payoutDate || b.createdAt).getTime() -
            new Date(a.payoutDate || a.createdAt).getTime();
   });
 
@@ -84,7 +84,7 @@ const PayoutHistoryTable: React.FC<PayoutHistoryTableProps> = ({ payouts }) => {
 // Helper function to format date
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
-  
+
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -96,7 +96,7 @@ const formatDate = (dateString: string) => {
 // Status badge component
 const StatusBadge = ({ status }: { status: string }) => {
   let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'default';
-  
+
   switch (status.toLowerCase()) {
     case 'completed':
       variant = 'default';
@@ -110,7 +110,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     default:
       variant = 'outline';
   }
-  
+
   return (
     <Badge variant={variant}>
       {status.charAt(0).toUpperCase() + status.slice(1)}

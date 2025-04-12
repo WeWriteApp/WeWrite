@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import Link from 'next/link';
 import { CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
-import { Button } from '../../../ui/button';
+import { Button } from '../../../components/ui/button';
 import { getUserSubscription } from '../../../firebase/subscription';
 
 export default function SubscriptionSuccessPage() {

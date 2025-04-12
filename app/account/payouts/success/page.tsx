@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import { CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '../../../ui/button';
+import { Button } from '../../../components/ui/button';
 import { getConnectAccountStatus } from '../../../services/stripeConnectService';
 
 export default function PayoutSetupSuccessPage() {
@@ -50,14 +50,14 @@ export default function PayoutSetupSuccessPage() {
           Back to Payouts
         </Link>
       </div>
-      
+
       <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-8 text-center">
         <div className="flex justify-center mb-4">
           <CheckCircle className="h-16 w-16 text-green-500" />
         </div>
-        
+
         <h1 className="text-2xl font-bold mb-2 text-green-800 dark:text-green-300">Payout Setup Complete!</h1>
-        
+
         {loading ? (
           <div className="animate-pulse h-4 bg-green-200 dark:bg-green-800 rounded w-3/4 mx-auto my-4"></div>
         ) : accountStatus && accountStatus.accountStatus === 'complete' ? (
@@ -79,11 +79,11 @@ export default function PayoutSetupSuccessPage() {
             </p>
           </div>
         )}
-        
+
         <p className="text-sm text-green-600 dark:text-green-500 mb-6">
           You'll be redirected to the payouts page in a few seconds...
         </p>
-        
+
         <div className="flex flex-col space-y-3">
           <Button
             onClick={() => router.push('/account/payouts')}
@@ -92,7 +92,7 @@ export default function PayoutSetupSuccessPage() {
             Go to Payouts
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          
+
           <Button
             onClick={() => router.push('/account')}
             variant="outline"
