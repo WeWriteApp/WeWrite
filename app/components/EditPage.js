@@ -9,6 +9,7 @@ import { X, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { usePage } from "../contexts/PageContext";
 import PageEditor from "./PageEditor";
+import { toast } from "sonner";
 
 const EditPage = ({
   isEditing,

@@ -1302,7 +1302,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
     if (item.type === 'user') {
       // Handle user selection
       onSelect({
-        text: '@' + item.title, // Always prefix username with @ for user links
+        text: item.title, // Don't prefix username with @ for user links
         url: `/user/${item.id}`,
         isUser: true,
         userId: item.id,
