@@ -59,6 +59,11 @@ const PledgeBar = () => {
         }
       }
 
+      // Always show the bar when at the top of the page
+      if (currentScrollY < 50) {
+        setVisible(true);
+      }
+
       setLastScrollY(currentScrollY);
     };
 
@@ -561,9 +566,12 @@ const PledgeBar = () => {
     const totalAmount = subscription.amount;
     const pledgedAmount = subscription.pledgedAmount || 0;
     const currentAmount = donateAmount || 0;
+
+    // Calculate how much is spent on other pages (total pledged minus current page)
     const spentAmount = pledgedAmount - currentAmount;
 
-    return (spentAmount / totalAmount) * 100;
+    // Make sure we don't return a negative percentage
+    return Math.max(0, (spentAmount / totalAmount) * 100);
   };
 
   const getCurrentPledgePercentage = () => {
@@ -575,13 +583,25 @@ const PledgeBar = () => {
     return (currentAmount / totalAmount) * 100;
   };
 
+  // Calculate available budget
+  const getAvailableBudget = () => {
+    if (!subscription) return 0;
+
+    const totalAmount = subscription.amount || 0;
+    const pledgedAmount = subscription.pledgedAmount || 0;
+
+    // Available = total subscription amount - amount pledged to all pages + current page amount
+    // (we add current page amount back because it's included in pledgedAmount)
+    return totalAmount - pledgedAmount + donateAmount;
+  };
+
   return (
     <>
       <div
         className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 pledge-bar-spring ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
-        onClick={(e) => e.stopPropagation()}
+        onClick={() => setShowActivationModal(true)}
       >
         <div className="w-full max-w-md mx-auto cursor-pointer shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden">
           {/* Custom Pledge Bar with Three-Color Background */}
@@ -594,15 +614,15 @@ const PledgeBar = () => {
             </div>
 
             <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-              {/* Already spent section */}
+              {/* Already spent section - grey for other pages */}
               <div
                 className="h-full bg-gray-400 dark:bg-gray-600 float-left"
                 style={{ width: `${getSpentPercentage()}%` }}
               ></div>
 
-              {/* Current pledge section */}
+              {/* Current pledge section - blue for this page */}
               <div
-                className="h-full bg-blue-500 float-left"
+                className="h-full bg-blue-500 dark:bg-blue-600 float-left"
                 style={{ width: `${getCurrentPledgePercentage()}%` }}
               ></div>
 
@@ -652,11 +672,25 @@ const PledgeBar = () => {
             </div>
 
             <div className="text-xs text-muted-foreground mt-2 text-center">
-              <span>Available: ${(subscription?.amount - (subscription?.pledgedAmount || 0) + donateAmount).toFixed(2)}</span>
+              <span>Available: ${getAvailableBudget().toFixed(2)}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Pledge Modal */}
+      <PledgeBarModal
+        isOpen={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        isSignedIn={!!user}
+        pledgeData={{
+          pageId: pageId,
+          pageTitle: pageTitle,
+          amount: donateAmount,
+          available: getAvailableBudget(),
+          subscription: subscription
+        }}
+      />
 
       {/* Custom Amount Modal */}
       {showCustomAmountModal && (

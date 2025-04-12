@@ -19,15 +19,15 @@ import { DollarSign } from "lucide-react";
 import "../styles/gradient-button.css";
 import "../styles/modal-animations.css";
 
-const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
-  // Use customContent if provided, otherwise use default content based on sign-in status
+const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent, pledgeData }) => {
+  // Use customContent if provided, otherwise use default content based on sign-in status and pledge data
   const content = customContent || (isSignedIn ? {
-    title: "This feature is coming soon!",
-    description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can support us on OpenCollective!",
+    title: pledgeData?.pageTitle || "Support this page",
+    description: `Adjust your monthly support for this page. Your current pledge is $${pledgeData?.amount?.toFixed(2) || '0.00'} per month.`,
     action: {
-      href: "https://opencollective.com/wewrite-app",
-      label: "Support us",
-      external: true
+      href: "#",
+      label: "Save",
+      external: false
     }
   } : {
     title: "Sign in Required",
@@ -62,6 +62,43 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
             {content.description}
           </DialogDescription>
         </DialogHeader>
+
+        {pledgeData && (
+          <div className="my-4 space-y-4">
+            <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
+              {/* Already spent section */}
+              {pledgeData.subscription && (
+                <div
+                  className="h-full bg-gray-400 dark:bg-gray-600 float-left"
+                  style={{
+                    width: `${pledgeData.subscription.amount ?
+                      Math.max(0, ((pledgeData.subscription.pledgedAmount || 0) - (pledgeData.amount || 0)) / pledgeData.subscription.amount * 100) : 0}%`
+                  }}
+                ></div>
+              )}
+
+              {/* Current pledge section */}
+              {pledgeData.subscription && (
+                <div
+                  className="h-full bg-blue-500 dark:bg-blue-600 float-left"
+                  style={{
+                    width: `${pledgeData.subscription.amount ?
+                      (pledgeData.amount / pledgeData.subscription.amount * 100) : 0}%`
+                  }}
+                ></div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center">
+              <div className="text-sm">
+                <span className="font-medium">Current pledge:</span> ${pledgeData.amount?.toFixed(2) || '0.00'}/mo
+              </div>
+              <div className="text-sm">
+                <span className="font-medium">Available:</span> ${pledgeData.available?.toFixed(2) || '0.00'}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="py-3">
           <Button
