@@ -89,6 +89,7 @@ const PledgeBar = () => {
        !pathname.startsWith('/group/'))
     );
 
+    console.log('PledgeBar: Checking if on page view:', { pathname, isOnPageView });
     setIsPageView(isOnPageView);
 
     // If not on a page view, set loading to false
@@ -102,8 +103,11 @@ const PledgeBar = () => {
     const loadData = async () => {
       if (!user || !pageId) {
         setLoading(false);
+        console.log('PledgeBar: No user or pageId, skipping data load', { user: !!user, pageId });
         return;
       }
+
+      console.log('PledgeBar: Loading data for page', { pageId });
 
       try {
         // Get the page to check its owner
@@ -171,8 +175,14 @@ const PledgeBar = () => {
       }
     };
 
-    loadData();
-  }, [user, pageId]);
+    // Only load data if we're on a page view
+    if (isPageView) {
+      loadData();
+    } else {
+      console.log('PledgeBar: Not on a page view, skipping data load');
+      setLoading(false);
+    }
+  }, [user, pageId, isPageView]);
 
   // Set global increment (this could be loaded from user settings)
   useEffect(() => {

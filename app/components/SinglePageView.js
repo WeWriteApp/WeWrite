@@ -20,6 +20,7 @@ import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import PledgeBar from "./PledgeBar";
+import PagePledgeBar from "./PagePledgeBar";
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "./ui/button";
@@ -647,6 +648,9 @@ function SinglePageView({ params }) {
           )}
         </div>
       </PageProvider>
+
+      {/* Explicitly render the PledgeBar */}
+      <PagePledgeBar />
 
       <SiteFooter />
     </Layout>
