@@ -81,20 +81,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       description,
       type: 'article',
       url: `https://wewrite.vercel.app/${id}`,
-      images: [
-        {
-          url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://wewrite.vercel.app'}/api/og/${id}`,
-          width: 1200,
-          height: 630,
-          alt: `${title} by ${username}`,
-        },
-      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${title} by ${username} on WeWrite`,
       description,
-      images: [`${process.env.NEXT_PUBLIC_SITE_URL || 'https://wewrite.vercel.app'}/api/og/${id}`],
     },
   };
 }
