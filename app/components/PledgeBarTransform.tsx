@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Minus, Plus, DollarSign, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Minus, Plus, DollarSign, X, CreditCard } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { updatePledge, getUserSubscription } from '../firebase/subscription';
+import { createPortalSession } from '../services/stripeService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 interface PledgeBarTransformProps {
   isOpen: boolean;
@@ -107,11 +110,60 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
 
   if (!isOpen) return null;
 
+  const router = useRouter();
+  const customAmountInputRef = useRef<HTMLInputElement>(null);
+  const [customAmount, setCustomAmount] = useState('');
+
+  // Focus the custom amount input when the modal opens
+  useEffect(() => {
+    if (isOpen && customAmountInputRef.current) {
+      setTimeout(() => {
+        customAmountInputRef.current?.focus();
+      }, 300); // Delay to allow animation to complete
+    }
+  }, [isOpen]);
+
+  // Handle custom amount change
+  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomAmount(e.target.value);
+  };
+
+  // Handle custom amount submit
+  const handleCustomAmountSubmit = () => {
+    const newAmount = parseFloat(customAmount);
+    if (!isNaN(newAmount) && newAmount >= 0) {
+      setAmount(newAmount);
+      savePledge(newAmount);
+    }
+  };
+
+  // Handle subscription setup
+  const handleSetupSubscription = () => {
+    router.push('/account/subscription');
+  };
+
+  // Handle subscription top-up
+  const handleTopUpSubscription = async () => {
+    if (!pledgeData?.userId) return;
+
+    try {
+      await createPortalSession(pledgeData.userId);
+    } catch (error) {
+      console.error('Error opening Stripe portal:', error);
+    }
+  };
+
   // Special case for when the user is not signed in
   if (pledgeData?.userId === undefined || pledgeData?.userId === '') {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300">
-        <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full"
+        >
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Support this creator</h2>
             <button
@@ -133,14 +185,62 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Special case for when the user doesn't have an active subscription
+  if (pledgeData?.subscription?.status !== 'active') {
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full"
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Set up your subscription</h2>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-accent"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-center">You need an active subscription to support creators.</p>
+            <div className="flex justify-center">
+              <Button
+                onClick={handleSetupSubscription}
+                className="px-6 flex items-center gap-2"
+              >
+                <CreditCard size={16} />
+                Set up subscription
+              </Button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300">
-      <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+      onClick={onClose} // Close when clicking outside
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 100 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full"
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+      >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">{pledgeData?.pageTitle || 'Untitled Page'}</h2>
           <button
@@ -157,6 +257,29 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Your pledge:</span>
               <span className="text-lg font-bold">${amount.toFixed(2)}/mo</span>
+            </div>
+
+            {/* Custom amount input */}
+            <div className="mb-4">
+              <div className="flex gap-2">
+                <input
+                  ref={customAmountInputRef}
+                  type="number"
+                  value={customAmount}
+                  onChange={handleCustomAmountChange}
+                  placeholder="Enter custom amount"
+                  className="flex-1 p-2 border rounded-md text-sm"
+                  min="0"
+                  step="0.01"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleCustomAmountSubmit}
+                  className="whitespace-nowrap"
+                >
+                  Set Amount
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between gap-4 mb-4">
@@ -235,11 +358,11 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleSubscriptionChange(subscriptionAmount + 10)}
-                className="text-xs"
+                onClick={handleTopUpSubscription}
+                className="text-xs flex items-center gap-1"
               >
-                <DollarSign size={12} className="mr-1" />
-                Increase budget
+                <CreditCard size={12} />
+                Top off subscription
               </Button>
 
               <div className="text-xs text-muted-foreground">
@@ -248,7 +371,7 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

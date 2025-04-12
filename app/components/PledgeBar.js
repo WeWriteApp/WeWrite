@@ -8,6 +8,8 @@ import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
 import PledgeBarTransform from './PledgeBarTransform';
+import PlusButtonParticles from './PlusButtonParticles';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
@@ -36,6 +38,8 @@ const PledgeBar = () => {
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showPlusParticles, setShowPlusParticles] = useState(false);
+  const [showMinusParticles, setShowMinusParticles] = useState(false);
 
   const { id: pageId } = useParams();
 
@@ -419,43 +423,46 @@ const PledgeBar = () => {
   // If this is the user's own page, show stats instead of pledge bar
   if (isOwnPage) {
     return (
-      <div
-        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 pledge-bar-spring ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        }`}
-      >
-        <div
-          className="w-full max-w-md mx-auto bg-background dark:bg-background/30 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-xl cursor-pointer"
-          onClick={() => setShowActivationModal(true)}
+      <AnimatePresence>
+        <motion.div
+          className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: visible ? 0 : 50, opacity: visible ? 1 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          <div className="flex justify-around py-4 px-6">
-            <div className="text-center">
-              <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
-              <p className="text-xs text-foreground/40">Active Donors</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
-              <p className="text-xs text-foreground/40">Monthly Income</p>
-            </div>
+          <div
+            className="w-full max-w-md mx-auto bg-background dark:bg-background/30 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-xl cursor-pointer"
+            onClick={() => setShowActivationModal(true)}
+          >
+            <div className="flex justify-around py-4 px-6">
+              <div className="text-center">
+                <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
+                <p className="text-xs text-foreground/40">Active Donors</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
+                <p className="text-xs text-foreground/40">Monthly Income</p>
+              </div>
 
+            </div>
           </div>
-        </div>
 
-        {/* Pledge Modal for self view */}
-        <PledgeBarTransform
-          isOpen={showActivationModal}
-          onClose={() => setShowActivationModal(false)}
-          pledgeData={{
-            pageId: pageId,
-            pageTitle: pageTitle,
-            amount: 0,
-            available: 0,
-            subscription: null,
-            userId: user?.uid
-          }}
-          onPledgeChange={() => {}}
-        />
-      </div>
+          {/* Pledge Modal for self view */}
+          <PledgeBarTransform
+            isOpen={showActivationModal}
+            onClose={() => setShowActivationModal(false)}
+            pledgeData={{
+              pageId: pageId,
+              pageTitle: pageTitle,
+              amount: 0,
+              available: 0,
+              subscription: null,
+              userId: user?.uid
+            }}
+            onPledgeChange={() => {}}
+          />
+        </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -497,6 +504,9 @@ const PledgeBar = () => {
   const handleIncrementAmount = () => {
     if (maxedOut) return;
 
+    // Show particle effect
+    setShowPlusParticles(true);
+
     // Use the first pledge in the list (there should only be one)
     if (pledges.length > 0) {
       handlePledgeAmountChange(pledges[0].id, 1);
@@ -511,10 +521,19 @@ const PledgeBar = () => {
   const handleDecrementAmount = () => {
     if (donateAmount <= 0) return;
 
+    // Show particle effect
+    setShowMinusParticles(true);
+
     // Use the first pledge in the list (there should only be one)
     if (pledges.length > 0) {
       handlePledgeAmountChange(pledges[0].id, -1);
     }
+  };
+
+  // Handle particle effect completion
+  const handleParticlesComplete = () => {
+    setShowPlusParticles(false);
+    setShowMinusParticles(false);
   };
 
   // Handle setting a custom amount
@@ -605,86 +624,107 @@ const PledgeBar = () => {
 
   return (
     <>
-      <div
-        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 pledge-bar-spring ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        }`}
-        onClick={() => setShowActivationModal(true)}
-      >
-        <div className="w-full max-w-md mx-auto cursor-pointer shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden">
-          {/* Custom Pledge Bar with Three-Color Background */}
-          <div className="w-full bg-background dark:bg-background/30 backdrop-blur-md p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">${donateAmount.toFixed(2)}/mo</span>
-              {maxedOut && (
-                <span className="text-xs text-amber-500">(Budget limit reached)</span>
-              )}
-            </div>
-
-            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-              {/* Already spent section - grey for other pages */}
-              <div
-                className="h-full bg-gray-400 dark:bg-gray-600 float-left"
-                style={{ width: `${getSpentPercentage()}%` }}
-              ></div>
-
-              {/* Current pledge section - blue for this page */}
-              <div
-                className="h-full bg-blue-500 dark:bg-blue-600 float-left"
-                style={{ width: `${getCurrentPledgePercentage()}%` }}
-              ></div>
-
-              {/* Available budget is the remaining space */}
-            </div>
-
-            <div className="flex justify-between mt-2">
-              <div className="flex items-center">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent modal from opening
-                    handleDecrementAmount();
-                  }}
-                  disabled={donateAmount <= 0}
-                  className={`p-1 rounded-full ${donateAmount <= 0 ? 'text-muted-foreground' : 'hover:bg-accent'}`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14" />
-                  </svg>
-                </button>
+      <AnimatePresence>
+        <motion.div
+          className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: visible ? 0 : 50, opacity: visible ? 1 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        >
+          <div
+            className="w-full max-w-md mx-auto cursor-pointer shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden"
+            onClick={() => setShowActivationModal(true)}
+          >
+            {/* Custom Pledge Bar with Three-Color Background */}
+            <div className="w-full bg-background dark:bg-background/30 backdrop-blur-md p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">${donateAmount.toFixed(2)}/mo</span>
+                {maxedOut && (
+                  <span className="text-xs text-amber-500">(Budget limit reached)</span>
+                )}
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCustomAmountModal(true);
-                }}
-                className="text-xs text-blue-500 hover:text-blue-600"
-              >
-                Custom
-              </button>
+              <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                {/* Already spent section - grey for other pages */}
+                <div
+                  className="h-full bg-gray-400 dark:bg-gray-600 float-left"
+                  style={{ width: `${getSpentPercentage()}%` }}
+                ></div>
 
-              <div className="flex items-center">
+                {/* Current pledge section - blue for this page */}
+                <div
+                  className="h-full bg-blue-500 dark:bg-blue-600 float-left"
+                  style={{ width: `${getCurrentPledgePercentage()}%` }}
+                ></div>
+
+                {/* Available budget is the remaining space */}
+              </div>
+
+              <div className="flex justify-between mt-2">
+                <div className="flex items-center relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent modal from opening
+                      handleDecrementAmount();
+                    }}
+                    disabled={donateAmount <= 0}
+                    className={`p-1 rounded-full ${donateAmount <= 0 ? 'text-muted-foreground' : 'hover:bg-accent'}`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14" />
+                    </svg>
+                  </button>
+                  {/* Minus button particles */}
+                  {showMinusParticles && (
+                    <PlusButtonParticles
+                      isActive={showMinusParticles}
+                      onComplete={handleParticlesComplete}
+                      color="#6b7280"
+                    />
+                  )}
+                </div>
+
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent modal from opening
-                    handleIncrementAmount();
+                    e.stopPropagation();
+                    setShowCustomAmountModal(true);
                   }}
-                  disabled={maxedOut}
-                  className={`p-1 rounded-full ${maxedOut ? 'text-muted-foreground' : 'hover:bg-accent'}`}
+                  className="text-xs text-blue-500 hover:text-blue-600"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+                  Custom
                 </button>
-              </div>
-            </div>
 
-            <div className="text-xs text-muted-foreground mt-2 text-center">
-              <span>Available: ${getAvailableBudget().toFixed(2)}</span>
+                <div className="flex items-center relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent modal from opening
+                      handleIncrementAmount();
+                    }}
+                    disabled={maxedOut}
+                    className={`p-1 rounded-full ${maxedOut ? 'text-muted-foreground' : 'hover:bg-accent'}`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </button>
+                  {/* Plus button particles */}
+                  {showPlusParticles && (
+                    <PlusButtonParticles
+                      isActive={showPlusParticles}
+                      onComplete={handleParticlesComplete}
+                      color="#3b82f6"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground mt-2 text-center">
+                <span>Available: ${getAvailableBudget().toFixed(2)}</span>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Pledge Bar Transform */}
       <PledgeBarTransform
