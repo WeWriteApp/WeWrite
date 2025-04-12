@@ -1,12 +1,16 @@
 import { ImageResponse } from 'next/og';
-import { NextRequest } from 'next/server';
 
 // Set Edge runtime
 export const runtime = 'edge';
 
-// Set the content type and cache headers
+// Define image size
+export const size = {
+  width: 1200,
+  height: 630,
+};
+
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -18,7 +22,7 @@ export async function GET(
 
     // For now, use static data to ensure the image generation works
     // In production, you would fetch this data from your database
-    const title = 'Sample Page Title';
+    const title = 'Page: ' + pageId;
     const author = 'Sample Author';
     const bodyText = 'This is sample content for the OpenGraph image. In a real implementation, this would be the actual content of the page that would be fetched from the database. The content would be truncated to fit nicely in the image.';
 
@@ -31,113 +35,88 @@ export async function GET(
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'flex-start',
-            justifyContent: 'flex-start',
+            alignItems: 'center',
+            justifyContent: 'center',
             backgroundColor: 'black',
-            padding: '60px 80px',
-            position: 'relative',
-            fontFamily: 'Inter, system-ui, sans-serif',
+            color: 'white',
+            padding: 40,
+            textAlign: 'center',
           }}
         >
           {/* Title */}
           <div
             style={{
-              color: 'white',
-              fontSize: '60px',
+              fontSize: 60,
               fontWeight: 'bold',
-              lineHeight: 1.2,
-              marginBottom: '30px',
-              maxWidth: '90%',
+              marginBottom: 20,
             }}
           >
             {title}
           </div>
 
-          {/* Body content */}
+          {/* Body content - simplified */}
           <div
             style={{
-              color: 'white',
-              fontSize: '32px',
-              lineHeight: 1.4,
+              fontSize: 30,
               opacity: 0.9,
-              marginBottom: '40px',
-              maxWidth: '90%',
-              position: 'relative',
+              marginBottom: 40,
+              maxWidth: '80%',
             }}
           >
-            {bodyText}
+            {bodyText.substring(0, 100)}...
           </div>
 
           {/* Author */}
           <div
             style={{
-              color: 'white',
-              fontSize: '24px',
+              fontSize: 24,
               opacity: 0.8,
-              marginTop: 'auto',
             }}
           >
             by {author}
           </div>
 
-          {/* Gradient overlay at the bottom */}
+          {/* Read more text */}
           <div
             style={{
               position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '200px',
-              background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
+              bottom: 40,
+              fontSize: 24,
+              opacity: 0.7,
               display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'space-between',
-              padding: '40px',
+              alignItems: 'center',
             }}
           >
-            <div
-              style={{
-                color: 'white',
-                fontSize: '24px',
-                opacity: 0.7,
-                fontWeight: 'medium',
-                display: 'flex',
-                alignItems: 'center',
-              }}
+            Read more on WeWrite
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ marginLeft: '8px' }}
             >
-              Read more on WeWrite
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                style={{ marginLeft: '8px' }}
-              >
-                <path
-                  d="M5 12H19M19 12L12 5M19 12L12 19"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
+              <path
+                d="M5 12H19M19 12L12 5M19 12L12 19"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
         </div>
       ),
       {
-        width: 1200,
-        height: 630,
-        // Add explicit content type and cache headers
+        ...size,
         headers: {
           'content-type': 'image/png',
-          'cache-control': 'public, immutable, no-transform, max-age=31536000',
+          'cache-control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
         },
       },
     );
   } catch (e) {
     console.error('Error generating OG image:', e);
-    return new Response('Failed to generate OG image', {
+    return new Response('Failed to generate image', {
       status: 500,
       headers: {
         'content-type': 'text/plain',

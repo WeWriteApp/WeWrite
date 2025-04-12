@@ -31,7 +31,7 @@ export async function GET() {
         >
           <div>WeWrite OpenGraph</div>
           <div style={{ fontSize: 30, marginTop: 20, opacity: 0.8 }}>
-            Test Route
+            Static Test Image
           </div>
         </div>
       ),
@@ -44,7 +44,7 @@ export async function GET() {
       }
     );
   } catch (e) {
-    console.error('Error generating test OG image:', e);
+    console.error('Error generating static OG image:', e);
     return new Response('Failed to generate image', {
       status: 500,
     });
