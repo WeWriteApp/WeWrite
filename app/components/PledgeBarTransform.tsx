@@ -9,38 +9,46 @@ import { updatePledge, getUserSubscription } from '../firebase/subscription';
 interface PledgeBarTransformProps {
   isOpen: boolean;
   onClose: () => void;
-  pledgeData: {
-    pageId: string;
-    pageTitle: string;
-    amount: number;
-    available: number;
-    subscription: any;
-    userId: string;
+  pledgeData?: {
+    pageId?: string;
+    pageTitle?: string;
+    amount?: number;
+    available?: number;
+    subscription?: any;
+    userId?: string;
   };
-  onPledgeChange: (amount: number) => void;
+  onPledgeChange?: (amount: number) => void;
+  isSignedIn?: boolean;
 }
 
 const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
   isOpen,
   onClose,
-  pledgeData,
-  onPledgeChange
+  pledgeData = {
+    pageId: '',
+    pageTitle: 'Untitled Page',
+    amount: 0,
+    available: 0,
+    subscription: null,
+    userId: ''
+  },
+  onPledgeChange = () => {}
 }) => {
-  const [amount, setAmount] = useState(pledgeData.amount || 0);
+  const [amount, setAmount] = useState(pledgeData?.amount || 0);
   const [intervalAmount, setIntervalAmount] = useState(0.1);
   const [otherPledges, setOtherPledges] = useState<any[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
   const [subscriptionAmount, setSubscriptionAmount] = useState(
-    pledgeData.subscription?.amount || 0
+    pledgeData?.subscription?.amount || 0
   );
 
   // Initialize state from props
   useEffect(() => {
-    setAmount(pledgeData.amount || 0);
-    setSubscriptionAmount(pledgeData.subscription?.amount || 0);
-    
+    setAmount(pledgeData?.amount || 0);
+    setSubscriptionAmount(pledgeData?.subscription?.amount || 0);
+
     // Calculate other pledges
-    if (pledgeData.subscription?.pledges) {
+    if (pledgeData?.subscription?.pledges) {
       const others = Object.values(pledgeData.subscription.pledges)
         .filter((pledge: any) => pledge.pageId !== pledgeData.pageId)
         .sort((a: any, b: any) => b.amount - a.amount);
@@ -72,8 +80,8 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
 
   // Save pledge to database
   const savePledge = async (newAmount: number) => {
-    if (!pledgeData.userId || !pledgeData.pageId) return;
-    
+    if (!pledgeData?.userId || !pledgeData?.pageId) return;
+
     setIsUpdating(true);
     try {
       await updatePledge(
@@ -99,12 +107,43 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
 
   if (!isOpen) return null;
 
+  // Special case for when the user is not signed in
+  if (pledgeData?.userId === undefined || pledgeData?.userId === '') {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300">
+        <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Support this creator</h2>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-accent"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <p className="text-center">Sign in to support this creator with a monthly pledge.</p>
+            <div className="flex justify-center">
+              <Button
+                onClick={() => window.location.href = '/auth/login'}
+                className="px-6"
+              >
+                Sign In
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-300">
       <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">{pledgeData.pageTitle}</h2>
-          <button 
+          <h2 className="text-xl font-semibold">{pledgeData?.pageTitle || 'Untitled Page'}</h2>
+          <button
             onClick={onClose}
             className="p-1 rounded-full hover:bg-accent"
           >
@@ -119,7 +158,7 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               <span className="text-sm font-medium">Your pledge:</span>
               <span className="text-lg font-bold">${amount.toFixed(2)}/mo</span>
             </div>
-            
+
             <div className="flex items-center justify-between gap-4 mb-4">
               <button
                 onClick={handleDecrement}
@@ -128,14 +167,14 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               >
                 <Minus size={16} />
               </button>
-              
+
               <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-blue-500 dark:bg-blue-600"
                   style={{ width: `${(amount / subscriptionAmount) * 100}%` }}
                 ></div>
               </div>
-              
+
               <button
                 onClick={handleIncrement}
                 disabled={amount >= subscriptionAmount - getTotalOtherPledges() || isUpdating}
@@ -145,22 +184,22 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               </button>
             </div>
           </div>
-          
+
           {/* Interval adjustment */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Adjustment interval:</span>
               <span className="text-sm">${intervalAmount.toFixed(2)}</span>
             </div>
-            
+
             <div className="grid grid-cols-5 gap-2">
               {[0.01, 0.05, 0.1, 0.5, 1].map((value) => (
                 <button
                   key={value}
                   onClick={() => setIntervalAmount(value)}
                   className={`p-2 text-xs rounded ${
-                    intervalAmount === value 
-                      ? 'bg-primary text-primary-foreground' 
+                    intervalAmount === value
+                      ? 'bg-primary text-primary-foreground'
                       : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
@@ -169,7 +208,7 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               ))}
             </div>
           </div>
-          
+
           {/* Other pledges */}
           {otherPledges.length > 0 && (
             <div>
@@ -184,17 +223,17 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
               </div>
             </div>
           )}
-          
+
           {/* Subscription amount */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium">Monthly budget:</span>
               <span className="text-sm">${subscriptionAmount.toFixed(2)}/mo</span>
             </div>
-            
+
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleSubscriptionChange(subscriptionAmount + 10)}
                 className="text-xs"
@@ -202,7 +241,7 @@ const PledgeBarTransform: React.FC<PledgeBarTransformProps> = ({
                 <DollarSign size={12} className="mr-1" />
                 Increase budget
               </Button>
-              
+
               <div className="text-xs text-muted-foreground">
                 Available: ${(subscriptionAmount - getTotalOtherPledges() - amount).toFixed(2)}
               </div>

@@ -442,10 +442,18 @@ const PledgeBar = () => {
         </div>
 
         {/* Pledge Modal for self view */}
-        <PledgeBarModal
+        <PledgeBarTransform
           isOpen={showActivationModal}
           onClose={() => setShowActivationModal(false)}
-          isSignedIn={!!user}
+          pledgeData={{
+            pageId: pageId,
+            pageTitle: pageTitle,
+            amount: 0,
+            available: 0,
+            subscription: null,
+            userId: user?.uid
+          }}
+          onPledgeChange={() => {}}
         />
       </div>
     );
