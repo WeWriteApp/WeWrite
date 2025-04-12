@@ -449,6 +449,27 @@ const PledgeBar = () => {
     return;
   };
 
+  // Helper functions for the pledge bar percentages
+  const getSpentPercentage = () => {
+    if (!subscription || subscription.amount === 0) return 0;
+
+    const totalAmount = subscription.amount;
+    const pledgedAmount = subscription.pledgedAmount || 0;
+    const currentAmount = donateAmount || 0;
+    const spentAmount = pledgedAmount - currentAmount;
+
+    return (spentAmount / totalAmount) * 100;
+  };
+
+  const getCurrentPledgePercentage = () => {
+    if (!subscription || subscription.amount === 0) return 0;
+
+    const totalAmount = subscription.amount;
+    const currentAmount = donateAmount || 0;
+
+    return (currentAmount / totalAmount) * 100;
+  };
+
   return (
     <>
       <div

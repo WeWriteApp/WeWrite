@@ -20,9 +20,10 @@ import { useTheme } from '../../../providers/ThemeProvider';
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 // Payment Form Component
-function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
+function PaymentForm({ clientSecret, amount, tier, onSuccess, onCancel }: {
   clientSecret: string;
   amount: number;
+  tier?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -119,11 +120,27 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
     }
   };
 
+  // Helper function to get tier display name
+  const getTierDisplayName = (tierId?: string) => {
+    if (!tierId) return '';
+
+    const tierNames: {[key: string]: string} = {
+      'bronze': 'Bronze',
+      'silver': 'Silver',
+      'gold': 'Gold',
+      'diamond': 'Diamond'
+    };
+
+    return tierNames[tierId] || 'Custom';
+  };
+
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
       <div className="mb-4">
         <h2 className="text-lg font-medium mb-1 text-foreground">Subscribe to WeWrite</h2>
-        <p className="text-xs text-muted-foreground">Complete your ${amount.toFixed(2)}/month subscription</p>
+        <p className="text-xs text-muted-foreground">
+          Complete your {tier && `${getTierDisplayName(tier)} tier `}${amount.toFixed(2)}/month subscription
+        </p>
       </div>
 
       <div className="space-y-3 mb-4">
@@ -194,6 +211,7 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
 export default function SubscriptionPaymentPage() {
   const [clientSecret, setClientSecret] = useState('');
   const [amount, setAmount] = useState<number>(0);
+  const [tier, setTier] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -209,6 +227,8 @@ export default function SubscriptionPaymentPage() {
     }
 
     const amountParam = searchParams.get('amount');
+    const tierParam = searchParams.get('tier');
+
     if (!amountParam) {
       router.push('/account/subscription');
       return;
@@ -216,6 +236,10 @@ export default function SubscriptionPaymentPage() {
 
     const parsedAmount = parseFloat(amountParam);
     setAmount(parsedAmount);
+
+    if (tierParam) {
+      setTier(tierParam);
+    }
 
     async function createPaymentIntent() {
       try {
@@ -226,7 +250,8 @@ export default function SubscriptionPaymentPage() {
           },
           body: JSON.stringify({
             amount: parsedAmount,
-            userId: user.uid
+            userId: user.uid,
+            tier: tierParam || 'bronze'
           }),
         });
 
@@ -307,6 +332,7 @@ export default function SubscriptionPaymentPage() {
               <PaymentForm
                 clientSecret={clientSecret}
                 amount={amount}
+                tier={tier}
                 onSuccess={handleSuccess}
                 onCancel={handleCancel}
               />

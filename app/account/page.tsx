@@ -825,22 +825,65 @@ export default function AccountPage() {
             </div>
           </section>
 
-          {/* Subscription & Payouts Section */}
+          {/* Subscription & Donations Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Subscription & Payouts</h3>
-            <Alert className="bg-green-500/10 border-green-500/20">
-              <AlertCircle className="h-4 w-4 text-green-500" />
-              <AlertTitle className="text-green-500">Coming Soon</AlertTitle>
-              <AlertDescription className="text-green-500/90">
-                <p className="mb-4">We're working on implementing subscription and payout features. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
-                <Button asChild className="bg-green-600 hover:bg-green-700 text-white w-full">
-                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full">
-                    <DollarSign className="h-4 w-4" />
-                    Support on OpenCollective
-                  </a>
+            <h3 className="text-base font-medium mb-4">Subscription & Donations</h3>
+            <div className="space-y-4">
+              {subscription && subscription.status === 'active' ? (
+                <SubscriptionStatusCard
+                  isActive={true}
+                  nextPaymentDate={subscription.billingCycleEnd || ''}
+                  amount={subscription.amount}
+                  onCancel={() => router.push('/account/subscription')}
+                />
+              ) : (
+                <div className="bg-card rounded-lg border border-border p-4 text-center">
+                  <h4 className="font-medium mb-2">No Active Subscription</h4>
+                  <p className="text-sm text-muted-foreground mb-4">Subscribe to support your favorite writers.</p>
+                  <Button
+                    onClick={() => router.push('/account/subscription')}
+                    className="w-full bg-primary hover:bg-primary/90"
+                  >
+                    Set up subscription
+                  </Button>
+                </div>
+              )}
+
+              <div className="bg-card rounded-lg border border-border p-4">
+                <h4 className="font-medium mb-2">My Donations</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {pledges.length > 0
+                    ? `You're supporting ${pledges.length} page${pledges.length !== 1 ? 's' : ''}.`
+                    : "You're not supporting any pages yet."}
+                </p>
+                <Button
+                  onClick={() => router.push('/account/donations')}
+                  className="w-full"
+                  variant="outline"
+                >
+                  Manage donations
                 </Button>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
+          </section>
+
+          {/* Creator Payouts Section */}
+          <section>
+            <h3 className="text-base font-medium mb-4">Creator Payouts</h3>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <h4 className="font-medium mb-2">Receive Payments</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Set up your payout account to receive donations from your readers.
+              </p>
+              <Button
+                onClick={() => router.push('/account/payouts')}
+                className="w-full"
+                variant="outline"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Manage Payouts
+              </Button>
+            </div>
           </section>
 
           {/* Admin Analytics - Only visible for jamiegray2234@gmail.com */}
