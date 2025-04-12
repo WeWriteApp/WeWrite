@@ -5,22 +5,12 @@ import { NextRequest } from 'next/server';
 export const runtime = 'edge';
 
 // Set the content type and cache headers
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    const pageId = params.id;
-
-    if (!pageId) {
-      return new Response('Page ID is required', { status: 400 });
-    }
-
-    // For now, use static data to ensure the image generation works
-    // In production, you would fetch this data from your database
-    const title = 'Sample Page Title';
-    const author = 'Sample Author';
-    const bodyText = 'This is sample content for the OpenGraph image. In a real implementation, this would be the actual content of the page that would be fetched from the database. The content would be truncated to fit nicely in the image.';
+    // Static test data
+    const title = 'Test Page Title';
+    const author = 'Test Author';
+    const bodyText = 'This is a test page for OpenGraph image generation. This content is static and is used to verify that the image generation is working correctly.';
 
     // Create the OG image
     return new ImageResponse(
@@ -52,7 +42,7 @@ export async function GET(
           >
             {title}
           </div>
-
+          
           {/* Body content */}
           <div
             style={{
@@ -67,7 +57,7 @@ export async function GET(
           >
             {bodyText}
           </div>
-
+          
           {/* Author */}
           <div
             style={{
@@ -79,7 +69,7 @@ export async function GET(
           >
             by {author}
           </div>
-
+          
           {/* Gradient overlay at the bottom */}
           <div
             style={{
@@ -137,7 +127,7 @@ export async function GET(
     );
   } catch (e) {
     console.error('Error generating OG image:', e);
-    return new Response('Failed to generate OG image', {
+    return new Response('Failed to generate OG image', { 
       status: 500,
       headers: {
         'content-type': 'text/plain',
