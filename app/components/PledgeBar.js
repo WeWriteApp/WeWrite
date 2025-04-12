@@ -654,7 +654,6 @@ const PledgeBar = () => {
             <div className="text-xs text-muted-foreground mt-2 text-center">
               <span>Available: ${(subscription?.amount - (subscription?.pledgedAmount || 0) + donateAmount).toFixed(2)}</span>
             </div>
-            </div>
           </div>
         </div>
       </div>
