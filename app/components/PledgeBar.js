@@ -43,14 +43,20 @@ const PledgeBar = () => {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      const scrollDelta = Math.abs(currentScrollY - lastScrollY);
 
-      // Show the bar when scrolling up, hide when scrolling down
-      if (currentScrollY < lastScrollY) {
-        // Scrolling up - show the bar
-        setVisible(true);
-      } else if (currentScrollY > lastScrollY) {
-        // Scrolling down - hide the bar
-        setVisible(false);
+      // Only respond to significant scroll movements (more than 5px)
+      if (scrollDelta > 5) {
+        // Show the bar when scrolling up, hide when scrolling down
+        if (currentScrollY < lastScrollY) {
+          // Scrolling up - show the bar
+          setVisible(true);
+          console.log('PledgeBar: Scrolling up, showing bar');
+        } else if (currentScrollY > lastScrollY) {
+          // Scrolling down - hide the bar
+          setVisible(false);
+          console.log('PledgeBar: Scrolling down, hiding bar');
+        }
       }
 
       setLastScrollY(currentScrollY);
@@ -98,83 +104,85 @@ const PledgeBar = () => {
     }
   }, [pathname]);
 
+  // Define loadData function outside useEffect so it can be called from other functions
+  const loadData = async () => {
+    if (!user || !pageId) {
+      setLoading(false);
+      console.log('PledgeBar: No user or pageId, skipping data load', { user: !!user, pageId });
+      return;
+    }
+
+    console.log('PledgeBar: Loading data for page', { pageId });
+    setLoading(true);
+
+    try {
+      // Get the page to check its owner
+      const pageDoc = await getDocById("pages", pageId);
+
+      if (pageDoc && pageDoc.exists()) {
+        setPageTitle(pageDoc.data().title || 'Untitled Page');
+
+        // Set isOwnPage based on page ownership
+        const isOwner = pageDoc.data().userId === user.uid;
+        console.log("Checking page ownership:", {
+          pageUserId: pageDoc.data().userId,
+          currentUserId: user.uid,
+          isOwner
+        });
+        setIsOwnPage(isOwner);
+
+        if (isOwner) {
+          // Load page stats
+          const stats = await getPageStats(pageId);
+          setPageStats({
+            activeDonors: stats?.activeDonors || 0,
+            monthlyIncome: stats?.monthlyIncome || 0,
+            totalViews: stats?.totalViews || 0
+          });
+        } else {
+          // Get subscription data for donating
+          const userSubscription = await getUserSubscription(user.uid);
+          setSubscription(userSubscription);
+
+          // Get pledge for this page if exists
+          const pledge = await getPledge(user.uid, pageId);
+          if (pledge) {
+            setDonateAmount(pledge.amount);
+            setSelectedAmount(pledge.amount);
+
+            // Check if current pledge is already at subscription limit
+            const usedAmount = userSubscription?.pledgedAmount || 0;
+            const subscriptionAmount = userSubscription?.amount || 0;
+            const availableAmount = subscriptionAmount - usedAmount + pledge.amount;
+
+            if (pledge.amount >= availableAmount || usedAmount >= subscriptionAmount) {
+              setMaxedOut(true);
+            }
+          } else {
+            // Default to $0 if no existing pledge
+            setDonateAmount(0);
+            setSelectedAmount(0);
+          }
+
+          // Create a single pledge object for CompositionBar
+          setPledges([{
+            id: pageId,
+            pageId: pageId,
+            title: pageDoc.data().title || 'Untitled Page',
+            amount: pledge?.amount || 0 // Default to 0 if no existing amount
+          }]);
+        }
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      setLoading(false);
+    }
+  };
+
   // Load user subscription and pledge data
   useEffect(() => {
-    const loadData = async () => {
-      if (!user || !pageId) {
-        setLoading(false);
-        console.log('PledgeBar: No user or pageId, skipping data load', { user: !!user, pageId });
-        return;
-      }
-
-      console.log('PledgeBar: Loading data for page', { pageId });
-
-      try {
-        // Get the page to check its owner
-        const pageDoc = await getDocById("pages", pageId);
-
-        if (pageDoc && pageDoc.exists()) {
-          setPageTitle(pageDoc.data().title || 'Untitled Page');
-
-          // Set isOwnPage based on page ownership
-          const isOwner = pageDoc.data().userId === user.uid;
-          console.log("Checking page ownership:", {
-            pageUserId: pageDoc.data().userId,
-            currentUserId: user.uid,
-            isOwner
-          });
-          setIsOwnPage(isOwner);
-
-          if (isOwner) {
-            // Load page stats
-            const stats = await getPageStats(pageId);
-            setPageStats({
-              activeDonors: stats?.activeDonors || 0,
-              monthlyIncome: stats?.monthlyIncome || 0,
-              totalViews: stats?.totalViews || 0
-            });
-          } else {
-            // Get subscription data for donating
-            const userSubscription = await getUserSubscription(user.uid);
-            setSubscription(userSubscription);
-
-            // Get pledge for this page if exists
-            const pledge = await getPledge(user.uid, pageId);
-            if (pledge) {
-              setDonateAmount(pledge.amount);
-              setSelectedAmount(pledge.amount);
-
-              // Check if current pledge is already at subscription limit
-              const usedAmount = userSubscription?.pledgedAmount || 0;
-              const subscriptionAmount = userSubscription?.amount || 0;
-              const availableAmount = subscriptionAmount - usedAmount + pledge.amount;
-
-              if (pledge.amount >= availableAmount || usedAmount >= subscriptionAmount) {
-                setMaxedOut(true);
-              }
-            } else {
-              // Default to $0 if no existing pledge
-              setDonateAmount(0);
-              setSelectedAmount(0);
-            }
-
-            // Create a single pledge object for CompositionBar
-            setPledges([{
-              id: pageId,
-              pageId: pageId,
-              title: pageDoc.data().title || 'Untitled Page',
-              amount: pledge?.amount || 0 // Default to 0 if no existing amount
-            }]);
-          }
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        setLoading(false);
-      }
-    };
-
     // Only load data if we're on a page view
     if (isPageView) {
       loadData();
@@ -183,6 +191,8 @@ const PledgeBar = () => {
       setLoading(false);
     }
   }, [user, pageId, isPageView]);
+
+  // Note: We're not including loadData in the dependency array because it would cause an infinite loop
 
   // Set global increment (this could be loaded from user settings)
   useEffect(() => {
@@ -287,6 +297,18 @@ const PledgeBar = () => {
     setDonateAmount(newAmount);
     setSelectedAmount(newAmount);
     setIsConfirmed(false);
+
+    // Save the updated pledge to the database
+    if (pageId && user) {
+      const oldAmount = currentPledge.amount || 0;
+      updatePledge(user.uid, pageId, newAmount, oldAmount)
+        .then(() => {
+          console.log('Pledge updated successfully');
+        })
+        .catch(error => {
+          console.error('Error updating pledge:', error);
+        });
+    }
   };
 
   const handlePledgeCustomAmount = (pledgeId) => {
@@ -459,6 +481,80 @@ const PledgeBar = () => {
     return;
   };
 
+  // Handle increment button click
+  const handleIncrementAmount = () => {
+    if (maxedOut) return;
+
+    // Use the first pledge in the list (there should only be one)
+    if (pledges.length > 0) {
+      handlePledgeAmountChange(pledges[0].id, 1);
+    } else if (pageId) {
+      // Create a new pledge if none exists
+      const newAmount = 1;
+      createNewPledge(newAmount);
+    }
+  };
+
+  // Handle decrement button click
+  const handleDecrementAmount = () => {
+    if (donateAmount <= 0) return;
+
+    // Use the first pledge in the list (there should only be one)
+    if (pledges.length > 0) {
+      handlePledgeAmountChange(pledges[0].id, -1);
+    }
+  };
+
+  // Handle setting a custom amount
+  const handleSetCustomAmount = (amount) => {
+    if (pledges.length > 0) {
+      // Update pledges with the new amount
+      const updatedPledges = pledges.map(p => ({ ...p, amount }));
+      setPledges(updatedPledges);
+      setDonateAmount(amount);
+      setSelectedAmount(amount);
+      setIsConfirmed(false);
+
+      // Save the updated pledge to the database
+      if (pageId && user) {
+        const oldAmount = pledges[0].amount || 0;
+        updatePledge(user.uid, pageId, amount, oldAmount)
+          .then(() => {
+            console.log('Pledge updated successfully');
+          })
+          .catch(error => {
+            console.error('Error updating pledge:', error);
+          });
+      }
+    } else if (pageId && user && amount > 0) {
+      // Create a new pledge if none exists
+      createNewPledge(amount);
+    }
+  };
+
+  // Create a new pledge
+  const createNewPledge = (amount) => {
+    if (!pageId || !user || !subscription) return;
+
+    // Check if the amount is within the available budget
+    const totalPledged = subscription.pledgedAmount || 0;
+    if (amount + totalPledged > subscription.amount) {
+      setShowMaxedOutWarning(true);
+      return;
+    }
+
+    // Create a new pledge
+    createPledge(user.uid, pageId, amount)
+      .then(() => {
+        console.log('Pledge created successfully');
+        // Refresh the pledges
+        loadData();
+      })
+      .catch(error => {
+        console.error('Error creating pledge:', error);
+      });
+  };
+
   // Helper functions for the pledge bar percentages
   const getSpentPercentage = () => {
     if (!subscription || subscription.amount === 0) return 0;
@@ -489,21 +585,73 @@ const PledgeBar = () => {
         onClick={() => setShowActivationModal(true)}
       >
         <div className="w-full max-w-md mx-auto cursor-pointer shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden">
-          <CompositionBar
-            value={pledges[0]?.amount || 0}
-            max={subscription?.amount || 100}
-            onChange={() => {}}
-            disabled={false}
-            pledges={pledges}
-            subscriptionAmount={subscription?.amount || 0}
-            onPledgeChange={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
-            onPledgeCustomAmount={(e) => {
-              e.stopPropagation(); // Prevent clicks from bubbling up
-              handlePledgeCustomAmount(e);
-            }}
-            onDeletePledge={() => {}}
-            className="w-full bg-background dark:bg-background/30 backdrop-blur-md"
-          />
+          {/* Custom Pledge Bar with Three-Color Background */}
+          <div className="w-full bg-background dark:bg-background/30 backdrop-blur-md p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">${donateAmount.toFixed(2)}/mo</span>
+              {maxedOut && (
+                <span className="text-xs text-amber-500">(Budget limit reached)</span>
+              )}
+            </div>
+
+            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+              {/* Already spent section */}
+              <div
+                className="h-full bg-gray-400 dark:bg-gray-600 float-left"
+                style={{ width: `${getSpentPercentage()}%` }}
+              ></div>
+
+              {/* Current pledge section */}
+              <div
+                className="h-full bg-blue-500 float-left"
+                style={{ width: `${getCurrentPledgePercentage()}%` }}
+              ></div>
+
+              {/* Available budget is the remaining space */}
+            </div>
+
+            <div className="flex justify-between mt-2">
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDecrementAmount();
+                  }}
+                  disabled={donateAmount <= 0}
+                  className={`p-1 rounded-full ${donateAmount <= 0 ? 'text-muted-foreground' : 'hover:bg-accent'}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleIncrementAmount();
+                  }}
+                  disabled={maxedOut}
+                  className={`p-1 rounded-full ${maxedOut ? 'text-muted-foreground' : 'hover:bg-accent'}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCustomAmountModal(true);
+                  }}
+                  className="text-xs text-blue-500 hover:text-blue-600 ml-2"
+                >
+                  Custom
+                </button>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                <span>Available: ${(subscription?.amount - (subscription?.pledgedAmount || 0) + donateAmount).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
