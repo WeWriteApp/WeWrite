@@ -7,7 +7,7 @@ import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
-import PledgeBarModal from './PledgeBarModal';
+import PledgeBarTransform from './PledgeBarTransform';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
@@ -633,7 +633,7 @@ const PledgeBar = () => {
               <div className="flex items-center">
                 <button
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // Prevent modal from opening
                     handleDecrementAmount();
                   }}
                   disabled={donateAmount <= 0}
@@ -658,7 +658,7 @@ const PledgeBar = () => {
               <div className="flex items-center">
                 <button
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // Prevent modal from opening
                     handleIncrementAmount();
                   }}
                   disabled={maxedOut}
@@ -678,17 +678,29 @@ const PledgeBar = () => {
         </div>
       </div>
 
-      {/* Pledge Modal */}
-      <PledgeBarModal
+      {/* Pledge Bar Transform */}
+      <PledgeBarTransform
         isOpen={showActivationModal}
         onClose={() => setShowActivationModal(false)}
-        isSignedIn={!!user}
         pledgeData={{
           pageId: pageId,
           pageTitle: pageTitle,
           amount: donateAmount,
           available: getAvailableBudget(),
-          subscription: subscription
+          subscription: subscription,
+          userId: user?.uid
+        }}
+        onPledgeChange={(newAmount) => {
+          setDonateAmount(newAmount);
+          setSelectedAmount(newAmount);
+          // Update the pledges array
+          if (pledges.length > 0) {
+            const updatedPledges = pledges.map(p => ({
+              ...p,
+              amount: newAmount
+            }));
+            setPledges(updatedPledges);
+          }
         }}
       />
 

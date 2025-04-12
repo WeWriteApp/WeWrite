@@ -97,7 +97,7 @@ export default function PayoutsPage() {
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Creator Payouts</h1>
+        <h1 className="text-3xl font-bold mb-2">Payouts</h1>
         <p className="text-gray-500 dark:text-gray-400">
           Manage your payout settings and view your earnings from donations.
         </p>

@@ -34,7 +34,7 @@ const DonationsList: React.FC = () => {
       try {
         // Get all user pledges
         const userPledges = await getUserPledges(user.uid);
-        
+
         // Fetch page titles for each pledge
         const pledgesWithTitles = await Promise.all(
           userPledges.map(async (pledge) => {
@@ -52,10 +52,10 @@ const DonationsList: React.FC = () => {
             }
           })
         );
-        
+
         // Sort by amount (highest first)
         pledgesWithTitles.sort((a, b) => b.amount - a.amount);
-        
+
         setPledges(pledgesWithTitles);
       } catch (err: any) {
         setError(err.message || 'Failed to load donations');
@@ -70,7 +70,7 @@ const DonationsList: React.FC = () => {
   const handleTouchStart = (e: React.TouchEvent, id: string) => {
     touchStartX.current = e.touches[0].clientX;
     isDragging.current = true;
-    
+
     // Initialize this item's position if it doesn't exist
     if (currentTranslateX.current[id] === undefined) {
       currentTranslateX.current[id] = 0;
@@ -79,18 +79,18 @@ const DonationsList: React.FC = () => {
 
   const handleTouchMove = (e: React.TouchEvent, id: string) => {
     if (!isDragging.current) return;
-    
+
     const currentX = e.touches[0].clientX;
     const diff = currentX - touchStartX.current;
-    
+
     // Only allow swiping left (negative values)
     const newTranslate = Math.min(0, diff + currentTranslateX.current[id]);
-    
+
     // Update the transform
     if (e.currentTarget) {
       e.currentTarget.style.transform = `translateX(${newTranslate}px)`;
     }
-    
+
     // If swiped far enough, show delete button
     if (newTranslate < -50) {
       setSwipedItemId(id);
@@ -101,7 +101,7 @@ const DonationsList: React.FC = () => {
 
   const handleTouchEnd = (e: React.TouchEvent, id: string) => {
     isDragging.current = false;
-    
+
     // If swiped far enough, snap to show delete button
     // Otherwise, snap back to original position
     if (swipedItemId === id) {
@@ -128,14 +128,40 @@ const DonationsList: React.FC = () => {
 
   const handleDelete = async (pledge: Pledge) => {
     if (!user) return;
-    
+
     try {
       await deletePledge(user.uid, pledge.pageId, pledge.amount);
-      
+
       // Remove from local state
       setPledges(pledges.filter(p => p.id !== pledge.id));
     } catch (err: any) {
       setError(err.message || 'Failed to delete donation');
+    }
+  };
+
+  const handleAdjustAmount = async (pledge: Pledge, change: number) => {
+    if (!user) return;
+
+    const newAmount = Math.max(0, pledge.amount + change);
+
+    // If amount is 0, delete the pledge
+    if (newAmount === 0) {
+      handleDelete(pledge);
+      return;
+    }
+
+    try {
+      await updatePledge(user.uid, pledge.pageId, newAmount, pledge.amount);
+
+      // Update local state
+      setPledges(pledges.map(p => {
+        if (p.id === pledge.id) {
+          return { ...p, amount: newAmount };
+        }
+        return p;
+      }));
+    } catch (err: any) {
+      setError(err.message || 'Failed to update donation');
     }
   };
 
@@ -153,7 +179,7 @@ const DonationsList: React.FC = () => {
     return (
       <div className="p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
         <p>Error: {error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="mt-2 px-4 py-2 bg-red-200 dark:bg-red-800 rounded-md"
         >
@@ -179,13 +205,13 @@ const DonationsList: React.FC = () => {
       {pledges.map((pledge) => (
         <div key={pledge.id} className="relative overflow-hidden rounded-lg">
           {/* Delete button (revealed on swipe) */}
-          <div 
+          <div
             className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 flex items-center justify-center"
             onClick={() => handleDelete(pledge)}
           >
             <Trash2 className="text-white h-5 w-5" />
           </div>
-          
+
           {/* Pledge item */}
           <div
             id={`pledge-item-${pledge.id}`}
@@ -195,7 +221,7 @@ const DonationsList: React.FC = () => {
             onTouchMove={(e) => handleTouchMove(e, pledge.id)}
             onTouchEnd={(e) => handleTouchEnd(e, pledge.id)}
           >
-            <div>
+            <div className="flex-1">
               <Link href={`/${pledge.pageId}`} className="font-medium hover:underline">
                 {pledge.title}
               </Link>
@@ -203,10 +229,32 @@ const DonationsList: React.FC = () => {
                 ${pledge.amount.toFixed(2)}/month
               </p>
             </div>
-            
-            <div className="flex items-center">
+
+            <div className="flex items-center space-x-2">
+              {/* Minus button */}
+              <button
+                onClick={() => handleAdjustAmount(pledge, -0.1)}
+                className="p-1 rounded-full hover:bg-accent"
+                aria-label="Decrease donation"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14" />
+                </svg>
+              </button>
+
+              {/* Plus button */}
+              <button
+                onClick={() => handleAdjustAmount(pledge, 0.1)}
+                className="p-1 rounded-full hover:bg-accent"
+                aria-label="Increase donation"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+
               {swipedItemId === pledge.id ? (
-                <button 
+                <button
                   className="p-2 text-muted-foreground"
                   onClick={() => resetSwipe(pledge.id)}
                 >
@@ -221,7 +269,7 @@ const DonationsList: React.FC = () => {
           </div>
         </div>
       ))}
-      
+
       <div className="mt-4 text-xs text-muted-foreground text-center">
         <p>Swipe left on an item to delete it</p>
       </div>

@@ -42,8 +42,8 @@ const CreatorEarningsCard: React.FC<CreatorEarningsCardProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Creator Earnings</CardTitle>
-        <CardDescription>Your estimated earnings from donations</CardDescription>
+        <CardTitle className="text-lg">Earnings</CardTitle>
+        <CardDescription>Your estimated earnings and available payouts</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
