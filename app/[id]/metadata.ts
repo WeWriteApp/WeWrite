@@ -7,7 +7,7 @@ import { db } from '../firebase/config';
 // Function to extract plain text from Slate content
 function extractPlainText(content: any): string {
   if (!content || !Array.isArray(content)) return '';
-  
+
   return content.map(node => {
     if (node.text) return node.text;
     if (node.children) return extractPlainText(node.children);
@@ -26,27 +26,27 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   let title = 'Untitled';
   let content = '';
   let username = 'Anonymous';
-  
+
   try {
     // Get page data from Firestore
     const pageDoc = await getDoc(doc(db, "pages", id));
-    
+
     if (pageDoc.exists()) {
       const pageData = pageDoc.data();
       title = pageData.title || 'Untitled';
-      
+
       // Get the user data to get the username
       if (pageData.userId) {
         const rtdb = getDatabase(app);
         const userRef = ref(rtdb, `users/${pageData.userId}`);
         const userSnapshot = await get(userRef);
-        
+
         if (userSnapshot.exists()) {
           const userData = userSnapshot.val();
           username = userData.username || 'Anonymous';
         }
       }
-      
+
       // Get the latest version content
       if (pageData.currentVersionId) {
         const versionDoc = await getDoc(doc(db, "versions", pageData.currentVersionId));
@@ -54,10 +54,10 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
           const versionData = versionDoc.data();
           if (versionData.content) {
             try {
-              const contentData = typeof versionData.content === 'string' 
-                ? JSON.parse(versionData.content) 
+              const contentData = typeof versionData.content === 'string'
+                ? JSON.parse(versionData.content)
                 : versionData.content;
-              
+
               content = extractPlainText(contentData);
             } catch (error) {
               console.error('Error parsing content:', error);
@@ -69,10 +69,10 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   } catch (error) {
     console.error('Error generating metadata:', error);
   }
-  
+
   // Truncate content for description
   const description = truncateText(content, 200);
-  
+
   return {
     title: `${title} by ${username} on WeWrite`,
     description,
@@ -83,7 +83,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       url: `https://wewrite.vercel.app/${id}`,
       images: [
         {
-          url: `https://wewrite.vercel.app/${id}/opengraph-image`,
+          url: `https://wewrite.vercel.app/api/og/${id}`,
           width: 1200,
           height: 630,
           alt: `${title} by ${username}`,
@@ -94,7 +94,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       card: 'summary_large_image',
       title: `${title} by ${username} on WeWrite`,
       description,
-      images: [`https://wewrite.vercel.app/${id}/opengraph-image`],
+      images: [`https://wewrite.vercel.app/api/og/${id}`],
     },
   };
 }

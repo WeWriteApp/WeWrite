@@ -12,14 +12,14 @@ export async function GET(
 ) {
   try {
     const pageId = params.id;
-    
+
     if (!pageId) {
       return new Response('Page ID is required', { status: 400 });
     }
 
     // Fetch page data
     const pageData = await getPageMetadata(pageId);
-    
+
     if (!pageData) {
       return new Response('Page not found', { status: 404 });
     }
@@ -71,7 +71,7 @@ export async function GET(
           >
             {title}
           </div>
-          
+
           {/* Body content */}
           <div
             style={{
@@ -86,7 +86,7 @@ export async function GET(
           >
             {bodyText}
           </div>
-          
+
           {/* Author */}
           <div
             style={{
@@ -98,7 +98,7 @@ export async function GET(
           >
             by {author}
           </div>
-          
+
           {/* Gradient overlay at the bottom */}
           <div
             style={{
@@ -110,7 +110,7 @@ export async function GET(
               background: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
               display: 'flex',
               alignItems: 'flex-end',
-              justifyContent: 'center',
+              justifyContent: 'space-between',
               padding: '40px',
             }}
           >
@@ -120,9 +120,26 @@ export async function GET(
                 fontSize: '24px',
                 opacity: 0.7,
                 fontWeight: 'medium',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               Read more on WeWrite
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ marginLeft: '8px' }}
+              >
+                <path
+                  d="M5 12H19M19 12L12 5M19 12L12 19"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </div>
           </div>
         </div>
@@ -139,7 +156,7 @@ export async function GET(
     );
   } catch (e) {
     console.error('Error generating OG image:', e);
-    return new Response('Failed to generate OG image', { 
+    return new Response('Failed to generate OG image', {
       status: 500,
       headers: {
         'content-type': 'text/plain',
