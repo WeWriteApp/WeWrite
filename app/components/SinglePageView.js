@@ -594,6 +594,35 @@ function SinglePageView({ params }) {
     <Layout>
       <Head>
         <title>{title} - WeWrite</title>
+        <meta name="description" content={editorState && editorState.length > 0 ? editorState.map(node => node.text || '').join(' ').substring(0, 160) : 'A collaborative writing page on WeWrite'} />
+        <meta name="author" content={page?.username || 'Anonymous'} />
+        <meta property="article:published_time" content={page?.createdAt} />
+        <meta property="article:modified_time" content={page?.updatedAt} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": title,
+            "author": {
+              "@type": "Person",
+              "name": page?.username || 'Anonymous'
+            },
+            "datePublished": page?.createdAt,
+            "dateModified": page?.updatedAt,
+            "publisher": {
+              "@type": "Organization",
+              "name": "WeWrite",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://wewrite.vercel.app/logo.png"
+              }
+            },
+            "mainEntityOfPage": {
+              "@type": "WebPage",
+              "@id": `https://wewrite.vercel.app/${page?.id}`
+            }
+          })}
+        </script>
       </Head>
       <PageHeader
         title={isEditing ? "Editing page" : title}

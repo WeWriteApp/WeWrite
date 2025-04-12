@@ -476,9 +476,8 @@ const PledgeBar = () => {
   const handlePledgeInteraction = (pledgeId, change) => {
     console.log("handlePledgeInteraction called", { isOwnPage, user, pledgeId, change });
 
-    // Always show the activation modal for now, since the feature isn't fully implemented
-    setShowActivationModal(true);
-    return;
+    // Use the pledge amount change handler directly
+    handlePledgeAmountChange(pledgeId, change);
   };
 
   // Handle increment button click
@@ -582,7 +581,7 @@ const PledgeBar = () => {
         className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 pledge-bar-spring ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
-        onClick={() => setShowActivationModal(true)}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="w-full max-w-md mx-auto cursor-pointer shadow-lg hover:shadow-xl transition-shadow rounded-xl overflow-hidden">
           {/* Custom Pledge Bar with Three-Color Background */}
@@ -611,7 +610,7 @@ const PledgeBar = () => {
             </div>
 
             <div className="flex justify-between mt-2">
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -624,6 +623,19 @@ const PledgeBar = () => {
                     <path d="M5 12h14" />
                   </svg>
                 </button>
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCustomAmountModal(true);
+                }}
+                className="text-xs text-blue-500 hover:text-blue-600"
+              >
+                Custom
+              </button>
+
+              <div className="flex items-center">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -636,36 +648,51 @@ const PledgeBar = () => {
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowCustomAmountModal(true);
-                  }}
-                  className="text-xs text-blue-500 hover:text-blue-600 ml-2"
-                >
-                  Custom
-                </button>
               </div>
+            </div>
 
-              <div className="text-xs text-muted-foreground">
-                <span>Available: ${(subscription?.amount - (subscription?.pledgedAmount || 0) + donateAmount).toFixed(2)}</span>
-              </div>
+            <div className="text-xs text-muted-foreground mt-2 text-center">
+              <span>Available: ${(subscription?.amount - (subscription?.pledgedAmount || 0) + donateAmount).toFixed(2)}</span>
+            </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Pledge Modal */}
-      <PledgeBarModal
-        isOpen={showActivationModal}
-        onClose={() => setShowActivationModal(false)}
-        isSignedIn={!!user}
-      />
-
-      {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
+      {/* Custom Amount Modal */}
       {showCustomAmountModal && (
-        <div>
-          {/* Custom amount modal content */}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-medium mb-4">Enter Custom Amount</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Amount ($)</label>
+              <input
+                type="number"
+                value={customAmountValue}
+                onChange={(e) => setCustomAmountValue(e.target.value)}
+                className="w-full p-2 border rounded-md"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowCustomAmountModal(false)}
+                className="px-4 py-2 border rounded-md hover:bg-accent"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleSetCustomAmount(parseFloat(customAmountValue));
+                  setShowCustomAmountModal(false);
+                }}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>
