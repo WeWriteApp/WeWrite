@@ -101,13 +101,35 @@ const EditPage = ({
           lastModified: updateTime,
         });
 
+        // Show success toast
+        toast({
+          title: "Page saved",
+          description: "Your changes have been saved successfully.",
+          variant: "success",
+          duration: 3000,
+        });
+
         setIsEditing(false);
       } else {
         setError("Error saving new version");
+        // Show error toast
+        toast({
+          title: "Error saving page",
+          description: "There was an error saving your changes.",
+          variant: "destructive",
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error("Error saving new version", error);
       setError("Failed to save: " + error.message);
+      // Show error toast
+      toast({
+        title: "Error saving page",
+        description: "Failed to save: " + (error.message || "Unknown error"),
+        variant: "destructive",
+        duration: 5000,
+      });
       await logError(error, "EditPage.js");
     } finally {
       setIsSaving(false);

@@ -411,8 +411,18 @@ const PageEditor = ({
 
       {/* Error message */}
       {error && (
-        <div className="fixed top-4 right-4 bg-destructive/10 p-4 rounded-md shadow-md">
+        <div className="fixed top-20 right-4 z-50 bg-destructive/10 p-4 rounded-md shadow-md border border-destructive/30">
           <p className="text-destructive font-medium">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="absolute top-2 right-2 text-destructive hover:text-destructive/80"
+            aria-label="Close error message"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
       )}
     </div>

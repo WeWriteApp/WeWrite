@@ -609,14 +609,13 @@ function SinglePageView({ params }) {
         <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
           {isEditing ? (
             <EditPage
-              pageId={params.id}
-              initialContent={editorState}
-              onCancel={() => setIsEditing(false)}
-              onSave={() => setIsEditing(false)}
-              isPublic={isPublic}
-              setIsPublic={setIsPublic}
+              isEditing={isEditing}
+              setIsEditing={setIsEditing}
+              page={page}
+              current={editorState}
               title={title}
               setTitle={setTitle}
+              editorError={editorError}
             />
           ) : (
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
