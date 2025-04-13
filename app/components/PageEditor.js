@@ -409,7 +409,7 @@ const PageEditor = ({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !title.trim() || !editorContent || editorContent.length === 0}
+              disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
               variant="default"
             >
               {isSaving ? "Saving..." : "Save"}
