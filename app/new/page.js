@@ -205,7 +205,7 @@ const Form = ({ Page, setPage, isReply }) => {
         });
         
         setIsSaving(false);
-        router.push(`/pages/${res}`);
+        router.push(`/${res}`);
       } else {
         setIsSaving(false);
         console.log("Error creating page");
@@ -265,7 +265,7 @@ const Form = ({ Page, setPage, isReply }) => {
           {isSaving ? "Saving..." : "Save"}
         </button>
         <button
-          onClick={() => router.push("/pages")}
+          onClick={() => router.push("/")}
           className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
         >
           Cancel

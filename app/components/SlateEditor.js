@@ -501,10 +501,39 @@ const withInlines = (editor) => {
 
   editor.insertData = data => {
     const text = data.getData('text/plain')
+    
+    // Check if it's a URL first
     if (text && isUrl(text)) {
       wrapLink(editor, text)
     } else {
-      insertData(data)
+      // For regular content, handle paste with more permissive behavior
+      try {
+        // Try to parse as HTML if available
+        const html = data.getData('text/html')
+        if (html) {
+          // Let the default handler process HTML
+          insertData(data)
+          return
+        }
+        
+        // If it's plain text, just insert it directly
+        if (text) {
+          insertText(text)
+          return
+        }
+        
+        // Default case, let the normal paste handler work
+        insertData(data)
+      } catch (error) {
+        console.error('Error handling paste:', error)
+        // Fallback to just inserting text if available
+        if (text) {
+          insertText(text)
+        } else {
+          // Last resort, try the default handler
+          insertData(data)
+        }
+      }
     }
   }
 
