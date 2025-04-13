@@ -55,7 +55,7 @@ function PageList({ pageList, emptyMessage }) {
         {pageList.map((page) => (
           <div key={page.id} className="flex-none">
             <PillLink 
-              href={`/${page.id}`}
+              href={`/pages/${page.id}`}
               variant="primary"
               isPublic={page.isPublic}
             >

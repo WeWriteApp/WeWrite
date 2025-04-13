@@ -205,7 +205,7 @@ const Form = ({ Page, setPage, isReply }) => {
         });
         
         setIsSaving(false);
-        router.push(`/${res}`);
+        router.push(`/pages/${res}`);
       } else {
         setIsSaving(false);
         console.log("Error creating page");

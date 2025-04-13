@@ -428,7 +428,7 @@ const TypeaheadSearch = ({
                           });
                           
                           // Redirect to the edit view of the newly created page
-                          router.push(`/${newPageId}?edit=true`);
+                          router.push(`/pages/${newPageId}?edit=true`);
                         } else {
                           console.error("Failed to create new page");
                         }
@@ -456,7 +456,7 @@ const SingleItemLink = ({ page, search }) => {
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <PillLink 
-        href={`/${page.id}`} 
+        href={`/pages/${page.id}`} 
         key={page.id}
         isPublic={page.isPublic}
         className="flex-shrink-0"
