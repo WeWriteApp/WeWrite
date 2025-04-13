@@ -16,10 +16,40 @@ export const createUser = async (email, password) => {
   }
 }
 
-export const loginUser = async (email, password) => {
+export const loginUser = async (emailOrUsername, password) => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return { user: userCredential.user };
+    // Check if input is an email or username
+    const isEmail = emailOrUsername.includes('@');
+
+    if (isEmail) {
+      // Login directly with email
+      const userCredential = await signInWithEmailAndPassword(auth, emailOrUsername, password);
+      return { user: userCredential.user };
+    } else {
+      // It's a username, so we need to find the corresponding email
+      const db = getFirestore(app);
+      const usernamesRef = doc(db, 'usernames', emailOrUsername.toLowerCase());
+      const usernameDoc = await getDoc(usernamesRef);
+
+      if (!usernameDoc.exists()) {
+        return { code: 'auth/user-not-found', message: 'No user found with this username' };
+      }
+
+      // Get the user's email from their user document
+      const userId = usernameDoc.data().userId;
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+
+      if (!userDoc.exists()) {
+        return { code: 'auth/user-not-found', message: 'User account not found' };
+      }
+
+      const email = userDoc.data().email;
+
+      // Now login with the email
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      return { user: userCredential.user };
+    }
   } catch (error) {
     console.error("Login error:", error);
     return { code: error.code, message: error.message };

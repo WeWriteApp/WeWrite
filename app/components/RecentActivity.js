@@ -87,17 +87,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     fetchFollowedPages();
   }, [user, viewMode]);
 
-  const scrollLeft = () => {
-    if (carouselRef.current) {
-      carouselRef.current.scrollBy({ left: -400, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (carouselRef.current) {
-      carouselRef.current.scrollBy({ left: 400, behavior: 'smooth' });
-    }
-  };
+  // Scroll functions removed as the buttons have been removed
 
   // Use grid layout in activity page or user profile
   const useGridLayout = isInActivityPage || isInUserProfile;
@@ -140,29 +130,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           </div>
         )}
 
-        {/* Only show carousel controls on homepage (not activity page or user profile) */}
-        {!useGridLayout && (
-          <div className="hidden md:flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollLeft}
-              disabled={loading || error}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollRight}
-              disabled={loading || error}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        {/* Carousel controls removed as requested */}
       </div>
 
       {/* Mobile view: always vertical stack */}

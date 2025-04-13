@@ -16,7 +16,7 @@ export function LoginForm({
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [emailOrUsername, setEmailOrUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -25,11 +25,19 @@ export function LoginForm({
 
   // Validate form inputs
   useEffect(() => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const isEmailValid = emailRegex.test(email)
+    // If input contains @, validate as email, otherwise as username
+    let isInputValid = false;
+    if (emailOrUsername.includes('@')) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      isInputValid = emailRegex.test(emailOrUsername);
+    } else {
+      // Username validation - at least 3 characters, alphanumeric + underscore
+      isInputValid = emailOrUsername.length >= 3 && /^[a-zA-Z0-9_]+$/.test(emailOrUsername);
+    }
+
     const isPasswordValid = password.length >= 6
-    setIsFormValid(isEmailValid && isPasswordValid)
-  }, [email, password])
+    setIsFormValid(isInputValid && isPasswordValid)
+  }, [emailOrUsername, password])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +45,7 @@ export function LoginForm({
     setIsLoading(true)
 
     try {
-      const result = await loginUser(email, password)
+      const result = await loginUser(emailOrUsername, password)
 
       if (result.user) {
         // Successful login - redirect to home page
@@ -90,14 +98,14 @@ export function LoginForm({
       </div>
       <div className="grid gap-3 sm:gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-foreground text-sm sm:text-base">Email</Label>
+          <Label htmlFor="emailOrUsername" className="text-foreground text-sm sm:text-base">Email or Username</Label>
           <Input
-            id="email"
-            type="email"
-            placeholder="thomaspaine@example.com"
+            id="emailOrUsername"
+            type="text"
+            placeholder="thomaspaine@example.com or thomaspaine"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={emailOrUsername}
+            onChange={(e) => setEmailOrUsername(e.target.value)}
             tabIndex={1}
             className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />

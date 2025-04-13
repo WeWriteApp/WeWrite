@@ -737,6 +737,21 @@ export default function AccountPage() {
                   </button>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground/80 mb-1">Password</label>
+                <div className="flex justify-between items-center">
+                  <p className="text-foreground">••••••••</p>
+                  <Button
+                    onClick={() => router.push('/account/reset-password')}
+                    variant="ghost"
+                    size="sm"
+                    className="text-sm text-foreground/60 hover:text-foreground"
+                  >
+                    Reset Password
+                  </Button>
+                </div>
+              </div>
             </div>
           </section>
 

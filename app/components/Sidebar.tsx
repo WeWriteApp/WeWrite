@@ -146,8 +146,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </Button>
           </div>
 
-          <div className="flex-1">
-            <div className="mb-8">
+          <div className="flex-1 space-y-4">
+            {/* Account Switcher */}
+            <AccountSwitcher />
+
+            {/* Theme Options */}
+            <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
               {themeOptions.map((option) => (
                 <button
@@ -172,12 +176,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* Accent Color Selector */}
             <AccentColorSelector />
-          </div>
-
-          {/* Account Switcher and Settings buttons at bottom */}
-          <div className="mt-auto pt-4 border-t border-border">
-            {/* Account Switcher */}
-            <AccountSwitcher />
 
             {/* Settings Button */}
             <Button

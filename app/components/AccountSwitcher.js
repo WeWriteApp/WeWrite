@@ -42,6 +42,13 @@ export function AccountSwitcher() {
     }
   };
 
+  const handleAccountSettings = (accountId) => {
+    // If it's the current account, go to account settings
+    if (currentAccount?.uid === accountId) {
+      router.push('/account');
+    }
+  };
+
   const handleAddAccount = async () => {
     if (isAtMaxAccounts) {
       setIsDialogOpen(true);
@@ -62,35 +69,55 @@ export function AccountSwitcher() {
   return (
     <>
       <div className="mb-2">
-        <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">Switch account</h3>
+        <h3 className="text-sm font-medium text-muted-foreground mb-2 px-2">Accounts</h3>
         <div className="space-y-1">
           {sortedAccounts.map((account) => (
-            <Button
-              key={account.uid}
-              variant="ghost"
-              className={cn(
-                "w-full justify-start text-sm px-2 py-1.5 h-auto",
-                currentAccount?.uid === account.uid && "bg-accent text-accent-foreground"
-              )}
-              onClick={() => currentAccount?.uid !== account.uid && handleSwitchAccount(account.uid)}
-            >
-              <div className="flex items-center gap-2 w-full overflow-hidden">
-                <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {account.username || account.email.split('@')[0]}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {account.email}
-                  </p>
-                </div>
-                {currentAccount?.uid === account.uid && (
-                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+            <div key={account.uid} className="flex items-center">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "flex-1 justify-start text-sm px-2 py-1.5 h-auto",
+                  currentAccount?.uid === account.uid && "bg-accent text-accent-foreground"
                 )}
-              </div>
-            </Button>
+                onClick={() => {
+                  if (currentAccount?.uid === account.uid) {
+                    // If clicking on current account, go to account settings
+                    handleAccountSettings(account.uid);
+                  } else {
+                    // Otherwise switch to that account
+                    handleSwitchAccount(account.uid);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-2 w-full overflow-hidden">
+                  <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {account.username || account.email.split('@')[0]}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {account.email}
+                    </p>
+                  </div>
+                  {currentAccount?.uid === account.uid && (
+                    <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                  )}
+                </div>
+              </Button>
+
+              {/* Settings gear icon */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 ml-1"
+                onClick={() => router.push('/account')}
+                title="Account settings"
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </div>
           ))}
 
           <Button
