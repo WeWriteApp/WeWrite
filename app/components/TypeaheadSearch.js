@@ -155,7 +155,9 @@ const TypeaheadSearch = ({
         searchTrimmedLength: search?.trim()?.length,
         userId: userId || user?.uid,
         groups: user?.groups,
-        characterCount
+        characterCount,
+        userSearchOnly,
+        pageSearchOnly
       });
 
       setIsSearching(true);
@@ -168,7 +170,7 @@ const TypeaheadSearch = ({
 
         const queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
         const userSearchUrl = `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
-        console.log('Making API requests to:', { queryUrl, userSearchUrl });
+        console.log('Making API requests to:', { queryUrl, userSearchUrl, userSearchOnly, pageSearchOnly });
 
         // Add timeout to prevent infinite loading
         const controller = new AbortController();
@@ -183,6 +185,7 @@ const TypeaheadSearch = ({
 
           // Only fetch pages if not in user-only mode
           if (!userSearchOnly) {
+            console.log('TypeaheadSearch - Adding pages request');
             requests.push(
               fetch(queryUrl, {
                 signal: controller.signal,
@@ -193,6 +196,7 @@ const TypeaheadSearch = ({
 
           // Only fetch users if not in page-only mode
           if (!pageSearchOnly) {
+            console.log('TypeaheadSearch - Adding users request');
             requests.push(
               fetch(userSearchUrl, {
                 signal: controller.signal,
@@ -201,8 +205,11 @@ const TypeaheadSearch = ({
             );
           }
 
+          console.log(`TypeaheadSearch - Making ${requests.length} requests`);
+
           // Fetch data in parallel using Promise.allSettled to handle partial failures
           const responses = await Promise.allSettled(requests);
+          console.log(`TypeaheadSearch - Received ${responses.length} responses`);
 
           // Assign responses to the appropriate variables
           if (responses.length > 0) {
@@ -220,7 +227,7 @@ const TypeaheadSearch = ({
 
           // Process page results
           let processedPages = [];
-          if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
+          if (!userSearchOnly && pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
             const pagesData = await pagesResponse.value.json();
             console.log('TypeaheadSearch - Pages API response:', pagesData);
 
@@ -233,7 +240,7 @@ const TypeaheadSearch = ({
             if (pagesData && pagesData.pages) {
               processedPages = await processPagesWithUsernames(pagesData.pages);
             }
-          } else {
+          } else if (!userSearchOnly) {
             console.error('TypeaheadSearch - Pages API request failed:',
               pagesResponse.status === 'rejected' ? pagesResponse.reason :
               `HTTP ${pagesResponse.value?.status || 'unknown'}`);
@@ -241,14 +248,14 @@ const TypeaheadSearch = ({
 
           // Process user results
           let users = [];
-          if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
+          if (!pageSearchOnly && usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
             const usersData = await usersResponse.value.json();
             console.log('TypeaheadSearch - Users API response:', usersData);
 
             if (usersData && usersData.users) {
               users = usersData.users;
             }
-          } else {
+          } else if (!pageSearchOnly) {
             console.error('TypeaheadSearch - Users API request failed:',
               usersResponse.status === 'rejected' ? usersResponse.reason :
               `HTTP ${usersResponse.value?.status || 'unknown'}`);
@@ -280,13 +287,14 @@ const TypeaheadSearch = ({
         setPages({
           userPages: [],
           groupPages: [],
-          publicPages: []
+          publicPages: [],
+          users: []
         });
       } finally {
         setIsSearching(false);
       }
     }, 500),
-    [userId]
+    [userId, userSearchOnly, pageSearchOnly]
   );
 
   const resetSearchResults = () => {
@@ -312,8 +320,15 @@ const TypeaheadSearch = ({
       return;
     }
 
+    // Log search parameters for debugging
+    console.log('TypeaheadSearch - Triggering search with:', {
+      search: search.trim(),
+      userSearchOnly,
+      pageSearchOnly
+    });
+
     fetchResults(search.trim(), user);
-  }, [search, user, fetchResults]);
+  }, [search, user, fetchResults, userSearchOnly, pageSearchOnly]);
 
   useEffect(() => {
     if (onSelect) {

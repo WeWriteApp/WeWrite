@@ -365,25 +365,8 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
       }
     }
 
-    // Check for @ symbol to trigger user search
-    if (event.key === '@') {
-      // Prevent default to NOT allow the @ symbol to be typed
-      event.preventDefault();
-
-      // Show the link editor modal
-      setShowLinkEditor(true);
-
-      // Get cursor position for the link editor
-      const domSelection = window.getSelection();
-      if (domSelection.rangeCount > 0) {
-        const range = domSelection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        setLinkEditorPosition({
-          left: rect.left,
-          top: rect.bottom + window.scrollY,
-        });
-      }
-    }
+    // We're no longer using @ symbol to trigger user search
+    // This allows @ to be typed normally in the editor
 
     // Check if we're on a line with special mode settings
     const { selection } = editor;
@@ -431,6 +414,12 @@ const SlateEditor = forwardRef(({ initialContent, onContentChange, onInsert, onD
           });
         }
       }
+    }
+
+    // Handle @ symbol to ensure it doesn't get added to links
+    if (event.key === '@') {
+      // Don't prevent default here - allow @ to be typed normally
+      // This ensures @ doesn't trigger special behavior that adds it to links
     }
   };
 
