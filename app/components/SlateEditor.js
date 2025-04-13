@@ -1285,6 +1285,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   const [url, setUrl] = useState('');
   const [mode, setMode] = useState('page'); // 'page' or 'url'
   const [searchText, setSearchText] = useState('');
+  const [showResults, setShowResults] = useState(true);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -1297,6 +1298,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
   const handlePageSelect = (item) => {
     // Update the search text when an item is selected
     setSearchText(item.title || '');
+    setShowResults(false);
 
     // Check if this is a user or a page
     if (item.type === 'user') {
@@ -1317,6 +1319,11 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
         pageTitle: item.title
       });
     }
+  };
+
+  // Handle search text changes
+  const handleSearchTextChange = (value) => {
+    setSearchText(value);
   };
 
   // Handle URL submission
@@ -1416,8 +1423,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                   onSelect={handlePageSelect}
                   placeholder="Search for a user..."
                   initialSearch={searchText}
-                  setShowResults={() => {}}
+                  setShowResults={setShowResults}
                   userSearchOnly={true}
+                  onSearchChange={handleSearchTextChange}
                 />
               </div>
               <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
@@ -1437,8 +1445,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                   onSelect={handlePageSelect}
                   placeholder="Search for a page..."
                   initialSearch={searchText}
-                  setShowResults={() => {}}
+                  setShowResults={setShowResults}
                   pageSearchOnly={true}
+                  onSearchChange={handleSearchTextChange}
                 />
 
                 {/* Always show create page button when there's search text */}

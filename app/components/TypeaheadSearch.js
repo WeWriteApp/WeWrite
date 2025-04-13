@@ -39,7 +39,8 @@ const TypeaheadSearch = ({
   editableOnly = false, // Filter for editable pages only
   initialSearch = "", // Set initial search value
   userSearchOnly = false, // Only search for users
-  pageSearchOnly = false // Only search for pages
+  pageSearchOnly = false, // Only search for pages
+  onSearchChange = null // Callback for when search text changes
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -333,7 +334,19 @@ const TypeaheadSearch = ({
   }, [initialSearch, user, fetchResults]);
 
   const handleInputChange = (e) => {
-    setSearch(e.target.value);
+    const value = e.target.value;
+    setSearch(value);
+
+    // If this component is being used in a parent component that needs to know the search text
+    // (like the LinkEditor), update the parent's state as well
+    if (setShowResults) {
+      setShowResults(true);
+    }
+
+    // If there's a callback for search changes, call it
+    if (onSearchChange) {
+      onSearchChange(value);
+    }
   };
 
   if (!user) return null;
