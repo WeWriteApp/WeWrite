@@ -142,52 +142,71 @@ function SinglePageView({ params }) {
   useEffect(() => {
     if (params.id) {
       setIsLoading(true);
+      setError(null); // Reset any previous errors
       
-      const unsubscribe = listenToPageById(params.id, async (data) => {
-        if (data.error) {
-          setError(data.error);
-          setIsLoading(false);
-          return;
-        }
+      // Add a small delay to ensure auth state is properly initialized
+      const timer = setTimeout(() => {
+        console.log(`Loading page with ID: ${params.id}, user ID: ${user?.uid || 'not logged in'}`);
         
-        let pageData = data.pageData || data;
-        
-        // Ensure the page has a valid username using our utility function
-        pageData = await ensurePageUsername(pageData);
-        
-        console.log("Page data loaded successfully:", pageData);
-        
-        setPage(pageData);
-        setIsPublic(pageData.isPublic || false);
-        setGroupId(pageData.groupId || null);
-        setGroupName(pageData.groupName || null);
-        
-        // Set page title for document title
-        if (pageData.title) {
-          setTitle(pageData.title);
-        }
-        
-        if (data.versionData) {
-          try {
-            const contentString = data.versionData.content;
-            const parsedContent = typeof contentString === 'string' 
-              ? JSON.parse(contentString) 
-              : contentString;
-            
-            setEditorState(parsedContent);
-            setEditorError(null); // Clear any previous errors
-          } catch (error) {
-            console.error("Error parsing content:", error);
-            setEditorError("There was an error loading the editor. Please try refreshing the page.");
+        const unsubscribe = listenToPageById(params.id, async (data) => {
+          console.log(`Received page data for ${params.id}:`, data.error ? `Error: ${data.error}` : 'Success');
+          
+          if (data.error) {
+            setError(data.error);
+            setIsLoading(false);
+            return;
           }
-        }
+          
+          try {
+            let pageData = data.pageData || data;
+            
+            // Ensure the page has a valid username using our utility function
+            if (typeof ensurePageUsername === 'function') {
+              pageData = await ensurePageUsername(pageData);
+            }
+            
+            console.log("Page data loaded successfully:", pageData);
+            
+            setPage(pageData);
+            setIsPublic(pageData.isPublic || false);
+            setGroupId(pageData.groupId || null);
+            setGroupName(pageData.groupName || null);
+            
+            // Set page title for document title
+            if (pageData.title) {
+              setTitle(pageData.title);
+            }
+            
+            if (data.versionData) {
+              try {
+                const contentString = data.versionData.content;
+                const parsedContent = typeof contentString === 'string' 
+                  ? JSON.parse(contentString) 
+                  : contentString;
+                
+                setEditorState(parsedContent);
+                setEditorError(null); // Clear any previous errors
+              } catch (error) {
+                console.error("Error parsing content:", error);
+                setEditorError("There was an error loading the editor. Please try refreshing the page.");
+              }
+            }
+            
+            setIsLoading(false);
+          } catch (error) {
+            console.error("Error processing page data:", error);
+            setError("There was an error loading the page. Please try again.");
+            setIsLoading(false);
+          }
+        }, user?.uid);
         
-        setIsLoading(false);
-      }, user?.uid);
+        return () => {
+          console.log(`Cleaning up page subscription for ${params.id}`);
+          unsubscribe();
+        };
+      }, 100); // Small delay to ensure auth is ready
       
-      return () => {
-        unsubscribe();
-      };
+      return () => clearTimeout(timer);
     }
   }, [params.id, user?.uid]);
 

@@ -162,6 +162,8 @@ export const createPage = async (data) => {
 }
 
 export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
+  console.log(`listenToPageById called with pageId: ${pageId}, userId: ${userId || 'null'}`);
+  
   // Validate pageId
   if (!pageId) {
     console.error("listenToPageById called with empty pageId");
@@ -176,59 +178,145 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   let unsubscribeVersion = null;
   
   // Listen for changes to the page document
-  const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
-    if (docSnap.exists()) {
-      const pageData = { id: docSnap.id, ...docSnap.data() };
-      
-      // Check access permissions (now async)
+  const unsubscribe = onSnapshot(
+    pageRef, 
+    { includeMetadataChanges: true },
+    async (docSnap) => {
       try {
-        const accessCheck = await checkPageAccess(pageData, userId);
-        if (!accessCheck.hasAccess) {
-          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-          onPageUpdate({ error: accessCheck.error });
-          return;
+        if (docSnap.exists()) {
+          const pageData = { id: docSnap.id, ...docSnap.data() };
+          console.log(`Page data fetched successfully for ${pageId}:`, pageData);
+          
+          // Check if metadata is from cache and not ready yet
+          if (docSnap.metadata.fromCache && !docSnap.metadata.hasPendingWrites) {
+            console.log("Data is from cache, waiting for server data...");
+            // Don't return early, still try to use the cached data
+          }
+          
+          // Check access permissions (now async)
+          try {
+            const accessCheck = await checkPageAccess(pageData, userId);
+            if (!accessCheck.hasAccess) {
+              console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+              onPageUpdate({ error: accessCheck.error });
+              return;
+            }
+            
+            console.log(`Access granted to page ${pageId} for user ${userId || 'anonymous'}`);
+
+            // Get the current version ID
+            const currentVersionId = pageData.currentVersion;
+            
+            if (!currentVersionId) {
+              console.error(`Page ${pageId} has no current version`);
+              onPageUpdate({ pageData, versionData: null, error: "No content available" });
+              return;
+            }
+
+            // Create version reference
+            const versionCollectionRef = collection(db, "pages", pageId, "versions");
+            const versionRef = doc(versionCollectionRef, currentVersionId);
+
+            // If there's an existing unsubscribeVersion listener, remove it before setting a new one
+            if (unsubscribeVersion) {
+              unsubscribeVersion();
+            }
+
+            // Listener for the version document
+            unsubscribeVersion = onSnapshot(
+              versionRef, 
+              { includeMetadataChanges: true }, 
+              async (versionSnap) => {
+                try {
+                  if (versionSnap.exists()) {
+                    const versionData = versionSnap.data();
+                    
+                    try {
+                      // Extract links - make sure content is valid JSON before parsing
+                      const contentStr = versionData.content;
+                      let contentJson;
+                      
+                      if (typeof contentStr === 'string') {
+                        try {
+                          contentJson = JSON.parse(contentStr);
+                        } catch (e) {
+                          console.error("Error parsing content JSON:", e);
+                          contentJson = [{ type: "paragraph", children: [{ text: "Error loading content" }] }];
+                        }
+                      } else if (Array.isArray(contentStr)) {
+                        contentJson = contentStr;
+                      } else {
+                        console.error("Invalid content format:", typeof contentStr);
+                        contentJson = [{ type: "paragraph", children: [{ text: "Error loading content" }] }];
+                      }
+                      
+                      const links = extractLinksFromNodes(contentJson);
+
+                      // Send updated page and version data
+                      onPageUpdate({ pageData, versionData, links });
+                    } catch (error) {
+                      console.error("Error processing content:", error);
+                      onPageUpdate({ 
+                        pageData, 
+                        versionData: {
+                          ...versionData,
+                          content: JSON.stringify([{ 
+                            type: "paragraph", 
+                            children: [{ text: "There was an error loading the content." }] 
+                          }])
+                        },
+                        error: "Error processing content"
+                      });
+                    }
+                  } else {
+                    console.error(`Version ${currentVersionId} not found for page ${pageId}`);
+                    onPageUpdate({ 
+                      pageData, 
+                      versionData: null, 
+                      error: "Version not found" 
+                    });
+                  }
+                } catch (error) {
+                  console.error("Error in version listener:", error);
+                  onPageUpdate({ 
+                    pageData, 
+                    versionData: null, 
+                    error: "Error loading page content" 
+                  });
+                }
+              },
+              (error) => {
+                console.error("Error in version listener:", error);
+                onPageUpdate({ error: `Error listening to version: ${error.message}` });
+              }
+            );
+          } catch (error) {
+            console.error("Error checking page access:", error);
+            onPageUpdate({ error: "Error checking page access" });
+          }
+        } else {
+          // If page document doesn't exist
+          console.error(`Page ${pageId} not found`);
+          onPageUpdate({ error: "Page not found" });
         }
-
-        // Get the current version ID
-        const currentVersionId = pageData.currentVersion;
-
-        // Log the version subcollection path
-        const versionCollectionRef = collection(db, "pages", pageId, "versions");
-        const versionRef = doc(versionCollectionRef, currentVersionId);
-
-        // If there's an existing unsubscribeVersion listener, remove it before setting a new one
-        if (unsubscribeVersion) {
-          unsubscribeVersion();
-        }
-
-        // Listener for the version document
-        unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
-          if (versionSnap.exists()) {
-            const versionData = versionSnap.data();
-
-            // Extract links
-            const links = extractLinksFromNodes(JSON.parse(versionData.content));
-
-            // Send updated page and version data
-            onPageUpdate({ pageData, versionData, links });
-          } 
-        });
       } catch (error) {
-        console.error("Error checking page access:", error);
-        onPageUpdate({ error: "Error checking page access" });
+        console.error("Error in page listener:", error);
+        onPageUpdate({ error: `Error loading page: ${error.message}` });
       }
-    } else {
-      // If page document doesn't exist
-      onPageUpdate({ error: "Page not found" });
+    },
+    (error) => {
+      console.error(`Error listening to page ${pageId}:`, error);
+      onPageUpdate({ error: `Error listening to page: ${error.message}` });
     }
-  });
+  );
 
   // Return the unsubscribe functions for cleanup
   return () => {
-    unsubscribe();
+    console.log(`Unsubscribing from page ${pageId}`);
     if (unsubscribeVersion) {
       unsubscribeVersion();
     }
+    unsubscribe();
   };
 };
 
