@@ -304,6 +304,61 @@ function SinglePageView({ params }) {
     );
   }
 
+  // Updated access check to ensure users can access their own private pages
+  if (!isPublic) {
+    // If the page is private, only allow access to the owner
+    if (!user) {
+      // No user is logged in, deny access
+      return (
+        <Layout>
+          <Head>
+            <title>Private Page - WeWrite</title>
+          </Head>
+          <PageHeader />
+          <div className="p-4">
+            <h1 className="text-2xl font-semibold text-text">
+              Access Error
+            </h1>
+            <div className="flex flex-col items-center gap-2 mt-4 text-center max-w-md mx-auto bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-4 rounded-lg">
+              <Lock className="h-10 w-10 mb-2" />
+              <span className="text-lg">This page is private and can only be viewed by its owner or group members</span>
+              <Link href="/auth/login" className="mt-4">
+                <Button>Log in</Button>
+              </Link>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+    
+    // Check if user is the page owner
+    if (user.uid !== page.userId) {
+      // User is logged in but is not the owner, deny access
+      return (
+        <Layout>
+          <Head>
+            <title>Private Page - WeWrite</title>
+          </Head>
+          <PageHeader />
+          <div className="p-4">
+            <h1 className="text-2xl font-semibold text-text">
+              Access Error
+            </h1>
+            <div className="flex flex-col items-center gap-2 mt-4 text-center max-w-md mx-auto bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-4 rounded-lg">
+              <Lock className="h-10 w-10 mb-2" />
+              <span className="text-lg">Access denied: This page is private and can only be viewed by its owner or group members</span>
+              <Link href="/">
+                <Button className="mt-4">Go Home</Button>
+              </Link>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+    
+    // If we get here, user is the owner of the private page, allow access
+  }
+
   if (!page) {
     return (
       <Layout>
@@ -381,45 +436,6 @@ function SinglePageView({ params }) {
             <Link href="/">
               <button className="bg-background text-button-text px-4 py-2 rounded-full">
                 Go back
-              </button>
-            </Link>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!isPublic && (!user || user.uid !== page.userId)) {
-    return (
-      <Layout>
-        <Head>
-          <title>Private Page - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            {title}
-          </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24" 
-              width="24" 
-              height="24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              className="h-5 w-5 text-muted-foreground"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span className="text-lg text-muted-foreground">This page is private</span>
-            <Link href={user ? "/" : "/auth/login"}>
-              <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
-                {user ? "Go back" : "Log in"}
               </button>
             </Link>
           </div>
