@@ -1105,7 +1105,7 @@ const isLinkActive = (editor) => {
 const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', initialPageId = null, initialPageTitle = '' }) => {
   const [text, setText] = useState(initialText);
   const [url, setUrl] = useState('');
-  const [mode, setMode] = useState('page'); // 'page' or 'url'
+  const [mode, setMode] = useState('page'); // 'page', 'user', or 'url'
   const [searchText, setSearchText] = useState('');
   const inputRef = useRef(null);
 
@@ -1188,6 +1188,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
             </button>
             <button
               type="button"
+              onClick={() => setMode('user')}
+              className={`px-3 py-1 text-sm rounded ${mode === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+            >
+              Link to User
+            </button>
+            <button
+              type="button"
               onClick={() => setMode('url')}
               className={`px-3 py-1 text-sm rounded ${mode === 'url' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
             >
@@ -1233,6 +1240,39 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                 </button>
               </div>
             </form>
+          ) : mode === 'user' ? (
+            <div className="h-full flex flex-col">
+              <div className="mb-3 flex-1">
+                <input
+                  type="text"
+                  placeholder="Search for a user..."
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  className="w-full p-2 bg-background border border-input rounded text-sm"
+                />
+              </div>
+
+              <div className="max-h-60 overflow-y-auto">
+                {searchText.length > 0 && (
+                  <TypeaheadSearch
+                    onSelect={handlePageSelect}
+                    placeholder="Search for a user..."
+                    initialSearch={searchText}
+                    userSearchOnly={true}
+                  />
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-auto pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowLinkEditor(false)}
+                  className="px-3 py-1 bg-muted text-sm rounded hover:bg-muted/80"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="h-full flex flex-col">
               <div className="mb-3 flex-1">
@@ -1263,6 +1303,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
                     onSelect={handlePageSelect}
                     placeholder="Search for a page..."
                     initialSearch={searchText}
+                    pageSearchOnly={true}
                   />
                 )}
               </div>
