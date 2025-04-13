@@ -615,7 +615,7 @@ const UserItemButton = ({ user, search, onSelect }) => {
           id: user.id,
           title: user.username,
           type: 'user',
-          url: `/u/${user.id}`
+          url: `/user/${user.id}`
         })}
         className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
       >

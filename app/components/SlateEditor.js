@@ -983,7 +983,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
 
   // Check if it's a user link - more robust check
   const isUserLink = element.isUser ||
-                   (url && url.startsWith('/u/')) ||
+                   (url && (url.startsWith('/u/') || url.startsWith('/user/'))) ||
                    (element.username) ||
                    (element.userId);
 
@@ -995,6 +995,16 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   const className = element.className ?
     `editor-link ${element.className}` :
     isUserLink ? 'editor-link user-link' : 'editor-link page-link';
+
+  // Ensure user links always use the /user/ format
+  let finalUrl = url;
+  if (isUserLink && element.userId) {
+    // Convert any old format URLs to the new format
+    if (url.startsWith('/u/')) {
+      finalUrl = `/user/${element.userId}`;
+      console.log(`LinkElement: Converting user URL from ${url} to ${finalUrl}`);
+    }
+  }
 
   // Add more debug logging for user links
   if (isUserLink) {
@@ -1016,7 +1026,7 @@ const LinkElement = ({ attributes, children, element, openLinkEditor }) => {
   return (
     <a
       {...attributes}
-      href={url}
+      href={finalUrl}
       className={className}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
@@ -1110,15 +1120,17 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = '', i
     // Check if this is a user or a page
     if (item.type === 'user') {
       // Handle user selection
+      console.log('LinkEditor - Selected user:', item);
       onSelect({
         text: text || item.title, // item.title contains the username
-        url: `/u/${item.id}`,
+        url: `/user/${item.id}`,
         isUser: true,
         userId: item.id,
         username: item.title
       });
     } else {
       // Handle page selection
+      console.log('LinkEditor - Selected page:', item);
       onSelect({
         text: text || item.title,
         pageId: item.id,
