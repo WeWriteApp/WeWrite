@@ -22,8 +22,11 @@ export const db = getFirestore(app);
 
 // Utility function to check if a user has access to a page
 export const checkPageAccess = async (pageData, userId) => {
+  console.log("Checking page access:", { pageData, userId });
+  
   // If page doesn't exist, no one has access
   if (!pageData) {
+    console.log("Page not found, access denied");
     return {
       hasAccess: false,
       error: "Page not found"
@@ -32,21 +35,33 @@ export const checkPageAccess = async (pageData, userId) => {
   
   // Public pages are accessible to everyone
   if (pageData.isPublic) {
+    console.log("Page is public, access granted");
     return {
       hasAccess: true
     };
   }
   
+  // If no user is logged in and the page is private, deny access
+  if (!userId) {
+    console.log("No user ID provided and page is private, access denied");
+    return {
+      hasAccess: false,
+      error: "Access denied: This page is private and can only be viewed by its owner or group members"
+    };
+  }
+  
   // Private pages are accessible to their owners
-  if (userId && pageData.userId === userId) {
+  if (pageData.userId === userId) {
+    console.log("User is the owner of this private page, access granted");
     return {
       hasAccess: true
     };
   }
   
   // Check if the page belongs to a group and if the user is a member of that group
-  if (userId && pageData.groupId) {
+  if (pageData.groupId) {
     try {
+      console.log("Page belongs to a group, checking membership");
       const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
       const groupSnapshot = await get(groupRef);
       
@@ -55,6 +70,7 @@ export const checkPageAccess = async (pageData, userId) => {
         
         // Check if the user is a member of the group
         if (groupData.members && groupData.members[userId]) {
+          console.log("User is a member of the group, access granted");
           return {
             hasAccess: true
           };
@@ -66,6 +82,7 @@ export const checkPageAccess = async (pageData, userId) => {
   }
   
   // Otherwise, access is denied
+  console.log("Access denied to private page");
   return {
     hasAccess: false,
     error: "Access denied: This page is private and can only be viewed by its owner or group members"

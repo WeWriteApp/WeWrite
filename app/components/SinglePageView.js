@@ -155,7 +155,7 @@ function SinglePageView({ params }) {
         // Ensure the page has a valid username using our utility function
         pageData = await ensurePageUsername(pageData);
         
-        console.log("Page data with ensured username:", pageData);
+        console.log("Page data loaded successfully:", pageData);
         
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
@@ -183,13 +183,13 @@ function SinglePageView({ params }) {
         }
         
         setIsLoading(false);
-      });
+      }, user?.uid);
       
       return () => {
         unsubscribe();
       };
     }
-  }, [params.id]);
+  }, [params.id, user?.uid]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
