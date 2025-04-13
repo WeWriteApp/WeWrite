@@ -52,9 +52,9 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         const pageData = { id: doc.id, ...doc.data() };
         
         // Only include private pages if the current user is the owner
-        if (pageData.isPublic) {
+        if (pageData.isPublic === true) {
           pagesArray.push(pageData);
-        } else if (isOwner) {
+        } else if (isOwner && pageData.isPublic === false) {
           privateArray.push(pageData);
         }
       });
@@ -62,6 +62,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       setPages(pagesArray);
       setPrivatePages(privateArray);
 
+      // Calculate if there are more pages to load
       if (pagesArray.length < limitCount) {
         setHasMorePages(false);
       } else {
@@ -75,8 +76,8 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       }
 
       // Set the last document keys for pagination
-      const publicDocs = snapshot.docs.filter(doc => doc.data().isPublic);
-      const privateDocs = snapshot.docs.filter(doc => !doc.data().isPublic);
+      const publicDocs = snapshot.docs.filter(doc => doc.data().isPublic === true);
+      const privateDocs = snapshot.docs.filter(doc => doc.data().isPublic === false);
       
       if (publicDocs.length > 0) {
         setLastPageKey(publicDocs[publicDocs.length - 1]);
@@ -109,7 +110,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       
       let moreQuery;
       if (includePrivate && isOwner) {
-        // Get public pages for the user
+        // Get only public pages (private pages are loaded separately)
         moreQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
@@ -137,7 +138,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       
       snapshot.forEach((doc) => {
         const pageData = { id: doc.id, ...doc.data() };
-        if (pageData.isPublic) {
+        if (pageData.isPublic === true) {
           newPagesArray.push(pageData);
         }
       });
@@ -196,7 +197,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       
       snapshot.forEach((doc) => {
         const pageData = { id: doc.id, ...doc.data() };
-        if (!pageData.isPublic) {
+        if (pageData.isPublic === false) {
           newPrivateArray.push(pageData);
         }
       });
