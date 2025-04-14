@@ -8,6 +8,7 @@ import { signOut } from "firebase/auth"
 import { cn } from "../lib/utils"
 import { Button } from "./ui/button"
 import { useTheme } from "next-themes"
+import { AccountSwitcher } from "./AccountSwitcher"
 
 interface SidebarProps {
   isOpen: boolean
@@ -18,30 +19,23 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth)
-      router.push("/")
-    } catch (error) {
-      console.error("Error signing out:", error)
-    }
-  }
+  // Logout functionality moved to account settings page
 
   const themeOptions = [
-    { 
-      value: "light", 
-      label: "Light", 
+    {
+      value: "light",
+      label: "Light",
       icon: (
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          width="24" 
-          height="24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="mr-2 h-5 w-5 text-foreground"
         >
           <circle cx="12" cy="12" r="5"></circle>
@@ -56,40 +50,40 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </svg>
       )
     },
-    { 
-      value: "dark", 
-      label: "Dark", 
+    {
+      value: "dark",
+      label: "Dark",
       icon: (
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          width="24" 
-          height="24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="mr-2 h-5 w-5 text-foreground"
         >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
       )
     },
-    { 
-      value: "system", 
-      label: "System", 
+    {
+      value: "system",
+      label: "System",
       icon: (
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          viewBox="0 0 24 24" 
-          width="24" 
-          height="24" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           className="mr-2 h-5 w-5 text-foreground"
         >
           <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -111,7 +105,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      
+
       {/* Sidebar */}
       <div
         className={cn(
@@ -132,9 +126,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          
-          <div className="flex-1">
-            <div className="mb-8">
+
+          <div className="flex flex-col space-y-6">
+            {/* Account Switcher */}
+            <div className="mb-2">
+              <AccountSwitcher />
+            </div>
+
+            {/* Theme Options */}
+            <div className="mb-6">
               <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
               {themeOptions.map((option) => (
                 <button
@@ -156,54 +156,54 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </button>
               ))}
             </div>
-          </div>
-          
-          {/* Account and Logout buttons at bottom */}
-          <div className="mt-auto pt-4 border-t border-border">
+
+            {/* Other sidebar items can be added here */}
             <Button
               variant="ghost"
-              className="w-full justify-start text-foreground hover:bg-accent mb-2"
-              onClick={() => router.push('/account')}
+              className="w-full justify-start text-foreground hover:bg-accent"
+              onClick={() => router.push('/')}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                width="24" 
-                height="24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 className="h-5 w-5 mr-2"
               >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
               </svg>
-              <span>Account</span>
+              <span>Home</span>
             </Button>
+
             <Button
               variant="ghost"
-              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleLogout}
+              className="w-full justify-start text-foreground hover:bg-accent"
+              onClick={() => router.push('/random')}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                width="24" 
-                height="24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="h-5 w-5 mr-2 text-destructive"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5 mr-2"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
-              <span>Log out</span>
+              <span>Random Page</span>
             </Button>
           </div>
         </div>

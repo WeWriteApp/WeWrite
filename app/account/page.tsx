@@ -1,31 +1,31 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut } from 'lucide-react';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
 import { useAuth } from '../providers/AuthProvider';
-import { 
-  getUserSubscription, 
-  updateSubscription, 
-  getUserPledges, 
-  getPledge, 
+import {
+  getUserSubscription,
+  updateSubscription,
+  getUserPledges,
+  getPledge,
   updatePledge,
-  createPledge 
+  createPledge
 } from '../firebase/subscription';
 import { getDocById } from '../firebase/database';
 import { loadStripe } from '@stripe/stripe-js';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { addUsername, updateEmail as updateFirebaseEmail } from '../firebase/auth';
+import { addUsername, updateEmail as updateFirebaseEmail, logoutUser } from '../firebase/auth';
 import { db } from '../firebase/database';
 import AccountDrawer from '../components/AccountDrawer';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import PaymentModal from '../components/PaymentModal';
 import SubscriptionStatusCard from '../components/SubscriptionStatusCard';
-import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { socialLinks } from '../config/social-links';
 
@@ -61,7 +61,7 @@ interface Subscription {
 const SpendingOverview = ({ total, max }: { total: number, max: number }) => {
   const percentage = max > 0 ? Math.min(100, (total / max) * 100) : 0;
   const isExceeded = total > max;
-  
+
   return (
     <div className="mt-4 p-4 bg-background rounded-lg border border-border shadow-sm">
       <div className="flex justify-between mb-2">
@@ -71,14 +71,14 @@ const SpendingOverview = ({ total, max }: { total: number, max: number }) => {
           <span className="text-sm text-muted-foreground"> / ${max.toFixed(2)}</span>
         </div>
       </div>
-      
+
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-        <div 
+        <div
           className={`h-full ${isExceeded ? 'bg-orange-500' : 'bg-green-500'}`}
           style={{ width: `${percentage}%` }}
         ></div>
       </div>
-      
+
       {isExceeded && (
         <p className="mt-2 text-xs text-orange-500 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -124,7 +124,7 @@ export default function AccountPage() {
       setSortButtonDisabled(true);
       return;
     }
-    
+
     setSortButtonDisabled(false);
   }, [sortedPledges, sortOrder, pledges.length]);
 
@@ -142,7 +142,7 @@ export default function AccountPage() {
     if (shouldRefresh && user) {
       console.log('Refresh parameter detected, reloading user data');
       loadUserData();
-      
+
       // Clear the refresh parameter from the URL without full page reload
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
@@ -159,7 +159,7 @@ export default function AccountPage() {
         if (!prevSorted.length || prevSorted.length !== pledges.length) {
           return [...pledges];
         }
-        
+
         // Otherwise, maintain the current order but update the pledge amounts
         return prevSorted.map(sortedPledge => {
           // Find the corresponding pledge with updated amount
@@ -197,12 +197,12 @@ export default function AccountPage() {
       if (userSubscription) {
         const subscription = userSubscription as unknown as Subscription;
         setSubscription(subscription);
-        
+
         if (subscription.billingCycleEnd) {
           setNextPaymentDate(new Date(subscription.billingCycleEnd));
           updateTimeUntilPayment();
         }
-        
+
         // Set the selected subscription button based on the subscription amount
         if ([10, 20, 50, 100].includes(subscription.amount)) {
           console.log(`Setting selectedSubscriptionButton to ${subscription.amount} (standard)`);
@@ -244,12 +244,12 @@ export default function AccountPage() {
         const userDoc = await getDocById("users", user.uid);
         if (userDoc && userDoc.exists()) {
           const userData = userDoc.data();
-          
+
           // Set default increment if it exists
           if (userData.defaultIncrement) {
             const incrementValue = userData.defaultIncrement;
             setGlobalIncrement(incrementValue);
-            
+
             // Explicitly set the selected increment button
             if ([0.01, 0.1, 1, 10].includes(incrementValue)) {
               setSelectedIncrementButton(incrementValue);
@@ -284,10 +284,10 @@ export default function AccountPage() {
 
   const updateTimeUntilPayment = () => {
     if (!nextPaymentDate) return;
-    
+
     const now = new Date();
     const diff = nextPaymentDate.getTime() - now.getTime();
-    
+
     if (diff <= 0) {
       setTimeUntilPayment('Payment due now');
       return;
@@ -303,9 +303,9 @@ export default function AccountPage() {
 
   const handleActivateSubscription = async (amount: number | string) => {
     if (!user) return;
-    
+
     let finalAmount: number;
-    
+
     if (typeof amount === 'string') {
       // If it's custom input from the input field
       const parsed = parseFloat(amount);
@@ -321,14 +321,14 @@ export default function AccountPage() {
 
     // Update the selected button state immediately for UI feedback
     setSelectedSubscriptionButton(finalAmount);
-    
+
     // If this is a custom amount, set the custom flag
     if (![10, 20, 50, 100].includes(finalAmount)) {
       setIsCustomSubscription(true);
     } else {
       setIsCustomSubscription(false);
     }
-    
+
     try {
       // Create a temporary subscription object to show UI feedback while waiting for server
       const tempSubscription: Subscription = {
@@ -344,12 +344,12 @@ export default function AccountPage() {
         createdAt: subscription?.createdAt || null,
         updatedAt: subscription?.updatedAt || null
       };
-      
+
       // Update local state immediately for UI feedback
       setSubscription(tempSubscription);
-      
+
       console.log('Activating subscription with amount:', finalAmount);
-      
+
       // Call the Stripe API endpoint to create a subscription
       const response = await fetch('/api/activate-subscription', {
         method: 'POST',
@@ -374,7 +374,7 @@ export default function AccountPage() {
       // Store client secret and amount for the payment modal
       setClientSecret(clientSecret);
       setPaymentAmount(finalAmount);
-      
+
       // Open the payment modal
       setPaymentModalOpen(true);
     } catch (error) {
@@ -388,24 +388,24 @@ export default function AccountPage() {
   const handlePaymentSuccess = () => {
     // Close the payment modal
     setPaymentModalOpen(false);
-    
+
     // Update subscription status
     setIsSubscriptionActive(true);
-    
+
     // Reload user data to reflect changes from server
     loadUserData();
   };
-  
+
   const handlePaymentModalClose = () => {
     setPaymentModalOpen(false);
-    
+
     // Reset subscription state on cancel
     setSubscription(subscription);
   };
 
   const handleUsernameChange = async (newUsername: string) => {
     if (!user || !newUsername) return;
-    
+
     try {
       await addUsername(user.uid, newUsername);
       setUsername(newUsername);
@@ -417,30 +417,30 @@ export default function AccountPage() {
 
   const handleEmailChange = async () => {
     if (!user) return;
-    
+
     const newEmail = prompt("Enter new email address:", email);
     if (!newEmail) return;
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
       alert('Please enter a valid email address.');
       return;
     }
-    
+
     setEmailError('');
-    
+
     try {
       // Update email in Firebase Authentication
       await updateFirebaseEmail(user, newEmail);
-      
+
       // Update email in state
       setEmail(newEmail);
-      
+
       alert('Email updated successfully!');
     } catch (error) {
       console.error('Error updating email:', error);
-      
+
       // Handle specific Firebase errors
       if (error.code === 'auth/requires-recent-login') {
         setEmailError('For security reasons, please log out and log back in before changing your email.');
@@ -469,7 +469,7 @@ export default function AccountPage() {
 
   const saveIncrementToUserSettings = async (incrementValue: number) => {
     if (!user) return;
-    
+
     try {
       const userDocRef = doc(db, "users", user.uid);
       await updateDoc(userDocRef, {
@@ -482,13 +482,13 @@ export default function AccountPage() {
 
   const handleCancelSubscription = async () => {
     if (!user || !subscription?.stripeSubscriptionId) return;
-    
+
     try {
       // Show confirmation dialog
       if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments.')) {
         return;
       }
-      
+
       // Call the cancel subscription API
       const response = await fetch('/api/cancel-subscription', {
         method: 'POST',
@@ -510,10 +510,10 @@ export default function AccountPage() {
         ...subscription,
         status: 'canceled'
       });
-      
+
       // Show success message
       alert('Your subscription has been canceled successfully.');
-      
+
       // Reload user data to reflect changes from server
       loadUserData();
     } catch (error) {
@@ -524,48 +524,48 @@ export default function AccountPage() {
 
   const handleIncrementChange = (value: number) => {
     console.log(`Changing increment to: ${value}, previous: ${globalIncrement}`);
-    
+
     // Update the selected button state immediately for UI feedback
     setSelectedIncrementButton(value);
-    
+
     // Update the global increment value
     setGlobalIncrement(value);
-    
+
     // Clear custom increment amount if this is a default value
     if ([0.01, 0.1, 1.0, 10.0].includes(value)) {
       setCustomIncrementAmount('');
     }
-    
+
     // Save to user settings
     saveIncrementToUserSettings(value);
   };
 
   const handlePledgeAmountChange = (pledgeId: string, change: number) => {
     console.log(`Changing pledge ${pledgeId} by ${change}`);
-    
+
     // Find the pledge in the original pledges array
     const pledgeIndex = pledges.findIndex(p => p.id === pledgeId);
     if (pledgeIndex === -1) {
       console.error(`Pledge not found: ${pledgeId}`);
       return;
     }
-    
+
     // Calculate the new amount
     const incrementValue = change * (globalIncrement || 1);
     let newAmount = Math.max(0, Number(pledges[pledgeIndex].amount || 0) + incrementValue);
     // Round to 2 decimal places
     newAmount = Math.round(newAmount * 100) / 100;
-    
+
     // Update the original pledges array with the new amount
     const updatedPledges = [...pledges];
     updatedPledges[pledgeIndex] = {
       ...updatedPledges[pledgeIndex],
       amount: newAmount
     };
-    
+
     // Set the updated pledges
     setPledges(updatedPledges);
-    
+
     // Also update the sortedPledges for the specific pledge without resorting
     setSortedPledges(prevSorted => {
       return prevSorted.map(p => {
@@ -575,7 +575,7 @@ export default function AccountPage() {
         return p;
       });
     });
-    
+
     // Save changes to the database
     saveUserPledges(updatedPledges);
   };
@@ -591,44 +591,44 @@ export default function AccountPage() {
       // This is a sort command
       const sortDirection = pledgeId.replace('sort-', '') as 'asc' | 'desc';
       console.log(`Sorting pledges ${sortDirection}`);
-      
+
       // Set the sort order
       setSortOrder(sortDirection);
-      
+
       // Sort the pledges according to the direction
-      const sorted = [...sortedPledges].sort((a, b) => 
+      const sorted = [...sortedPledges].sort((a, b) =>
         sortDirection === 'desc' ? b.amount - a.amount : a.amount - b.amount
       );
-      
+
       setSortedPledges(sorted);
       setSortButtonDisabled(true);
       return;
     }
-    
+
     // Check for refresh-data special case
     if (pledgeId === 'refresh-data') {
       console.log('Refresh data command received');
       loadUserData();
       return;
     }
-    
+
     // Handle actual pledge deletion
     if (!user) return;
-    
+
     if (window.confirm('Are you sure you want to remove this pledge?')) {
       const updatedPledges = pledges.filter(p => p.id !== pledgeId);
       setPledges(updatedPledges);
-      
+
       // Also update sortedPledges by removing the deleted pledge
       setSortedPledges(prevSorted => prevSorted.filter(p => p.id !== pledgeId));
-      
+
       saveUserPledges(updatedPledges);
     }
   };
 
   const saveUserPledges = async (updatedPledges: Pledge[]) => {
     if (!user) return;
-    
+
     try {
       // Update each pledge in Firestore
       for (const pledge of updatedPledges) {
@@ -642,7 +642,7 @@ export default function AccountPage() {
       // Update subscription's pledgedAmount if needed
       if (subscription) {
         const totalPledged = updatedPledges.reduce((total, pledge) => total + Number(pledge.amount), 0);
-        
+
         await updateSubscription(user.uid, {
           pledgedAmount: totalPledged
         });
@@ -655,13 +655,13 @@ export default function AccountPage() {
   // Function to check if pledges are in the expected order based on current sort direction
   const arePledgesInOrder = () => {
     if (pledges.length <= 1) return true;
-    
+
     return sortedPledges.every((pledge, index) => {
       if (index === 0) return true;
-      
+
       const prevPledge = sortedPledges[index - 1];
-      return sortOrder === 'desc' 
-        ? prevPledge.amount >= pledge.amount 
+      return sortOrder === 'desc'
+        ? prevPledge.amount >= pledge.amount
         : prevPledge.amount <= pledge.amount;
     });
   };
@@ -675,12 +675,12 @@ export default function AccountPage() {
     const newOrder = sortOrder === 'desc' ? 'asc' : 'desc';
     console.log(`Toggling sort order from ${sortOrder} to ${newOrder}`);
     setSortOrder(newOrder);
-    
+
     // Create a new sorted array based on the current pledges
-    const sorted = [...sortedPledges].sort((a, b) => 
+    const sorted = [...sortedPledges].sort((a, b) =>
       newOrder === 'desc' ? b.amount - a.amount : a.amount - b.amount
     );
-    
+
     // Update the sorted pledges with the new order
     setSortedPledges(sorted);
   };
@@ -688,8 +688,8 @@ export default function AccountPage() {
   return (
     <div className="px-5 py-4 max-w-3xl mx-auto">
       <div className="flex items-center mb-6">
-        <button 
-          onClick={() => router.push('/')} 
+        <button
+          onClick={() => router.push('/')}
           className="flex items-center text-sm mr-4 px-3 py-1.5 rounded-md bg-background/80 hover:bg-background/90 border border-border/50"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
@@ -699,7 +699,7 @@ export default function AccountPage() {
         </button>
         <h1 className="text-2xl font-bold">Account Settings</h1>
       </div>
-      
+
       {user && (
         <div className="space-y-8">
           {/* Profile Section */}
@@ -721,7 +721,7 @@ export default function AccountPage() {
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
                 <div className="flex justify-between items-center">
@@ -736,6 +736,22 @@ export default function AccountPage() {
                     Edit
                   </button>
                 </div>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-border">
+                <Button
+                  variant="destructive"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to log out?')) {
+                      await logoutUser();
+                      router.push('/');
+                    }
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log out
+                </Button>
               </div>
             </div>
           </section>
@@ -769,9 +785,9 @@ export default function AccountPage() {
                   asChild
                   className={`w-full justify-center bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white border-[#1DA1F2]`}
                 >
-                  <a 
-                    href={socialLinks.find(link => link.platform === 'twitter')?.url} 
-                    target="_blank" 
+                  <a
+                    href={socialLinks.find(link => link.platform === 'twitter')?.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
@@ -784,9 +800,9 @@ export default function AccountPage() {
                   asChild
                   className={`w-full justify-center bg-[#FF0000] hover:bg-[#FF0000]/90 text-white border-[#FF0000]`}
                 >
-                  <a 
-                    href={socialLinks.find(link => link.platform === 'youtube')?.url} 
-                    target="_blank" 
+                  <a
+                    href={socialLinks.find(link => link.platform === 'youtube')?.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
@@ -799,9 +815,9 @@ export default function AccountPage() {
                   asChild
                   className={`w-full justify-center bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white border-transparent`}
                 >
-                  <a 
-                    href={socialLinks.find(link => link.platform === 'instagram')?.url} 
-                    target="_blank" 
+                  <a
+                    href={socialLinks.find(link => link.platform === 'instagram')?.url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
                   >
@@ -816,7 +832,7 @@ export default function AccountPage() {
       )}
 
       {/* Add Payment Modal */}
-      <PaymentModal 
+      <PaymentModal
         open={paymentModalOpen}
         clientSecret={clientSecret}
         amount={paymentAmount}
@@ -832,7 +848,7 @@ export default function AccountPage() {
             <p className="text-sm text-muted-foreground mb-4">
               Enter a custom amount to increment or decrement pledges.
             </p>
-            
+
             <div className="flex items-center mb-6">
               <span className="text-foreground mr-2">$</span>
               <input
@@ -845,7 +861,7 @@ export default function AccountPage() {
                 autoFocus
               />
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <Button
                 onClick={() => setShowCustomModal(false)}
@@ -870,4 +886,4 @@ export default function AccountPage() {
       )}
     </div>
   );
-} 
+}
