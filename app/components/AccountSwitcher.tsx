@@ -1,14 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Settings, LogOut, Plus, X } from 'lucide-react';
+import { ChevronRight, Settings, LogOut, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { AccountSwitcherModal } from './AccountSwitcherModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { X } from 'lucide-react';
 import { Button } from './ui/button';
 import { IconButton } from './ui/icon-button';
 import { useAuth } from '../providers/AuthProvider';
@@ -147,58 +144,27 @@ export function AccountSwitcher() {
         <ChevronRight className="h-5 w-5 text-muted-foreground" />
       </button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-lg relative">
-          <IconButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsOpen(false)}
-            className="absolute right-4 top-4"
-          >
-            <X className="h-4 w-4" />
-          </IconButton>
-          <DialogHeader>
-            <DialogTitle>Switch Account</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2 px-1">
-            {accounts.map((account) => (
-              <div
-                key={account.uid}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                onClick={() => handleAccountClick(account)}
-              >
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{account.username || 'Anonymous'}</span>
-                    {account.isCurrent && (
-                      <span className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">Current</span>
-                    )}
-                  </div>
-                  <span className="text-sm text-muted-foreground">{account.email}</span>
-                </div>
-                {account.isCurrent ? (
-                  <IconButton variant="ghost" size="sm" onClick={(e) => {
-                    e.stopPropagation();
-                    setIsOpen(false);
-                    router.push('/account');
-                  }}>
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                  </IconButton>
-                ) : null}
-              </div>
-            ))}
-
-            <Button
-              variant="outline"
-              className="w-full mt-4 flex items-center justify-center gap-2"
-              onClick={handleAddAccount}
-            >
-              <Plus className="h-4 w-4" />
-              Add Account
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AccountSwitcherModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        accounts={accounts.map(account => ({
+          id: account.uid,
+          email: account.email,
+          username: account.username
+        }))}
+        currentUser={user ? {
+          id: user.uid,
+          email: user.email || '',
+          username: user.username
+        } : null}
+        onSwitchAccount={(userId) => {
+          const account = accounts.find(acc => acc.uid === userId);
+          if (account) {
+            handleAccountClick(account);
+          }
+        }}
+        onAddAccount={handleAddAccount}
+      />
     </>
   );
 }
