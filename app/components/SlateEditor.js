@@ -14,46 +14,47 @@ import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon } from "lucide-react";
+import { Search, X, Link as LinkIcon, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { motion } from "framer-motion";
 import "../styles/shake-animation.css";
+import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 
 /**
  * SlateEditor Component
- * 
+ *
  * A rich text editor component built with Slate.js that supports:
  * - Text formatting (bold, italic, etc.)
  * - Links with URL validation
  * - Typeahead search for mentions and references
  * - Paragraph modes for different display styles (Normal and Dense)
  * - Initial content loading for new pages and replies
- * 
+ *
  * Paragraph Mode Options:
  * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
  *    - Numbers positioned to the left of the text
  *    - Clear indent for each paragraph
  *    - Proper spacing between paragraphs
  *    - Standard text size (1rem/16px)
- * 
+ *
  * 2. Dense Mode: Collapses all paragraphs for a more comfortable reading experience
  *    - NO line breaks between paragraphs
  *    - Text wraps continuously as if newline characters were temporarily deleted
  *    - Paragraph numbers inserted inline within the continuous text
  *    - Only a small space separates paragraphs
  *    - Standard text size (1rem/16px)
- * 
+ *
  * The component handles two types of initial content:
  * 1. initialEditorState: Used for loading existing content
  * 2. initialContent: Used primarily for replies, which takes precedence over initialEditorState
- * 
+ *
  * For the Reply to Page functionality, this component ensures that:
  * - The initialContent from URL parameters is properly parsed and displayed
  * - Links to the original page are properly formatted with 'url' attributes
  * - The editor is auto-focused after content initialization
  * - Content is only initialized once to prevent re-initialization issues
- * 
+ *
  * @param {Object} initialEditorState - The initial state to load into the editor (for existing content)
  * @param {Object} initialContent - The initial content to load (takes precedence, used for replies)
  * @param {Function} setEditorState - Function to update the parent component's state with editor changes
@@ -78,7 +79,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         console.log("Using initialContent for editor initialization");
         return Array.isArray(initialContent) ? initialContent : JSON.parse(initialContent);
       }
-      
+
       // Otherwise use initialEditorState if available
       if (initialEditorState) {
         console.log("Using initialEditorState for editor initialization");
@@ -90,7 +91,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           return JSON.parse(JSON.stringify(initialEditorState));
         }
       }
-      
+
       // Default empty state
       return [{ type: "paragraph", children: [{ text: "" }] }];
     } catch (error) {
@@ -103,7 +104,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     focus: () => {
       try {
         ReactEditor.focus(editor);
-        
+
         // If there's no content, add an empty paragraph
         if (editor.children.length === 0) {
           Transforms.insertNodes(editor, {
@@ -116,7 +117,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         const lastNode = Editor.last(editor, []);
         if (lastNode) {
           const [node, path] = lastNode;
-          
+
           // Create a new selection at the end of the last text node
           const point = { path, offset: node.text.length };
           Transforms.select(editor, point);
@@ -131,25 +132,25 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   useEffect(() => {
     if (initialContent && !contentInitialized) {
       console.log("SlateEditor received initialContent:", JSON.stringify(initialContent, null, 2));
-      
+
       try {
         // Use initialContent as the priority source
         console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
         setInitialValue(initialContent);
-        
+
         // Also set the editor state if the callback is provided
         if (setEditorState) {
           console.log("Setting editorState from initialContent");
           setEditorState(initialContent);
-          
+
           // Force update the editor with the initialContent
           editor.children = initialContent;
           editor.onChange();
         }
-        
+
         // Set content as initialized to prevent re-initialization
         setContentInitialized(true);
-        
+
         // Focus the editor after setting content
         setTimeout(() => {
           try {
@@ -195,28 +196,28 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     // Regular enter should create a newline, but prevent consecutive empty paragraphs
     if (event.key === 'Enter') {
       const { selection } = editor;
-      
+
       if (selection && Range.isCollapsed(selection)) {
         const [node, path] = Editor.node(editor, selection);
         const [parent] = Editor.parent(editor, path);
-        
+
         // Check if current node is in a paragraph and is empty or only contains whitespace
-        const isEmptyParagraph = 
-          SlateElement.isElement(parent) && 
-          parent.type === 'paragraph' && 
+        const isEmptyParagraph =
+          SlateElement.isElement(parent) &&
+          parent.type === 'paragraph' &&
           Node.string(parent).trim() === '';
-        
+
         // Check if previous node is also an empty paragraph
         let prevNodeIsEmpty = false;
-        
+
         if (path[0] > 0) {
           const prevPath = [path[0] - 1];
-          
+
           try {
             const [prevNode] = Editor.node(editor, prevPath);
-            
-            if (SlateElement.isElement(prevNode) && 
-                prevNode.type === 'paragraph' && 
+
+            if (SlateElement.isElement(prevNode) &&
+                prevNode.type === 'paragraph' &&
                 Node.string(prevNode).trim() === '') {
               prevNodeIsEmpty = true;
             }
@@ -224,14 +225,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             // Path might not exist, ignore
           }
         }
-        
+
         // If current paragraph is empty and previous paragraph is also empty, prevent new line
         if (isEmptyParagraph && prevNodeIsEmpty) {
           event.preventDefault();
           return;
         }
       }
-      
+
       // Allow default behavior which creates a newline
       return;
     }
@@ -241,16 +242,16 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       const [link] = Editor.nodes(editor, {
         match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
       });
-      
+
       if (link) {
         // Get the current selection
         const { selection } = editor;
         if (!selection) return;
-        
+
         // Find the link element and its parent paragraph
         const [, linkPath] = link;
         const parentPath = Path.parent(linkPath);
-        
+
         if (event.key === 'ArrowUp') {
           // Find the previous paragraph if exists
           if (parentPath[0] > 0) {
@@ -264,7 +265,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           // Find the next paragraph if exists
           const nextPath = [...parentPath];
           nextPath[0] = parentPath[0] + 1;
-          
+
           try {
             const nextNode = Node.get(editor, nextPath);
             if (nextNode) {
@@ -301,12 +302,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           const domSelection = ReactEditor.toDOMRange(editor, editorSelection);
           if (domSelection) {
             const rect = domSelection.getBoundingClientRect();
-          
+
             setLinkEditorPosition({
               top: rect.bottom + window.pageYOffset,
               left: rect.left + window.pageXOffset,
             });
-          
+
             setShowLinkEditor(true);
             setSelectedLinkElement(null);
             setSelectedLinkPath(null);
@@ -317,7 +318,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           // Continue to fallback method
         }
       }
-      
+
       // Fall back to window.getSelection()
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) {
@@ -330,15 +331,15 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         setShowLinkEditor(true);
         return;
       }
-    
+
       const range = selection.getRangeAt(0).cloneRange();
       const rect = range.getBoundingClientRect();
-    
+
       setLinkEditorPosition({
         top: rect.bottom + window.pageYOffset,
         left: rect.left + window.pageXOffset,
       });
-    
+
       setShowLinkEditor(true);
       setSelectedLinkElement(null);
       setSelectedLinkPath(null);
@@ -354,7 +355,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       setSelectedLinkPath(null);
     }
   };
-  
+
   const openLinkEditor = (element, path) => {
     setSelectedLinkElement(element);
     setSelectedLinkPath(path);
@@ -368,13 +369,16 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleSelection = (item) => {
+    // Format the title to ensure it never has @ symbols for page links
+    const formattedTitle = formatPageTitle(item.displayText || item.title);
+
     if (selectedLinkElement && selectedLinkPath) {
       // Edit existing link
       Transforms.setNodes(
         editor,
-        { 
+        {
           url: `/pages/${item.id}`,
-          children: [{ text: item.displayText || item.title }],
+          children: [{ text: formattedTitle }],
           pageId: item.id,
           pageTitle: item.title // Store the original page title for reference
         },
@@ -385,30 +389,43 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       const link = {
         type: "link",
         url: `/pages/${item.id}`,
-        children: [{ text: item.displayText || item.title }],
+        children: [{ text: formattedTitle }],
         pageId: item.id,
         pageTitle: item.title // Store the original page title for reference
       };
+
+      // Make sure we have a valid selection
+      if (!editor.selection) {
+        // If no selection, place cursor at the end of the document
+        const end = Editor.end(editor, []);
+        Transforms.select(editor, end);
+      }
+
+      // Insert the link node
       Transforms.insertNodes(editor, link, { at: editor.selection });
-      // after insert -- move the cursor to the end of the link
+
+      // Move cursor to the end of the link
       Transforms.collapse(editor, { edge: "end" });
 
-      // position the cursor at the end of the new link
-      Transforms.select(editor, Editor.end(editor, []));
-
-      // insert a space after the link
-      Transforms.insertText(editor, ' ');
+      // Insert a space after the link for better editing experience
+      Transforms.insertText(editor, " ");
     }
 
+    // Reset link editor state
+    setSelectedLinkElement(null);
+    setSelectedLinkPath(null);
+    setInitialLinkValues({});
+
+    // Focus the editor
     ReactEditor.focus(editor);
 
-    // hide the dropdown
+    // Hide the dropdown
     setShowLinkEditor(false);
   };
 
   const renderElement = (props) => {
     const { attributes, children, element } = props;
-    
+
     switch (element.type) {
       case "link":
         return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
@@ -437,7 +454,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   return (
     <LineSettingsProvider>
-      <motion.div 
+      <motion.div
         className="relative rounded-lg bg-background"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -447,11 +464,11 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           <div className="flex">
             <div className="flex-grow">
               <div className="relative">
-                <EditorContent 
-                  editor={editor} 
-                  handleKeyDown={handleKeyDown} 
-                  renderElement={renderElement} 
-                  editableRef={editableRef} 
+                <EditorContent
+                  editor={editor}
+                  handleKeyDown={handleKeyDown}
+                  renderElement={renderElement}
+                  editableRef={editableRef}
                 />
               </div>
             </div>
@@ -460,10 +477,10 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       </motion.div>
 
       {showLinkEditor && (
-        <LinkEditor 
-          position={linkEditorPosition} 
-          onSelect={handleSelection} 
-          setShowLinkEditor={setShowLinkEditor} 
+        <LinkEditor
+          position={linkEditorPosition}
+          onSelect={handleSelection}
+          setShowLinkEditor={setShowLinkEditor}
           initialText={initialLinkValues.text || ""}
           initialPageId={initialLinkValues.pageId || null}
           initialPageTitle={initialLinkValues.pageTitle || ""}
@@ -539,17 +556,37 @@ const withInlines = (editor) => {
   return editor
 }
 
-const wrapLink = (editor, url) => {
+const wrapLink = (editor, url, pageId, pageTitle) => {
   if (isLinkActive(editor)) {
     unwrapLink(editor);
   }
 
   const { selection } = editor;
   const isCollapsed = selection && Range.isCollapsed(selection);
+
+  // Determine the display text
+  let text = url;
+
+  // If it's a page link and no display text is provided, use the page title
+  if (pageId && pageTitle) {
+    text = pageTitle;
+  }
+
+  // Format text based on link type
+  if (isPageLink(url)) {
+    // For page links, ensure they never have @ symbols
+    text = formatPageTitle(text);
+  } else if (isUserLink(url)) {
+    // For user links, ensure they have @ symbols
+    text = formatUsername(text);
+  }
+
   const linkElement = {
     type: "link",
     url,
-    children: isCollapsed ? [{ text: url }] : [],
+    pageId,
+    pageTitle,
+    children: isCollapsed ? [{ text }] : [],
   };
 
   if (isCollapsed) {
@@ -589,23 +626,36 @@ InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
 const LinkComponent = forwardRef(({ attributes, children, element, openLinkEditor }, ref) => {
   const selected = useSelected();
   const editor = useSlate();
-  
+
+  // Use our utility functions to determine link type
+  const isUserLinkType = isUserLink(element.url);
+  const isPageLinkType = isPageLink(element.url);
+  const isExternalLinkType = isExternalLink(element.url);
+
+  // Determine the appropriate class based on link type
+  const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
+
   const handleClick = (e) => {
     e.preventDefault();
     const path = ReactEditor.findPath(editor, element);
     openLinkEditor(element, path);
   };
-  
+
   return (
     <a
       {...attributes}
       ref={ref}
       onClick={handleClick}
-      className="inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer"
+      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
+      data-page-id={isPageLinkType ? element.pageId : undefined}
+      data-user-id={isUserLinkType ? element.userId : undefined}
     >
       <InlineChromiumBugfix />
       <div className="flex items-center gap-0.5 min-w-0">
         {children}
+        {isExternalLinkType && (
+          <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
+        )}
       </div>
       <InlineChromiumBugfix />
     </a>
@@ -630,22 +680,22 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   const [isNewPageCreating, setIsNewPageCreating] = useState(false);
-  
+
   // Safely access AuthContext with error handling
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
-  
+
   // Add error handling for missing auth context
   useEffect(() => {
     if (!authContext) {
       console.warn("AuthContext is not available in LinkEditor");
     }
   }, [authContext]);
-  
+
   const handleClose = () => {
     setShowLinkEditor(false);
   };
-  
+
   useEffect(() => {
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
@@ -668,26 +718,26 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   const handleSave = (page) => {
     console.log("LinkEditor - handleSave:", page);
-    
+
     // Handle newly created page
     if (page.id) {
       setSelectedPageId(page.id);
       setPageTitle(page.title); // Save the original page title
-      
+
       // If display text is empty or not yet set, use the page title
       if (!displayText || displayText === initialText) {
         setDisplayText(page.title);
       }
-      
+
       const pageLink = {
         ...page,
         url: `/pages/${page.id}`,
         displayText: displayText || page.title
       };
-      
+
       console.log("Selecting page link:", pageLink);
       onSelect(pageLink);
-      
+
       // Close the editor if we have a valid page
       handleClose();
     } else {
@@ -697,18 +747,18 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   const handleExternalSubmit = () => {
     if (!externalUrl) return;
-    
+
     let finalUrl = externalUrl;
     // Add https:// if not present and not a relative URL
     if (!finalUrl.startsWith('/') && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
       finalUrl = 'https://' + finalUrl;
     }
-    
+
     onSelect({
       url: finalUrl,
       displayText: displayText || finalUrl
     });
-    
+
     handleClose();
   };
 
@@ -738,21 +788,21 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
               <X className="h-4 w-4" />
             </button>
           </div>
-          
+
           {/* Tabs */}
           <div className="px-4 border-b border-border">
             <div className="flex">
-              <button 
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'page' 
-                  ? 'border-primary text-primary' 
+              <button
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'page'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('page')}
               >
                 Page
               </button>
-              <button 
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'external' 
-                  ? 'border-primary text-primary' 
+              <button
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'external'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('external')}
               >
@@ -760,14 +810,14 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
               </button>
             </div>
           </div>
-          
+
           {activeTab === 'page' ? (
             <>
               {/* Display text section */}
               <div className="p-4">
                 <h2 className="text-sm font-medium mb-2">Page</h2>
                 <div className="overflow-y-auto max-h-[40vh]">
-                  <TypeaheadSearch 
+                  <TypeaheadSearch
                     onSelect={(page) => handleSave(page)}
                     placeholder="Search pages..."
                     onFocus={() => setSearchActive(true)}
@@ -776,13 +826,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   />
                 </div>
               </div>
-              
+
               {/* Display text input */}
               {selectedPageId && (
                 <div className="px-4 pb-2 space-y-2">
                   <div className="flex items-center justify-between">
                     <h2 className="text-sm font-medium">Display Text</h2>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => {
                         setLinkText(initialText || "");
@@ -802,7 +852,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   />
                 </div>
               )}
-              
+
               {/* Link destination section - Radio buttons for pages */}
               <div className="px-4 pb-4 space-y-2">
                 <h2 className="text-sm font-medium mb-2">Link to a page</h2>
@@ -825,7 +875,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <h2 className="text-sm font-medium">URL</h2>
                   <input
@@ -836,7 +886,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
                   />
                 </div>
-                
+
                 <button
                   onClick={handleExternalSubmit}
                   disabled={!externalUrl}
@@ -857,7 +907,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) => {
   const { lineMode } = useLineSettings();
   const [selectedParagraph, setSelectedParagraph] = useState(null);
-  
+
   // Track the selected paragraph
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -884,15 +934,15 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
     // Add event listener for selection changes
     document.addEventListener('selectionchange', handleSelectionChange);
-    
+
     // Initial check
     handleSelectionChange();
-    
+
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
   }, [editor]);
-  
+
   // Get styles based on line mode
   const getLineModeStyles = () => {
     switch(lineMode) {
@@ -909,10 +959,10 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
   const renderElementWithStyles = (props) => {
     const { element, children, attributes } = props;
     // Check if element and path exist before comparing
-    const isSelected = selectedParagraph !== null && 
-                      ((element.id && selectedParagraph === element.id) || 
+    const isSelected = selectedParagraph !== null &&
+                      ((element.id && selectedParagraph === element.id) ||
                        (props.path && selectedParagraph === props.path[0]));
-    
+
     // Create a new props object with custom styling
     const enhancedProps = {
       ...props,
@@ -921,13 +971,13 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
         className: `${attributes.className || ''} rounded-sm transition-colors duration-150 hover:bg-accent/10 ${isSelected ? 'bg-accent/20' : ''}`,
       }
     };
-    
+
     // Call the original renderElement with the enhanced props
     return renderElement(enhancedProps);
   };
 
   return (
-    <motion.div 
+    <motion.div
       className={`p-2 ${getLineModeStyles()} w-full`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
