@@ -11,6 +11,7 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { useAuth } from '../providers/AuthProvider';
+import { logoutUser } from '../firebase/auth';
 
 interface Account {
   uid: string;
@@ -57,12 +58,10 @@ export function AccountSwitcher() {
 
       // Log out the current user before navigating to auth flow
       // This is necessary to allow adding a new account
-      import('../firebase/auth').then(({ logoutUser }) => {
-        // Log out from Firebase, but keep the previousUserSession
-        logoutUser(true).then(() => {
-          // Navigate to login page after logout
-          router.push('/auth/login');
-        });
+      // Log out from Firebase, but keep the previousUserSession
+      logoutUser(true).then(() => {
+        // Navigate to login page after logout
+        router.push('/auth/login');
       });
     } else {
       // If no user is logged in, just navigate to login page

@@ -744,7 +744,8 @@ export default function AccountPage() {
                   className="w-full flex items-center justify-center gap-2"
                   onClick={async () => {
                     if (confirm('Are you sure you want to log out?')) {
-                      await logoutUser();
+                      // Pass false to ensure we clear the previousUserSession
+                      await logoutUser(false);
                       router.push('/');
                     }
                   }}

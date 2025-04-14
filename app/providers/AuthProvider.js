@@ -127,9 +127,17 @@ export const AuthProvider = ({ children }) => {
       } else {
         // User is signed out
         localStorage.removeItem('authState');
-        // Don't clear previousUserSession here to allow returning to previous session
-        // Only clear it if we're explicitly logging out
-        if (!localStorage.getItem('previousUserSession')) {
+        // Check if we have a previous user session
+        const previousUserSession = localStorage.getItem('previousUserSession');
+
+        if (previousUserSession) {
+          // We're in the process of switching accounts, don't fully clear the user state
+          console.log('Previous user session found, maintaining partial state for account switching');
+          // We still need to clear cookies for proper auth state
+          Cookies.remove('session');
+          Cookies.remove('authenticated');
+        } else {
+          // Normal logout, clear everything
           setUser(null);
           // Remove session cookie
           Cookies.remove('session');
