@@ -33,18 +33,72 @@ export function LoginForm({
     e.preventDefault()
     setError(null)
     setIsLoading(true)
-    
+
     try {
       const result = await loginUser(email, password)
-      
+
       if (result.user) {
         // Successful login - redirect to home page
         console.log("Login successful, redirecting...")
-        
+
+        // Check if we're adding a new account to the account switcher
+        const previousUserSession = localStorage.getItem('previousUserSession')
+
+        if (previousUserSession) {
+          console.log("Adding new account to account switcher...")
+
+          try {
+            // Get the previous user session
+            const prevUser = JSON.parse(previousUserSession)
+
+            // Get any existing saved accounts
+            let savedAccounts = []
+            const savedAccountsJson = localStorage.getItem('savedAccounts')
+            if (savedAccountsJson) {
+              savedAccounts = JSON.parse(savedAccountsJson)
+            }
+
+            // Add the previous user to the saved accounts if not already there
+            if (!savedAccounts.some(account => account.uid === prevUser.uid)) {
+              savedAccounts.push({
+                ...prevUser,
+                isCurrent: false
+              })
+            }
+
+            // Add the new user to the saved accounts
+            const newUser = {
+              uid: result.user.uid,
+              email: result.user.email,
+              username: result.user.displayName || email.split('@')[0],
+              isCurrent: true
+            }
+
+            // Update existing accounts to not be current
+            savedAccounts = savedAccounts.map(account => ({
+              ...account,
+              isCurrent: account.uid === newUser.uid
+            }))
+
+            // Add the new user if not already in the list
+            if (!savedAccounts.some(account => account.uid === newUser.uid)) {
+              savedAccounts.push(newUser)
+            }
+
+            // Save the updated accounts list
+            localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts))
+
+            // Clear the previous user session
+            localStorage.removeItem('previousUserSession')
+          } catch (error) {
+            console.error("Error handling account switching:", error)
+          }
+        }
+
         // Increase timeout to allow auth state to fully propagate
         // and ensure cookies are properly set
         localStorage.setItem('authRedirectPending', 'true')
-        
+
         setTimeout(() => {
           localStorage.removeItem('authRedirectPending')
           router.push("/")
@@ -55,13 +109,13 @@ export function LoginForm({
         // Error handling
         const errorCode = result.code || ""
         let errorMessage = result.message || "Failed to sign in. Please try again."
-        
+
         if (errorCode.includes("user-not-found") || errorCode.includes("wrong-password")) {
           errorMessage = "Invalid email or password"
         } else if (errorCode.includes("too-many-requests")) {
           errorMessage = "Too many attempts. Please try again later."
         }
-        
+
         setError(errorMessage)
       }
     } catch (err: any) {
@@ -73,9 +127,9 @@ export function LoginForm({
   }
 
   return (
-    <form 
-      className={cn("flex flex-col gap-4 sm:gap-6", className)} 
-      {...props} 
+    <form
+      className={cn("flex flex-col gap-4 sm:gap-6", className)}
+      {...props}
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col items-center gap-1 text-center">
@@ -84,11 +138,11 @@ export function LoginForm({
       <div className="grid gap-4 sm:gap-5">
         <div className="grid gap-2">
           <Label htmlFor="email" className="text-foreground text-sm sm:text-base">Email</Label>
-          <Input 
-            id="email" 
-            type="email" 
-            placeholder="thomaspaine@example.com" 
-            required 
+          <Input
+            id="email"
+            type="email"
+            placeholder="thomaspaine@example.com"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={1}
@@ -97,41 +151,41 @@ export function LoginForm({
         </div>
         <div className="grid gap-2">
           <Label htmlFor="password" className="text-foreground text-sm sm:text-base">Password</Label>
-          <Input 
-            id="password" 
-            type="password" 
+          <Input
+            id="password"
+            type="password"
             placeholder="••••••••"
-            required 
+            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            tabIndex={2} 
+            tabIndex={2}
             className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />
           <div className="flex justify-end mt-1">
             <Link
               href="/auth/forgot-password"
               className="text-xs sm:text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
-              tabIndex={3} 
+              tabIndex={3}
             >
               Forgot your password?
             </Link>
           </div>
         </div>
-        
+
         {error && (
           <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
             {error}
           </div>
         )}
-        
-        <Button 
-          type="submit" 
+
+        <Button
+          type="submit"
           className={cn(
             "w-full transition-all h-10 sm:h-11 mt-2",
-            !isFormValid && !isLoading ? 
+            !isFormValid && !isLoading ?
               "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
           )}
-          disabled={isLoading || !isFormValid} 
+          disabled={isLoading || !isFormValid}
           tabIndex={4}
         >
           {isLoading ? "Signing in..." : "Login"}

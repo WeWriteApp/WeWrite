@@ -25,16 +25,49 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Check for pending redirects and previous user sessions on component mount
+  // Check for pending redirects, previous user sessions, and account switching
   useEffect(() => {
     const hasPendingRedirect = localStorage.getItem('authRedirectPending') === 'true';
     const previousUserSession = localStorage.getItem('previousUserSession');
+    const switchToAccount = localStorage.getItem('switchToAccount');
 
     if (hasPendingRedirect && auth.currentUser) {
       console.log('Found pending redirect with authenticated user, handling now...');
       localStorage.removeItem('authRedirectPending');
       router.push('/');
       router.refresh();
+    } else if (switchToAccount && !auth.currentUser) {
+      // Handle account switching
+      try {
+        const accountToSwitch = JSON.parse(switchToAccount);
+        console.log('Switching to account:', accountToSwitch.username || accountToSwitch.email);
+
+        // In a real implementation, you would use proper auth tokens
+        // For now, we'll just update the UI to show the switched account
+        setUser(accountToSwitch);
+
+        // Save this account to the saved accounts list
+        try {
+          const savedAccounts = localStorage.getItem('savedAccounts');
+          if (savedAccounts) {
+            const accounts = JSON.parse(savedAccounts);
+            // Update the current account to be the switched one
+            const updatedAccounts = accounts.map(account => ({
+              ...account,
+              isCurrent: account.uid === accountToSwitch.uid
+            }));
+            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+          }
+        } catch (e) {
+          console.error('Error updating saved accounts:', e);
+        }
+
+        // Clear the switchToAccount data after using it
+        localStorage.removeItem('switchToAccount');
+      } catch (error) {
+        console.error('Error switching account:', error);
+        localStorage.removeItem('switchToAccount');
+      }
     } else if (previousUserSession && !auth.currentUser) {
       // If we have a previous user session but no current user,
       // we might be returning from an auth flow where the user canceled

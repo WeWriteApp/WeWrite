@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, Settings, LogOut, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ interface Account {
   uid: string;
   email: string;
   username?: string;
+  isCurrent?: boolean;
 }
 
 export function AccountSwitcher() {
@@ -24,36 +25,88 @@ export function AccountSwitcher() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Only show the current user account
-  const [accounts, setAccounts] = useState<Account[]>([
-    user ? {
-      uid: user.uid,
-      email: user.email || '',
-      username: user.username || '',
-    } : {
-      uid: '1',
-      email: 'demo@example.com',
-      username: 'demo',
-    },
-  ]);
+  // State for storing multiple accounts
+  const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // Load accounts from localStorage on component mount
+  useEffect(() => {
+    // Always include current user if available
+    const accountsList: Account[] = [];
+
+    if (user) {
+      accountsList.push({
+        uid: user.uid,
+        email: user.email || '',
+        username: user.username || '',
+        isCurrent: true
+      });
+    }
+
+    // Try to load saved accounts from localStorage
+    try {
+      const savedAccounts = localStorage.getItem('savedAccounts');
+      if (savedAccounts) {
+        const parsedAccounts: Account[] = JSON.parse(savedAccounts);
+
+        // Filter out the current user to avoid duplicates
+        const filteredAccounts = parsedAccounts.filter(account =>
+          !user || account.uid !== user.uid
+        );
+
+        // Add filtered accounts to the list
+        accountsList.push(...filteredAccounts);
+      }
+    } catch (error) {
+      console.error('Error loading saved accounts:', error);
+    }
+
+    setAccounts(accountsList);
+  }, [user]);
 
   const handleAccountClick = (account: Account) => {
-    // In a real implementation, this would switch the active account
-    // For now, just navigate to account settings
     setIsOpen(false);
-    router.push('/account');
+
+    if (account.isCurrent) {
+      // If it's the current account, just go to account settings
+      router.push('/account');
+    } else {
+      // If it's a different account, switch to it
+      // Save current accounts list to localStorage first
+      saveAccountsToLocalStorage();
+
+      // Simulate logging in as the selected account
+      // In a real implementation, this would use proper auth tokens
+      localStorage.setItem('switchToAccount', JSON.stringify(account));
+
+      // Log out current user (but keep session data for account switcher)
+      logoutUser(true).then(() => {
+        // After logout, redirect to a special route that will handle the switch
+        router.push('/auth/switch-account');
+      });
+    }
+  };
+
+  // Helper function to save accounts to localStorage
+  const saveAccountsToLocalStorage = () => {
+    if (accounts.length > 0) {
+      localStorage.setItem('savedAccounts', JSON.stringify(accounts));
+    }
   };
 
   const handleAddAccount = () => {
     // Navigate to the login page
     setIsOpen(false);
 
+    // Save current accounts to localStorage
+    saveAccountsToLocalStorage();
+
     // Use localStorage to remember the current user is still logged in
     if (user) {
       localStorage.setItem('previousUserSession', JSON.stringify({
         uid: user.uid,
         email: user.email,
-        username: user.username
+        username: user.username,
+        isCurrent: true
       }));
 
       // Log out the current user before navigating to auth flow
@@ -97,7 +150,9 @@ export function AccountSwitcher() {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{account.username || 'Anonymous'}</span>
-                    <span className="px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">Current</span>
+                    {account.isCurrent && (
+                      <span className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded-full">Current</span>
+                    )}
                   </div>
                   <span className="text-sm text-muted-foreground">{account.email}</span>
                 </div>
