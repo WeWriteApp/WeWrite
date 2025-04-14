@@ -44,6 +44,12 @@ export const AuthProvider = ({ children }) => {
         // In a real implementation, you would handle this with proper auth state management
         const prevUser = JSON.parse(previousUserSession);
         console.log('Previous user session found:', prevUser.username || prevUser.email);
+
+        // Check if we're on the login page and redirect to home if needed
+        if (window.location.pathname.includes('/auth/')) {
+          console.log('On auth page with previous session, redirecting to home...');
+          router.push('/');
+        }
       } catch (error) {
         console.error('Error parsing previous user session:', error);
       }

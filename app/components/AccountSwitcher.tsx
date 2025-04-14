@@ -46,6 +46,7 @@ export function AccountSwitcher() {
   const handleAddAccount = () => {
     // Navigate to the login page
     setIsOpen(false);
+
     // Use localStorage to remember the current user is still logged in
     if (user) {
       localStorage.setItem('previousUserSession', JSON.stringify({
@@ -53,8 +54,20 @@ export function AccountSwitcher() {
         email: user.email,
         username: user.username
       }));
+
+      // Log out the current user before navigating to auth flow
+      // This is necessary to allow adding a new account
+      import('../firebase/auth').then(({ logoutUser }) => {
+        // Log out from Firebase, but keep the previousUserSession
+        logoutUser(true).then(() => {
+          // Navigate to login page after logout
+          router.push('/auth/login');
+        });
+      });
+    } else {
+      // If no user is logged in, just navigate to login page
+      router.push('/auth/login');
     }
-    router.push('/auth/login');
   };
 
   return (

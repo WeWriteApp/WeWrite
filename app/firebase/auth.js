@@ -26,10 +26,12 @@ export const loginUser = async (email, password) => {
   }
 }
 
-export const logoutUser = async () => {
+export const logoutUser = async (keepPreviousSession = false) => {
   try {
-    // Clear any previous user session when explicitly logging out
-    localStorage.removeItem('previousUserSession');
+    // Only clear previous user session if not explicitly keeping it
+    if (!keepPreviousSession) {
+      localStorage.removeItem('previousUserSession');
+    }
     await signOut(auth);
     return { success: true };
   } catch (error) {
