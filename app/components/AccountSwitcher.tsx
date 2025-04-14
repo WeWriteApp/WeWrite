@@ -148,7 +148,7 @@ export function AccountSwitcher() {
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md mx-4 rounded-lg relative">
+        <DialogContent className="sm:max-w-md rounded-lg relative">
           <IconButton
             variant="ghost"
             size="sm"
