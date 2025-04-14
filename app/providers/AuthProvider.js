@@ -44,14 +44,17 @@ export const AuthProvider = ({ children }) => {
 
         // In a real implementation, you would use proper auth tokens
         // For now, we'll just update the UI to show the switched account
-        setUser(accountToSwitch);
+        setUser({
+          ...accountToSwitch,
+          isCurrent: true
+        });
 
-        // Save this account to the saved accounts list
+        // Make sure only one account is marked as current
         try {
           const savedAccounts = localStorage.getItem('savedAccounts');
           if (savedAccounts) {
             const accounts = JSON.parse(savedAccounts);
-            // Update the current account to be the switched one
+            // Update all accounts to not be current except the switched one
             const updatedAccounts = accounts.map(account => ({
               ...account,
               isCurrent: account.uid === accountToSwitch.uid

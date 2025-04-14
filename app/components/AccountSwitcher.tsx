@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Settings, LogOut, Plus } from 'lucide-react';
+import { ChevronRight, Settings, LogOut, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Button } from './ui/button';
+import { IconButton } from './ui/icon-button';
 import { useAuth } from '../providers/AuthProvider';
 import { logoutUser } from '../firebase/auth';
 
@@ -74,9 +75,19 @@ export function AccountSwitcher() {
       // Save current accounts list to localStorage first
       saveAccountsToLocalStorage();
 
+      // Update the accounts list to mark the clicked account as current
+      const updatedAccounts = accounts.map(acc => ({
+        ...acc,
+        isCurrent: acc.uid === account.uid
+      }));
+      localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+
       // Simulate logging in as the selected account
       // In a real implementation, this would use proper auth tokens
-      localStorage.setItem('switchToAccount', JSON.stringify(account));
+      localStorage.setItem('switchToAccount', JSON.stringify({
+        ...account,
+        isCurrent: true
+      }));
 
       // Log out current user (but keep session data for account switcher)
       logoutUser(true).then(() => {
@@ -136,9 +147,12 @@ export function AccountSwitcher() {
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md mx-4">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md mx-4 rounded-lg">
+          <DialogHeader className="flex items-center justify-between">
             <DialogTitle>Switch Account</DialogTitle>
+            <IconButton variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
+              <X className="h-4 w-4" />
+            </IconButton>
           </DialogHeader>
           <div className="space-y-4 py-2 px-1">
             {accounts.map((account) => (
@@ -156,7 +170,15 @@ export function AccountSwitcher() {
                   </div>
                   <span className="text-sm text-muted-foreground">{account.email}</span>
                 </div>
-                <Settings className="h-5 w-5 text-muted-foreground" />
+                {account.isCurrent && (
+                  <IconButton variant="ghost" size="sm" onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(false);
+                    router.push('/account');
+                  }}>
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                  </IconButton>
+                )}
               </div>
             ))}
 

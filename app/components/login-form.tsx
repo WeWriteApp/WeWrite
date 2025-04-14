@@ -74,11 +74,13 @@ export function LoginForm({
               isCurrent: true
             }
 
-            // Update existing accounts to not be current
+            // Update all accounts to not be current
             savedAccounts = savedAccounts.map(account => ({
               ...account,
-              isCurrent: account.uid === newUser.uid
+              isCurrent: false
             }))
+
+            // Only the new user should be current
 
             // Add the new user if not already in the list
             if (!savedAccounts.some(account => account.uid === newUser.uid)) {

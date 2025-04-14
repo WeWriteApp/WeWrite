@@ -13,23 +13,39 @@ export default function SwitchAccountPage() {
       try {
         // Get the account to switch to from localStorage
         const switchToAccountJson = localStorage.getItem('switchToAccount');
-        
+
         if (!switchToAccountJson) {
           console.error('No account to switch to found');
           router.push('/');
           return;
         }
-        
+
         const switchToAccount = JSON.parse(switchToAccountJson);
         console.log('Switching to account:', switchToAccount.username || switchToAccount.email);
-        
+
         // In a real implementation, you would use proper auth tokens or credentials
         // For now, we'll just redirect back to home and rely on the AuthProvider
         // to handle the account switching based on the localStorage data
-        
-        // Clear the switchToAccount data after using it
-        localStorage.removeItem('switchToAccount');
-        
+
+        // Make sure the account is marked as current
+        switchToAccount.isCurrent = true;
+        localStorage.setItem('switchToAccount', JSON.stringify(switchToAccount));
+
+        // Update saved accounts to ensure only this one is current
+        try {
+          const savedAccountsJson = localStorage.getItem('savedAccounts');
+          if (savedAccountsJson) {
+            const savedAccounts = JSON.parse(savedAccountsJson);
+            const updatedAccounts = savedAccounts.map(account => ({
+              ...account,
+              isCurrent: account.uid === switchToAccount.uid
+            }));
+            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+          }
+        } catch (error) {
+          console.error('Error updating saved accounts:', error);
+        }
+
         // Redirect to home page
         router.push('/');
       } catch (error) {
