@@ -6,7 +6,7 @@ import { IconButton } from './ui/icon-button'
 import { cn } from '../lib/utils'
 import { User } from '@/types'
 import { useRouter } from 'next/navigation'
-import { useToast } from './ui/use-toast'
+import { useToast } from '@/components/ui/use-toast'
 import { Button } from './ui/button'
 
 interface AccountSwitcherModalProps {
@@ -27,12 +27,11 @@ export function AccountSwitcherModal({
   onAddAccount
 }: AccountSwitcherModalProps) {
   const router = useRouter()
-  const { toast } = useToast()
 
   if (!isOpen) return null
 
   const handleAccountSettings = () => {
-    router.push('/account/settings')
+    router.push('/account')
     onClose()
   }
 
