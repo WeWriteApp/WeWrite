@@ -100,6 +100,34 @@ export const AuthProvider = ({ children }) => {
       console.log("Found persisted auth state, waiting for full auth...");
     }
 
+    // Ensure only one account is marked as current in savedAccounts
+    try {
+      const savedAccounts = localStorage.getItem('savedAccounts');
+      if (savedAccounts) {
+        const accounts = JSON.parse(savedAccounts);
+        let hasCurrentAccount = false;
+        let updatedAccounts = accounts.map(account => {
+          if (account.isCurrent) {
+            if (hasCurrentAccount) {
+              // If we already have a current account, this one shouldn't be current
+              return { ...account, isCurrent: false };
+            }
+            hasCurrentAccount = true;
+          }
+          return account;
+        });
+
+        // If no account is marked as current, mark the first one
+        if (!hasCurrentAccount && updatedAccounts.length > 0) {
+          updatedAccounts[0].isCurrent = true;
+        }
+
+        localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+      }
+    } catch (e) {
+      console.error('Error ensuring single current account:', e);
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user ? "User logged in" : "User logged out");
 

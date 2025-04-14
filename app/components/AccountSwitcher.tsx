@@ -92,6 +92,7 @@ export function AccountSwitcher() {
       // Log out current user (but keep session data for account switcher)
       logoutUser(true).then(() => {
         // After logout, redirect to a special route that will handle the switch
+        // which will then redirect to home page
         router.push('/auth/switch-account');
       });
     }
@@ -147,12 +148,17 @@ export function AccountSwitcher() {
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md mx-4 rounded-lg">
-          <DialogHeader className="flex items-center justify-between">
+        <DialogContent className="sm:max-w-md mx-4 rounded-lg relative">
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsOpen(false)}
+            className="absolute right-4 top-4"
+          >
+            <X className="h-4 w-4" />
+          </IconButton>
+          <DialogHeader>
             <DialogTitle>Switch Account</DialogTitle>
-            <IconButton variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-              <X className="h-4 w-4" />
-            </IconButton>
           </DialogHeader>
           <div className="space-y-4 py-2 px-1">
             {accounts.map((account) => (
@@ -170,7 +176,7 @@ export function AccountSwitcher() {
                   </div>
                   <span className="text-sm text-muted-foreground">{account.email}</span>
                 </div>
-                {account.isCurrent && (
+                {account.isCurrent ? (
                   <IconButton variant="ghost" size="sm" onClick={(e) => {
                     e.stopPropagation();
                     setIsOpen(false);
@@ -178,7 +184,7 @@ export function AccountSwitcher() {
                   }}>
                     <Settings className="h-4 w-4 text-muted-foreground" />
                   </IconButton>
-                )}
+                ) : null}
               </div>
             ))}
 
