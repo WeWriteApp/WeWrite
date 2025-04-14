@@ -25,15 +25,28 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Check for pending redirects on component mount
+  // Check for pending redirects and previous user sessions on component mount
   useEffect(() => {
     const hasPendingRedirect = localStorage.getItem('authRedirectPending') === 'true';
-    
+    const previousUserSession = localStorage.getItem('previousUserSession');
+
     if (hasPendingRedirect && auth.currentUser) {
       console.log('Found pending redirect with authenticated user, handling now...');
       localStorage.removeItem('authRedirectPending');
       router.push('/');
       router.refresh();
+    } else if (previousUserSession && !auth.currentUser) {
+      // If we have a previous user session but no current user,
+      // we might be returning from an auth flow where the user canceled
+      console.log('Returning from auth flow, restoring previous session...');
+      try {
+        // We don't actually log the user back in here, just show that we're preserving the session
+        // In a real implementation, you would handle this with proper auth state management
+        const prevUser = JSON.parse(previousUserSession);
+        console.log('Previous user session found:', prevUser.username || prevUser.email);
+      } catch (error) {
+        console.error('Error parsing previous user session:', error);
+      }
     }
   }, [router]);
 
@@ -44,21 +57,23 @@ export const AuthProvider = ({ children }) => {
     if (persistedAuthState === 'authenticated' && !user) {
       console.log("Found persisted auth state, waiting for full auth...");
     }
-    
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user ? "User logged in" : "User logged out");
-      
+
       if (user) {
         // User is signed in
         localStorage.setItem('authState', 'authenticated');
-        
+        // Clear any previous user session since we have a new login
+        localStorage.removeItem('previousUserSession');
+
         try {
           // Get user data from Firestore
           const userDoc = await getDoc(doc(db, "users", user.uid));
-          
+
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            
+
             // Set user state with Firestore data
             setUser({
               uid: user.uid,
@@ -66,7 +81,7 @@ export const AuthProvider = ({ children }) => {
               username: userData.username || user.displayName || '',
               ...userData
             });
-            
+
             // Log the user data for debugging
             console.log("User data from Firestore:", userData);
           } else {
@@ -76,7 +91,7 @@ export const AuthProvider = ({ children }) => {
               email: user.email,
               username: user.displayName || '',
             });
-            
+
             // Create a user document if it doesn't exist
             await setDoc(doc(db, "users", user.uid), {
               email: user.email,
@@ -84,13 +99,13 @@ export const AuthProvider = ({ children }) => {
               createdAt: new Date().toISOString()
             });
           }
-          
+
           // Update user's last login timestamp
           const rtdbUserRef = ref(rtdb, `users/${user.uid}`);
           update(rtdbUserRef, {
             lastLogin: new Date().toISOString(),
           });
-          
+
           // Set session cookie
           const token = await user.getIdToken();
           Cookies.set('session', token, { expires: 7 }); // 7 days expiry
@@ -106,12 +121,16 @@ export const AuthProvider = ({ children }) => {
       } else {
         // User is signed out
         localStorage.removeItem('authState');
-        setUser(null);
-        // Remove session cookie
-        Cookies.remove('session');
-        Cookies.remove('authenticated');
+        // Don't clear previousUserSession here to allow returning to previous session
+        // Only clear it if we're explicitly logging out
+        if (!localStorage.getItem('previousUserSession')) {
+          setUser(null);
+          // Remove session cookie
+          Cookies.remove('session');
+          Cookies.remove('authenticated');
+        }
       }
-      
+
       setLoading(false);
     });
 

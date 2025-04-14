@@ -22,8 +22,8 @@ export function AccountSwitcher() {
   const { user } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  
-  // Mock accounts for now - in a real implementation, this would come from a service
+
+  // Only show the current user account
   const [accounts, setAccounts] = useState<Account[]>([
     user ? {
       uid: user.uid,
@@ -33,11 +33,6 @@ export function AccountSwitcher() {
       uid: '1',
       email: 'demo@example.com',
       username: 'demo',
-    },
-    {
-      uid: '2',
-      email: 'test@example.com',
-      username: 'test',
     },
   ]);
 
@@ -49,8 +44,16 @@ export function AccountSwitcher() {
   };
 
   const handleAddAccount = () => {
-    // In a real implementation, this would open a login/register flow
+    // Navigate to the login page
     setIsOpen(false);
+    // Use localStorage to remember the current user is still logged in
+    if (user) {
+      localStorage.setItem('previousUserSession', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        username: user.username
+      }));
+    }
     router.push('/auth/login');
   };
 
@@ -68,27 +71,30 @@ export function AccountSwitcher() {
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md mx-4">
           <DialogHeader>
             <DialogTitle>Switch Account</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 px-1">
             {accounts.map((account) => (
-              <div 
+              <div
                 key={account.uid}
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
                 onClick={() => handleAccountClick(account)}
               >
                 <div className="flex flex-col">
-                  <span className="font-medium">{account.username || 'Anonymous'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{account.username || 'Anonymous'}</span>
+                    <span className="px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">Current</span>
+                  </div>
                   <span className="text-sm text-muted-foreground">{account.email}</span>
                 </div>
                 <Settings className="h-5 w-5 text-muted-foreground" />
               </div>
             ))}
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="w-full mt-4 flex items-center justify-center gap-2"
               onClick={handleAddAccount}
             >

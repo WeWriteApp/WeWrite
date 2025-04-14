@@ -28,9 +28,13 @@ export const loginUser = async (email, password) => {
 
 export const logoutUser = async () => {
   try {
+    // Clear any previous user session when explicitly logging out
+    localStorage.removeItem('previousUserSession');
     await signOut(auth);
+    return { success: true };
   } catch (error) {
-    return error;
+    console.error("Logout error:", error);
+    return { success: false, error };
   }
 }
 
@@ -41,14 +45,14 @@ export const addUsername = async (userId, username) => {
     await updateDoc(userDocRef, {
       username: username
     });
-    
+
     // Also update auth display name if current user
     if (auth.currentUser && auth.currentUser.uid === userId) {
       await updateProfile(auth.currentUser, {
         displayName: username
       });
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error updating username:", error);
@@ -58,16 +62,16 @@ export const addUsername = async (userId, username) => {
 
 export const getUserProfile = async (userId) => {
   if (!userId) return null;
-  
+
   try {
     // Try to get user from Firestore users collection
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
-    
+
     if (userDoc.exists()) {
       return userDoc.data();
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error fetching user profile:", error);
@@ -79,13 +83,13 @@ export const updateEmail = async (user, newEmail) => {
   try {
     // Update the email in Firebase Authentication
     await firebaseUpdateEmail(user, newEmail);
-    
+
     // Update the email in Firestore users collection
     const userDocRef = doc(db, 'users', user.uid);
     await updateDoc(userDocRef, {
       email: newEmail
     });
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error updating email:", error);
@@ -98,16 +102,16 @@ export const checkUsernameAvailability = async (username) => {
     if (!username || username.length < 3) {
       return { isAvailable: false, message: "Username must be at least 3 characters" };
     }
-    
+
     // Check if username contains only alphanumeric characters and underscores
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       return { isAvailable: false, message: "Username can only contain letters, numbers, and underscores" };
     }
-    
+
     const userDoc = doc(db, 'usernames', username.toLowerCase());
     const docSnap = await getDoc(userDoc);
-    
-    return { 
+
+    return {
       isAvailable: !docSnap.exists(),
       message: docSnap.exists() ? "Username already taken" : "Username is available"
     };

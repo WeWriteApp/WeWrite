@@ -157,54 +157,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               ))}
             </div>
 
-            {/* Other sidebar items can be added here */}
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-foreground hover:bg-accent"
-              onClick={() => router.push('/')}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5 mr-2"
-              >
-                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-              </svg>
-              <span>Home</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-foreground hover:bg-accent"
-              onClick={() => router.push('/random')}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5 mr-2"
-              >
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
-              <span>Random Page</span>
-            </Button>
+            {/* Additional sidebar items can be added here in the future */}
           </div>
         </div>
       </div>
