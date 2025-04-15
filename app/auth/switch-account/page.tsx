@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setCurrentUser } from "../../utils/currentUser";
+import AuthManager from "../../utils/AuthManager";
 import { auth } from "../../firebase/auth";
-import { signInWithCustomToken } from "firebase/auth";
-import Cookies from 'js-cookie';
 
 export default function SwitchAccountPage() {
   const router = useRouter();
@@ -13,28 +11,29 @@ export default function SwitchAccountPage() {
   const [status, setStatus] = useState<string>('Initializing...');
 
   useEffect(() => {
-    const switchAccount = async () => {
+    const completeAccountSwitch = async () => {
       try {
-        setStatus('Getting account data...');
-        // Get the account to switch to from localStorage
-        const switchToAccountJson = localStorage.getItem('switchToAccount');
+        // Check if we're in the middle of an account switch
+        if (sessionStorage.getItem('accountSwitch') !== 'true') {
+          setError('No account switch in progress');
+          setTimeout(() => router.push('/'), 1000);
+          return;
+        }
 
-        if (!switchToAccountJson) {
+        setStatus('Getting account data...');
+
+        // Get the current account from AuthManager
+        const currentAccount = AuthManager.getCurrentAccount();
+
+        if (!currentAccount) {
           setError('No account to switch to found');
           setTimeout(() => router.push('/'), 1000);
           return;
         }
 
-        const switchToAccount = JSON.parse(switchToAccountJson);
-        console.log('Switching to account:', switchToAccount.username || switchToAccount.email);
+        console.log('Switching to account:', currentAccount.email);
 
-        // Make sure the account is marked as current
-        switchToAccount.isCurrent = true;
-
-        // We'll avoid trying to get the token directly to prevent browser extension issues
-        setStatus('Setting up authentication...');
-
-        // First, make sure we're completely signed out of Firebase
+        // Make sure we're completely signed out of Firebase
         if (auth.currentUser) {
           setStatus('Signing out current user...');
           try {
@@ -46,29 +45,13 @@ export default function SwitchAccountPage() {
           }
         }
 
-        // Clear any existing session cookies that might cause conflicts
-        Cookies.remove('session');
+        // Clear the account switch flag
+        sessionStorage.removeItem('accountSwitch');
 
-        // Set the authenticated cookie to maintain session-based auth
-        Cookies.set('authenticated', 'true', { expires: 7 });
+        setStatus('Setting up session...');
 
-        // Set a flag to indicate we're using session-based auth
-        switchToAccount.useSessionAuth = true;
-
-        // Add a timestamp to help with debugging
-        switchToAccount.switchTimestamp = new Date().toISOString();
-
-        setStatus('Setting current user...');
-        // Use the centralized utility to set the current user
-        setCurrentUser(switchToAccount);
-
-        // Clean up the localStorage
-        localStorage.removeItem('switchToAccount');
-        localStorage.removeItem('lastAuthToken');
-        localStorage.removeItem('accountSwitchInProgress');
-
+        // Redirect to home page
         setStatus('Redirecting to home page...');
-        // Immediately redirect to home page
         window.location.href = '/';
       } catch (error) {
         console.error('Error switching account:', error);
@@ -77,7 +60,7 @@ export default function SwitchAccountPage() {
       }
     };
 
-    switchAccount();
+    completeAccountSwitch();
   }, [router]);
 
   return (
