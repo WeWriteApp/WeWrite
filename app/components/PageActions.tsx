@@ -9,6 +9,7 @@ import { deletePage } from "../firebase/database";
 import { getUserProfile } from "../firebase/auth";
 import { auth } from "../firebase/auth";
 import { useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
+import Cookies from 'js-cookie';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -137,9 +138,11 @@ export function PageActions({
    * Creates a reply to the current page
    */
   const handleReply = async () => {
-    const { isAuthenticated } = useContext(AuthContext);
+    // Check authentication directly from cookies
+    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true';
+    const userSessionCookie = Cookies.get('userSession');
 
-    if (!isAuthenticated) {
+    if (!isAuthenticatedCookie && !userSessionCookie && !auth.currentUser) {
       toast.error("You must be logged in to reply");
       return;
     }

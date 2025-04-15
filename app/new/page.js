@@ -9,6 +9,7 @@ import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
+import Cookies from 'js-cookie';
 
 /**
  * New Page Component
@@ -25,12 +26,17 @@ const New = () => {
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
   const { user, isAuthenticated } = useContext(AuthContext);
 
-  // Redirect to login if not authenticated
+  // Check authentication status from cookies directly
   useEffect(() => {
-    if (!isAuthenticated) {
+    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true';
+    const userSessionCookie = Cookies.get('userSession');
+
+    // Only redirect if we're sure the user is not authenticated
+    if (!isAuthenticatedCookie && !userSessionCookie && !user) {
+      console.log('User not authenticated, redirecting to login');
       router.push('/auth/login');
     }
-  }, [isAuthenticated, router]);
+  }, [router, user]);
 
   // Get username from URL parameters if available (for replies), otherwise use user data
   const urlUsername = searchParams.get('username');

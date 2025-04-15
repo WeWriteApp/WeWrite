@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "../../firebase/config";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
 import Cookies from 'js-cookie';
 
 export default function SwitchAccountPage() {
@@ -12,14 +9,14 @@ export default function SwitchAccountPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const switchAccount = async () => {
+    const switchAccount = () => {
       try {
         // Get the account to switch to from localStorage
         const switchToAccountJson = localStorage.getItem('switchToAccount');
 
         if (!switchToAccountJson) {
           setError('No account to switch to found');
-          setTimeout(() => router.push('/'), 2000);
+          setTimeout(() => router.push('/'), 1000);
           return;
         }
 
@@ -29,24 +26,8 @@ export default function SwitchAccountPage() {
         // Make sure the account is marked as current
         switchToAccount.isCurrent = true;
 
-        // Get additional user data from Firestore if available
-        try {
-          const userDoc = await getDoc(doc(db, "users", switchToAccount.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            // Merge Firestore data with the account data
-            Object.assign(switchToAccount, userData);
-          }
-        } catch (e) {
-          console.error('Error fetching user data from Firestore:', e);
-          // Continue with the switch even if Firestore fetch fails
-        }
-
-        // Store the complete account data in localStorage
+        // Store the account data in localStorage
         localStorage.setItem('switchToAccount', JSON.stringify(switchToAccount));
-
-        // Set a flag to indicate we're in the middle of an account switch
-        localStorage.setItem('accountSwitchInProgress', 'true');
 
         // Set authenticated cookie to maintain logged-in state
         Cookies.set('authenticated', 'true', { expires: 7 });
@@ -73,15 +54,12 @@ export default function SwitchAccountPage() {
           console.error('Error updating saved accounts:', error);
         }
 
-        // Wait a moment to ensure all localStorage and cookie operations complete
-        setTimeout(() => {
-          // Force a hard navigation to the home page to ensure a full page reload
-          window.location.href = '/';
-        }, 500);
+        // Immediately redirect to home page
+        window.location.href = '/';
       } catch (error) {
         console.error('Error switching account:', error);
         setError('Error switching account. Please try again.');
-        setTimeout(() => router.push('/'), 2000);
+        setTimeout(() => router.push('/'), 1000);
       }
     };
 
