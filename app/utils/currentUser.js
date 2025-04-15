@@ -107,11 +107,10 @@ export const setCurrentUser = (user) => {
   // Set the user session cookie
   Cookies.set('userSession', JSON.stringify(cleanUser), { expires: 7 });
 
-  // If we have an auth token, set it as a session cookie
-  if (cleanUser.authToken) {
-    console.log('Setting session cookie with auth token');
-    Cookies.set('session', cleanUser.authToken, { expires: 7 });
-  }
+  // We'll no longer try to set the auth token directly to avoid browser extension issues
+  // Instead, we'll just set the authenticated cookie
+  console.log('Setting authenticated cookie');
+  Cookies.set('authenticated', 'true', { expires: 7 });
 
   // Update saved accounts to ensure only this one is current
   try {
@@ -185,33 +184,22 @@ export const getCurrentUserToken = async () => {
         return token;
       } catch (e) {
         console.error('Error getting Firebase token:', e);
+        // Don't try to access other token sources if this fails
+        // as it might trigger browser extension security measures
       }
-    }
+    } else {
+      // If we don't have a Firebase auth user, we'll use session-based auth
+      // This avoids trying to access tokens directly which can trigger browser extension security measures
+      console.log('No Firebase auth user, using session-based auth');
 
-    // If no Firebase auth user, check for session cookie
-    const sessionToken = Cookies.get('session');
-    if (sessionToken) {
-      console.log('Got token from session cookie');
-      return sessionToken;
-    }
-
-    // Check user session for token
-    const userSession = getCurrentUser();
-    if (userSession && userSession.authToken) {
-      console.log('Got token from user session');
-      return userSession.authToken;
-    }
-
-    // Last resort: check localStorage
-    const lastAuthToken = localStorage.getItem('lastAuthToken');
-    if (lastAuthToken) {
-      console.log('Got token from localStorage');
-      return lastAuthToken;
+      // Return a placeholder token to indicate we're using session-based auth
+      return 'session-auth';
     }
   } catch (error) {
     console.error('Error getting current user token:', error);
   }
 
-  console.log('No auth token found');
-  return null;
+  console.log('Using session-based auth as fallback');
+  // Return a placeholder token to indicate we're using session-based auth
+  return 'session-auth';
 };

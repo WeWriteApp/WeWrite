@@ -33,22 +33,17 @@ export const logoutUser = async (keepPreviousSession = false) => {
       localStorage.removeItem('previousUserSession');
     }
 
-    // Get the current Firebase ID token before signing out
-    let idToken = null;
-    if (keepPreviousSession && auth.currentUser) {
-      try {
-        idToken = await auth.currentUser.getIdToken(true);
-        // Store the token in localStorage for account switching
-        if (idToken) {
-          localStorage.setItem('lastAuthToken', idToken);
-        }
-      } catch (tokenError) {
-        console.error('Error getting ID token before logout:', tokenError);
-      }
+    // We'll no longer try to get the token directly to avoid browser extension issues
+    // Instead, we'll just mark that we're in the process of switching accounts
+    if (keepPreviousSession) {
+      // Set a flag to indicate we're in the process of switching accounts
+      localStorage.setItem('accountSwitchInProgress', 'true');
     }
 
+    // Sign out from Firebase
     await signOut(auth);
-    return { success: true, token: idToken };
+
+    return { success: true };
   } catch (error) {
     console.error("Logout error:", error);
     return { success: false, error };

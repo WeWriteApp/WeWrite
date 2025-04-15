@@ -34,12 +34,8 @@ export default function SwitchAccountPage() {
         // We'll avoid trying to get the token directly to prevent browser extension issues
         setStatus('Setting up authentication...');
 
-        // Instead of trying to get the token, we'll just set up the user session
-        // and let the auth provider handle the authentication
-
-        // First, check if the user is already signed in with Firebase
-        if (auth.currentUser && auth.currentUser.uid !== switchToAccount.uid) {
-          // If a different user is signed in, sign them out first
+        // First, make sure we're completely signed out of Firebase
+        if (auth.currentUser) {
           setStatus('Signing out current user...');
           try {
             await auth.signOut();
@@ -50,11 +46,17 @@ export default function SwitchAccountPage() {
           }
         }
 
+        // Clear any existing session cookies that might cause conflicts
+        Cookies.remove('session');
+
         // Set the authenticated cookie to maintain session-based auth
         Cookies.set('authenticated', 'true', { expires: 7 });
 
         // Set a flag to indicate we're using session-based auth
         switchToAccount.useSessionAuth = true;
+
+        // Add a timestamp to help with debugging
+        switchToAccount.switchTimestamp = new Date().toISOString();
 
         setStatus('Setting current user...');
         // Use the centralized utility to set the current user
