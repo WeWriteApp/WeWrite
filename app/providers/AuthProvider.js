@@ -37,45 +37,69 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('authRedirectPending');
       router.push('/');
       router.refresh();
-    } else if (switchToAccount) {
+    } else if (switchToAccount || localStorage.getItem('accountSwitchInProgress') === 'true') {
       // Handle account switching
       try {
-        const accountToSwitch = JSON.parse(switchToAccount);
-        console.log('Switching to account:', accountToSwitch.username || accountToSwitch.email);
+        // Get the account data from localStorage
+        const accountData = switchToAccount ? JSON.parse(switchToAccount) : null;
+        // Check for user session cookie as a backup
+        const userSessionCookie = Cookies.get('userSession');
+        const userSession = userSessionCookie ? JSON.parse(userSessionCookie) : null;
 
-        // Set the user state with the switched account data
-        // This ensures the UI shows the correct user even if Firebase auth state hasn't updated yet
-        setUser({
-          uid: accountToSwitch.uid,
-          email: accountToSwitch.email,
-          username: accountToSwitch.username,
-          isCurrent: true
-        });
+        // Use account data from localStorage or cookie
+        const accountToSwitch = accountData || userSession;
 
-        // Set authenticated cookie to maintain logged-in state
-        Cookies.set('authenticated', 'true', { expires: 7 });
+        if (accountToSwitch) {
+          console.log('Switching to account:', accountToSwitch.username || accountToSwitch.email);
 
-        // Make sure only one account is marked as current
-        try {
-          const savedAccounts = localStorage.getItem('savedAccounts');
-          if (savedAccounts) {
-            const accounts = JSON.parse(savedAccounts);
-            // Update all accounts to not be current except the switched one
-            const updatedAccounts = accounts.map(account => ({
-              ...account,
-              isCurrent: account.uid === accountToSwitch.uid
-            }));
-            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+          // Set the user state with the switched account data
+          setUser({
+            uid: accountToSwitch.uid,
+            email: accountToSwitch.email,
+            username: accountToSwitch.username,
+            isCurrent: true,
+            // Include any other properties from the account data
+            ...accountToSwitch
+          });
+
+          // Set authenticated cookie to maintain logged-in state
+          Cookies.set('authenticated', 'true', { expires: 7 });
+
+          // If we don't have a user session cookie yet, create one
+          if (!userSessionCookie) {
+            Cookies.set('userSession', JSON.stringify({
+              uid: accountToSwitch.uid,
+              username: accountToSwitch.username,
+              email: accountToSwitch.email
+            }), { expires: 7 });
           }
-        } catch (e) {
-          console.error('Error updating saved accounts:', e);
+
+          // Make sure only one account is marked as current
+          try {
+            const savedAccounts = localStorage.getItem('savedAccounts');
+            if (savedAccounts) {
+              const accounts = JSON.parse(savedAccounts);
+              // Update all accounts to not be current except the switched one
+              const updatedAccounts = accounts.map(account => ({
+                ...account,
+                isCurrent: account.uid === accountToSwitch.uid
+              }));
+              localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+            }
+          } catch (e) {
+            console.error('Error updating saved accounts:', e);
+          }
+        } else {
+          console.error('No account data found for switching');
         }
 
         // Clear the switchToAccount data after using it
         localStorage.removeItem('switchToAccount');
+        localStorage.removeItem('accountSwitchInProgress');
       } catch (error) {
         console.error('Error switching account:', error);
         localStorage.removeItem('switchToAccount');
+        localStorage.removeItem('accountSwitchInProgress');
       }
     } else if (previousUserSession && !auth.currentUser) {
       // If we have a previous user session but no current user,
@@ -202,28 +226,58 @@ export const AuthProvider = ({ children }) => {
         const accountSwitchInProgress = localStorage.getItem('accountSwitchInProgress') === 'true';
         const switchToAccount = localStorage.getItem('switchToAccount');
         const previousUserSession = localStorage.getItem('previousUserSession');
+        const userSessionCookie = Cookies.get('userSession');
 
-        if (accountSwitchInProgress && switchToAccount) {
-          // We're in the process of switching accounts
-          console.log('Account switch in progress, maintaining user state');
+        if (accountSwitchInProgress || userSessionCookie) {
+          // We're in the process of switching accounts or have a user session cookie
+          console.log('Account switch in progress or user session cookie found, maintaining user state');
           try {
-            // Parse the account data and set it as the current user
-            const accountData = JSON.parse(switchToAccount);
-            setUser({
-              uid: accountData.uid,
-              email: accountData.email,
-              username: accountData.username,
-              isCurrent: true
-            });
+            // Try to get account data from multiple sources
+            let accountData = null;
 
-            // Keep the authenticated cookie to maintain logged-in state
-            Cookies.set('authenticated', 'true', { expires: 7 });
+            // First try localStorage
+            if (switchToAccount) {
+              accountData = JSON.parse(switchToAccount);
+            }
+            // Then try the user session cookie
+            else if (userSessionCookie) {
+              accountData = JSON.parse(userSessionCookie);
+            }
 
-            // Clear the account switch flag since we've handled it
-            localStorage.removeItem('accountSwitchInProgress');
+            if (accountData) {
+              // Set the user state with the account data
+              setUser({
+                uid: accountData.uid,
+                email: accountData.email,
+                username: accountData.username,
+                isCurrent: true,
+                // Include any other properties from the account data
+                ...accountData
+              });
+
+              // Keep the authenticated cookie to maintain logged-in state
+              Cookies.set('authenticated', 'true', { expires: 7 });
+
+              // Ensure we have a user session cookie
+              if (!userSessionCookie) {
+                Cookies.set('userSession', JSON.stringify({
+                  uid: accountData.uid,
+                  username: accountData.username,
+                  email: accountData.email
+                }), { expires: 7 });
+              }
+
+              // Don't clear the flags here - let the auth state stabilize first
+            } else {
+              console.error('No account data found for switching');
+              // Clear flags if we can't find account data
+              localStorage.removeItem('accountSwitchInProgress');
+              localStorage.removeItem('switchToAccount');
+            }
           } catch (error) {
             console.error('Error handling account switch:', error);
             localStorage.removeItem('accountSwitchInProgress');
+            localStorage.removeItem('switchToAccount');
           }
         } else if (previousUserSession) {
           // We're in the process of adding a new account, don't fully clear the user state
