@@ -1,9 +1,7 @@
-"use client";
+import { redirect } from 'next/navigation';
 
-import NewPageWrapper from "./page-wrapper";
-
-// This is now just a wrapper that renders the NewPageWrapper component
+// This page now redirects to the new /create page
 export default function NewPage() {
-  return <NewPageWrapper />;
+  redirect('/create');
 }
 
