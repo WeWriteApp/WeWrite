@@ -24,7 +24,7 @@ const New = () => {
   });
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
-  const { user, isAuthenticated } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
   // Check authentication status from cookies directly
   useEffect(() => {
@@ -76,7 +76,7 @@ const New = () => {
  * @param {boolean} isReply - Whether this is a reply to an existing page
  */
 const Form = ({ Page, setPage, isReply }) => {
-  const { user, isAuthenticated } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editorState, setEditorState] = useState();
@@ -169,8 +169,28 @@ const Form = ({ Page, setPage, isReply }) => {
     setIsSaving(true);
     setError(null);
 
-    if (!isAuthenticated) {
+    // Check authentication directly from cookies
+    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true';
+    const userSessionCookie = Cookies.get('userSession');
+
+    if (!isAuthenticatedCookie && !userSessionCookie && !user) {
       setError("You must be logged in to create a page");
+      setIsSaving(false);
+      return;
+    }
+
+    // If we have a user session cookie but no user object, use the session data
+    let currentUser = user;
+    if (!currentUser && userSessionCookie) {
+      try {
+        currentUser = JSON.parse(userSessionCookie);
+      } catch (error) {
+        console.error("Error parsing user session cookie:", error);
+      }
+    }
+
+    if (!currentUser) {
+      setError("Unable to determine user. Please try logging in again.");
       setIsSaving(false);
       return;
     }
@@ -185,17 +205,16 @@ const Form = ({ Page, setPage, isReply }) => {
       // Get the username from URL parameters if available (for replies)
       const urlUsername = searchParams.get('username');
       console.log("Username from URL:", urlUsername);
-      console.log("User displayName:", user.displayName);
-      console.log("User username:", user.username);
+      console.log("User data:", currentUser);
 
       // Use the username from URL if available, otherwise fallback to user data
-      const username = urlUsername || user.displayName || user.username || 'Anonymous';
+      const username = urlUsername || currentUser.username || currentUser.displayName || 'Anonymous';
       console.log("Final username to use:", username);
 
       const data = {
         ...Page,
         content: JSON.stringify(editorState),
-        userId: user.uid,
+        userId: currentUser.uid,
         username: username,
         lastModified: updateTime,
         isReply: isReply || false, // Add flag to indicate this is a reply page
