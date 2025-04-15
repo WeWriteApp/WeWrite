@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, Plus, Settings } from 'lucide-react'
+import { X, Plus, Settings, ChevronRight } from 'lucide-react'
 import { IconButton } from './ui/icon-button'
 import { cn } from '../lib/utils'
 import { User } from '@/types'
@@ -96,48 +96,55 @@ export function AccountSwitcherModal({
 
         {/* Account list */}
         <div className="space-y-4 py-2 px-1">
-          {accounts.map((account) => (
-            <div
-              key={account.id}
-              className={cn(
-                "flex items-center justify-between space-x-2 rounded-lg border p-3",
-                account.id === currentUser?.id && "border-blue-600 bg-blue-50 dark:bg-blue-950/30"
-              )}
-            >
-              <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {account.username || "No username"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {account.email}
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                {account.id === currentUser?.id ? (
-                  <>
-                    <div className="rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
-                      Current
-                    </div>
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleAccountSettings}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </IconButton>
-                  </>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSwitchAccount(account.id)}
-                  >
-                    Switch
-                  </Button>
+          {accounts.map((account) => {
+            const isCurrent = account.id === currentUser?.id;
+            return (
+              <div
+                key={account.id}
+                className={cn(
+                  "flex items-center justify-between space-x-2 rounded-lg border p-3",
+                  isCurrent && "border-blue-600 bg-blue-50 dark:bg-blue-950/30",
+                  !isCurrent && "cursor-pointer hover:bg-muted/50 transition-colors"
                 )}
+                onClick={() => {
+                  if (!isCurrent) {
+                    onSwitchAccount(account.id);
+                    onClose();
+                  }
+                }}
+              >
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {account.username || "No username"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {account.email}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isCurrent ? (
+                    <>
+                      <div className="rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
+                        Current
+                      </div>
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAccountSettings();
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {onAddAccount && (
             <Button
