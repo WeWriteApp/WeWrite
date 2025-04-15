@@ -9,6 +9,8 @@ import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
+// Import auth directly to avoid reference errors
+import { auth } from "../firebase/auth";
 
 
 /**
@@ -22,6 +24,7 @@ const New = () => {
     title: "",
     isPublic: true,
   });
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
   const { user } = useContext(AuthContext);
@@ -213,10 +216,8 @@ const Form = ({ Page, setPage, isReply }) => {
       const username = urlUsername || currentUser.username || currentUser.displayName || 'Anonymous';
       console.log("Final username to use:", username);
 
-      // Import Firebase auth to get the current user's ID token
-      const { auth } = require('../firebase/auth');
-
       // Get the user ID from the current user or Firebase auth
+      // We already imported auth at the top of the file
       const userId = currentUser.uid || (auth.currentUser ? auth.currentUser.uid : null);
 
       if (!userId) {

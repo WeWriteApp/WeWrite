@@ -31,34 +31,30 @@ export default function SwitchAccountPage() {
         // Make sure the account is marked as current
         switchToAccount.isCurrent = true;
 
-        // Get the auth token from multiple sources
-        setStatus('Getting authentication token...');
-        let authToken = switchToAccount.authToken ||
-                       localStorage.getItem('lastAuthToken') ||
-                       Cookies.get('session');
+        // We'll avoid trying to get the token directly to prevent browser extension issues
+        setStatus('Setting up authentication...');
 
-        // If we have an auth token, add it to the account data
-        if (authToken) {
-          console.log('Found auth token, setting in account data');
-          switchToAccount.authToken = authToken;
+        // Instead of trying to get the token, we'll just set up the user session
+        // and let the auth provider handle the authentication
 
-          // Also set it in a cookie for API requests
-          Cookies.set('session', authToken, { expires: 7 });
-
-          // Try to sign in with the token if it's a custom token
-          if (authToken.length > 500) { // Custom tokens are typically very long
-            try {
-              setStatus('Signing in with token...');
-              await signInWithCustomToken(auth, authToken);
-              console.log('Successfully signed in with custom token');
-            } catch (tokenError) {
-              console.error('Error signing in with custom token:', tokenError);
-              // Continue anyway, we'll use the session-based auth
-            }
+        // First, check if the user is already signed in with Firebase
+        if (auth.currentUser && auth.currentUser.uid !== switchToAccount.uid) {
+          // If a different user is signed in, sign them out first
+          setStatus('Signing out current user...');
+          try {
+            await auth.signOut();
+            console.log('Signed out current user');
+          } catch (signOutError) {
+            console.error('Error signing out current user:', signOutError);
+            // Continue anyway
           }
-        } else {
-          console.warn('No auth token found for account switching');
         }
+
+        // Set the authenticated cookie to maintain session-based auth
+        Cookies.set('authenticated', 'true', { expires: 7 });
+
+        // Set a flag to indicate we're using session-based auth
+        switchToAccount.useSessionAuth = true;
 
         setStatus('Setting current user...');
         // Use the centralized utility to set the current user

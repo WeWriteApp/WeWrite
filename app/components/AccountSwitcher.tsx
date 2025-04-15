@@ -79,23 +79,14 @@ export function AccountSwitcher() {
       }));
       localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
 
-      // Get the auth token from multiple sources
-      // 1. Check cookies first
-      let authToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('session='))
-        ?.split('=')[1];
+      // Mark that we're in the process of switching accounts
+      localStorage.setItem('accountSwitchInProgress', 'true');
 
-      // 2. If not in cookies, check localStorage for the token we saved during logout
-      if (!authToken) {
-        authToken = localStorage.getItem('lastAuthToken');
-      }
-
-      // Prepare the account data with auth token if available
+      // Prepare the account data without trying to access the auth token directly
+      // This avoids the "blocked by client" error from browser extensions
       const accountData = {
         ...account,
-        isCurrent: true,
-        authToken: authToken || undefined
+        isCurrent: true
       };
 
       // Store the account data for the switch
@@ -126,25 +117,17 @@ export function AccountSwitcher() {
 
     // Use localStorage to remember the current user is still logged in
     if (user) {
-      // Get the auth token from multiple sources
-      // 1. Check cookies first
-      let authToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('session='))
-        ?.split('=')[1];
-
-      // 2. If not in cookies, check localStorage for the token we saved during logout
-      if (!authToken) {
-        authToken = localStorage.getItem('lastAuthToken');
-      }
-
+      // Store user data without trying to access auth token directly
+      // This avoids the "blocked by client" error from browser extensions
       localStorage.setItem('previousUserSession', JSON.stringify({
         uid: user.uid,
         email: user.email,
         username: user.username,
-        isCurrent: true,
-        authToken: authToken || undefined
+        isCurrent: true
       }));
+
+      // Mark that we're adding a new account
+      localStorage.setItem('addingNewAccount', 'true');
 
       // Log out the current user before navigating to auth flow
       // This is necessary to allow adding a new account
