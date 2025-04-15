@@ -187,12 +187,15 @@ const Form = ({ Page, setPage, isReply }) => {
       return;
     }
 
+    // Make sure we have a valid auth token
     try {
-      // Make sure we have a valid auth token
       const authToken = await getCurrentUserToken();
       if (!authToken) {
         console.warn('No auth token available, but continuing with session-based auth');
       }
+    } catch (tokenError) {
+      console.error('Error getting auth token:', tokenError);
+    }
 
     if (!Page.title) {
       setError("Please add a title");
@@ -256,7 +259,7 @@ const Form = ({ Page, setPage, isReply }) => {
     } catch (error) {
       setIsSaving(false);
       console.error("Error creating page:", error);
-      setError("Failed to create page: " + error.message);
+      setError("Failed to create page: " + (error.message || 'Unknown error'));
     }
   };
 
