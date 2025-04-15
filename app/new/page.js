@@ -21,7 +21,7 @@ import ensureAuth from "../utils/ensureAuth";
  * This component renders the page creation form, handling both new pages and replies.
  * It detects if the page is a reply based on URL parameters and renders the appropriate header.
  */
-const New = () => {
+const New = ({ forcedUser }) => {
   const [Page, setPage] = useState({
     title: "",
     isPublic: true,
@@ -29,7 +29,14 @@ const New = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
-  const { user } = useContext(AuthContext);
+  const { user: contextUser } = useContext(AuthContext);
+
+  // Use the forced user if provided, otherwise use the user from context
+  const user = forcedUser || contextUser;
+
+  console.log('New page component initialized with user:', user);
+  console.log('Forced user:', forcedUser);
+  console.log('Context user:', contextUser);
 
   // Check authentication using our centralized utility
   useEffect(() => {
@@ -72,7 +79,7 @@ const New = () => {
     <DashboardLayout>
       <PageHeader title={isReply ? "Replying to page" : "New page"} username={username} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
-        <div className="w-full">
+        <div className="w-full" id="new-page-component" data-forced-user={JSON.stringify(user || {})}>
           <Form Page={Page} setPage={setPage} isReply={isReply} />
         </div>
       </div>
@@ -102,7 +109,7 @@ const New = () => {
  * @param {boolean} isReply - Whether this is a reply to an existing page
  */
 const Form = ({ Page, setPage, isReply }) => {
-  const { user } = useContext(AuthContext);
+  const { user: contextUser } = useContext(AuthContext);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editorState, setEditorState] = useState();
@@ -110,6 +117,24 @@ const Form = ({ Page, setPage, isReply }) => {
   const [initialContent, setInitialContent] = useState(null);
   const [error, setError] = useState(null);
   const analytics = useWeWriteAnalytics();
+
+  // Get the forced user from the parent component
+  const parentComponent = document.getElementById('new-page-component');
+  const forcedUserJson = parentComponent?.getAttribute('data-forced-user');
+  let forcedUser = null;
+
+  if (forcedUserJson) {
+    try {
+      forcedUser = JSON.parse(forcedUserJson);
+      console.log('Form got forced user from parent:', forcedUser);
+    } catch (e) {
+      console.error('Error parsing forced user:', e);
+    }
+  }
+
+  // Use the forced user if provided, otherwise use the user from context
+  const user = forcedUser || contextUser;
+  console.log('Form using user:', user);
 
   // Get username from URL parameters if available (for replies), otherwise use user data
   const urlUsername = searchParams.get('username');
