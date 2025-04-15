@@ -85,6 +85,8 @@ export const createDoc = async (collectionName, data) => {
 
 export const createPage = async (data) => {
   try {
+    console.log('Creating page with data:', { ...data, content: '(content omitted)' });
+
     // Validate required fields to prevent empty path errors
     if (!data || !data.userId) {
       console.error("Cannot create page: Missing required user ID");
@@ -111,14 +113,22 @@ export const createPage = async (data) => {
 
         // If still no username, fetch from Firestore
         if (!username) {
-          const userDoc = await getDoc(doc(db, "users", data.userId));
-          if (userDoc.exists()) {
-            username = userDoc.data().username;
-            console.log('Using username from Firestore:', username);
+          try {
+            const userDoc = await getDoc(doc(db, "users", data.userId));
+            if (userDoc.exists()) {
+              username = userDoc.data().username;
+              console.log('Using username from Firestore:', username);
+            }
+          } catch (firestoreError) {
+            console.error("Error fetching username from Firestore:", firestoreError);
+            // Continue with a default username rather than failing
+            username = 'Anonymous';
           }
         }
       } catch (error) {
         console.error("Error fetching username:", error);
+        // Set a default username rather than failing
+        username = 'Anonymous';
       }
     }
 
@@ -134,27 +144,46 @@ export const createPage = async (data) => {
       pledgeCount: 0,
       fundraisingEnabled: true,
       fundraisingGoal: data.fundraisingGoal || 0,
+      // Add reply fields if this is a reply
+      isReply: data.isReply || false,
+      replyTo: data.replyTo || null,
+      replyToTitle: data.replyToTitle || null,
+      replyToUsername: data.replyToUsername || null,
     };
 
     console.log("Creating page with username:", username);
 
-    const pageRef = await addDoc(collection(db, "pages"), pageData);
+    try {
+      const pageRef = await addDoc(collection(db, "pages"), pageData);
+      console.log("Created page with ID:", pageRef.id);
 
-    // Ensure we have content before creating a version
-    const versionData = {
-      content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
-      createdAt: new Date().toISOString(),
-      userId: data.userId,
-      username: username || "Anonymous" // Also store username in version data for consistency
-    };
+      // Ensure we have content before creating a version
+      const versionData = {
+        content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
+        createdAt: new Date().toISOString(),
+        userId: data.userId,
+        username: username || "Anonymous" // Also store username in version data for consistency
+      };
 
-    // create a subcollection for versions
-    const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
+      try {
+        // create a subcollection for versions
+        const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
+        console.log("Created version with ID:", version.id);
 
-    // take the version id and add it as the currentVersion on the page
-    await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
+        // take the version id and add it as the currentVersion on the page
+        await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
+        console.log("Updated page with current version ID");
 
-    return pageRef.id;
+        return pageRef.id;
+      } catch (versionError) {
+        console.error("Error creating version:", versionError);
+        // Even if version creation fails, return the page ID
+        return pageRef.id;
+      }
+    } catch (pageError) {
+      console.error("Error creating page document:", pageError);
+      return null;
+    }
 
   } catch (e) {
     console.error('Error creating page:', e);
