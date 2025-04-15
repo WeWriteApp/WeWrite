@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { X, Plus, Settings } from 'lucide-react'
 import { IconButton } from './ui/icon-button'
 import { cn } from '../lib/utils'
@@ -36,21 +37,24 @@ export function AccountSwitcherModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        pointerEvents: 'auto',
-      }}
-    >
+    <>
+      {/* Portal to ensure the modal is rendered at the root level */}
+      {typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            pointerEvents: 'auto',
+          }}
+        >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-300"
@@ -100,18 +104,13 @@ export function AccountSwitcherModal({
                 account.id === currentUser?.id && "border-blue-600 bg-blue-50 dark:bg-blue-950/30"
               )}
             >
-              <div className="flex items-center space-x-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
-                  {account.username?.charAt(0).toUpperCase() || "?"}
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {account.username || "No username"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {account.email}
-                  </p>
-                </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium leading-none">
+                  {account.username || "No username"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {account.email}
+                </p>
               </div>
               <div className="flex items-center space-x-2">
                 {account.id === currentUser?.id ? (
@@ -155,6 +154,9 @@ export function AccountSwitcherModal({
           )}
         </div>
       </div>
-    </div>
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
