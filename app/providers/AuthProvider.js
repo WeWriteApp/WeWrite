@@ -30,24 +30,30 @@ export const AuthProvider = ({ children }) => {
     const hasPendingRedirect = localStorage.getItem('authRedirectPending') === 'true';
     const previousUserSession = localStorage.getItem('previousUserSession');
     const switchToAccount = localStorage.getItem('switchToAccount');
+    const accountSwitchInProgress = localStorage.getItem('accountSwitchInProgress') === 'true';
 
     if (hasPendingRedirect && auth.currentUser) {
       console.log('Found pending redirect with authenticated user, handling now...');
       localStorage.removeItem('authRedirectPending');
       router.push('/');
       router.refresh();
-    } else if (switchToAccount && !auth.currentUser) {
+    } else if (switchToAccount) {
       // Handle account switching
       try {
         const accountToSwitch = JSON.parse(switchToAccount);
         console.log('Switching to account:', accountToSwitch.username || accountToSwitch.email);
 
-        // In a real implementation, you would use proper auth tokens
-        // For now, we'll just update the UI to show the switched account
+        // Set the user state with the switched account data
+        // This ensures the UI shows the correct user even if Firebase auth state hasn't updated yet
         setUser({
-          ...accountToSwitch,
+          uid: accountToSwitch.uid,
+          email: accountToSwitch.email,
+          username: accountToSwitch.username,
           isCurrent: true
         });
+
+        // Set authenticated cookie to maintain logged-in state
+        Cookies.set('authenticated', 'true', { expires: 7 });
 
         // Make sure only one account is marked as current
         try {
@@ -191,11 +197,36 @@ export const AuthProvider = ({ children }) => {
       } else {
         // User is signed out
         localStorage.removeItem('authState');
-        // Check if we have a previous user session
+
+        // Check if we're in the middle of an account switch
+        const accountSwitchInProgress = localStorage.getItem('accountSwitchInProgress') === 'true';
+        const switchToAccount = localStorage.getItem('switchToAccount');
         const previousUserSession = localStorage.getItem('previousUserSession');
 
-        if (previousUserSession) {
-          // We're in the process of switching accounts, don't fully clear the user state
+        if (accountSwitchInProgress && switchToAccount) {
+          // We're in the process of switching accounts
+          console.log('Account switch in progress, maintaining user state');
+          try {
+            // Parse the account data and set it as the current user
+            const accountData = JSON.parse(switchToAccount);
+            setUser({
+              uid: accountData.uid,
+              email: accountData.email,
+              username: accountData.username,
+              isCurrent: true
+            });
+
+            // Keep the authenticated cookie to maintain logged-in state
+            Cookies.set('authenticated', 'true', { expires: 7 });
+
+            // Clear the account switch flag since we've handled it
+            localStorage.removeItem('accountSwitchInProgress');
+          } catch (error) {
+            console.error('Error handling account switch:', error);
+            localStorage.removeItem('accountSwitchInProgress');
+          }
+        } else if (previousUserSession) {
+          // We're in the process of adding a new account, don't fully clear the user state
           console.log('Previous user session found, maintaining partial state for account switching');
           // We still need to clear cookies for proper auth state
           Cookies.remove('session');

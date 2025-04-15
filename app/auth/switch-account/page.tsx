@@ -29,7 +29,13 @@ export default function SwitchAccountPage() {
 
         // Make sure the account is marked as current
         switchToAccount.isCurrent = true;
+
+        // Store the account data in localStorage for the AuthProvider to use
         localStorage.setItem('switchToAccount', JSON.stringify(switchToAccount));
+
+        // Set a flag to indicate we're in the middle of an account switch
+        // This helps prevent the AuthProvider from clearing user state
+        localStorage.setItem('accountSwitchInProgress', 'true');
 
         // Update saved accounts to ensure only this one is current
         try {
