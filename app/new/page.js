@@ -170,7 +170,7 @@ const Form = ({ Page, setPage, isReply }) => {
     setError(null);
 
     // Import the utility here to ensure it's only used on the client
-    const { isAuthenticated, getCurrentUser } = require('../utils/currentUser');
+    const { isAuthenticated, getCurrentUser, getCurrentUserToken } = require('../utils/currentUser');
 
     if (!isAuthenticated()) {
       setError("You must be logged in to create a page");
@@ -186,6 +186,13 @@ const Form = ({ Page, setPage, isReply }) => {
       setIsSaving(false);
       return;
     }
+
+    try {
+      // Make sure we have a valid auth token
+      const authToken = await getCurrentUserToken();
+      if (!authToken) {
+        console.warn('No auth token available, but continuing with session-based auth');
+      }
 
     if (!Page.title) {
       setError("Please add a title");
