@@ -36,6 +36,12 @@ export function AccountSwitcherModal({
     onClose()
   }
 
+  // Navigate to home page after switching accounts
+  const handleSwitchToAccount = (accountId: string) => {
+    onSwitchAccount(accountId)
+    onClose()
+  }
+
   return (
     <>
       {/* Portal to ensure the modal is rendered at the root level */}
@@ -108,8 +114,7 @@ export function AccountSwitcherModal({
                 )}
                 onClick={() => {
                   if (!isCurrent) {
-                    onSwitchAccount(account.id);
-                    onClose();
+                    handleSwitchToAccount(account.id);
                   }
                 }}
               >
