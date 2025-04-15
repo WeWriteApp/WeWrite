@@ -8,7 +8,7 @@ import { signOut } from "firebase/auth"
 import { cn } from "../lib/utils"
 import { Button } from "./ui/button"
 import { useTheme } from "next-themes"
-import { AccountSwitcher } from "./AccountSwitcher"
+import { SimpleAccountSwitcher } from "./SimpleAccountSwitcher"
 
 interface SidebarProps {
   isOpen: boolean
@@ -130,7 +130,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex flex-col space-y-6">
             {/* Account Switcher */}
             <div className="mb-2">
-              <AccountSwitcher />
+              <SimpleAccountSwitcher />
             </div>
 
             {/* Theme Options */}

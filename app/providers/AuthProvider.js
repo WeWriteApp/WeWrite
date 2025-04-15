@@ -307,23 +307,55 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Always check for session cookie on mount and when auth state changes
     const userSessionCookie = Cookies.get('userSession');
-    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true';
+    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true' || Cookies.get('wewrite_authenticated') === 'true';
+    const wewriteUserId = Cookies.get('wewrite_user_id');
 
-    if ((!user || user.isSessionUser) && isAuthenticatedCookie && userSessionCookie) {
+    // Check for debug info in sessionStorage
+    const debugInfo = {
+      wewriteSwitching: sessionStorage.getItem('wewrite_switching'),
+      wewriteSwitchTo: sessionStorage.getItem('wewrite_switch_to'),
+      wewriteAccounts: sessionStorage.getItem('wewrite_accounts'),
+      cookies: {
+        userSession: userSessionCookie ? 'exists' : 'missing',
+        authenticated: Cookies.get('authenticated'),
+        wewriteAuthenticated: Cookies.get('wewrite_authenticated'),
+        wewriteUserId: wewriteUserId
+      }
+    };
+    console.log('Auth debug info:', debugInfo);
+
+    if ((!user || user.isSessionUser) && isAuthenticatedCookie) {
       try {
-        const sessionData = JSON.parse(userSessionCookie);
-        console.log('Using session cookie data for auth state:', sessionData);
+        let sessionData;
 
-        // Set the user state with the session data
-        setUser({
-          uid: sessionData.uid,
-          email: sessionData.email,
-          username: sessionData.username,
-          // Add any other necessary properties
-          isSessionUser: true // Flag to indicate this is from a session cookie
-        });
+        if (userSessionCookie) {
+          sessionData = JSON.parse(userSessionCookie);
+          console.log('Using userSession cookie data for auth state:', sessionData);
+        } else if (wewriteUserId) {
+          // Try to get account data from sessionStorage
+          const accountsJson = sessionStorage.getItem('wewrite_accounts');
+          if (accountsJson) {
+            const accounts = JSON.parse(accountsJson);
+            const account = accounts.find(acc => acc.uid === wewriteUserId);
+            if (account) {
+              sessionData = account;
+              console.log('Using sessionStorage account data for auth state:', sessionData);
+            }
+          }
+        }
+
+        if (sessionData) {
+          // Set the user state with the session data
+          setUser({
+            uid: sessionData.uid,
+            email: sessionData.email,
+            username: sessionData.username,
+            // Add any other necessary properties
+            isSessionUser: true // Flag to indicate this is from a session cookie
+          });
+        }
       } catch (error) {
-        console.error('Error parsing user session cookie:', error);
+        console.error('Error parsing user session data:', error);
       }
     }
   }, [user, loading]);
@@ -332,7 +364,10 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     // Add a helper method to check if the user is authenticated
-    isAuthenticated: !!user || Cookies.get('authenticated') === 'true'
+    isAuthenticated: !!user ||
+                    Cookies.get('authenticated') === 'true' ||
+                    Cookies.get('wewrite_authenticated') === 'true' ||
+                    !!Cookies.get('wewrite_user_id')
   };
 
   return (
