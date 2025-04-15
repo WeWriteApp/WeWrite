@@ -79,12 +79,21 @@ export function AccountSwitcher() {
       }));
       localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
 
-      // Simulate logging in as the selected account
-      // In a real implementation, this would use proper auth tokens
-      localStorage.setItem('switchToAccount', JSON.stringify({
+      // Get the auth token from cookies if available
+      const authToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('session='))
+        ?.split('=')[1];
+
+      // Prepare the account data with auth token if available
+      const accountData = {
         ...account,
-        isCurrent: true
-      }));
+        isCurrent: true,
+        authToken: authToken || undefined
+      };
+
+      // Store the account data for the switch
+      localStorage.setItem('switchToAccount', JSON.stringify(accountData));
 
       // Log out current user (but keep session data for account switcher)
       logoutUser(true).then(() => {
@@ -111,11 +120,18 @@ export function AccountSwitcher() {
 
     // Use localStorage to remember the current user is still logged in
     if (user) {
+      // Get the auth token from cookies if available
+      const authToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('session='))
+        ?.split('=')[1];
+
       localStorage.setItem('previousUserSession', JSON.stringify({
         uid: user.uid,
         email: user.email,
         username: user.username,
-        isCurrent: true
+        isCurrent: true,
+        authToken: authToken || undefined
       }));
 
       // Log out the current user before navigating to auth flow

@@ -203,10 +203,22 @@ const Form = ({ Page, setPage, isReply }) => {
       const username = urlUsername || currentUser.username || currentUser.displayName || 'Anonymous';
       console.log("Final username to use:", username);
 
+      // Import Firebase auth to get the current user's ID token
+      const { auth } = require('../firebase/auth');
+
+      // Get the user ID from the current user or Firebase auth
+      const userId = currentUser.uid || (auth.currentUser ? auth.currentUser.uid : null);
+
+      if (!userId) {
+        setError("Unable to determine user ID. Please try logging in again.");
+        setIsSaving(false);
+        return;
+      }
+
       const data = {
         ...Page,
         content: JSON.stringify(editorState),
-        userId: currentUser.uid,
+        userId: userId,
         username: username,
         lastModified: updateTime,
         isReply: isReply || false, // Add flag to indicate this is a reply page
