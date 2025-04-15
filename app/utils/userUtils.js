@@ -4,7 +4,6 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { auth } from "../firebase/auth";
-import Cookies from 'js-cookie';
 
 /**
  * Gets the username for a given user ID
@@ -37,26 +36,26 @@ export const getUsernameById = async (userId) => {
  * @returns {Promise<string>} - The current user's username or "Anonymous" if not logged in
  */
 export const getCurrentUsername = async () => {
-  // First try to get the current user from Firebase Auth
-  const currentUser = auth.currentUser;
-  if (currentUser) {
+  // Import the utility here to ensure it's only used on the client
+  const { getCurrentUser } = require('./currentUser');
+
+  // Get the current user from our centralized utility
+  const currentUser = getCurrentUser();
+
+  // If we have a current user with a username, return it
+  if (currentUser && currentUser.username) {
+    return currentUser.username;
+  }
+
+  // If we have a current user with a uid but no username, fetch it
+  if (currentUser && currentUser.uid) {
     return getUsernameById(currentUser.uid);
   }
 
-  // If no Firebase Auth user, try to get from session cookie
-  try {
-    const userSessionCookie = Cookies.get('userSession');
-    if (userSessionCookie) {
-      const sessionData = JSON.parse(userSessionCookie);
-      if (sessionData.username) {
-        return sessionData.username;
-      }
-      if (sessionData.uid) {
-        return getUsernameById(sessionData.uid);
-      }
-    }
-  } catch (error) {
-    console.error('Error getting username from session cookie:', error);
+  // Fallback to Firebase Auth
+  const firebaseUser = auth.currentUser;
+  if (firebaseUser) {
+    return getUsernameById(firebaseUser.uid);
   }
 
   return "Anonymous";

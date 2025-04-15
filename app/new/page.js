@@ -9,7 +9,7 @@ import ReactGA from 'react-ga4';
 import PageHeader from "../components/PageHeader";
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
-import Cookies from 'js-cookie';
+
 
 /**
  * New Page Component
@@ -26,17 +26,17 @@ const New = () => {
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
   const { user } = useContext(AuthContext);
 
-  // Check authentication status from cookies directly
+  // Check authentication using our centralized utility
   useEffect(() => {
-    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true';
-    const userSessionCookie = Cookies.get('userSession');
+    // Import the utility here to ensure it's only used on the client
+    const { isAuthenticated } = require('../utils/currentUser');
 
     // Only redirect if we're sure the user is not authenticated
-    if (!isAuthenticatedCookie && !userSessionCookie && !user) {
+    if (!isAuthenticated()) {
       console.log('User not authenticated, redirecting to login');
       router.push('/auth/login');
     }
-  }, [router, user]);
+  }, [router]);
 
   // Get username from URL parameters if available (for replies), otherwise use user data
   const urlUsername = searchParams.get('username');
@@ -169,25 +169,17 @@ const Form = ({ Page, setPage, isReply }) => {
     setIsSaving(true);
     setError(null);
 
-    // Check authentication directly from cookies
-    const isAuthenticatedCookie = Cookies.get('authenticated') === 'true';
-    const userSessionCookie = Cookies.get('userSession');
+    // Import the utility here to ensure it's only used on the client
+    const { isAuthenticated, getCurrentUser } = require('../utils/currentUser');
 
-    if (!isAuthenticatedCookie && !userSessionCookie && !user) {
+    if (!isAuthenticated()) {
       setError("You must be logged in to create a page");
       setIsSaving(false);
       return;
     }
 
-    // If we have a user session cookie but no user object, use the session data
-    let currentUser = user;
-    if (!currentUser && userSessionCookie) {
-      try {
-        currentUser = JSON.parse(userSessionCookie);
-      } catch (error) {
-        console.error("Error parsing user session cookie:", error);
-      }
-    }
+    // Get the current user from our centralized utility
+    const currentUser = getCurrentUser();
 
     if (!currentUser) {
       setError("Unable to determine user. Please try logging in again.");

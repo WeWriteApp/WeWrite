@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from 'js-cookie';
+import { setCurrentUser } from "../../utils/currentUser";
 
 export default function SwitchAccountPage() {
   const router = useRouter();
@@ -26,33 +26,11 @@ export default function SwitchAccountPage() {
         // Make sure the account is marked as current
         switchToAccount.isCurrent = true;
 
-        // Store the account data in localStorage
-        localStorage.setItem('switchToAccount', JSON.stringify(switchToAccount));
+        // Use the centralized utility to set the current user
+        setCurrentUser(switchToAccount);
 
-        // Set authenticated cookie to maintain logged-in state
-        Cookies.set('authenticated', 'true', { expires: 7 });
-
-        // Set a user session cookie with minimal data
-        Cookies.set('userSession', JSON.stringify({
-          uid: switchToAccount.uid,
-          username: switchToAccount.username,
-          email: switchToAccount.email
-        }), { expires: 7 });
-
-        // Update saved accounts to ensure only this one is current
-        try {
-          const savedAccountsJson = localStorage.getItem('savedAccounts');
-          if (savedAccountsJson) {
-            const savedAccounts = JSON.parse(savedAccountsJson);
-            const updatedAccounts = savedAccounts.map(account => ({
-              ...account,
-              isCurrent: account.uid === switchToAccount.uid
-            }));
-            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
-          }
-        } catch (error) {
-          console.error('Error updating saved accounts:', error);
-        }
+        // Clean up the localStorage
+        localStorage.removeItem('switchToAccount');
 
         // Immediately redirect to home page
         window.location.href = '/';
