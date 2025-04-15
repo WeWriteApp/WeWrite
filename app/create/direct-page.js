@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
+import Cookies from 'js-cookie';
 import NewPageComponent from "../components/NewPageComponent";
 
 /**
@@ -18,11 +19,11 @@ export default function DirectCreatePage() {
 
   useEffect(() => {
     console.log("DirectCreatePage: Setting up auth state listener");
-    
+
     // Listen for Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("DirectCreatePage: Auth state changed:", firebaseUser ? "User logged in" : "User logged out");
-      
+
       if (firebaseUser) {
         // User is signed in to Firebase
         const userData = {
@@ -31,46 +32,113 @@ export default function DirectCreatePage() {
           username: firebaseUser.displayName || '',
           displayName: firebaseUser.displayName || '',
         };
-        
+
         console.log("DirectCreatePage: Using Firebase user:", userData);
         setUser(userData);
         setIsLoading(false);
       } else {
         // User is signed out of Firebase
-        // Try to get user data from sessionStorage
+        console.log("DirectCreatePage: Firebase user is signed out, checking other auth sources");
+
+        // Try multiple sources for authentication data
+        let userData = null;
+
+        // 1. Try to get user data from wewrite_accounts in sessionStorage
         try {
           const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
           if (wewriteAccounts) {
             const accounts = JSON.parse(wewriteAccounts);
             const currentAccount = accounts.find(acc => acc.isCurrent);
-            
+
             if (currentAccount) {
-              console.log("DirectCreatePage: Using current account from sessionStorage:", currentAccount);
-              setUser(currentAccount);
-              setIsLoading(false);
-              return;
+              console.log("DirectCreatePage: Found current account in wewrite_accounts:", currentAccount);
+              userData = currentAccount;
             }
           }
         } catch (error) {
-          console.error("DirectCreatePage: Error getting user data from sessionStorage:", error);
+          console.error("DirectCreatePage: Error getting user data from wewrite_accounts:", error);
         }
-        
+
+        // 2. Try to get user data from switchToAccount in localStorage
+        if (!userData) {
+          try {
+            const switchToAccount = localStorage.getItem('switchToAccount');
+            if (switchToAccount) {
+              const account = JSON.parse(switchToAccount);
+              if (account && account.uid) {
+                console.log("DirectCreatePage: Found account in switchToAccount:", account);
+                userData = account;
+              }
+            }
+          } catch (error) {
+            console.error("DirectCreatePage: Error getting user data from switchToAccount:", error);
+          }
+        }
+
+        // 3. Try to get user data from wewrite_user_id cookie and wewrite_accounts
+        if (!userData) {
+          try {
+            const wewriteUserId = Cookies.get('wewrite_user_id');
+            if (wewriteUserId) {
+              console.log("DirectCreatePage: Found wewrite_user_id cookie:", wewriteUserId);
+
+              // Try to find the account in wewrite_accounts
+              const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+              if (wewriteAccounts) {
+                const accounts = JSON.parse(wewriteAccounts);
+                const account = accounts.find(acc => acc.uid === wewriteUserId);
+
+                if (account) {
+                  console.log("DirectCreatePage: Found account in wewrite_accounts by user ID:", account);
+                  userData = account;
+                }
+              }
+            }
+          } catch (error) {
+            console.error("DirectCreatePage: Error getting user data from wewrite_user_id:", error);
+          }
+        }
+
+        // 4. Try to get user data from userSession cookie
+        if (!userData) {
+          try {
+            const userSessionCookie = Cookies.get('userSession');
+            if (userSessionCookie) {
+              const userSession = JSON.parse(userSessionCookie);
+              if (userSession && userSession.uid) {
+                console.log("DirectCreatePage: Found user data in userSession cookie:", userSession);
+                userData = userSession;
+              }
+            }
+          } catch (error) {
+            console.error("DirectCreatePage: Error getting user data from userSession cookie:", error);
+          }
+        }
+
+        // If we found user data from any source, use it
+        if (userData) {
+          console.log("DirectCreatePage: Using user data from alternative source:", userData);
+          setUser(userData);
+          setIsLoading(false);
+          return;
+        }
+
         // If we get here, we're not authenticated
-        console.log("DirectCreatePage: No user found, redirecting to login");
+        console.log("DirectCreatePage: No user found in any source, redirecting to login");
         setError("You must be logged in to create a page");
         setIsLoading(false);
-        
+
         // Redirect to login page
         router.push('/auth/login');
       }
     });
-    
+
     return () => {
       console.log("DirectCreatePage: Cleaning up auth state listener");
       unsubscribe();
     };
   }, [router]);
-  
+
   // Show loading state
   if (isLoading) {
     return (
@@ -82,7 +150,7 @@ export default function DirectCreatePage() {
       </div>
     );
   }
-  
+
   // Show error state
   if (error) {
     return (
@@ -100,13 +168,13 @@ export default function DirectCreatePage() {
       </div>
     );
   }
-  
+
   // If we have a user, render the New Page component
   if (user) {
     console.log("DirectCreatePage: Rendering NewPageComponent with user:", user);
     return <NewPageComponent forcedUser={user} />;
   }
-  
+
   // This should never happen, but just in case
   return (
     <div className="flex items-center justify-center min-h-screen">
