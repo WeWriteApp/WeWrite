@@ -34,12 +34,29 @@ const New = () => {
     // Import the utility here to ensure it's only used on the client
     const { isAuthenticated } = require('../utils/currentUser');
 
+    // Add more detailed logging to diagnose authentication issues
+    console.log('Authentication check in new page component');
+    console.log('User from context:', user);
+    console.log('Cookies:', {
+      authenticated: document.cookie.includes('authenticated'),
+      wewriteAuthenticated: document.cookie.includes('wewrite_authenticated'),
+      wewriteUserId: document.cookie.includes('wewrite_user_id'),
+      userSession: document.cookie.includes('userSession')
+    });
+
+    // Check sessionStorage
+    const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+    console.log('wewrite_accounts in sessionStorage:', !!wewriteAccounts);
+
     // Only redirect if we're sure the user is not authenticated
-    if (!isAuthenticated()) {
+    const authenticated = isAuthenticated();
+    console.log('isAuthenticated() result:', authenticated);
+
+    if (!authenticated && !user) {
       console.log('User not authenticated, redirecting to login');
       router.push('/auth/login');
     }
-  }, [router]);
+  }, [router, user]);
 
   // Get username from URL parameters if available (for replies), otherwise use user data
   const urlUsername = searchParams.get('username');
@@ -175,14 +192,79 @@ const Form = ({ Page, setPage, isReply }) => {
     // Import the utility here to ensure it's only used on the client
     const { isAuthenticated, getCurrentUser, getCurrentUserToken } = require('../utils/currentUser');
 
-    if (!isAuthenticated()) {
+    // Add more detailed logging to diagnose authentication issues
+    console.log('Authentication check in handleSubmit');
+    console.log('User from context:', user);
+    console.log('Cookies:', {
+      authenticated: document.cookie.includes('authenticated'),
+      wewriteAuthenticated: document.cookie.includes('wewrite_authenticated'),
+      wewriteUserId: document.cookie.includes('wewrite_user_id'),
+      userSession: document.cookie.includes('userSession')
+    });
+
+    // Check sessionStorage
+    const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+    console.log('wewrite_accounts in sessionStorage:', !!wewriteAccounts);
+
+    // Check authentication from multiple sources
+    const authenticated = isAuthenticated() || !!user;
+    console.log('Authentication result:', authenticated);
+
+    if (!authenticated) {
       setError("You must be logged in to create a page");
       setIsSaving(false);
       return;
     }
 
-    // Get the current user from our centralized utility
-    const currentUser = getCurrentUser();
+    // Get the current user from context or our centralized utility
+    let currentUser = user || getCurrentUser();
+
+    console.log('Current user:', currentUser);
+
+    // If we still don't have a user, try to get it from cookies or sessionStorage
+    if (!currentUser) {
+      // Try to get user from userSession cookie
+      const userSessionCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('userSession='));
+
+      if (userSessionCookie) {
+        try {
+          const userSession = JSON.parse(decodeURIComponent(userSessionCookie.split('=')[1]));
+          console.log('User from userSession cookie:', userSession);
+          currentUser = userSession;
+        } catch (e) {
+          console.error('Error parsing userSession cookie:', e);
+        }
+      }
+
+      // Try to get user from wewrite_user_id cookie and wewrite_accounts in sessionStorage
+      if (!currentUser) {
+        const wewriteUserIdCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('wewrite_user_id='));
+
+        if (wewriteUserIdCookie) {
+          const userId = wewriteUserIdCookie.split('=')[1];
+          console.log('User ID from wewrite_user_id cookie:', userId);
+
+          // Try to get account data from sessionStorage
+          const accountsJson = sessionStorage.getItem('wewrite_accounts');
+          if (accountsJson) {
+            try {
+              const accounts = JSON.parse(accountsJson);
+              const account = accounts.find(acc => acc.uid === userId);
+              if (account) {
+                console.log('User from wewrite_accounts:', account);
+                currentUser = account;
+              }
+            } catch (e) {
+              console.error('Error parsing wewrite_accounts:', e);
+            }
+          }
+        }
+      }
+    }
 
     if (!currentUser) {
       setError("Unable to determine user. Please try logging in again.");
