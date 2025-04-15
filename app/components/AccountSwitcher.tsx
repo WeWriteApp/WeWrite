@@ -160,7 +160,13 @@ export function AccountSwitcher() {
         onSwitchAccount={(userId) => {
           const account = accounts.find(acc => acc.uid === userId);
           if (account) {
-            handleAccountClick(account);
+            // Make sure we're not treating this as the current account
+            // even if the UI thinks it is (to prevent going to account settings)
+            const accountToSwitch = {
+              ...account,
+              isCurrent: false // Force this to false to ensure we go to home page
+            };
+            handleAccountClick(accountToSwitch);
           }
         }}
         onAddAccount={handleAddAccount}

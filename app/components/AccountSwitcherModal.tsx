@@ -38,6 +38,8 @@ export function AccountSwitcherModal({
 
   // Navigate to home page after switching accounts
   const handleSwitchToAccount = (accountId: string) => {
+    // Just call the parent's onSwitchAccount function and close the modal
+    // The parent component will handle the navigation
     onSwitchAccount(accountId)
     onClose()
   }
