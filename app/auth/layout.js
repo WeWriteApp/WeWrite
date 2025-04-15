@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'WeWrite - Authentication',
+  title: 'WeWrite - Account Access',
   description: 'Sign in or create an account for WeWrite collaborative writing platform',
 };
 

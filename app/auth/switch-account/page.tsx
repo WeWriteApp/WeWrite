@@ -26,11 +26,22 @@ export default function SwitchAccountPage() {
         // Make sure the account is marked as current
         switchToAccount.isCurrent = true;
 
+        // Get the auth token from the account data or localStorage
+        const authToken = switchToAccount.authToken || localStorage.getItem('lastAuthToken');
+
+        // If we have an auth token, add it to the account data
+        if (authToken) {
+          switchToAccount.authToken = authToken;
+          // Also set it in a cookie for API requests
+          document.cookie = `session=${authToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        }
+
         // Use the centralized utility to set the current user
         setCurrentUser(switchToAccount);
 
         // Clean up the localStorage
         localStorage.removeItem('switchToAccount');
+        localStorage.removeItem('lastAuthToken');
 
         // Immediately redirect to home page
         window.location.href = '/';
