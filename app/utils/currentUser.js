@@ -25,6 +25,25 @@ export const getCurrentUser = () => {
       };
     }
 
+    // Check for our new wewrite cookies
+    const wewriteUserId = Cookies.get('wewrite_user_id');
+    if (wewriteUserId) {
+      // Try to get account data from sessionStorage
+      const accountsJson = sessionStorage.getItem('wewrite_accounts');
+      if (accountsJson) {
+        try {
+          const accounts = JSON.parse(accountsJson);
+          const account = accounts.find(acc => acc.uid === wewriteUserId);
+          if (account) {
+            console.log('Using wewrite_accounts sessionStorage data:', account.email);
+            return account;
+          }
+        } catch (e) {
+          console.error('Error parsing wewrite_accounts data:', e);
+        }
+      }
+    }
+
     // If no Firebase auth user, check for session cookie
     const userSessionCookie = Cookies.get('userSession');
     if (userSessionCookie) {
@@ -161,16 +180,27 @@ export const isAuthenticated = () => {
   const firebaseAuth = !!auth.currentUser;
   const sessionUser = !!getCurrentUser();
   const authenticatedCookie = Cookies.get('authenticated') === 'true';
+  const wewriteAuthenticatedCookie = Cookies.get('wewrite_authenticated') === 'true';
   const sessionCookie = !!Cookies.get('session');
+  const wewriteUserIdCookie = !!Cookies.get('wewrite_user_id');
+  const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
 
   console.log('Auth check:', {
     firebaseAuth,
     sessionUser,
     authenticatedCookie,
-    sessionCookie
+    wewriteAuthenticatedCookie,
+    sessionCookie,
+    wewriteUserIdCookie,
+    hasWewriteAccounts: !!wewriteAccounts
   });
 
-  return firebaseAuth || sessionUser || authenticatedCookie || sessionCookie;
+  return firebaseAuth ||
+         sessionUser ||
+         authenticatedCookie ||
+         wewriteAuthenticatedCookie ||
+         sessionCookie ||
+         wewriteUserIdCookie;
 };
 
 // Get the current user's auth token
