@@ -39,35 +39,13 @@ const NewPageComponent = ({ forcedUser }) => {
   console.log('Forced user:', forcedUser);
   console.log('Context user:', contextUser);
 
-  // Check authentication using our centralized utility
+  // Log the user information
   useEffect(() => {
-    // Call our ensureAuth utility to make sure authentication is properly set up
-    const isAuthEnsured = ensureAuth();
-    console.log('ensureAuth result:', isAuthEnsured);
+    console.log('NewPageComponent: User information:', user);
 
-    // Import the utility here to ensure it's only used on the client
-    const { isAuthenticated } = require('../utils/currentUser');
-
-    // Add more detailed logging to diagnose authentication issues
-    console.log('Authentication check in new page component');
-    console.log('User from context:', user);
-    console.log('Cookies:', {
-      authenticated: document.cookie.includes('authenticated'),
-      wewriteAuthenticated: document.cookie.includes('wewrite_authenticated'),
-      wewriteUserId: document.cookie.includes('wewrite_user_id'),
-      userSession: document.cookie.includes('userSession')
-    });
-    
-    // Check sessionStorage
-    const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-    console.log('wewrite_accounts in sessionStorage:', !!wewriteAccounts);
-    
-    // Only redirect if we're sure the user is not authenticated
-    const authenticated = isAuthenticated() || isAuthEnsured;
-    console.log('Final authentication result:', authenticated);
-    
-    if (!authenticated && !user) {
-      console.log('User not authenticated, redirecting to login');
+    // If we don't have a user, redirect to the login page
+    if (!user) {
+      console.log('NewPageComponent: No user provided, redirecting to login');
       router.push('/auth/login');
     }
   }, [router, user]);
@@ -118,12 +96,12 @@ const Form = ({ Page, setPage, isReply }) => {
   const [initialContent, setInitialContent] = useState(null);
   const [error, setError] = useState(null);
   const analytics = useWeWriteAnalytics();
-  
+
   // Get the forced user from the parent component
   const parentComponent = document.getElementById('new-page-component');
   const forcedUserJson = parentComponent?.getAttribute('data-forced-user');
   let forcedUser = null;
-  
+
   if (forcedUserJson) {
     try {
       forcedUser = JSON.parse(forcedUserJson);
@@ -132,7 +110,7 @@ const Form = ({ Page, setPage, isReply }) => {
       console.error('Error parsing forced user:', e);
     }
   }
-  
+
   // Use the forced user if provided, otherwise use the user from context
   const user = forcedUser || contextUser;
   console.log('Form using user:', user);
@@ -221,102 +199,18 @@ const Form = ({ Page, setPage, isReply }) => {
     setIsSaving(true);
     setError(null);
 
-    // Call our ensureAuth utility to make sure authentication is properly set up
-    const isAuthEnsured = ensureAuth();
-    console.log('ensureAuth result in handleSubmit:', isAuthEnsured);
+    // Simple authentication check
+    console.log('Form handleSubmit: User information:', user);
 
-    // Import the utility here to ensure it's only used on the client
-    const { isAuthenticated, getCurrentUser, getCurrentUserToken } = require('../utils/currentUser');
-
-    // Add more detailed logging to diagnose authentication issues
-    console.log('Authentication check in handleSubmit');
-    console.log('User from context:', user);
-    console.log('Cookies:', {
-      authenticated: document.cookie.includes('authenticated'),
-      wewriteAuthenticated: document.cookie.includes('wewrite_authenticated'),
-      wewriteUserId: document.cookie.includes('wewrite_user_id'),
-      userSession: document.cookie.includes('userSession')
-    });
-
-    // Check sessionStorage
-    const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-    console.log('wewrite_accounts in sessionStorage:', !!wewriteAccounts);
-
-    // Check authentication from multiple sources
-    const authenticated = isAuthenticated() || !!user || isAuthEnsured;
-    console.log('Final authentication result in handleSubmit:', authenticated);
-
-    if (!authenticated) {
+    if (!user) {
       setError("You must be logged in to create a page");
       setIsSaving(false);
       return;
     }
 
-    // Get the current user from context or our centralized utility
-    let currentUser = user || getCurrentUser();
-
-    console.log('Current user:', currentUser);
-
-    // If we still don't have a user, try to get it from cookies or sessionStorage
-    if (!currentUser) {
-      // Try to get user from userSession cookie
-      const userSessionCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('userSession='));
-
-      if (userSessionCookie) {
-        try {
-          const userSession = JSON.parse(decodeURIComponent(userSessionCookie.split('=')[1]));
-          console.log('User from userSession cookie:', userSession);
-          currentUser = userSession;
-        } catch (e) {
-          console.error('Error parsing userSession cookie:', e);
-        }
-      }
-
-      // Try to get user from wewrite_user_id cookie and wewrite_accounts in sessionStorage
-      if (!currentUser) {
-        const wewriteUserIdCookie = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('wewrite_user_id='));
-
-        if (wewriteUserIdCookie) {
-          const userId = wewriteUserIdCookie.split('=')[1];
-          console.log('User ID from wewrite_user_id cookie:', userId);
-
-          // Try to get account data from sessionStorage
-          const accountsJson = sessionStorage.getItem('wewrite_accounts');
-          if (accountsJson) {
-            try {
-              const accounts = JSON.parse(accountsJson);
-              const account = accounts.find(acc => acc.uid === userId);
-              if (account) {
-                console.log('User from wewrite_accounts:', account);
-                currentUser = account;
-              }
-            } catch (e) {
-              console.error('Error parsing wewrite_accounts:', e);
-            }
-          }
-        }
-      }
-    }
-
-    if (!currentUser) {
-      setError("Unable to determine user. Please try logging in again.");
-      setIsSaving(false);
-      return;
-    }
-
-    // Make sure we have a valid auth token
-    try {
-      const authToken = await getCurrentUserToken();
-      if (!authToken) {
-        console.warn('No auth token available, but continuing with session-based auth');
-      }
-    } catch (tokenError) {
-      console.error('Error getting auth token:', tokenError);
-    }
+    // Use the user directly
+    let currentUser = user;
+    console.log('Form handleSubmit: Using user:', currentUser);
 
     if (!Page.title) {
       setError("Please add a title");
