@@ -110,7 +110,7 @@ export function AccountSwitcherModal({
               <div
                 key={account.id}
                 className={cn(
-                  "flex items-center justify-between space-x-2 rounded-lg border p-3",
+                  "flex items-center justify-between rounded-lg border p-3 overflow-hidden",
                   isCurrent && "border-blue-600 bg-blue-50 dark:bg-blue-950/30",
                   !isCurrent && "cursor-pointer hover:bg-muted/50 transition-colors"
                 )}
@@ -120,15 +120,15 @@ export function AccountSwitcherModal({
                   }
                 }}
               >
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">
+                <div className="space-y-1 min-w-0 flex-1 mr-2">
+                  <p className="text-sm font-medium leading-none truncate">
                     {account.username || "No username"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {account.email}
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-shrink-0">
                   {isCurrent ? (
                     <>
                       <div className="rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
@@ -146,7 +146,7 @@ export function AccountSwitcherModal({
                       </IconButton>
                     </>
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   )}
                 </div>
               </div>

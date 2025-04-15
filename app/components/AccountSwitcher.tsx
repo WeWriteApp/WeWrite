@@ -135,13 +135,13 @@ export function AccountSwitcher() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-accent transition-colors"
+        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-accent transition-colors overflow-hidden"
       >
-        <div className="flex flex-col items-start">
-          <span className="font-medium">{user?.username || 'Anonymous'}</span>
-          <span className="text-sm text-muted-foreground">{user?.email || 'Not signed in'}</span>
+        <div className="flex flex-col items-start min-w-0 flex-1 mr-2">
+          <span className="font-medium truncate w-full">{user?.username || 'Anonymous'}</span>
+          <span className="text-sm text-muted-foreground truncate w-full">{user?.email || 'Not signed in'}</span>
         </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
       </button>
 
       <AccountSwitcherModal
