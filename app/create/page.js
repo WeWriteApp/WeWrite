@@ -1,12 +1,12 @@
 "use client";
 
-import DirectCreatePage from "./direct-page";
+import SimpleCreatePage from "./simple-page";
 
 /**
- * This is a simple wrapper that renders the DirectCreatePage component.
- * The DirectCreatePage component directly uses Firebase auth and bypasses all the complex authentication checks.
+ * This is a simple wrapper that renders the SimpleCreatePage component.
+ * The SimpleCreatePage component uses standard Firebase Auth patterns.
  */
 export default function CreatePage() {
-  // Simply render the DirectCreatePage component
-  return <DirectCreatePage />;
+  // Simply render the SimpleCreatePage component
+  return <SimpleCreatePage />;
 }
