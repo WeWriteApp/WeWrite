@@ -11,6 +11,8 @@ import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 // Import auth directly to avoid reference errors
 import { auth } from "../firebase/auth";
+// Import our new ensureAuth utility
+import ensureAuth from "../utils/ensureAuth";
 
 
 /**
@@ -31,6 +33,10 @@ const New = () => {
 
   // Check authentication using our centralized utility
   useEffect(() => {
+    // Call our ensureAuth utility to make sure authentication is properly set up
+    const isAuthEnsured = ensureAuth();
+    console.log('ensureAuth result:', isAuthEnsured);
+
     // Import the utility here to ensure it's only used on the client
     const { isAuthenticated } = require('../utils/currentUser');
 
@@ -49,8 +55,8 @@ const New = () => {
     console.log('wewrite_accounts in sessionStorage:', !!wewriteAccounts);
 
     // Only redirect if we're sure the user is not authenticated
-    const authenticated = isAuthenticated();
-    console.log('isAuthenticated() result:', authenticated);
+    const authenticated = isAuthenticated() || isAuthEnsured;
+    console.log('Final authentication result:', authenticated);
 
     if (!authenticated && !user) {
       console.log('User not authenticated, redirecting to login');
@@ -189,6 +195,10 @@ const Form = ({ Page, setPage, isReply }) => {
     setIsSaving(true);
     setError(null);
 
+    // Call our ensureAuth utility to make sure authentication is properly set up
+    const isAuthEnsured = ensureAuth();
+    console.log('ensureAuth result in handleSubmit:', isAuthEnsured);
+
     // Import the utility here to ensure it's only used on the client
     const { isAuthenticated, getCurrentUser, getCurrentUserToken } = require('../utils/currentUser');
 
@@ -207,8 +217,8 @@ const Form = ({ Page, setPage, isReply }) => {
     console.log('wewrite_accounts in sessionStorage:', !!wewriteAccounts);
 
     // Check authentication from multiple sources
-    const authenticated = isAuthenticated() || !!user;
-    console.log('Authentication result:', authenticated);
+    const authenticated = isAuthenticated() || !!user || isAuthEnsured;
+    console.log('Final authentication result in handleSubmit:', authenticated);
 
     if (!authenticated) {
       setError("You must be logged in to create a page");

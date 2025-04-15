@@ -120,11 +120,11 @@ export function AccountSwitcherModal({
                   }
                 }}
               >
-                <div className="space-y-1 min-w-0 flex-1 mr-2">
-                  <p className="text-sm font-medium leading-none truncate">
+                <div className="space-y-1 min-w-0 flex-1 mr-2 text-left">
+                  <p className="text-sm font-medium leading-none truncate text-left">
                     {account.username || "No username"}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs text-muted-foreground truncate text-left">
                     {account.email}
                   </p>
                 </div>
