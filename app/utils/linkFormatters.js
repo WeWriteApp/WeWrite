@@ -22,8 +22,8 @@ export const formatPageTitle = (title) => {
  */
 export const formatUsername = (username) => {
   if (!username) return "Anonymous";
-  // Ensure username has @ symbol (but don't duplicate)
-  return username.startsWith('@') ? username : `@${username}`;
+  // Don't add @ symbol anymore - we're removing them from the UI
+  return username.startsWith('@') ? username.substring(1) : username;
 };
 
 /**
@@ -44,9 +44,9 @@ export const isUserLink = (url) => {
 export const isPageLink = (url) => {
   if (!url) return false;
   // If it's not a user link, external link, or group link, it's a page link
-  return !isUserLink(url) && 
-         !isExternalLink(url) && 
-         !url.includes('/group/') && 
+  return !isUserLink(url) &&
+         !isExternalLink(url) &&
+         !url.includes('/group/') &&
          !url.includes('/g/');
 };
 
@@ -57,8 +57,8 @@ export const isPageLink = (url) => {
  */
 export const isExternalLink = (url) => {
   if (!url) return false;
-  return url.startsWith('http://') || 
-         url.startsWith('https://') || 
-         url.startsWith('www.') || 
+  return url.startsWith('http://') ||
+         url.startsWith('https://') ||
+         url.startsWith('www.') ||
          url.includes('://');
 };

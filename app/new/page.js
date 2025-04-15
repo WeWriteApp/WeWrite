@@ -12,7 +12,7 @@ import { CONTENT_EVENTS } from "../constants/analytics-events";
 
 /**
  * New Page Component
- * 
+ *
  * This component renders the page creation form, handling both new pages and replies.
  * It detects if the page is a reply based on URL parameters and renders the appropriate header.
  */
@@ -23,12 +23,19 @@ const New = () => {
   });
   const searchParams = useSearchParams();
   const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
-  const { user } = useContext(AuthContext);
-  
+  const { user, isAuthenticated } = useContext(AuthContext);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, router]);
+
   // Get username from URL parameters if available (for replies), otherwise use user data
   const urlUsername = searchParams.get('username');
   const username = urlUsername || user?.displayName || user?.username || 'Anonymous';
-  
+
   return (
     <DashboardLayout>
       <PageHeader title={isReply ? "Replying to page" : "New page"} username={username} userId={user?.uid} />
@@ -43,10 +50,10 @@ const New = () => {
 
 /**
  * Form Component
- * 
+ *
  * This component handles the form for creating new pages and replies.
  * It's responsible for:
- * 
+ *
  * 1. Processing URL parameters to extract title and initial content
  * 2. Handling the Reply to Page functionality by:
  *    - Parsing and decoding the initialContent from URL parameters
@@ -54,16 +61,16 @@ const New = () => {
  *    - Updating the blockquote with a summary of the original content
  *    - Ensuring proper initialization of the SlateEditor with the reply content
  * 3. Saving the new page to the database
- * 
+ *
  * The component works closely with the SlateEditor component, which prioritizes
  * initialContent over initialEditorState to ensure replies are properly formatted.
- * 
+ *
  * @param {Object} Page - The page object containing title and visibility settings
  * @param {Function} setPage - Function to update the page object
  * @param {boolean} isReply - Whether this is a reply to an existing page
  */
 const Form = ({ Page, setPage, isReply }) => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, isAuthenticated } = useContext(AuthContext);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [editorState, setEditorState] = useState();
@@ -82,7 +89,7 @@ const Form = ({ Page, setPage, isReply }) => {
     const titleParam = searchParams.get('title');
     const contentParam = searchParams.get('initialContent');
     const replyToParam = searchParams.get('replyTo');
-    
+
     if (titleParam) {
       try {
         const decodedTitle = decodeURIComponent(titleParam);
@@ -91,31 +98,31 @@ const Form = ({ Page, setPage, isReply }) => {
         console.error("Error decoding title parameter:", error);
       }
     }
-    
+
     if (contentParam) {
       try {
         const decodedContent = decodeURIComponent(contentParam);
         console.log("Received encoded content:", contentParam);
         console.log("Decoded content:", decodedContent);
-        
+
         const parsedContent = JSON.parse(decodedContent);
         console.log("Setting initial content (FULL):", JSON.stringify(parsedContent, null, 2));
-        
+
         // Always set the initialContent first to ensure it's available
         setInitialContent(parsedContent);
         console.log("initialContent set to:", parsedContent);
-        
+
         // Also set the editor state immediately
         if (setEditorState) {
           console.log("Setting editor state directly");
           setEditorState(parsedContent);
         }
-        
+
         // If this is a reply and we have a replyTo parameter, fetch the original page content
         if (isReply && replyToParam && parsedContent) {
           // Find the blockquote in the content
           const blockquoteIndex = parsedContent.findIndex(node => node.type === 'blockquote');
-          
+
           if (blockquoteIndex !== -1) {
             // Fetch the original page content
             import('../firebase/database').then(({ getPageById }) => {
@@ -123,17 +130,17 @@ const Form = ({ Page, setPage, isReply }) => {
                 if (originalPage && originalPage.content) {
                   try {
                     // Parse the original content
-                    const originalContent = typeof originalPage.content === 'string' 
-                      ? JSON.parse(originalPage.content) 
+                    const originalContent = typeof originalPage.content === 'string'
+                      ? JSON.parse(originalPage.content)
                       : originalPage.content;
-                    
+
                     // Keep the existing blockquote text which should already contain
                     // "Reply to [page title] by [username]"
                     // No need to modify it as it's already set correctly in PageActions
-                    
+
                     // Update the initialContent
                     setInitialContent([...parsedContent]);
-                    
+
                     console.log("Updated reply content with original page reference:", parsedContent);
                   } catch (error) {
                     console.error("Error parsing original page content:", error);
@@ -156,7 +163,7 @@ const Form = ({ Page, setPage, isReply }) => {
     setIsSaving(true);
     setError(null);
 
-    if (!user) {
+    if (!isAuthenticated) {
       setError("You must be logged in to create a page");
       setIsSaving(false);
       return;
@@ -174,7 +181,7 @@ const Form = ({ Page, setPage, isReply }) => {
       console.log("Username from URL:", urlUsername);
       console.log("User displayName:", user.displayName);
       console.log("User username:", user.username);
-      
+
       // Use the username from URL if available, otherwise fallback to user data
       const username = urlUsername || user.displayName || user.username || 'Anonymous';
       console.log("Final username to use:", username);
@@ -196,14 +203,14 @@ const Form = ({ Page, setPage, isReply }) => {
           action: "Add new page",
           label: Page.title,
         });
-        
+
         // Track with new analytics system
         analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
           label: Page.title,
           page_id: res,
           is_reply: !!isReply,
         });
-        
+
         setIsSaving(false);
         router.push(`/pages/${res}`);
       } else {
@@ -235,14 +242,14 @@ const Form = ({ Page, setPage, isReply }) => {
             autoComplete="off"
           />
         </div>
-        
+
         <div>
           <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
           <div className="min-h-[300px] border border-input rounded-md bg-background">
             <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"

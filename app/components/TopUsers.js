@@ -69,11 +69,11 @@ const TopUsers = () => {
       setLoading(true);
       setError(null);
       setErrorDetails("");
-      
+
       try {
         // First, let's check if user auth state is available
         console.log("TopUsers: Current auth user state:", user ? `Logged in as ${user.email}` : "Not logged in");
-        
+
         // Try to fetch users from RTDB
         console.log("TopUsers: Attempting to fetch users from RTDB");
         const usersRef = ref(rtdb, 'users');
@@ -82,62 +82,70 @@ const TopUsers = () => {
           console.log("TopUsers: Listening for changes to users ref");
           onValue(usersRef, (snapshot) => {
             console.log("TopUsers: Got snapshot, exists:", snapshot.exists());
-            
+
             if (!snapshot.exists()) {
               console.log("TopUsers: No user data found in snapshot");
               setAllTimeUsers([]);
               setLoading(false);
               return;
             }
-            
+
             const data = snapshot.val();
             console.log(`TopUsers: Retrieved data for ${Object.keys(data).length} users`);
-            
+
             if (data) {
               // Create a lookup object to store page counts per user
               const pageCountsByUser = {};
-              
+
               // Now try to get pages from Firestore
               console.log("TopUsers: Attempting to fetch pages from Firestore");
               const pagesRef = collection(db, 'pages');
               // No limit here to get accurate page counts
-                
+
               try {
                 // Use an async IIFE to be able to use await inside the onValue callback
                 (async () => {
                   const pagesSnapshot = await getDocs(pagesRef);
-                
+
                   console.log(`TopUsers: Retrieved ${pagesSnapshot.size} pages from Firestore`);
-                  
+
                   // Count pages by user
                   pagesSnapshot.forEach((doc) => {
                     const pageData = doc.data();
                     const userId = pageData.userId;
-                    
+
                     if (userId) {
                       // Increment page count for this user
                       pageCountsByUser[userId] = (pageCountsByUser[userId] || 0) + 1;
                     }
                   });
-                  
+
                   console.log("TopUsers: Processing user data");
                   // Process users for all-time leaderboard
-                  const allTimeUsersArray = Object.entries(data).map(([id, userData]) => ({
-                    id,
-                    username: userData.username || userData.displayName || "Unknown User",
-                    photoURL: userData.photoURL,
-                    pageCount: pageCountsByUser[id] || 0
-                  }));
-                  
+                  const allTimeUsersArray = Object.entries(data).map(([id, userData]) => {
+                    // Get the username and remove @ symbol if present
+                    let username = userData.username || userData.displayName || "Unknown User";
+                    if (username.startsWith('@')) {
+                      username = username.substring(1);
+                    }
+
+                    return {
+                      id,
+                      username,
+                      photoURL: userData.photoURL,
+                      pageCount: pageCountsByUser[id] || 0
+                    };
+                  });
+
                   // Sort users by page count (including users with 0 pages)
                   const sortedAllTimeUsers = allTimeUsersArray
                     .sort((a, b) => b.pageCount - a.pageCount)
                     .slice(0, 8); // Show only top 8 users
-                  
+
                   console.log('TopUsers: Processed users:', {
                     allTimeUserCount: sortedAllTimeUsers.length,
                   });
-                  
+
                   setAllTimeUsers(sortedAllTimeUsers);
                   setLoading(false);
                   setError(null);
@@ -177,7 +185,7 @@ const TopUsers = () => {
         setLoading(false);
       }
     };
-    
+
     fetchUsersAndPages();
   }, [user]);
 
@@ -197,19 +205,19 @@ const TopUsers = () => {
             </Button>
           </Link>
         </div>
-        
+
         <div className="border rounded-lg overflow-hidden">
           {loading && (
             <UserListSkeleton />
           )}
-          
+
           {!loading && error && !user && (
             <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
               <Info className="h-4 w-4 flex-shrink-0" />
               <p>Sign in to see the leaderboard</p>
             </div>
           )}
-          
+
           {!loading && error && user && (
             <div className="p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
               <div className="flex gap-2 items-start">
@@ -221,13 +229,13 @@ const TopUsers = () => {
               </div>
             </div>
           )}
-          
+
           {!loading && !error && allTimeUsers.length === 0 && (
             <div className="p-4 text-sm text-muted-foreground">
               <p>No users found</p>
             </div>
           )}
-          
+
           {!loading && !error && allTimeUsers.length > 0 && (
             <Table className="table-compact">
               <TableHeader>
@@ -252,7 +260,7 @@ const TopUsers = () => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <PillLink 
+                            <PillLink
                               href={`/user/${user.id}`}
                               variant="primary"
                             >

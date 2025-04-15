@@ -9,17 +9,17 @@ import { Plus } from "lucide-react";
 import PageList from "./PageList";
 
 const AllPages = () => {
-  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  
+  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages, isAuthenticated } = useContext(DataContext);
   const { user } = useContext(AuthContext);
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !isAuthenticated) {
       router.push('/auth/login');
     }
-  }, [user, loading, router]);
+  }, [isAuthenticated, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !isAuthenticated) {
     return <PageList loading={true} pages={[]} />;
   }
 

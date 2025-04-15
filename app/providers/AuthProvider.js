@@ -303,9 +303,38 @@ export const AuthProvider = ({ children }) => {
     };
   }, [router]);
 
+  // Check if we have a valid user session cookie even if Firebase auth is not logged in
+  useEffect(() => {
+    if (!user && !loading) {
+      const userSessionCookie = Cookies.get('userSession');
+      if (userSessionCookie) {
+        try {
+          const sessionData = JSON.parse(userSessionCookie);
+          console.log('Using session cookie data for auth state:', sessionData);
+
+          // Set the user state with the session data
+          setUser({
+            uid: sessionData.uid,
+            email: sessionData.email,
+            username: sessionData.username,
+            // Add any other necessary properties
+            isSessionUser: true // Flag to indicate this is from a session cookie
+          });
+
+          // Set authenticated cookie to maintain logged-in state
+          Cookies.set('authenticated', 'true', { expires: 7 });
+        } catch (error) {
+          console.error('Error parsing user session cookie:', error);
+        }
+      }
+    }
+  }, [user, loading]);
+
   const value = {
     user,
     loading,
+    // Add a helper method to check if the user is authenticated
+    isAuthenticated: !!user || Cookies.get('authenticated') === 'true'
   };
 
   return (

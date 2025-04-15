@@ -137,7 +137,9 @@ export function PageActions({
    * Creates a reply to the current page
    */
   const handleReply = async () => {
-    if (!auth.currentUser) {
+    const { isAuthenticated } = useContext(AuthContext);
+
+    if (!isAuthenticated) {
       toast.error("You must be logged in to reply");
       return;
     }
