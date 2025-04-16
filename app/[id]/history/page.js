@@ -148,12 +148,7 @@ export default function PageHistoryPage({ params }) {
             username="Error"
             isLoading={false}
           />
-          <div className="flex items-center mb-4">
-            <Button variant="outline" size="lg" onClick={handleBackToPage} className="mr-2">
-              <ChevronLeft className="h-5 w-5 mr-2" />
-              Back to page
-            </Button>
-          </div>
+          {/* Back button removed - using PageHeader back button instead */}
           <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
             <p className="font-medium">{error}</p>
             <p className="text-sm mt-2 text-muted-foreground">Unable to load page history. Please try again later.</p>
@@ -173,12 +168,7 @@ export default function PageHistoryPage({ params }) {
           isLoading={loading}
         />
 
-        <div className="flex items-center mb-4">
-          <Button variant="outline" size="lg" onClick={handleBackToPage} className="mr-2">
-            <ChevronLeft className="h-5 w-5 mr-2" />
-            Back to page
-          </Button>
-        </div>
+        {/* Back button removed - using PageHeader back button instead */}
 
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-6">

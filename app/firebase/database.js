@@ -453,6 +453,38 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
 
 export const saveNewVersion = async (pageId, data) => {
   try {
+    // Validate content to prevent saving empty versions
+    if (!data.content || data.content === '[]' || data.content === '{}') {
+      console.error("Cannot save empty content");
+      return null;
+    }
+
+    // Parse content to validate it's proper JSON
+    let parsedContent;
+    try {
+      if (typeof data.content === 'string') {
+        parsedContent = JSON.parse(data.content);
+      } else {
+        parsedContent = data.content;
+        // Convert to string for storage
+        data.content = JSON.stringify(data.content);
+      }
+
+      // Validate that content is not empty array or has empty paragraphs only
+      if (Array.isArray(parsedContent) &&
+          (parsedContent.length === 0 ||
+           (parsedContent.length === 1 &&
+            parsedContent[0].children &&
+            parsedContent[0].children.length === 1 &&
+            parsedContent[0].children[0].text === ''))) {
+        console.error("Cannot save effectively empty content");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error parsing content:", error);
+      return null;
+    }
+
     const pageRef = doc(db, "pages", pageId);
 
     // Get the username from the user document
@@ -475,25 +507,23 @@ export const saveNewVersion = async (pageId, data) => {
       username: username || "Anonymous"
     };
 
-    const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
-
-    // set the new version as the current version
-    await setCurrentVersion(pageId, versionRef.id);
-
-    // Update the page content directly to ensure it's immediately available
-    await updateDoc("pages", pageId, {
+    // First update the page document directly to ensure content is immediately available
+    await setDoc(pageRef, {
       content: data.content,
       lastModified: new Date().toISOString()
-    });
+    }, { merge: true });
 
-    // Force update the page document with the new content
-    const pageDocRef = doc(db, "pages", pageId);
-    await setDoc(pageDocRef, { content: data.content }, { merge: true });
+    // Then create the version
+    const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
 
+    // Set the new version as the current version
+    await setCurrentVersion(pageId, versionRef.id);
+
+    console.log("Page content updated and new version saved successfully");
     return versionRef.id;
   } catch (e) {
     console.error("Error saving new version:", e);
-    return e;
+    return null;
   }
 }
 
