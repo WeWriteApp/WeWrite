@@ -230,53 +230,86 @@ export default function DirectCreatePage() {
   // Get username for display
   const urlUsername = searchParams.get('username');
 
-  // Try to get a better username from multiple sources
-  let username = urlUsername || user?.displayName || user?.username || '';
+  // State to store the username
+  const [displayUsername, setDisplayUsername] = useState('Loading...');
 
-  // If we still don't have a username, try to get it from other sources
-  if (!username) {
-    try {
-      // Try to get username from wewrite_accounts in sessionStorage
-      const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-      if (wewriteAccounts) {
-        const accounts = JSON.parse(wewriteAccounts);
-        const currentAccount = accounts.find(acc => acc.isCurrent);
+  // Effect to get the username from multiple sources
+  useEffect(() => {
+    const getUsername = async () => {
+      // Try to get username from multiple sources
+      let foundUsername = urlUsername || user?.displayName || user?.username || '';
 
-        if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
-          username = currentAccount.username || currentAccount.displayName;
-          console.log("Found username in wewrite_accounts:", username);
+      // If we still don't have a username, try to get it from other sources
+      if (!foundUsername) {
+        try {
+          // Try to get username from wewrite_accounts in sessionStorage
+          const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+          if (wewriteAccounts) {
+            const accounts = JSON.parse(wewriteAccounts);
+            const currentAccount = accounts.find(acc => acc.isCurrent);
+
+            if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
+              foundUsername = currentAccount.username || currentAccount.displayName;
+              console.log("Found username in wewrite_accounts:", foundUsername);
+            }
+          }
+        } catch (error) {
+          console.error("Error getting username from wewrite_accounts:", error);
         }
       }
-    } catch (error) {
-      console.error("Error getting username from wewrite_accounts:", error);
-    }
-  }
 
-  // If we still don't have a username, try to get it from userSession cookie
-  if (!username) {
-    try {
-      const userSessionCookie = Cookies.get('userSession');
-      if (userSessionCookie) {
-        const userSession = JSON.parse(userSessionCookie);
-        if (userSession && (userSession.username || userSession.displayName)) {
-          username = userSession.username || userSession.displayName;
-          console.log("Found username in userSession cookie:", username);
+      // If we still don't have a username, try to get it from userSession cookie
+      if (!foundUsername) {
+        try {
+          const userSessionCookie = Cookies.get('userSession');
+          if (userSessionCookie) {
+            const userSession = JSON.parse(userSessionCookie);
+            if (userSession && (userSession.username || userSession.displayName)) {
+              foundUsername = userSession.username || userSession.displayName;
+              console.log("Found username in userSession cookie:", foundUsername);
+            }
+          }
+        } catch (error) {
+          console.error("Error getting username from userSession cookie:", error);
         }
       }
-    } catch (error) {
-      console.error("Error getting username from userSession cookie:", error);
-    }
-  }
 
-  // If we still don't have a username, use 'Anonymous'
-  if (!username) {
-    username = 'Anonymous';
-  }
+      // If we still don't have a username, try to get it from localStorage
+      if (!foundUsername) {
+        try {
+          const savedUsername = localStorage.getItem('wewrite_username');
+          if (savedUsername) {
+            foundUsername = savedUsername;
+            console.log("Found username in localStorage:", foundUsername);
+          }
+        } catch (error) {
+          console.error("Error getting username from localStorage:", error);
+        }
+      }
+
+      // If we still don't have a username, try to get it from the auth object
+      if (!foundUsername && auth.currentUser) {
+        foundUsername = auth.currentUser.displayName || '';
+        console.log("Found username in auth.currentUser:", foundUsername);
+      }
+
+      // If we still don't have a username, use 'Anonymous'
+      if (!foundUsername) {
+        foundUsername = 'Anonymous';
+      }
+
+      // Set the username in state
+      setDisplayUsername(foundUsername);
+      console.log("Final username:", foundUsername);
+    };
+
+    getUsername();
+  }, [urlUsername, user]);
 
   // Render the page creation form
   return (
     <DashboardLayout>
-      <PageHeader title={isReply ? "Replying to page" : "New page"} username={username} userId={user?.uid} />
+      <PageHeader title={isReply ? "Replying to page" : "New page"} username={displayUsername} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
         <div className="w-full">
           <form
