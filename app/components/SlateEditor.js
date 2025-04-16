@@ -8,7 +8,7 @@ import {
   Range,
   Node,
 } from "slate";
-import { Editable, withReact, useSlate, useSelected, Slate } from "slate-react";
+import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
@@ -142,10 +142,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         if (setEditorState) {
           console.log("Setting editorState from initialContent");
           setEditorState(initialContent);
-
-          // Force update the editor with the initialContent
-          editor.children = initialContent;
-          editor.onChange();
         }
 
         // Set content as initialized to prevent re-initialization
@@ -173,10 +169,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     }
   }, [initialContent, initialValue]);
 
-  // onchange handler
+  // onchange handler with error handling
   const onChange = (newValue) => {
-    setEditorState(newValue);
-    setLineCount(newValue.length);
+    try {
+      // Make sure newValue is valid before updating state
+      if (Array.isArray(newValue) && newValue.length > 0) {
+        setEditorState(newValue);
+        setLineCount(newValue.length);
+      } else {
+        console.error('Invalid editor value:', newValue);
+      }
+    } catch (error) {
+      console.error('Error in onChange handler:', error);
+    }
   };
 
   const handleKeyDown = (event, editor) => {
@@ -193,47 +198,23 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       return;
     }
 
-    // Regular enter should create a newline, but prevent consecutive empty paragraphs
+    // For regular Enter key, use our custom insertBreak implementation
     if (event.key === 'Enter') {
-      const { selection } = editor;
+      event.preventDefault();
+      try {
+        // Call our custom insertBreak implementation
+        editor.insertBreak();
+      } catch (error) {
+        console.error('Error handling Enter key:', error);
 
-      if (selection && Range.isCollapsed(selection)) {
-        const [node, path] = Editor.node(editor, selection);
-        const [parent] = Editor.parent(editor, path);
-
-        // Check if current node is in a paragraph and is empty or only contains whitespace
-        const isEmptyParagraph =
-          SlateElement.isElement(parent) &&
-          parent.type === 'paragraph' &&
-          Node.string(parent).trim() === '';
-
-        // Check if previous node is also an empty paragraph
-        let prevNodeIsEmpty = false;
-
-        if (path[0] > 0) {
-          const prevPath = [path[0] - 1];
-
-          try {
-            const [prevNode] = Editor.node(editor, prevPath);
-
-            if (SlateElement.isElement(prevNode) &&
-                prevNode.type === 'paragraph' &&
-                Node.string(prevNode).trim() === '') {
-              prevNodeIsEmpty = true;
-            }
-          } catch (e) {
-            // Path might not exist, ignore
-          }
-        }
-
-        // If current paragraph is empty and previous paragraph is also empty, prevent new line
-        if (isEmptyParagraph && prevNodeIsEmpty) {
-          event.preventDefault();
-          return;
+        // Fallback: try to insert a new paragraph directly
+        try {
+          const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+          Transforms.insertNodes(editor, newParagraph);
+        } catch (fallbackError) {
+          console.error('Fallback error:', fallbackError);
         }
       }
-
-      // Allow default behavior which creates a newline
       return;
     }
 
@@ -502,55 +483,126 @@ function isUrl(string) {
 }
 
 const withInlines = (editor) => {
-  const { insertData, insertText, isInline, normalizeNode } = editor
+  const { insertData, insertText, isInline, normalizeNode, insertBreak } = editor
 
+  // Override isInline to handle link elements
   editor.isInline = element => {
     return ['link'].includes(element.type) || isInline(element)
   }
 
+  // Override insertText to handle URL pasting
   editor.insertText = text => {
-    if (text && isUrl(text)) {
-      wrapLink(editor, text)
-    } else {
-      insertText(text)
+    try {
+      if (text && isUrl(text)) {
+        wrapLink(editor, text)
+      } else {
+        insertText(text)
+      }
+    } catch (error) {
+      console.error('Error in insertText:', error);
+      // Fallback to original behavior
+      insertText(text);
     }
   }
 
+  // Override insertData to handle URL pasting
   editor.insertData = data => {
-    const text = data.getData('text/plain')
-    if (text && isUrl(text)) {
-      wrapLink(editor, text)
-    } else {
-      insertData(data)
+    try {
+      const text = data.getData('text/plain')
+      if (text && isUrl(text)) {
+        wrapLink(editor, text)
+      } else {
+        insertData(data)
+      }
+    } catch (error) {
+      console.error('Error in insertData:', error);
+      // Fallback to original behavior
+      insertData(data);
     }
   }
+
+  // Ensure insertBreak works properly
+  editor.insertBreak = () => {
+    try {
+      // Use Transforms.splitNodes to create a new paragraph at the current selection
+      if (editor.selection) {
+        // First check if we're at the end of a paragraph
+        const endPoint = Editor.end(editor, editor.selection.focus.path.slice(0, 1));
+        const isAtEnd = editor.selection.focus.offset === endPoint.offset;
+
+        // Split the node to create a new paragraph
+        Transforms.splitNodes(editor, {
+          always: true,
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'paragraph'
+        });
+
+        // If we're at the end of a paragraph, ensure the cursor is in the new paragraph
+        if (isAtEnd) {
+          Transforms.move(editor, { distance: 1, unit: 'line' });
+        }
+      } else {
+        // If no selection, insert at the end
+        const end = Editor.end(editor, []);
+        Transforms.select(editor, end);
+        Transforms.insertNodes(editor, { type: 'paragraph', children: [{ text: '' }] });
+      }
+    } catch (error) {
+      console.error('Error in custom insertBreak:', error);
+
+      // Try a simpler approach as fallback
+      try {
+        // Just insert a new paragraph at the current selection
+        const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
+        Transforms.insertNodes(editor, newParagraph);
+      } catch (fallbackError) {
+        console.error('Error in fallback insertBreak:', fallbackError);
+
+        // Last resort: use the original insertBreak
+        try {
+          insertBreak();
+        } catch (lastResortError) {
+          console.error('Error in original insertBreak:', lastResortError);
+        }
+      }
+    }
+  };
 
   // Add custom normalizer to ensure links have valid url properties
   editor.normalizeNode = entry => {
-    const [node, path] = entry;
+    try {
+      const [node, path] = entry;
 
-    // Check if the element is a link
-    if (SlateElement.isElement(node) && node.type === 'link') {
-      // Ensure link has a url property
-      if (!node.url) {
-        // If no URL, convert to normal text or provide a default
-        if (node.href) {
-          // Handle legacy href attribute
-          Transforms.setNodes(
-            editor,
-            { url: node.href },
-            { at: path }
-          );
-        } else {
-          // Remove the link formatting if no URL available
-          Transforms.unwrapNodes(editor, { at: path });
+      // Check if the element is a link
+      if (SlateElement.isElement(node) && node.type === 'link') {
+        // Ensure link has a url property
+        if (!node.url) {
+          // If no URL, convert to normal text or provide a default
+          if (node.href) {
+            // Handle legacy href attribute
+            Transforms.setNodes(
+              editor,
+              { url: node.href },
+              { at: path }
+            );
+          } else {
+            // Remove the link formatting if no URL available
+            Transforms.unwrapNodes(editor, { at: path });
+          }
+          return; // Return early as we've handled this node
         }
-        return; // Return early as we've handled this node
+      }
+
+      // Fall back to the original normalizeNode
+      normalizeNode(entry);
+    } catch (error) {
+      console.error('Error in normalizeNode:', error);
+      // Try to continue with original normalizeNode
+      try {
+        normalizeNode(entry);
+      } catch (fallbackError) {
+        console.error('Error in fallback normalizeNode:', fallbackError);
       }
     }
-
-    // Fall back to the original normalizeNode
-    normalizeNode(entry);
   }
 
   return editor
@@ -605,7 +657,7 @@ const unwrapLink = (editor) => {
 };
 
 // Wrap with forwardRef to fix the "Function components cannot be given refs" error
-const InlineChromiumBugfix = forwardRef((props, ref) => (
+const InlineChromiumBugfix = forwardRef((_, ref) => (
   <span
     ref={ref}
     contentEditable={false}
@@ -624,7 +676,7 @@ const InlineChromiumBugfix = forwardRef((props, ref) => (
 InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
 
 const LinkComponent = forwardRef(({ attributes, children, element, openLinkEditor }, ref) => {
-  const selected = useSelected();
+  // const selected = useSelected();
   const editor = useSlate();
 
   // Use our utility functions to determine link type
@@ -672,18 +724,18 @@ const isLinkActive = (editor) => {
   return !!link;
 };
 
-const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
+const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null }) => {
   const [displayText, setDisplayText] = useState(initialText);
-  const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
-  const [searchActive, setSearchActive] = useState(false);
+  // const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
+  // const [searchActive, setSearchActive] = useState(false);
   const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
-  const [isNewPageCreating, setIsNewPageCreating] = useState(false);
+  // const [isNewPageCreating, setIsNewPageCreating] = useState(false);
 
   // Safely access AuthContext with error handling
   const authContext = useContext(AuthContext);
-  const user = authContext?.user;
+  // const user = authContext?.user;
 
   // Add error handling for missing auth context
   useEffect(() => {
@@ -712,9 +764,10 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     setExternalUrl(e.target.value);
   };
 
-  const resetDisplayText = () => {
-    setDisplayText(pageTitle);
-  };
+  // Unused but kept for future reference
+  // const resetDisplayText = () => {
+  //   setDisplayText(pageTitle);
+  // };
 
   const handleSave = (page) => {
     console.log("LinkEditor - handleSave:", page);
@@ -908,22 +961,29 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
   const { lineMode } = useLineSettings();
   const [selectedParagraph, setSelectedParagraph] = useState(null);
 
-  // Track the selected paragraph
+  // Simplified selection tracking
   useEffect(() => {
+    // Only track selection when editor is available
+    if (!editor) return;
+
     const handleSelectionChange = () => {
       try {
-        // Get the current selection
-        const { selection } = editor;
-        if (selection && !Range.isCollapsed(selection)) {
-          // Get the parent node at the current selection
-          const [node, path] = Editor.parent(editor, selection.focus.path);
-          setSelectedParagraph(path[0]); // The first element of the path is the paragraph index
-        } else if (selection && Range.isCollapsed(selection)) {
-          // For cursor position (collapsed selection)
-          const [node, path] = Editor.parent(editor, selection.focus.path);
+        // If no selection, clear the selected paragraph
+        if (!editor.selection) {
+          setSelectedParagraph(null);
+          return;
+        }
+
+        // Get the path of the current node
+        const nodeEntry = Editor.above(editor, {
+          match: n => !Editor.isEditor(n) && SlateElement.isElement(n),
+        });
+
+        // If we found a node, set its path as the selected paragraph
+        if (nodeEntry) {
+          const [, path] = nodeEntry;
           setSelectedParagraph(path[0]);
         } else {
-          // No selection
           setSelectedParagraph(null);
         }
       } catch (error) {
@@ -957,7 +1017,7 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
 
   // Custom element renderer that adds hover and selection styles
   const renderElementWithStyles = (props) => {
-    const { element, children, attributes } = props;
+    const { element, attributes } = props;
     // Check if element and path exist before comparing
     const isSelected = selectedParagraph !== null &&
                       ((element.id && selectedParagraph === element.id) ||
@@ -998,45 +1058,45 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
   );
 };
 
-// Editor toolbar component
-const EditorToolbar = ({ editor }) => {
-  return (
-    <div className="flex items-center p-2 border-b">
-      <ToolbarButton
-        icon={<LinkIcon size={16} />}
-        tooltip="Insert Link"
-        onMouseDown={event => {
-          event.preventDefault();
-          const url = window.prompt('Enter a URL:');
-          if (!url) return;
-          if (!isUrl(url)) return;
-          wrapLink(editor, url);
-        }}
-      />
-    </div>
-  );
-};
+// Editor toolbar component - unused but kept for reference
+// const EditorToolbar = ({ editor }) => {
+//   return (
+//     <div className="flex items-center p-2 border-b">
+//       <ToolbarButton
+//         icon={<LinkIcon size={16} />}
+//         tooltip="Insert Link"
+//         onMouseDown={event => {
+//           event.preventDefault();
+//           const url = window.prompt('Enter a URL:');
+//           if (!url) return;
+//           if (!isUrl(url)) return;
+//           wrapLink(editor, url);
+//         }}
+//       />
+//     </div>
+//   );
+// };
 
-// Toolbar button component
-const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onMouseDown={onMouseDown}
-            className="p-1 rounded-full hover:bg-accent mr-1"
-          >
-            {icon}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-};
+// Toolbar button component - unused but kept for reference
+// const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
+//   return (
+//     <TooltipProvider>
+//       <Tooltip>
+//         <TooltipTrigger asChild>
+//           <button
+//             onMouseDown={onMouseDown}
+//             className="p-1 rounded-full hover:bg-accent mr-1"
+//           >
+//             {icon}
+//           </button>
+//         </TooltipTrigger>
+//         <TooltipContent>
+//           <p>{tooltip}</p>
+//         </TooltipContent>
+//       </Tooltip>
+//     </TooltipProvider>
+//   );
+// };
 
 const Leaf = ({ attributes, children, leaf }) => {
   return (
