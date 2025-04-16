@@ -203,17 +203,10 @@ function SinglePageView({ params }) {
               ? JSON.parse(contentString)
               : contentString;
 
-            // Only update editor state if content has changed
-            const currentContentStr = JSON.stringify(editorState);
-            const newContentStr = JSON.stringify(parsedContent);
-
-            if (currentContentStr !== newContentStr) {
-              console.log("Content has changed, updating editor state");
-              setEditorState(parsedContent);
-              setEditorError(null); // Clear any previous errors
-            } else {
-              console.log("Content unchanged, skipping editor state update");
-            }
+            // Update editor state without comparing to avoid circular dependencies
+            console.log("Updating editor state with new content");
+            setEditorState(parsedContent);
+            setEditorError(null); // Clear any previous errors
           } catch (error) {
             console.error("Error parsing content:", error);
             setEditorError("There was an error loading the editor. Please try refreshing the page.");
@@ -227,7 +220,7 @@ function SinglePageView({ params }) {
         unsubscribe();
       };
     }
-  }, [params.id, editorState]);
+  }, [params.id]); // Removed editorState from dependencies to prevent infinite loop
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
@@ -244,26 +237,8 @@ function SinglePageView({ params }) {
     }
   }, [page, addRecentPage, recentPages]);
 
-  useEffect(() => {
-    if (page && page.content) {
-      try {
-        const contentString = typeof page.content === 'string'
-          ? page.content
-          : JSON.stringify(page.content);
-
-        const parsedContent = contentString.startsWith('[')
-          ? JSON.parse(contentString)
-          : contentString;
-
-        setEditorState(parsedContent);
-        setEditorError(null); // Clear any previous errors
-      } catch (error) {
-        console.error("Error parsing content:", error);
-        setEditorError("There was an error loading the editor. Please try refreshing the page.");
-        setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
-      }
-    }
-  }, [page]);
+  // Removed duplicate useEffect for parsing page content
+  // Content is already handled by the listenToPageById callback
 
   useEffect(() => {
     if (page && page.id && user) {
