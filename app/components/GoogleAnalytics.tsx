@@ -25,7 +25,7 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
   // Log initialization attempt
   useEffect(() => {
     console.log('Google Analytics component mounting with ID:', GA_MEASUREMENT_ID);
-    
+
     if (!GA_MEASUREMENT_ID) {
       console.error('Missing Google Analytics Measurement ID');
       setError('Missing GA ID');
@@ -44,17 +44,27 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
 
     try {
       const url = pathname + searchParams.toString();
-      
+
       // Get the current page title
       let pageTitle = document.title;
-      
+
       // For specific routes, we can set more descriptive titles
       if (pathname === '/') {
         pageTitle = 'WeWrite - Home';
       } else if (pathname.startsWith('/auth/login')) {
-        pageTitle = 'WeWrite - Login';
+        pageTitle = 'WeWrite - Sign In';
       } else if (pathname.startsWith('/auth/register')) {
-        pageTitle = 'WeWrite - Register';
+        pageTitle = 'WeWrite - Create Account';
+      } else if (pathname.startsWith('/auth/forgot-password')) {
+        pageTitle = 'WeWrite - Reset Password';
+      } else if (pathname.startsWith('/auth/switch-account')) {
+        pageTitle = 'WeWrite - Switch Account';
+      } else if (pathname.startsWith('/auth/logout')) {
+        pageTitle = 'WeWrite - Sign Out';
+      } else if (pathname.startsWith('/account/subscription')) {
+        pageTitle = 'WeWrite - Subscription Settings';
+      } else if (pathname.startsWith('/account')) {
+        pageTitle = 'WeWrite - Account Settings';
       } else if (pathname.startsWith('/pages/')) {
         // For content pages, try to get a more specific title
         const contentTitle = document.querySelector('h1')?.textContent;
@@ -64,13 +74,13 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
           pageTitle = 'WeWrite - Content Page';
         }
       }
-      
+
       window.gtag('config', GA_MEASUREMENT_ID, {
         page_path: url,
         page_title: pageTitle,
         page_location: window.location.href
       });
-      
+
       console.log('Google Analytics pageview tracked:', url, 'with title:', pageTitle);
       setInitialized(true);
     } catch (err) {
@@ -116,15 +126,15 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
           `,
         }}
       />
-      
+
       {/* Development-only debugging indicator */}
       {process.env.NODE_ENV === 'development' && (
-        <div style={{ 
-          position: 'fixed', 
-          bottom: '40px', 
-          right: '10px', 
-          background: initialized ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)', 
-          padding: '4px 8px', 
+        <div style={{
+          position: 'fixed',
+          bottom: '40px',
+          right: '10px',
+          background: initialized ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)',
+          padding: '4px 8px',
           borderRadius: '4px',
           fontSize: '10px',
           zIndex: 9999,

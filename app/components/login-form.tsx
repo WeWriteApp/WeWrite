@@ -4,40 +4,30 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "../lib/utils"
-import { LoadingButton } from "../components/ui/loading-button"
+import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
 import { loginUser } from "../firebase/auth"
-import { AuthRedirectOverlay } from "./AuthRedirectOverlay"
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
-  const [emailOrUsername, setEmailOrUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
 
   // Validate form inputs
   useEffect(() => {
-    // If input contains @, validate as email, otherwise as username
-    let isInputValid = false;
-    if (emailOrUsername.includes('@')) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      isInputValid = emailRegex.test(emailOrUsername);
-    } else {
-      // Username validation - at least 3 characters, alphanumeric + underscore
-      isInputValid = emailOrUsername.length >= 3 && /^[a-zA-Z0-9_]+$/.test(emailOrUsername);
-    }
-
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const isEmailValid = emailRegex.test(email)
     const isPasswordValid = password.length >= 6
-    setIsFormValid(isInputValid && isPasswordValid)
-  }, [emailOrUsername, password])
+    setIsFormValid(isEmailValid && isPasswordValid)
+  }, [email, password])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,14 +35,67 @@ export function LoginForm({
     setIsLoading(true)
 
     try {
-      const result = await loginUser(emailOrUsername, password)
+      const result = await loginUser(email, password)
 
       if (result.user) {
         // Successful login - redirect to home page
         console.log("Login successful, redirecting...")
 
-        // Show redirect overlay
-        setIsRedirecting(true)
+        // Check if we're adding a new account to the account switcher
+        const previousUserSession = localStorage.getItem('previousUserSession')
+
+        if (previousUserSession) {
+          console.log("Adding new account to account switcher...")
+
+          try {
+            // Get the previous user session
+            const prevUser = JSON.parse(previousUserSession)
+
+            // Get any existing saved accounts
+            let savedAccounts = []
+            const savedAccountsJson = localStorage.getItem('savedAccounts')
+            if (savedAccountsJson) {
+              savedAccounts = JSON.parse(savedAccountsJson)
+            }
+
+            // Add the previous user to the saved accounts if not already there
+            if (!savedAccounts.some(account => account.uid === prevUser.uid)) {
+              savedAccounts.push({
+                ...prevUser,
+                isCurrent: false
+              })
+            }
+
+            // Add the new user to the saved accounts
+            const newUser = {
+              uid: result.user.uid,
+              email: result.user.email,
+              username: result.user.displayName || email.split('@')[0],
+              isCurrent: true
+            }
+
+            // Update all accounts to not be current
+            savedAccounts = savedAccounts.map(account => ({
+              ...account,
+              isCurrent: false
+            }))
+
+            // Only the new user should be current
+
+            // Add the new user if not already in the list
+            if (!savedAccounts.some(account => account.uid === newUser.uid)) {
+              savedAccounts.push(newUser)
+            }
+
+            // Save the updated accounts list
+            localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts))
+
+            // Clear the previous user session
+            localStorage.removeItem('previousUserSession')
+          } catch (error) {
+            console.error("Error handling account switching:", error)
+          }
+        }
 
         // Increase timeout to allow auth state to fully propagate
         // and ensure cookies are properly set
@@ -86,26 +129,24 @@ export function LoginForm({
   }
 
   return (
-    <>
-      <AuthRedirectOverlay isVisible={isRedirecting} message="Logging you in..." />
-      <form
-        className={cn("flex flex-col gap-3 sm:gap-4", className)}
-        {...props}
-        onSubmit={handleSubmit}
-      >
+    <form
+      className={cn("flex flex-col gap-4 sm:gap-6", className)}
+      {...props}
+      onSubmit={handleSubmit}
+    >
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Log in</h1>
       </div>
-      <div className="grid gap-3 sm:gap-4">
+      <div className="grid gap-4 sm:gap-5">
         <div className="grid gap-2">
-          <Label htmlFor="emailOrUsername" className="text-foreground text-sm sm:text-base">Email or Username</Label>
+          <Label htmlFor="email" className="text-foreground text-sm sm:text-base">Email</Label>
           <Input
-            id="emailOrUsername"
-            type="text"
-            placeholder="thomaspaine@example.com or thomaspaine"
+            id="email"
+            type="email"
+            placeholder="thomaspaine@example.com"
             required
-            value={emailOrUsername}
-            onChange={(e) => setEmailOrUsername(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             tabIndex={1}
             className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
           />
@@ -139,20 +180,18 @@ export function LoginForm({
           </div>
         )}
 
-        <LoadingButton
+        <Button
           type="submit"
           className={cn(
             "w-full transition-all h-10 sm:h-11 mt-2",
             !isFormValid && !isLoading ?
               "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
           )}
-          isLoading={isLoading}
-          loadingText="Signing in..."
-          disabled={!isFormValid}
+          disabled={isLoading || !isFormValid}
           tabIndex={4}
         >
-          Login
-        </LoadingButton>
+          {isLoading ? "Signing in..." : "Login"}
+        </Button>
       </div>
       <div className="text-center text-sm sm:text-base text-muted-foreground mt-2">
         Don&apos;t have an account?{" "}
@@ -161,6 +200,5 @@ export function LoginForm({
         </Link>
       </div>
     </form>
-    </>
   )
 }

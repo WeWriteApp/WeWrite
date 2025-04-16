@@ -33,7 +33,7 @@ export default function GroupDetails({ group }) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingVisibilityChange, setPendingVisibilityChange] = useState(null);
 
-  if (!group) return <div className="flex justify-center py-4"><div className="loader loader-lg"></div></div>;
+  if (!group) return <div>Loading...</div>;
 
   const isOwner = user?.uid === group.owner;
   const isMember = user?.uid && group.members && group.members[user.uid];
@@ -151,7 +151,7 @@ export default function GroupDetails({ group }) {
             {(isOwner || isMember) && (
               <div className="flex gap-2">
                 <Button variant="outline" asChild>
-                  <Link href={`/new?groupId=${group.id}`} className="flex items-center gap-2">
+                  <Link href={`/direct-create?groupId=${group.id}`} className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
                     New Page
                   </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut } from 'lucide-react';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
@@ -17,15 +17,15 @@ import {
 import { getDocById } from '../firebase/database';
 import { loadStripe } from '@stripe/stripe-js';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { addUsername, updateEmail as updateFirebaseEmail } from '../firebase/auth';
+import { addUsername, updateEmail as updateFirebaseEmail, logoutUser } from '../firebase/auth';
 import { db } from '../firebase/database';
 import AccountDrawer from '../components/AccountDrawer';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import PaymentModal from '../components/PaymentModal';
 import SubscriptionStatusCard from '../components/SubscriptionStatusCard';
-import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { socialLinks } from '../config/social-links';
 
@@ -738,19 +738,21 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground/80 mb-1">Password</label>
-                <div className="flex justify-between items-center">
-                  <p className="text-foreground">••••••••</p>
-                  <Button
-                    onClick={() => router.push('/account/reset-password')}
-                    variant="ghost"
-                    size="sm"
-                    className="text-sm text-foreground/60 hover:text-foreground"
-                  >
-                    Reset Password
-                  </Button>
-                </div>
+              <div className="pt-4 mt-4 border-t border-border">
+                <Button
+                  variant="destructive"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to log out?')) {
+                      // Pass false to ensure we clear the previousUserSession
+                      await logoutUser(false);
+                      router.push('/');
+                    }
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log out
+                </Button>
               </div>
             </div>
           </section>
@@ -776,13 +778,13 @@ export default function AccountPage() {
           {/* Social Media Section */}
           <section>
             <h3 className="text-base font-medium mb-4">Follow Us</h3>
-            <div className="bg-background rounded-lg border-theme-medium p-4">
+            <div className="bg-background rounded-lg border border-border p-4">
               <p className="text-sm text-foreground/80 mb-4">Follow us on social media for future updates and announcements.</p>
               <div className="flex flex-col gap-2 w-full">
                 <Button
                   variant="outline"
                   asChild
-                  className={`w-full justify-center bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white`}
+                  className={`w-full justify-center bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white border-[#1DA1F2]`}
                 >
                   <a
                     href={socialLinks.find(link => link.platform === 'twitter')?.url}
@@ -797,7 +799,7 @@ export default function AccountPage() {
                 <Button
                   variant="outline"
                   asChild
-                  className={`w-full justify-center bg-[#FF0000] hover:bg-[#FF0000]/90 text-white`}
+                  className={`w-full justify-center bg-[#FF0000] hover:bg-[#FF0000]/90 text-white border-[#FF0000]`}
                 >
                   <a
                     href={socialLinks.find(link => link.platform === 'youtube')?.url}
@@ -812,7 +814,7 @@ export default function AccountPage() {
                 <Button
                   variant="outline"
                   asChild
-                  className={`w-full justify-center bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white`}
+                  className={`w-full justify-center bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white border-transparent`}
                 >
                   <a
                     href={socialLinks.find(link => link.platform === 'instagram')?.url}

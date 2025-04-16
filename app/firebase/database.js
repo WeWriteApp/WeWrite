@@ -85,6 +85,8 @@ export const createDoc = async (collectionName, data) => {
 
 export const createPage = async (data) => {
   try {
+    console.log('Creating page with data:', { ...data, content: '(content omitted)' });
+
     // Validate required fields to prevent empty path errors
     if (!data || !data.userId) {
       console.error("Cannot create page: Missing required user ID");
@@ -95,12 +97,38 @@ export const createPage = async (data) => {
     let username = data.username;
     if (!username && data.userId) {
       try {
-        const userDoc = await getDoc(doc(db, "users", data.userId));
-        if (userDoc.exists()) {
-          username = userDoc.data().username;
+        // First try to get from currentUser utility if we're on the client
+        if (typeof window !== 'undefined') {
+          try {
+            const { getCurrentUser } = require('../utils/currentUser');
+            const currentUser = getCurrentUser();
+            if (currentUser && currentUser.username) {
+              username = currentUser.username;
+              console.log('Using username from currentUser utility:', username);
+            }
+          } catch (e) {
+            console.error('Error getting username from currentUser:', e);
+          }
+        }
+
+        // If still no username, fetch from Firestore
+        if (!username) {
+          try {
+            const userDoc = await getDoc(doc(db, "users", data.userId));
+            if (userDoc.exists()) {
+              username = userDoc.data().username;
+              console.log('Using username from Firestore:', username);
+            }
+          } catch (firestoreError) {
+            console.error("Error fetching username from Firestore:", firestoreError);
+            // Continue with a default username rather than failing
+            username = 'Anonymous';
+          }
         }
       } catch (error) {
         console.error("Error fetching username:", error);
+        // Set a default username rather than failing
+        username = 'Anonymous';
       }
     }
 
@@ -116,27 +144,46 @@ export const createPage = async (data) => {
       pledgeCount: 0,
       fundraisingEnabled: true,
       fundraisingGoal: data.fundraisingGoal || 0,
+      // Add reply fields if this is a reply
+      isReply: data.isReply || false,
+      replyTo: data.replyTo || null,
+      replyToTitle: data.replyToTitle || null,
+      replyToUsername: data.replyToUsername || null,
     };
 
     console.log("Creating page with username:", username);
 
-    const pageRef = await addDoc(collection(db, "pages"), pageData);
+    try {
+      const pageRef = await addDoc(collection(db, "pages"), pageData);
+      console.log("Created page with ID:", pageRef.id);
 
-    // Ensure we have content before creating a version
-    const versionData = {
-      content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
-      createdAt: new Date().toISOString(),
-      userId: data.userId,
-      username: username || "Anonymous" // Also store username in version data for consistency
-    };
+      // Ensure we have content before creating a version
+      const versionData = {
+        content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
+        createdAt: new Date().toISOString(),
+        userId: data.userId,
+        username: username || "Anonymous" // Also store username in version data for consistency
+      };
 
-    // create a subcollection for versions
-    const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
+      try {
+        // create a subcollection for versions
+        const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
+        console.log("Created version with ID:", version.id);
 
-    // take the version id and add it as the currentVersion on the page
-    await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
+        // take the version id and add it as the currentVersion on the page
+        await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
+        console.log("Updated page with current version ID");
 
-    return pageRef.id;
+        return pageRef.id;
+      } catch (versionError) {
+        console.error("Error creating version:", versionError);
+        // Even if version creation fails, return the page ID
+        return pageRef.id;
+      }
+    } catch (pageError) {
+      console.error("Error creating page document:", pageError);
+      return null;
+    }
 
   } catch (e) {
     console.error('Error creating page:', e);
@@ -285,7 +332,6 @@ export const getVersionsByPageId = async (pageId) => {
 }
 
 export const getPageVersions = async (pageId, versionCount = 10) => {
-  console.log(`getPageVersions called with pageId: ${pageId}, versionCount: ${versionCount}`);
   try {
     if (!pageId) {
       console.error("getPageVersions called with invalid pageId:", pageId);
@@ -298,10 +344,8 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
     // First try to get all versions without ordering (to avoid index requirements)
     try {
       const versionsSnap = await getDocs(versionsRef);
-      console.log(`Found ${versionsSnap.size} version documents for pageId: ${pageId}`);
 
       if (versionsSnap.empty) {
-        console.log(`No versions found for pageId: ${pageId}`);
         return [];
       }
 
@@ -309,26 +353,19 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
       let versions = versionsSnap.docs.map((doc) => {
         try {
           const data = doc.data();
-          console.log(`Processing version doc ${doc.id}, data:`, data);
 
           // Handle different timestamp formats
           let createdAt = new Date();
           if (data.createdAt) {
-            console.log(`Version ${doc.id} has createdAt:`, data.createdAt);
             if (typeof data.createdAt === 'object' && data.createdAt.toDate) {
               createdAt = data.createdAt.toDate();
-              console.log(`  - Converted Firestore timestamp to Date:`, createdAt);
             } else if (data.createdAt.seconds && data.createdAt.nanoseconds) {
               // Firestore Timestamp format
               createdAt = new Date(data.createdAt.seconds * 1000);
-              console.log(`  - Converted seconds/nanoseconds to Date:`, createdAt);
             } else {
               // String or number format
               createdAt = new Date(data.createdAt);
-              console.log(`  - Converted string/number to Date:`, createdAt);
             }
-          } else {
-            console.log(`  - No createdAt found, using current date:`, createdAt);
           }
 
           return {
@@ -716,7 +753,7 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
 // Add a new function to fetch only page metadata (title, lastModified, etc.)
 export async function getPageMetadata(pageId) {
   try {
-    const { doc, getDoc, collection, query, orderBy, limit, getDocs } = await import('firebase/firestore');
+    const { doc, getDoc } = await import('firebase/firestore');
     const pageRef = doc(db, 'pages', pageId);
     const pageSnapshot = await getDoc(pageRef);
 
@@ -879,8 +916,6 @@ export const searchUsers = async (searchQuery, limit = 10) => {
   try {
     const usersRef = collection(db, "users");
 
-    console.log('Searching for users with query:', searchQuery);
-
     // Search by username (case insensitive)
     const usernameQuery = query(
       usersRef,
@@ -928,9 +963,7 @@ export const searchUsers = async (searchQuery, limit = 10) => {
       }
     });
 
-    const finalResults = Array.from(results.values());
-    console.log('Final user search results:', finalResults);
-    return finalResults;
+    return Array.from(results.values());
   } catch (error) {
     console.error("Error searching users:", error);
     return [];

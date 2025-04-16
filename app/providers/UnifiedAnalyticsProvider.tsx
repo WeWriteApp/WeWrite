@@ -8,10 +8,10 @@ import { useRouter } from 'next/navigation';
 
 /**
  * UnifiedAnalyticsProvider
- * 
+ *
  * This component handles analytics initialization and automatic tracking of page views.
  * It serves as a bridge between the Next.js app router and our analytics implementation.
- * 
+ *
  * Key features:
  * 1. Loads Google Analytics script
  * 2. Initializes our unified analytics service
@@ -30,58 +30,58 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // Reference to track the current document title
   const documentTitleRef = useRef<string>('');
-  
+
   const analytics = getAnalyticsInstance();
   const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
   const isDev = process.env.NODE_ENV === 'development';
-  
+
   // Initial setup - runs once when component mounts
   useEffect(() => {
     if (isDev) console.log('UnifiedAnalyticsProvider initializing...');
-    
+
     const setup = async () => {
       try {
         if (!GA_MEASUREMENT_ID) {
           if (isDev) console.warn('Missing Google Analytics Measurement ID');
           setError('Missing GA ID');
         }
-        
+
         // Get debug info from analytics instance
         const analyticsStatus = analytics.debugStatus();
         setStatus(analyticsStatus);
-        
+
         // Mark as successfully initialized
         setInitialized(true);
-        
+
       } catch (err) {
         console.error('Error initializing analytics:', err);
         setError(`${err}`);
       }
     };
-    
+
     if (typeof window !== 'undefined') {
       setup();
     }
   }, [analytics, GA_MEASUREMENT_ID, isDev]);
-  
+
   // Monitor document title changes to improve analytics accuracy
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    
+
     // Store initial document title
     documentTitleRef.current = document.title;
-    
+
     // Set up a MutationObserver to watch for title changes
     const titleObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (
           mutation.target === document.querySelector('title') ||
-          (mutation.addedNodes.length && 
-            Array.from(mutation.addedNodes).some(node => 
-              node.nodeType === Node.ELEMENT_NODE && 
+          (mutation.addedNodes.length &&
+            Array.from(mutation.addedNodes).some(node =>
+              node.nodeType === Node.ELEMENT_NODE &&
               (node as Element).tagName === 'TITLE')
           )
         ) {
@@ -89,7 +89,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
           if (newTitle !== documentTitleRef.current) {
             documentTitleRef.current = newTitle;
             if (isDev) console.log('Document title changed to:', newTitle);
-            
+
             // Re-track the current page with the new title
             if (initialized && pathname) {
               const url = pathname + (searchParams?.toString() || '');
@@ -101,84 +101,99 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
         }
       });
     });
-    
+
     // Start observing title changes
-    titleObserver.observe(document.head, { 
-      subtree: true, 
-      childList: true, 
-      characterData: true 
+    titleObserver.observe(document.head, {
+      subtree: true,
+      childList: true,
+      characterData: true
     });
-    
+
     return () => {
       titleObserver.disconnect();
     };
   }, [initialized, pathname, searchParams, analytics, isDev]);
-  
+
   // Track page views - runs whenever the route changes
   useEffect(() => {
     if (!initialized || !pathname) return;
-    
+
     try {
       // Construct the full URL
       const url = pathname + (searchParams?.toString() || '');
-      
+
       // Get page title - try document title first then fall back to URL-based title
-      const pageTitle = typeof document !== 'undefined' && document.title 
-        ? document.title 
+      const pageTitle = typeof document !== 'undefined' && document.title
+        ? document.title
         : getPageTitle(pathname);
-      
+
       // Store the current title
       if (typeof document !== 'undefined') {
         documentTitleRef.current = document.title;
       }
-      
+
       // Extract page ID from URL if present (for pages/[id] routes)
       const pageId = extractPageId(pathname);
-      
+
       // Track page view with our unified analytics
       analytics.pageView(url, pageTitle, pageId);
-      
+
       if (isDev) console.log('Page view tracked:', url, pageTitle ? `(${pageTitle})` : '');
     } catch (err) {
       console.error('Error tracking page view:', err);
     }
   }, [pathname, searchParams, initialized, analytics, isDev]);
-  
+
   // Handlers for script loading
   const handleGAScriptLoad = () => {
     if (isDev) console.log('Google Analytics script loaded successfully');
   };
-  
+
   const handleGAScriptError = () => {
     console.error('Failed to load Google Analytics script');
     setError('GA script failed to load');
   };
-  
+
   /**
    * Helper function to determine page title from URL
    * This improves analytics reporting by including readable page names
    */
   const getPageTitle = (path: string): string => {
     // If we're on the homepage
-    if (path === '/') return 'Homepage';
-    
+    if (path === '/') return 'WeWrite - Home';
+
     // Extract section from URL
     const sections = path.split('/').filter(Boolean);
-    if (sections.length === 0) return 'Unknown Page';
-    
+    if (sections.length === 0) return 'WeWrite - Unknown Page';
+
     // Format based on route pattern
     if (sections[0] === 'pages' && sections.length > 1) {
-      return `Page: ${sections[1]}`;  // Will be replaced with actual title via DOM if available
+      return `WeWrite - Page: ${sections[1]}`;  // Will be replaced with actual title via DOM if available
     }
-    
+
     if (sections[0] === 'user' && sections.length > 1) {
-      return `User Profile: ${sections[1]}`;
+      return `WeWrite - User Profile: ${sections[1]}`;
     }
-    
+
+    // Auth routes
+    if (sections[0] === 'auth') {
+      if (sections[1] === 'login') return 'WeWrite - Sign In';
+      if (sections[1] === 'register') return 'WeWrite - Create Account';
+      if (sections[1] === 'forgot-password') return 'WeWrite - Reset Password';
+      if (sections[1] === 'switch-account') return 'WeWrite - Switch Account';
+      if (sections[1] === 'logout') return 'WeWrite - Sign Out';
+    }
+
+    // Account routes
+    if (sections[0] === 'account') {
+      if (sections.length === 1) return 'WeWrite - Account Settings';
+      if (sections[1] === 'subscription') return 'WeWrite - Subscription Settings';
+    }
+
     // Default to capitalized path section
-    return sections[0].charAt(0).toUpperCase() + sections[0].slice(1);
+    return `WeWrite - ${sections[0].charAt(0).toUpperCase() + sections[0].slice(1)}`;
   };
-  
+
   /**
    * Helper function to extract page ID from URL
    * This helps with tracking specific pages
@@ -187,7 +202,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
     const pageMatch = path.match(/\/pages\/([^/?#]+)/);
     return pageMatch?.[1];
   };
-  
+
   return (
     <>
       {/* Google Analytics Script - needed for gtag to be available globally */}
@@ -219,19 +234,19 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
           />
         </>
       )}
-      
+
       {/* Children content */}
       {children}
-      
+
       {/* Development-only debug indicator */}
       {isDev && (
-        <div style={{ 
-          position: 'fixed', 
-          bottom: '10px', 
-          right: '10px', 
-          background: '#333', 
-          color: 'white', 
-          padding: '8px 12px', 
+        <div style={{
+          position: 'fixed',
+          bottom: '10px',
+          right: '10px',
+          background: '#333',
+          color: 'white',
+          padding: '8px 12px',
           borderRadius: '4px',
           fontSize: '12px',
           zIndex: 9999,
@@ -242,7 +257,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
             Analytics: {initialized ? '✅' : '❌'}
             {error && <span style={{ color: '#ff4d4d' }}> (Error)</span>}
           </div>
-          
+
           {status && (
             <div style={{ fontSize: '10px', wordBreak: 'break-word' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -270,4 +285,4 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       )}
     </>
   );
-} 
+}

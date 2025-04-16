@@ -14,8 +14,7 @@ import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "./components/ui/button";
-import { Plus, FileText, Loader as LoaderIcon } from "lucide-react";
-import { PageLoader } from "./components/ui/page-loader";
+import { Plus, FileText, Loader } from "lucide-react";
 import { ShimmerEffect } from "./components/ui/skeleton";
 import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/LandingPage";
@@ -69,7 +68,11 @@ export default function Home() {
 
   // Display a loading state while checking authentication
   if (authLoading) {
-    return <PageLoader message="Loading your account..." />;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader className="animate-spin h-8 w-8 text-primary"/>
+      </div>
+    );
   }
 
   // Show landing page for logged-out users
@@ -95,7 +98,7 @@ export default function Home() {
         <div className="flex items-center justify-between mb-6">
           {isLoading ? (
             <div className="flex items-center space-x-2">
-              <LoaderIcon className="h-5 w-5 animate-spin text-primary" />
+              <Loader className="h-5 w-5 animate-spin text-primary" />
               <span className="text-lg text-muted-foreground">Loading your pages...</span>
             </div>
           ) : (
@@ -105,7 +108,7 @@ export default function Home() {
             </h1>
           )}
           <Button variant="outline" asChild>
-            <Link href="/new" className="flex items-center gap-2">
+            <Link href="/direct-create" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New page
             </Link>
@@ -121,7 +124,7 @@ export default function Home() {
         {/* 4. Top Users */}
         <TopUsers />
 
-        <FloatingActionButton href="/new" />
+        <FloatingActionButton href="/direct-create" />
       </main>
     </>
   );

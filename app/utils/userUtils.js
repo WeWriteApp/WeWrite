@@ -15,53 +15,13 @@ export const getUsernameById = async (userId) => {
   if (!userId) return "Anonymous";
 
   try {
-    // First try to get user from Firestore users collection
+    // Try to get user from Firestore users collection
     const userDocRef = doc(db, "users", userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      if (userData.username && userData.username.trim() !== "") {
-        console.log(`Found username in Firestore: ${userData.username} for user ${userId}`);
-        return userData.username.trim();
-      }
-    }
-
-    // If not found in Firestore or no username, try RTDB
-    try {
-      const { getDatabase, ref, get } = await import('firebase/database');
-      const { app } = await import('../firebase/config');
-      const rtdb = getDatabase(app);
-      const rtdbUserRef = ref(rtdb, `users/${userId}`);
-      const rtdbSnapshot = await get(rtdbUserRef);
-
-      if (rtdbSnapshot.exists()) {
-        const rtdbUserData = rtdbSnapshot.val();
-        if (rtdbUserData.username && rtdbUserData.username.trim() !== "") {
-          console.log(`Found username in RTDB: ${rtdbUserData.username} for user ${userId}`);
-          return rtdbUserData.username.trim();
-        }
-        if (rtdbUserData.displayName && rtdbUserData.displayName.trim() !== "") {
-          console.log(`Found displayName in RTDB: ${rtdbUserData.displayName} for user ${userId}`);
-          return rtdbUserData.displayName.trim();
-        }
-      }
-    } catch (rtdbError) {
-      console.error("Error fetching username from RTDB:", rtdbError);
-    }
-
-    // Try to get the user from auth directly
-    try {
-      const { auth } = await import('../firebase/auth');
-      const authUser = auth.currentUser;
-      if (authUser && authUser.uid === userId) {
-        if (authUser.displayName && authUser.displayName.trim() !== "") {
-          console.log(`Found displayName in auth: ${authUser.displayName} for user ${userId}`);
-          return authUser.displayName.trim();
-        }
-      }
-    } catch (authError) {
-      console.error("Error fetching username from auth:", authError);
+      return userData.username || "Anonymous";
     }
 
     return "Anonymous";
@@ -76,10 +36,29 @@ export const getUsernameById = async (userId) => {
  * @returns {Promise<string>} - The current user's username or "Anonymous" if not logged in
  */
 export const getCurrentUsername = async () => {
-  const currentUser = auth.currentUser;
-  if (!currentUser) return "Anonymous";
+  // Import the utility here to ensure it's only used on the client
+  const { getCurrentUser } = require('./currentUser');
 
-  return getUsernameById(currentUser.uid);
+  // Get the current user from our centralized utility
+  const currentUser = getCurrentUser();
+
+  // If we have a current user with a username, return it
+  if (currentUser && currentUser.username) {
+    return currentUser.username;
+  }
+
+  // If we have a current user with a uid but no username, fetch it
+  if (currentUser && currentUser.uid) {
+    return getUsernameById(currentUser.uid);
+  }
+
+  // Fallback to Firebase Auth
+  const firebaseUser = auth.currentUser;
+  if (firebaseUser) {
+    return getUsernameById(firebaseUser.uid);
+  }
+
+  return "Anonymous";
 };
 
 /**

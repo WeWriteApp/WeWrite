@@ -1,0 +1,24 @@
+/* 
+ * PILL LINK STYLING
+ * This is the single source of truth for pill link styling in WeWrite
+ */
+
+/* Base pill link styling */
+.user-link::before {
+  content: '';
+  display: none;
+}
+
+/* Ensure page links never have @ symbols */
+.page-link::before {
+  content: '';
+  display: none;
+}
+
+/* Add icon for external links */
+.external-link .external-icon {
+  display: inline-block;
+  margin-left: 4px;
+  height: 12px;
+  width: 12px;
+}

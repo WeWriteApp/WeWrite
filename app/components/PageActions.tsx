@@ -9,6 +9,7 @@ import { deletePage } from "../firebase/database";
 import { getUserProfile } from "../firebase/auth";
 import { auth } from "../firebase/auth";
 import { useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +33,6 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
-import { AuthModal } from "./AuthModal";
 
 /**
  * PageActions Component
@@ -88,11 +88,6 @@ export function PageActions({
   const router = useRouter();
   const { lineMode, setLineMode } = useLineSettings();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
-  const [isEditLoading, setIsEditLoading] = useState(false);
-
-  // Get user from AuthContext
-  const { user } = useContext(AuthContext);
-  const actualIsOwner = user && user.uid === page.userId;
 
   // Store the current page content for future use
   const [currentPageContent, setCurrentPageContent] = useState<any>(null);
@@ -143,18 +138,41 @@ export function PageActions({
    * Creates a reply to the current page
    */
   const handleReply = async () => {
-    if (!user) {
-      toast.error("You must be logged in to reply");
-      return;
-    }
-
-    // Username is now available from the auth context directly (user.displayName)
-    // or we can fetch it more reliably if needed, but for the URL generation,
-    // let's keep using the utility function for consistency as it handles fallbacks.
+    // Get the current user's username using our centralized utility
     try {
-      // We still need the current username for the reply metadata
-      const replyInitiatorUsername = user?.displayName || await getCurrentUsername();
-      console.log("Reply initiator username:", replyInitiatorUsername);
+      // Try to get username from multiple sources
+      let username = '';
+
+      // 1. Try to get username from getCurrentUsername utility
+      try {
+        username = await getCurrentUsername();
+        console.log("Current user username from utility:", username);
+      } catch (error) {
+        console.error("Error getting username from utility:", error);
+      }
+
+      // 2. If we don't have a username, try to get it from wewrite_accounts
+      if (!username) {
+        try {
+          const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+          if (wewriteAccounts) {
+            const accounts = JSON.parse(wewriteAccounts);
+            const currentAccount = accounts.find(acc => acc.isCurrent);
+
+            if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
+              username = currentAccount.username || currentAccount.displayName;
+              console.log("Found username in wewrite_accounts:", username);
+            }
+          }
+        } catch (error) {
+          console.error("Error getting username from wewrite_accounts:", error);
+        }
+      }
+
+      // 3. If we still don't have a username, use 'Anonymous'
+      if (!username) {
+        username = 'Anonymous';
+      }
 
       // Use utility functions to create standardized reply content
       const replyTitle = generateReplyTitle(page.title);
@@ -171,63 +189,41 @@ export function PageActions({
         const params = encodeReplyParams({
           title: replyTitle,
           content: initialContent,
-          username: replyInitiatorUsername // Use the fetched/context username
+          username
         });
 
-        console.log("Navigating to new page with:", {
+        console.log("Navigating to direct-reply page with:", {
           title: replyTitle,
-          username: replyInitiatorUsername,
+          username,
           initialContent
         });
 
-        // Ensure username param is encoded correctly and include replyTo parameter
-        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${encodeURIComponent(replyInitiatorUsername)}&replyTo=${page.id}`);
+        // Use the direct-reply route instead of the new route
+        router.push(`/direct-reply?title=${params.title}&initialContent=${params.content}&replyTo=${page.id}&username=${params.username}`);
       } catch (error) {
-        console.error("Error navigating to new page:", error);
+        console.error("Error navigating to direct-reply page:", error);
         toast.error("Failed to create reply");
       }
     } catch (error) {
-      console.error("Error getting username:", error);
+      console.error("Error in handleReply:", error);
       toast.error("Failed to create reply");
     }
   };
 
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
-      {/* Owner-only actions - Edit button always, Delete button only in edit mode */}
-      {actualIsOwner && (
+      {/* Owner-only actions - Edit and Delete buttons */}
+      {isOwner && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             className="gap-2"
-            disabled={isEditLoading}
-            onClick={() => {
-              if (isEditing) {
-                // If already editing, just cancel
-                setIsEditing && setIsEditing(false);
-              } else {
-                // If not editing, show loading state while transitioning to edit mode
-                setIsEditLoading(true);
-                setIsEditing && setIsEditing(true);
-                // Reset loading state after a short delay to ensure UI feedback
-                setTimeout(() => setIsEditLoading(false), 500);
-              }
-            }}
+            onClick={() => setIsEditing && setIsEditing(!isEditing)}
           >
-            {isEditLoading ? (
-              <>
-                <div className="loader"></div>
-                Loading...
-              </>
-            ) : (
-              <>
-                <Edit className="h-4 w-4" />
-                {isEditing ? "Cancel" : "Edit"}
-              </>
-            )}
+            <Edit className="h-4 w-4" />
+            {isEditing ? "Cancel" : "Edit"}
           </Button>
-          {/* Delete button only shown in edit mode */}
           {isEditing && (
             <Button
               variant="destructive"
@@ -243,10 +239,9 @@ export function PageActions({
       )}
 
       {/* Actions available to all users - Copy, Reply, Layout */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t-only pt-4 w-full">
-        {/* Copy Link Button (always shown) */}
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t pt-4 w-full">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           className="gap-2"
           onClick={handleCopyLink}
@@ -255,40 +250,20 @@ export function PageActions({
           Copy Link
         </Button>
 
-        {/* Conditional Reply Button - only show for non-owners */}
-        {!actualIsOwner && (
-          user ? (
-            // Logged-in user (non-owner): Show direct reply button
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handleReply}
-            >
-              <Reply className="h-4 w-4" />
-              Reply to Page
-            </Button>
-          ) : (
-            // Logged-out user: Show reply button wrapped in AuthModal
-            <AuthModal initialTab="login">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                // No onClick needed here, AuthModal handles opening
-              >
-                <Reply className="h-4 w-4" />
-                Reply to Page
-              </Button>
-            </AuthModal>
-          )
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2"
+          onClick={handleReply}
+        >
+          <Reply className="h-4 w-4" />
+          Reply to Page
+        </Button>
 
-        {/* Layout Dropdown (always shown) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               className="gap-2"
             >

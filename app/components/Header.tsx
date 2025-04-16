@@ -69,7 +69,7 @@ export default function Header() {
             {/* New Page button (right side) */}
             <div className="flex-1 flex justify-end">
               <Button variant="outline" size="sm" asChild className="gap-1">
-                <Link href="/new">
+                <Link href="/direct-create">
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">New Page</span>
                 </Link>

@@ -122,12 +122,20 @@ const TopUsers = () => {
 
                   console.log("TopUsers: Processing user data");
                   // Process users for all-time leaderboard
-                  const allTimeUsersArray = Object.entries(data).map(([id, userData]) => ({
-                    id,
-                    username: userData.username || userData.displayName || "Unknown User",
-                    photoURL: userData.photoURL,
-                    pageCount: pageCountsByUser[id] || 0
-                  }));
+                  const allTimeUsersArray = Object.entries(data).map(([id, userData]) => {
+                    // Get the username and remove @ symbol if present
+                    let username = userData.username || userData.displayName || "Unknown User";
+                    if (username.startsWith('@')) {
+                      username = username.substring(1);
+                    }
+
+                    return {
+                      id,
+                      username,
+                      photoURL: userData.photoURL,
+                      pageCount: pageCountsByUser[id] || 0
+                    };
+                  });
 
                   // Sort users by page count (including users with 0 pages)
                   const sortedAllTimeUsers = allTimeUsersArray
@@ -198,7 +206,7 @@ const TopUsers = () => {
           </Link>
         </div>
 
-        <div className="border-theme-medium rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-hidden">
           {loading && (
             <UserListSkeleton />
           )}
