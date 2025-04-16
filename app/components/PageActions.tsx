@@ -216,7 +216,7 @@ export function PageActions({
       {isOwner && (
         <div className="flex flex-col items-stretch gap-3 mb-3 w-full">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="gap-2 w-full"
             onClick={() => setIsEditing && setIsEditing(!isEditing)}
@@ -241,7 +241,7 @@ export function PageActions({
       {/* Actions available to all users - Reply, Layout */}
       <div className="flex flex-col items-stretch gap-3 border-t pt-4 w-full">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           className="gap-2 w-full"
           onClick={handleReply}
@@ -253,7 +253,7 @@ export function PageActions({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               className="gap-2 w-full"
             >
