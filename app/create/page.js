@@ -1,12 +1,12 @@
 "use client";
 
-import SimpleCreatePage from "./simple-page";
+import BypassAuthPage from "./bypass-auth-page-fixed";
 
 /**
- * This is a simple wrapper that renders the SimpleCreatePage component.
- * The SimpleCreatePage component uses standard Firebase Auth patterns.
+ * This is a simple wrapper that renders the BypassAuthPage component.
+ * The BypassAuthPage component completely bypasses authentication checks.
  */
 export default function CreatePage() {
-  // Simply render the SimpleCreatePage component
-  return <SimpleCreatePage />;
+  // Simply render the BypassAuthPage component
+  return <BypassAuthPage />;
 }
