@@ -34,17 +34,17 @@ export default function Home() {
       // First check cookies for auth state
       const isAuthenticated = document.cookie.includes('authenticated=true');
       const persistedAuthState = localStorage.getItem('authState');
-      
-      console.log("Home page auth check:", { 
-        authLoading, 
-        user: !!user, 
+
+      console.log("Home page auth check:", {
+        authLoading,
+        user: !!user,
         cookieAuth: isAuthenticated,
         persistedAuth: persistedAuthState === 'authenticated'
       });
-      
+
       // If auth is still loading, wait
       if (authLoading) return;
-      
+
       // If we have a cookie or localStorage indicating auth, but no user yet,
       // wait a bit longer as Firebase might still be initializing
       if ((isAuthenticated || persistedAuthState === 'authenticated') && !user) {
@@ -52,15 +52,15 @@ export default function Home() {
         // Don't redirect immediately, give a chance for auth to complete
         return;
       }
-      
+
       // If user is authenticated, show dashboard
       if (user) {
         setShowLanding(false);
       }
     };
-    
+
     checkAuth();
-    
+
     // Set up a timer to check again in case of race conditions
     const timer = setTimeout(checkAuth, 1000);
     return () => clearTimeout(timer);
@@ -86,14 +86,14 @@ export default function Home() {
       <Header />
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />
-        
+
         <div className="w-full mb-6">
           <TypeaheadSearch />
         </div>
-        
+
         {/* 1. Recent Activity (moved to top) */}
         <RecentActivity limit={4} />
-        
+
         {/* 2. My Pages */}
         <div className="flex items-center justify-between mb-6">
           {isLoading ? (
@@ -108,23 +108,23 @@ export default function Home() {
             </h1>
           )}
           <Button variant="outline" asChild>
-            <Link href="/new" className="flex items-center gap-2">
+            <Link href="/direct-create" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New page
             </Link>
           </Button>
         </div>
-        
+
         <AllPages />
-        
+
         {/* 3. My Groups - temporarily hidden
         <MyGroups />
         */}
-        
+
         {/* 4. Top Users */}
         <TopUsers />
-        
-        <FloatingActionButton href="/new" />
+
+        <FloatingActionButton href="/direct-create" />
       </main>
     </>
   );

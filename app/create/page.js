@@ -1,12 +1,7 @@
-"use client";
+import { redirect } from 'next/navigation';
 
-import BypassAuthPage from "./bypass-auth-page-fixed";
-
-/**
- * This is a simple wrapper that renders the BypassAuthPage component.
- * The BypassAuthPage component completely bypasses authentication checks.
- */
+// This page now redirects to the direct create page
 export default function CreatePage() {
-  // Simply render the BypassAuthPage component
-  return <BypassAuthPage />;
+  // Redirect to the direct create page
+  redirect('/direct-create');
 }

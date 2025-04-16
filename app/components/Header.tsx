@@ -19,7 +19,7 @@ export default function Header() {
       // Update scroll state
       const scrollY = window.scrollY;
       setIsScrolled(scrollY > 10);
-      
+
       // Calculate scroll progress for the progress bar
       const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
       const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
@@ -29,10 +29,10 @@ export default function Header() {
 
     // Initial update
     handleScroll();
-    
+
     // Add scroll event listener
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Add scrollend event listener if supported
     if ('onscrollend' in window) {
       window.addEventListener('scrollend', () => {
@@ -69,7 +69,7 @@ export default function Header() {
             {/* New Page button (right side) */}
             <div className="flex-1 flex justify-end">
               <Button variant="outline" size="sm" asChild className="gap-1">
-                <Link href="/new">
+                <Link href="/direct-create">
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">New Page</span>
                 </Link>
@@ -77,7 +77,7 @@ export default function Header() {
             </div>
           </div>
           {/* Scroll Progress Bar */}
-          <div 
+          <div
             className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-200"
             style={{ width: `${scrollProgress}%` }}
           />
@@ -85,4 +85,4 @@ export default function Header() {
       </header>
     </>
   );
-} 
+}

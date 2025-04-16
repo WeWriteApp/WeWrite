@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 
-// This page now redirects to the new /create page
+// This page now redirects to the direct create page
 export default function NewPage() {
-  // Use a query parameter to indicate this is from the new page route
-  redirect('/create?from=new');
+  // Redirect to the direct create page
+  redirect('/direct-create');
 }
 
