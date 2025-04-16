@@ -486,6 +486,10 @@ export const saveNewVersion = async (pageId, data) => {
       lastModified: new Date().toISOString()
     });
 
+    // Force update the page document with the new content
+    const pageDocRef = doc(db, "pages", pageId);
+    await setDoc(pageDocRef, { content: data.content }, { merge: true });
+
     return versionRef.id;
   } catch (e) {
     console.error("Error saving new version:", e);

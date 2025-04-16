@@ -211,51 +211,42 @@ export function PageActions({
   };
 
   return (
-    <div className={`flex flex-col gap-4 ${className}`}>
-      {/* Owner-only actions - Edit and Delete buttons */}
-      {isOwner && (
-        <div className="flex flex-col items-stretch gap-3 mb-3 w-full">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-full"
-            onClick={() => setIsEditing && setIsEditing(!isEditing)}
-          >
-            <Edit className="h-4 w-4" />
-            {isEditing ? "Cancel" : "Edit"}
-          </Button>
-          {isEditing && (
+    <div className={`${className}`}>
+      {/* All buttons - horizontal on desktop, vertical on mobile */}
+      <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-3 w-full">
+        {/* Owner-only actions - Edit and Delete buttons */}
+        {isOwner && (
+          <>
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
-              className="gap-2 w-full"
-              onClick={handleDelete}
+              className="gap-2 w-full md:w-auto"
+              onClick={() => setIsEditing && setIsEditing(!isEditing)}
             >
-              <Trash2 className="h-4 w-4" />
-              Delete
+              <Edit className="h-4 w-4" />
+              {isEditing ? "Cancel" : "Edit"}
             </Button>
-          )}
-        </div>
-      )}
+            {isEditing && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-2 w-full md:w-auto"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            )}
+          </>
+        )}
 
-      {/* Actions available to all users - Reply, Layout */}
-      <div className="flex flex-col items-stretch gap-3 border-t pt-4 w-full">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full"
-          onClick={handleReply}
-        >
-          <Reply className="h-4 w-4" />
-          Reply to Page
-        </Button>
-
+        {/* Paragraph Mode button - available to all users */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 w-full"
+              className="gap-2 w-full md:w-auto"
             >
               <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode
@@ -273,6 +264,19 @@ export function PageActions({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Reply button - only show for non-owners */}
+        {!isOwner && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full md:w-auto"
+            onClick={handleReply}
+          >
+            <Reply className="h-4 w-4" />
+            Reply to Page
+          </Button>
+        )}
       </div>
     </div>
   );
