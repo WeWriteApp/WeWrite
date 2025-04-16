@@ -12,10 +12,10 @@ import { CONTENT_EVENTS } from "../constants/analytics-events";
 import Cookies from 'js-cookie';
 
 /**
- * A direct page creation component that doesn't rely on any authentication
- * and always allows page creation
+ * A direct reply page component that doesn't rely on any authentication
+ * and always allows replying to pages
  */
-export default function DirectCreatePage() {
+export default function DirectReplyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState({
@@ -33,55 +33,55 @@ export default function DirectCreatePage() {
   const [initialContent, setInitialContent] = useState(null);
   const [error, setError] = useState(null);
   const analytics = useWeWriteAnalytics();
-  const isReply = searchParams.has('isReply') || (searchParams.has('title') && searchParams.get('title').startsWith('Re:'));
+  const isReply = true; // This is always a reply page
 
   // Try to get user data from cookies and session storage
   useEffect(() => {
-    console.log("DirectCreatePage: Getting user data from cookies and session storage");
-
+    console.log("DirectReplyPage: Getting user data from cookies and session storage");
+    
     // Try to get user data from multiple sources
     let userData = null;
-
+    
     // 1. Try to get user data from wewrite_accounts in sessionStorage
     try {
       const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
       if (wewriteAccounts) {
         const accounts = JSON.parse(wewriteAccounts);
         const currentAccount = accounts.find(acc => acc.isCurrent);
-
+        
         if (currentAccount) {
-          console.log("DirectCreatePage: Found current account in wewrite_accounts:", currentAccount);
+          console.log("DirectReplyPage: Found current account in wewrite_accounts:", currentAccount);
           userData = currentAccount;
         }
       }
     } catch (error) {
-      console.error("DirectCreatePage: Error getting user data from wewrite_accounts:", error);
+      console.error("DirectReplyPage: Error getting user data from wewrite_accounts:", error);
     }
-
+    
     // 2. Try to get user data from wewrite_user_id cookie and wewrite_accounts
     if (!userData) {
       try {
         const wewriteUserId = Cookies.get('wewrite_user_id');
         if (wewriteUserId) {
-          console.log("DirectCreatePage: Found wewrite_user_id cookie:", wewriteUserId);
-
+          console.log("DirectReplyPage: Found wewrite_user_id cookie:", wewriteUserId);
+          
           // Try to find the account in wewrite_accounts
           const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
           if (wewriteAccounts) {
             const accounts = JSON.parse(wewriteAccounts);
             const account = accounts.find(acc => acc.uid === wewriteUserId);
-
+            
             if (account) {
-              console.log("DirectCreatePage: Found account in wewrite_accounts by user ID:", account);
+              console.log("DirectReplyPage: Found account in wewrite_accounts by user ID:", account);
               userData = account;
             }
           }
         }
       } catch (error) {
-        console.error("DirectCreatePage: Error getting user data from wewrite_user_id:", error);
+        console.error("DirectReplyPage: Error getting user data from wewrite_user_id:", error);
       }
     }
-
+    
     // 3. Try to get user data from userSession cookie
     if (!userData) {
       try {
@@ -89,18 +89,18 @@ export default function DirectCreatePage() {
         if (userSessionCookie) {
           const userSession = JSON.parse(userSessionCookie);
           if (userSession && userSession.uid) {
-            console.log("DirectCreatePage: Found user data in userSession cookie:", userSession);
+            console.log("DirectReplyPage: Found user data in userSession cookie:", userSession);
             userData = userSession;
           }
         }
       } catch (error) {
-        console.error("DirectCreatePage: Error getting user data from userSession cookie:", error);
+        console.error("DirectReplyPage: Error getting user data from userSession cookie:", error);
       }
     }
-
+    
     // If we found user data, use it
     if (userData) {
-      console.log("DirectCreatePage: Using user data:", userData);
+      console.log("DirectReplyPage: Using user data:", userData);
       setUser(userData);
     }
   }, []);
@@ -131,14 +131,14 @@ export default function DirectCreatePage() {
 
         // Set the initial content
         setInitialContent(parsedContent);
-
+        
         // Also set the editor state immediately
         if (setEditorState) {
           setEditorState(parsedContent);
         }
 
         // If this is a reply and we have a replyTo parameter, fetch the original page content
-        if (isReply && replyToParam && parsedContent) {
+        if (replyToParam && parsedContent) {
           // Find the blockquote in the content
           const blockquoteIndex = parsedContent.findIndex(node => node.type === 'blockquote');
 
@@ -164,7 +164,7 @@ export default function DirectCreatePage() {
         console.error("Error parsing initial content:", error);
       }
     }
-  }, [searchParams, isReply]);
+  }, [searchParams]);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -182,10 +182,10 @@ export default function DirectCreatePage() {
     try {
       // Get the username from URL parameters if available (for replies)
       const urlUsername = searchParams.get('username');
-
+      
       // Use the username from URL if available, otherwise fallback to user data
       const username = urlUsername || user?.username || user?.displayName || 'Anonymous';
-
+      
       // Get the user ID
       const userId = user?.uid || 'anonymous';
 
@@ -195,7 +195,7 @@ export default function DirectCreatePage() {
         userId: userId,
         username: username,
         lastModified: new Date().toISOString(),
-        isReply: isReply || false,
+        isReply: true,
       };
 
       const res = await createPage(data);
@@ -211,7 +211,7 @@ export default function DirectCreatePage() {
         analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
           label: Page.title,
           page_id: res,
-          is_reply: !!isReply,
+          is_reply: true,
         });
 
         setIsSaving(false);
@@ -229,10 +229,10 @@ export default function DirectCreatePage() {
 
   // Get username for display
   const urlUsername = searchParams.get('username');
-
+  
   // Try to get a better username from multiple sources
   let username = urlUsername || user?.displayName || user?.username || '';
-
+  
   // If we still don't have a username, try to get it from other sources
   if (!username) {
     try {
@@ -241,7 +241,7 @@ export default function DirectCreatePage() {
       if (wewriteAccounts) {
         const accounts = JSON.parse(wewriteAccounts);
         const currentAccount = accounts.find(acc => acc.isCurrent);
-
+        
         if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
           username = currentAccount.username || currentAccount.displayName;
           console.log("Found username in wewrite_accounts:", username);
@@ -251,7 +251,7 @@ export default function DirectCreatePage() {
       console.error("Error getting username from wewrite_accounts:", error);
     }
   }
-
+  
   // If we still don't have a username, try to get it from userSession cookie
   if (!username) {
     try {
@@ -267,7 +267,7 @@ export default function DirectCreatePage() {
       console.error("Error getting username from userSession cookie:", error);
     }
   }
-
+  
   // If we still don't have a username, use 'Anonymous'
   if (!username) {
     username = 'Anonymous';
@@ -276,7 +276,7 @@ export default function DirectCreatePage() {
   // Render the page creation form
   return (
     <DashboardLayout>
-      <PageHeader title={isReply ? "Replying to page" : "New page"} username={username} userId={user?.uid} />
+      <PageHeader title="Replying to page" username={username} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
         <div className="w-full">
           <form

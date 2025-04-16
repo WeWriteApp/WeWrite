@@ -138,18 +138,41 @@ export function PageActions({
    * Creates a reply to the current page
    */
   const handleReply = async () => {
-    // Import the utility here to ensure it's only used on the client
-    const { isAuthenticated } = require('../utils/currentUser');
-
-    if (!isAuthenticated()) {
-      toast.error("You must be logged in to reply");
-      return;
-    }
-
     // Get the current user's username using our centralized utility
     try {
-      const username = await getCurrentUsername();
-      console.log("Current user username from utility:", username);
+      // Try to get username from multiple sources
+      let username = '';
+
+      // 1. Try to get username from getCurrentUsername utility
+      try {
+        username = await getCurrentUsername();
+        console.log("Current user username from utility:", username);
+      } catch (error) {
+        console.error("Error getting username from utility:", error);
+      }
+
+      // 2. If we don't have a username, try to get it from wewrite_accounts
+      if (!username) {
+        try {
+          const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
+          if (wewriteAccounts) {
+            const accounts = JSON.parse(wewriteAccounts);
+            const currentAccount = accounts.find(acc => acc.isCurrent);
+
+            if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
+              username = currentAccount.username || currentAccount.displayName;
+              console.log("Found username in wewrite_accounts:", username);
+            }
+          }
+        } catch (error) {
+          console.error("Error getting username from wewrite_accounts:", error);
+        }
+      }
+
+      // 3. If we still don't have a username, use 'Anonymous'
+      if (!username) {
+        username = 'Anonymous';
+      }
 
       // Use utility functions to create standardized reply content
       const replyTitle = generateReplyTitle(page.title);
@@ -169,19 +192,20 @@ export function PageActions({
           username
         });
 
-        console.log("Navigating to new page with:", {
+        console.log("Navigating to direct-reply page with:", {
           title: replyTitle,
           username,
           initialContent
         });
 
-        router.push(`/new?title=${params.title}&initialContent=${params.content}&isReply=true&username=${params.username}`);
+        // Use the direct-reply route instead of the new route
+        router.push(`/direct-reply?title=${params.title}&initialContent=${params.content}&replyTo=${page.id}&username=${params.username}`);
       } catch (error) {
-        console.error("Error navigating to new page:", error);
+        console.error("Error navigating to direct-reply page:", error);
         toast.error("Failed to create reply");
       }
     } catch (error) {
-      console.error("Error getting username:", error);
+      console.error("Error in handleReply:", error);
       toast.error("Failed to create reply");
     }
   };
