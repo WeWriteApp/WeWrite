@@ -248,22 +248,12 @@ export default function PageHeader({
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({
-                      title: title || 'WeWrite Page',
-                      url: window.location.href,
-                    })
-                    .then(() => toast.success('Shared successfully'))
-                    .catch((error) => {
-                      if (error.name !== 'AbortError') {
-                        console.error('Error sharing:', error);
-                        toast.error('Failed to share');
-                      }
-                    });
-                  } else {
-                    // Fallback for browsers that don't support the Web Share API
+                  try {
                     navigator.clipboard.writeText(window.location.href);
                     toast.success('Link copied to clipboard');
+                  } catch (error) {
+                    console.error('Error copying link:', error);
+                    toast.error('Failed to copy link');
                   }
                 }}
                 title="Share"

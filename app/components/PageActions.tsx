@@ -218,7 +218,7 @@ export function PageActions({
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 w-full sm:w-auto justify-start sm:justify-center"
+            className="gap-2 w-full sm:w-auto"
             onClick={() => setIsEditing && setIsEditing(!isEditing)}
           >
             <Edit className="h-4 w-4" />
@@ -228,7 +228,7 @@ export function PageActions({
             <Button
               variant="destructive"
               size="sm"
-              className="gap-2 w-full sm:w-auto justify-start sm:justify-center"
+              className="gap-2 w-full sm:w-auto"
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4" />
@@ -243,7 +243,7 @@ export function PageActions({
         <Button
           variant="ghost"
           size="sm"
-          className="gap-2 w-full sm:w-auto justify-start sm:justify-center"
+          className="gap-2 w-full sm:w-auto"
           onClick={handleCopyLink}
         >
           <Link2 className="h-4 w-4" />
@@ -253,7 +253,7 @@ export function PageActions({
         <Button
           variant="ghost"
           size="sm"
-          className="gap-2 w-full sm:w-auto justify-start sm:justify-center"
+          className="gap-2 w-full sm:w-auto"
           onClick={handleReply}
         >
           <Reply className="h-4 w-4" />
@@ -265,7 +265,7 @@ export function PageActions({
             <Button
               variant="ghost"
               size="sm"
-              className="gap-2 w-full sm:w-auto justify-start sm:justify-center"
+              className="gap-2 w-full sm:w-auto"
             >
               <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode
