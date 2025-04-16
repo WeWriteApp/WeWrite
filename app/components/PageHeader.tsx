@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { Loader, ChevronLeft, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+
 import { getUsernameById } from "../utils/userUtils";
 
 export interface PageHeaderProps {
@@ -248,12 +248,22 @@ export default function PageHeader({
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 onClick={() => {
-                  try {
-                    navigator.clipboard.writeText(window.location.href);
-                    toast.success('Link copied to clipboard');
-                  } catch (error) {
-                    console.error('Error copying link:', error);
-                    toast.error('Failed to copy link');
+                  if (navigator.share) {
+                    navigator.share({
+                      title: title || 'WeWrite Page',
+                      url: window.location.href,
+                    }).catch((error) => {
+                      // Silent error handling - no toast
+                      console.error('Error sharing:', error);
+                    });
+                  } else {
+                    // Fallback for browsers that don't support the Web Share API
+                    try {
+                      navigator.clipboard.writeText(window.location.href);
+                      // No toast notification
+                    } catch (error) {
+                      console.error('Error copying link:', error);
+                    }
                   }
                 }}
                 title="Share"

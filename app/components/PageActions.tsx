@@ -214,11 +214,11 @@ export function PageActions({
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Owner-only actions - Edit and Delete buttons */}
       {isOwner && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-3 w-full">
+        <div className="flex flex-col items-stretch gap-3 mb-3 w-full">
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 w-full sm:w-auto"
+            className="gap-2 w-full"
             onClick={() => setIsEditing && setIsEditing(!isEditing)}
           >
             <Edit className="h-4 w-4" />
@@ -228,7 +228,7 @@ export function PageActions({
             <Button
               variant="destructive"
               size="sm"
-              className="gap-2 w-full sm:w-auto"
+              className="gap-2 w-full"
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4" />
@@ -238,22 +238,12 @@ export function PageActions({
         </div>
       )}
 
-      {/* Actions available to all users - Copy, Reply, Layout */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 border-t pt-4 w-full">
+      {/* Actions available to all users - Reply, Layout */}
+      <div className="flex flex-col items-stretch gap-3 border-t pt-4 w-full">
         <Button
           variant="ghost"
           size="sm"
-          className="gap-2 w-full sm:w-auto"
-          onClick={handleCopyLink}
-        >
-          <Link2 className="h-4 w-4" />
-          Copy Link
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-2 w-full sm:w-auto"
+          className="gap-2 w-full"
           onClick={handleReply}
         >
           <Reply className="h-4 w-4" />
@@ -265,7 +255,7 @@ export function PageActions({
             <Button
               variant="ghost"
               size="sm"
-              className="gap-2 w-full sm:w-auto"
+              className="gap-2 w-full"
             >
               <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode
