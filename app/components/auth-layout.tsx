@@ -20,18 +20,18 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   }, []);
 
   return (
-    <div className="container relative h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+    <div className="container relative h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 px-0">
       {/* Left side - Form */}
-      <div className="lg:p-2 flex flex-col h-full">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 flex-1 px-4 sm:px-0 sm:w-[450px]">
-          <Card className="mt-auto mb-auto border border-gray-200 shadow-sm dark:border-gray-800 bg-white dark:bg-background">
-            <CardContent className="pt-4 pb-4 px-4 sm:pt-6 sm:pb-6 sm:px-6">
+      <div className="flex flex-col h-full">
+        <div className="mx-auto flex w-full flex-col justify-center flex-1 px-2 sm:w-[400px]">
+          <Card className="mt-auto mb-auto border-theme-medium shadow-md bg-white dark:bg-background">
+            <CardContent className="pt-2 pb-2 px-3 sm:pt-3 sm:pb-3 sm:px-4">
               {children}
             </CardContent>
           </Card>
         </div>
       </div>
-      
+
       {/* Right side - Image */}
       <div className="relative hidden h-full lg:block">
         <Image

@@ -32,13 +32,13 @@ const GroupMembers = ({ members, groupId }) => {
               members &&
               user &&
               members[user.uid] && members[user.uid].role === "owner" &&
-              member.role !== "owner" && 
+              member.role !== "owner" &&
                 <button
                   className="text-red-500"
                   type="button"
                   onClick={() => handleRemove(uid)}
                 >Remove</button>
-              
+
             }
           </li>
         ))}
@@ -72,7 +72,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
       });
       setUsers(arr);
     });
-    
+
   }, []);
 
   useEffect(() => {
@@ -86,7 +86,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
       role: "member",
       joinedAt: new Date().toISOString()
     }
-    
+
     setMembers(
       members => {
         return {
@@ -112,7 +112,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
     set(groupMembersRef, membersArr);
   }
 
-  if (!users.length) return <div>Loading...</div>;
+  if (!users.length) return <div className="flex justify-center py-4"><div className="loader loader-lg"></div></div>;
   return (
     <div className="mt-4">
       <h2
@@ -126,7 +126,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
         autoFocus
         className="searchbar"
         placeholder="Search for a user"
-        fuseOptions={{ 
+        fuseOptions={{
           minMatchCharLength: 2,
         }}
         formatResult={(item) => {

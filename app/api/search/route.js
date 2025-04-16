@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
+import { searchUsers } from "../../firebase/database";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -11,18 +12,18 @@ const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GO
 if (credentialsEnvVar) {
   try {
     console.log('Attempting to initialize BigQuery with credentials');
-    
+
     // First try to handle it as regular JSON
     let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
-    
+
     // Check if it might be HTML content (bad response)
     if (jsonString.includes('<!DOCTYPE') || jsonString.includes('<html')) {
       console.error('Credentials appear to contain HTML content instead of JSON. Check environment variable configuration.');
       throw new Error('Invalid credentials format: Contains HTML content');
     }
-    
+
     // Check if the string starts with eyJ - a common Base64 JSON start pattern
-    if (credentialsEnvVar.startsWith('eyJ') || 
+    if (credentialsEnvVar.startsWith('eyJ') ||
         process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true') {
       console.log('Credentials appear to be Base64 encoded, attempting to decode');
       // Try to decode as Base64
@@ -35,7 +36,7 @@ if (credentialsEnvVar) {
         // Continue with the original string if decoding fails
       }
     }
-    
+
     const credentials = JSON.parse(jsonString);
     console.log('Successfully parsed credentials JSON with project_id:', credentials.project_id);
     bigquery = new BigQuery({
@@ -80,18 +81,133 @@ async function testBigQueryConnection() {
   }
 }
 
+// Fallback function to search pages in Firestore when BigQuery is not available
+async function searchPagesInFirestore(userId, searchTerm, groupIds = []) {
+  try {
+    console.log('Using Firestore fallback for page search');
+
+    // Import Firestore modules dynamically
+    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+    const { db } = await import('../../firebase/database');
+
+    // Format search term for case-insensitive search
+    const searchTermLower = searchTerm.toLowerCase().trim();
+
+    // Get user's own pages
+    const userPagesQuery = query(
+      collection(db, 'pages'),
+      where('userId', '==', userId),
+      orderBy('lastModified', 'desc'),
+      limit(10)
+    );
+
+    const userPagesSnapshot = await getDocs(userPagesQuery);
+
+    // Filter pages by title client-side (Firestore doesn't support LIKE queries)
+    const userPages = [];
+    userPagesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (!searchTermLower || data.title.toLowerCase().includes(searchTermLower)) {
+        userPages.push({
+          id: doc.id,
+          title: data.title || 'Untitled',
+          isOwned: true,
+          isEditable: true,
+          userId: data.userId,
+          lastModified: data.lastModified,
+          type: 'user'
+        });
+      }
+    });
+
+    // Get public pages
+    const publicPagesQuery = query(
+      collection(db, 'pages'),
+      where('isPublic', '==', true),
+      orderBy('lastModified', 'desc'),
+      limit(20)
+    );
+
+    const publicPagesSnapshot = await getDocs(publicPagesQuery);
+
+    // Filter public pages by title and exclude user's own pages
+    const publicPages = [];
+    publicPagesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.userId !== userId &&
+          (!searchTermLower || data.title.toLowerCase().includes(searchTermLower))) {
+        publicPages.push({
+          id: doc.id,
+          title: data.title || 'Untitled',
+          isOwned: false,
+          isEditable: false,
+          userId: data.userId,
+          lastModified: data.lastModified,
+          type: 'public'
+        });
+      }
+    });
+
+    // Combine and return results
+    return [...userPages, ...publicPages.slice(0, 10)];
+  } catch (error) {
+    console.error('Error in Firestore fallback search:', error);
+    return [];
+  }
+}
+
 export async function GET(request) {
   try {
+    // Extract query parameters from the URL
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+    const groupIds = searchParams.get("groupIds")
+      ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
+      : [];
+    const searchTerm = searchParams.get("searchTerm") || "";
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          pages: [],
+          users: [],
+          message: "userId is required"
+        },
+        { status: 400 }
+      );
+    }
+
+    // If BigQuery is not initialized, use Firestore fallback
     if (!bigquery) {
-      console.log('BigQuery client not initialized, returning empty results');
-      return NextResponse.json({
-        pages: [],
-        error: {
-          type: "bigquery_not_initialized",
-          details: {
-            envVarPresent: !!process.env.GOOGLE_CLOUD_KEY_JSON,
-          }
+      console.log('BigQuery client not initialized, using Firestore fallback');
+
+      // Search for pages in Firestore
+      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds);
+
+      // Search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          const { searchUsers } = await import('../../firebase/database');
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user'
+          }));
+        } catch (userError) {
+          console.error('Error searching for users:', userError);
         }
+      }
+
+      return NextResponse.json({
+        pages,
+        users,
+        source: "firestore_fallback"
       }, { status: 200 });
     }
 
@@ -101,6 +217,7 @@ export async function GET(request) {
       console.log('BigQuery connection failed, returning empty results');
       return NextResponse.json({
         pages: [],
+        users: [],
         error: {
           type: "bigquery_connection_failed",
           details: "Failed to connect to BigQuery"
@@ -108,29 +225,23 @@ export async function GET(request) {
       }, { status: 200 });
     }
 
-    const { searchParams } = new URL(request.url);
-
-    // Extract query parameters from the URL
-    const userId = searchParams.get("userId");
-    const groupIds = searchParams.get("groupIds")
-      ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
-      : []; // Handle multiple groupIds or empty array, filter out empty strings
-    const searchTerm = searchParams.get("searchTerm");
+    // Ensure searchTerm is properly handled if not provided
+    const searchTermFormatted = searchTerm
+      ? `%${searchTerm.toLowerCase().trim()}%`
+      : "%";
 
     if (!userId) {
       return NextResponse.json(
-        { 
-          pages: [], 
-          message: "userId is required" 
+        {
+          pages: [],
+          users: [],
+          message: "userId is required"
         },
         { status: 400 }
       );
     }
 
-    // Ensure searchTerm is properly handled if not provided
-    const searchTermFormatted = searchTerm
-      ? `%${searchTerm.toLowerCase().trim()}%`
-      : "%";
+    // searchTermFormatted is already defined above
 
     // Let's also verify the data exists with a simpler query
     const verifyQuery = `
@@ -236,8 +347,8 @@ export async function GET(request) {
       WHERE p.userId != @userId
         AND LOWER(p.title) LIKE @searchTerm
         ${groupIds.length > 0 ? `AND p.document_id NOT IN (
-          SELECT document_id 
-          FROM \`wewrite-ccd82.pages_indexes.pages\` 
+          SELECT document_id
+          FROM \`wewrite-ccd82.pages_indexes.pages\`
           WHERE groupId IN UNNEST(@groupIds)
         )` : ''}
       ORDER BY p.lastModified DESC
@@ -267,7 +378,7 @@ export async function GET(request) {
 
     try {
       const pages = [];
-      
+
       // Add user pages to results
       if (userRows && userRows.length > 0) {
         userRows.forEach(row => {
@@ -282,7 +393,7 @@ export async function GET(request) {
           });
         });
       }
-      
+
       // Add group pages to results
       if (groupRows && groupRows.length > 0) {
         groupRows.forEach(row => {
@@ -298,7 +409,7 @@ export async function GET(request) {
           });
         });
       }
-      
+
       // Add public pages to results
       if (publicRows && publicRows.length > 0) {
         publicRows.forEach(row => {
@@ -314,19 +425,42 @@ export async function GET(request) {
         });
       }
 
+      // Also search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          // Search for users with the same search term
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user' // Add a type field to distinguish from pages
+          }));
+        } catch (userError) {
+          console.error('Error searching for users:', userError);
+        }
+      }
+
       console.log('Final processed results:', {
         pagesCount: pages.length,
+        usersCount: users.length,
         pages,
+        users,
         searchTerm,
         searchTermFormatted
       });
 
-      // Return formatted results
-      return NextResponse.json({ pages }, { status: 200 });
+      // Return formatted results including users
+      return NextResponse.json({ pages, users }, { status: 200 });
     } catch (error) {
       console.error('Error processing query results:', error);
       return NextResponse.json({
         pages: [],
+        users: [],
         error: {
           message: error.message,
           details: error.stack
@@ -337,6 +471,7 @@ export async function GET(request) {
     console.error('Error querying BigQuery:', error);
     return NextResponse.json({
       pages: [],
+      users: [],
       error: {
         message: error.message,
         details: error.stack

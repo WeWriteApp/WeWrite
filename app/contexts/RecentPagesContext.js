@@ -87,7 +87,7 @@ export function RecentPagesProvider({ children }) {
         title: page.title || 'Untitled',
         timestamp: Date.now(),
         userId: page.userId || user.uid,
-        username: page.username || user.displayName || user.email
+        username: page.username || user.displayName || "Anonymous"
       };
       
       // Save to Firebase

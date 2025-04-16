@@ -38,7 +38,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  
+
   const table = useReactTable({
     data,
     columns,
@@ -68,7 +68,7 @@ export function DataTable<TData, TValue>({
           />
         </div>
       )}
-      <div className="rounded-md border">
+      <div className="rounded-md border-theme-medium">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

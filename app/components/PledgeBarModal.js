@@ -9,18 +9,21 @@ import {
   DialogClose,
   DialogHeader,
   DialogFooter,
+  DialogOverlay,
+  DialogPortal,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
 import { DollarSign } from "lucide-react";
 
-const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
-  const content = isSignedIn ? {
-    title: "Support WeWrite",
-    description: "⚡️ Donations aren't built yet! Please support us on OpenCollective so we can get this built!⚡️",
+const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
+  // Use customContent if provided, otherwise use default content based on sign-in status
+  const content = customContent || (isSignedIn ? {
+    title: "This feature is coming soon!",
+    description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can support us on OpenCollective!",
     action: {
-      href: "https://opencollective.com/wewrite-app/contribute/backer-77100",
+      href: "https://opencollective.com/wewrite-app",
       label: "Support us",
       external: true
     }
@@ -32,7 +35,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
       label: "Sign in",
       external: false
     }
-  };
+  });
 
   // Sort social links in the specified order: twitter, youtube, instagram
   const sortedSocialLinks = [...socialLinks].sort((a, b) => {
@@ -42,10 +45,32 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="max-w-sm sm:max-w-md mx-auto animate-in fade-in-50 slide-in-from-bottom-8 duration-300" 
-        hideCloseButton
-      >
+      <style jsx global>{`
+        .support-modal-overlay {
+          animation: overlay-fade-in 200ms ease-out forwards !important;
+        }
+
+        @keyframes overlay-fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        .support-modal {
+          animation: elegant-fade-in 250ms ease-out forwards !important;
+        }
+
+        @keyframes elegant-fade-in {
+          0% { opacity: 0; transform: translate(-50%, -45%); }
+          100% { opacity: 1; transform: translate(-50%, -50%); }
+        }
+      `}</style>
+      <DialogPortal>
+        <DialogOverlay className="support-modal-overlay" />
+        <DialogContent
+          className="max-w-sm sm:max-w-md mx-auto rounded-lg border-border dark:border-border support-modal"
+          hideCloseButton
+        >
+
         <DialogHeader>
           <DialogTitle>
             {content.title}
@@ -56,13 +81,13 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
         </DialogHeader>
 
         <div className="py-3">
-          <Button 
-            asChild 
-            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`} 
+          <Button
+            asChild
+            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >
-            <a 
+            <a
               href={content.action.href}
               target={content.action.external ? "_blank" : undefined}
               rel={content.action.external ? "noopener noreferrer" : undefined}
@@ -75,7 +100,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
         </div>
 
         {/* Social Links Section */}
-        <div className="pt-4 border-t">
+        <div className="pt-4 border-t-only">
           <h3 className="text-sm font-medium mb-3 text-center">Follow us for updates</h3>
           <div className="flex flex-col gap-2 w-full">
             {sortedSocialLinks.map((link) => (
@@ -84,12 +109,12 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
                 variant="outline"
                 asChild
                 className={`w-full justify-center ${
-                  link.platform === 'twitter' 
-                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white border-[#1DA1F2]' 
-                    : link.platform === 'youtube' 
-                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white border-[#FF0000]' 
-                    : link.platform === 'instagram' 
-                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white border-transparent' 
+                  link.platform === 'twitter'
+                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white'
+                    : link.platform === 'youtube'
+                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white'
+                    : link.platform === 'instagram'
+                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white'
                     : ''
                 }`}
               >
@@ -107,7 +132,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
           </div>
         </div>
 
-        <div className="pt-4 mt-2 border-t">
+        <div className="pt-4 mt-2 border-t-only">
           <DialogFooter className="sm:justify-center pt-2">
             <DialogClose asChild>
               <Button variant="outline">
@@ -117,8 +142,9 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn }) => {
           </DialogFooter>
         </div>
       </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };
 
-export default PledgeBarModal; 
+export default PledgeBarModal;

@@ -12,18 +12,18 @@ export default function TestUsernamePage() {
 
   const fetchUserData = async () => {
     if (!userId) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(`/api/username?userId=${userId}`);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch user data');
       }
-      
+
       setApiResponse(data);
     } catch (err) {
       console.error('Error fetching user data:', err);
@@ -40,7 +40,7 @@ export default function TestUsernamePage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">Username Test Page</h1>
-      
+
       <div className="mb-6">
         <div className="flex gap-2 mb-4">
           <input
@@ -55,10 +55,10 @@ export default function TestUsernamePage() {
             disabled={loading}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
           >
-            {loading ? 'Loading...' : 'Fetch User'}
+            {loading ? <><div className="loader"></div> Loading</> : 'Fetch User'}
           </button>
         </div>
-        
+
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
             <div className="flex items-center">
@@ -68,7 +68,7 @@ export default function TestUsernamePage() {
           </div>
         )}
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h2 className="text-xl font-semibold mb-4">API Response</h2>
@@ -86,7 +86,7 @@ export default function TestUsernamePage() {
             <p className="text-gray-500">No data fetched yet</p>
           )}
         </div>
-        
+
         <div>
           <h2 className="text-xl font-semibold mb-4">UsernameHistory Component</h2>
           <div className="bg-white p-6 rounded-lg border">

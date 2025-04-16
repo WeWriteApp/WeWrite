@@ -74,7 +74,7 @@ export function MultiSelect({
         {selectedItems.length === 0 && !isOpen && (
           <span className="text-muted-foreground self-center">{placeholder}</span>
         )}
-        
+
         {selectedItems.map((item) => (
           <Badge key={item.id} variant="secondary" className="flex items-center gap-1">
             {item.label}
@@ -90,7 +90,7 @@ export function MultiSelect({
             </button>
           </Badge>
         ))}
-        
+
         {isOpen && (
           <Input
             type="text"
@@ -104,9 +104,9 @@ export function MultiSelect({
       </div>
 
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-md shadow-md max-h-60 overflow-auto">
+        <div className="absolute z-10 w-full mt-1 bg-popover border-theme-medium rounded-md shadow-md max-h-60 overflow-auto">
           {loading ? (
-            <div className="p-2 text-center text-muted-foreground">Loading...</div>
+            <div className="p-2 text-center text-muted-foreground flex justify-center"><div className="loader"></div></div>
           ) : filteredItems.length === 0 ? (
             <div className="p-2 text-center text-muted-foreground">No results found</div>
           ) : (

@@ -10,13 +10,19 @@ import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { RecentPagesProvider } from "./contexts/RecentPagesContext";
 import { LineSettingsProvider } from "./contexts/LineSettingsContext";
+import { AccentColorProvider } from "./contexts/AccentColorContext";
+import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 
-// Dynamically import WindsurfOverlay with no SSR
-const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), { 
-  ssr: false 
+// Dynamically import components with no SSR
+const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
+  ssr: false
+});
+
+const UsernameWarningBanner = dynamic(() => import('./components/UsernameWarningBanner'), {
+  ssr: false
 });
 
 export default function ClientLayout({ children }) {
@@ -30,16 +36,19 @@ export default function ClientLayout({ children }) {
       enableSystem
       disableTransitionOnChange
     >
-      <LoggingProvider>
-        <DataProvider>
-          <AuthProvider>
-            <PortfolioProvider>
-              <RecentPagesProvider>
-                <MobileProvider>
-                  <DrawerProvider>
-                    <LineSettingsProvider>
+      <AccentColorProvider>
+        <LoggingProvider>
+          <DataProvider>
+            <MultiAccountProvider>
+              <AuthProvider>
+                <PortfolioProvider>
+                  <RecentPagesProvider>
+                    <MobileProvider>
+                      <DrawerProvider>
+                        <LineSettingsProvider>
                       <Drawer />
                       <div className="flex flex-col min-h-screen bg-background pb-8">
+                        {!isAuthPage && <UsernameWarningBanner />}
                         <main className="flex-grow">
                           {children}
                         </main>
@@ -50,14 +59,16 @@ export default function ClientLayout({ children }) {
                           <WindsurfOverlay />
                         </>
                       )}
-                    </LineSettingsProvider>
-                  </DrawerProvider>
-                </MobileProvider>
-              </RecentPagesProvider>
-            </PortfolioProvider>
-          </AuthProvider>
-        </DataProvider>
-      </LoggingProvider>
+                        </LineSettingsProvider>
+                      </DrawerProvider>
+                    </MobileProvider>
+                  </RecentPagesProvider>
+                </PortfolioProvider>
+              </AuthProvider>
+            </MultiAccountProvider>
+          </DataProvider>
+        </LoggingProvider>
+      </AccentColorProvider>
     </ThemeProvider>
   );
 }

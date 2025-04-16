@@ -43,7 +43,7 @@ const PledgeBar = () => {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         // Scrolling down - hide the bar
         setVisible(false);
@@ -51,12 +51,12 @@ const PledgeBar = () => {
         // Scrolling up - show the bar
         setVisible(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
-    
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -64,30 +64,49 @@ const PledgeBar = () => {
 
   // Detect if we're on a page view
   useEffect(() => {
-    setIsPageView(pathname && pathname.includes('/pages/'));
+    // Check if we're on a page view with the new URL structure
+    // The new structure is just /[id] for pages
+    const isOnPageView = pathname && (
+      // Match the old URL structure for backward compatibility
+      pathname.includes('/pages/') ||
+      // Match the new URL structure: /[id] (but not /u/ or /g/ paths)
+      (pathname.match(/^\/[a-zA-Z0-9_-]+$/) &&
+       !pathname.startsWith('/u/') &&
+       !pathname.startsWith('/g/'))
+    );
+
+    setIsPageView(isOnPageView);
+
+    // If not on a page view, set loading to false
+    if (!isOnPageView) {
+      setLoading(false);
+    }
   }, [pathname]);
 
   // Load user subscription and pledge data
   useEffect(() => {
     const loadData = async () => {
-      if (!user || !pageId) return;
-      
+      if (!user || !pageId) {
+        setLoading(false);
+        return;
+      }
+
       try {
         // Get the page to check its owner
         const pageDoc = await getDocById("pages", pageId);
-        
+
         if (pageDoc && pageDoc.exists()) {
           setPageTitle(pageDoc.data().title || 'Untitled Page');
-          
+
           // Set isOwnPage based on page ownership
           const isOwner = pageDoc.data().userId === user.uid;
-          console.log("Checking page ownership:", { 
-            pageUserId: pageDoc.data().userId, 
+          console.log("Checking page ownership:", {
+            pageUserId: pageDoc.data().userId,
             currentUserId: user.uid,
-            isOwner 
+            isOwner
           });
           setIsOwnPage(isOwner);
-          
+
           if (isOwner) {
             // Load page stats
             const stats = await getPageStats(pageId);
@@ -100,18 +119,18 @@ const PledgeBar = () => {
             // Get subscription data for donating
             const userSubscription = await getUserSubscription(user.uid);
             setSubscription(userSubscription);
-            
+
             // Get pledge for this page if exists
             const pledge = await getPledge(user.uid, pageId);
             if (pledge) {
               setDonateAmount(pledge.amount);
               setSelectedAmount(pledge.amount);
-              
+
               // Check if current pledge is already at subscription limit
               const usedAmount = userSubscription?.pledgedAmount || 0;
               const subscriptionAmount = userSubscription?.amount || 0;
               const availableAmount = subscriptionAmount - usedAmount + pledge.amount;
-              
+
               if (pledge.amount >= availableAmount || usedAmount >= subscriptionAmount) {
                 setMaxedOut(true);
               }
@@ -130,14 +149,14 @@ const PledgeBar = () => {
             }]);
           }
         }
-        
+
         setLoading(false);
       } catch (error) {
         console.error("Error loading data:", error);
         setLoading(false);
       }
     };
-    
+
     loadData();
   }, [user, pageId]);
 
@@ -152,7 +171,7 @@ const PledgeBar = () => {
     if (pledges.length > 0) {
       console.log("Pledges updated:", pledges.map(p => ({id: p.id, amount: p.amount})));
       console.log("Current donate amount:", donateAmount);
-      
+
       // Ensure the amount is a valid number
       if (isNaN(pledges[0].amount) || pledges[0].amount === null) {
         const updatedPledges = pledges.map(p => ({
@@ -167,13 +186,13 @@ const PledgeBar = () => {
 
   const handlePledgeAmountChange = (pledgeId, change) => {
     console.log("handlePledgeAmountChange called with pledgeId:", pledgeId, "change:", change, "globalIncrement:", globalIncrement);
-    
+
     if (!user) {
       console.log("No user, redirecting to login");
       router.push('/auth/login');
       return;
     }
-    
+
     // Check if subscription exists and is active
     console.log("Subscription status:", subscription?.status);
     if (!subscription) {
@@ -181,26 +200,26 @@ const PledgeBar = () => {
       setShowActivationModal(true);
       return;
     }
-    
+
     if (subscription.status !== 'active') {
       console.log("Subscription not active, showing activation modal");
       setShowActivationModal(true);
       return;
     }
-    
+
     // Find the current pledge
     const currentPledge = pledges.find(p => p.id === pledgeId);
     if (!currentPledge) {
       console.error("Pledge not found for ID:", pledgeId);
       return;
     }
-    
+
     // Calculate the new amount
     const incrementValue = change * (globalIncrement || 1);
     let newAmount = Math.max(0, Number(currentPledge.amount || 0) + incrementValue);
     // Round to 2 decimal places
     newAmount = Math.round(newAmount * 100) / 100;
-    
+
     console.log("Calculating new amount:", {
       currentAmount: currentPledge.amount,
       change,
@@ -208,12 +227,12 @@ const PledgeBar = () => {
       incrementValue,
       newAmount
     });
-    
+
     // Check subscription limits
     const totalPledged = subscription.pledgedAmount || 0;
     const currentAmount = Number(currentPledge.amount || 0);
     const otherPledgesAmount = totalPledged - currentAmount;
-    
+
     // Don't allow amounts above available budget
     if (newAmount + otherPledgesAmount > subscription.amount) {
       console.log("Would exceed limit", {
@@ -225,7 +244,7 @@ const PledgeBar = () => {
       setShowMaxedOutWarning(true);
       return;
     }
-    
+
     // Update pledges with the new amount
     setShowMaxedOutWarning(false);
     const updatedPledges = pledges.map(p => {
@@ -234,12 +253,12 @@ const PledgeBar = () => {
       }
       return p;
     });
-    
+
     console.log("Updating pledges", {
       before: pledges.map(p => ({id: p.id, amount: p.amount})),
       after: updatedPledges.map(p => ({id: p.id, amount: p.amount}))
     });
-    
+
     setPledges(updatedPledges);
     setDonateAmount(newAmount);
     setSelectedAmount(newAmount);
@@ -260,18 +279,18 @@ const PledgeBar = () => {
       const totalPledged = subscription.pledgedAmount || 0;
       const currentAmount = pledges[0].amount;
       const otherPledgesAmount = totalPledged - currentAmount;
-      
+
       // Don't allow amounts above available budget
       if (amount + otherPledgesAmount > subscription.amount) {
         setShowMaxedOutWarning(true);
         setShowCustomAmountModal(false);
         return;
       }
-      
+
       const updatedPledges = pledges.map(p => {
         return { ...p, amount };
       });
-      
+
       setPledges(updatedPledges);
       setDonateAmount(amount);
       setSelectedAmount(amount);
@@ -288,7 +307,7 @@ const PledgeBar = () => {
       console.error("No amount selected for subscription");
     }
   };
-  
+
   // Save pledge changes with debounce
   useEffect(() => {
     if (!isConfirmed && user && pageId && !isOwnPage) {
@@ -296,18 +315,18 @@ const PledgeBar = () => {
       const saveTimeout = setTimeout(() => {
         savePledge();
       }, 1000);
-      
+
       return () => clearTimeout(saveTimeout);
     }
   }, [donateAmount, isConfirmed, user, pageId, isOwnPage]);
-  
+
   const savePledge = async () => {
     if (!user || !pageId) return;
-    
+
     try {
       console.log(`Attempting to save pledge for page ${pageId} with amount ${donateAmount}`);
       const existingPledge = await getPledge(user.uid, pageId);
-      
+
       if (existingPledge) {
         console.log(`Updating existing pledge with ID ${existingPledge.id}`);
         // Update existing pledge
@@ -317,17 +336,17 @@ const PledgeBar = () => {
         // Create new pledge
         await createPledge(user.uid, pageId, donateAmount);
       }
-      
+
       // After successful save, reload subscription data to reflect new pledge amounts
       const updatedSubscription = await getUserSubscription(user.uid);
       if (updatedSubscription) {
         setSubscription(updatedSubscription);
       }
-      
+
       setIsConfirmed(true);
     } catch (error) {
       console.error("Error saving pledge:", error);
-      
+
       // If there was an error, try to recreate the pledge as a fallback
       if (donateAmount > 0) {
         try {
@@ -341,25 +360,36 @@ const PledgeBar = () => {
     }
   };
 
+  // If not on a page view, don't render anything
+  if (!isPageView) {
+    return null;
+  }
+
   // If this is the user's own page, show stats instead of pledge bar
   if (isOwnPage) {
     return (
-      <div 
-        className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6 cursor-pointer"
-        onClick={() => setShowActivationModal(true)}
+      <div
+        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        }`}
       >
-        <div className="flex justify-around">
-          <div className="text-center">
-            <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
-            <p className="text-xs text-foreground/40">Active Donors</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
-            <p className="text-xs text-foreground/40">Monthly Income</p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-foreground/60">{pageStats.totalViews}</p>
-            <p className="text-xs text-foreground/40">Views</p>
+        <div
+          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
+          onClick={() => setShowActivationModal(true)}
+        >
+          <div className="flex justify-around py-4 px-6">
+            <div className="text-center">
+              <p className="text-sm text-foreground/60">{pageStats.activeDonors}</p>
+              <p className="text-xs text-foreground/40">Active Donors</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
+              <p className="text-xs text-foreground/40">Monthly Income</p>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-foreground/60">{pageStats.totalViews}</p>
+              <p className="text-xs text-foreground/40">Views</p>
+            </div>
           </div>
         </div>
 
@@ -376,7 +406,7 @@ const PledgeBar = () => {
   // If user isn't logged in, show login button
   if (!user) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6">
         <div className="text-center">
           <p className="text-foreground/70 mb-2">Login to support this creator</p>
           <Link href="/auth/login">
@@ -392,7 +422,7 @@ const PledgeBar = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6">
+      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6">
         <div className="animate-pulse flex justify-center">
           <div className="h-10 bg-foreground/10 rounded w-3/4"></div>
         </div>
@@ -402,7 +432,7 @@ const PledgeBar = () => {
 
   const handlePledgeInteraction = (pledgeId, change) => {
     console.log("handlePledgeInteraction called", { isOwnPage, user, pledgeId, change });
-    
+
     if (!user) {
       setShowActivationModal(true);
       return;
@@ -418,23 +448,25 @@ const PledgeBar = () => {
   };
 
   return (
-    <div 
-      className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 transition-transform duration-300 ${
-        visible ? 'translate-y-0' : 'translate-y-full'
-      }`}
-    >
-      <CompositionBar
-        value={pledges[0]?.amount || 0}
-        max={subscription?.amount || 100}
-        onChange={() => {}}
-        disabled={false}
-        pledges={pledges}
-        subscriptionAmount={subscription?.amount || 0}
-        onPledgeChange={handlePledgeInteraction}
-        onPledgeCustomAmount={handlePledgeCustomAmount}
-        onDeletePledge={() => {}}
-        className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border border-accent/20 py-4 px-6"
-      />
+    <>
+      <div
+        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        }`}
+      >
+        <CompositionBar
+          value={pledges[0]?.amount || 0}
+          max={subscription?.amount || 100}
+          onChange={() => {}}
+          disabled={false}
+          pledges={pledges}
+          subscriptionAmount={subscription?.amount || 0}
+          onPledgeChange={handlePledgeInteraction}
+          onPledgeCustomAmount={handlePledgeCustomAmount}
+          onDeletePledge={() => {}}
+          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
+        />
+      </div>
 
       {/* Pledge Modal */}
       <PledgeBarModal
@@ -442,14 +474,14 @@ const PledgeBar = () => {
         onClose={() => setShowActivationModal(false)}
         isSignedIn={!!user}
       />
-      
+
       {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
       {showCustomAmountModal && (
         <div>
           {/* Custom amount modal content */}
         </div>
       )}
-    </div>
+    </>
   );
 };
 

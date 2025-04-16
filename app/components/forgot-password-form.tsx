@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "./ui/button";
+import { LoadingButton } from "./ui/loading-button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -32,7 +32,7 @@ export function ForgotPasswordForm({
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     try {
       await sendPasswordResetEmail(auth, email);
       setSuccess(true);
@@ -44,8 +44,8 @@ export function ForgotPasswordForm({
   };
 
   return (
-    <form 
-      className={cn("flex flex-col gap-3 sm:gap-6", className)}
+    <form
+      className={cn("flex flex-col gap-3 sm:gap-4", className)}
       onSubmit={handleSubmit}
       {...props}
     >
@@ -55,14 +55,14 @@ export function ForgotPasswordForm({
           Enter your email address and we'll send you a link to reset your password
         </p>
       </div>
-      
+
       {success ? (
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-2 sm:space-y-3">
           <div className="bg-green-500/20 p-2 sm:p-4 rounded-md text-green-600 dark:text-green-200 text-xs sm:text-sm">
             Reset link sent! Check your email for instructions to reset your password.
           </div>
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             onClick={() => router.push("/auth/login")}
           >
             Return to Login
@@ -72,39 +72,41 @@ export function ForgotPasswordForm({
         <div className="grid gap-3 sm:gap-6">
           <div className="grid gap-1 sm:gap-2">
             <Label htmlFor="email" className="text-foreground text-sm">Email</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              placeholder="thomaspaine@example.com" 
+            <Input
+              id="email"
+              type="email"
+              placeholder="thomaspaine@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="bg-background border-input text-foreground placeholder:text-muted-foreground h-9 sm:h-10"
             />
           </div>
-          
+
           {error && (
             <div className="text-xs sm:text-sm font-medium text-destructive">
               {error}
             </div>
           )}
-          
-          <Button 
-            type="submit" 
+
+          <LoadingButton
+            type="submit"
             className={cn(
               "w-full transition-all",
-              !isFormValid && !isLoading ? 
+              !isFormValid && !isLoading ?
                 "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" : ""
             )}
-            disabled={isLoading || !isFormValid}
+            disabled={!isFormValid}
+            isLoading={isLoading}
+            loadingText="Sending..."
           >
-            {isLoading ? "Sending..." : "Send Reset Link"}
-          </Button>
-          
+            Send Reset Link
+          </LoadingButton>
+
           <div className="text-center text-xs sm:text-sm text-muted-foreground">
             Remember your password?{" "}
-            <Link 
-              href="/auth/login" 
+            <Link
+              href="/auth/login"
               className="underline underline-offset-4 text-foreground hover:text-foreground/90"
             >
               Back to login

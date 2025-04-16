@@ -1,6 +1,6 @@
 /**
  * Utility functions for handling reply functionality in WeWrite
- * 
+ *
  * This module centralizes the reply logic to:
  * 1. Make the codebase more robust
  * 2. Ensure consistent behavior across the application
@@ -9,7 +9,7 @@
 
 /**
  * Generates a reply title based on the original page title
- * 
+ *
  * @param {string} originalTitle - The title of the original page
  * @returns {string} - Formatted reply title
  */
@@ -19,7 +19,7 @@ export const generateReplyTitle = (originalTitle) => {
 
 /**
  * Creates standardized initial content for a reply
- * 
+ *
  * @param {Object} options - Configuration options for the reply
  * @param {string} options.pageId - ID of the original page
  * @param {string} options.pageTitle - Title of the original page
@@ -39,28 +39,36 @@ export const createReplyContent = ({
   switch (replyType) {
     case "standard":
     default:
+      // Ensure we have a valid username to display
+      const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
+
+      // Log the username being used
+      console.log(`Creating reply content with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
+
       return [
         {
           type: "paragraph",
           children: [
-            { text: `Reply to ` },
+            { text: `Replying to ` },
             {
               type: "link",
-              url: `/pages/${pageId}`,
+              url: `/${pageId}`,
+              pageId: pageId,
+              pageTitle: pageTitle || "Untitled",
+              className: "page-link",
               children: [{ text: pageTitle || "Untitled" }]
             },
             { text: ` by ` },
             {
               type: "link",
-              url: `/user/${userId || "anonymous"}`,
-              children: [{ text: username || "Anonymous" }]
-            },
-            { text: "" }
+              url: `/u/${userId || "anonymous"}`,
+              isUser: true,
+              userId: userId || "anonymous",
+              username: displayUsername,
+              className: "user-link",
+              children: [{ text: displayUsername }]
+            }
           ]
-        },
-        {
-          type: "paragraph",
-          children: [{ text: "" }]
         }
       ];
   }
@@ -68,7 +76,7 @@ export const createReplyContent = ({
 
 /**
  * Encodes reply data for URL parameters
- * 
+ *
  * @param {Object} replyData - Data needed for the reply
  * @param {string} replyData.title - Reply title
  * @param {Array} replyData.content - Reply content in Slate format

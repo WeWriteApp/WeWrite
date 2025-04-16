@@ -19,15 +19,17 @@ export interface PageHeaderProps {
   isLoading?: boolean;
   groupId?: string;
   groupName?: string;
+  scrollDirection?: string;
 }
 
-export default function PageHeader({ 
-  title, 
-  username, 
-  userId, 
+export default function PageHeader({
+  title,
+  username,
+  userId,
   isLoading = false,
   groupId,
-  groupName
+  groupName,
+  scrollDirection
 }: PageHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -67,7 +69,7 @@ export default function PageHeader({
       if (headerRef.current) {
         const height = headerRef.current.offsetHeight;
         setHeaderHeight(height);
-        
+
         // Also update spacer height directly to ensure immediate sync
         if (spacerRef.current) {
           spacerRef.current.style.height = `${height}px`;
@@ -80,15 +82,15 @@ export default function PageHeader({
 
     // Add resize listener to recalculate on window resize
     window.addEventListener('resize', updateHeaderHeight);
-    
+
     // Create a MutationObserver to watch for changes to the header
     const observer = new MutationObserver(updateHeaderHeight);
-    
+
     if (headerRef.current) {
-      observer.observe(headerRef.current, { 
-        attributes: true, 
-        childList: true, 
-        subtree: true 
+      observer.observe(headerRef.current, {
+        attributes: true,
+        childList: true,
+        subtree: true
       });
     }
 
@@ -109,7 +111,7 @@ export default function PageHeader({
       const maxScroll = documentHeight - windowHeight;
       const progress = (scrollPosition / maxScroll) * 100;
       setScrollProgress(Math.min(progress, 100));
-      
+
       // Ensure spacer height is always correct
       if (headerRef.current && spacerRef.current) {
         spacerRef.current.style.height = `${headerRef.current.offsetHeight}px`;
@@ -117,7 +119,7 @@ export default function PageHeader({
     };
 
     window.addEventListener("scroll", handleScroll);
-    
+
     // Also add scrollend event listener for modern browsers
     if ('onscrollend' in window) {
       window.addEventListener('scrollend', () => {
@@ -125,7 +127,7 @@ export default function PageHeader({
         if (window.scrollY < 5) {
           // Force scroll to absolute top to avoid partial header overlay
           window.scrollTo({top: 0, behavior: 'instant'});
-          
+
           // Make sure header height is updated
           if (headerRef.current && spacerRef.current) {
             const height = headerRef.current.offsetHeight;
@@ -134,7 +136,7 @@ export default function PageHeader({
         }
       });
     }
-    
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
       if ('onscrollend' in window) {
@@ -146,7 +148,7 @@ export default function PageHeader({
   // Function to handle back button click
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     // Check if we came from a user page or home
     if (document.referrer.includes('/user/')) {
       // Extract user ID from referrer and navigate to that user's page
@@ -158,7 +160,7 @@ export default function PageHeader({
         return;
       }
     }
-    
+
     // Default to home page
     router.push('/');
   };
@@ -167,10 +169,10 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-120 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-120 header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
-            : "bg-background border-b border-border/40"
+            : "bg-background border-visible"
         }`}
       >
         <div className="relative mx-auto px-2 md:px-4">
@@ -196,8 +198,8 @@ export default function PageHeader({
                 isScrolled ? "max-w-[85vw] flex flex-row items-center gap-2" : "max-w-full"
               }`}>
                 <h1 className={`font-semibold transition-all duration-120 ${
-                  isScrolled 
-                    ? "text-base truncate max-w-[70vw]" 
+                  isScrolled
+                    ? "text-base truncate max-w-[70vw]"
                     : "text-2xl mb-0.5"
                 }`}>
                   {isLoading ? (
@@ -210,8 +212,8 @@ export default function PageHeader({
                   )}
                 </h1>
                 <p className={`text-muted-foreground transition-all duration-120 ${
-                  isScrolled 
-                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block" 
+                  isScrolled
+                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block"
                     : "text-sm mt-0.5 truncate"
                 }`}>
                   {isLoading ? (
@@ -245,16 +247,16 @@ export default function PageHeader({
             </div>
           </div>
           {/* Scroll Progress Bar */}
-          <div 
-            className="absolute bottom-0 left-0 h-0.5 bg-blue-500 transition-all duration-120"
+          <div
+            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-120"
             style={{ width: `${scrollProgress}%` }}
           />
         </div>
       </header>
-      <div 
-        ref={spacerRef} 
-        style={{ height: `${headerHeight}px`, minHeight: `${headerHeight}px` }} 
-        className="w-full flex-shrink-0" 
+      <div
+        ref={spacerRef}
+        style={{ height: `${headerHeight}px`, minHeight: `${headerHeight}px` }}
+        className="w-full flex-shrink-0"
       /> {/* Dynamic spacer for fixed header with explicit min-height */}
     </>
   );

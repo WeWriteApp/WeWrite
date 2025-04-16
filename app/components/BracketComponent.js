@@ -52,7 +52,7 @@ function BracketComponent() {
 
         const data = await response.json();
         console.log('BracketComponent search response:', data);
-        
+
         // Combine all pages into one array
         const combinedPages = [
           ...(data.userPages || []),
@@ -142,7 +142,7 @@ function BracketComponent() {
         autoComplete="off"
       />
       {isSearching ? (
-        <div className="mt-2 text-center text-gray-500">Loading...</div>
+        <div className="mt-2 text-center text-gray-500 flex justify-center"><div className="loader"></div></div>
       ) : (
         allPages.length > 0 && (
           <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md">

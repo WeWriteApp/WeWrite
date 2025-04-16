@@ -5,12 +5,12 @@ import { ref, onValue } from "firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
-import { 
-  Trophy, 
-  ArrowLeft, 
-  AlertTriangle, 
-  Info, 
-  ChevronUp, 
+import {
+  Trophy,
+  ArrowLeft,
+  AlertTriangle,
+  Info,
+  ChevronUp,
   ChevronDown,
   Loader2
 } from "lucide-react";
@@ -24,11 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger 
+  TooltipTrigger
 } from "../components/ui/tooltip";
 import { PillLink } from "../components/PillLink";
 
@@ -60,16 +60,16 @@ export default function LeaderboardPage() {
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
-    
+
     setLoadingMore(true);
-    
+
     // Calculate start and end indices
     const start = (page) * usersPerPage;
     const end = start + usersPerPage;
-    
+
     // Get next batch of users
     const nextBatch = allUsers.slice(start, end);
-    
+
     // Update displayed users
     setDisplayedUsers(prev => [...prev, ...nextBatch]);
     setPage(prev => prev + 1);
@@ -81,7 +81,7 @@ export default function LeaderboardPage() {
       try {
         // First, let's check if user auth state is available
         console.log("Leaderboard: Current auth user state:", user ? `Logged in as ${user.email}` : "Not logged in");
-        
+
         // Try to fetch users from RTDB
         console.log("Leaderboard: Attempting to fetch users from RTDB");
         const usersRef = ref(rtdb, 'users');
@@ -90,7 +90,7 @@ export default function LeaderboardPage() {
           console.log("Leaderboard: Getting snapshot from users ref");
           onValue(usersRef, (snapshot) => {
             console.log("Leaderboard: Got snapshot, exists:", snapshot.exists());
-            
+
             if (!snapshot.exists()) {
               console.log("Leaderboard: No user data found in snapshot");
               setAllUsers([]);
@@ -98,40 +98,40 @@ export default function LeaderboardPage() {
               setLoading(false);
               return;
             }
-            
+
             const data = snapshot.val();
             console.log(`Leaderboard: Retrieved data for ${Object.keys(data).length} users`);
-            
+
             if (data) {
               // Create a lookup object to store page counts per user
               const pageCountsByUser = {};
-              
+
               // Now get pages from Firestore
               try {
                 console.log("Leaderboard: Attempting to fetch pages from Firestore");
-                
+
                 // Use an async IIFE to be able to use await inside the onValue callback
                 (async () => {
                   try {
                     const pagesRef = collection(db, 'pages');
                     // No limit here as we want to get all pages for accurate counts
                     const pagesSnapshot = await getDocs(pagesRef);
-                    
+
                     console.log(`Leaderboard: Retrieved ${pagesSnapshot.size} pages from Firestore`);
-                    
+
                     // Count pages by user
                     pagesSnapshot.forEach((doc) => {
                       const pageData = doc.data();
                       const userId = pageData.userId;
-                      
+
                       if (userId) {
                         // Increment page count for this user
                         pageCountsByUser[userId] = (pageCountsByUser[userId] || 0) + 1;
                       }
                     });
-                    
+
                     console.log("Leaderboard: Processing user data");
-                    
+
                     // Process users with their page counts
                     const usersArray = Object.entries(data).map(([id, userData]) => ({
                       id,
@@ -139,13 +139,13 @@ export default function LeaderboardPage() {
                       photoURL: userData.photoURL,
                       pageCount: pageCountsByUser[id] || 0
                     }));
-                    
+
                     // Sort users by page count (including users with 0 pages)
                     const sortedUsers = usersArray
                       .sort((a, b) => b.pageCount - a.pageCount);
-                    
+
                     console.log(`Leaderboard: Found ${sortedUsers.length} users`);
-                    
+
                     setAllUsers(sortedUsers);
                     setDisplayedUsers(sortedUsers.slice(0, usersPerPage));
                     setLoading(false);
@@ -188,7 +188,7 @@ export default function LeaderboardPage() {
         setLoading(false);
       }
     };
-    
+
     fetchUsersAndPages();
   }, [user]);
 
@@ -206,8 +206,8 @@ export default function LeaderboardPage() {
           <h1 className="text-2xl font-bold tracking-tight">Top Users</h1>
         </div>
       </div>
-      
-      <div className="border rounded-lg overflow-hidden">
+
+      <div className="border-theme-medium rounded-lg overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center p-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -239,8 +239,8 @@ export default function LeaderboardPage() {
                 <TableRow>
                   <TableHead className="w-12 px-2">Rank</TableHead>
                   <TableHead className="px-2">Username</TableHead>
-                  <TableHead 
-                    className="w-16 px-2 text-right cursor-pointer" 
+                  <TableHead
+                    className="w-16 px-2 text-right cursor-pointer"
                     onClick={toggleSortDirection}
                   >
                     <div className="flex items-center justify-end gap-1">
@@ -258,15 +258,15 @@ export default function LeaderboardPage() {
                 {sortedUsers.map((user, index) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-mono text-muted-foreground px-2 w-12">
-                      {sortDirection === "desc" 
-                        ? index + 1 
+                      {sortDirection === "desc"
+                        ? index + 1
                         : displayedUsers.length - index}
                     </TableCell>
                     <TableCell className="px-2">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <PillLink 
+                            <PillLink
                               href={`/user/${user.id}`}
                               variant="primary"
                               className="max-w-[180px] truncate"
@@ -285,18 +285,18 @@ export default function LeaderboardPage() {
                 ))}
               </TableBody>
             </Table>
-            
+
             {hasMore && (
               <div className="p-4 flex justify-center">
-                <Button 
-                  onClick={loadMore} 
+                <Button
+                  onClick={loadMore}
                   variant="outline"
                   disabled={loadingMore}
                   className="min-w-[200px]"
                 >
                   {loadingMore ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <div className="loader mr-2"></div>
                       Loading...
                     </>
                   ) : (

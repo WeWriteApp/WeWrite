@@ -52,7 +52,7 @@ export default function Header() {
   return (
     <>
       <header ref={headerRef} className={`sticky top-0 z-50 ${isScrolled ? 'shadow-sm' : ''}`}>
-        <div className={`relative border-b bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
+        <div className={`relative header-border-transition border-visible bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`w-full flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
               {/* Auth navigation (sidebar toggle or login button) */}

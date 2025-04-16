@@ -6,13 +6,13 @@ import { FileText, Lock, Globe, ChevronRight, Plus, Search } from "lucide-react"
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "./ui/table";
 import { interactiveCard, cn } from "../lib/utils";
 import { PillLink } from "./PillLink";
@@ -54,7 +54,7 @@ const PageListSkeleton = ({ mode = "wrapped", count = 8 }) => {
       </div>
     );
   }
-  
+
   if (mode === "grid") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -64,7 +64,7 @@ const PageListSkeleton = ({ mode = "wrapped", count = 8 }) => {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-3">
       {Array(count).fill(0).map((_, index) => (
@@ -104,35 +104,35 @@ export default function PageList({
   createButtonText = "New page",
   maxItems,
   showViewAll = false,
-  viewAllHref = "/pages",
+  viewAllHref = "/",
   viewAllText = "View all",
   groupId
 }: PageListProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
-  
+
   if (loading) {
     return <PageListSkeleton mode={mode} />;
   }
-  
+
   if (!pages || pages.length === 0) {
     return emptyState || <DefaultEmptyState createButtonHref={createButtonHref} createButtonText={createButtonText} />;
   }
-  
+
   // Filter pages based on search term
-  const filteredPages = searchTerm.trim() === "" 
-    ? pages 
-    : pages.filter(page => 
+  const filteredPages = searchTerm.trim() === ""
+    ? pages
+    : pages.filter(page =>
         page.title.toLowerCase().includes(searchTerm.toLowerCase())
       );
-  
+
   // Limit the number of pages to display if maxItems is set
   const displayPages = maxItems ? filteredPages.slice(0, maxItems) : filteredPages;
-  
+
   // Adjust create button href if groupId is provided
-  const finalCreateButtonHref = groupId 
-    ? `${createButtonHref}${createButtonHref.includes('?') ? '&' : '?'}groupId=${groupId}` 
+  const finalCreateButtonHref = groupId
+    ? `${createButtonHref}${createButtonHref.includes('?') ? '&' : '?'}groupId=${groupId}`
     : createButtonHref;
-  
+
   return (
     <div className="space-y-4">
       {/* Header with search and create button */}
@@ -150,7 +150,7 @@ export default function PageList({
               />
             </div>
           )}
-          
+
           {showCreateButton && (
             <Button variant="outline" asChild>
               <Link href={finalCreateButtonHref} className="flex items-center gap-2">
@@ -161,19 +161,19 @@ export default function PageList({
           )}
         </div>
       )}
-      
+
       {/* Wrapped mode (pill links) */}
       {mode === "wrapped" && (
         <div className="relative">
           <div className="flex flex-wrap gap-2 justify-start items-start content-start">
             {displayPages.map((page) => (
-              <div key={page.id} className="flex-none">
+              <div key={page.id} className="flex-none max-w-full">
                 <PillLink
                   groupId={page.groupId}
-                  href={`/pages/${page.id}`}
+                  href={`/${page.id}`}
                   isPublic={page.isPublic}
                   byline={page.authorName}
-                  className=""
+                  className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
                   isOwned={false}
                   isLoading={false}
                   label=""
@@ -186,7 +186,7 @@ export default function PageList({
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
         </div>
       )}
-      
+
       {/* Table mode */}
       {mode === "table" && (
         <div className="rounded-md border">
@@ -223,7 +223,7 @@ export default function PageList({
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/pages/${page.id}`}>
+                      <Link href={`/${page.id}`}>
                         View
                       </Link>
                     </Button>
@@ -234,12 +234,12 @@ export default function PageList({
           </Table>
         </div>
       )}
-      
+
       {/* Grid mode (card style) */}
       {mode === "grid" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayPages.map((page) => (
-            <Link key={page.id} href={`/pages/${page.id}`} className={interactiveCard("h-full")}>
+            <Link key={page.id} href={`/${page.id}`} className={interactiveCard("h-full")}>
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "flex items-center justify-center w-10 h-10 rounded-full",
@@ -274,7 +274,7 @@ export default function PageList({
           ))}
         </div>
       )}
-      
+
       {/* View all button */}
       {showViewAll && pages.length > 0 && (
         <div className="flex justify-center mt-4">

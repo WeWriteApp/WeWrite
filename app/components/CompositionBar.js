@@ -19,15 +19,15 @@ const CompositionBar = ({
 }) => {
   const [showSubscriptionLimitModal, setShowSubscriptionLimitModal] = useState(false);
   const [activePledgeId, setActivePledgeId] = useState(null);
-  
+
   // Debugging the props
   console.log("CompositionBar props:", {
-    disabled, 
+    disabled,
     hasPledges: pledges?.length > 0,
     hasSubscriptionAmount: !!subscriptionAmount,
     hasOnPledgeChange: !!onPledgeChange
   });
-  
+
   // Handle safer percentage calculations to avoid NaN
   const calculatePercentage = (amount, total) => {
     if (!total || total <= 0 || isNaN(amount) || amount <= 0) return 0;
@@ -35,9 +35,9 @@ const CompositionBar = ({
     const percentage = Math.min(100, (safeAmount / total) * 100);
     return percentage;
   };
-  
+
   // Check if total spending exceeds subscription amount
-  const totalSpending = pledges.reduce((acc, pledge) => 
+  const totalSpending = pledges.reduce((acc, pledge) =>
     acc + (Number(pledge.amount) || 0), 0);
   const isExceeded = subscriptionAmount > 0 && totalSpending > subscriptionAmount;
 
@@ -61,16 +61,16 @@ const CompositionBar = ({
           const pledgeAmount = Number(pledge.amount || 0);
           const isZero = pledgeAmount === 0;
           const percentage = calculatePercentage(pledgeAmount, max);
-          
+
           // Calculate other pledges total percentage for visualization
           const currentPledgeAmount = pledgeAmount;
           const otherPledgesAmount = totalSpending - currentPledgeAmount;
           const otherPledgesPercentage = calculatePercentage(otherPledgesAmount, max);
-          
+
           // Calculate if this pledge would exceed the limit when increased
           const remainingSubscription = subscriptionAmount - otherPledgesAmount;
           const wouldExceedLimit = subscriptionAmount > 0 && (remainingSubscription <= 0 || pledgeAmount >= remainingSubscription);
-          
+
           return (
             <div key={pledge.id} className="w-full">
               {/* Show title only when showTitle prop is true */}
@@ -81,10 +81,22 @@ const CompositionBar = ({
                   </a>
                 </div>
               )}
-              
-              <div className="relative h-[56px] rounded-full overflow-hidden border border-border bg-background shadow-sm">
+
+              <div
+                className="relative h-[56px] rounded-lg overflow-hidden border border-border bg-background dark:bg-black shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => {
+                  // If we have a subscription limit and would exceed it, show the limit modal
+                  if (wouldExceedLimit && subscriptionAmount > 0) {
+                    setActivePledgeId(pledge.id);
+                    setShowSubscriptionLimitModal(true);
+                  } else if (onPledgeChange) {
+                    // Otherwise, trigger the pledge change handler which will show the support modal
+                    onPledgeChange(pledge.id, 0);
+                  }
+                }}
+              >
                 {/* Other pledges background - always show regardless of percentage */}
-                <div 
+                <div
                   className="h-full absolute left-0 bg-muted"
                   style={{
                     width: `${otherPledgesPercentage}%`,
@@ -92,9 +104,9 @@ const CompositionBar = ({
                     zIndex: 1
                   }}
                 ></div>
-                
+
                 {/* Current pledge progress bar */}
-                <div 
+                <div
                   key={`pledge-bar-${pledgeAmount}`}
                   className={cn(
                     "h-full absolute",
@@ -109,10 +121,10 @@ const CompositionBar = ({
                 ></div>
 
                 {/* Remaining subscription amount is implicit in background */}
-                
+
                 {/* Inner border that appears when there's a value */}
                 {pledgeAmount > 0 && (
-                  <div 
+                  <div
                     className={cn(
                       "absolute h-full pointer-events-none border-l-2",
                       isExceeded ? "border-destructive" : "border-primary"
@@ -125,22 +137,14 @@ const CompositionBar = ({
                     }}
                   ></div>
                 )}
-                
+
                 {/* Controls */}
-                <div className="flex justify-between items-center h-full relative z-10">
+                <div className="flex justify-between items-center h-full relative z-10 p-0">
                   <div
-                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 text-foreground/80 cursor-pointer"
-                    onClick={() => {
-                      console.log("Minus button clicked", {
-                        onPledgeChange: !!onPledgeChange,
-                        pledgeAmount,
-                        disabled,
-                        id: pledge.id
-                      });
-                      
-                      // Call the handler without checking for disabled
+                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 text-foreground dark:text-white cursor-pointer rounded-l-lg"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (onPledgeChange) {
-                        console.log("Calling onPledgeChange with", pledge.id, -1);
                         onPledgeChange(pledge.id, -1);
                       }
                     }}
@@ -149,47 +153,37 @@ const CompositionBar = ({
                       <path d="M5 12h14"></path>
                     </svg>
                   </div>
-                  
-                  <div 
-                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground group transition-all hover:bg-foreground/5"
-                    onClick={() => {
+
+                  <div
+                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground dark:text-white group transition-all hover:bg-muted/50 dark:hover:bg-gray-900"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (onPledgeCustomAmount) {
                         onPledgeCustomAmount(pledge.id);
                       }
                     }}
                   >
-                    <span className="text-sm opacity-70 mr-1">$</span>
+                    <span className="text-sm text-foreground dark:text-white mr-1">$</span>
                     <span className={cn(
-                      "text-3xl font-normal transition-all group-hover:scale-105",
+                      "text-3xl font-normal transition-all group-hover:scale-105 text-foreground dark:text-white",
                       isExceeded ? "text-orange-600 dark:text-orange-400" : ""
                     )}>
-                      {isNaN(pledgeAmount) ? '0.10' : Number(pledgeAmount).toFixed(2)}
+                      {isNaN(pledgeAmount) ? '0.00' : Number(pledgeAmount).toFixed(2)}
                     </span>
-                    <span className="text-sm opacity-70 ml-1">/mo</span>
+                    <span className="text-sm text-foreground dark:text-white ml-1">/mo</span>
                   </div>
-                  
+
                   <div
                     className={cn(
-                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-foreground/5 cursor-pointer",
-                      wouldExceedLimit ? "text-orange-500/70" : "text-foreground/80"
+                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 cursor-pointer rounded-r-lg",
+                      wouldExceedLimit ? "text-orange-600/70 dark:text-orange-500/70" : "text-foreground dark:text-white"
                     )}
-                    onClick={() => {
-                      console.log("Plus button clicked", {
-                        onPledgeChange: !!onPledgeChange,
-                        pledgeAmount,
-                        wouldExceedLimit,
-                        disabled,
-                        id: pledge.id,
-                        subscriptionAmount
-                      });
-                      
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (wouldExceedLimit && subscriptionAmount > 0) {
-                        // Set active pledge and show subscription limit modal
                         setActivePledgeId(pledge.id);
                         setShowSubscriptionLimitModal(true);
                       } else if (onPledgeChange) {
-                        // Call the handler without checking for disabled status
-                        console.log("Calling onPledgeChange with", pledge.id, 1);
                         onPledgeChange(pledge.id, 1);
                       }
                     }}
@@ -201,14 +195,14 @@ const CompositionBar = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Show subscription limit message */}
               {wouldExceedLimit && (
                 <div className="mt-1 p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs rounded">
                   Subscription limit reached. Increase subscription to pledge more.
                 </div>
               )}
-              
+
               {/* Delete button only shown when amount is zero and showRemoveButton is true */}
               {isZero && onDeletePledge && showRemoveButton && (
                 <div className="mt-1 flex justify-end">
@@ -229,7 +223,7 @@ const CompositionBar = ({
           );
         })}
       </div>
-      
+
       {/* Subscription Limit Modal */}
       {typeof document !== 'undefined' && createPortal(
         <ActionModal
@@ -246,4 +240,4 @@ const CompositionBar = ({
   );
 };
 
-export default CompositionBar; 
+export default CompositionBar;

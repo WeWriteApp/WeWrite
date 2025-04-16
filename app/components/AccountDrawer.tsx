@@ -50,7 +50,7 @@ interface AccountDrawerProps {
 const SpendingOverview = ({ total, max }: { total: number, max: number }) => {
   const percentage = max > 0 ? Math.min(100, (total / max) * 100) : 0;
   const isExceeded = total > max;
-  
+
   return (
     <div className="mt-4 p-4 bg-background/60 rounded-md shadow-sm border border-border/40">
       <div className="flex justify-between mb-2">
@@ -60,14 +60,14 @@ const SpendingOverview = ({ total, max }: { total: number, max: number }) => {
           <span className="text-sm text-muted-foreground"> / ${max.toFixed(2)}</span>
         </div>
       </div>
-      
+
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-        <div 
+        <div
           className={`h-full ${isExceeded ? 'bg-orange-500' : 'bg-green-500'}`}
           style={{ width: `${percentage}%` }}
         ></div>
       </div>
-      
+
       {isExceeded && (
         <p className="mt-2 text-xs text-orange-500 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,10 +157,10 @@ const AccountDrawer = ({
       // we'll use the email as a fallback. In a real implementation, you would pass the actual userId.
       const userId = localStorage.getItem('userId') || email.split('@')[0];
       await updateUsername(userId, editedUsername);
-      
+
       // Then call the parent's onUsernameChange handler
       onUsernameChange(editedUsername);
-      
+
       // Close the edit form
       setIsEditingUsername(false);
     } catch (error) {
@@ -171,28 +171,28 @@ const AccountDrawer = ({
 
   const handleActivateSubscription = () => {
     console.log("handleActivateSubscription called with selectedAmount:", selectedAmount);
-    
+
     if (!selectedAmount) {
       showErrorMessage('Please select a subscription amount');
       return;
     }
-    
+
     try {
       // Show loading state
       showLoadingMessage('Connecting to payment provider...');
-      
+
       if (selectedAmount === 'custom') {
         if (!customAmount || Number(customAmount) <= 0) {
           showErrorMessage('Please enter a valid custom amount');
           return;
         }
         console.log("Activating custom subscription:", customAmount);
-        
+
         // Call the parent handler with the custom amount
         onSubscriptionActivate(customAmount);
       } else {
         console.log("Activating fixed subscription:", selectedAmount);
-        
+
         // Call the parent handler with the selected amount
         onSubscriptionActivate(selectedAmount);
       }
@@ -237,8 +237,8 @@ const AccountDrawer = ({
         </button>
       )}
 
-      <Drawer.Root 
-        open={isOpen} 
+      <Drawer.Root
+        open={isOpen}
         onOpenChange={(isOpen) => {
           setIsOpen(isOpen);
         }}
@@ -247,15 +247,15 @@ const AccountDrawer = ({
       >
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-          <Drawer.Content 
+          <Drawer.Content
             className="bg-background flex flex-col rounded-t-[10px] h-[90%] mt-24 fixed bottom-0 left-0 right-0 z-50 overscroll-contain"
           >
             {/* Interactive pull handle for dismiss */}
-            <div 
+            <div
               className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted my-4 cursor-grab active:cursor-grabbing"
               onTouchStart={(e) => e.stopPropagation()}
             />
-            
+
             <div className="p-4 bg-background flex-shrink-0">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Account Settings</h2>
@@ -310,7 +310,7 @@ const AccountDrawer = ({
                       </div>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
                     <div className="flex justify-between items-center">
@@ -334,7 +334,7 @@ const AccountDrawer = ({
                         <span className="text-sm font-medium">Next Payment</span>
                         <span className="text-sm text-foreground/70">{timeUntilPayment}</span>
                       </div>
-                      
+
                       {showCancelConfirmation ? (
                         <div className="p-3 bg-destructive/10 rounded-md">
                           <p className="text-sm mb-3">Are you sure you want to cancel your subscription?</p>
@@ -367,12 +367,12 @@ const AccountDrawer = ({
                       <div className="text-sm text-foreground/70 mb-4">
                         No active subscription. Start one to begin supporting creators.
                       </div>
-                      
+
                       <div className="grid grid-cols-3 gap-2 mb-4">
                         {[10, 20, 50, 100, 'custom'].map((amount) => {
                           const isSelected = selectedAmount === amount;
                           console.log(`Rendering amount: ${amount}, isSelected: ${isSelected}, selectedAmount: ${selectedAmount}`);
-                          
+
                           return (
                             <button
                               key={`${typeof amount === 'number' ? amount.toString() : amount}`}
@@ -390,16 +390,16 @@ const AccountDrawer = ({
                                   : 'bg-secondary hover:bg-secondary/80 text-foreground'
                               }`}
                             >
-                              {amount === 'custom' 
-                                ? (selectedAmount === 'custom' && customAmount 
-                                  ? `$${customAmount}` 
-                                  : 'Custom') 
+                              {amount === 'custom'
+                                ? (selectedAmount === 'custom' && customAmount
+                                  ? `$${customAmount}`
+                                  : 'Custom')
                                 : `$${amount}`}
                             </button>
                           );
                         })}
                       </div>
-                      
+
                       {showCustomModal && (
                         <div className="p-3 bg-muted rounded-md mb-3">
                           <label className="block text-sm font-medium mb-2">Custom amount ($)</label>
@@ -435,7 +435,7 @@ const AccountDrawer = ({
                           </div>
                         </div>
                       )}
-                      
+
                       <button
                         onClick={handleActivateSubscription}
                         className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
@@ -455,12 +455,12 @@ const AccountDrawer = ({
                     <p className="text-xs text-muted-foreground mb-4">
                       Choose how much to increment or decrement each pledge when using the plus and minus buttons.
                     </p>
-                    
+
                     <div className="grid grid-cols-4 gap-2 mb-4">
                       {[0.01, 0.1, 1.0, 10.0].map((amount) => {
                         const isSelected = Math.abs(globalIncrement - amount) < 0.001;
                         console.log(`Rendering increment: ${amount}, isSelected: ${isSelected}, globalIncrement: ${globalIncrement}`);
-                        
+
                         return (
                           <button
                             key={amount}
@@ -479,23 +479,23 @@ const AccountDrawer = ({
                         );
                       })}
                     </div>
-                    
+
                     <button
                       onClick={() => {
                         console.log("Opening custom increment modal");
                         setShowCustomIncrementModal(true);
                       }}
                       className={`w-full px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        customIncrementAmount 
-                          ? 'bg-primary text-primary-foreground' 
+                        customIncrementAmount
+                          ? 'bg-primary text-primary-foreground'
                           : 'bg-secondary hover:bg-secondary/80 text-foreground'
                       }`}
                     >
-                      {customIncrementAmount 
-                        ? `Custom: ${parseFloat(customIncrementAmount).toFixed(2)}` 
+                      {customIncrementAmount
+                        ? `Custom: ${parseFloat(customIncrementAmount).toFixed(2)}`
                         : 'Custom Amount'}
                     </button>
-                    
+
                     {showCustomIncrementModal && (
                       <div className="p-3 bg-muted rounded-md mt-4">
                         <label className="block text-sm font-medium mb-2">Custom increment</label>
@@ -543,21 +543,21 @@ const AccountDrawer = ({
                           <button
                             onClick={handleSortToggle}
                             className={`flex items-center text-sm px-2 py-1 rounded-md transition-colors ${
-                              needsSort 
-                                ? 'bg-primary/20 text-primary hover:bg-primary/30' 
+                              needsSort
+                                ? 'bg-primary/20 text-primary hover:bg-primary/30'
                                 : 'text-primary hover:bg-primary/10'
                             }`}
                           >
                             {needsSort ? 'Click to sort' : 'Sort'}
-                            <svg 
-                              xmlns="http://www.w3.org/2000/svg" 
-                              width="16" 
-                              height="16" 
-                              viewBox="0 0 24 24" 
-                              fill="none" 
-                              stroke="currentColor" 
-                              strokeWidth="2" 
-                              strokeLinecap="round" 
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
                               strokeLinejoin="round"
                               className={`ml-1 transition-transform duration-300 ${sortDirection === 'asc' ? 'rotate-180' : ''}`}
                             >
@@ -567,9 +567,9 @@ const AccountDrawer = ({
                         </div>
                       </div>
                       {pledges.map(pledge => (
-                        <div 
-                          key={pledge.id} 
-                          className="bg-background/40 hover:bg-background/60 p-3 rounded-lg border border-border/30 transition-all"
+                        <div
+                          key={pledge.id}
+                          className="bg-background/40 hover:bg-background/60 p-3 rounded-lg border-theme-light hover-border-medium transition-all"
                         >
                           <CompositionBar
                             value={pledge.amount}
@@ -603,4 +603,4 @@ const AccountDrawer = ({
   );
 };
 
-export default AccountDrawer; 
+export default AccountDrawer;

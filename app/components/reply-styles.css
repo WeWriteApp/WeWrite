@@ -1,0 +1,56 @@
+/* Custom styles for reply content links */
+
+/* Base link styling */
+[data-slate-editor] a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* Page link styling - high specificity to ensure it applies */
+[data-slate-editor] a.page-link,
+[data-slate-editor] a[data-page-id],
+[data-slate-editor] a.editor-link.page-link {
+  background-color: var(--primary, #1768FF) !important;
+  border-radius: 8px !important;
+  padding: 1px 6px !important;
+  margin: 0 1px !important;
+  border-bottom: none !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.5 !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+/* User link styling - high specificity to ensure it applies */
+[data-slate-editor] a.user-link,
+[data-slate-editor] a[data-user-id],
+[data-slate-editor] a.editor-link.user-link {
+  background-color: var(--primary, #1768FF) !important;
+  border-radius: 8px !important;
+  padding: 1px 6px !important;
+  margin: 0 1px !important;
+  position: relative !important;
+  border-bottom: none !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.5 !important;
+  color: white !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+/* Add @ symbol before user links */
+[data-slate-editor] a.user-link::before,
+[data-slate-editor] a[data-user-id]::before,
+[data-slate-editor] a.editor-link.user-link::before {
+  content: "@";
+  margin-right: 1px;
+}
