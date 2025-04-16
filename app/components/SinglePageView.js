@@ -31,7 +31,7 @@ import {
   ChevronDown,
   X
 } from "lucide-react";
-import { toast } from "sonner";
+// toast import removed (unused)
 import { RecentPagesContext } from "../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../contexts/PageContext";
@@ -193,12 +193,27 @@ function SinglePageView({ params }) {
         if (data.versionData) {
           try {
             const contentString = data.versionData.content;
+            console.log("Received content update", {
+              contentLength: contentString ? contentString.length : 0,
+              isString: typeof contentString === 'string',
+              timestamp: new Date().toISOString()
+            });
+
             const parsedContent = typeof contentString === 'string'
               ? JSON.parse(contentString)
               : contentString;
 
-            setEditorState(parsedContent);
-            setEditorError(null); // Clear any previous errors
+            // Only update editor state if content has changed
+            const currentContentStr = JSON.stringify(editorState);
+            const newContentStr = JSON.stringify(parsedContent);
+
+            if (currentContentStr !== newContentStr) {
+              console.log("Content has changed, updating editor state");
+              setEditorState(parsedContent);
+              setEditorError(null); // Clear any previous errors
+            } else {
+              console.log("Content unchanged, skipping editor state update");
+            }
           } catch (error) {
             console.error("Error parsing content:", error);
             setEditorError("There was an error loading the editor. Please try refreshing the page.");
@@ -212,7 +227,7 @@ function SinglePageView({ params }) {
         unsubscribe();
       };
     }
-  }, [params.id]);
+  }, [params.id, editorState]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
@@ -273,20 +288,6 @@ function SinglePageView({ params }) {
       }
     }
   }, [page, user]);
-
-  const copyLinkToClipboard = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-
-      // Show toast notification
-      toast({
-        title: "Link copied",
-        description: "Page link copied to clipboard",
-        variant: "success",
-        duration: 2000,
-      });
-    }
-  };
 
   // Function to handle when page content is fully rendered
   const handlePageFullyRendered = () => {

@@ -209,6 +209,7 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
+      console.log("Page document updated:", { id: pageData.id, title: pageData.title });
 
       // Check access permissions (now async)
       try {
@@ -222,7 +223,30 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
 
-        // Log the version subcollection path
+        // Check if the page has content directly (from a save operation)
+        if (pageData.content) {
+          try {
+            // Create a version data object from the page content
+            const versionData = {
+              content: pageData.content,
+              createdAt: pageData.lastModified || new Date().toISOString(),
+              userId: pageData.userId || 'unknown'
+            };
+
+            // Extract links
+            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+
+            // Send updated page and version data immediately
+            console.log("Using content directly from page document");
+            onPageUpdate({ pageData, versionData, links });
+            return; // Skip version listener since we already have the content
+          } catch (error) {
+            console.error("Error parsing page content:", error);
+            // Continue to fetch from version document as fallback
+          }
+        }
+
+        // If we don't have content in the page document or parsing failed, get it from the version
         const versionCollectionRef = collection(db, "pages", pageId, "versions");
         const versionRef = doc(versionCollectionRef, currentVersionId);
 
@@ -232,15 +256,18 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
         }
 
         // Listener for the version document
-        unsubscribeVersion = onSnapshot(versionRef,{ includeMetadataChanges: true }, async (versionSnap) => {
+        unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
           if (versionSnap.exists()) {
             const versionData = versionSnap.data();
+            console.log("Version document updated:", versionSnap.id);
 
             // Extract links
             const links = extractLinksFromNodes(JSON.parse(versionData.content));
 
             // Send updated page and version data
             onPageUpdate({ pageData, versionData, links });
+          } else {
+            console.error("Version document does not exist:", currentVersionId);
           }
         });
       } catch (error) {
@@ -282,6 +309,27 @@ export const getPageById = async (pageId, userId = null) => {
       if (!accessCheck.hasAccess) {
         console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
         return { pageData: null, error: accessCheck.error };
+      }
+
+      // Check if the page has content directly (from a save operation)
+      if (pageData.content) {
+        try {
+          // Create a version data object from the page content
+          const versionData = {
+            content: pageData.content,
+            createdAt: pageData.lastModified || new Date().toISOString(),
+            userId: pageData.userId || 'unknown'
+          };
+
+          // Extract links
+          const links = extractLinksFromNodes(JSON.parse(versionData.content));
+
+          console.log("getPageById: Using content directly from page document");
+          return { pageData, versionData, links };
+        } catch (error) {
+          console.error("Error parsing page content in getPageById:", error);
+          // Continue to fetch from version document as fallback
+        }
       }
 
       // Get the current version ID
