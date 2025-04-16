@@ -454,10 +454,25 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
 export const saveNewVersion = async (pageId, data) => {
   try {
     const pageRef = doc(db, "pages", pageId);
+
+    // Get the username from the user document
+    let username = data.username;
+    if (!username && data.userId) {
+      try {
+        const userDoc = await getDoc(doc(db, "users", data.userId));
+        if (userDoc.exists()) {
+          username = userDoc.data().username;
+        }
+      } catch (error) {
+        console.error("Error fetching username:", error);
+      }
+    }
+
     const versionData = {
       content: data.content,
       createdAt: new Date().toISOString(),
-      userId: data.userId
+      userId: data.userId,
+      username: username || "Anonymous"
     };
 
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
@@ -465,8 +480,15 @@ export const saveNewVersion = async (pageId, data) => {
     // set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
 
+    // Update the page content directly to ensure it's immediately available
+    await updateDoc("pages", pageId, {
+      content: data.content,
+      lastModified: new Date().toISOString()
+    });
+
     return versionRef.id;
   } catch (e) {
+    console.error("Error saving new version:", e);
     return e;
   }
 }

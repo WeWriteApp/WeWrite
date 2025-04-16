@@ -90,6 +90,7 @@ const EditPage = ({
       const result = await saveNewVersion(page.id, {
         content: editorStateJSON,
         userId: user.uid,
+        username: user.displayName || user.username,
       });
 
       if (result) {
