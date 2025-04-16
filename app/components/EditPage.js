@@ -81,6 +81,8 @@ const EditPage = ({
 
     setIsSaving(true);
     try {
+      console.log('Saving editor content:', editorContent);
+
       // Convert the editorState to JSON
       const editorStateJSON = JSON.stringify(editorContent);
 
@@ -100,8 +102,10 @@ const EditPage = ({
           lastModified: updateTime,
         });
 
+        console.log('Page saved successfully');
         setIsEditing(false);
       } else {
+        console.error('Error saving new version: result was falsy');
         setError("Error saving new version");
       }
     } catch (error) {
@@ -127,18 +131,22 @@ const EditPage = ({
     );
   }
 
+  // State to track the current editor content
+  const [editorContent, setEditorContent] = useState(current);
+
   return (
     <PageEditor
       title={title}
       setTitle={setTitle}
       initialContent={current}
       onContentChange={(content) => {
-        // Store the updated content in a ref or state if needed
+        // Store the updated content in state
         console.log('Content updated in EditPage');
+        setEditorContent(content);
       }}
       isPublic={isPublic}
       setIsPublic={setIsPublic}
-      onSave={(editorContent) => handleSave(editorContent || current)}
+      onSave={(content) => handleSave(content || editorContent || current)}
       onCancel={handleCancel}
       isSaving={isSaving}
       error={error}
