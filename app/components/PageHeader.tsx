@@ -3,13 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Loader, ChevronLeft } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
-import { Sheet, SheetTrigger } from "./ui/sheet";
-import { Sidebar } from "./ui/sidebar";
-import { PageMenu } from "./PageMenu";
+import { Loader, ChevronLeft, Share2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
 import { getUsernameById } from "../utils/userUtils";
 
 export interface PageHeaderProps {
@@ -29,17 +25,14 @@ export default function PageHeader({
   isLoading = false,
   groupId,
   groupName,
-  scrollDirection
+  // scrollDirection is not used but kept for compatibility
 }: PageHeaderProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [showTooltip, setShowTooltip] = React.useState(false);
   const [headerHeight, setHeaderHeight] = React.useState(0);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const spacerRef = React.useRef<HTMLDivElement>(null);
-  const tooltipTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
 
   // Fetch username if not provided but userId is available
@@ -244,6 +237,39 @@ export default function PageHeader({
                   )}
                 </p>
               </div>
+            </div>
+
+            {/* Right Side - Share Button (only visible when not scrolled) */}
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`text-foreground transition-opacity duration-120 ${
+                  isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: title || 'WeWrite Page',
+                      url: window.location.href,
+                    })
+                    .then(() => toast.success('Shared successfully'))
+                    .catch((error) => {
+                      if (error.name !== 'AbortError') {
+                        console.error('Error sharing:', error);
+                        toast.error('Failed to share');
+                      }
+                    });
+                  } else {
+                    // Fallback for browsers that don't support the Web Share API
+                    navigator.clipboard.writeText(window.location.href);
+                    toast.success('Link copied to clipboard');
+                  }
+                }}
+                title="Share"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
             </div>
           </div>
           {/* Scroll Progress Bar */}

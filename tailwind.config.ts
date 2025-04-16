@@ -1,6 +1,6 @@
 /**
  * Tailwind Configuration
- * 
+ *
  * IMPORTANT THEME HANDLING REQUIREMENTS:
  * 1. Use CSS variables from globals.css for theme-specific colors
  * 2. Avoid hardcoding colors here - use CSS variables instead
@@ -99,6 +99,21 @@ const config: Config = {
         '7/10': '70%',
         '8/10': '80%',
         '9/10': '90%',
+      },
+      animation: {
+        'gradient-x': 'gradient-x 3s ease infinite',
+      },
+      keyframes: {
+        'gradient-x': {
+          '0%, 100%': {
+            'background-size': '200% 200%',
+            'background-position': 'left center'
+          },
+          '50%': {
+            'background-size': '200% 200%',
+            'background-position': 'right center'
+          },
+        },
       },
     },
   },

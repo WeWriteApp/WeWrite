@@ -83,7 +83,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         <div className="py-3">
           <Button
             asChild
-            className={`w-full ${isSignedIn ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+            className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-blue-500 to-teal-400 hover:from-blue-600 hover:to-teal-500 text-white relative overflow-hidden animate-gradient-x' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >
@@ -108,15 +108,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
                 key={link.platform}
                 variant="outline"
                 asChild
-                className={`w-full justify-center ${
-                  link.platform === 'twitter'
-                    ? 'bg-[#1DA1F2] hover:bg-[#1DA1F2]/90 text-white'
-                    : link.platform === 'youtube'
-                    ? 'bg-[#FF0000] hover:bg-[#FF0000]/90 text-white'
-                    : link.platform === 'instagram'
-                    ? 'bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] hover:opacity-90 text-white'
-                    : ''
-                }`}
+                className="w-full justify-center text-foreground hover:text-foreground/90"
               >
                 <a
                   href={link.url}
