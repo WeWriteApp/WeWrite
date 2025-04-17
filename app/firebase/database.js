@@ -502,21 +502,26 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
 export const saveNewVersion = async (pageId, data) => {
   try {
     // Validate content to prevent saving empty versions
-    if (!data.content || data.content === '[]' || data.content === '{}') {
+    if (!data.content) {
       console.error("Cannot save empty content");
+      return null;
+    }
+
+    // Ensure content is a string
+    let contentString = typeof data.content === 'string'
+      ? data.content
+      : JSON.stringify(data.content);
+
+    // Check for empty JSON structures
+    if (contentString === '[]' || contentString === '{}' || contentString === '') {
+      console.error("Cannot save empty content JSON");
       return null;
     }
 
     // Parse content to validate it's proper JSON
     let parsedContent;
     try {
-      if (typeof data.content === 'string') {
-        parsedContent = JSON.parse(data.content);
-      } else {
-        parsedContent = data.content;
-        // Convert to string for storage
-        data.content = JSON.stringify(data.content);
-      }
+      parsedContent = JSON.parse(contentString);
 
       // Validate that content is not empty array or has empty paragraphs only
       if (Array.isArray(parsedContent) &&
@@ -528,6 +533,16 @@ export const saveNewVersion = async (pageId, data) => {
         console.error("Cannot save effectively empty content");
         return null;
       }
+
+      // Extract text to ensure there's actual content
+      const extractedText = extractTextContent(contentString);
+      if (!extractedText || extractedText.trim() === '') {
+        console.error("Cannot save version with no text content");
+        return null;
+      }
+
+      // Ensure we're using the parsed and re-stringified content for consistency
+      contentString = JSON.stringify(parsedContent);
     } catch (error) {
       console.error("Error parsing content:", error);
       return null;
@@ -549,17 +564,17 @@ export const saveNewVersion = async (pageId, data) => {
     }
 
     const versionData = {
-      content: data.content,
+      content: contentString,
       createdAt: new Date().toISOString(),
       userId: data.userId,
       username: username || "Anonymous"
     };
 
     // First update the page document directly to ensure content is immediately available
-    await setDoc(pageRef, {
-      content: data.content,
+    await updateDoc("pages", pageId, {
+      content: contentString,
       lastModified: new Date().toISOString()
-    }, { merge: true });
+    });
 
     // Then create the version
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);

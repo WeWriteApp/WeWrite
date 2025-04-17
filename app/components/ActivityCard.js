@@ -16,14 +16,24 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
 
-  const { added, removed } = generateSimpleDiff(
+  // Ensure we have valid content before generating diffs
+  const hasValidContent = activity.currentContent &&
+    activity.currentContent !== '[]' &&
+    activity.currentContent !== '{}';
+
+  const hasValidPrevContent = activity.previousContent &&
+    activity.previousContent !== '[]' &&
+    activity.previousContent !== '{}';
+
+  const { added, removed } = hasValidContent ? generateSimpleDiff(
     activity.currentContent,
     activity.previousContent
-  );
-  const textDiff = generateTextDiff(
+  ) : { added: 0, removed: 0 };
+
+  const textDiff = hasValidContent ? generateTextDiff(
     activity.currentContent,
     activity.previousContent
-  );
+  ) : null;
 
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;

@@ -79,6 +79,15 @@ const EditPage = ({
       return;
     }
 
+    // Check if content is just an empty paragraph
+    if (editorContent.length === 1 &&
+        editorContent[0].children &&
+        editorContent[0].children.length === 1 &&
+        editorContent[0].children[0].text === '') {
+      setError("Cannot save empty content");
+      return;
+    }
+
     setIsSaving(true);
     try {
       console.log('Saving editor content:', editorContent);
@@ -86,7 +95,18 @@ const EditPage = ({
       // Convert the editorState to JSON
       const editorStateJSON = JSON.stringify(editorContent);
 
-      // Save the new version
+      // First update the page metadata and content
+      let updateTime = new Date().toISOString();
+      await updateDoc("pages", page.id, {
+        title: title,
+        isPublic: isPublic,
+        groupId: groupId,
+        lastModified: updateTime,
+        // Also update content directly in the page document
+        content: editorStateJSON
+      });
+
+      // Then save the new version
       const result = await saveNewVersion(page.id, {
         content: editorStateJSON,
         userId: user.uid,
@@ -94,24 +114,17 @@ const EditPage = ({
       });
 
       if (result) {
-        let updateTime = new Date().toISOString();
-        // Update the page content
-        await updateDoc("pages", page.id, {
-          title: title,
-          isPublic: isPublic,
-          groupId: groupId,
-          lastModified: updateTime,
-        });
-
         console.log('Page saved successfully');
-        setIsEditing(false);
+
+        // Force reload the page to show the updated content
+        window.location.href = `/${page.id}`;
       } else {
         console.error('Error saving new version: result was falsy');
         setError("Error saving new version");
       }
     } catch (error) {
       console.error("Error saving new version", error);
-      setError("Failed to save: " + error.message);
+      setError("Failed to save: " + (error.message || "Unknown error"));
       await logError(error, "EditPage.js");
     } finally {
       setIsSaving(false);
