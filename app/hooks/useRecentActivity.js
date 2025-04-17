@@ -227,11 +227,14 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
                   username = await getUsernameById(currentVersion.userId);
                 }
 
+                // Use page content directly if available, otherwise use version content
+                const content = pageData.content || currentVersion.content || "";
+
                 return {
                   pageId: pageData.id,
                   pageName: pageData.title || "Untitled Page",
                   timestamp: currentVersion.createdAt,
-                  currentContent: currentVersion.content || "",
+                  currentContent: content,
                   previousContent: "", // Empty string for new pages
                   username: username,
                   userId: userId,
@@ -269,11 +272,14 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
                 username = await getUsernameById(currentVersion.userId);
               }
 
+              // Use page content directly if available, otherwise use version content
+              const content = pageData.content || currentVersion.content || "";
+
               return {
                 pageId: pageData.id,
                 pageName: pageData.title || "Untitled Page",
                 timestamp: currentVersion.createdAt,
-                currentContent: currentVersion.content || "",
+                currentContent: content,
                 previousContent: previousVersion.content || "",
                 username: username,
                 userId: userId,
@@ -449,11 +455,14 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
               username = await getUsernameById(currentVersion.userId);
             }
 
+            // Use page content directly if available, otherwise use version content
+            const content = pageData.content || currentVersion.content || "";
+
             return {
               pageId: pageData.id,
               pageName: pageData.title || "Untitled Page",
               timestamp: currentVersion.createdAt,
-              currentContent: currentVersion.content || "",
+              currentContent: content,
               previousContent: "", // Empty string for new pages
               username: username,
               userId: userId,
@@ -491,11 +500,14 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             username = await getUsernameById(currentVersion.userId);
           }
 
+          // Use page content directly if available, otherwise use version content
+          const content = pageData.content || currentVersion.content || "";
+
           return {
             pageId: pageData.id,
             pageName: pageData.title || "Untitled Page",
             timestamp: currentVersion.createdAt,
-            currentContent: currentVersion.content || "",
+            currentContent: content,
             previousContent: previousVersion.content || "",
             username: username,
             userId: userId,
