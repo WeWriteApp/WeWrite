@@ -411,8 +411,14 @@ const PageEditor = ({
               onClick={handleSave}
               disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
               variant="default"
+              className="min-w-[80px]"
             >
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? (
+                <div className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
+                  <span>Saving</span>
+                </div>
+              ) : "Save"}
             </Button>
           </div>
         </div>

@@ -204,7 +204,7 @@ export default function PageHeader({
               }`}>
                 <h1 className={`font-semibold transition-all duration-120 ${
                   isScrolled
-                    ? "text-base truncate max-w-[80vw]"
+                    ? "text-xs truncate max-w-[80vw] opacity-90"
                     : "text-2xl mb-0.5"
                 }`}>
                   {isLoading ? (

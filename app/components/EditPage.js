@@ -85,8 +85,37 @@ const EditPage = ({
       return;
     }
 
+    // Show loading state immediately
     setIsSaving(true);
     setError(null); // Clear any previous errors
+
+    // Add a loading overlay to indicate saving is in progress
+    const addLoadingOverlay = () => {
+      if (typeof window !== 'undefined') {
+        // Remove any existing loading overlays first
+        const existingOverlay = document.getElementById('save-loading-overlay');
+        if (existingOverlay) {
+          existingOverlay.remove();
+        }
+
+        // Create and add the new overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'save-loading-overlay';
+        overlay.className = 'fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50';
+        overlay.innerHTML = `
+          <div class="bg-background rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-center gap-3">
+              <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+              <p class="text-lg font-medium">Saving your changes...</p>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+      }
+    };
+
+    // Add the loading overlay
+    addLoadingOverlay();
 
     // Maximum number of save attempts
     const maxAttempts = 3; // Increased to 3 attempts
@@ -159,8 +188,16 @@ const EditPage = ({
           console.log('Page saved successfully');
           saveSuccessful = true;
 
-          // Add a small delay before redirecting to ensure Firebase has time to update
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Remove the loading overlay
+          if (typeof window !== 'undefined') {
+            const overlay = document.getElementById('save-loading-overlay');
+            if (overlay) {
+              overlay.remove();
+            }
+          }
+
+          // Add a minimal delay before redirecting to ensure Firebase has time to update
+          await new Promise(resolve => setTimeout(resolve, 300));
 
           // Force reload the page to show the updated content
           window.location.href = `/${page.id}`;
@@ -193,6 +230,14 @@ const EditPage = ({
     if (!saveSuccessful) {
       console.error("All save attempts failed");
       setError("Failed to save after multiple attempts. Please try again later.");
+
+      // Remove the loading overlay
+      if (typeof window !== 'undefined') {
+        const overlay = document.getElementById('save-loading-overlay');
+        if (overlay) {
+          overlay.remove();
+        }
+      }
     }
 
     setIsSaving(false);
