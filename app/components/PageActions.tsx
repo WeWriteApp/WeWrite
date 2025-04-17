@@ -247,9 +247,9 @@ export function PageActions({
               variant="outline"
               size="sm"
               className="gap-2 w-full h-10 md:h-8 md:w-auto"
+              title="Change paragraph display mode"
             >
               <LayoutPanelLeft className="h-4 w-4" />
-              Paragraph Mode
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

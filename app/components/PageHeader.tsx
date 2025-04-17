@@ -102,6 +102,7 @@ export default function PageHeader({
     let scrollTimeout: ReturnType<typeof setTimeout>;
     let lastScrollY = 0;
     let ticking = false;
+    let spacerUpdateTimeout: ReturnType<typeof setTimeout>;
 
     const handleScroll = () => {
       lastScrollY = window.scrollY;
@@ -122,19 +123,15 @@ export default function PageHeader({
           const progress = (lastScrollY / maxScroll) * 100;
           setScrollProgress(Math.min(progress, 100));
 
-          // Clear any existing timeout
-          if (scrollTimeout) {
-            clearTimeout(scrollTimeout);
-          }
-
-          // Use a timeout to ensure spacer height is updated after scroll events have settled
-          // This reduces the frequency of DOM updates during rapid scrolling
-          scrollTimeout = setTimeout(() => {
+          // Don't update the spacer height during scroll - only after scrolling stops
+          // This prevents layout shifts during scrolling
+          clearTimeout(spacerUpdateTimeout);
+          spacerUpdateTimeout = setTimeout(() => {
             if (headerRef.current && spacerRef.current) {
               const height = headerRef.current.offsetHeight;
               spacerRef.current.style.height = `${height}px`;
             }
-          }, 100);
+          }, 200);
 
           ticking = false;
         });
@@ -152,12 +149,12 @@ export default function PageHeader({
       if (window.scrollY < 5) {
         // Force scroll to absolute top to avoid partial header overlay
         window.scrollTo({top: 0, behavior: 'instant'});
+      }
 
-        // Make sure header height is updated
-        if (headerRef.current && spacerRef.current) {
-          const height = headerRef.current.offsetHeight;
-          spacerRef.current.style.height = `${height}px`;
-        }
+      // Update spacer height after scrolling stops
+      if (headerRef.current && spacerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        spacerRef.current.style.height = `${height}px`;
       }
     };
 
@@ -169,6 +166,9 @@ export default function PageHeader({
       window.removeEventListener("scroll", handleScroll);
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
+      }
+      if (spacerUpdateTimeout) {
+        clearTimeout(spacerUpdateTimeout);
       }
       if ('onscrollend' in window) {
         window.removeEventListener('scrollend', handleScrollEnd);
@@ -212,11 +212,14 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-120 header-border-transition ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
         }`}
+        style={{
+          transform: 'translateZ(0)' // Force GPU acceleration
+        }}
       >
         <div className="relative mx-auto px-2 md:px-4">
           <div className="flex items-center justify-between py-1">
@@ -350,10 +353,11 @@ export default function PageHeader({
         style={{
           height: `${headerHeight}px`,
           minHeight: `${headerHeight}px`,
-          // Add a small buffer to prevent content from jumping
-          marginBottom: '2px'
+          willChange: 'height',
+          transition: 'height 300ms ease-out',
+          transform: 'translateZ(0)' // Force GPU acceleration
         }}
-        className="w-full flex-shrink-0"
+        className="w-full flex-shrink-0 pointer-events-none"
         aria-hidden="true"
       /> {/* Dynamic spacer for fixed header with explicit min-height */}
     </>
