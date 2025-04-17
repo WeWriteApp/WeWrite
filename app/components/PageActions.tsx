@@ -243,10 +243,7 @@ export function PageActions({
 
         {/* Dense Mode switch - available to all users */}
         <div className="flex items-center gap-2 w-full h-10 md:h-8 md:w-auto px-3 py-1 border border-input rounded-md">
-          <div className="flex items-center gap-2">
-            <AlignJustify className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">Dense Mode</span>
-          </div>
+          <span className="text-sm">Dense Mode</span>
           <Switch
             checked={lineMode === LINE_MODES.DENSE}
             onCheckedChange={(checked) => {
