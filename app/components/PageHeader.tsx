@@ -94,24 +94,43 @@ export default function PageHeader({
   }, [title, isScrolled]);
 
   React.useEffect(() => {
+    // Use a debounced scroll handler to prevent flickering
+    let scrollTimeout: ReturnType<typeof setTimeout>;
+    let lastScrollY = 0;
+
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      setIsScrolled(scrollPosition > 0);
-
-      // Calculate scroll progress
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const maxScroll = documentHeight - windowHeight;
-      const progress = (scrollPosition / maxScroll) * 100;
-      setScrollProgress(Math.min(progress, 100));
-
-      // Ensure spacer height is always correct
-      if (headerRef.current && spacerRef.current) {
-        spacerRef.current.style.height = `${headerRef.current.offsetHeight}px`;
+      // Clear any existing timeout
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
       }
+
+      // Get current scroll position
+      const scrollPosition = window.scrollY;
+
+      // Only update if we've scrolled more than 5px to reduce jitter
+      if (Math.abs(scrollPosition - lastScrollY) > 5) {
+        lastScrollY = scrollPosition;
+
+        // Update scroll state
+        setIsScrolled(scrollPosition > 0);
+
+        // Calculate scroll progress
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const maxScroll = documentHeight - windowHeight;
+        const progress = (scrollPosition / maxScroll) * 100;
+        setScrollProgress(Math.min(progress, 100));
+      }
+
+      // Use a timeout to ensure spacer height is updated after scroll events have settled
+      scrollTimeout = setTimeout(() => {
+        if (headerRef.current && spacerRef.current) {
+          spacerRef.current.style.height = `${headerRef.current.offsetHeight}px`;
+        }
+      }, 50);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     // Also add scrollend event listener for modern browsers
     if ('onscrollend' in window) {
@@ -132,6 +151,9 @@ export default function PageHeader({
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
       if ('onscrollend' in window) {
         window.removeEventListener('scrollend', () => {});
       }

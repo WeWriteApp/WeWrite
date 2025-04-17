@@ -139,26 +139,41 @@ export default function DirectReplyPage() {
 
         // If this is a reply and we have a replyTo parameter, fetch the original page content
         if (replyToParam && parsedContent) {
-          // Find the blockquote in the content
-          const blockquoteIndex = parsedContent.findIndex(node => node.type === 'blockquote');
-
-          if (blockquoteIndex !== -1) {
-            // Fetch the original page content
+          // Import the utility function to create reply content
+          import('../utils/replyUtils').then(({ createReplyContent }) => {
+            // Import the database module to get page details
             import('../firebase/database').then(({ getPageById }) => {
-              getPageById(replyToParam).then(originalPage => {
-                if (originalPage && originalPage.content) {
+              getPageById(replyToParam).then(({ pageData }) => {
+                if (pageData) {
                   try {
-                    // Update the initialContent
-                    setInitialContent([...parsedContent]);
+                    // Create proper reply content with attribution
+                    const replyContent = createReplyContent({
+                      pageId: pageData.id,
+                      pageTitle: pageData.title,
+                      userId: pageData.userId,
+                      username: pageData.username || 'Anonymous'
+                    });
+
+                    // Add a blank paragraph after the attribution
+                    const updatedContent = [
+                      ...replyContent,
+                      { type: 'paragraph', children: [{ text: '' }] }
+                    ];
+
+                    console.log("Created reply content with attribution:", updatedContent);
+
+                    // Update the editor state with the proper reply content
+                    setInitialContent(updatedContent);
+                    setEditorState(updatedContent);
                   } catch (error) {
-                    console.error("Error parsing original page content:", error);
+                    console.error("Error creating reply content:", error);
                   }
                 }
               }).catch(error => {
                 console.error("Error fetching original page:", error);
               });
             });
-          }
+          });
         }
       } catch (error) {
         console.error("Error parsing initial content:", error);
