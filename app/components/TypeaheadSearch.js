@@ -33,7 +33,7 @@ const TypeaheadSearch = ({
   onSelect = null,
   setShowResults = null,
   userId = null,
-  placeholder = "Search...",
+  placeholder = "Link to page...",
   selectedId = null,
   editableOnly = false, // New prop to filter for editable pages only
   initialSearch = "" // New prop to set initial search value
@@ -48,6 +48,7 @@ const TypeaheadSearch = ({
     users: []
   });
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
   const { theme } = useTheme();
   const router = useRouter();
 
@@ -310,16 +311,43 @@ const TypeaheadSearch = ({
     <div className="flex flex-col" id="typeahead-search">
       <div className="flex flex-col space-y-1">
         <div className="relative w-full">
-          <Input
-            id="search-input"
-            type="text"
-            placeholder={placeholder}
-            value={search}
-            onChange={handleInputChange}
-            onFocus={() => setShowResults && setShowResults(true)}
-            className="w-full pr-10"
-            autoComplete="off"
-          />
+          {selectedId ? (
+            <div className="flex items-center w-full border rounded-md px-3 py-2 bg-background">
+              {(() => {
+                // Find the selected page
+                const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                  .find(page => page.id === selectedId);
+
+                return selectedPage ? (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <span className="inline-flex px-2 py-1 bg-primary text-white rounded-md mr-2">
+                        {selectedPage.title}
+                        <X
+                          className="h-4 w-4 ml-1.5 cursor-pointer"
+                          onClick={() => {
+                            setSelectedId(null);
+                            setSearch('');
+                          }}
+                        />
+                      </span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          ) : (
+            <Input
+              id="search-input"
+              type="text"
+              placeholder={placeholder}
+              value={search}
+              onChange={handleInputChange}
+              onFocus={() => setShowResults && setShowResults(true)}
+              className="w-full pr-10"
+              autoComplete="off"
+            />
+          )}
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             {isSearching ? (
               <Loader />
@@ -377,6 +405,7 @@ const TypeaheadSearch = ({
                         onSelect={onSelect}
                         isSelected={selectedId === page.id}
                         setSearch={setSearch}
+                        setSelectedId={setSelectedId}
                         key={page.id}
                       />
                     ) : (
@@ -402,6 +431,7 @@ const TypeaheadSearch = ({
                         onSelect={onSelect}
                         isSelected={selectedId === page.id}
                         setSearch={setSearch}
+                        setSelectedId={setSelectedId}
                         key={page.id}
                       />
                     ) : (
@@ -427,6 +457,7 @@ const TypeaheadSearch = ({
                         onSelect={onSelect}
                         isSelected={selectedId === page.id}
                         setSearch={setSearch}
+                        setSelectedId={setSelectedId}
                         key={page.id}
                       />
                     ) : (
@@ -503,11 +534,11 @@ const TypeaheadSearch = ({
         )}
       </div>
 
-      {/* Insert Link button - show when a page is selected */}
-      {selectedId && (
-        <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t">
-          <button
-            onClick={() => {
+      {/* Insert Link button - always show at the bottom */}
+      <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t">
+        <button
+          onClick={() => {
+            if (selectedId) {
               // Find the selected page
               const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
                 .find(page => page.id === selectedId);
@@ -515,13 +546,14 @@ const TypeaheadSearch = ({
               if (selectedPage && onSelect) {
                 onSelect(selectedPage);
               }
-            }}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Insert Link
-          </button>
-        </div>
-      )}
+            }
+          }}
+          disabled={!selectedId}
+          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Insert Link
+        </button>
+      </div>
     </div>
   );
 };
@@ -546,7 +578,7 @@ const SingleItemLink = ({ page, search }) => {
   );
 };
 
-const SingleItemButton = ({ page, search, onSelect, isSelected = false, setSearch }) => {
+const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId }) => {
   // Ensure we have a valid username to display (handle NULL values properly)
   const displayName = page.username && page.username !== 'NULL'
     ? page.username
@@ -555,10 +587,13 @@ const SingleItemButton = ({ page, search, onSelect, isSelected = false, setSearc
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
-        onClick={() => onSelect(page)}
+        onClick={() => {
+          setSelectedId(page.id);
+          // Don't call onSelect here, wait for Insert Link button
+        }}
         className={`inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] ${isSelected
-          ? 'bg-primary text-primary-foreground border-[1.5px] border-primary-foreground/20'
-          : 'bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700'
+          ? 'bg-primary text-white border-[1.5px] border-primary-foreground/20'
+          : 'bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700'
         } transition-colors flex-shrink-0`}
         key={page.id}
       >
@@ -621,7 +656,7 @@ const UserItemButton = ({ user, search, onSelect }) => {
           type: 'user',
           url: `/user/${user.id}`
         })}
-        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
+        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700 transition-colors flex-shrink-0"
       >
         {highlightText(user.username, search)}
       </button>
