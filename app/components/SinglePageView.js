@@ -171,9 +171,20 @@ function SinglePageView({ params }) {
         let pageData = data.pageData || data;
 
         // Ensure the page has a valid username using our utility function
-        pageData = await ensurePageUsername(pageData);
-
-        console.log("Page data with ensured username:", pageData);
+        try {
+          pageData = await ensurePageUsername(pageData);
+          // Double-check that username is defined
+          if (!pageData.username) {
+            pageData.username = "Anonymous";
+          }
+          console.log("Page data with ensured username:", pageData);
+        } catch (error) {
+          console.error("Error ensuring username:", error);
+          // Make sure pageData has a username even if ensurePageUsername fails
+          if (pageData && !pageData.username) {
+            pageData.username = "Anonymous";
+          }
+        }
 
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
