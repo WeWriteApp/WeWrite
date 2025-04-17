@@ -36,8 +36,7 @@ const TypeaheadSearch = ({
   placeholder = "Search...",
   selectedId = null,
   editableOnly = false, // New prop to filter for editable pages only
-  initialSearch = "", // New prop to set initial search value
-  isLinkSelection = false // New prop to indicate if this is for link selection
+  initialSearch = "" // New prop to set initial search value
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -332,7 +331,7 @@ const TypeaheadSearch = ({
       </div>
 
       <div
-        className={`mt-2 space-y-1 transition-all ${
+        className={`mt-2 space-y-1 transition-all max-h-[300px] overflow-y-auto ${
           search.length >= characterCount
             ? "opacity-100"
             : "opacity-0"
@@ -504,9 +503,9 @@ const TypeaheadSearch = ({
         )}
       </div>
 
-      {/* Insert Link button - only show when in link selection mode and a page is selected */}
-      {isLinkSelection && selectedId && (
-        <div className="mt-4 flex justify-end">
+      {/* Insert Link button - show when a page is selected */}
+      {selectedId && (
+        <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t">
           <button
             onClick={() => {
               // Find the selected page

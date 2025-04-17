@@ -28,11 +28,18 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
       try {
         // Extract all words from the title for better search coverage
-        const titleWords = currentPage.title
+        // Include the full title as a search term as well
+        let titleWords = [currentPage.title.toLowerCase()];
+
+        // Add individual words
+        const individualWords = currentPage.title
           .toLowerCase()
           .split(/\s+/)
           .filter(word => word.length >= 2)
           .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as'].includes(word));
+
+        // Combine full title and individual words for better search coverage
+        titleWords = [...titleWords, ...individualWords];
 
         if (titleWords.length === 0) {
           setLoading(false);
@@ -52,7 +59,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
             where('title', '>=', word),
             where('title', '<=', word + '\uf8ff'),
             where('isPublic', '==', true),
-            limit(10)
+            limit(20)
           );
 
           queries.push(titleQuery);
@@ -114,8 +121,15 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
     );
   }
 
-  if (similarPages.length === 0) {
-    return null; // Don't show the section if no similar pages found
+  if (similarPages.length === 0 && !loading) {
+    return (
+      <div className="mt-8 border-t pt-6">
+        <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
+        <div className="text-muted-foreground text-sm py-4 text-center">
+          No similar pages found. Be the first to create related content!
+        </div>
+      </div>
+    );
   }
 
   return (
