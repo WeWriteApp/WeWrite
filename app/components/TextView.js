@@ -103,6 +103,14 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   // Use lineMode from context as the primary mode
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
+  // Force re-render when lineMode changes
+  const [, forceUpdate] = useState({});
+
+  // Listen for lineMode changes and force re-render
+  useEffect(() => {
+    forceUpdate({});
+  }, [lineMode]);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY;

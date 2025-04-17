@@ -55,7 +55,7 @@ const CompositionBar = ({
   });
 
   return (
-    <div className={cn("w-full relative", className)}>
+    <div className={cn("w-full relative cursor-pointer", className)} onClick={() => onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0)}>
       <div className="w-full flex flex-col gap-4">
         {pledges.map((pledge) => {
           const pledgeAmount = Number(pledge.amount || 0);
@@ -83,17 +83,7 @@ const CompositionBar = ({
               )}
 
               <div
-                className="relative h-[56px] rounded-lg overflow-hidden border border-border bg-background dark:bg-black shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  // If we have a subscription limit and would exceed it, show the limit modal
-                  if (wouldExceedLimit && subscriptionAmount > 0) {
-                    setActivePledgeId(pledge.id);
-                    setShowSubscriptionLimitModal(true);
-                  } else if (onPledgeChange) {
-                    // Otherwise, trigger the pledge change handler which will show the support modal
-                    onPledgeChange(pledge.id, 0);
-                  }
-                }}
+                className="relative h-[56px] rounded-lg overflow-hidden border border-border bg-background dark:bg-black shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Other pledges background - always show regardless of percentage */}
                 <div
@@ -139,7 +129,7 @@ const CompositionBar = ({
                 )}
 
                 {/* Controls */}
-                <div className="flex justify-between items-center h-full relative z-10 p-0">
+                <div className="flex justify-between items-center h-full relative z-10 p-0 pointer-events-none">
                   <div
                     className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 text-foreground dark:text-white cursor-pointer rounded-l-lg"
                     onClick={(e) => {

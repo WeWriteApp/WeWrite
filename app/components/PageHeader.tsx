@@ -198,13 +198,13 @@ export default function PageHeader({
             </div>
 
             {/* Center - Title and Author */}
-            <div className="flex-1 flex justify-start items-center ml-4">
-              <div className={`text-left space-y-0 transition-all duration-120 ${
-                isScrolled ? "max-w-[85vw] flex flex-row items-center gap-2" : "max-w-full"
+            <div className="flex-1 flex justify-center items-center">
+              <div className={`text-center space-y-0 transition-all duration-120 ${
+                isScrolled ? "max-w-[95vw] flex flex-row items-center gap-2 pl-0" : "max-w-full"
               }`}>
                 <h1 className={`font-semibold transition-all duration-120 ${
                   isScrolled
-                    ? "text-base truncate max-w-[70vw]"
+                    ? "text-base truncate max-w-[80vw]"
                     : "text-2xl mb-0.5"
                 }`}>
                   {isLoading ? (
