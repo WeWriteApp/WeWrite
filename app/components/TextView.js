@@ -133,7 +133,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     setIsInitialLoad(true);
   }, [content]);
 
-  // Staggered loading animation effect
+  // Modified loading animation effect to reduce layout shifts on mobile
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph-like nodes
@@ -144,30 +144,49 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         node.type === nodeTypes.LIST
       );
 
-      // Create a staggered loading effect
+      // Get total number of nodes
       const totalNodes = paragraphNodes.length;
-      const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
+
+      // Check if we're on mobile
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
       if (totalNodes > 0) {
-        const newLoadedParagraphs = [];
-
-        // Schedule each paragraph to appear with a staggered delay
-        for (let i = 0; i < totalNodes; i++) {
-          setTimeout(() => {
-            setLoadedParagraphs(prev => [...prev, i]);
-          }, i * loadingDelay);
-        }
-
-        // Mark initial load as complete after all paragraphs are loaded
-        setTimeout(() => {
-          setIsInitialLoad(false);
+        if (isMobile) {
+          // On mobile, load all paragraphs at once to prevent layout shifts
+          // This still preserves the fade-in animation but avoids staggered loading
           setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
 
-          // Call onRenderComplete callback when all paragraphs are loaded
-          if (onRenderComplete && typeof onRenderComplete === 'function') {
-            onRenderComplete();
+          // Short delay before marking as complete
+          setTimeout(() => {
+            setIsInitialLoad(false);
+
+            // Call onRenderComplete callback
+            if (onRenderComplete && typeof onRenderComplete === 'function') {
+              onRenderComplete();
+            }
+          }, 300);
+        } else {
+          // On desktop, use the original staggered loading effect
+          const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
+
+          // Schedule each paragraph to appear with a staggered delay
+          for (let i = 0; i < totalNodes; i++) {
+            setTimeout(() => {
+              setLoadedParagraphs(prev => [...prev, i]);
+            }, i * loadingDelay);
           }
-        }, totalNodes * loadingDelay + 100);
+
+          // Mark initial load as complete after all paragraphs are loaded
+          setTimeout(() => {
+            setIsInitialLoad(false);
+            setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
+
+            // Call onRenderComplete callback when all paragraphs are loaded
+            if (onRenderComplete && typeof onRenderComplete === 'function') {
+              onRenderComplete();
+            }
+          }, totalNodes * loadingDelay + 100);
+        }
       } else {
         setIsInitialLoad(false);
 

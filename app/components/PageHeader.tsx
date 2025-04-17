@@ -98,59 +98,71 @@ export default function PageHeader({
   }, [title, isScrolled]);
 
   React.useEffect(() => {
-    // Use a debounced scroll handler to prevent flickering
+    // Use a throttled scroll handler for better performance
     let scrollTimeout: ReturnType<typeof setTimeout>;
     let lastScrollY = 0;
+    let ticking = false;
 
     const handleScroll = () => {
-      // Clear any existing timeout
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
+      lastScrollY = window.scrollY;
+
+      // Use requestAnimationFrame for smoother performance
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          // Update scroll state - only change if needed
+          const shouldBeScrolled = lastScrollY > 0;
+          if (shouldBeScrolled !== isScrolled) {
+            setIsScrolled(shouldBeScrolled);
+          }
+
+          // Calculate scroll progress
+          const windowHeight = window.innerHeight;
+          const documentHeight = document.documentElement.scrollHeight;
+          const maxScroll = documentHeight - windowHeight;
+          const progress = (lastScrollY / maxScroll) * 100;
+          setScrollProgress(Math.min(progress, 100));
+
+          // Clear any existing timeout
+          if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+          }
+
+          // Use a timeout to ensure spacer height is updated after scroll events have settled
+          // This reduces the frequency of DOM updates during rapid scrolling
+          scrollTimeout = setTimeout(() => {
+            if (headerRef.current && spacerRef.current) {
+              const height = headerRef.current.offsetHeight;
+              spacerRef.current.style.height = `${height}px`;
+            }
+          }, 100);
+
+          ticking = false;
+        });
+
+        ticking = true;
       }
-
-      // Get current scroll position
-      const scrollPosition = window.scrollY;
-
-      // Only update if we've scrolled more than 5px to reduce jitter
-      if (Math.abs(scrollPosition - lastScrollY) > 5) {
-        lastScrollY = scrollPosition;
-
-        // Update scroll state
-        setIsScrolled(scrollPosition > 0);
-
-        // Calculate scroll progress
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        const maxScroll = documentHeight - windowHeight;
-        const progress = (scrollPosition / maxScroll) * 100;
-        setScrollProgress(Math.min(progress, 100));
-      }
-
-      // Use a timeout to ensure spacer height is updated after scroll events have settled
-      scrollTimeout = setTimeout(() => {
-        if (headerRef.current && spacerRef.current) {
-          spacerRef.current.style.height = `${headerRef.current.offsetHeight}px`;
-        }
-      }, 50);
     };
 
+    // Use passive event listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     // Also add scrollend event listener for modern browsers
-    if ('onscrollend' in window) {
-      window.addEventListener('scrollend', () => {
-        // When scrolling stops, check if we're at the top
-        if (window.scrollY < 5) {
-          // Force scroll to absolute top to avoid partial header overlay
-          window.scrollTo({top: 0, behavior: 'instant'});
+    const handleScrollEnd = () => {
+      // When scrolling stops, check if we're at the top
+      if (window.scrollY < 5) {
+        // Force scroll to absolute top to avoid partial header overlay
+        window.scrollTo({top: 0, behavior: 'instant'});
 
-          // Make sure header height is updated
-          if (headerRef.current && spacerRef.current) {
-            const height = headerRef.current.offsetHeight;
-            spacerRef.current.style.height = `${height}px`;
-          }
+        // Make sure header height is updated
+        if (headerRef.current && spacerRef.current) {
+          const height = headerRef.current.offsetHeight;
+          spacerRef.current.style.height = `${height}px`;
         }
-      });
+      }
+    };
+
+    if ('onscrollend' in window) {
+      window.addEventListener('scrollend', handleScrollEnd);
     }
 
     return () => {
@@ -159,10 +171,10 @@ export default function PageHeader({
         clearTimeout(scrollTimeout);
       }
       if ('onscrollend' in window) {
-        window.removeEventListener('scrollend', () => {});
+        window.removeEventListener('scrollend', handleScrollEnd);
       }
     };
-  }, []);
+  }, [isScrolled]);
 
   // Function to handle back button click
   const handleBackClick = (e: React.MouseEvent) => {
@@ -319,8 +331,14 @@ export default function PageHeader({
       </header>
       <div
         ref={spacerRef}
-        style={{ height: `${headerHeight}px`, minHeight: `${headerHeight}px` }}
+        style={{
+          height: `${headerHeight}px`,
+          minHeight: `${headerHeight}px`,
+          // Add a small buffer to prevent content from jumping
+          marginBottom: '2px'
+        }}
         className="w-full flex-shrink-0"
+        aria-hidden="true"
       /> {/* Dynamic spacer for fixed header with explicit min-height */}
     </>
   );
