@@ -222,7 +222,7 @@ export default function PageHeader({
         }}
       >
         <div className="relative mx-auto px-2 md:px-4">
-          <div className="flex items-center justify-between py-1">
+          <div className={`flex items-center justify-between ${isScrolled ? 'py-0.5' : 'py-1'}`}>
             {/* Left Side - Back Button */}
             <div className="flex items-center gap-2">
               <Button

@@ -36,7 +36,9 @@ const TypeaheadSearch = ({
   placeholder = "Link to page...",
   initialSelectedId = null,
   editableOnly = false, // New prop to filter for editable pages only
-  initialSearch = "" // New prop to set initial search value
+  initialSearch = "", // New prop to set initial search value
+  displayText = "", // Display text for the link
+  setDisplayText = null // Function to update display text
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -306,11 +308,41 @@ const TypeaheadSearch = ({
     setSearch(e.target.value);
   };
 
+  // Update display text when a page is selected
+  useEffect(() => {
+    if (selectedId && setDisplayText) {
+      const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+        .find(page => page.id === selectedId);
+
+      if (selectedPage && !displayText) {
+        setDisplayText(selectedPage.title);
+      }
+    }
+  }, [selectedId, pages, setDisplayText, displayText]);
+
   if (!user) return null;
   return (
     <div className="flex flex-col" id="typeahead-search">
-      <div className="flex flex-col space-y-1">
-        <div className="relative w-full">
+      {/* Display Text Input */}
+      <div className="flex flex-col space-y-3">
+        <div className="flex flex-col space-y-1">
+          <label htmlFor="display-text" className="text-sm font-medium">Display Text</label>
+          <input
+            id="display-text"
+            type="text"
+            value={displayText}
+            onChange={(e) => setDisplayText && setDisplayText(e.target.value)}
+            placeholder={selectedId ?
+              [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                .find(page => page.id === selectedId)?.title || "Link text"
+              : "Link text"}
+            className="w-full px-3 py-2 border rounded-md"
+          />
+        </div>
+
+        <div className="flex flex-col space-y-1">
+          <label htmlFor="search-input" className="text-sm font-medium">Page</label>
+          <div className="relative w-full">
           {selectedId ? (
             <div className="flex items-center w-full border rounded-md px-3 py-2 bg-background">
               {(() => {
@@ -535,7 +567,7 @@ const TypeaheadSearch = ({
       </div>
 
       {/* Insert Link button - always show at the bottom */}
-      <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t">
+      <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t border-border dark:border-border">
         <button
           onClick={() => {
             if (selectedId) {
@@ -544,7 +576,11 @@ const TypeaheadSearch = ({
                 .find(page => page.id === selectedId);
 
               if (selectedPage && onSelect) {
-                onSelect(selectedPage);
+                // Include display text in the selected page object
+                onSelect({
+                  ...selectedPage,
+                  displayText: displayText || selectedPage.title
+                });
               }
             }
           }}
@@ -554,6 +590,7 @@ const TypeaheadSearch = ({
           Insert Link
         </button>
       </div>
+    </div>
     </div>
   );
 };

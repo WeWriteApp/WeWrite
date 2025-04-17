@@ -729,9 +729,9 @@ const isLinkActive = (editor) => {
   return !!link;
 };
 
-const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null }) => {
+const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
   const [displayText, setDisplayText] = useState(initialText);
-  // const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
+  const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
   // const [searchActive, setSearchActive] = useState(false);
   const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
@@ -873,49 +873,14 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
             <>
               {/* Display text section */}
               <div className="p-4">
-                <h2 className="text-sm font-medium mb-2">Page</h2>
                 <div className="overflow-y-auto max-h-[40vh]">
                   <TypeaheadSearch
                     onSelect={(page) => handleSave(page)}
                     placeholder="Search pages..."
-                    onFocus={() => setSearchActive(true)}
-                    radioSelection={true}
-                    selectedId={selectedPageId}
+                    initialSelectedId={selectedPageId}
+                    displayText={displayText}
+                    setDisplayText={setDisplayText}
                   />
-                </div>
-              </div>
-
-              {/* Display text input */}
-              {selectedPageId && (
-                <div className="px-4 pb-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium">Display Text</h2>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLinkText(initialText || "");
-                      }}
-                      className="p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground"
-                      title="Reset to page title"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={displayText}
-                    onChange={handleDisplayTextChange}
-                    placeholder="Display text (defaults to page title)"
-                    className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
-                  />
-                </div>
-              )}
-
-              {/* Link destination section - Radio buttons for pages */}
-              <div className="px-4 pb-4 space-y-2">
-                <h2 className="text-sm font-medium mb-2">Link to a page</h2>
-                <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                  {/* Pages are now displayed by TypeaheadSearch with radio buttons */}
                 </div>
               </div>
             </>
