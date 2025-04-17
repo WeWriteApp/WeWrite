@@ -211,14 +211,27 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
       const pageData = { id: docSnap.id, ...docSnap.data() };
       console.log("Page document updated:", { id: pageData.id, title: pageData.title });
 
-      // Check access permissions (now async)
-      try {
-        const accessCheck = await checkPageAccess(pageData, userId);
-        if (!accessCheck.hasAccess) {
-          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-          onPageUpdate({ error: accessCheck.error });
+      // Always return the page data for private pages if the user is the owner
+      if (!pageData.isPublic && userId && pageData.userId === userId) {
+        // User is the owner, allow access to their private page
+        console.log(`Owner access granted to private page ${pageId} for user ${userId}`);
+      } else {
+        // Check access permissions for non-owners
+        try {
+          const accessCheck = await checkPageAccess(pageData, userId);
+          if (!accessCheck.hasAccess) {
+            console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+            onPageUpdate({ error: accessCheck.error });
+            return;
+          }
+        } catch (error) {
+          console.error(`Error checking access for page ${pageId}:`, error);
+          onPageUpdate({ error: "Error checking page access" });
           return;
         }
+      }
+
+      try {
 
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
@@ -304,11 +317,17 @@ export const getPageById = async (pageId, userId = null) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
 
-      // Check if user has access to this page
-      const accessCheck = await checkPageAccess(pageData, userId);
-      if (!accessCheck.hasAccess) {
-        console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-        return { pageData: null, error: accessCheck.error };
+      // Always allow access to private pages if the user is the owner
+      if (!pageData.isPublic && userId && pageData.userId === userId) {
+        // User is the owner, allow access to their private page
+        console.log(`Owner access granted to private page ${pageId} for user ${userId}`);
+      } else {
+        // Check access permissions for non-owners
+        const accessCheck = await checkPageAccess(pageData, userId);
+        if (!accessCheck.hasAccess) {
+          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+          return { pageData: null, error: accessCheck.error };
+        }
       }
 
       // Check if the page has content directly (from a save operation)

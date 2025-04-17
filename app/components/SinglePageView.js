@@ -390,8 +390,8 @@ function SinglePageView({ params }) {
     );
   }
 
-  // Allow access to private pages if the user is the owner
-  if (!isPublic && (!user || (user.uid !== page.userId))) {
+  // Check if this is a private page and the user is not the owner
+  if (!isPublic && (!user || user.uid !== page.userId)) {
     return (
       <Layout>
         <Head>

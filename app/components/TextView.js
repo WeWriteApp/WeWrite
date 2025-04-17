@@ -99,6 +99,12 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     user.uid === page.userId
   );
 
+  // Check if current user can view this page (public or owner)
+  const canView = Boolean(
+    page?.isPublic ||
+    (user?.uid && page?.userId && user.uid === page.userId)
+  );
+
   // Use lineMode from context as the primary mode
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
