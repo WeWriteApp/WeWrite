@@ -390,7 +390,8 @@ function SinglePageView({ params }) {
     );
   }
 
-  if (!isPublic && (!user || user.uid !== page.userId)) {
+  // Allow access to private pages if the user is the owner
+  if (!isPublic && (!user || (user.uid !== page.userId))) {
     return (
       <Layout>
         <Head>
@@ -401,28 +402,23 @@ function SinglePageView({ params }) {
           <h1 className="text-2xl font-semibold text-text">
             {title}
           </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 text-muted-foreground"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span className="text-lg text-muted-foreground">This page is private</span>
-            <Link href={user ? "/" : "/auth/login"}>
-              <button className="bg-accent text-accent-foreground px-4 py-2 rounded-lg hover:bg-accent/90 transition-colors">
-                {user ? "Go back" : "Log in"}
-              </button>
-            </Link>
+          <div className="flex flex-col items-start gap-4 mt-4">
+            <div className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <span className="text-lg text-muted-foreground">This page is private</span>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/auth/register">
+                <Button variant="outline">
+                  Create Account
+                </Button>
+              </Link>
+              <Link href="/auth/login">
+                <Button variant="default">
+                  Log In
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </Layout>

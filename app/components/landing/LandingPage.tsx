@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { Hero } from './Hero';
 import { FeatureSection } from './FeatureSection';
+import { FeatureCarousel } from './FeatureCarousel';
 import { DeveloperSection } from './DeveloperSection';
 import { motion } from 'framer-motion';
 import { Separator } from "../../components/ui/separator";
@@ -198,6 +199,7 @@ const LandingPage = () => {
           viewport={{ once: true, margin: "-100px" }}
           variants={sectionVariants}
         >
+          <FeatureCarousel />
           <FeatureSection />
         </motion.section>
 

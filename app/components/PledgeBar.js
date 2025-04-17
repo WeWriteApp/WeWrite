@@ -403,17 +403,30 @@ const PledgeBar = () => {
     );
   }
 
-  // If user isn't logged in, show login button
+  // If user isn't logged in, show login and create account buttons
   if (!user) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6">
-        <div className="text-center">
-          <p className="text-foreground/70 mb-2">Login to support this creator</p>
-          <Link href="/auth/login">
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
-              Login
-            </button>
-          </Link>
+      <div
+        className={`fixed bottom-8 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        }`}
+      >
+        <div className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg rounded-lg border border-border dark:border-border py-4 px-6">
+          <div className="text-center">
+            <p className="text-foreground/70 mb-3">Log in to support this creator</p>
+            <div className="flex justify-center space-x-3">
+              <Link href="/auth/register">
+                <Button variant="outline" size="sm">
+                  Create Account
+                </Button>
+              </Link>
+              <Link href="/auth/login">
+                <Button variant="default" size="sm">
+                  Log In
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     );
