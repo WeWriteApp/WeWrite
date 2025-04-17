@@ -65,6 +65,7 @@ export default function GlobalIDPage({ params }) {
   }
 
   if (contentType === 'page') {
+    // Ensure we're passing a valid params object with id to ClientPage
     return <ClientPage params={{ id }} />;
   }
 
