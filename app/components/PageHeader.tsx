@@ -98,42 +98,59 @@ export default function PageHeader({
   }, [title, isScrolled]);
 
   React.useEffect(() => {
-    // Use a debounced scroll handler to prevent flickering
+    // Detect if we're on mobile
+    const isMobile = window.innerWidth < 768;
+
+    // Use a throttled scroll handler to prevent flickering
     let scrollTimeout: ReturnType<typeof setTimeout>;
     let lastScrollY = 0;
+    let ticking = false;
 
     const handleScroll = () => {
-      // Clear any existing timeout
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
+      lastScrollY = window.scrollY;
+
+      // Use requestAnimationFrame for smoother performance
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          // Update scroll state
+          setIsScrolled(lastScrollY > 0);
+
+          // Calculate scroll progress
+          const windowHeight = window.innerHeight;
+          const documentHeight = document.documentElement.scrollHeight;
+          const maxScroll = documentHeight - windowHeight;
+          const progress = (lastScrollY / maxScroll) * 100;
+          setScrollProgress(Math.min(progress, 100));
+
+          // On mobile, update spacer height less frequently to reduce layout shifts
+          if (isMobile) {
+            // Clear any existing timeout
+            if (scrollTimeout) {
+              clearTimeout(scrollTimeout);
+            }
+
+            // Use a timeout to ensure spacer height is updated after scroll events have settled
+            scrollTimeout = setTimeout(() => {
+              if (headerRef.current && spacerRef.current) {
+                const height = headerRef.current.offsetHeight;
+                spacerRef.current.style.height = `${height}px`;
+              }
+            }, 100); // Longer timeout on mobile
+          } else {
+            // On desktop, update immediately
+            if (headerRef.current && spacerRef.current) {
+              spacerRef.current.style.height = `${headerRef.current.offsetHeight}px`;
+            }
+          }
+
+          ticking = false;
+        });
+
+        ticking = true;
       }
-
-      // Get current scroll position
-      const scrollPosition = window.scrollY;
-
-      // Only update if we've scrolled more than 5px to reduce jitter
-      if (Math.abs(scrollPosition - lastScrollY) > 5) {
-        lastScrollY = scrollPosition;
-
-        // Update scroll state
-        setIsScrolled(scrollPosition > 0);
-
-        // Calculate scroll progress
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        const maxScroll = documentHeight - windowHeight;
-        const progress = (scrollPosition / maxScroll) * 100;
-        setScrollProgress(Math.min(progress, 100));
-      }
-
-      // Use a timeout to ensure spacer height is updated after scroll events have settled
-      scrollTimeout = setTimeout(() => {
-        if (headerRef.current && spacerRef.current) {
-          spacerRef.current.style.height = `${headerRef.current.offsetHeight}px`;
-        }
-      }, 50);
     };
 
+    // Use passive event listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     // Also add scrollend event listener for modern browsers
@@ -200,7 +217,7 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-120 header-border-transition ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ease-out header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
@@ -225,10 +242,10 @@ export default function PageHeader({
 
             {/* Center - Title and Author */}
             <div className="flex-1 flex justify-center items-center">
-              <div className={`text-center space-y-0 transition-all duration-120 ${
+              <div className={`text-center space-y-0 transition-all duration-200 ease-out ${
                 isScrolled ? "max-w-[95vw] flex flex-row items-center gap-2 pl-0" : "max-w-full"
               }`}>
-                <h1 className={`font-semibold transition-all duration-120 ${
+                <h1 className={`font-semibold transition-all duration-200 ease-out ${
                   isScrolled
                     ? "text-xs truncate max-w-[80vw] opacity-90"
                     : "text-2xl mb-0.5"
@@ -242,7 +259,7 @@ export default function PageHeader({
                     title || "Untitled"
                   )}
                 </h1>
-                <p className={`text-muted-foreground transition-all duration-120 ${
+                <p className={`text-muted-foreground transition-all duration-200 ease-out ${
                   isScrolled
                     ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block"
                     : "text-sm mt-0.5 truncate"
@@ -312,15 +329,21 @@ export default function PageHeader({
           </div>
           {/* Scroll Progress Bar */}
           <div
-            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-120"
+            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-200 ease-out"
             style={{ width: `${scrollProgress}%` }}
           />
         </div>
       </header>
       <div
         ref={spacerRef}
-        style={{ height: `${headerHeight}px`, minHeight: `${headerHeight}px` }}
-        className="w-full flex-shrink-0"
+        style={{
+          height: `${headerHeight}px`,
+          minHeight: `${headerHeight}px`,
+          // Add a small buffer to prevent content from jumping
+          marginBottom: '4px'
+        }}
+        className="w-full flex-shrink-0 will-change-[height]"
+        aria-hidden="true"
       /> {/* Dynamic spacer for fixed header with explicit min-height */}
     </>
   );

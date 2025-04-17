@@ -133,7 +133,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     setIsInitialLoad(true);
   }, [content]);
 
-  // Staggered loading animation effect
+  // Improved loading animation effect with reduced layout shifts
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph-like nodes
@@ -144,30 +144,51 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         node.type === nodeTypes.LIST
       );
 
-      // Create a staggered loading effect
       const totalNodes = paragraphNodes.length;
-      const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
+
+      // For mobile, reduce animation complexity to prevent layout shifts
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
       if (totalNodes > 0) {
-        const newLoadedParagraphs = [];
-
-        // Schedule each paragraph to appear with a staggered delay
-        for (let i = 0; i < totalNodes; i++) {
-          setTimeout(() => {
-            setLoadedParagraphs(prev => [...prev, i]);
-          }, i * loadingDelay);
-        }
-
-        // Mark initial load as complete after all paragraphs are loaded
-        setTimeout(() => {
-          setIsInitialLoad(false);
+        if (isMobile) {
+          // On mobile, load all paragraphs at once but keep fade-in animation
+          // This prevents layout shifts while still having a nice animation
           setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
 
-          // Call onRenderComplete callback when all paragraphs are loaded
-          if (onRenderComplete && typeof onRenderComplete === 'function') {
-            onRenderComplete();
+          // Short timeout to allow the DOM to update before marking as complete
+          setTimeout(() => {
+            setIsInitialLoad(false);
+
+            // Call onRenderComplete callback
+            if (onRenderComplete && typeof onRenderComplete === 'function') {
+              onRenderComplete();
+            }
+          }, 100);
+        } else {
+          // On desktop, keep the staggered loading effect
+          const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
+
+          // Pre-calculate the final height to reduce layout shifts
+          // This helps the browser allocate space for all paragraphs
+
+          // Schedule each paragraph to appear with a staggered delay
+          for (let i = 0; i < totalNodes; i++) {
+            setTimeout(() => {
+              setLoadedParagraphs(prev => [...prev, i]);
+            }, i * loadingDelay);
           }
-        }, totalNodes * loadingDelay + 100);
+
+          // Mark initial load as complete after all paragraphs are loaded
+          setTimeout(() => {
+            setIsInitialLoad(false);
+            setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
+
+            // Call onRenderComplete callback when all paragraphs are loaded
+            if (onRenderComplete && typeof onRenderComplete === 'function') {
+              onRenderComplete();
+            }
+          }, totalNodes * loadingDelay + 100);
+        }
       } else {
         setIsInitialLoad(false);
 
@@ -532,7 +553,47 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
     </span>
   );
 
-  // Normal mode with motion animations
+  // Check if we're on mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Simplified animations for mobile to reduce layout shifts
+  if (isMobile) {
+    return (
+      <div
+        ref={paragraphRef}
+        className={`group relative ${spacingClass} ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
+        onClick={handleClick}
+        onTouchStart={() => canEdit && setLineHovered(true)}
+        onTouchEnd={() => setLineHovered(false)}
+        title={canEdit ? "Tap to edit" : ""}
+        style={{ opacity: 1 }} // Start fully visible to prevent flicker
+      >
+        {/* Normal mode - paragraph numbers create indentation */}
+        <div className="flex">
+          {/* Paragraph number - precisely aligned with centerline of first line of text */}
+          <div
+            className="flex-shrink-0 w-6 text-right pr-1 flex items-center justify-end"
+            style={{
+              height: "1.5rem",
+              transform: "translateY(0.15rem)"
+            }}
+          >
+            {renderParagraphNumber(index)}
+          </div>
+
+          {/* Paragraph content */}
+          <div className="flex-1">
+            <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
+              {node.children && node.children.map((child, i) => renderChild(child, i))}
+              {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop version with full animations
   return (
     <motion.div
       ref={paragraphRef}
