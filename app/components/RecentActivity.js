@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef, useContext, useEffect, useState } from "react";
+import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info } from "lucide-react";
 import useRecentActivity from "../hooks/useRecentActivity";
@@ -42,13 +43,15 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   // Also check if we're in a user profile (determined by having userId passed and not being in activity page)
   const isInUserProfile = userId && !isInActivityPage;
 
-  // Set default view mode based on context:
-  // - 'following' for homepage
-  // - 'all' for user profiles
-  // - 'all' for activity page
-  const defaultViewMode = isInUserProfile || isActivityPage ? 'all' : 'following';
+  // Get view mode from context
+  const { viewMode, setViewMode } = useActivityFilter();
 
-  const [viewMode, setViewMode] = useState(defaultViewMode);
+  // Override view mode for user profiles and activity page
+  useEffect(() => {
+    if (isInUserProfile || isActivityPage) {
+      setViewMode('all');
+    }
+  }, [isInUserProfile, isActivityPage, setViewMode]);
   const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
     limit,
     userId,
@@ -96,7 +99,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4" />
           <h2 className="text-lg font-semibold">Recent activity</h2>

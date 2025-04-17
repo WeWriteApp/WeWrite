@@ -14,7 +14,7 @@ import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { motion } from "framer-motion";
@@ -190,6 +190,66 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleKeyDown = (event, editor) => {
+    // Check if we're at or adjacent to a link and handle deletion
+    if ((event.key === 'Delete' || event.key === 'Backspace')) {
+      // First check if we're at a link
+      const [link] = Editor.nodes(editor, {
+        match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
+      }) || [];
+
+      if (link) {
+        event.preventDefault();
+        const [, path] = link;
+        Transforms.removeNodes(editor, { at: path });
+        return;
+      }
+
+      // If not at a link, check if we're adjacent to one
+      const { selection } = editor;
+      if (selection && Range.isCollapsed(selection)) {
+        const [start] = Range.edges(selection);
+        const beforePoint = { path: start.path, offset: start.offset - 1 };
+        const afterPoint = { path: start.path, offset: start.offset };
+
+        // Check if there's a link before the cursor (for Backspace)
+        if (event.key === 'Backspace' && start.offset > 0) {
+          try {
+            const [nodeEntry] = Editor.nodes(editor, {
+              at: Editor.range(editor, beforePoint, beforePoint),
+              match: (n) => SlateElement.isElement(n) && n.type === 'link',
+            }) || [];
+
+            if (nodeEntry) {
+              event.preventDefault();
+              const [, linkPath] = nodeEntry;
+              Transforms.removeNodes(editor, { at: linkPath });
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking for link before cursor:', error);
+          }
+        }
+
+        // Check if there's a link after the cursor (for Delete)
+        if (event.key === 'Delete') {
+          try {
+            const [nodeEntry] = Editor.nodes(editor, {
+              at: Editor.range(editor, afterPoint, afterPoint),
+              match: (n) => SlateElement.isElement(n) && n.type === 'link',
+            }) || [];
+
+            if (nodeEntry) {
+              event.preventDefault();
+              const [, linkPath] = nodeEntry;
+              Transforms.removeNodes(editor, { at: linkPath });
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking for link after cursor:', error);
+          }
+        }
+      }
+    }
     // Handle cmd+enter to save
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
@@ -355,46 +415,90 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleSelection = (item) => {
-    // Format the title to ensure it never has @ symbols for page links
-    const formattedTitle = formatPageTitle(item.displayText || item.title);
+    // Check if this is an external link
+    if (item.isExternal) {
+      const displayText = item.displayText || item.url;
 
-    if (selectedLinkElement && selectedLinkPath) {
-      // Edit existing link
-      Transforms.setNodes(
-        editor,
-        {
+      if (selectedLinkElement && selectedLinkPath) {
+        // Edit existing link
+        Transforms.setNodes(
+          editor,
+          {
+            type: "link",
+            url: item.url,
+            children: [{ text: displayText }],
+            isExternal: true
+          },
+          { at: selectedLinkPath }
+        );
+      } else {
+        // Insert new external link
+        const link = {
+          type: "link",
+          url: item.url,
+          children: [{ text: displayText }],
+          isExternal: true
+        };
+
+        // Make sure we have a valid selection
+        if (!editor.selection) {
+          // If no selection, place cursor at the end of the document
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+        }
+
+        // Insert the link node
+        Transforms.insertNodes(editor, link, { at: editor.selection });
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: "end" });
+
+        // Insert a space after the link for better editing experience
+        Transforms.insertText(editor, " ");
+      }
+    } else {
+      // Handle internal page links
+      // Format the title to ensure it never has @ symbols for page links
+      const formattedTitle = formatPageTitle(item.displayText || item.title);
+
+      if (selectedLinkElement && selectedLinkPath) {
+        // Edit existing link
+        Transforms.setNodes(
+          editor,
+          {
+            url: `/pages/${item.id}`,
+            children: [{ text: formattedTitle }],
+            pageId: item.id,
+            pageTitle: item.title // Store the original page title for reference
+          },
+          { at: selectedLinkPath }
+        );
+      } else {
+        // Insert new link
+        const link = {
+          type: "link",
           url: `/pages/${item.id}`,
           children: [{ text: formattedTitle }],
           pageId: item.id,
           pageTitle: item.title // Store the original page title for reference
-        },
-        { at: selectedLinkPath }
-      );
-    } else {
-      // Insert new link
-      const link = {
-        type: "link",
-        url: `/pages/${item.id}`,
-        children: [{ text: formattedTitle }],
-        pageId: item.id,
-        pageTitle: item.title // Store the original page title for reference
-      };
+        };
 
-      // Make sure we have a valid selection
-      if (!editor.selection) {
-        // If no selection, place cursor at the end of the document
-        const end = Editor.end(editor, []);
-        Transforms.select(editor, end);
+        // Make sure we have a valid selection
+        if (!editor.selection) {
+          // If no selection, place cursor at the end of the document
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+        }
+
+        // Insert the link node
+        Transforms.insertNodes(editor, link, { at: editor.selection });
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: "end" });
+
+        // Insert a space after the link for better editing experience
+        Transforms.insertText(editor, " ");
       }
-
-      // Insert the link node
-      Transforms.insertNodes(editor, link, { at: editor.selection });
-
-      // Move cursor to the end of the link
-      Transforms.collapse(editor, { edge: "end" });
-
-      // Insert a space after the link for better editing experience
-      Transforms.insertText(editor, " ");
     }
 
     // Reset link editor state
@@ -698,21 +802,24 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     openLinkEditor(element, path);
   };
 
+  // We'll handle deletion in the editor's main keydown handler instead
+
   return (
     <a
       {...attributes}
       ref={ref}
       onClick={handleClick}
-      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
+      contentEditable={false} // Make the link non-editable
+      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
       data-page-id={isPageLinkType ? element.pageId : undefined}
       data-user-id={isUserLinkType ? element.userId : undefined}
     >
       <InlineChromiumBugfix />
       <div className="flex items-center gap-0.5 min-w-0">
         {children}
-        {isExternalLinkType && (
+        {isExternalLinkType || isExternalLink(element.url) ? (
           <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
-        )}
+        ) : null}
       </div>
       <InlineChromiumBugfix />
     </a>
@@ -729,14 +836,36 @@ const isLinkActive = (editor) => {
   return !!link;
 };
 
-const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null }) => {
+const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
   const [displayText, setDisplayText] = useState(initialText);
-  // const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
+  const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
   // const [searchActive, setSearchActive] = useState(false);
   const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   // const [isNewPageCreating, setIsNewPageCreating] = useState(false);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Handle cmd+enter to submit the form
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (activeTab === 'external' && externalUrl) {
+          handleExternalSubmit();
+        } else if (activeTab === 'page' && selectedPageId) {
+          // If a page is already selected, submit it
+          const page = { id: selectedPageId, title: pageTitle };
+          handleSave(page);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, externalUrl, selectedPageId, pageTitle]);
 
   // Safely access AuthContext with error handling
   const authContext = useContext(AuthContext);
@@ -812,9 +941,12 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
       finalUrl = 'https://' + finalUrl;
     }
 
+    // Create a proper external link object
     onSelect({
+      type: "link",
       url: finalUrl,
-      displayText: displayText || finalUrl
+      displayText: displayText || finalUrl,
+      isExternal: true // Flag to identify this as an external link
     });
 
     handleClose();
@@ -851,20 +983,22 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
           <div className="px-4 border-b border-border">
             <div className="flex">
               <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'page'
+                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'page'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('page')}
               >
-                Page
+                <FileText className="h-4 w-4" />
+                WeWrite Page
               </button>
               <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'external'
+                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'external'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('external')}
               >
-                Link (external)
+                <Globe className="h-4 w-4" />
+                External link
               </button>
             </div>
           </div>
@@ -873,49 +1007,21 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
             <>
               {/* Display text section */}
               <div className="p-4">
-                <h2 className="text-sm font-medium mb-2">Page</h2>
                 <div className="overflow-y-auto max-h-[40vh]">
                   <TypeaheadSearch
                     onSelect={(page) => handleSave(page)}
                     placeholder="Search pages..."
-                    onFocus={() => setSearchActive(true)}
-                    radioSelection={true}
-                    selectedId={selectedPageId}
+                    initialSelectedId={selectedPageId}
+                    displayText={displayText}
+                    setDisplayText={setDisplayText}
+                    onInputChange={(value) => {
+                      // If the input looks like a URL, switch to external tab and fill the URL field
+                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
+                        setActiveTab('external');
+                        setExternalUrl(value);
+                      }
+                    }}
                   />
-                </div>
-              </div>
-
-              {/* Display text input */}
-              {selectedPageId && (
-                <div className="px-4 pb-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium">Display Text</h2>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLinkText(initialText || "");
-                      }}
-                      className="p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground"
-                      title="Reset to page title"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={displayText}
-                    onChange={handleDisplayTextChange}
-                    placeholder="Display text (defaults to page title)"
-                    className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
-                  />
-                </div>
-              )}
-
-              {/* Link destination section - Radio buttons for pages */}
-              <div className="px-4 pb-4 space-y-2">
-                <h2 className="text-sm font-medium mb-2">Link to a page</h2>
-                <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                  {/* Pages are now displayed by TypeaheadSearch with radio buttons */}
                 </div>
               </div>
             </>

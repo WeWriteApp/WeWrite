@@ -140,13 +140,23 @@ const SingleProfileView = ({ profile }) => {
 
         {!user && (
           <div className="bg-primary/10 text-primary border border-primary/20 rounded-md p-4 mb-4">
-            <p>
-              You are viewing this profile as a guest.
-              <Link href="/auth/login" className="ml-2 font-medium underline">
-                Log in
-              </Link>
-              to interact with {username}'s pages.
-            </p>
+            <div className="flex flex-col space-y-3">
+              <p className="text-center">
+                You are viewing this profile as a guest.
+              </p>
+              <div className="flex justify-center space-x-3">
+                <Link href="/auth/register">
+                  <Button variant="outline" size="sm">
+                    Create Account
+                  </Button>
+                </Link>
+                <Link href="/auth/login">
+                  <Button variant="default" size="sm">
+                    Log In
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 

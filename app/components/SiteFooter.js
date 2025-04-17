@@ -46,7 +46,8 @@ export default function SiteFooter({ className = "" }) {
       href: "https://opencollective.com/wewrite-app",
       label: "Support us",
       icon: <Heart className="h-3 w-3" />,
-      external: true
+      external: true,
+      forceNewTab: true
     },
     {
       href: "/zRNwhNgIEfLFo050nyAT",
@@ -76,8 +77,8 @@ export default function SiteFooter({ className = "" }) {
             <Link
               key={index}
               href={link.href}
-              target={link.external ? "_blank" : undefined}
-              rel={link.external ? "noopener noreferrer" : undefined}
+              target={(link.external || link.forceNewTab) ? "_blank" : undefined}
+              rel={(link.external || link.forceNewTab) ? "noopener noreferrer" : undefined}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 group"
             >
               <span className="text-muted-foreground group-hover:text-foreground transition-colors">
@@ -106,7 +107,7 @@ export default function SiteFooter({ className = "" }) {
         </div>
 
         {/* Add extra padding to ensure content isn't covered by pledge bar */}
-        <div className="h-20"></div>
+        <div className="h-24"></div>
       </div>
     </footer>
   );

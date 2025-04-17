@@ -8,10 +8,10 @@ import { Loader } from './Loader';
 
 /**
  * SimilarPages Component
- * 
+ *
  * Displays a list of pages with similar titles to the current page.
  * Uses the page title to find other pages with similar content.
- * 
+ *
  * @param {Object} currentPage - The current page object
  * @param {number} maxPages - Maximum number of similar pages to display (default: 3)
  */
@@ -27,33 +27,55 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
       }
 
       try {
-        // Extract meaningful keywords from the title (words with 3+ characters)
-        const titleWords = currentPage.title
+        // Extract all words from the title for better search coverage
+        // Include the full title as a search term as well
+        let titleWords = [];
+
+        // Add individual words
+        const individualWords = currentPage.title
           .toLowerCase()
-          .split(/\\s+/)
-          .filter(word => word.length >= 3)
-          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from'].includes(word));
+          .split(/\s+/)
+          .filter(word => word.length >= 2)
+          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as'].includes(word));
+
+        // Use individual words for better search coverage
+        titleWords = [...individualWords];
 
         if (titleWords.length === 0) {
+          // If no significant words, use a generic query
+          const genericQuery = query(
+            collection(db, 'pages'),
+            where('isPublic', '==', true),
+            orderBy('lastModified', 'desc'),
+            limit(maxPages * 2)
+          );
+
+          const snapshot = await getDocs(genericQuery);
+          const pages = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(page => page.id !== currentPage.id)
+            .slice(0, maxPages);
+
+          setSimilarPages(pages);
           setLoading(false);
           return;
         }
 
         // Create queries for each significant word in the title
         const queries = [];
-        
+
         for (const word of titleWords) {
-          // Skip very common words or short words
-          if (word.length < 3) continue;
-          
+          // Skip very short words
+          if (word.length < 2) continue;
+
           // Create a query for titles containing this word
           const titleQuery = query(
             collection(db, 'pages'),
-            where('title', '>=', word),
-            where('title', '<=', word + '\\uf8ff'),
-            limit(5)
+            where('isPublic', '==', true),
+            orderBy('title'),
+            limit(50)
           );
-          
+
           queries.push(titleQuery);
         }
 
@@ -64,24 +86,46 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
         // Combine and deduplicate results
         const pageMap = new Map();
-        
+
         queryResults.forEach(snapshot => {
           snapshot.docs.forEach(doc => {
             const pageData = { id: doc.id, ...doc.data() };
-            
+
             // Skip the current page
             if (pageData.id === currentPage.id) return;
-            
-            // If we already have this page, increment its relevance score
+
+            // Calculate relevance score based on title similarity
+            let relevanceScore = 0;
+
+            // Check if title contains any of the search words
+            const pageTitle = pageData.title.toLowerCase();
+            for (const word of titleWords) {
+              if (pageTitle.includes(word)) {
+                relevanceScore += 1;
+                // Exact word match gets higher score
+                if (pageTitle.split(/\s+/).includes(word)) {
+                  relevanceScore += 2;
+                }
+              }
+            }
+
+            // If no direct match but we want to include it anyway with low score
+            if (relevanceScore === 0) {
+              relevanceScore = 0.1;
+            }
+
+            // If we already have this page, keep the higher relevance score
             if (pageMap.has(pageData.id)) {
               const existing = pageMap.get(pageData.id);
-              pageMap.set(pageData.id, { 
-                ...existing, 
-                relevanceScore: existing.relevanceScore + 1 
-              });
+              if (relevanceScore > existing.relevanceScore) {
+                pageMap.set(pageData.id, {
+                  ...existing,
+                  relevanceScore: relevanceScore
+                });
+              }
             } else {
-              // Otherwise, add it with a score of 1
-              pageMap.set(pageData.id, { ...pageData, relevanceScore: 1 });
+              // Otherwise, add it with its calculated score
+              pageMap.set(pageData.id, { ...pageData, relevanceScore });
             }
           });
         });
@@ -104,7 +148,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
   if (loading) {
     return (
-      <div className="mt-8 border-t pt-6">
+      <div className="mt-8 pt-6">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="flex justify-center py-4">
           <Loader size="sm" />
@@ -113,19 +157,26 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
     );
   }
 
-  if (similarPages.length === 0) {
-    return null; // Don't show the section if no similar pages found
+  if (similarPages.length === 0 && !loading) {
+    return (
+      <div className="mt-8 pt-6">
+        <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
+        <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
+          No similar pages found. Be the first to create related content!
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="mt-8 border-t pt-6">
+    <div className="mt-8 pt-6">
       <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
       <div className="space-y-2">
         {similarPages.map(page => (
-          <PillLink 
-            key={page.id} 
+          <PillLink
+            key={page.id}
             href={`/${page.id}`}
-            className="w-full"
+            className="inline-block"
           >
             {page.title}
           </PillLink>

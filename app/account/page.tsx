@@ -760,12 +760,12 @@ export default function AccountPage() {
           {/* OpenCollective Section */}
           <section>
             <h3 className="text-base font-medium mb-4">Support WeWrite</h3>
-            <Alert className="bg-primary/10 border-primary/20">
-              <AlertCircle className="h-4 w-4 text-primary" />
-              <AlertTitle className="text-primary">Payments Coming Soon</AlertTitle>
-              <AlertDescription className="text-primary/90">
+            <Alert className="bg-green-500/10 border-green-500/20">
+              <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertTitle className="text-green-600 dark:text-green-400">Payments Coming Soon</AlertTitle>
+              <AlertDescription className="text-green-600 dark:text-green-400">
                 <p className="mb-4">We're working on implementing payments. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
-                <Button asChild className="relative overflow-hidden bg-gradient-to-r from-green-500 via-blue-500 to-green-500 bg-[length:200%_100%] text-white hover:shadow-lg transition-all duration-300 animate-gradient">
+                <Button asChild className="w-full relative overflow-hidden bg-gradient-to-r from-green-500 via-blue-500 to-green-500 bg-[length:200%_100%] text-white hover:shadow-lg transition-all duration-300 animate-gradient">
                   <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
                     Support on OpenCollective

@@ -97,6 +97,7 @@ export const PillLink = ({
         ${variantStyles}
         ${groupId ? 'opacity-90' : ''}
         ${className || ''}
+        max-w-fit
       `}
     >
       <div className="flex items-center gap-1.5 flex-nowrap">

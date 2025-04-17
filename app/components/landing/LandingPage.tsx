@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { ArrowRight, Menu, X } from 'lucide-react';
 import { Hero } from './Hero';
 import { FeatureSection } from './FeatureSection';
+import { FeatureCarousel } from './FeatureCarousel';
 import { DeveloperSection } from './DeveloperSection';
 import { motion } from 'framer-motion';
 import { Separator } from "../../components/ui/separator";
@@ -77,7 +78,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-y-auto">
+    <div className="min-h-screen bg-background">
       {/* Desktop Header */}
       <header
         className={`fixed top-0 left-0 right-0 w-full header-border-transition z-50 transition-all duration-200 hidden md:block ${
@@ -198,6 +199,7 @@ const LandingPage = () => {
           viewport={{ once: true, margin: "-100px" }}
           variants={sectionVariants}
         >
+          <FeatureCarousel />
           <FeatureSection />
         </motion.section>
 

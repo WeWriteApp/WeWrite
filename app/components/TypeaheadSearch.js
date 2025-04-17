@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import { MobileContext } from "../providers/MobileProvider";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PillLink } from "./PillLink";
@@ -33,11 +33,12 @@ const TypeaheadSearch = ({
   onSelect = null,
   setShowResults = null,
   userId = null,
-  placeholder = "Search...",
-  radioSelection = false,
-  selectedId = null,
+  placeholder = "Link to page...",
+  initialSelectedId = null,
   editableOnly = false, // New prop to filter for editable pages only
-  initialSearch = "" // New prop to set initial search value
+  initialSearch = "", // New prop to set initial search value
+  displayText = "", // Display text for the link
+  setDisplayText = null // Function to update display text
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -49,6 +50,7 @@ const TypeaheadSearch = ({
     users: []
   });
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
   const { theme } = useTheme();
   const router = useRouter();
 
@@ -306,21 +308,80 @@ const TypeaheadSearch = ({
     setSearch(e.target.value);
   };
 
+  // Update display text when a page is selected
+  useEffect(() => {
+    if (selectedId && setDisplayText) {
+      const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+        .find(page => page.id === selectedId);
+
+      if (selectedPage && !displayText) {
+        setDisplayText(selectedPage.title);
+      }
+    }
+  }, [selectedId, pages, setDisplayText, displayText]);
+
   if (!user) return null;
   return (
     <div className="flex flex-col" id="typeahead-search">
-      <div className="flex flex-col space-y-1">
-        <div className="relative w-full">
-          <Input
-            id="search-input"
-            type="text"
-            placeholder={placeholder}
-            value={search}
-            onChange={handleInputChange}
-            onFocus={() => setShowResults && setShowResults(true)}
-            className="w-full pr-10"
-            autoComplete="off"
-          />
+      <div className="flex flex-col space-y-3">
+        {/* Display Text Input - Only show when setDisplayText is provided (in link editor) */}
+        {setDisplayText && (
+          <div className="flex flex-col space-y-1">
+            <label htmlFor="display-text" className="text-sm font-medium">Display Text</label>
+            <input
+              id="display-text"
+              type="text"
+              value={displayText}
+              onChange={(e) => setDisplayText(e.target.value)}
+              placeholder={selectedId ?
+                [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                  .find(page => page.id === selectedId)?.title || "Link text"
+                : "Link text"}
+              className="w-full px-3 py-2 border border-border dark:border-border rounded-md"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col space-y-1">
+          {setDisplayText && <label htmlFor="search-input" className="text-sm font-medium">Page</label>}
+          <div className="relative w-full">
+          {selectedId ? (
+            <div className="flex items-center w-full border border-border dark:border-border rounded-md px-3 py-2 bg-background">
+              {(() => {
+                // Find the selected page
+                const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                  .find(page => page.id === selectedId);
+
+                return selectedPage ? (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <span className="inline-flex px-2 py-1 bg-primary text-white rounded-md mr-2">
+                        {selectedPage.title}
+                        <X
+                          className="h-4 w-4 ml-1.5 cursor-pointer"
+                          onClick={() => {
+                            setSelectedId(null);
+                            setSearch('');
+                          }}
+                        />
+                      </span>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          ) : (
+            <Input
+              id="search-input"
+              type="text"
+              placeholder={placeholder}
+              value={search}
+              onChange={handleInputChange}
+              onFocus={() => setShowResults && setShowResults(true)}
+              className="w-full pr-10"
+              autoComplete="off"
+            />
+          )}
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             {isSearching ? (
               <Loader />
@@ -332,7 +393,7 @@ const TypeaheadSearch = ({
       </div>
 
       <div
-        className={`mt-2 space-y-1 transition-all ${
+        className={`mt-2 space-y-1 transition-all max-h-[300px] overflow-y-auto ${
           search.length >= characterCount
             ? "opacity-100"
             : "opacity-0"
@@ -376,8 +437,9 @@ const TypeaheadSearch = ({
                         page={page}
                         search={search}
                         onSelect={onSelect}
-                        radioSelection={radioSelection}
                         isSelected={selectedId === page.id}
+                        setSearch={setSearch}
+                        setSelectedId={setSelectedId}
                         key={page.id}
                       />
                     ) : (
@@ -401,8 +463,9 @@ const TypeaheadSearch = ({
                         page={page}
                         search={search}
                         onSelect={onSelect}
-                        radioSelection={radioSelection}
                         isSelected={selectedId === page.id}
+                        setSearch={setSearch}
+                        setSelectedId={setSelectedId}
                         key={page.id}
                       />
                     ) : (
@@ -426,8 +489,9 @@ const TypeaheadSearch = ({
                         page={page}
                         search={search}
                         onSelect={onSelect}
-                        radioSelection={radioSelection}
                         isSelected={selectedId === page.id}
+                        setSearch={setSearch}
+                        setSelectedId={setSelectedId}
                         key={page.id}
                       />
                     ) : (
@@ -503,6 +567,34 @@ const TypeaheadSearch = ({
           </>
         )}
       </div>
+
+      {/* Insert Link button - only show when onSelect is provided */}
+      {onSelect && (
+        <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t border-border dark:border-border">
+          <button
+            onClick={() => {
+              if (selectedId) {
+                // Find the selected page
+                const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                  .find(page => page.id === selectedId);
+
+                if (selectedPage && onSelect) {
+                  // Include display text in the selected page object
+                  onSelect({
+                    ...selectedPage,
+                    displayText: displayText || selectedPage.title
+                  });
+                }
+              }
+            }}
+            disabled={!selectedId}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Insert Link
+          </button>
+        </div>
+      )}
+    </div>
     </div>
   );
 };
@@ -527,46 +619,34 @@ const SingleItemLink = ({ page, search }) => {
   );
 };
 
-const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSelected = false }) => {
+const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId }) => {
   // Ensure we have a valid username to display (handle NULL values properly)
   const displayName = page.username && page.username !== 'NULL'
     ? page.username
     : 'Anonymous';
 
-  if (radioSelection) {
-    return (
-      <div
-        className="flex items-center space-x-2 p-2 rounded hover:bg-accent/50 cursor-pointer"
-        onClick={() => onSelect(page)}
-      >
-        <input
-          type="radio"
-          id={`page-${page.id}`}
-          name="page"
-          className="h-4 w-4 text-primary border-muted-foreground"
-          checked={isSelected}
-          onChange={() => onSelect(page)}
-        />
-        <label htmlFor={`page-${page.id}`} className="text-sm cursor-pointer font-medium">
-          {highlightText(page.title, search)}
-        </label>
-        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-          {page.groupId ? 'Group' : `by ${displayName}`}
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
-        onClick={() => onSelect(page)}
-        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
+        onClick={() => {
+          setSelectedId(page.id);
+          // Don't call onSelect here, wait for Insert Link button
+        }}
+        className={`inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] ${isSelected
+          ? 'bg-primary text-white border-[1.5px] border-primary-foreground/20'
+          : 'bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700'
+        } transition-colors flex-shrink-0`}
         key={page.id}
       >
         <span className="truncate">
           {highlightText(page.title, search)}
         </span>
+        {isSelected && (
+          <X className="h-3.5 w-3.5 ml-1.5 flex-shrink-0" onClick={(e) => {
+            e.stopPropagation();
+            setSearch('');
+          }} />
+        )}
       </button>
       <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
         {page.groupId ? 'Group' : `by ${displayName}`}
@@ -617,7 +697,7 @@ const UserItemButton = ({ user, search, onSelect }) => {
           type: 'user',
           url: `/user/${user.id}`
         })}
-        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
+        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700 transition-colors flex-shrink-0"
       >
         {highlightText(user.username, search)}
       </button>
