@@ -36,7 +36,7 @@ export const createPageLink = ({
  * @param {Object} options - Configuration options for the user link
  * @param {string} options.userId - ID of the user
  * @param {string} options.username - Username to display
- * @param {string} options.url - URL for the link (defaults to /u/{userId})
+ * @param {string} options.url - URL for the link (defaults to /user/{userId})
  * @returns {Object} - Standardized user link object for Slate
  */
 export const createUserLink = ({
@@ -57,7 +57,7 @@ export const createUserLink = ({
 
   return {
     type: "link",
-    url: url || `/u/${userId || "anonymous"}`,
+    url: url || `/user/${userId || "anonymous"}`,
     isUser: true,
     userId: userId || "anonymous",
     username: displayUsername,

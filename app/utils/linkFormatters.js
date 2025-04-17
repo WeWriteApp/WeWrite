@@ -33,7 +33,7 @@ export const formatUsername = (username) => {
  */
 export const isUserLink = (url) => {
   if (!url) return false;
-  return url.includes('/user/') || url.includes('/u/');
+  return url.includes('/user/');
 };
 
 /**

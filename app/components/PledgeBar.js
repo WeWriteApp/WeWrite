@@ -71,7 +71,7 @@ const PledgeBar = () => {
       pathname.includes('/pages/') ||
       // Match the new URL structure: /[id] (but not /u/ or /g/ paths)
       (pathname.match(/^\/[a-zA-Z0-9_-]+$/) &&
-       !pathname.startsWith('/u/') &&
+       !pathname.startsWith('/user/') &&
        !pathname.startsWith('/g/'))
     );
 

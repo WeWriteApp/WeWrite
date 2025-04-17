@@ -594,7 +594,7 @@ const UserItemLink = ({ user, search }) => {
   return (
     <div className="flex items-center w-full overflow-hidden my-1 px-3 py-1.5 hover:bg-accent/50 rounded-md">
       <PillLink
-        href={`/u/${user.id}`}
+        href={`/user/${user.id}`}
         key={user.id}
         className="flex-shrink-0"
       >
