@@ -145,7 +145,7 @@ const SingleProfileView = ({ profile }) => {
               <Link href="/auth/login" className="ml-2 font-medium underline">
                 Log in
               </Link>
-              to interact with {profile.username}'s pages.
+              to interact with {username}'s pages.
             </p>
           </div>
         )}
