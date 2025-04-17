@@ -8,10 +8,10 @@ import { Loader } from './Loader';
 
 /**
  * SimilarPages Component
- * 
+ *
  * Displays a list of pages with similar titles to the current page.
  * Uses the page title to find other pages with similar content.
- * 
+ *
  * @param {Object} currentPage - The current page object
  * @param {number} maxPages - Maximum number of similar pages to display (default: 3)
  */
@@ -27,12 +27,12 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
       }
 
       try {
-        // Extract meaningful keywords from the title (words with 3+ characters)
+        // Extract all words from the title for better search coverage
         const titleWords = currentPage.title
           .toLowerCase()
-          .split(/\\s+/)
-          .filter(word => word.length >= 3)
-          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from'].includes(word));
+          .split(/\s+/)
+          .filter(word => word.length >= 2)
+          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as'].includes(word));
 
         if (titleWords.length === 0) {
           setLoading(false);
@@ -41,19 +41,20 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
         // Create queries for each significant word in the title
         const queries = [];
-        
+
         for (const word of titleWords) {
-          // Skip very common words or short words
-          if (word.length < 3) continue;
-          
+          // Skip very short words
+          if (word.length < 2) continue;
+
           // Create a query for titles containing this word
           const titleQuery = query(
             collection(db, 'pages'),
             where('title', '>=', word),
-            where('title', '<=', word + '\\uf8ff'),
-            limit(5)
+            where('title', '<=', word + '\uf8ff'),
+            where('isPublic', '==', true),
+            limit(10)
           );
-          
+
           queries.push(titleQuery);
         }
 
@@ -64,20 +65,20 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
         // Combine and deduplicate results
         const pageMap = new Map();
-        
+
         queryResults.forEach(snapshot => {
           snapshot.docs.forEach(doc => {
             const pageData = { id: doc.id, ...doc.data() };
-            
+
             // Skip the current page
             if (pageData.id === currentPage.id) return;
-            
+
             // If we already have this page, increment its relevance score
             if (pageMap.has(pageData.id)) {
               const existing = pageMap.get(pageData.id);
-              pageMap.set(pageData.id, { 
-                ...existing, 
-                relevanceScore: existing.relevanceScore + 1 
+              pageMap.set(pageData.id, {
+                ...existing,
+                relevanceScore: existing.relevanceScore + 1
               });
             } else {
               // Otherwise, add it with a score of 1
@@ -122,10 +123,10 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
       <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
       <div className="space-y-2">
         {similarPages.map(page => (
-          <PillLink 
-            key={page.id} 
+          <PillLink
+            key={page.id}
             href={`/${page.id}`}
-            className="w-full"
+            className="inline-block"
           >
             {page.title}
           </PillLink>

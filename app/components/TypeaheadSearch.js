@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import { MobileContext } from "../providers/MobileProvider";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PillLink } from "./PillLink";
@@ -34,10 +34,10 @@ const TypeaheadSearch = ({
   setShowResults = null,
   userId = null,
   placeholder = "Search...",
-  radioSelection = false,
   selectedId = null,
   editableOnly = false, // New prop to filter for editable pages only
-  initialSearch = "" // New prop to set initial search value
+  initialSearch = "", // New prop to set initial search value
+  isLinkSelection = false // New prop to indicate if this is for link selection
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -376,8 +376,8 @@ const TypeaheadSearch = ({
                         page={page}
                         search={search}
                         onSelect={onSelect}
-                        radioSelection={radioSelection}
                         isSelected={selectedId === page.id}
+                        setSearch={setSearch}
                         key={page.id}
                       />
                     ) : (
@@ -401,8 +401,8 @@ const TypeaheadSearch = ({
                         page={page}
                         search={search}
                         onSelect={onSelect}
-                        radioSelection={radioSelection}
                         isSelected={selectedId === page.id}
+                        setSearch={setSearch}
                         key={page.id}
                       />
                     ) : (
@@ -426,8 +426,8 @@ const TypeaheadSearch = ({
                         page={page}
                         search={search}
                         onSelect={onSelect}
-                        radioSelection={radioSelection}
                         isSelected={selectedId === page.id}
+                        setSearch={setSearch}
                         key={page.id}
                       />
                     ) : (
@@ -503,6 +503,26 @@ const TypeaheadSearch = ({
           </>
         )}
       </div>
+
+      {/* Insert Link button - only show when in link selection mode and a page is selected */}
+      {isLinkSelection && selectedId && (
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={() => {
+              // Find the selected page
+              const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                .find(page => page.id === selectedId);
+
+              if (selectedPage && onSelect) {
+                onSelect(selectedPage);
+              }
+            }}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            Insert Link
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -527,46 +547,31 @@ const SingleItemLink = ({ page, search }) => {
   );
 };
 
-const SingleItemButton = ({ page, search, onSelect, radioSelection = false, isSelected = false }) => {
+const SingleItemButton = ({ page, search, onSelect, isSelected = false, setSearch }) => {
   // Ensure we have a valid username to display (handle NULL values properly)
   const displayName = page.username && page.username !== 'NULL'
     ? page.username
     : 'Anonymous';
 
-  if (radioSelection) {
-    return (
-      <div
-        className="flex items-center space-x-2 p-2 rounded hover:bg-accent/50 cursor-pointer"
-        onClick={() => onSelect(page)}
-      >
-        <input
-          type="radio"
-          id={`page-${page.id}`}
-          name="page"
-          className="h-4 w-4 text-primary border-muted-foreground"
-          checked={isSelected}
-          onChange={() => onSelect(page)}
-        />
-        <label htmlFor={`page-${page.id}`} className="text-sm cursor-pointer font-medium">
-          {highlightText(page.title, search)}
-        </label>
-        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
-          {page.groupId ? 'Group' : `by ${displayName}`}
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
         onClick={() => onSelect(page)}
-        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700 transition-colors flex-shrink-0"
+        className={`inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] ${isSelected
+          ? 'bg-primary text-primary-foreground border-[1.5px] border-primary-foreground/20'
+          : 'bg-blue-100/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-[1.5px] border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-700'
+        } transition-colors flex-shrink-0`}
         key={page.id}
       >
         <span className="truncate">
           {highlightText(page.title, search)}
         </span>
+        {isSelected && (
+          <X className="h-3.5 w-3.5 ml-1.5 flex-shrink-0" onClick={(e) => {
+            e.stopPropagation();
+            setSearch('');
+          }} />
+        )}
       </button>
       <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
         {page.groupId ? 'Group' : `by ${displayName}`}
