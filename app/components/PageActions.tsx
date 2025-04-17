@@ -250,10 +250,11 @@ export function PageActions({
               title="Change paragraph display mode"
             >
               <LayoutPanelLeft className="h-4 w-4" />
+              Paragraph Mode
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuLabel>Layout Options</DropdownMenuLabel>
+            {/* Layout Options label removed */}
             <DropdownMenuItem onClick={() => setLineMode(LINE_MODES.NORMAL)}>
               <AlignLeft className="h-4 w-4 mr-2" />
               Normal Mode
@@ -265,18 +266,7 @@ export function PageActions({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Reply button - only show for non-owners */}
-        {!isOwner && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-full h-10 md:h-8 md:w-auto"
-            onClick={handleReply}
-          >
-            <Reply className="h-4 w-4" />
-            Reply to Page
-          </Button>
-        )}
+        {/* Reply button removed temporarily */}
       </div>
     </div>
   );
