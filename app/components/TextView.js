@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect, useCallback, useRef, useContext } from "react";
+import React, { useState, useEffect, useCallback, useRef, useContext, useMemo } from "react";
 import { usePage } from "../contexts/PageContext";
 import SecureSyntaxHighlighter from "./SecureSyntaxHighlighter";
 import { useLineSettings } from "../contexts/LineSettingsContext";
