@@ -78,9 +78,9 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
 
       // Show toast notification based on the selected mode
       if (mode === LINE_MODES.NORMAL) {
-        toast.success("Normal paragraph mode selected");
+        toast.success("Dense mode disabled");
       } else if (mode === LINE_MODES.DENSE) {
-        toast.success("Dense paragraph mode selected");
+        toast.success("Dense mode enabled");
       }
 
       // Force page reload to ensure the mode change takes effect immediately

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
 import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft } from "lucide-react";
+import { Switch } from "./ui/switch";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { deletePage } from "../firebase/database";
@@ -240,31 +241,19 @@ export function PageActions({
           </>
         )}
 
-        {/* Paragraph Mode button - available to all users */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 w-full h-10 md:h-8 md:w-auto"
-              title="Change paragraph display mode"
-            >
-              <LayoutPanelLeft className="h-4 w-4" />
-              Paragraph Mode
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {/* Layout Options label removed */}
-            <DropdownMenuItem onClick={() => setLineMode(LINE_MODES.NORMAL)}>
-              <AlignLeft className="h-4 w-4 mr-2" />
-              Normal Mode
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLineMode(LINE_MODES.DENSE)}>
-              <AlignJustify className="h-4 w-4 mr-2" />
-              Dense Mode
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Dense Mode switch - available to all users */}
+        <div className="flex items-center gap-2 w-full h-10 md:h-8 md:w-auto px-3 py-1 border border-input rounded-md">
+          <div className="flex items-center gap-2">
+            <AlignJustify className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">Dense Mode</span>
+          </div>
+          <Switch
+            checked={lineMode === LINE_MODES.DENSE}
+            onCheckedChange={(checked) => {
+              setLineMode(checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
+            }}
+          />
+        </div>
 
         {/* Reply button removed temporarily */}
       </div>
