@@ -97,7 +97,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
         <PageActions
           page={page}
           content={content}

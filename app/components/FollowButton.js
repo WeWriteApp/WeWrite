@@ -157,7 +157,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
         size="sm"
         onClick={handleFollowClick}
         disabled={isLoading}
-        className={`relative ${className}`}
+        className={`relative h-10 md:h-8 ${className}`}
       >
         <AnimatePresence mode="wait">
           {isFollowing ? (

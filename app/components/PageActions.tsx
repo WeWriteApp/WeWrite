@@ -211,7 +211,7 @@ export function PageActions({
   };
 
   return (
-    <div className={`${className}`}>
+    <div className={`w-full ${className}`}>
       {/* All buttons - horizontal on desktop, vertical on mobile */}
       <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center">
         {/* Owner-only actions - Edit and Delete buttons */}
@@ -220,7 +220,7 @@ export function PageActions({
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 w-full md:w-auto"
+              className="gap-2 w-full h-10 md:h-8 md:w-auto"
               onClick={() => setIsEditing && setIsEditing(!isEditing)}
             >
               <Edit className="h-4 w-4" />
@@ -230,7 +230,7 @@ export function PageActions({
               <Button
                 variant="destructive"
                 size="sm"
-                className="gap-2 w-full md:w-auto"
+                className="gap-2 w-full h-10 md:h-8 md:w-auto"
                 onClick={handleDelete}
               >
                 <Trash2 className="h-4 w-4" />
@@ -246,7 +246,7 @@ export function PageActions({
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 w-full md:w-auto"
+              className="gap-2 w-full h-10 md:h-8 md:w-auto"
             >
               <LayoutPanelLeft className="h-4 w-4" />
               Paragraph Mode
@@ -270,7 +270,7 @@ export function PageActions({
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 w-full md:w-auto"
+            className="gap-2 w-full h-10 md:h-8 md:w-auto"
             onClick={handleReply}
           >
             <Reply className="h-4 w-4" />
