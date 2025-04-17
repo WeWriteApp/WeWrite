@@ -65,21 +65,13 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
   // Handle follow button click
   const handleFollowClick = async () => {
     if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "You need to sign in to follow pages",
-        variant: "destructive"
-      });
+      toast.error("You need to sign in to follow pages");
       return;
     }
 
     // Prevent following own pages
     if (pageOwnerId && user.uid === pageOwnerId) {
-      toast({
-        title: "Cannot follow own page",
-        description: "You cannot follow your own pages",
-        variant: "destructive"
-      });
+      toast.error("You cannot follow your own pages");
       return;
     }
 
@@ -93,11 +85,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
         setIsFollowing(true);
         setAnimateCheck(true);
 
-        toast({
-          title: "Page followed",
-          description: `You are now following "${pageTitle}"`,
-          variant: "success"
-        });
+        toast.success(`You are now following "${pageTitle}"`);
 
         // Reset animation after it completes
         setTimeout(() => {
@@ -105,11 +93,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
         }, 1500);
       } catch (error) {
         console.error("Error following page:", error);
-        toast({
-          title: "Error",
-          description: "Failed to follow page. Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to follow page. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -128,11 +112,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       setIsFollowing(false);
       setShowUnfollowDialog(false);
 
-      toast({
-        title: "Page unfollowed",
-        description: `You are no longer following "${pageTitle}"`,
-        variant: "info"
-      });
+      toast.info(`You are no longer following "${pageTitle}"`);
     } catch (error) {
       console.error("Error unfollowing page:", error);
 
@@ -140,11 +120,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       setIsFollowing(false);
       setShowUnfollowDialog(false);
 
-      toast({
-        title: "Warning",
-        description: "There was an issue unfollowing this page, but we've updated your view.",
-        variant: "warning"
-      });
+      toast.warning("There was an issue unfollowing this page, but we've updated your view.");
     } finally {
       setIsLoading(false);
     }

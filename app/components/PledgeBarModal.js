@@ -83,7 +83,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         <div className="py-3">
           <Button
             asChild
-            className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-green-500 via-blue-500 to-green-500 hover:from-green-600 hover:via-blue-600 hover:to-green-600 text-black animate-gradient bg-[length:200%_auto]' : ''}`}
+            className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-green-500 via-blue-500 to-green-500 hover:from-green-600 hover:via-blue-600 hover:to-green-600 text-white animate-gradient bg-[length:200%_auto]' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >
@@ -93,7 +93,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
               rel={content.action.external ? "noopener noreferrer" : undefined}
               className="flex items-center justify-center gap-2"
             >
-              {isSignedIn && <DollarSign className="h-4 w-4 text-black" />}
+              {isSignedIn && <DollarSign className="h-4 w-4 text-white" />}
               {content.action.label}
             </a>
           </Button>

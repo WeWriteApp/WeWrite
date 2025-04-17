@@ -108,7 +108,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
             <button
               onClick={() => setViewMode('all')}
               className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'all'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-white'
                 : 'bg-muted hover:bg-muted/80'}`}
             >
               All
@@ -117,15 +117,12 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
               onClick={() => setViewMode('following')}
               disabled={isLoadingFollows || followedPages.length === 0}
               className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'following'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-white'
                 : followedPages.length === 0
                   ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
                   : 'bg-muted hover:bg-muted/80'}`}
             >
               Following
-              {isLoadingFollows && (
-                <span className="ml-1 inline-block h-3 w-3 animate-pulse rounded-full bg-current opacity-70"></span>
-              )}
             </button>
           </div>
         )}

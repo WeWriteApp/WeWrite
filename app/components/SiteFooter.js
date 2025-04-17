@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Twitter, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
 
@@ -10,6 +13,21 @@ import { Twitter, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
  */
 export default function SiteFooter({ className = "" }) {
   const currentYear = new Date().getFullYear();
+
+  // Interactive footer text options
+  const [madeWithIndex, setMadeWithIndex] = useState(0);
+  const [locationIndex, setLocationIndex] = useState(0);
+
+  const madeWithOptions = ["Made with agápē", "Vibe coded"];
+  const locationOptions = ["in New York City", "in America", "on Earth"];
+
+  const handleMadeWithClick = () => {
+    setMadeWithIndex((prevIndex) => (prevIndex + 1) % madeWithOptions.length);
+  };
+
+  const handleLocationClick = () => {
+    setLocationIndex((prevIndex) => (prevIndex + 1) % locationOptions.length);
+  };
 
   const footerLinks = [
     {
@@ -71,7 +89,20 @@ export default function SiteFooter({ className = "" }) {
         </div>
 
         <div className="text-xs text-muted-foreground">
-          Made with agápē in New York City
+          <span
+            onClick={handleMadeWithClick}
+            className="cursor-pointer hover:text-foreground transition-colors"
+            title="Click me!"
+          >
+            {madeWithOptions[madeWithIndex]}
+          </span>{" "}
+          <span
+            onClick={handleLocationClick}
+            className="cursor-pointer hover:text-foreground transition-colors"
+            title="Click me too!"
+          >
+            {locationOptions[locationIndex]}
+          </span>
         </div>
 
         {/* Add extra padding to ensure content isn't covered by pledge bar */}

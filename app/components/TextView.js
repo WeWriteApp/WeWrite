@@ -103,7 +103,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
   // Create a unique key that changes when lineMode changes to force complete re-render
-  const renderKey = useMemo(() => `${lineMode}-${Date.now()}`, [lineMode]);
+  const renderKey = useMemo(() => `mode-${lineMode}`, [lineMode]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -133,7 +133,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     setIsInitialLoad(true);
   }, [content]);
 
-  // Improved loading animation effect with reduced layout shifts
+  // Modified loading animation effect to reduce layout shifts on mobile
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph-like nodes
@@ -144,18 +144,19 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         node.type === nodeTypes.LIST
       );
 
+      // Get total number of nodes
       const totalNodes = paragraphNodes.length;
 
-      // For mobile, reduce animation complexity to prevent layout shifts
+      // Check if we're on mobile
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
       if (totalNodes > 0) {
         if (isMobile) {
-          // On mobile, load all paragraphs at once but keep fade-in animation
-          // This prevents layout shifts while still having a nice animation
+          // On mobile, load all paragraphs at once to prevent layout shifts
+          // This still preserves the fade-in animation but avoids staggered loading
           setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
 
-          // Short timeout to allow the DOM to update before marking as complete
+          // Short delay before marking as complete
           setTimeout(() => {
             setIsInitialLoad(false);
 
@@ -163,13 +164,10 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
             if (onRenderComplete && typeof onRenderComplete === 'function') {
               onRenderComplete();
             }
-          }, 100);
+          }, 300);
         } else {
-          // On desktop, keep the staggered loading effect
+          // On desktop, use the original staggered loading effect
           const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
-
-          // Pre-calculate the final height to reduce layout shifts
-          // This helps the browser allocate space for all paragraphs
 
           // Schedule each paragraph to appear with a staggered delay
           for (let i = 0; i < totalNodes; i++) {
@@ -350,8 +348,9 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
 
-  // Use the provided effectiveMode or fall back to lineMode from context
-  const mode = effectiveMode || lineMode || LINE_MODES.NORMAL;
+  // Always use the latest lineMode from context to ensure immediate updates
+  // Fall back to effectiveMode only if lineMode is not available
+  const mode = lineMode || effectiveMode || LINE_MODES.NORMAL;
 
   if (!contents) return null;
 
@@ -497,7 +496,8 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  */
 const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = false, isActive = false, onActiveLine = null }) => {
   const { lineMode } = useLineSettings();
-  // Use lineMode from context if available, otherwise fall back to effectiveMode prop
+  // Always use the latest lineMode from context to ensure immediate updates
+  // Fall back to effectiveMode only if lineMode is not available
   const mode = lineMode || (effectiveMode === 'dense' ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
 
   const paragraphRef = useRef(null);
@@ -553,47 +553,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
     </span>
   );
 
-  // Check if we're on mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-  // Simplified animations for mobile to reduce layout shifts
-  if (isMobile) {
-    return (
-      <div
-        ref={paragraphRef}
-        className={`group relative ${spacingClass} ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
-        onClick={handleClick}
-        onTouchStart={() => canEdit && setLineHovered(true)}
-        onTouchEnd={() => setLineHovered(false)}
-        title={canEdit ? "Tap to edit" : ""}
-        style={{ opacity: 1 }} // Start fully visible to prevent flicker
-      >
-        {/* Normal mode - paragraph numbers create indentation */}
-        <div className="flex">
-          {/* Paragraph number - precisely aligned with centerline of first line of text */}
-          <div
-            className="flex-shrink-0 w-6 text-right pr-1 flex items-center justify-end"
-            style={{
-              height: "1.5rem",
-              transform: "translateY(0.15rem)"
-            }}
-          >
-            {renderParagraphNumber(index)}
-          </div>
-
-          {/* Paragraph content */}
-          <div className="flex-1">
-            <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
-              {node.children && node.children.map((child, i) => renderChild(child, i))}
-              {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop version with full animations
+  // Normal mode with motion animations
   return (
     <motion.div
       ref={paragraphRef}

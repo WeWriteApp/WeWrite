@@ -465,7 +465,7 @@ function SinglePageView({ params }) {
                 <PageProvider>
                   <LineSettingsProvider>
                     <TextView
-                      key={Date.now()} /* Use timestamp as key to force re-render on every change */
+                      key={`content-${page.id}`} /* Use stable key based on page ID */
                       content={editorState}
                       viewMode={lineMode}
                       onRenderComplete={handlePageFullyRendered}

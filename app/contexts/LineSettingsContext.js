@@ -37,8 +37,19 @@ const LineSettingsContext = createContext();
  * @param {boolean} props.isEditMode - Whether the context is being used in edit mode
  */
 export function LineSettingsProvider({ children, isEditMode = false }) {
-  // Default to 'normal' mode, but try to load from localStorage if available
-  const [lineMode, setLineMode] = useState(LINE_MODES.NORMAL);
+  // Try to get the initial mode from localStorage if available
+  const getInitialMode = () => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('lineMode');
+      if (savedMode === LINE_MODES.DENSE) {
+        return LINE_MODES.DENSE;
+      }
+    }
+    return LINE_MODES.NORMAL; // Default to normal mode
+  };
+
+  // Initialize with the correct mode from localStorage
+  const [lineMode, setLineMode] = useState(getInitialMode());
 
   // Load setting from localStorage on mount
   useEffect(() => {
@@ -60,7 +71,7 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
     }
   }, []);
 
-  // Custom setter function that also shows a toast notification
+  // Custom setter function that also shows a toast notification and forces page reload
   const setLineModeWithNotification = (mode) => {
     // Validate the mode before setting it
     if (mode !== LINE_MODES.NORMAL && mode !== LINE_MODES.DENSE) {
@@ -68,7 +79,7 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
       return;
     }
 
-    // Force update the state
+    // Force update the state immediately
     setLineMode(mode);
 
     // Also update localStorage immediately to ensure persistence
@@ -76,14 +87,17 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
       localStorage.setItem('lineMode', mode);
       console.log(`Line mode set to ${mode} and saved to localStorage`);
 
-      // No longer forcing page reload - changes apply immediately
-    }
+      // Show toast notification based on the selected mode
+      if (mode === LINE_MODES.NORMAL) {
+        toast.success("Dense mode disabled");
+      } else if (mode === LINE_MODES.DENSE) {
+        toast.success("Dense mode enabled");
+      }
 
-    // Show toast notification based on the selected mode
-    if (mode === LINE_MODES.NORMAL) {
-      toast.success("Normal paragraph mode selected");
-    } else if (mode === LINE_MODES.DENSE) {
-      toast.success("Dense paragraph mode selected");
+      // Force page reload to ensure the mode change takes effect immediately
+      setTimeout(() => {
+        window.location.reload();
+      }, 300); // Short delay to allow toast to be seen
     }
   };
 
