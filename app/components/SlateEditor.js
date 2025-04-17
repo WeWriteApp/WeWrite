@@ -57,10 +57,10 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
  *
  * @param {Object} initialEditorState - The initial state to load into the editor (for existing content)
  * @param {Object} initialContent - The initial content to load (takes precedence, used for replies)
- * @param {Function} setEditorState - Function to update the parent component's state with editor changes
+ * @param {Function} onContentChange - Function to update the parent component's state with editor changes
  * @param {Ref} ref - Reference to access editor methods from parent components
  */
-const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, setEditorState }, ref) => {
+const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, onContentChange }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({});
@@ -138,10 +138,10 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
         setInitialValue(initialContent);
 
-        // Also set the editor state if the callback is provided
-        if (setEditorState) {
-          console.log("Setting editorState from initialContent");
-          setEditorState(initialContent);
+        // Also notify the parent component if the callback is provided
+        if (typeof onContentChange === 'function') {
+          console.log("Notifying parent component about initialContent");
+          onContentChange(initialContent);
         }
 
         // Set content as initialized to prevent re-initialization
@@ -159,7 +159,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         console.error("Error setting editor content from initialContent:", error);
       }
     }
-  }, [initialContent, setEditorState, contentInitialized, editor]);
+  }, [initialContent, onContentChange, contentInitialized, editor]);
 
   // Make sure initialValue is properly set from initialContent
   useEffect(() => {
@@ -174,8 +174,13 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     try {
       // Make sure newValue is valid before updating state
       if (Array.isArray(newValue) && newValue.length > 0) {
-        setEditorState(newValue);
+        // Update local state
         setLineCount(newValue.length);
+
+        // Call the parent component's onContentChange callback
+        if (typeof onContentChange === 'function') {
+          onContentChange(newValue);
+        }
       } else {
         console.error('Invalid editor value:', newValue);
       }
