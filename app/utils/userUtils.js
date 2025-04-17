@@ -81,12 +81,21 @@ export const ensurePageUsername = async (pageData) => {
       const username = await getUsernameById(pageData.userId);
       return {
         ...pageData,
-        username
+        username: username || "Anonymous" // Ensure username is never undefined
       };
     } catch (error) {
       console.error("Error ensuring page username:", error);
+      // Set a default username in case of error
+      return {
+        ...pageData,
+        username: "Anonymous"
+      };
     }
   }
 
-  return pageData;
+  // If we get here, ensure the page has a username property
+  return {
+    ...pageData,
+    username: pageData.username || "Anonymous"
+  };
 };
