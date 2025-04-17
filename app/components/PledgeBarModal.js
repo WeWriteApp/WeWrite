@@ -83,7 +83,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         <div className="py-3">
           <Button
             asChild
-            className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white animate-gradient bg-[length:200%_auto]' : ''}`}
+            className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-blue-500 to-green-400 hover:from-blue-600 hover:to-green-500 text-white animate-gradient bg-[length:200%_auto]' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >

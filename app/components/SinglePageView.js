@@ -465,6 +465,7 @@ function SinglePageView({ params }) {
                 <PageProvider>
                   <LineSettingsProvider>
                     <TextView
+                      key={`text-view-${lineMode}`} /* Add key prop that changes with lineMode to force re-render */
                       content={editorState}
                       viewMode={lineMode}
                       onRenderComplete={handlePageFullyRendered}

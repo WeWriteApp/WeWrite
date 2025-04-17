@@ -75,6 +75,10 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('lineMode', mode);
       console.log(`Line mode set to ${mode} and saved to localStorage`);
+
+      // Force reload the page to apply changes immediately
+      // This is a temporary solution until we can fix the React state update issue
+      window.location.reload();
     }
 
     // Show toast notification based on the selected mode

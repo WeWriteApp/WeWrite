@@ -102,6 +102,7 @@ const config: Config = {
       },
       animation: {
         'gradient-x': 'gradient-x 3s ease infinite',
+        'gradient': 'gradient 3s ease infinite',
       },
       keyframes: {
         'gradient-x': {
@@ -113,6 +114,11 @@ const config: Config = {
             'background-size': '200% 200%',
             'background-position': 'right center'
           },
+        },
+        'gradient': {
+          '0%': { 'background-position': '0% 50%' },
+          '50%': { 'background-position': '100% 50%' },
+          '100%': { 'background-position': '0% 50%' },
         },
       },
     },
