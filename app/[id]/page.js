@@ -6,45 +6,22 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../firebase/config';
-import dynamic from 'next/dynamic';
+import ClientPage from '../pages/[id]/client-page.tsx';
 import { Loader } from '../components/Loader';
 
-// Dynamically import ClientPage to ensure it only loads on the client side
-const ClientPage = dynamic(
-  () => import('../pages/[id]/client-page.tsx'),
-  { ssr: false }
-);
-
-/**
- * GlobalIDPage Component
- * This component handles routing based on the ID parameter
- * It determines if the ID belongs to a page, user, or group and routes accordingly
- */
 export default function GlobalIDPage({ params }) {
   const { id } = params;
   const router = useRouter();
   const [contentType, setContentType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [pageData, setPageData] = useState(null);
 
   useEffect(() => {
-    // Safety check for id
-    if (!id) {
-      setContentType('not-found');
-      setIsLoading(false);
-      return;
-    }
-
     async function determineContentType() {
       try {
-        console.log("Determining content type for ID:", id);
-
         // First, check if it's a page
         const pageDoc = await getDoc(doc(db, "pages", id));
         if (pageDoc.exists()) {
-          console.log("Found page with ID:", id);
           setContentType('page');
-          setPageData(pageDoc.data());
           setIsLoading(false);
           return;
         }
@@ -55,7 +32,6 @@ export default function GlobalIDPage({ params }) {
         const userSnapshot = await get(userRef);
 
         if (userSnapshot.exists()) {
-          console.log("Found user with ID:", id);
           // Redirect to the user page
           router.replace(`/user/${id}`);
           return;
@@ -66,14 +42,12 @@ export default function GlobalIDPage({ params }) {
         const groupSnapshot = await get(groupRef);
 
         if (groupSnapshot.exists()) {
-          console.log("Found group with ID:", id);
           // Redirect to the group page
           router.replace(`/group/${id}`);
           return;
         }
 
         // If we get here, the ID doesn't match any content
-        console.log("No content found for ID:", id);
         setContentType('not-found');
         setIsLoading(false);
       } catch (error) {
@@ -87,20 +61,11 @@ export default function GlobalIDPage({ params }) {
   }, [id, router]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader />
-      </div>
-    );
+    return <Loader />;
   }
 
   if (contentType === 'page') {
-    // Ensure we're passing a valid params object with id to ClientPage
-    return (
-      <div className="page-container">
-        <ClientPage params={{ id }} />
-      </div>
-    );
+    return <ClientPage params={{ id }} />;
   }
 
   if (contentType === 'not-found') {
@@ -121,9 +86,5 @@ export default function GlobalIDPage({ params }) {
     );
   }
 
-  return (
-    <div className="flex items-center justify-center min-h-[50vh]">
-      <Loader />
-    </div>
-  );
+  return <Loader />;
 }

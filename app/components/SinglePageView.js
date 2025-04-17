@@ -54,7 +54,7 @@ import {
   CommandList
 } from './ui/command';
 import EditPage from "./EditPage";
-import { ensurePageUsername } from "../utils/userUtils";
+// Username handling is now done directly in this component
 
 /**
  * SinglePageView Component
@@ -170,31 +170,9 @@ function SinglePageView({ params }) {
 
         let pageData = data.pageData || data;
 
-        // Ensure the page has a valid username using our utility function
-        try {
-          // Always set a default username first to prevent undefined errors
-          if (!pageData.username) {
-            pageData.username = "Anonymous";
-          }
-
-          // Then try to get the actual username
-          const enrichedPageData = await ensurePageUsername(pageData);
-          if (enrichedPageData) {
-            pageData = enrichedPageData;
-          }
-
-          // Double-check that username is defined after the async operation
-          if (!pageData.username) {
-            pageData.username = "Anonymous";
-          }
-
-          console.log("Page data with ensured username:", pageData);
-        } catch (error) {
-          console.error("Error ensuring username:", error);
-          // Make sure pageData has a username even if ensurePageUsername fails
-          if (pageData && !pageData.username) {
-            pageData.username = "Anonymous";
-          }
+        // Make sure pageData has a username
+        if (!pageData.username) {
+          pageData.username = "Anonymous";
         }
 
         setPage(pageData);
