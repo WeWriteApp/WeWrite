@@ -63,6 +63,8 @@ export default function GAProvider({ children }) {
     const pageTitleMap = {
       '/': 'WeWrite - Home',
       '/new': 'WeWrite - Create New Page',
+      '/direct-create': 'WeWrite - Create New Page',
+      '/direct-reply': 'WeWrite - Reply to Page',
       '/auth/login': 'WeWrite - Sign In',
       '/auth/register': 'WeWrite - Create Account',
       '/auth/forgot-password': 'WeWrite - Reset Password',
@@ -71,7 +73,8 @@ export default function GAProvider({ children }) {
       '/account': 'WeWrite - Account Settings',
       '/account/subscription': 'WeWrite - Subscription Settings',
       '/activity': 'WeWrite - Activity Feed',
-      '/sandbox': 'WeWrite - Sandbox'
+      '/sandbox': 'WeWrite - Sandbox',
+      '/leaderboard': 'WeWrite - Leaderboard'
     };
 
     // Check if we have a predefined title for this path
@@ -79,7 +82,7 @@ export default function GAProvider({ children }) {
       pageTitle = pageTitleMap[pathname];
     }
     // Handle dynamic routes
-    else if (pathname.startsWith('/users/')) {
+    else if (pathname.startsWith('/user/')) {
       // For user profile pages
       const username = document.querySelector('h1')?.textContent;
       if (username) {
@@ -88,7 +91,7 @@ export default function GAProvider({ children }) {
         pageTitle = 'WeWrite - User Profile';
       }
     }
-    else if (pathname.startsWith('/pages/')) {
+    else if (pathname.match(/\/[a-zA-Z0-9]{20}/) || pathname.includes('/pages/')) {
       // For content pages, get a specific title
       const contentTitle = document.querySelector('h1')?.textContent;
       if (contentTitle && contentTitle !== 'Untitled') {
@@ -98,13 +101,20 @@ export default function GAProvider({ children }) {
         if (searchParams?.has('edit')) {
           pageTitle = 'WeWrite - Page Editor';
         } else {
-          pageTitle = 'WeWrite - Page View';
+          // Extract the page ID for a more descriptive title
+          const pageId = pathname.split('/').pop();
+          pageTitle = `WeWrite - Page: ${pageId}`;
         }
       }
     }
     // Ensure we never have "Untitled" in analytics
     else if (pageTitle.includes('Untitled')) {
       // Extract the path segment for a more descriptive title
+      const pathSegment = pathname.split('/').filter(Boolean).pop() || 'page';
+      pageTitle = `WeWrite - ${pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)}`;
+    }
+    // Fallback for any other page
+    else if (!pageTitle || pageTitle === '' || pageTitle === 'WeWrite') {
       const pathSegment = pathname.split('/').filter(Boolean).pop() || 'page';
       pageTitle = `WeWrite - ${pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)}`;
     }

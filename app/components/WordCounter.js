@@ -10,9 +10,9 @@ import React, { useMemo } from 'react';
  * @param {string} content - The text content to analyze
  */
 export default function WordCounter({ content }) {
-  const { wordCount, charCount } = useMemo(() => {
+  const wordCount = useMemo(() => {
     if (!content) {
-      return { wordCount: 0, charCount: 0 };
+      return 0;
     }
 
     // Handle content as string or JSON
@@ -60,23 +60,24 @@ export default function WordCounter({ content }) {
       }
     }
 
-    // Remove extra whitespace and count words
+    // Improved word counting algorithm
+    // Remove extra whitespace, split by whitespace, and filter out empty strings
     const cleanText = textContent.trim().replace(/\\s+/g, ' ');
-    const words = cleanText ? cleanText.split(' ').filter(word => word.length > 0) : [];
 
-    return {
-      wordCount: words.length,
-      charCount: cleanText.length
-    };
+    // Split by whitespace and filter out empty strings and non-word characters
+    const words = cleanText
+      ? cleanText.split(/\s+/)
+        .filter(word => word.length > 0 && /\w+/.test(word))
+      : [];
+
+    return words.length;
   }, [content]);
 
   if (!content) return null;
 
   return (
-    <div className="text-sm text-muted-foreground flex gap-3">
+    <div className="text-sm text-muted-foreground">
       <span>{wordCount} {wordCount === 1 ? 'word' : 'words'}</span>
-      <span>•</span>
-      <span>{charCount} {charCount === 1 ? 'character' : 'characters'}</span>
     </div>
   );
 }

@@ -38,17 +38,17 @@ export default function DirectReplyPage() {
   // Try to get user data from cookies and session storage
   useEffect(() => {
     console.log("DirectReplyPage: Getting user data from cookies and session storage");
-    
+
     // Try to get user data from multiple sources
     let userData = null;
-    
+
     // 1. Try to get user data from wewrite_accounts in sessionStorage
     try {
       const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
       if (wewriteAccounts) {
         const accounts = JSON.parse(wewriteAccounts);
         const currentAccount = accounts.find(acc => acc.isCurrent);
-        
+
         if (currentAccount) {
           console.log("DirectReplyPage: Found current account in wewrite_accounts:", currentAccount);
           userData = currentAccount;
@@ -57,20 +57,20 @@ export default function DirectReplyPage() {
     } catch (error) {
       console.error("DirectReplyPage: Error getting user data from wewrite_accounts:", error);
     }
-    
+
     // 2. Try to get user data from wewrite_user_id cookie and wewrite_accounts
     if (!userData) {
       try {
         const wewriteUserId = Cookies.get('wewrite_user_id');
         if (wewriteUserId) {
           console.log("DirectReplyPage: Found wewrite_user_id cookie:", wewriteUserId);
-          
+
           // Try to find the account in wewrite_accounts
           const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
           if (wewriteAccounts) {
             const accounts = JSON.parse(wewriteAccounts);
             const account = accounts.find(acc => acc.uid === wewriteUserId);
-            
+
             if (account) {
               console.log("DirectReplyPage: Found account in wewrite_accounts by user ID:", account);
               userData = account;
@@ -81,7 +81,7 @@ export default function DirectReplyPage() {
         console.error("DirectReplyPage: Error getting user data from wewrite_user_id:", error);
       }
     }
-    
+
     // 3. Try to get user data from userSession cookie
     if (!userData) {
       try {
@@ -97,7 +97,7 @@ export default function DirectReplyPage() {
         console.error("DirectReplyPage: Error getting user data from userSession cookie:", error);
       }
     }
-    
+
     // If we found user data, use it
     if (userData) {
       console.log("DirectReplyPage: Using user data:", userData);
@@ -131,7 +131,7 @@ export default function DirectReplyPage() {
 
         // Set the initial content
         setInitialContent(parsedContent);
-        
+
         // Also set the editor state immediately
         if (setEditorState) {
           setEditorState(parsedContent);
@@ -182,10 +182,10 @@ export default function DirectReplyPage() {
     try {
       // Get the username from URL parameters if available (for replies)
       const urlUsername = searchParams.get('username');
-      
+
       // Use the username from URL if available, otherwise fallback to user data
       const username = urlUsername || user?.username || user?.displayName || 'Anonymous';
-      
+
       // Get the user ID
       const userId = user?.uid || 'anonymous';
 
@@ -229,10 +229,10 @@ export default function DirectReplyPage() {
 
   // Get username for display
   const urlUsername = searchParams.get('username');
-  
+
   // Try to get a better username from multiple sources
   let username = urlUsername || user?.displayName || user?.username || '';
-  
+
   // If we still don't have a username, try to get it from other sources
   if (!username) {
     try {
@@ -241,7 +241,7 @@ export default function DirectReplyPage() {
       if (wewriteAccounts) {
         const accounts = JSON.parse(wewriteAccounts);
         const currentAccount = accounts.find(acc => acc.isCurrent);
-        
+
         if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
           username = currentAccount.username || currentAccount.displayName;
           console.log("Found username in wewrite_accounts:", username);
@@ -251,7 +251,7 @@ export default function DirectReplyPage() {
       console.error("Error getting username from wewrite_accounts:", error);
     }
   }
-  
+
   // If we still don't have a username, try to get it from userSession cookie
   if (!username) {
     try {
@@ -267,7 +267,7 @@ export default function DirectReplyPage() {
       console.error("Error getting username from userSession cookie:", error);
     }
   }
-  
+
   // If we still don't have a username, use 'Anonymous'
   if (!username) {
     username = 'Anonymous';
@@ -276,7 +276,7 @@ export default function DirectReplyPage() {
   // Render the page creation form
   return (
     <DashboardLayout>
-      <PageHeader title="Replying to page" username={username} userId={user?.uid} />
+      <PageHeader title="Reply to page" username={username} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
         <div className="w-full">
           <form
@@ -290,7 +290,7 @@ export default function DirectReplyPage() {
                   id="title"
                   type="text"
                   value={Page.title}
-                  placeholder="Enter page title..."
+                  placeholder="Entitle your reply..."
                   onChange={(e) => setPage(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   autoComplete="off"

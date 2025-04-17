@@ -185,7 +185,7 @@ export default function PageHeader({
             {/* Left Side - Back Button */}
             <div className="flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 className={`md:mr-2 text-foreground transition-opacity duration-120 ${
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
@@ -254,7 +254,7 @@ export default function PageHeader({
             {/* Right Side - Share Button (only visible when not scrolled) */}
             <div className="flex items-center">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 className={`text-foreground transition-opacity duration-120 ${
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"

@@ -48,30 +48,66 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
       // Get the current page title
       let pageTitle = document.title;
 
-      // For specific routes, we can set more descriptive titles
-      if (pathname === '/') {
-        pageTitle = 'WeWrite - Home';
-      } else if (pathname.startsWith('/auth/login')) {
-        pageTitle = 'WeWrite - Sign In';
-      } else if (pathname.startsWith('/auth/register')) {
-        pageTitle = 'WeWrite - Create Account';
-      } else if (pathname.startsWith('/auth/forgot-password')) {
-        pageTitle = 'WeWrite - Reset Password';
-      } else if (pathname.startsWith('/auth/switch-account')) {
-        pageTitle = 'WeWrite - Switch Account';
-      } else if (pathname.startsWith('/auth/logout')) {
-        pageTitle = 'WeWrite - Sign Out';
-      } else if (pathname.startsWith('/account/subscription')) {
-        pageTitle = 'WeWrite - Subscription Settings';
-      } else if (pathname.startsWith('/account')) {
-        pageTitle = 'WeWrite - Account Settings';
-      } else if (pathname.startsWith('/pages/')) {
-        // For content pages, try to get a more specific title
-        const contentTitle = document.querySelector('h1')?.textContent;
-        if (contentTitle) {
-          pageTitle = `WeWrite - ${contentTitle}`;
-        } else {
-          pageTitle = 'WeWrite - Content Page';
+      // Make sure we have a meaningful title
+      if (!pageTitle || pageTitle === '' || pageTitle === 'WeWrite') {
+        // Map of standardized page titles for analytics
+        const pageTitleMap = {
+          '/': 'WeWrite - Home',
+          '/new': 'WeWrite - Create New Page',
+          '/direct-create': 'WeWrite - Create New Page',
+          '/direct-reply': 'WeWrite - Reply to Page',
+          '/auth/login': 'WeWrite - Sign In',
+          '/auth/register': 'WeWrite - Create Account',
+          '/auth/forgot-password': 'WeWrite - Reset Password',
+          '/auth/switch-account': 'WeWrite - Switch Account',
+          '/auth/logout': 'WeWrite - Sign Out',
+          '/account': 'WeWrite - Account Settings',
+          '/account/subscription': 'WeWrite - Subscription Settings',
+          '/activity': 'WeWrite - Activity Feed',
+          '/sandbox': 'WeWrite - Sandbox',
+          '/leaderboard': 'WeWrite - Leaderboard'
+        };
+
+        // Check if we have a predefined title for this path
+        if (pageTitleMap[pathname]) {
+          pageTitle = pageTitleMap[pathname];
+        }
+        // Handle dynamic routes
+        else if (pathname.startsWith('/user/')) {
+          // For user profile pages
+          const username = document.querySelector('h1')?.textContent;
+          if (username) {
+            pageTitle = `WeWrite - User Profile: ${username}`;
+          } else {
+            pageTitle = 'WeWrite - User Profile';
+          }
+        }
+        else if (pathname.match(/\/[a-zA-Z0-9]{20}/) || pathname.includes('/pages/')) {
+          // For content pages, get a specific title
+          const contentTitle = document.querySelector('h1')?.textContent;
+          if (contentTitle && contentTitle !== 'Untitled') {
+            pageTitle = `WeWrite - Page: ${contentTitle}`;
+          } else {
+            // Check if we're in edit mode
+            if (searchParams?.has('edit')) {
+              pageTitle = 'WeWrite - Page Editor';
+            } else {
+              // Extract the page ID for a more descriptive title
+              const pageId = pathname.split('/').pop();
+              pageTitle = `WeWrite - Page: ${pageId}`;
+            }
+          }
+        }
+        // Ensure we never have "Untitled" in analytics
+        else if (pageTitle.includes('Untitled')) {
+          // Extract the path segment for a more descriptive title
+          const pathSegment = pathname.split('/').filter(Boolean).pop() || 'page';
+          pageTitle = `WeWrite - ${pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)}`;
+        }
+        // Fallback for any other page
+        else {
+          const pathSegment = pathname.split('/').filter(Boolean).pop() || 'page';
+          pageTitle = `WeWrite - ${pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)}`;
         }
       }
 

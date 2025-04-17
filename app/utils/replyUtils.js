@@ -14,7 +14,8 @@
  * @returns {string} - Formatted reply title
  */
 export const generateReplyTitle = (originalTitle) => {
-  return `Re: "${originalTitle || "Untitled"}"`;
+  // Return empty string to allow user to set their own title
+  return "";
 };
 
 /**
