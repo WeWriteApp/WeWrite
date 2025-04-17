@@ -34,7 +34,7 @@ const TypeaheadSearch = ({
   setShowResults = null,
   userId = null,
   placeholder = "Link to page...",
-  selectedId = null,
+  initialSelectedId = null,
   editableOnly = false, // New prop to filter for editable pages only
   initialSearch = "" // New prop to set initial search value
 }) => {
@@ -48,7 +48,7 @@ const TypeaheadSearch = ({
     users: []
   });
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(initialSelectedId);
   const { theme } = useTheme();
   const router = useRouter();
 
