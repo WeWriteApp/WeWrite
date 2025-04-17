@@ -766,16 +766,16 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       ref={ref}
       onClick={handleClick}
       contentEditable={false} // Make the link non-editable
-      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
+      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
       data-page-id={isPageLinkType ? element.pageId : undefined}
       data-user-id={isUserLinkType ? element.userId : undefined}
     >
       <InlineChromiumBugfix />
       <div className="flex items-center gap-0.5 min-w-0">
         {children}
-        {isExternalLinkType && (
+        {isExternalLinkType || isExternalLink(element.url) ? (
           <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
-        )}
+        ) : null}
       </div>
       <InlineChromiumBugfix />
     </a>
@@ -800,6 +800,28 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   // const [isNewPageCreating, setIsNewPageCreating] = useState(false);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Handle cmd+enter to submit the form
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (activeTab === 'external' && externalUrl) {
+          handleExternalSubmit();
+        } else if (activeTab === 'page' && selectedPageId) {
+          // If a page is already selected, submit it
+          const page = { id: selectedPageId, title: pageTitle };
+          handleSave(page);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, externalUrl, selectedPageId, pageTitle]);
 
   // Safely access AuthContext with error handling
   const authContext = useContext(AuthContext);
@@ -943,6 +965,13 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                     initialSelectedId={selectedPageId}
                     displayText={displayText}
                     setDisplayText={setDisplayText}
+                    onInputChange={(value) => {
+                      // If the input looks like a URL, switch to external tab and fill the URL field
+                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.'))) {
+                        setActiveTab('external');
+                        setExternalUrl(value);
+                      }
+                    }}
                   />
                 </div>
               </div>

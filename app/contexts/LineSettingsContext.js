@@ -94,8 +94,26 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
         toast.success("Dense mode enabled");
       }
 
-      // Refresh the page to apply the new mode
-      window.location.reload();
+      // Show loading overlay before refreshing
+      const loadingOverlay = document.createElement('div');
+      loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center';
+      loadingOverlay.id = 'mode-change-overlay';
+
+      const spinner = document.createElement('div');
+      spinner.className = 'loader loader-md mb-4';
+
+      const text = document.createElement('div');
+      text.className = 'text-lg font-medium';
+      text.textContent = 'Refreshing page...';
+
+      loadingOverlay.appendChild(spinner);
+      loadingOverlay.appendChild(text);
+      document.body.appendChild(loadingOverlay);
+
+      // Refresh the page after a short delay to allow the overlay to appear
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 

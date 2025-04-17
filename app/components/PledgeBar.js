@@ -41,26 +41,42 @@ const PledgeBar = () => {
 
   // Handle scroll events to hide/show the pledge bar
   useEffect(() => {
+    let lastKnownScrollY = window.scrollY;
+    let ticking = false;
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down - hide the bar
+      // Hide immediately on any downward scroll
+      if (currentScrollY > lastKnownScrollY) {
+        // Scrolling down - hide the bar immediately
         setVisible(false);
-      } else {
+      } else if (currentScrollY < lastKnownScrollY) {
         // Scrolling up - show the bar
         setVisible(true);
       }
 
+      lastKnownScrollY = currentScrollY;
       setLastScrollY(currentScrollY);
+      ticking = false;
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const onScroll = () => {
+      if (!ticking) {
+        // Use requestAnimationFrame to optimize scroll performance
+        window.requestAnimationFrame(() => {
+          handleScroll();
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', onScroll);
     };
-  }, [lastScrollY]);
+  }, []);
 
   // Detect if we're on a page view
   useEffect(() => {

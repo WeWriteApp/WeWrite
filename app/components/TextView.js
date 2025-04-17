@@ -791,10 +791,10 @@ const LinkNode = ({ node, index }) => {
               e.preventDefault();
               setShowExternalLinkModal(true);
             }}
-            className="inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer external-link"
+            className="inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer external-link"
           >
             {displayText}
-            <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
+            <ExternalLink className="inline-block h-3.5 w-3.5 ml-1 flex-shrink-0" />
           </a>
         </span>
 
