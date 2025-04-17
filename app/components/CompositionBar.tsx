@@ -103,7 +103,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
   });
 
   return (
-    <div className={cn("w-full relative pointer-events-none", className)}>
+    <div className={cn("w-full relative cursor-pointer", className)} onClick={() => onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0)}>
       <div className="w-full flex flex-col gap-4">
         {pledges.map((pledge) => {
           const pledgeAmount = Number(pledge.amount || 0);
@@ -132,17 +132,8 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
               )}
 
               <div
-                className="relative h-[56px] rounded-xl overflow-hidden border border-border bg-background dark:bg-background/30 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => {
-                  // If we have a subscription limit and would exceed it, show the limit modal
-                  if (wouldExceedLimit && subscriptionAmount > 0) {
-                    setActivePledgeId(pledge.id);
-                    setShowSubscriptionLimitModal(true);
-                  } else if (onPledgeChange) {
-                    // Otherwise, trigger the pledge change handler which will show the support modal
-                    onPledgeChange(pledge.id, 0);
-                  }
-                }}
+                className="relative h-[56px] rounded-2xl overflow-hidden border border-border bg-background dark:bg-background/30 shadow-md hover:shadow-lg transition-shadow"
+
               >
                 {/* Background for visualization */}
                 <div className="h-full w-full bg-gray-100 dark:bg-gray-800 absolute left-0 top-0"></div>

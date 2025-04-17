@@ -765,12 +765,23 @@ export default function AccountPage() {
               <AlertTitle className="text-primary">Payments Coming Soon</AlertTitle>
               <AlertDescription className="text-primary/90">
                 <p className="mb-4">We're working on implementing payments. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
-                <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
+                <Button asChild className="relative overflow-hidden bg-gradient-to-r from-green-500 via-blue-500 to-green-500 bg-[length:200%_100%] text-white hover:shadow-lg transition-all duration-300 animate-gradient">
                   <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
                     Support on OpenCollective
                   </a>
                 </Button>
+
+                <style jsx global>{`
+                  @keyframes gradient-animation {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                  }
+                  .animate-gradient {
+                    animation: gradient-animation 8s ease infinite;
+                  }
+                `}</style>
               </AlertDescription>
             </Alert>
           </section>

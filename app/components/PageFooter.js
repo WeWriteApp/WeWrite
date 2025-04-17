@@ -113,7 +113,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
             pageId={page.id}
             pageTitle={page.title}
             pageOwnerId={page.userId}
-            className="ml-auto"
+            className="w-full md:w-auto md:ml-auto"
           />
         )}
       </div>

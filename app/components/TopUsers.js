@@ -206,7 +206,7 @@ const TopUsers = () => {
           </Link>
         </div>
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           {loading && (
             <UserListSkeleton />
           )}
@@ -255,7 +255,11 @@ const TopUsers = () => {
               </TableHeader>
               <TableBody>
                 {sortedUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow
+                    key={user.id}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => router.push(`/user/${user.id}`)}
+                  >
                     <TableCell>
                       <TooltipProvider>
                         <Tooltip>
@@ -263,6 +267,7 @@ const TopUsers = () => {
                             <PillLink
                               href={`/user/${user.id}`}
                               variant="primary"
+                              onClick={(e) => e.stopPropagation()} // Prevent double navigation
                             >
                               {user.username || "Unknown User"}
                             </PillLink>

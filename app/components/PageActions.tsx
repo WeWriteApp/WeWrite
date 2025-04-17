@@ -213,7 +213,7 @@ export function PageActions({
   return (
     <div className={`${className}`}>
       {/* All buttons - horizontal on desktop, vertical on mobile */}
-      <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-3 w-full">
+      <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center">
         {/* Owner-only actions - Edit and Delete buttons */}
         {isOwner && (
           <>
