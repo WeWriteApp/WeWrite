@@ -206,7 +206,7 @@ const TopUsers = () => {
           </Link>
         </div>
 
-        <div className="border border-border rounded-lg overflow-hidden">
+        <div className="border border-theme-medium rounded-lg overflow-hidden">
           {loading && (
             <UserListSkeleton />
           )}
@@ -258,7 +258,7 @@ const TopUsers = () => {
                   <TableRow
                     key={user.id}
                     className="cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => router.push(`/user/${user.id}`)}
+                    onClick={() => window.location.href = `/user/${user.id}`}
                   >
                     <TableCell>
                       <TooltipProvider>

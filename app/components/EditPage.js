@@ -89,73 +89,105 @@ const EditPage = ({
     }
 
     setIsSaving(true);
-    try {
-      console.log('Saving editor content:', editorContent);
+    setError(null); // Clear any previous errors
 
-      // Convert the editorState to JSON
-      const editorStateJSON = JSON.stringify(editorContent);
+    // Maximum number of save attempts
+    const maxAttempts = 2;
+    let currentAttempt = 0;
+    let saveSuccessful = false;
 
-      // Check if content has actually changed by comparing with the original content
-      let contentChanged = true;
-      if (page.content) {
-        try {
-          // Parse the original content for comparison
-          const originalContent = typeof page.content === 'string'
-            ? page.content
-            : JSON.stringify(page.content);
+    while (currentAttempt < maxAttempts && !saveSuccessful) {
+      currentAttempt++;
+      console.log(`Save attempt ${currentAttempt} of ${maxAttempts}`);
 
-          // Compare the stringified content
-          contentChanged = originalContent !== editorStateJSON;
+      try {
+        console.log('Saving editor content:', editorContent);
 
-          if (!contentChanged) {
-            console.log('Content unchanged, skipping version creation');
+        // Convert the editorState to JSON
+        const editorStateJSON = JSON.stringify(editorContent);
+
+        // Check if content has actually changed by comparing with the original content
+        let contentChanged = true;
+        if (page.content) {
+          try {
+            // Parse the original content for comparison
+            const originalContent = typeof page.content === 'string'
+              ? page.content
+              : JSON.stringify(page.content);
+
+            // Compare the stringified content
+            contentChanged = originalContent !== editorStateJSON;
+
+            if (!contentChanged) {
+              console.log('Content unchanged, skipping version creation');
+            }
+          } catch (e) {
+            console.error('Error comparing content:', e);
+            // If there's an error in comparison, assume content has changed
+            contentChanged = true;
           }
-        } catch (e) {
-          console.error('Error comparing content:', e);
-          // If there's an error in comparison, assume content has changed
-          contentChanged = true;
+        }
+
+        // First update the page metadata and content
+        let updateTime = new Date().toISOString();
+        await updateDoc("pages", page.id, {
+          title: title,
+          isPublic: isPublic,
+          groupId: groupId,
+          lastModified: updateTime,
+          // Also update content directly in the page document
+          content: editorStateJSON
+        });
+
+        // Only create a new version if content has actually changed
+        let result = true;
+        if (contentChanged) {
+          // Then save the new version
+          result = await saveNewVersion(page.id, {
+            content: editorStateJSON,
+            userId: user.uid,
+            username: user.displayName || user.username,
+            skipIfUnchanged: true
+          });
+        }
+
+        if (result) {
+          console.log('Page saved successfully');
+          saveSuccessful = true;
+
+          // Force reload the page to show the updated content
+          window.location.href = `/${page.id}`;
+          return; // Exit the function on success
+        } else {
+          console.error(`Error saving new version on attempt ${currentAttempt}: result was falsy`);
+          if (currentAttempt >= maxAttempts) {
+            setError("Error saving new version. Please try again.");
+          } else {
+            console.log("Retrying save operation...");
+            // Small delay before retry
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      } catch (error) {
+        console.error(`Error saving new version on attempt ${currentAttempt}:`, error);
+
+        if (currentAttempt >= maxAttempts) {
+          setError("Failed to save: " + (error.message || "Unknown error"));
+          await logError(error, "EditPage.js");
+        } else {
+          console.log("Retrying save operation after error...");
+          // Small delay before retry
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
-
-      // First update the page metadata and content
-      let updateTime = new Date().toISOString();
-      await updateDoc("pages", page.id, {
-        title: title,
-        isPublic: isPublic,
-        groupId: groupId,
-        lastModified: updateTime,
-        // Also update content directly in the page document
-        content: editorStateJSON
-      });
-
-      // Only create a new version if content has actually changed
-      let result = true;
-      if (contentChanged) {
-        // Then save the new version
-        result = await saveNewVersion(page.id, {
-          content: editorStateJSON,
-          userId: user.uid,
-          username: user.displayName || user.username,
-          skipIfUnchanged: true
-        });
-      }
-
-      if (result) {
-        console.log('Page saved successfully');
-
-        // Force reload the page to show the updated content
-        window.location.href = `/${page.id}`;
-      } else {
-        console.error('Error saving new version: result was falsy');
-        setError("Error saving new version");
-      }
-    } catch (error) {
-      console.error("Error saving new version", error);
-      setError("Failed to save: " + (error.message || "Unknown error"));
-      await logError(error, "EditPage.js");
-    } finally {
-      setIsSaving(false);
     }
+
+    // If we get here, all save attempts failed
+    if (!saveSuccessful) {
+      console.error("All save attempts failed");
+    }
+
+    setIsSaving(false);
   };
 
   const handleCancel = () => {
