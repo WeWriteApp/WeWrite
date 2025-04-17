@@ -69,7 +69,7 @@ const PledgeBar = () => {
     const isOnPageView = pathname && (
       // Match the old URL structure for backward compatibility
       pathname.includes('/pages/') ||
-      // Match the new URL structure: /[id] (but not /u/ or /g/ paths)
+      // Match the new URL structure: /[id] (but not /user/ or /g/ paths)
       (pathname.match(/^\/[a-zA-Z0-9_-]+$/) &&
        !pathname.startsWith('/user/') &&
        !pathname.startsWith('/g/'))

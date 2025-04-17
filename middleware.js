@@ -33,17 +33,17 @@ export function middleware(request) {
     }
   }
 
-  // Redirect /user/[id] to /u/[slug]
-  if (path.startsWith('/user/')) {
-    const id = path.replace('/user/', '');
-    url.pathname = `/u/${id}`;
+  // Redirect /u/[slug] to /user/[id]
+  if (path.startsWith('/u/')) {
+    const id = path.replace('/u/', '');
+    url.pathname = `/user/${id}`;
     return NextResponse.redirect(url);
   }
 
-  // Redirect /users/[userId] to /u/[slug]
+  // Redirect /users/[userId] to /user/[id]
   if (path.startsWith('/users/')) {
     const id = path.replace('/users/', '');
-    url.pathname = `/u/${id}`;
+    url.pathname = `/user/${id}`;
     return NextResponse.redirect(url);
   }
 
