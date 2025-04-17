@@ -68,15 +68,13 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
       return;
     }
 
-    // Force update the state
+    // Force update the state immediately
     setLineMode(mode);
 
     // Also update localStorage immediately to ensure persistence
     if (typeof window !== 'undefined') {
       localStorage.setItem('lineMode', mode);
       console.log(`Line mode set to ${mode} and saved to localStorage`);
-
-      // No longer forcing page reload - changes apply immediately
     }
 
     // Show toast notification based on the selected mode

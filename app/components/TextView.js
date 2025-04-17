@@ -103,7 +103,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
   // Create a unique key that changes when lineMode changes to force complete re-render
-  const renderKey = useMemo(() => `${lineMode}-${Date.now()}`, [lineMode]);
+  const renderKey = useMemo(() => `mode-${lineMode}`, [lineMode]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -348,8 +348,9 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
 
-  // Use the provided effectiveMode or fall back to lineMode from context
-  const mode = effectiveMode || lineMode || LINE_MODES.NORMAL;
+  // Always use the latest lineMode from context to ensure immediate updates
+  // Fall back to effectiveMode only if lineMode is not available
+  const mode = lineMode || effectiveMode || LINE_MODES.NORMAL;
 
   if (!contents) return null;
 
@@ -495,7 +496,8 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  */
 const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = false, isActive = false, onActiveLine = null }) => {
   const { lineMode } = useLineSettings();
-  // Use lineMode from context if available, otherwise fall back to effectiveMode prop
+  // Always use the latest lineMode from context to ensure immediate updates
+  // Fall back to effectiveMode only if lineMode is not available
   const mode = lineMode || (effectiveMode === 'dense' ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
 
   const paragraphRef = useRef(null);

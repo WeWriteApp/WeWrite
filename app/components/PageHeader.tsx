@@ -237,14 +237,25 @@ export default function PageHeader({
 
             {/* Center - Title and Author */}
             <div className="flex-1 flex justify-center items-center">
-              <div className={`text-center space-y-0 transition-all duration-120 ${
-                isScrolled ? "max-w-[95vw] flex flex-row items-center gap-2 pl-0" : "max-w-full"
-              }`}>
-                <h1 className={`font-semibold transition-all duration-120 ${
-                  isScrolled
-                    ? "text-xs truncate max-w-[80vw] opacity-90"
-                    : "text-2xl mb-0.5"
-                }`}>
+              <div
+                className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform ${
+                  isScrolled ? "flex flex-row items-center gap-2 pl-0" : "max-w-full"
+                }`}
+                style={{
+                  transform: isScrolled ? "translateY(0)" : "translateY(0)",
+                  maxWidth: isScrolled ? "95vw" : "100%"
+                }}
+              >
+                <h1
+                  className={`font-semibold transition-all duration-200 ease-out will-change-transform ${
+                    isScrolled
+                      ? "text-xs truncate opacity-90"
+                      : "text-2xl mb-0.5"
+                  }`}
+                  style={{
+                    maxWidth: isScrolled ? "80vw" : "100%"
+                  }}
+                >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
                       <Loader className="h-4 w-4 animate-spin" />
@@ -254,11 +265,16 @@ export default function PageHeader({
                     title || "Untitled"
                   )}
                 </h1>
-                <p className={`text-muted-foreground transition-all duration-120 ${
-                  isScrolled
-                    ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis max-w-[30vw] inline-block"
-                    : "text-sm mt-0.5 truncate"
-                }`}>
+                <p
+                  className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
+                    isScrolled
+                      ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block"
+                      : "text-sm mt-0.5 truncate"
+                  }`}
+                  style={{
+                    maxWidth: isScrolled ? "30vw" : "100%"
+                  }}
+                >
                   {isLoading ? (
                     <span className="inline-flex items-center">
                       <Loader className="h-3 w-3 animate-spin mr-1" />
