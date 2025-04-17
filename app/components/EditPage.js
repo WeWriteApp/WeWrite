@@ -95,6 +95,28 @@ const EditPage = ({
       // Convert the editorState to JSON
       const editorStateJSON = JSON.stringify(editorContent);
 
+      // Check if content has actually changed by comparing with the original content
+      let contentChanged = true;
+      if (page.content) {
+        try {
+          // Parse the original content for comparison
+          const originalContent = typeof page.content === 'string'
+            ? page.content
+            : JSON.stringify(page.content);
+
+          // Compare the stringified content
+          contentChanged = originalContent !== editorStateJSON;
+
+          if (!contentChanged) {
+            console.log('Content unchanged, skipping version creation');
+          }
+        } catch (e) {
+          console.error('Error comparing content:', e);
+          // If there's an error in comparison, assume content has changed
+          contentChanged = true;
+        }
+      }
+
       // First update the page metadata and content
       let updateTime = new Date().toISOString();
       await updateDoc("pages", page.id, {
@@ -106,12 +128,17 @@ const EditPage = ({
         content: editorStateJSON
       });
 
-      // Then save the new version
-      const result = await saveNewVersion(page.id, {
-        content: editorStateJSON,
-        userId: user.uid,
-        username: user.displayName || user.username,
-      });
+      // Only create a new version if content has actually changed
+      let result = true;
+      if (contentChanged) {
+        // Then save the new version
+        result = await saveNewVersion(page.id, {
+          content: editorStateJSON,
+          userId: user.uid,
+          username: user.displayName || user.username,
+          skipIfUnchanged: true
+        });
+      }
 
       if (result) {
         console.log('Page saved successfully');

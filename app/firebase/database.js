@@ -550,6 +550,38 @@ export const saveNewVersion = async (pageId, data) => {
 
     const pageRef = doc(db, "pages", pageId);
 
+    // If skipIfUnchanged is true, check if content has changed from the most recent version
+    if (data.skipIfUnchanged) {
+      try {
+        // Get the current version
+        const pageDoc = await getDoc(pageRef);
+        if (pageDoc.exists()) {
+          const pageData = pageDoc.data();
+          const currentVersionId = pageData.currentVersion;
+
+          if (currentVersionId) {
+            // Get the current version content
+            const versionRef = doc(collection(pageRef, "versions"), currentVersionId);
+            const versionDoc = await getDoc(versionRef);
+
+            if (versionDoc.exists()) {
+              const versionData = versionDoc.data();
+              const currentContent = versionData.content;
+
+              // Compare content
+              if (currentContent === contentString) {
+                console.log("Content unchanged, skipping version creation");
+                return currentVersionId; // Return existing version ID
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking for content changes:", error);
+        // Continue with version creation if check fails
+      }
+    }
+
     // Get the username from the user document
     let username = data.username;
     if (!username && data.userId) {
