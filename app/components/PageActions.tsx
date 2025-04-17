@@ -89,6 +89,17 @@ export function PageActions({
   const router = useRouter();
   const { lineMode, setLineMode } = useLineSettings();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
+  const [currentLineMode, setCurrentLineMode] = useState(lineMode);
+
+  // Ensure the switch reflects the current mode from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('lineMode');
+      if (savedMode && (savedMode === LINE_MODES.NORMAL || savedMode === LINE_MODES.DENSE)) {
+        setCurrentLineMode(savedMode);
+      }
+    }
+  }, []);
 
   // Store the current page content for future use
   const [currentPageContent, setCurrentPageContent] = useState<any>(null);
@@ -245,9 +256,11 @@ export function PageActions({
         <div className="flex items-center gap-2 w-full h-10 md:h-8 md:w-auto px-3 py-1 border border-input rounded-md">
           <span className="text-sm">Dense Mode</span>
           <Switch
-            checked={lineMode === LINE_MODES.DENSE}
+            checked={currentLineMode === LINE_MODES.DENSE}
             onCheckedChange={(checked) => {
-              setLineMode(checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
+              const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+              setCurrentLineMode(newMode); // Update local state immediately
+              setLineMode(newMode); // This will trigger page reload
             }}
           />
         </div>

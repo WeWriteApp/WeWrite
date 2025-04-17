@@ -37,8 +37,19 @@ const LineSettingsContext = createContext();
  * @param {boolean} props.isEditMode - Whether the context is being used in edit mode
  */
 export function LineSettingsProvider({ children, isEditMode = false }) {
-  // Default to 'normal' mode, but try to load from localStorage if available
-  const [lineMode, setLineMode] = useState(LINE_MODES.NORMAL);
+  // Try to get the initial mode from localStorage if available
+  const getInitialMode = () => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('lineMode');
+      if (savedMode === LINE_MODES.DENSE) {
+        return LINE_MODES.DENSE;
+      }
+    }
+    return LINE_MODES.NORMAL; // Default to normal mode
+  };
+
+  // Initialize with the correct mode from localStorage
+  const [lineMode, setLineMode] = useState(getInitialMode());
 
   // Load setting from localStorage on mount
   useEffect(() => {
