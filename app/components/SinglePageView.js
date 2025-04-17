@@ -390,39 +390,49 @@ function SinglePageView({ params }) {
     );
   }
 
-  // Check if this is a private page and the user is not the owner
-  if (!isPublic && (!user || user.uid !== page.userId)) {
-    return (
-      <Layout>
-        <Head>
-          <title>Private Page - WeWrite</title>
-        </Head>
-        <PageHeader />
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            {title}
-          </h1>
-          <div className="flex flex-col items-start gap-4 mt-4">
-            <div className="flex items-center gap-2">
-              <Lock className="h-5 w-5 text-muted-foreground" />
-              <span className="text-lg text-muted-foreground">This page is private</span>
-            </div>
-            <div className="flex gap-3">
-              <Link href="/auth/register">
-                <Button variant="outline">
-                  Create Account
-                </Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button variant="default">
-                  Log In
-                </Button>
-              </Link>
+  // Check if this is a private page
+  if (!isPublic) {
+    // If user is logged in and is the owner, allow access
+    if (user && user.uid === page.userId) {
+      // Continue to render the page for the owner
+    } else {
+      // For non-owners or logged-out users, show private page message
+      return (
+        <Layout>
+          <Head>
+            <title>Private Page - WeWrite</title>
+          </Head>
+          <PageHeader />
+          <div className="p-4">
+            <h1 className="text-2xl font-semibold text-text">
+              {title}
+            </h1>
+            <div className="flex flex-col items-start gap-4 mt-4">
+              <div className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                <span className="text-lg text-muted-foreground">This page is private</span>
+              </div>
+              {!user ? (
+                <div className="flex gap-3">
+                  <Link href="/auth/register">
+                    <Button variant="outline">
+                      Create Account
+                    </Button>
+                  </Link>
+                  <Link href="/auth/login">
+                    <Button variant="default">
+                      Log In
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Only the page owner can view this content.</p>
+              )}
             </div>
           </div>
-        </div>
-      </Layout>
-    );
+        </Layout>
+      );
+    }
   }
 
   return (

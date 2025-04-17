@@ -110,12 +110,15 @@ export function AccountSwitcherModal({
               <div
                 key={account.id}
                 className={cn(
-                  "flex items-center justify-between rounded-lg border border-border dark:border-border p-3 overflow-hidden",
-                  isCurrent && "border-blue-600 bg-blue-50 dark:bg-blue-950/30",
-                  !isCurrent && "cursor-pointer hover:bg-muted/50 transition-colors"
+                  "flex items-center justify-between rounded-lg border border-border dark:border-border p-3 overflow-hidden cursor-pointer hover:bg-muted/50 transition-colors",
+                  isCurrent && "border-blue-600 bg-blue-50 dark:bg-blue-950/30"
                 )}
                 onClick={() => {
-                  if (!isCurrent) {
+                  if (isCurrent) {
+                    // If it's the current account, go to account settings
+                    handleAccountSettings();
+                  } else {
+                    // Otherwise switch to that account
                     handleSwitchToAccount(account.id);
                   }
                 }}
@@ -134,16 +137,7 @@ export function AccountSwitcherModal({
                       <div className="rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
                         Current
                       </div>
-                      <IconButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAccountSettings();
-                        }}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </IconButton>
+                      <Settings className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </>
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
