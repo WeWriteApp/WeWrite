@@ -79,11 +79,8 @@ const EditPage = ({
       return;
     }
 
-    // Check if content is just an empty paragraph
-    if (editorContent.length === 1 &&
-        editorContent[0].children &&
-        editorContent[0].children.length === 1 &&
-        editorContent[0].children[0].text === '') {
+    // Check if content is just an empty paragraph - less strict validation
+    if (editorContent.length === 0) {
       setError("Cannot save empty content");
       return;
     }
@@ -92,7 +89,7 @@ const EditPage = ({
     setError(null); // Clear any previous errors
 
     // Maximum number of save attempts
-    const maxAttempts = 2;
+    const maxAttempts = 3; // Increased to 3 attempts
     let currentAttempt = 0;
     let saveSuccessful = false;
 
@@ -130,6 +127,9 @@ const EditPage = ({
 
         // First update the page metadata and content
         let updateTime = new Date().toISOString();
+        console.log(`Updating page ${page.id} with new metadata and content`);
+
+        // Update the page document first
         await updateDoc("pages", page.id, {
           title: title,
           isPublic: isPublic,
@@ -139,9 +139,12 @@ const EditPage = ({
           content: editorStateJSON
         });
 
+        console.log('Page metadata and content updated successfully');
+
         // Only create a new version if content has actually changed
         let result = true;
         if (contentChanged) {
+          console.log('Content changed, creating new version');
           // Then save the new version
           result = await saveNewVersion(page.id, {
             content: editorStateJSON,
@@ -149,11 +152,15 @@ const EditPage = ({
             username: user.displayName || user.username,
             skipIfUnchanged: true
           });
+          console.log('saveNewVersion result:', result);
         }
 
         if (result) {
           console.log('Page saved successfully');
           saveSuccessful = true;
+
+          // Add a small delay before redirecting to ensure Firebase has time to update
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           // Force reload the page to show the updated content
           window.location.href = `/${page.id}`;
@@ -164,8 +171,8 @@ const EditPage = ({
             setError("Error saving new version. Please try again.");
           } else {
             console.log("Retrying save operation...");
-            // Small delay before retry
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Longer delay before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
       } catch (error) {
@@ -176,8 +183,8 @@ const EditPage = ({
           await logError(error, "EditPage.js");
         } else {
           console.log("Retrying save operation after error...");
-          // Small delay before retry
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Longer delay before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     }
@@ -185,6 +192,7 @@ const EditPage = ({
     // If we get here, all save attempts failed
     if (!saveSuccessful) {
       console.error("All save attempts failed");
+      setError("Failed to save after multiple attempts. Please try again later.");
     }
 
     setIsSaving(false);

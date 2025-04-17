@@ -499,8 +499,12 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
   }
 }
 
+// Import moved to top of file to avoid circular dependencies
+
 export const saveNewVersion = async (pageId, data) => {
   try {
+    console.log('saveNewVersion called with pageId:', pageId);
+
     // Validate content to prevent saving empty versions
     if (!data.content) {
       console.error("Cannot save empty content");
@@ -524,20 +528,9 @@ export const saveNewVersion = async (pageId, data) => {
       parsedContent = JSON.parse(contentString);
 
       // Validate that content is not empty array or has empty paragraphs only
-      if (Array.isArray(parsedContent) &&
-          (parsedContent.length === 0 ||
-           (parsedContent.length === 1 &&
-            parsedContent[0].children &&
-            parsedContent[0].children.length === 1 &&
-            parsedContent[0].children[0].text === ''))) {
-        console.error("Cannot save effectively empty content");
-        return null;
-      }
-
-      // Extract text to ensure there's actual content
-      const extractedText = extractTextContent(contentString);
-      if (!extractedText || extractedText.trim() === '') {
-        console.error("Cannot save version with no text content");
+      // Less strict validation to allow saving
+      if (Array.isArray(parsedContent) && parsedContent.length === 0) {
+        console.error("Cannot save empty array content");
         return null;
       }
 
@@ -603,13 +596,18 @@ export const saveNewVersion = async (pageId, data) => {
     };
 
     // First update the page document directly to ensure content is immediately available
-    await updateDoc("pages", pageId, {
+    // Use the pageRef directly instead of collection/doc name strings
+    const updateTime = new Date().toISOString();
+    await setDoc(pageRef, {
       content: contentString,
-      lastModified: new Date().toISOString()
-    });
+      lastModified: updateTime
+    }, { merge: true });
+
+    console.log("Page document updated with new content");
 
     // Then create the version
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
+    console.log("Version created with ID:", versionRef.id);
 
     // Set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
