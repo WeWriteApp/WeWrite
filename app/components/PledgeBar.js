@@ -369,7 +369,7 @@ const PledgeBar = () => {
   if (isOwnPage) {
     return (
       <div
-        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-8 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
       >
@@ -450,7 +450,7 @@ const PledgeBar = () => {
   return (
     <>
       <div
-        className={`fixed bottom-4 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-8 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
       >
