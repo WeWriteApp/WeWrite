@@ -323,28 +323,30 @@ const TypeaheadSearch = ({
   if (!user) return null;
   return (
     <div className="flex flex-col" id="typeahead-search">
-      {/* Display Text Input */}
       <div className="flex flex-col space-y-3">
-        <div className="flex flex-col space-y-1">
-          <label htmlFor="display-text" className="text-sm font-medium">Display Text</label>
-          <input
-            id="display-text"
-            type="text"
-            value={displayText}
-            onChange={(e) => setDisplayText && setDisplayText(e.target.value)}
-            placeholder={selectedId ?
-              [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
-                .find(page => page.id === selectedId)?.title || "Link text"
-              : "Link text"}
-            className="w-full px-3 py-2 border rounded-md"
-          />
-        </div>
+        {/* Display Text Input - Only show when setDisplayText is provided (in link editor) */}
+        {setDisplayText && (
+          <div className="flex flex-col space-y-1">
+            <label htmlFor="display-text" className="text-sm font-medium">Display Text</label>
+            <input
+              id="display-text"
+              type="text"
+              value={displayText}
+              onChange={(e) => setDisplayText(e.target.value)}
+              placeholder={selectedId ?
+                [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                  .find(page => page.id === selectedId)?.title || "Link text"
+                : "Link text"}
+              className="w-full px-3 py-2 border border-border dark:border-border rounded-md"
+            />
+          </div>
+        )}
 
         <div className="flex flex-col space-y-1">
-          <label htmlFor="search-input" className="text-sm font-medium">Page</label>
+          {setDisplayText && <label htmlFor="search-input" className="text-sm font-medium">Page</label>}
           <div className="relative w-full">
           {selectedId ? (
-            <div className="flex items-center w-full border rounded-md px-3 py-2 bg-background">
+            <div className="flex items-center w-full border border-border dark:border-border rounded-md px-3 py-2 bg-background">
               {(() => {
                 // Find the selected page
                 const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]

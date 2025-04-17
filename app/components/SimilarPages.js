@@ -112,7 +112,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
   if (loading) {
     return (
-      <div className="mt-8 border-t pt-6">
+      <div className="mt-8 pt-6">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="flex justify-center py-4">
           <Loader size="sm" />
@@ -123,9 +123,9 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
   if (similarPages.length === 0 && !loading) {
     return (
-      <div className="mt-8 border-t pt-6">
+      <div className="mt-8 pt-6">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
-        <div className="text-muted-foreground text-sm py-4 text-center border rounded-md p-6 bg-muted/20">
+        <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
           No similar pages found. Be the first to create related content!
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
   }
 
   return (
-    <div className="mt-8 border-t pt-6">
+    <div className="mt-8 pt-6">
       <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
       <div className="space-y-2">
         {similarPages.map(page => (

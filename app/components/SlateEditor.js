@@ -698,11 +698,22 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     openLinkEditor(element, path);
   };
 
+  // Handle keydown to delete the entire link with a single delete/backspace press
+  const handleKeyDown = (e) => {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      const path = ReactEditor.findPath(editor, element);
+      Transforms.removeNodes(editor, { at: path });
+    }
+  };
+
   return (
     <a
       {...attributes}
       ref={ref}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      contentEditable={false} // Make the link non-editable
       className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
       data-page-id={isPageLinkType ? element.pageId : undefined}
       data-user-id={isUserLinkType ? element.userId : undefined}
