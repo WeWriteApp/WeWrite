@@ -325,21 +325,30 @@ export const getUserFollowerCount = async (userId) => {
     for (let i = 0; i < pageIds.length; i += batchSize) {
       const batch = pageIds.slice(i, i + batchSize);
 
-      const followersQuery = query(
-        collection(db, 'pageFollowers'),
-        where('pageId', 'in', batch),
-        where('deleted', '==', undefined) // Only count non-deleted follows
-      );
+      // Only proceed if we have valid page IDs in the batch
+      if (batch.length === 0) continue;
 
-      const followersSnapshot = await getDocs(followersQuery);
+      try {
+        // First query without the deleted field filter
+        const followersQuery = query(
+          collection(db, 'pageFollowers'),
+          where('pageId', 'in', batch)
+        );
 
-      // Add each unique follower to the set
-      followersSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.userId && data.userId !== userId) { // Don't count self-follows
-          uniqueFollowers.add(data.userId);
-        }
-      });
+        const followersSnapshot = await getDocs(followersQuery);
+
+        // Add each unique follower to the set, filtering out deleted ones in memory
+        followersSnapshot.forEach(doc => {
+          const data = doc.data();
+          // Only count followers that aren't deleted and aren't self-follows
+          if (data.userId && data.userId !== userId && data.deleted !== true) {
+            uniqueFollowers.add(data.userId);
+          }
+        });
+      } catch (batchError) {
+        console.error(`Error processing batch ${i}:`, batchError);
+        // Continue with the next batch instead of failing completely
+      }
     }
 
     return uniqueFollowers.size;
