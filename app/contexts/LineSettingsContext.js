@@ -93,6 +93,8 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
       } else if (mode === LINE_MODES.DENSE) {
         toast.success("Dense mode enabled");
       }
+
+      // No need to reload the page - the UI will update automatically
     }
   };
 

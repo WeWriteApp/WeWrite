@@ -253,13 +253,20 @@ export function PageActions({
         )}
 
         {/* Dense Mode switch - available to all users */}
-        <div className="flex items-center gap-2 w-full h-10 md:h-8 md:w-auto px-3 py-1 border border-input rounded-md">
+        <div
+          className="flex items-center gap-2 w-full h-10 md:h-8 md:w-auto px-3 py-1 border border-input rounded-md cursor-pointer hover:bg-accent/10 transition-colors"
+          onClick={() => {
+            const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
+            setCurrentLineMode(newMode); // Update local state immediately
+            setLineMode(newMode); // Update the mode without page reload
+          }}
+        >
           <Switch
             checked={currentLineMode === LINE_MODES.DENSE}
             onCheckedChange={(checked) => {
               const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
               setCurrentLineMode(newMode); // Update local state immediately
-              setLineMode(newMode); // This will trigger page reload
+              setLineMode(newMode); // Update the mode without page reload
             }}
           />
           <span className="text-sm">Dense Mode</span>

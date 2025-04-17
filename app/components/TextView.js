@@ -103,7 +103,8 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
   // Create a unique key that changes when lineMode changes to force complete re-render
-  const renderKey = useMemo(() => `mode-${lineMode}`, [lineMode]);
+  // We no longer need this for re-rendering since we'll handle mode changes directly
+  const renderKey = useMemo(() => 'content-view', []);
 
   useEffect(() => {
     const handleScroll = () => {

@@ -17,7 +17,7 @@ interface Feature {
 
 export const FeatureCarousel = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  
+
   const features: Feature[] = [
     {
       title: "Every Page is a Fundraiser",
@@ -80,13 +80,13 @@ export const FeatureCarousel = () => {
   };
 
   const nextSlide = () => {
-    setActiveIndex((prevIndex) => 
+    setActiveIndex((prevIndex) =>
       prevIndex === features.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const prevSlide = () => {
-    setActiveIndex((prevIndex) => 
+    setActiveIndex((prevIndex) =>
       prevIndex === 0 ? features.length - 1 : prevIndex - 1
     );
   };
@@ -98,7 +98,7 @@ export const FeatureCarousel = () => {
   return (
     <div className="py-12">
       <div className="container mx-auto px-6">
-        <motion.div 
+        <motion.div
           className="text-center mb-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -114,13 +114,34 @@ export const FeatureCarousel = () => {
         <div className="relative max-w-3xl mx-auto">
           {/* Carousel container */}
           <div className="overflow-hidden rounded-xl">
-            <div 
-              className="flex transition-transform duration-500 ease-in-out"
+            <div
+              className="flex transition-transform duration-500 ease-in-out touch-pan-x"
               style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+              onTouchStart={(e) => {
+                const touchStartX = e.touches[0].clientX;
+                const touchMoveHandler = (e: TouchEvent) => {
+                  const touchCurrentX = e.touches[0].clientX;
+                  const diff = touchStartX - touchCurrentX;
+                  if (Math.abs(diff) > 50) { // Threshold to trigger slide
+                    if (diff > 0) {
+                      // Swipe left, go to next slide
+                      nextSlide();
+                    } else {
+                      // Swipe right, go to previous slide
+                      prevSlide();
+                    }
+                    document.removeEventListener('touchmove', touchMoveHandler);
+                  }
+                };
+                document.addEventListener('touchmove', touchMoveHandler, { passive: true });
+                document.addEventListener('touchend', () => {
+                  document.removeEventListener('touchmove', touchMoveHandler);
+                }, { once: true });
+              }}
             >
               {features.map((feature, index) => (
                 <div key={index} className="w-full flex-shrink-0">
-                  <Card className="h-full border border-border dark:border-border">
+                  <Card className="h-full border border-border dark:border-border overflow-hidden">
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <CardTitle className="text-2xl">{feature.title}</CardTitle>
@@ -133,9 +154,9 @@ export const FeatureCarousel = () => {
                     <CardFooter>
                       {(feature.status === 'coming-soon' || feature.status === 'in-progress') && (
                         <Button variant="outline" asChild>
-                          <a 
-                            href="https://opencollective.com/wewrite-app" 
-                            target="_blank" 
+                          <a
+                            href="https://opencollective.com/wewrite-app"
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm"
                           >
@@ -151,14 +172,14 @@ export const FeatureCarousel = () => {
           </div>
 
           {/* Navigation buttons */}
-          <button 
+          <button
             onClick={prevSlide}
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-background border border-border dark:border-border rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
-          <button 
+          <button
             onClick={nextSlide}
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-background border border-border dark:border-border rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
             aria-label="Next slide"
@@ -173,8 +194,8 @@ export const FeatureCarousel = () => {
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                  index === activeIndex 
-                    ? 'bg-primary' 
+                  index === activeIndex
+                    ? 'bg-primary'
                     : 'bg-muted hover:bg-primary/50'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}

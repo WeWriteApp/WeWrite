@@ -29,7 +29,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
       try {
         // Extract all words from the title for better search coverage
         // Include the full title as a search term as well
-        let titleWords = [currentPage.title.toLowerCase()];
+        let titleWords = [];
 
         // Add individual words
         const individualWords = currentPage.title
@@ -38,10 +38,25 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
           .filter(word => word.length >= 2)
           .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as'].includes(word));
 
-        // Combine full title and individual words for better search coverage
-        titleWords = [...titleWords, ...individualWords];
+        // Use individual words for better search coverage
+        titleWords = [...individualWords];
 
         if (titleWords.length === 0) {
+          // If no significant words, use a generic query
+          const genericQuery = query(
+            collection(db, 'pages'),
+            where('isPublic', '==', true),
+            orderBy('lastModified', 'desc'),
+            limit(maxPages * 2)
+          );
+
+          const snapshot = await getDocs(genericQuery);
+          const pages = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(page => page.id !== currentPage.id)
+            .slice(0, maxPages);
+
+          setSimilarPages(pages);
           setLoading(false);
           return;
         }
@@ -56,10 +71,9 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
           // Create a query for titles containing this word
           const titleQuery = query(
             collection(db, 'pages'),
-            where('title', '>=', word),
-            where('title', '<=', word + '\uf8ff'),
             where('isPublic', '==', true),
-            limit(20)
+            orderBy('title'),
+            limit(50)
           );
 
           queries.push(titleQuery);
@@ -80,16 +94,38 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
             // Skip the current page
             if (pageData.id === currentPage.id) return;
 
-            // If we already have this page, increment its relevance score
+            // Calculate relevance score based on title similarity
+            let relevanceScore = 0;
+
+            // Check if title contains any of the search words
+            const pageTitle = pageData.title.toLowerCase();
+            for (const word of titleWords) {
+              if (pageTitle.includes(word)) {
+                relevanceScore += 1;
+                // Exact word match gets higher score
+                if (pageTitle.split(/\s+/).includes(word)) {
+                  relevanceScore += 2;
+                }
+              }
+            }
+
+            // If no direct match but we want to include it anyway with low score
+            if (relevanceScore === 0) {
+              relevanceScore = 0.1;
+            }
+
+            // If we already have this page, keep the higher relevance score
             if (pageMap.has(pageData.id)) {
               const existing = pageMap.get(pageData.id);
-              pageMap.set(pageData.id, {
-                ...existing,
-                relevanceScore: existing.relevanceScore + 1
-              });
+              if (relevanceScore > existing.relevanceScore) {
+                pageMap.set(pageData.id, {
+                  ...existing,
+                  relevanceScore: relevanceScore
+                });
+              }
             } else {
-              // Otherwise, add it with a score of 1
-              pageMap.set(pageData.id, { ...pageData, relevanceScore: 1 });
+              // Otherwise, add it with its calculated score
+              pageMap.set(pageData.id, { ...pageData, relevanceScore });
             }
           });
         });

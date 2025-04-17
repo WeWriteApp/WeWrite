@@ -99,7 +99,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4" />
           <h2 className="text-lg font-semibold">Recent activity</h2>
