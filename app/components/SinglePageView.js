@@ -172,11 +172,22 @@ function SinglePageView({ params }) {
 
         // Ensure the page has a valid username using our utility function
         try {
-          pageData = await ensurePageUsername(pageData);
-          // Double-check that username is defined
+          // Always set a default username first to prevent undefined errors
           if (!pageData.username) {
             pageData.username = "Anonymous";
           }
+
+          // Then try to get the actual username
+          const enrichedPageData = await ensurePageUsername(pageData);
+          if (enrichedPageData) {
+            pageData = enrichedPageData;
+          }
+
+          // Double-check that username is defined after the async operation
+          if (!pageData.username) {
+            pageData.username = "Anonymous";
+          }
+
           console.log("Page data with ensured username:", pageData);
         } catch (error) {
           console.error("Error ensuring username:", error);

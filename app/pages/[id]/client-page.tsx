@@ -1,16 +1,24 @@
 "use client";
 
-import SinglePageView from "../../components/SinglePageView";
-import { useEffect, useState } from 'react';
-import { getUsernameById } from '../../utils/userUtils';
+import React from 'react';
+import dynamic from 'next/dynamic';
 
-// This component is used by the main page component in app/[id]/page.js
-// It should not be directly accessed via a route
+// Dynamically import SinglePageView with no SSR to ensure it only runs on client
+const SinglePageView = dynamic(
+  () => import("../../components/SinglePageView"),
+  { ssr: false }
+);
+
+/**
+ * ClientPage Component
+ * This is a simple wrapper around SinglePageView that ensures proper client-side rendering
+ * It's used by the GlobalIDPage component in app/[id]/page.js
+ */
 export default function ClientPage({ params }: { params: { id: string } }) {
-  // Ensure we're passing a valid params object to SinglePageView
+  // Ensure we have a valid params object
   const validParams = params || { id: '' };
 
-  // Add a wrapper div to ensure proper rendering
+  // Use a simple div wrapper to ensure proper rendering context
   return (
     <div className="page-wrapper">
       <SinglePageView params={validParams} />

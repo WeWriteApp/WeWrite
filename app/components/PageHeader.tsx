@@ -38,18 +38,22 @@ export default function PageHeader({
   // Fetch username if not provided but userId is available
   React.useEffect(() => {
     const fetchUsername = async () => {
-      if (userId && (!username || username === "Anonymous")) {
+      // Always set a default username first
+      setDisplayUsername(username || "Anonymous");
+
+      // Then try to fetch the actual username if we have a userId
+      if (userId) {
         try {
+          console.log("Fetching username for userId:", userId);
           const fetchedUsername = await getUsernameById(userId);
-          if (fetchedUsername) {
+          if (fetchedUsername && fetchedUsername !== "Anonymous") {
             setDisplayUsername(fetchedUsername);
             console.log("Username fetched for PageHeader:", fetchedUsername);
           }
         } catch (error) {
           console.error("Error fetching username for header:", error);
+          // Keep the default username on error
         }
-      } else if (username) {
-        setDisplayUsername(username);
       }
     };
 
