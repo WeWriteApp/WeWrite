@@ -14,7 +14,7 @@ import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { motion } from "framer-motion";
@@ -415,46 +415,90 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleSelection = (item) => {
-    // Format the title to ensure it never has @ symbols for page links
-    const formattedTitle = formatPageTitle(item.displayText || item.title);
+    // Check if this is an external link
+    if (item.isExternal) {
+      const displayText = item.displayText || item.url;
 
-    if (selectedLinkElement && selectedLinkPath) {
-      // Edit existing link
-      Transforms.setNodes(
-        editor,
-        {
+      if (selectedLinkElement && selectedLinkPath) {
+        // Edit existing link
+        Transforms.setNodes(
+          editor,
+          {
+            type: "link",
+            url: item.url,
+            children: [{ text: displayText }],
+            isExternal: true
+          },
+          { at: selectedLinkPath }
+        );
+      } else {
+        // Insert new external link
+        const link = {
+          type: "link",
+          url: item.url,
+          children: [{ text: displayText }],
+          isExternal: true
+        };
+
+        // Make sure we have a valid selection
+        if (!editor.selection) {
+          // If no selection, place cursor at the end of the document
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+        }
+
+        // Insert the link node
+        Transforms.insertNodes(editor, link, { at: editor.selection });
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: "end" });
+
+        // Insert a space after the link for better editing experience
+        Transforms.insertText(editor, " ");
+      }
+    } else {
+      // Handle internal page links
+      // Format the title to ensure it never has @ symbols for page links
+      const formattedTitle = formatPageTitle(item.displayText || item.title);
+
+      if (selectedLinkElement && selectedLinkPath) {
+        // Edit existing link
+        Transforms.setNodes(
+          editor,
+          {
+            url: `/pages/${item.id}`,
+            children: [{ text: formattedTitle }],
+            pageId: item.id,
+            pageTitle: item.title // Store the original page title for reference
+          },
+          { at: selectedLinkPath }
+        );
+      } else {
+        // Insert new link
+        const link = {
+          type: "link",
           url: `/pages/${item.id}`,
           children: [{ text: formattedTitle }],
           pageId: item.id,
           pageTitle: item.title // Store the original page title for reference
-        },
-        { at: selectedLinkPath }
-      );
-    } else {
-      // Insert new link
-      const link = {
-        type: "link",
-        url: `/pages/${item.id}`,
-        children: [{ text: formattedTitle }],
-        pageId: item.id,
-        pageTitle: item.title // Store the original page title for reference
-      };
+        };
 
-      // Make sure we have a valid selection
-      if (!editor.selection) {
-        // If no selection, place cursor at the end of the document
-        const end = Editor.end(editor, []);
-        Transforms.select(editor, end);
+        // Make sure we have a valid selection
+        if (!editor.selection) {
+          // If no selection, place cursor at the end of the document
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+        }
+
+        // Insert the link node
+        Transforms.insertNodes(editor, link, { at: editor.selection });
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: "end" });
+
+        // Insert a space after the link for better editing experience
+        Transforms.insertText(editor, " ");
       }
-
-      // Insert the link node
-      Transforms.insertNodes(editor, link, { at: editor.selection });
-
-      // Move cursor to the end of the link
-      Transforms.collapse(editor, { edge: "end" });
-
-      // Insert a space after the link for better editing experience
-      Transforms.insertText(editor, " ");
     }
 
     // Reset link editor state
@@ -897,9 +941,12 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
       finalUrl = 'https://' + finalUrl;
     }
 
+    // Create a proper external link object
     onSelect({
+      type: "link",
       url: finalUrl,
-      displayText: displayText || finalUrl
+      displayText: displayText || finalUrl,
+      isExternal: true // Flag to identify this as an external link
     });
 
     handleClose();
@@ -936,20 +983,22 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
           <div className="px-4 border-b border-border">
             <div className="flex">
               <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'page'
+                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'page'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('page')}
               >
-                Page
+                <FileText className="h-4 w-4" />
+                WeWrite Page
               </button>
               <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'external'
+                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'external'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('external')}
               >
-                Link (external)
+                <Globe className="h-4 w-4" />
+                External link
               </button>
             </div>
           </div>
@@ -967,7 +1016,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                     setDisplayText={setDisplayText}
                     onInputChange={(value) => {
                       // If the input looks like a URL, switch to external tab and fill the URL field
-                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.'))) {
+                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
                         setActiveTab('external');
                         setExternalUrl(value);
                       }
