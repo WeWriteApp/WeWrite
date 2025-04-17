@@ -88,7 +88,7 @@ export default function Home() {
         <AddUsername />
 
         <div className="w-full mb-6">
-          <TypeaheadSearch />
+          <TypeaheadSearch placeholder="Search all pages..." />
         </div>
 
         {/* 1. Recent Activity (moved to top) */}

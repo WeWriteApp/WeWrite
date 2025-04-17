@@ -190,6 +190,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleKeyDown = (event, editor) => {
+    // Check if we're at a link and handle deletion
+    if ((event.key === 'Delete' || event.key === 'Backspace')) {
+      const [link] = Editor.nodes(editor, {
+        match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
+      }) || [];
+
+      if (link) {
+        event.preventDefault();
+        const [, path] = link;
+        Transforms.removeNodes(editor, { at: path });
+        return;
+      }
+    }
     // Handle cmd+enter to save
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
@@ -698,21 +711,13 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     openLinkEditor(element, path);
   };
 
-  // Handle keydown to delete the entire link with a single delete/backspace press
-  const handleKeyDown = (e) => {
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      e.preventDefault();
-      const path = ReactEditor.findPath(editor, element);
-      Transforms.removeNodes(editor, { at: path });
-    }
-  };
+  // We'll handle deletion in the editor's main keydown handler instead
 
   return (
     <a
       {...attributes}
       ref={ref}
       onClick={handleClick}
-      onKeyDown={handleKeyDown}
       contentEditable={false} // Make the link non-editable
       className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
       data-page-id={isPageLinkType ? element.pageId : undefined}

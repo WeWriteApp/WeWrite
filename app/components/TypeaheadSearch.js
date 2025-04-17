@@ -568,30 +568,32 @@ const TypeaheadSearch = ({
         )}
       </div>
 
-      {/* Insert Link button - always show at the bottom */}
-      <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t border-border dark:border-border">
-        <button
-          onClick={() => {
-            if (selectedId) {
-              // Find the selected page
-              const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
-                .find(page => page.id === selectedId);
+      {/* Insert Link button - only show when onSelect is provided */}
+      {onSelect && (
+        <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t border-border dark:border-border">
+          <button
+            onClick={() => {
+              if (selectedId) {
+                // Find the selected page
+                const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
+                  .find(page => page.id === selectedId);
 
-              if (selectedPage && onSelect) {
-                // Include display text in the selected page object
-                onSelect({
-                  ...selectedPage,
-                  displayText: displayText || selectedPage.title
-                });
+                if (selectedPage && onSelect) {
+                  // Include display text in the selected page object
+                  onSelect({
+                    ...selectedPage,
+                    displayText: displayText || selectedPage.title
+                  });
+                }
               }
-            }
-          }}
-          disabled={!selectedId}
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Insert Link
-        </button>
-      </div>
+            }}
+            disabled={!selectedId}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Insert Link
+          </button>
+        </div>
+      )}
     </div>
     </div>
   );
