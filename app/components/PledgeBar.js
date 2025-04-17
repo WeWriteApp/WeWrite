@@ -411,7 +411,7 @@ const PledgeBar = () => {
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         }`}
       >
-        <div className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg rounded-lg border border-border dark:border-border py-4 px-6">
+        <div className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg rounded-lg border border-border dark:border-border py-4 px-6 overflow-hidden">
           <div className="text-center">
             <p className="text-foreground/70 mb-3">Log in to support this creator</p>
             <div className="flex justify-center space-x-3">

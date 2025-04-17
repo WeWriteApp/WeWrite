@@ -190,8 +190,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleKeyDown = (event, editor) => {
-    // Check if we're at a link and handle deletion
+    // Check if we're at or adjacent to a link and handle deletion
     if ((event.key === 'Delete' || event.key === 'Backspace')) {
+      // First check if we're at a link
       const [link] = Editor.nodes(editor, {
         match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === "link",
       }) || [];
@@ -201,6 +202,52 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         const [, path] = link;
         Transforms.removeNodes(editor, { at: path });
         return;
+      }
+
+      // If not at a link, check if we're adjacent to one
+      const { selection } = editor;
+      if (selection && Range.isCollapsed(selection)) {
+        const [start] = Range.edges(selection);
+        const beforePoint = { path: start.path, offset: start.offset - 1 };
+        const afterPoint = { path: start.path, offset: start.offset };
+
+        // Check if there's a link before the cursor (for Backspace)
+        if (event.key === 'Backspace' && start.offset > 0) {
+          try {
+            const [nodeEntry] = Editor.nodes(editor, {
+              at: Editor.range(editor, beforePoint, beforePoint),
+              match: (n) => SlateElement.isElement(n) && n.type === 'link',
+            }) || [];
+
+            if (nodeEntry) {
+              event.preventDefault();
+              const [, linkPath] = nodeEntry;
+              Transforms.removeNodes(editor, { at: linkPath });
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking for link before cursor:', error);
+          }
+        }
+
+        // Check if there's a link after the cursor (for Delete)
+        if (event.key === 'Delete') {
+          try {
+            const [nodeEntry] = Editor.nodes(editor, {
+              at: Editor.range(editor, afterPoint, afterPoint),
+              match: (n) => SlateElement.isElement(n) && n.type === 'link',
+            }) || [];
+
+            if (nodeEntry) {
+              event.preventDefault();
+              const [, linkPath] = nodeEntry;
+              Transforms.removeNodes(editor, { at: linkPath });
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking for link after cursor:', error);
+          }
+        }
       }
     }
     // Handle cmd+enter to save

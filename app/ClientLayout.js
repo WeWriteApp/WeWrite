@@ -10,6 +10,7 @@ import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { RecentPagesProvider } from "./contexts/RecentPagesContext";
 import { LineSettingsProvider } from "./contexts/LineSettingsContext";
+import { ActivityFilterProvider } from "./contexts/ActivityFilterContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { GADebugger } from "./utils/ga-debug";
@@ -43,9 +44,10 @@ export default function ClientLayout({ children }) {
               <AuthProvider>
                 <PortfolioProvider>
                   <RecentPagesProvider>
-                    <MobileProvider>
-                      <DrawerProvider>
-                        <LineSettingsProvider>
+                    <ActivityFilterProvider>
+                      <MobileProvider>
+                        <DrawerProvider>
+                          <LineSettingsProvider>
                       <Drawer />
                       <div className="flex flex-col min-h-screen bg-background pb-8">
                         {!isAuthPage && <UsernameWarningBanner />}
@@ -59,9 +61,10 @@ export default function ClientLayout({ children }) {
                           <WindsurfOverlay />
                         </>
                       )}
-                        </LineSettingsProvider>
-                      </DrawerProvider>
-                    </MobileProvider>
+                          </LineSettingsProvider>
+                        </DrawerProvider>
+                      </MobileProvider>
+                    </ActivityFilterProvider>
                   </RecentPagesProvider>
                 </PortfolioProvider>
               </AuthProvider>

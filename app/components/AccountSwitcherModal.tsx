@@ -79,7 +79,7 @@ export function AccountSwitcherModal({
 
       {/* Modal */}
       <div
-        className="relative z-[10000] w-full max-w-md rounded-lg border bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-300"
+        className="relative z-[10000] w-full max-w-md rounded-lg border border-border dark:border-border bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-300"
         style={{
           position: 'relative',
           maxWidth: '28rem',
@@ -110,7 +110,7 @@ export function AccountSwitcherModal({
               <div
                 key={account.id}
                 className={cn(
-                  "flex items-center justify-between rounded-lg border p-3 overflow-hidden",
+                  "flex items-center justify-between rounded-lg border border-border dark:border-border p-3 overflow-hidden",
                   isCurrent && "border-blue-600 bg-blue-50 dark:bg-blue-950/30",
                   !isCurrent && "cursor-pointer hover:bg-muted/50 transition-colors"
                 )}
