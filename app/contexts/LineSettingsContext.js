@@ -71,7 +71,7 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
     }
   }, []);
 
-  // Custom setter function that also shows a toast notification
+  // Custom setter function that also shows a toast notification and refreshes the page
   const setLineModeWithNotification = (mode) => {
     // Validate the mode before setting it
     if (mode !== LINE_MODES.NORMAL && mode !== LINE_MODES.DENSE) {
@@ -94,7 +94,8 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
         toast.success("Dense mode enabled");
       }
 
-      // No need to reload the page - the UI will update automatically
+      // Refresh the page to apply the new mode
+      window.location.reload();
     }
   };
 

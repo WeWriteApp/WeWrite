@@ -269,7 +269,7 @@ export function PageActions({
               setLineMode(newMode); // Update the mode without page reload
             }}
           />
-          <span className="text-sm">Dense Mode</span>
+          <span className="text-sm">Dense mode</span>
         </div>
 
         {/* Reply button removed temporarily */}

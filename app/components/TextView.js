@@ -10,6 +10,9 @@ import { getPageById } from "../firebase/database";
 import { LineSettingsProvider, LINE_MODES } from '../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 import { AuthContext } from "../providers/AuthProvider";
+import { isExternalLink } from "../utils/linkFormatters";
+import { Button } from "./ui/button";
+import { ExternalLink } from "lucide-react";
 
 /**
  * TextView Component - Renders text content with different paragraph modes
@@ -749,8 +752,10 @@ const ListNode = ({ node, index = 0 }) => {
 };
 
 const LinkNode = ({ node, index }) => {
+  const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const href = node.url || node.href || node.link || '#';
   const pageId = extractPageId(href);
+  const isExternal = isExternalLink(href);
 
   // Extract text content from children array if available
   const getTextFromNode = (node) => {
@@ -775,7 +780,57 @@ const LinkNode = ({ node, index }) => {
     );
   }
 
-  // For external links, use the PillLink component
+  // For external links, use the PillLink component with a modal confirmation
+  if (isExternal) {
+    return (
+      <>
+        <span className="inline-block">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              setShowExternalLinkModal(true);
+            }}
+            className="inline-flex items-center my-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer external-link"
+          >
+            {displayText}
+            <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
+          </a>
+        </span>
+
+        {showExternalLinkModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background rounded-lg p-6 max-w-md w-full shadow-lg border border-border dark:border-border">
+              <h3 className="text-lg font-semibold mb-4">External Link</h3>
+              <p className="mb-4">You're about to visit an external website:</p>
+              <div className="bg-muted p-3 rounded mb-6 break-all">
+                <code>{href}</code>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExternalLinkModal(false)}
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                    setShowExternalLinkModal(false);
+                  }}
+                >
+                  Visit link
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // For other links, use the PillLink component
   return (
     <span className="inline-block">
       <PillLink href={href} isPublic={true} className="inline">

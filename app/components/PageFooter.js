@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
-import SimilarPages from "./SimilarPages";
 import PageStats from "./PageStats";
 import ConstructionChip from "./ConstructionChip";
 import FollowButton from "./FollowButton";
@@ -125,10 +124,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         </div>
       )}
 
-      {/* Similar pages section */}
-      {!isEditing && (
-        <SimilarPages currentPage={page} maxPages={3} />
-      )}
+      {/* Similar pages section removed to conserve resources */}
 
       {/* Page stats section */}
       {!isEditing && (
