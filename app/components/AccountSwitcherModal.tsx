@@ -1,14 +1,12 @@
 "use client"
 
 import React from 'react'
-import { createPortal } from 'react-dom'
 import { X, Plus, Settings, ChevronRight } from 'lucide-react'
-import { IconButton } from './ui/icon-button'
 import { cn } from '../lib/utils'
 import { User } from '@/types'
 import { useRouter } from 'next/navigation'
-import { useToast } from '@/components/ui/use-toast'
 import { Button } from './ui/button'
+import Modal from './ui/modal'
 
 interface AccountSwitcherModalProps {
   isOpen: boolean
@@ -29,8 +27,6 @@ export function AccountSwitcherModal({
 }: AccountSwitcherModalProps) {
   const router = useRouter()
 
-  if (!isOpen) return null
-
   const handleAccountSettings = () => {
     router.push('/account')
     onClose()
@@ -45,62 +41,12 @@ export function AccountSwitcherModal({
   }
 
   return (
-    <>
-      {/* Portal to ensure the modal is rendered at the root level */}
-      {typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            pointerEvents: 'auto',
-          }}
-        >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-300"
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-        data-state="open"
-      />
-
-      {/* Modal */}
-      <div
-        className="relative z-[10000] w-full max-w-md rounded-lg border border-border dark:border-border bg-background p-6 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-300"
-        style={{
-          position: 'relative',
-          maxWidth: '28rem',
-          zIndex: 10000,
-        }}
-        data-state="open"
-      >
-        {/* Close button */}
-        <IconButton
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="absolute right-4 top-4"
-        >
-          <X className="h-4 w-4" />
-        </IconButton>
-
-        {/* Header */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Switch Account</h2>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Switch Account"
+      className="max-w-md"
+    >
 
         {/* Account list */}
         <div className="space-y-4 py-2 px-1">
@@ -148,23 +94,51 @@ export function AccountSwitcherModal({
           })}
 
           {onAddAccount && (
-            <Button
-              variant="outline"
-              className="w-full mt-4 flex items-center justify-center gap-2"
-              onClick={() => {
-                onClose();
-                onAddAccount();
-              }}
+            <div
+              className="w-full mt-4"
+              // Add touch-specific wrapper to ensure it works in PWA
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
             >
-              <Plus className="h-4 w-4" />
-              Add Account
-            </Button>
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={(e) => {
+                  // Prevent event propagation
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  // Close modal first
+                  onClose();
+
+                  // Use setTimeout to ensure the modal is fully closed
+                  // before triggering the add account action
+                  setTimeout(() => {
+                    onAddAccount();
+                  }, 50);
+                }}
+                // Add touch-specific handlers for better mobile/PWA support
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  // Close modal first
+                  onClose();
+
+                  // Use setTimeout to ensure the modal is fully closed
+                  // before triggering the add account action
+                  setTimeout(() => {
+                    onAddAccount();
+                  }, 50);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Account
+              </Button>
+            </div>
           )}
         </div>
-      </div>
-        </div>,
-        document.body
-      )}
-    </>
+    </Modal>
   )
 }
