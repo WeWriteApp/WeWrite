@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { getAnalyticsInstance } from '../utils/analytics';
 import { useRouter } from 'next/navigation';
-import { getAnalyticsPageTitle } from '../utils/analytics-page-titles';
+import { getAnalyticsPageTitle, getAnalyticsPageTitleForId, extractPageIdFromPath } from '../utils/analytics-page-titles';
 
 /**
  * UnifiedAnalyticsProvider
@@ -136,8 +136,29 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       // Extract page ID from URL if present (for pages/[id] routes)
       const pageId = extractPageId(pathname);
 
-      // Track page view with our unified analytics
-      analytics.pageView(url, pageTitle, pageId);
+      // For page routes, try to get a better title asynchronously if needed
+      if (pageId && (pathname.includes('/pages/') || pathname.match(/\/[a-zA-Z0-9]{20}/))) {
+        // First track with what we have
+        analytics.pageView(url, pageTitle, pageId);
+
+        // Then try to get a better title asynchronously
+        if (pageTitle === `Page: ${pageId}`) {
+          try {
+            getAnalyticsPageTitleForId(pageId).then(betterTitle => {
+              if (betterTitle !== `Page: ${pageId}`) {
+                // Re-track with the better title
+                analytics.pageView(url, betterTitle, pageId);
+                if (isDev) console.log('Re-tracked page view with better title:', betterTitle);
+              }
+            });
+          } catch (titleErr) {
+            console.error('Error getting better page title:', titleErr);
+          }
+        }
+      } else {
+        // For non-page routes, just track normally
+        analytics.pageView(url, pageTitle, pageId);
+      }
 
       if (isDev) console.log('Page view tracked:', url, pageTitle ? `(${pageTitle})` : '');
     } catch (err) {
@@ -204,9 +225,8 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
    * Helper function to extract page ID from URL
    * This helps with tracking specific pages
    */
-  const extractPageId = (path: string): string | undefined => {
-    const pageMatch = path.match(/\/pages\/([^/?#]+)/);
-    return pageMatch?.[1];
+  const extractPageId = (path: string): string | null => {
+    return extractPageIdFromPath(path);
   };
 
   return (

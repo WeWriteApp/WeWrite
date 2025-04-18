@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { initializeAnalytics } from '../firebase/config';
 import { logEvent } from 'firebase/analytics';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { getAnalyticsPageTitle } from '../utils/analytics-page-titles';
+import { getAnalyticsPageTitle, getAnalyticsPageTitleForId } from '../utils/analytics-page-titles';
 
 interface AnalyticsProviderProps {
   children: ReactNode;
@@ -62,12 +62,37 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
       // Get a standardized page title for analytics
       const pageTitle = getAnalyticsPageTitle(pathname, searchParams, document.title);
 
+      // Extract page ID if this is a page route
+      const pageId = extractPageIdFromPath(pathname);
+
       // Log page view event with page title
       logEvent(analyticsInstance, 'page_view', {
         page_title: pageTitle,
         page_location: window.location.href,
         page_path: url
       });
+
+      // For page routes with ID-based titles, try to get a better title asynchronously
+      if (pageId && pageTitle === `Page: ${pageId}`) {
+        try {
+          getAnalyticsPageTitleForId(pageId).then(betterTitle => {
+            if (betterTitle !== `Page: ${pageId}`) {
+              // Re-track with the better title
+              logEvent(analyticsInstance, 'page_view', {
+                page_title: betterTitle,
+                page_location: window.location.href,
+                page_path: url
+              });
+
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Firebase Analytics re-tracked with better title:', betterTitle);
+              }
+            }
+          });
+        } catch (titleErr) {
+          console.error('Error getting better page title for Firebase Analytics:', titleErr);
+        }
+      }
 
       if (process.env.NODE_ENV === 'development') {
         console.log('Firebase Analytics page view tracked:', url, 'with title:', pageTitle);
