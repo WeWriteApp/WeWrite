@@ -5,6 +5,8 @@
  *
  * This ensures consistent page naming across all analytics providers
  * and reduces the number of "(other)" pages in Google Analytics.
+ *
+ * Updated to ensure human-readable page titles in reports.
  */
 
 import { getPageMetadata, getCachedPageTitle } from '../firebase/database';
