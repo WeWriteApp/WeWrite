@@ -774,9 +774,17 @@ const LinkNode = ({ node, index }) => {
 
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
+    // Pass the original page title if available in the node
+    const originalPageTitle = node.pageTitle || null;
+
     return (
       <span className="inline-block">
-        <InternalLinkWithTitle pageId={pageId} href={href} displayText={displayText} />
+        <InternalLinkWithTitle
+          pageId={pageId}
+          href={href}
+          displayText={displayText}
+          originalPageTitle={originalPageTitle}
+        />
       </span>
     );
   }
@@ -843,24 +851,34 @@ const LinkNode = ({ node, index }) => {
 };
 
 // Component for internal links that fetches and displays page titles
-const InternalLinkWithTitle = ({ pageId, href, displayText }) => {
-  const [title, setTitle] = useState(null);
+const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle }) => {
+  const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTitle = async () => {
       setIsLoading(true);
       const pageTitle = await getPageTitle(pageId);
-      setTitle(pageTitle);
+      setCurrentTitle(pageTitle);
       setIsLoading(false);
     };
 
     fetchTitle();
   }, [pageId]);
 
+  // Determine if displayText was customized or not
+  // If originalPageTitle exists and displayText is different, it was customized
+  const wasCustomized = originalPageTitle && displayText !== originalPageTitle;
+
+  // If it was customized, use the custom displayText
+  // If not customized, use the current title from the database
+  const textToDisplay = wasCustomized
+    ? displayText
+    : (currentTitle || (isLoading ? <><div className="loader"></div> Loading</> : 'Page Link'));
+
   return (
     <PillLink href={href} isPublic={true} className="inline">
-      {displayText || title || (isLoading ? <><div className="loader"></div> Loading</> : 'Page Link')}
+      {textToDisplay}
     </PillLink>
   );
 };
