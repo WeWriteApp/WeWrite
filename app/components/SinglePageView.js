@@ -420,7 +420,7 @@ function SinglePageView({ params }) {
                     </Button>
                   </Link>
                   <Link href="/auth/login">
-                    <Button variant="default">
+                    <Button variant="default" className="text-white">
                       Log In
                     </Button>
                   </Link>

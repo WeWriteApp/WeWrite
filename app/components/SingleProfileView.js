@@ -151,7 +151,7 @@ const SingleProfileView = ({ profile }) => {
                   </Button>
                 </Link>
                 <Link href="/auth/login">
-                  <Button variant="default" size="sm">
+                  <Button variant="default" size="sm" className="text-white">
                     Log In
                   </Button>
                 </Link>
