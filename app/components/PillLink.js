@@ -10,7 +10,7 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-[10px] py-[3px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[16px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px]">
+    <div className="my-0.5 px-[8px] pt-[2px] pb-[2px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px]">
       <ShimmerEffect className="h-3 w-3 rounded-full" />
       <ShimmerEffect className="h-3.5 w-14 rounded-md" />
     </div>
@@ -82,8 +82,8 @@ export const PillLink = ({
     }
   }
 
-  // Use consistent padding for all pill links
-  const paddingClass = 'py-[3px]';
+  // Use padding that's equal on top and bottom
+  const paddingClass = 'pt-[2px] pb-[2px]';
 
   return (
     <Link
@@ -91,10 +91,10 @@ export const PillLink = ({
       target={isExternalLinkType ? "_blank" : undefined}
       rel={isExternalLinkType ? "noopener noreferrer" : undefined}
       className={`
-        my-0.5 px-[10px] ${paddingClass}
+        my-0.5 px-[8px] ${paddingClass}
         inline-flex items-center
         text-sm font-medium
-        rounded-[16px]
+        rounded-[8px]
         transition-colors duration-200
         shadow-sm
         ${variantStyles}
@@ -111,7 +111,7 @@ export const PillLink = ({
             data-page-id={isPageLinkType ? pageId : undefined}
             data-user-id={isUserLinkType ? pageId : undefined}
           >
-            <span className="truncate inline-block max-w-full leading-[1.2]">{displayTitle}</span>
+            <span className="truncate inline-block max-w-full leading-[1.1]">{displayTitle}</span>
             {isExternalLinkType && (
               <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
             )}
