@@ -88,7 +88,7 @@ export const PillLink = ({
       target={isExternalLinkType ? "_blank" : undefined}
       rel={isExternalLinkType ? "noopener noreferrer" : undefined}
       className={`
-        my-0.5 px-2.5 py-1
+        my-0.5 px-2.5 py-0.5
         inline-flex items-center
         text-sm font-medium
         rounded-[8px]

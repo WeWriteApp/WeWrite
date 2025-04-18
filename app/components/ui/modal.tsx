@@ -55,6 +55,27 @@ export function Modal({
     }
   };
 
+  // Add a more reliable click outside handler using useEffect
+  useEffect(() => {
+    if (!isOpen || preventClickOutside) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    // Add the event listener with a slight delay to prevent immediate closing
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose, preventClickOutside]);
+
   // Add specific touch event handlers for better PWA support
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     // Store the touch target to check if the touch ends on the same element
