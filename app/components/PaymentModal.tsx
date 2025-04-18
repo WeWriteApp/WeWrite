@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { 
-  Elements, 
+import {
+  Elements,
   CardNumberElement,
   CardExpiryElement,
   CardCvcElement,
-  useStripe, 
-  useElements 
+  useStripe,
+  useElements
 } from '@stripe/react-stripe-js';
-import Dialog from '@mui/material/Dialog';
-import DialogContent from '@mui/material/DialogContent';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import Button from './Button';
+import Modal from './ui/modal';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -47,7 +46,7 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
     setProcessing(true);
 
     const cardElement = elements.getElement(CardNumberElement);
-    
+
     if (!cardElement) {
       setError('Card element not found');
       setProcessing(false);
@@ -70,8 +69,8 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
 
       if (confirmError) {
         throw new Error(confirmError.message || 'Payment failed');
-      } 
-      
+      }
+
       if (paymentIntent.status === 'succeeded') {
         onSuccess();
       } else {
@@ -89,14 +88,14 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
       ...cardComplete,
       [field]: event.complete
     });
-    
+
     if (event.error) {
       setError(event.error.message);
     } else {
       setError(null);
     }
   };
-  
+
   const isFormComplete = cardComplete.cardNumber && cardComplete.cardExpiry && cardComplete.cardCvc;
 
   // Enhanced styling for the card elements with better visibility
@@ -138,35 +137,35 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
         <h2 className="text-xl font-semibold mb-2">Subscribe to WeWrite</h2>
         <p className="text-sm text-white/70">Complete your ${amount.toFixed(2)}/month subscription</p>
       </div>
-      
+
       <div className="space-y-4 mb-6">
         <div>
           <label className="block text-base font-semibold mb-2 text-white">Card number</label>
           <div style={containerStyle} className="w-full focus-within:border-[#0057FF] focus-within:ring-2 focus-within:ring-[#0057FF]/30">
-            <CardNumberElement 
+            <CardNumberElement
               options={cardElementStyle}
               onChange={(e) => handleCardElementChange(e, 'cardNumber')}
               className="w-full"
             />
           </div>
         </div>
-        
+
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block text-base font-semibold mb-2 text-white">Expiry date</label>
             <div style={containerStyle} className="w-full focus-within:border-[#0057FF] focus-within:ring-2 focus-within:ring-[#0057FF]/30">
-              <CardExpiryElement 
+              <CardExpiryElement
                 options={cardElementStyle}
                 onChange={(e) => handleCardElementChange(e, 'cardExpiry')}
                 className="w-full"
               />
             </div>
           </div>
-          
+
           <div className="flex-1">
             <label className="block text-base font-semibold mb-2 text-white">CVC</label>
             <div style={containerStyle} className="w-full focus-within:border-[#0057FF] focus-within:ring-2 focus-within:ring-[#0057FF]/30">
-              <CardCvcElement 
+              <CardCvcElement
                 options={cardElementStyle}
                 onChange={(e) => handleCardElementChange(e, 'cardCvc')}
                 className="w-full"
@@ -175,24 +174,24 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
           </div>
         </div>
       </div>
-      
+
       {error && (
         <div className="py-2 px-3 text-red-300 text-sm bg-red-500/20 border border-red-500/30 rounded-md mb-4">
           {error}
         </div>
       )}
-      
+
       <div className="flex justify-between">
-        <button 
-          onClick={onCancel} 
+        <button
+          onClick={onCancel}
           disabled={processing}
           className="bg-transparent border border-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.15)] text-white px-5 py-2 rounded"
           type="button"
         >
           Cancel
         </button>
-        
-        <button 
+
+        <button
           disabled={!stripe || processing || !isFormComplete}
           className="bg-[#0057FF] hover:bg-[#0046CC] text-white font-medium px-5 py-2 rounded"
           type="submit"
@@ -226,53 +225,44 @@ export default function PaymentModal({ open, onClose, clientSecret, amount, onSu
   };
 
   return (
-    <Dialog
-      open={open}
+    <Modal
+      isOpen={open}
       onClose={onClose}
-      fullScreen={fullScreen}
-      aria-labelledby="payment-modal-title"
-      PaperProps={{
-        style: {
-          backgroundColor: '#121212',
-          borderRadius: '16px',
-          maxWidth: '500px',
-          width: '100%',
-          color: '#fff',
-        },
-      }}
+      className="max-w-[500px] bg-[#121212] text-white p-0"
+      showCloseButton={false}
     >
-      <DialogContent>
-        {clientSecret && (
-          <Elements stripe={stripePromise} options={{ 
-            clientSecret,
-            appearance: {
-              theme: 'night',
-              variables: {
-                colorPrimary: '#0057FF',
-                colorBackground: '#121212',
-                colorText: '#FFFFFF',
-                colorDanger: '#FF5252',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontSizeBase: '16px',
-                borderRadius: '8px',
-                fontWeightNormal: '500'
-              },
-              rules: {
-                '.Input': {
-                  color: '#FFFFFF'
-                }
+      {clientSecret && (
+        <Elements stripe={stripePromise} options={{
+          clientSecret,
+          appearance: {
+            theme: 'night',
+            variables: {
+              colorPrimary: '#0057FF',
+              colorBackground: '#121212',
+              colorText: '#FFFFFF',
+              colorDanger: '#FF5252',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSizeBase: '16px',
+              borderRadius: '8px',
+              fontWeightNormal: '500'
+            },
+            rules: {
+              '.Input': {
+                color: '#FFFFFF'
               }
             }
-          }}>
+          }
+        }}>
+          <div className="p-6">
             <PaymentForm
               clientSecret={clientSecret}
               amount={amount}
               onSuccess={handleSuccess}
               onCancel={handleCancel}
             />
-          </Elements>
-        )}
-      </DialogContent>
-    </Dialog>
+          </div>
+        </Elements>
+      )}
+    </Modal>
   );
-} 
+}
