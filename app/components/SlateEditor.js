@@ -179,7 +179,10 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
         // Call the parent component's onContentChange callback
         if (typeof onContentChange === 'function') {
+          console.log('SlateEditor onChange: Updating parent component with new content');
           onContentChange(newValue);
+        } else {
+          console.warn('SlateEditor onChange: No onContentChange callback provided');
         }
       } else {
         console.error('Invalid editor value:', newValue);

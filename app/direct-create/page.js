@@ -28,7 +28,7 @@ export default function DirectCreatePage() {
     title: "",
     isPublic: true,
   });
-  const [editorState, setEditorState] = useState();
+  const [editorState, setEditorState] = useState([{ type: "paragraph", children: [{ text: "" }] }]);
   const [isSaving, setIsSaving] = useState(false);
   const [initialContent, setInitialContent] = useState(null);
   const [error, setError] = useState(null);
@@ -189,6 +189,16 @@ export default function DirectCreatePage() {
       // Get the user ID
       const userId = user?.uid || 'anonymous';
 
+      // Ensure we have valid editor state
+      if (!editorState || !Array.isArray(editorState) || editorState.length === 0) {
+        console.error("Invalid editor state:", editorState);
+        setError("Error: Invalid content format");
+        setIsSaving(false);
+        return;
+      }
+
+      console.log("Saving page with editor state:", editorState);
+
       const data = {
         ...Page,
         content: JSON.stringify(editorState),
@@ -333,7 +343,14 @@ export default function DirectCreatePage() {
               <div>
                 <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
                 <div className="min-h-[300px] border border-input rounded-md bg-background">
-                  <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
+                  <SlateEditor
+                    setEditorState={setEditorState}
+                    initialContent={initialContent}
+                    onContentChange={(newContent) => {
+                      console.log('Direct-create: Editor content changed');
+                      setEditorState(newContent);
+                    }}
+                  />
                 </div>
               </div>
 
