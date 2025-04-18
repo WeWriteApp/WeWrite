@@ -126,19 +126,32 @@ export function AccountSwitcher() {
         isCurrent: true
       }));
 
+      // Also store in sessionStorage for better cross-browser compatibility
+      // especially for PWA environments
+      sessionStorage.setItem('wewrite_previous_user', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        username: user.username || user.displayName
+      }));
+
       // Mark that we're adding a new account
       localStorage.setItem('addingNewAccount', 'true');
+      sessionStorage.setItem('wewrite_adding_account', 'true');
 
       // Log out the current user before navigating to auth flow
       // This is necessary to allow adding a new account
       // Log out from Firebase, but keep the previousUserSession
       logoutUser(true).then(() => {
         // Navigate to login page after logout
-        router.push('/auth/login');
+        window.location.href = '/auth/login';
+      }).catch(error => {
+        console.error('Error logging out:', error);
+        // If logout fails, still try to navigate to login page
+        window.location.href = '/auth/login';
       });
     } else {
       // If no user is logged in, just navigate to login page
-      router.push('/auth/login');
+      window.location.href = '/auth/login';
     }
   };
 

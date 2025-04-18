@@ -20,6 +20,7 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
+  const [previousAccount, setPreviousAccount] = useState<{ email: string } | null>(null)
 
   // Validate form inputs
   useEffect(() => {
@@ -28,6 +29,33 @@ export function LoginForm({
     const isPasswordValid = password.length >= 6
     setIsFormValid(isEmailValid && isPasswordValid)
   }, [email, password])
+
+  // Check for previous user session on component mount
+  useEffect(() => {
+    // Check if we're coming back from an aborted login attempt
+    const isAddingAccount = localStorage.getItem('addingNewAccount') === 'true' ||
+                           sessionStorage.getItem('wewrite_adding_account') === 'true';
+
+    if (isAddingAccount) {
+      console.log("Detected aborted account addition, checking for previous user session");
+
+      // Get the previous user session
+      const previousUserSession = localStorage.getItem('previousUserSession') ||
+                                 sessionStorage.getItem('wewrite_previous_user');
+
+      if (previousUserSession) {
+        try {
+          const prevUser = JSON.parse(previousUserSession);
+          console.log("Found previous user session, returning to previous account");
+
+          // Set the previous account state to show the return button
+          setPreviousAccount(prevUser);
+        } catch (error) {
+          console.error("Error parsing previous user session:", error);
+        }
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +70,8 @@ export function LoginForm({
         console.log("Login successful, redirecting...")
 
         // Check if we're adding a new account to the account switcher
-        const previousUserSession = localStorage.getItem('previousUserSession')
+        const previousUserSession = localStorage.getItem('previousUserSession') ||
+                                   sessionStorage.getItem('wewrite_previous_user')
 
         if (previousUserSession) {
           console.log("Adding new account to account switcher...")
@@ -80,8 +109,6 @@ export function LoginForm({
               isCurrent: false
             }))
 
-            // Only the new user should be current
-
             // Add the new user if not already in the list
             if (!savedAccounts.some(account => account.uid === newUser.uid)) {
               savedAccounts.push(newUser)
@@ -90,8 +117,13 @@ export function LoginForm({
             // Save the updated accounts list
             localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts))
 
-            // Clear the previous user session
+            // Clear the previous user session from both storage types
             localStorage.removeItem('previousUserSession')
+            sessionStorage.removeItem('wewrite_previous_user')
+
+            // Clear the adding account flags
+            localStorage.removeItem('addingNewAccount')
+            sessionStorage.removeItem('wewrite_adding_account')
           } catch (error) {
             console.error("Error handling account switching:", error)
           }
@@ -103,9 +135,7 @@ export function LoginForm({
 
         setTimeout(() => {
           localStorage.removeItem('authRedirectPending')
-          router.push("/")
-          // Force a refresh of the page to ensure auth state is recognized
-          router.refresh()
+          window.location.href = "/"; // Use direct navigation for better compatibility
         }, 1500)
       } else {
         // Error handling
@@ -199,6 +229,24 @@ export function LoginForm({
           Sign up
         </Link>
       </div>
+
+      {previousAccount && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full mt-4 bg-blue-50 text-blue-800 hover:bg-blue-100 border-blue-200"
+          onClick={() => {
+            // Clear the adding account flags
+            localStorage.removeItem('addingNewAccount');
+            sessionStorage.removeItem('wewrite_adding_account');
+
+            // Redirect to home page
+            window.location.href = '/';
+          }}
+        >
+          Return to {previousAccount.email}
+        </Button>
+      )}
     </form>
   )
 }
