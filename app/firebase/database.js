@@ -199,7 +199,11 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
     return () => {};
   }
 
-  // Get reference to the page document
+  // Cache for version data to avoid unnecessary reads
+  let cachedVersionData = null;
+  let cachedLinks = null;
+
+  // Get reference to the page document - only select fields we need
   const pageRef = doc(db, "pages", pageId);
 
   // Variables to store unsubscribe functions
@@ -209,7 +213,6 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
-      console.log("Page document updated:", { id: pageData.id, title: pageData.title });
 
       // Always return the page data for private pages if the user is the owner
       if (!pageData.isPublic && userId && pageData.userId === userId) {
@@ -232,7 +235,6 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
       }
 
       try {
-
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
 
@@ -250,13 +252,32 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
             const links = extractLinksFromNodes(JSON.parse(versionData.content));
 
             // Send updated page and version data immediately
-            console.log("Using content directly from page document");
             onPageUpdate({ pageData, versionData, links });
+
+            // Update cache
+            cachedVersionData = versionData;
+            cachedLinks = links;
+
+            // If we have a version listener, remove it since we have the content directly
+            if (unsubscribeVersion) {
+              unsubscribeVersion();
+              unsubscribeVersion = null;
+            }
+
             return; // Skip version listener since we already have the content
           } catch (error) {
             console.error("Error parsing page content:", error);
             // Continue to fetch from version document as fallback
           }
+        }
+
+        // Check if the version ID has changed
+        const versionChanged = !cachedVersionData || pageData.currentVersion !== currentVersionId;
+
+        // If version hasn't changed and we have cached data, use it
+        if (!versionChanged && cachedVersionData && cachedLinks) {
+          onPageUpdate({ pageData, versionData: cachedVersionData, links: cachedLinks });
+          return;
         }
 
         // If we don't have content in the page document or parsing failed, get it from the version
@@ -268,14 +289,17 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
           unsubscribeVersion();
         }
 
-        // Listener for the version document
+        // Listener for the version document - only set up if needed
         unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
           if (versionSnap.exists()) {
             const versionData = versionSnap.data();
-            console.log("Version document updated:", versionSnap.id);
 
             // Extract links
             const links = extractLinksFromNodes(JSON.parse(versionData.content));
+
+            // Update cache
+            cachedVersionData = versionData;
+            cachedLinks = links;
 
             // Send updated page and version data
             onPageUpdate({ pageData, versionData, links });

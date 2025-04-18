@@ -243,121 +243,67 @@ export async function GET(request) {
 
     // searchTermFormatted is already defined above
 
-    // Let's also verify the data exists with a simpler query
-    const verifyQuery = `
-      SELECT COUNT(*) as count, STRING_AGG(title) as titles
-      FROM \`wewrite-ccd82.pages_indexes.pages\`
-      WHERE LOWER(title) LIKE @searchTerm
-    `;
+    // Skip verification query to reduce BigQuery costs
 
-    console.log('Executing verify query:', {
-      query: verifyQuery,
-      params: {
-        searchTerm: searchTermFormatted
-      }
-    });
-
-    const [verifyResult] = await bigquery.query({
-      query: verifyQuery,
-      params: {
-        searchTerm: searchTermFormatted
-      },
-      types: {
-        searchTerm: "STRING"
-      }
-    }).catch(error => {
-      console.error("Error executing verify query:", {
-        error,
-        stack: error.stack,
-        query: verifyQuery,
-        params: { searchTerm: searchTermFormatted }
-      });
-      throw error;
-    });
-
-    console.log('Verify query results:', JSON.stringify(verifyResult, null, 2));
-
-    // Query 1: Fetch all pages owned by the user that match the search term
-    const userQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.userId, p.lastModified
-      FROM \`wewrite-ccd82.pages_indexes.pages\` p
-      WHERE p.userId = @userId
-        AND LOWER(p.title) LIKE @searchTerm
-      ORDER BY p.lastModified DESC
-      LIMIT 10
-    `;
-
-    // Execute user query
-    const [userRows] = await bigquery.query({
-      query: userQuery,
-      params: {
-        userId: userId,
-        searchTerm: searchTermFormatted
-      },
-      types: {
-        userId: "STRING",
-        searchTerm: "STRING"
-      },
-    }).catch(error => {
-      console.error("Error executing user query:", error);
-      throw error;
-    });
-
-    console.log('User pages query results:', JSON.stringify(userRows, null, 2));
-
-    let groupRows = [];
-    let publicRows = [];
-
-    // Check if groupIds are provided and not empty
-    if (groupIds && groupIds.length > 0) {
-      // Query 2: Fetch all pages belonging to groups that match the search term
-      const groupQuery = `
-        SELECT DISTINCT p.document_id, p.title, p.groupId, p.userId, p.lastModified
-        FROM \`wewrite-ccd82.pages_indexes.pages\` p
-        WHERE p.groupId IN UNNEST(@groupIds)
-          AND LOWER(p.title) LIKE @searchTerm
-        ORDER BY p.lastModified DESC
+    // Use a single combined query to reduce BigQuery costs
+    const combinedQuery = `
+      WITH user_pages AS (
+        SELECT
+          document_id,
+          title,
+          userId,
+          lastModified,
+          'user' as page_type,
+          NULL as groupId
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE userId = @userId
+          AND LOWER(title) LIKE @searchTerm
+        ORDER BY lastModified DESC
+        LIMIT 10
+      ),
+      ${groupIds.length > 0 ? `
+      group_pages AS (
+        SELECT
+          document_id,
+          title,
+          userId,
+          lastModified,
+          'group' as page_type,
+          groupId
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE groupId IN UNNEST(@groupIds)
+          AND LOWER(title) LIKE @searchTerm
+        ORDER BY lastModified DESC
         LIMIT 5
-      `;
+      ),` : ''}
+      public_pages AS (
+        SELECT
+          document_id,
+          title,
+          userId,
+          lastModified,
+          'public' as page_type,
+          NULL as groupId
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE userId != @userId
+          AND LOWER(title) LIKE @searchTerm
+          ${groupIds.length > 0 ? `AND document_id NOT IN (
+            SELECT document_id
+            FROM \`wewrite-ccd82.pages_indexes.pages\`
+            WHERE groupId IN UNNEST(@groupIds)
+          )` : ''}
+        ORDER BY lastModified DESC
+        LIMIT 10
+      )
 
-      // Execute group query
-      const [groupRowsResult] = await bigquery.query({
-        query: groupQuery,
-        params: {
-          groupIds: groupIds,
-          searchTerm: searchTermFormatted
-        },
-        types: {
-          groupIds: ['STRING'],
-          searchTerm: "STRING"
-        },
-      }).catch(error => {
-        console.error("Error executing group query:", error);
-        throw error;
-      });
-
-      console.log('Group pages query results:', groupRowsResult);
-      groupRows = groupRowsResult || [];
-    }
-
-    // Query 3: Fetch public pages from other users that match the search term
-    const publicQuery = `
-      SELECT DISTINCT p.document_id, p.title, p.userId, p.lastModified
-      FROM \`wewrite-ccd82.pages_indexes.pages\` p
-      WHERE p.userId != @userId
-        AND LOWER(p.title) LIKE @searchTerm
-        ${groupIds.length > 0 ? `AND p.document_id NOT IN (
-          SELECT document_id
-          FROM \`wewrite-ccd82.pages_indexes.pages\`
-          WHERE groupId IN UNNEST(@groupIds)
-        )` : ''}
-      ORDER BY p.lastModified DESC
-      LIMIT 10
+      SELECT * FROM user_pages
+      ${groupIds.length > 0 ? 'UNION ALL SELECT * FROM group_pages' : ''}
+      UNION ALL SELECT * FROM public_pages
     `;
 
-    // Execute public pages query
-    const [publicRowsResult] = await bigquery.query({
-      query: publicQuery,
+    // Execute combined query
+    const [combinedResults] = await bigquery.query({
+      query: combinedQuery,
       params: {
         userId: userId,
         ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
@@ -369,12 +315,16 @@ export async function GET(request) {
         searchTerm: "STRING"
       },
     }).catch(error => {
-      console.error("Error executing public query:", error);
+      console.error("Error executing combined query:", error);
       throw error;
     });
 
-    console.log('Public pages query results:', JSON.stringify(publicRowsResult, null, 2));
-    publicRows = publicRowsResult || [];
+    console.log('Combined query results count:', combinedResults?.length || 0);
+
+    // Separate results by type
+    const userRows = combinedResults.filter(row => row.page_type === 'user') || [];
+    const groupRows = groupIds.length > 0 ? combinedResults.filter(row => row.page_type === 'group') || [] : [];
+    const publicRows = combinedResults.filter(row => row.page_type === 'public') || [];
 
     try {
       const pages = [];
