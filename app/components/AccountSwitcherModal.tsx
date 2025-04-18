@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { X, Plus, Settings, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { User } from '@/types'
@@ -40,7 +41,9 @@ export function AccountSwitcherModal({
     onClose()
   }
 
-  return (
+  // Use createPortal to render the modal at the document body level
+  // This ensures it's centered in the viewport and not constrained by parent elements
+  return typeof document !== 'undefined' ? createPortal(
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -139,6 +142,7 @@ export function AccountSwitcherModal({
             </div>
           )}
         </div>
-    </Modal>
-  )
+    </Modal>,
+    document.body
+  ) : null
 }
