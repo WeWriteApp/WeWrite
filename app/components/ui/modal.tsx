@@ -43,12 +43,36 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  // Handle click outside
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  // Handle click and touch events outside
+  const handleBackdropInteraction = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     if (preventClickOutside) return;
 
-    // Only close if clicking directly on the backdrop (not on modal content)
+    // Only close if interacting directly with the backdrop (not with modal content)
     if (e.target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    }
+  };
+
+  // Add specific touch event handlers for better PWA support
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Store the touch target to check if the touch ends on the same element
+    if (e.target === e.currentTarget) {
+      e.currentTarget.dataset.touchTarget = 'backdrop';
+    } else {
+      delete e.currentTarget.dataset.touchTarget;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (preventClickOutside) return;
+
+    // Only close if the touch started and ended on the backdrop
+    if (e.currentTarget.dataset.touchTarget === 'backdrop' && e.target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+      delete e.currentTarget.dataset.touchTarget;
       onClose();
     }
   };
@@ -58,7 +82,9 @@ export function Modal({
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
-          onClick={handleBackdropClick}
+          onClick={handleBackdropInteraction}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           aria-modal="true"
           role="dialog"
           initial={{ opacity: 0 }}
