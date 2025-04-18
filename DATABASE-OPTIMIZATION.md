@@ -23,17 +23,32 @@ We've implemented the following optimizations to reduce database costs:
 
 ## Deploying Indexes
 
-To deploy the updated indexes, run:
+To deploy the updated indexes, follow these steps:
+
+1. Install Firebase CLI if you haven't already:
 
 ```bash
-./deploy-indexes.sh
+npm install -g firebase-tools
 ```
 
-Or manually:
+2. Login to Firebase:
+
+```bash
+firebase login
+```
+
+3. Deploy the indexes:
 
 ```bash
 firebase deploy --only firestore:indexes
 ```
+
+Alternatively, you can deploy the indexes from the Firebase Console:
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Select your project
+3. Navigate to Firestore Database > Indexes
+4. Click "Add Index" and create each index manually according to the configuration in `firestore.indexes.json`
 
 ## Additional Optimization Recommendations
 
