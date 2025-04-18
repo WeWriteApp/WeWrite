@@ -394,7 +394,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
                     {index > 0 && ' '}
 
                     {/* Paragraph number */}
-                    <span className="text-muted-foreground text-xs select-none">
+                    <span className="text-muted-foreground text-xs select-none ml-1">
                       {index + 1}
                     </span>{'\u00A0'}
 
