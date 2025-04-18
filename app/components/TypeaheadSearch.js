@@ -308,11 +308,31 @@ const TypeaheadSearch = ({
     setSearch(e.target.value);
   };
 
+  // Helper function to deduplicate pages by ID
+  const deduplicatePages = (allPages) => {
+    const uniquePages = new Map();
+
+    // Process pages in order of priority: user pages first, then group pages, then public pages
+    allPages.forEach(page => {
+      // Only add the page if it's not already in our map
+      if (!uniquePages.has(page.id)) {
+        uniquePages.set(page.id, page);
+      }
+    });
+
+    return Array.from(uniquePages.values());
+  };
+
+  // Get all unique pages across all categories
+  const getAllUniquePages = () => {
+    const allPages = [...pages.userPages, ...pages.groupPages, ...pages.publicPages];
+    return deduplicatePages(allPages);
+  };
+
   // Update display text when a page is selected
   useEffect(() => {
     if (selectedId && setDisplayText) {
-      const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
-        .find(page => page.id === selectedId);
+      const selectedPage = getAllUniquePages().find(page => page.id === selectedId);
 
       if (selectedPage && !displayText) {
         setDisplayText(selectedPage.title);
@@ -348,9 +368,8 @@ const TypeaheadSearch = ({
           {selectedId ? (
             <div className="flex items-center w-full border border-border dark:border-border rounded-md px-3 py-2 bg-background">
               {(() => {
-                // Find the selected page
-                const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
-                  .find(page => page.id === selectedId);
+                // Find the selected page from deduplicated list
+                const selectedPage = getAllUniquePages().find(page => page.id === selectedId);
 
                 return selectedPage ? (
                   <div className="flex items-center justify-between w-full">
@@ -426,86 +445,116 @@ const TypeaheadSearch = ({
               </div>
             )}
 
-            {/* User pages section */}
-            {pages.userPages.length > 0 && (
+            {/* Pages section - using deduplicated pages */}
+            {getAllUniquePages().length > 0 && (
               <div>
-                {pages.userPages
-                  .filter((page) => !editableOnly || page.isOwned || page.isEditable)
-                  .map((page) =>
-                    onSelect ? (
-                      <SingleItemButton
-                        page={page}
-                        search={search}
-                        onSelect={onSelect}
-                        isSelected={selectedId === page.id}
-                        setSearch={setSearch}
-                        setSelectedId={setSelectedId}
-                        key={page.id}
-                      />
-                    ) : (
-                      <SingleItemLink
-                        page={page}
-                        search={search}
-                        key={page.id}
-                      />
-                    )
-                  )}
+                {/* Group pages by type for better organization */}
+                {(() => {
+                  const uniquePages = getAllUniquePages();
+
+                  // Create sections based on page types
+                  const userOwnedPages = uniquePages.filter(page => page.isOwned || page.type === 'user');
+                  const groupPages = uniquePages.filter(page => !page.isOwned && page.type === 'group');
+                  const publicPages = uniquePages.filter(page => !page.isOwned && page.type === 'public');
+
+                  return (
+                    <>
+                      {/* User pages section */}
+                      {userOwnedPages.length > 0 && (
+                        <div className="mb-2">
+                          {userOwnedPages.length > 0 && groupPages.length + publicPages.length > 0 && (
+                            <div className="text-xs font-medium text-muted-foreground px-3 py-1 uppercase">Your Pages</div>
+                          )}
+                          {userOwnedPages
+                            .filter((page) => !editableOnly || page.isOwned || page.isEditable)
+                            .map((page) =>
+                              onSelect ? (
+                                <SingleItemButton
+                                  page={page}
+                                  search={search}
+                                  onSelect={onSelect}
+                                  isSelected={selectedId === page.id}
+                                  setSearch={setSearch}
+                                  setSelectedId={setSelectedId}
+                                  key={page.id}
+                                />
+                              ) : (
+                                <SingleItemLink
+                                  page={page}
+                                  search={search}
+                                  key={page.id}
+                                />
+                              )
+                            )}
+                        </div>
+                      )}
+
+                      {/* Group pages section */}
+                      {groupPages.length > 0 && (
+                        <div className="mb-2">
+                          {groupPages.length > 0 && (userOwnedPages.length > 0 || publicPages.length > 0) && (
+                            <div className="text-xs font-medium text-muted-foreground px-3 py-1 uppercase">Group Pages</div>
+                          )}
+                          {groupPages
+                            .filter((page) => !editableOnly || page.isOwned || page.isEditable)
+                            .map((page) =>
+                              onSelect ? (
+                                <SingleItemButton
+                                  page={page}
+                                  search={search}
+                                  onSelect={onSelect}
+                                  isSelected={selectedId === page.id}
+                                  setSearch={setSearch}
+                                  setSelectedId={setSelectedId}
+                                  key={page.id}
+                                />
+                              ) : (
+                                <SingleItemLink
+                                  page={page}
+                                  search={search}
+                                  key={page.id}
+                                />
+                              )
+                            )}
+                        </div>
+                      )}
+
+                      {/* Public pages section */}
+                      {publicPages.length > 0 && (
+                        <div>
+                          {publicPages.length > 0 && (userOwnedPages.length > 0 || groupPages.length > 0) && (
+                            <div className="text-xs font-medium text-muted-foreground px-3 py-1 uppercase">Public Pages</div>
+                          )}
+                          {publicPages
+                            .filter((page) => !editableOnly || page.isOwned || page.isEditable)
+                            .map((page) =>
+                              onSelect ? (
+                                <SingleItemButton
+                                  page={page}
+                                  search={search}
+                                  onSelect={onSelect}
+                                  isSelected={selectedId === page.id}
+                                  setSearch={setSearch}
+                                  setSelectedId={setSelectedId}
+                                  key={page.id}
+                                />
+                              ) : (
+                                <SingleItemLink
+                                  page={page}
+                                  search={search}
+                                  key={page.id}
+                                />
+                              )
+                            )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
 
-            {pages.groupPages.length > 0 && (
-              <div>
-                {pages.groupPages
-                  .filter((page) => !editableOnly || page.isOwned || page.isEditable)
-                  .map((page) =>
-                    onSelect ? (
-                      <SingleItemButton
-                        page={page}
-                        search={search}
-                        onSelect={onSelect}
-                        isSelected={selectedId === page.id}
-                        setSearch={setSearch}
-                        setSelectedId={setSelectedId}
-                        key={page.id}
-                      />
-                    ) : (
-                      <SingleItemLink
-                        page={page}
-                        search={search}
-                        key={page.id}
-                      />
-                    )
-                  )}
-              </div>
-            )}
-
-            {pages.publicPages.length > 0 && (
-              <div>
-                {pages.publicPages
-                  .filter((page) => !editableOnly || page.isOwned || page.isEditable)
-                  .map((page) =>
-                    onSelect ? (
-                      <SingleItemButton
-                        page={page}
-                        search={search}
-                        onSelect={onSelect}
-                        isSelected={selectedId === page.id}
-                        setSearch={setSearch}
-                        setSelectedId={setSelectedId}
-                        key={page.id}
-                      />
-                    ) : (
-                      <SingleItemLink
-                        page={page}
-                        search={search}
-                        key={page.id}
-                      />
-                    )
-                  )}
-              </div>
-            )}
-
-            {search.length >= 2 && pages.userPages.length === 0 && pages.groupPages.length === 0 && pages.publicPages.length === 0 && (
+            {search.length >= 2 && getAllUniquePages().length === 0 && (
               <div className="p-3">
                 <button
                   onClick={() => {
@@ -574,9 +623,8 @@ const TypeaheadSearch = ({
           <button
             onClick={() => {
               if (selectedId) {
-                // Find the selected page
-                const selectedPage = [...pages.userPages, ...pages.groupPages, ...pages.publicPages]
-                  .find(page => page.id === selectedId);
+                // Find the selected page from deduplicated list
+                const selectedPage = getAllUniquePages().find(page => page.id === selectedId);
 
                 if (selectedPage && onSelect) {
                   // Include display text in the selected page object
