@@ -352,14 +352,18 @@ export default function DirectCreatePage() {
 
             <div className="flex items-center gap-2">
               <button
-                disabled={!Page.title || !editorState || isSaving}
+                disabled={!Page.title || isSaving}
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 type="submit"
               >
                 {isSaving ? "Saving..." : "Save"}
               </button>
               <button
-                onClick={() => router.push("/pages")}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent form submission
+                  router.push("/pages");
+                }}
+                type="button" // Explicitly set as button type to avoid form submission
                 className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
               >
                 Cancel

@@ -166,9 +166,9 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             );
           } else {
             // No user filter, show public pages for everyone
+            // Note: We're not filtering by isPublic here to show all pages in the "all" tab
             pagesQuery = query(
               collection(db, "pages"),
-              where("isPublic", "==", true),
               orderBy("lastModified", "desc"),
               limit(limitCount * 2)
             );
@@ -396,10 +396,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           return;
         }
       } else {
-        // No user filter
+        // No user filter, show all pages
+        // Note: We're not filtering by isPublic here to show all pages in the "all" tab
         moreQuery = query(
           collection(db, "pages"),
-          where("isPublic", "==", true),
           orderBy("lastModified", "desc"),
           startAfter(lastVisible),
           limit(limitCount * 2)

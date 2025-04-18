@@ -17,7 +17,7 @@ export const useActivityFilter = () => {
 // Provider component
 export const ActivityFilterProvider = ({ children }) => {
   // Initialize state from localStorage if available
-  const [viewMode, setViewMode] = useState('following'); // Default to 'following'
+  const [viewMode, setViewMode] = useState('all'); // Default to 'all' to show all activity
 
   // Load saved preference from localStorage on mount
   useEffect(() => {
