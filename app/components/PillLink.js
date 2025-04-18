@@ -97,18 +97,18 @@ export const PillLink = ({
         ${variantStyles}
         ${groupId ? 'opacity-90' : ''}
         ${className || ''}
-        max-w-fit
+        max-w-full
       `}
     >
-      <div className="flex items-center gap-1.5 flex-nowrap">
+      <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <div className="flex flex-col min-w-0 max-w-full">
+        <div className="flex flex-col min-w-0 max-w-full overflow-hidden">
           <span
             className={`leading-tight whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link'}`}
             data-page-id={isPageLinkType ? pageId : undefined}
             data-user-id={isUserLinkType ? pageId : undefined}
           >
-            {displayTitle}
+            <span className="truncate inline-block max-w-full">{displayTitle}</span>
             {isExternalLinkType && (
               <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
             )}

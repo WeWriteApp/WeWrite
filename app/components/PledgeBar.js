@@ -48,8 +48,12 @@ const PledgeBar = () => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Hide immediately on any downward scroll
-      if (currentScrollY > lastKnownScrollY) {
+      // Always show the bar when at the top of the page (or very close to it)
+      if (currentScrollY <= 10) {
+        setVisible(true);
+      }
+      // Hide immediately on any downward scroll when not at the top
+      else if (currentScrollY > lastKnownScrollY) {
         // Scrolling down - hide the bar immediately
         setVisible(false);
       } else if (currentScrollY < lastKnownScrollY) {
