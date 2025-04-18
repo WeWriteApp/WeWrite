@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import { getUserSubscription, getPledge, createPledge, updatePledge } from "../firebase/subscription";
@@ -409,12 +410,15 @@ const PledgeBar = () => {
           </div>
         </div>
 
-        {/* Pledge Modal for self view */}
-        <PledgeBarModal
-          isOpen={showActivationModal}
-          onClose={() => setShowActivationModal(false)}
-          isSignedIn={!!user}
-        />
+        {/* Pledge Modal for self view - rendered at document level */}
+        {typeof document !== 'undefined' && createPortal(
+          <PledgeBarModal
+            isOpen={showActivationModal}
+            onClose={() => setShowActivationModal(false)}
+            isSignedIn={!!user}
+          />,
+          document.body
+        )}
       </div>
     );
   }
@@ -497,12 +501,15 @@ const PledgeBar = () => {
         />
       </div>
 
-      {/* Pledge Modal */}
-      <PledgeBarModal
-        isOpen={showActivationModal}
-        onClose={() => setShowActivationModal(false)}
-        isSignedIn={!!user}
-      />
+      {/* Pledge Modal - rendered at document level to ensure proper positioning */}
+      {typeof document !== 'undefined' && createPortal(
+        <PledgeBarModal
+          isOpen={showActivationModal}
+          onClose={() => setShowActivationModal(false)}
+          isSignedIn={!!user}
+        />,
+        document.body
+      )}
 
       {/* Custom Amount Modal - TODO: Convert to Radix Dialog */}
       {showCustomAmountModal && (
