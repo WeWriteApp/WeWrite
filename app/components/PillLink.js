@@ -10,7 +10,7 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-[8px] pt-[2px] pb-[2px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px]">
+    <div className="my-0.5 px-[8px] py-0 inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px] h-[20px]">
       <ShimmerEffect className="h-3 w-3 rounded-full" />
       <ShimmerEffect className="h-3.5 w-14 rounded-md" />
     </div>
@@ -82,8 +82,8 @@ export const PillLink = ({
     }
   }
 
-  // Use padding that's equal on top and bottom
-  const paddingClass = 'pt-[2px] pb-[2px]';
+  // Use a class that ensures perfect vertical centering
+  const paddingClass = 'py-0';
 
   return (
     <Link
@@ -103,25 +103,23 @@ export const PillLink = ({
         max-w-full
       `}
     >
-      <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
+      <div className="flex items-center gap-1.5 flex-nowrap max-w-full h-[20px]">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <div className="flex flex-col min-w-0 max-w-full overflow-hidden">
-          <span
-            className={`leading-tight whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link'}`}
-            data-page-id={isPageLinkType ? pageId : undefined}
-            data-user-id={isUserLinkType ? pageId : undefined}
-          >
-            <span className="truncate inline-block max-w-full leading-[1.1]">{displayTitle}</span>
-            {isExternalLinkType && (
-              <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
-            )}
-          </span>
-          {byline && (
-            <span className="text-xs opacity-75 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
-              {byline}
-            </span>
+        <span
+          className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link'}`}
+          data-page-id={isPageLinkType ? pageId : undefined}
+          data-user-id={isUserLinkType ? pageId : undefined}
+        >
+          <span className="truncate inline-block max-w-full leading-none">{displayTitle}</span>
+          {isExternalLinkType && (
+            <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
           )}
-        </div>
+        </span>
+        {byline && (
+          <span className="text-xs opacity-75 leading-none whitespace-nowrap overflow-hidden text-ellipsis">
+            {byline}
+          </span>
+        )}
       </div>
     </Link>
   );

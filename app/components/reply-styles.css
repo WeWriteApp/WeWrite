@@ -12,14 +12,15 @@
 [data-slate-editor] a.editor-link.page-link {
   background-color: var(--primary, #1768FF) !important;
   border-radius: 8px !important;
-  padding: 2px 8px !important; /* Equal top and bottom padding */
+  padding: 0 8px !important; /* No vertical padding, fixed height instead */
   margin: 0 1px !important;
   border-bottom: none !important;
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
   font-size: 0.9375rem !important;
-  line-height: 1.1 !important; /* Tighter line height */
+  line-height: 1 !important; /* No line height */
+  height: 20px !important; /* Fixed height for consistent sizing */
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-weight: 500 !important;
@@ -32,7 +33,7 @@
 [data-slate-editor] a.editor-link.user-link {
   background-color: var(--primary, #1768FF) !important;
   border-radius: 8px !important;
-  padding: 2px 8px !important; /* Equal top and bottom padding */
+  padding: 0 8px !important; /* No vertical padding, fixed height instead */
   margin: 0 1px !important;
   position: relative !important;
   border-bottom: none !important;
@@ -40,7 +41,8 @@
   display: inline-flex !important;
   align-items: center !important;
   font-size: 0.9375rem !important;
-  line-height: 1.1 !important; /* Tighter line height */
+  line-height: 1 !important; /* No line height */
+  height: 20px !important; /* Fixed height for consistent sizing */
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-weight: 500 !important;

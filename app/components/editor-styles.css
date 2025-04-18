@@ -36,14 +36,15 @@
   background-color: #1768FF;
   background-color: var(--primary, #1768FF);
   border-radius: 8px;
-  padding: 2px 8px; /* Equal top and bottom padding */
+  padding: 0 8px; /* No vertical padding, fixed height instead */
   margin: 0 1px;
   border-bottom: none;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   font-size: 0.9375rem;
-  line-height: 1.1; /* Tighter line height */
+  line-height: 1; /* Remove line height */
+  height: 20px; /* Fixed height for consistent sizing */
   color: white;
   color: var(--primary-foreground, white);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -74,7 +75,7 @@
   background-color: #1768FF;
   background-color: var(--primary, #1768FF);
   border-radius: 8px;
-  padding: 2px 8px; /* Equal top and bottom padding */
+  padding: 0 8px; /* No vertical padding, fixed height instead */
   margin: 0 1px;
   position: relative;
   border-bottom: none;
@@ -82,7 +83,8 @@
   display: inline-flex;
   align-items: center;
   font-size: 0.9375rem;
-  line-height: 1.1; /* Tighter line height */
+  line-height: 1; /* Remove line height */
+  height: 20px; /* Fixed height for consistent sizing */
   color: white;
   color: var(--primary-foreground, white);
   border: 1px solid rgba(255, 255, 255, 0.2);
