@@ -13,6 +13,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { isExternalLink } from "../utils/linkFormatters";
 import { Button } from "./ui/button";
 import { ExternalLink } from "lucide-react";
+import Modal from "./ui/modal";
 
 /**
  * TextView Component - Renders text content with different paragraph modes
@@ -798,34 +799,35 @@ const LinkNode = ({ node, index }) => {
           </a>
         </span>
 
-        {showExternalLinkModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background rounded-lg p-6 max-w-md w-full shadow-lg border border-border dark:border-border">
-              <h3 className="text-lg font-semibold mb-4">External Link</h3>
-              <p className="mb-4">You're about to visit an external website:</p>
-              <div className="bg-muted p-3 rounded mb-6 break-all">
-                <code>{href}</code>
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExternalLinkModal(false)}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    window.open(href, '_blank', 'noopener,noreferrer');
-                    setShowExternalLinkModal(false);
-                  }}
-                >
-                  Visit link
-                </Button>
-              </div>
+        <Modal
+          isOpen={showExternalLinkModal}
+          onClose={() => setShowExternalLinkModal(false)}
+          title="External Link"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowExternalLinkModal(false)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => {
+                  window.open(href, '_blank', 'noopener,noreferrer');
+                  setShowExternalLinkModal(false);
+                }}
+              >
+                Visit link
+              </Button>
             </div>
+          }
+        >
+          <p className="mb-4">You're about to visit an external website:</p>
+          <div className="bg-muted p-3 rounded mb-2 break-all">
+            <code>{href}</code>
           </div>
-        )}
+        </Modal>
       </>
     );
   }
