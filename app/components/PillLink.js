@@ -10,9 +10,9 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[32px] min-w-[100px]">
-      <ShimmerEffect className="h-3.5 w-3.5 rounded-full" />
-      <ShimmerEffect className="h-4 w-16 rounded-md" />
+    <div className="my-0.5 px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] h-[28px] min-w-[80px] max-w-[120px]">
+      <ShimmerEffect className="h-3 w-3 rounded-full" />
+      <ShimmerEffect className="h-3.5 w-14 rounded-md" />
     </div>
   );
 };
