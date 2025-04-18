@@ -981,20 +981,33 @@ export async function getPageMetadata(pageId) {
 }
 
 // Add a function to cache and retrieve page titles
+// Use a global cache that persists between function calls
 const pageTitleCache = new Map();
 
+/**
+ * Get a page title from cache or database
+ *
+ * @param {string} pageId - The page ID to get the title for
+ * @returns {Promise<string>} The page title
+ */
 export async function getCachedPageTitle(pageId) {
+  // Validate input
+  if (!pageId) return 'Untitled';
+
   // Check if title is in cache
   if (pageTitleCache.has(pageId)) {
     return pageTitleCache.get(pageId);
   }
 
   try {
+    // Try to get from database
     const metadata = await getPageMetadata(pageId);
     const title = metadata?.title || 'Untitled';
 
-    // Cache the title
-    pageTitleCache.set(pageId, title);
+    // Only cache non-empty, meaningful titles
+    if (title && title !== 'Untitled') {
+      pageTitleCache.set(pageId, title);
+    }
 
     return title;
   } catch (error) {
@@ -1003,15 +1016,21 @@ export async function getCachedPageTitle(pageId) {
   }
 }
 
-// Function to prefetch and cache multiple page titles at once
+/**
+ * Prefetch and cache multiple page titles at once
+ * This is useful for optimizing performance when displaying lists of pages
+ *
+ * @param {string[]} pageIds - Array of page IDs to prefetch titles for
+ * @returns {Promise<void>}
+ */
 export async function prefetchPageTitles(pageIds) {
   if (!pageIds || pageIds.length === 0) return;
 
   try {
     const { getDocs, query, collection, where } = await import('firebase/firestore');
 
-    // Filter out IDs that are already cached
-    const uncachedIds = pageIds.filter(id => !pageTitleCache.has(id));
+    // Filter out IDs that are already cached and ensure we have valid IDs
+    const uncachedIds = pageIds.filter(id => id && typeof id === 'string' && !pageTitleCache.has(id));
 
     if (uncachedIds.length === 0) return;
 
@@ -1028,11 +1047,21 @@ export async function prefetchPageTitles(pageIds) {
 
       const querySnapshot = await getDocs(q);
 
-      // Cache each page title
+      // Cache each page title, but only if it's meaningful
       querySnapshot.forEach(doc => {
         const data = doc.data();
-        pageTitleCache.set(doc.id, data.title || 'Untitled');
+        const title = data.title || 'Untitled';
+
+        // Only cache non-empty, meaningful titles
+        if (title && title !== 'Untitled') {
+          pageTitleCache.set(doc.id, title);
+        }
       });
+
+      // Log the number of titles fetched in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Prefetched ${querySnapshot.size} page titles (batch ${i/batchSize + 1})`);
+      }
     }
   } catch (error) {
     console.error('Error prefetching page titles:', error);
