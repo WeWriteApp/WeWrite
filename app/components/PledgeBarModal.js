@@ -1,17 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogClose,
-  DialogHeader,
-  DialogFooter,
-  DialogOverlay,
-  DialogPortal,
-} from "./ui/dialog";
+import Modal from "./ui/modal";
 import { Button } from "./ui/button";
 import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
@@ -44,43 +34,27 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <style jsx global>{`
-        .support-modal-overlay {
-          animation: overlay-fade-in 200ms ease-out forwards !important;
-        }
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={content.title}
+      className="max-w-sm sm:max-w-md"
+      footer={
+        <div className="flex justify-center w-full pt-2">
+          <Button variant="outline" onClick={onClose}>
+            Dismiss
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        {/* Description */}
+        <p className="text-sm text-muted-foreground">
+          {content.description}
+        </p>
 
-        @keyframes overlay-fade-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-
-        .support-modal {
-          animation: elegant-fade-in 250ms ease-out forwards !important;
-        }
-
-        @keyframes elegant-fade-in {
-          0% { opacity: 0; transform: translate(-50%, -45%); }
-          100% { opacity: 1; transform: translate(-50%, -50%); }
-        }
-      `}</style>
-      <DialogPortal>
-        <DialogOverlay className="support-modal-overlay" />
-        <DialogContent
-          className="max-w-sm sm:max-w-md mx-auto rounded-lg border-border dark:border-border support-modal"
-          hideCloseButton
-        >
-
-        <DialogHeader>
-          <DialogTitle>
-            {content.title}
-          </DialogTitle>
-          <DialogDescription>
-            {content.description}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-3">
+        {/* Action Button */}
+        <div>
           <Button
             asChild
             className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-green-500 via-blue-500 to-green-500 hover:from-green-600 hover:via-blue-600 hover:to-green-600 text-white animate-gradient bg-[length:200%_auto]' : ''}`}
@@ -100,7 +74,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
         </div>
 
         {/* Social Links Section */}
-        <div className="pt-4 border-t-only">
+        <div className="pt-4 border-t border-border">
           <h3 className="text-sm font-medium mb-3 text-center">Follow us for updates</h3>
           <div className="flex flex-col gap-2 w-full">
             {sortedSocialLinks.map((link) => (
@@ -123,19 +97,8 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
             ))}
           </div>
         </div>
-
-        <div className="pt-4 mt-2 border-t-only">
-          <DialogFooter className="sm:justify-center pt-2">
-            <DialogClose asChild>
-              <Button variant="outline">
-                Dismiss
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-      </DialogPortal>
-    </Dialog>
+      </div>
+    </Modal>
   );
 };
 

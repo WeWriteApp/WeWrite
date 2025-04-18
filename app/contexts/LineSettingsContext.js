@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from 'sonner';
 
 /**
  * LINE_MODES - Constants for paragraph display modes
@@ -87,12 +86,8 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
       localStorage.setItem('lineMode', mode);
       console.log(`Line mode set to ${mode} and saved to localStorage`);
 
-      // Show toast notification based on the selected mode
-      if (mode === LINE_MODES.NORMAL) {
-        toast.success("Dense mode disabled");
-      } else if (mode === LINE_MODES.DENSE) {
-        toast.success("Dense mode enabled");
-      }
+      // No toast notification needed since we have a full page loading state
+      console.log(`Line mode changed to ${mode}`);
 
       // Show loading overlay before refreshing
       const loadingOverlay = document.createElement('div');

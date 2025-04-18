@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { initializeAnalytics } from '../firebase/config';
 import { logEvent } from 'firebase/analytics';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { getAnalyticsPageTitle } from '../utils/analytics-page-titles';
 
 interface AnalyticsProviderProps {
   children: ReactNode;
@@ -58,35 +59,8 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
     try {
       const url = pathname + (searchParams?.toString() || '');
 
-      // Get the current page title
-      let pageTitle = document.title;
-
-      // For specific routes, we can set more descriptive titles
-      if (pathname === '/') {
-        pageTitle = 'WeWrite - Home';
-      } else if (pathname.startsWith('/auth/login')) {
-        pageTitle = 'WeWrite - Sign In';
-      } else if (pathname.startsWith('/auth/register')) {
-        pageTitle = 'WeWrite - Create Account';
-      } else if (pathname.startsWith('/auth/forgot-password')) {
-        pageTitle = 'WeWrite - Reset Password';
-      } else if (pathname.startsWith('/auth/switch-account')) {
-        pageTitle = 'WeWrite - Switch Account';
-      } else if (pathname.startsWith('/auth/logout')) {
-        pageTitle = 'WeWrite - Sign Out';
-      } else if (pathname.startsWith('/account/subscription')) {
-        pageTitle = 'WeWrite - Subscription Settings';
-      } else if (pathname.startsWith('/account')) {
-        pageTitle = 'WeWrite - Account Settings';
-      } else if (pathname.startsWith('/pages/')) {
-        // For content pages, try to get a more specific title
-        const contentTitle = document.querySelector('h1')?.textContent;
-        if (contentTitle) {
-          pageTitle = `WeWrite - ${contentTitle}`;
-        } else {
-          pageTitle = 'WeWrite - Content Page';
-        }
-      }
+      // Get a standardized page title for analytics
+      const pageTitle = getAnalyticsPageTitle(pathname, searchParams, document.title);
 
       // Log page view event with page title
       logEvent(analyticsInstance, 'page_view', {

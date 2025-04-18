@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { getAnalyticsInstance } from '../utils/analytics';
 import { useRouter } from 'next/navigation';
+import { getAnalyticsPageTitle } from '../utils/analytics-page-titles';
 
 /**
  * UnifiedAnalyticsProvider
@@ -122,9 +123,9 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       // Construct the full URL
       const url = pathname + (searchParams?.toString() || '');
 
-      // Get page title - try document title first then fall back to URL-based title
-      const pageTitle = typeof document !== 'undefined' && document.title
-        ? document.title
+      // Get a standardized page title for analytics
+      const pageTitle = typeof document !== 'undefined'
+        ? getAnalyticsPageTitle(pathname, searchParams, document.title)
         : getPageTitle(pathname);
 
       // Store the current title
@@ -155,43 +156,48 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
   };
 
   /**
-   * Helper function to determine page title from URL
-   * This improves analytics reporting by including readable page names
+   * Helper function to determine page title from URL when document is not available
+   * This is a server-side fallback for the client-side getAnalyticsPageTitle function
    */
   const getPageTitle = (path: string): string => {
-    // If we're on the homepage
-    if (path === '/') return 'WeWrite - Home';
-
     // Extract section from URL
     const sections = path.split('/').filter(Boolean);
-    if (sections.length === 0) return 'WeWrite - Unknown Page';
 
-    // Format based on route pattern
+    // Use the same mapping logic as in analytics-page-titles.ts
+    // but without DOM access
+
+    // Check static routes first
+    if (path === '/') return 'Home Page';
+
+    // Handle dynamic routes
     if (sections[0] === 'pages' && sections.length > 1) {
-      return `WeWrite - Page: ${sections[1]}`;  // Will be replaced with actual title via DOM if available
+      return `Page: ${sections[1]}`;
     }
 
     if (sections[0] === 'user' && sections.length > 1) {
-      return `WeWrite - User Profile: ${sections[1]}`;
+      return `User Profile: ${sections[1]}`;
+    }
+
+    if (sections[0] === 'g' && sections.length > 1) {
+      return `Group: ${sections[1]}`;
     }
 
     // Auth routes
     if (sections[0] === 'auth') {
-      if (sections[1] === 'login') return 'WeWrite - Sign In';
-      if (sections[1] === 'register') return 'WeWrite - Create Account';
-      if (sections[1] === 'forgot-password') return 'WeWrite - Reset Password';
-      if (sections[1] === 'switch-account') return 'WeWrite - Switch Account';
-      if (sections[1] === 'logout') return 'WeWrite - Sign Out';
+      if (sections[1] === 'login') return 'Login Page';
+      if (sections[1] === 'register') return 'Registration Page';
+      if (sections[1] === 'forgot-password') return 'Password Reset Page';
+      if (sections[1] === 'switch-account') return 'Account Switcher';
+      if (sections[1] === 'logout') return 'Logout Page';
     }
 
-    // Account routes
-    if (sections[0] === 'account') {
-      if (sections.length === 1) return 'WeWrite - Account Settings';
-      if (sections[1] === 'subscription') return 'WeWrite - Subscription Settings';
+    // Fallback to capitalized path segment
+    if (sections.length > 0) {
+      const lastSegment = sections[sections.length - 1];
+      return lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/-/g, ' ');
     }
 
-    // Default to capitalized path section
-    return `WeWrite - ${sections[0].charAt(0).toUpperCase() + sections[0].slice(1)}`;
+    return 'Unknown Page';
   };
 
   /**
