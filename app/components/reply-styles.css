@@ -11,15 +11,15 @@
 [data-slate-editor] a[data-page-id],
 [data-slate-editor] a.editor-link.page-link {
   background-color: var(--primary, #1768FF) !important;
-  border-radius: 8px !important;
-  padding: 1px 6px !important;
+  border-radius: 16px !important;
+  padding: 3px 10px !important; /* Even padding all around */
   margin: 0 1px !important;
   border-bottom: none !important;
   white-space: nowrap !important;
   display: inline-flex !important;
   align-items: center !important;
   font-size: 0.9375rem !important;
-  line-height: 1.5 !important;
+  line-height: 1.2 !important; /* Consistent line height */
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-weight: 500 !important;
@@ -31,8 +31,8 @@
 [data-slate-editor] a[data-user-id],
 [data-slate-editor] a.editor-link.user-link {
   background-color: var(--primary, #1768FF) !important;
-  border-radius: 8px !important;
-  padding: 1px 6px !important;
+  border-radius: 16px !important;
+  padding: 3px 10px !important; /* Even padding all around */
   margin: 0 1px !important;
   position: relative !important;
   border-bottom: none !important;
@@ -40,7 +40,7 @@
   display: inline-flex !important;
   align-items: center !important;
   font-size: 0.9375rem !important;
-  line-height: 1.5 !important;
+  line-height: 1.2 !important; /* Consistent line height */
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
   font-weight: 500 !important;

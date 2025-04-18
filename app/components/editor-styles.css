@@ -35,15 +35,15 @@
   /* Use direct color values with fallbacks to CSS variables */
   background-color: #1768FF;
   background-color: var(--primary, #1768FF);
-  border-radius: 8px;
-  padding: 1px 6px;
+  border-radius: 16px;
+  padding: 3px 10px; /* Even padding all around */
   margin: 0 1px;
   border-bottom: none;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   font-size: 0.9375rem;
-  line-height: 1.5;
+  line-height: 1.2; /* Consistent line height */
   color: white;
   color: var(--primary-foreground, white);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -73,8 +73,8 @@
   /* Use direct color values with fallbacks to CSS variables */
   background-color: #1768FF;
   background-color: var(--primary, #1768FF);
-  border-radius: 8px;
-  padding: 1px 6px;
+  border-radius: 16px;
+  padding: 3px 10px; /* Even padding all around */
   margin: 0 1px;
   position: relative;
   border-bottom: none;
@@ -82,7 +82,7 @@
   display: inline-flex;
   align-items: center;
   font-size: 0.9375rem;
-  line-height: 1.5;
+  line-height: 1.2; /* Consistent line height */
   color: white;
   color: var(--primary-foreground, white);
   border: 1px solid rgba(255, 255, 255, 0.2);
