@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Loader, ChevronLeft, Share2 } from "lucide-react";
+import { Loader, ChevronLeft, Share2, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { getUsernameById } from "../utils/userUtils";
@@ -16,6 +16,7 @@ export interface PageHeaderProps {
   groupId?: string;
   groupName?: string;
   scrollDirection?: string;
+  isPrivate?: boolean;
 }
 
 export default function PageHeader({
@@ -26,6 +27,7 @@ export default function PageHeader({
   groupId,
   groupName,
   // scrollDirection is not used but kept for compatibility
+  isPrivate = false,
 }: PageHeaderProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = React.useState(false);
@@ -265,7 +267,10 @@ export default function PageHeader({
                       <span className="text-muted-foreground">Loading title...</span>
                     </div>
                   ) : (
-                    title || "Untitled"
+                    <div className="flex items-center gap-1.5">
+                      <span>{title || "Untitled"}</span>
+                      {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
+                    </div>
                   )}
                 </h1>
                 <p

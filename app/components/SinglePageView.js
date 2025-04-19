@@ -395,6 +395,7 @@ function SinglePageView({ params }) {
     // If user is logged in and is the owner, allow access
     if (user && user.uid === page.userId) {
       // Continue to render the page for the owner
+      console.log(`Owner access granted to private page ${page.id} for user ${user.uid}`);
     } else {
       // For non-owners or logged-out users, show private page message
       return (
@@ -448,6 +449,7 @@ function SinglePageView({ params }) {
         groupId={groupId}
         groupName={groupName}
         scrollDirection={scrollDirection}
+        isPrivate={!isPublic}
       />
       <div className="pb-24 px-0 sm:px-2 w-full max-w-none">
         {isEditing ? (
