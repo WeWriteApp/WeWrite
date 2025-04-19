@@ -97,12 +97,7 @@ export function AccountSwitcherModal({
           })}
 
           {onAddAccount && (
-            <div
-              className="w-full mt-4"
-              // Add touch-specific wrapper to ensure it works in PWA
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
-            >
+            <div className="w-full mt-4">
               <Button
                 variant="outline"
                 className="w-full flex items-center justify-center gap-2"
@@ -114,26 +109,10 @@ export function AccountSwitcherModal({
                   // Close modal first
                   onClose();
 
-                  // Use setTimeout to ensure the modal is fully closed
-                  // before triggering the add account action
-                  setTimeout(() => {
+                  // Call the add account function directly
+                  if (onAddAccount) {
                     onAddAccount();
-                  }, 50);
-                }}
-                // Add touch-specific handlers for better mobile/PWA support
-                onTouchStart={(e) => e.stopPropagation()}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  // Close modal first
-                  onClose();
-
-                  // Use setTimeout to ensure the modal is fully closed
-                  // before triggering the add account action
-                  setTimeout(() => {
-                    onAddAccount();
-                  }, 50);
+                  }
                 }}
               >
                 <Plus className="h-4 w-4" />

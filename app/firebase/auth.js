@@ -2,6 +2,7 @@ import {app} from './config';
 import { getAuth } from "firebase/auth";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail as firebaseUpdateEmail } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import Cookies from 'js-cookie';
 
 export const auth = getAuth(app);
 const db = getFirestore(app);
@@ -31,6 +32,19 @@ export const logoutUser = async (keepPreviousSession = false) => {
     // Only clear previous user session if not explicitly keeping it
     if (!keepPreviousSession) {
       localStorage.removeItem('previousUserSession');
+      localStorage.removeItem('wewrite_accounts');
+      localStorage.removeItem('wewrite_current_account');
+      localStorage.removeItem('wewrite_auth_state');
+      localStorage.removeItem('authState');
+      localStorage.removeItem('accountSwitchInProgress');
+      localStorage.removeItem('switchToAccount');
+
+      // Clear cookies
+      Cookies.remove('session');
+      Cookies.remove('authenticated');
+      Cookies.remove('userSession');
+      Cookies.remove('wewrite_authenticated');
+      Cookies.remove('wewrite_user_id');
     }
 
     // We'll no longer try to get the token directly to avoid browser extension issues
@@ -43,9 +57,25 @@ export const logoutUser = async (keepPreviousSession = false) => {
     // Sign out from Firebase
     await signOut(auth);
 
+    // Force a page reload in PWA mode to ensure clean state
+    if (!keepPreviousSession && typeof window !== 'undefined') {
+      // Use a small timeout to ensure the signOut completes
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Logout error:", error);
+
+    // Even if there's an error, try to clear cookies and redirect
+    if (!keepPreviousSession && typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    }
+
     return { success: false, error };
   }
 }

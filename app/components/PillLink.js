@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Lock, Loader, ExternalLink } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
@@ -7,6 +7,8 @@ import { useTheme } from "next-themes";
 import { useAuth } from "../providers/AuthProvider";
 import { motion } from "framer-motion";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
+import Modal from "./ui/modal";
+import { Button } from "./ui/button";
 
 export const PillLinkSkeleton = () => {
   return (
@@ -34,6 +36,7 @@ export const PillLink = ({
   const showLock = isPublic === false;
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
   if (isLoading) {
     return <PillLinkSkeleton />;
@@ -85,11 +88,82 @@ export const PillLink = ({
   // Use padding that properly accommodates descenders
   const paddingClass = 'py-[2px]';
 
+  // For external links, we'll use a custom handler to show a confirmation modal
+  if (isExternalLinkType) {
+    return (
+      <>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            setShowExternalLinkModal(true);
+          }}
+          className={`
+            my-0.5 px-[8px] ${paddingClass}
+            inline-flex items-center
+            text-sm font-medium
+            rounded-[8px]
+            transition-colors duration-200
+            shadow-sm
+            ${variantStyles}
+            ${groupId ? 'opacity-90' : ''}
+            ${className || ''}
+            max-w-full
+          `}
+        >
+          <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
+            {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
+            <span
+              className={`whitespace-nowrap overflow-hidden text-ellipsis flex items-center external-link`}
+            >
+              <span className="truncate inline-block max-w-full">{displayTitle}</span>
+              <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
+            </span>
+            {byline && (
+              <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
+                {byline}
+              </span>
+            )}
+          </div>
+        </a>
+
+        <Modal
+          isOpen={showExternalLinkModal}
+          onClose={() => setShowExternalLinkModal(false)}
+          title="External Link"
+          footer={
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowExternalLinkModal(false)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => {
+                  window.open(href, '_blank', 'noopener,noreferrer');
+                  setShowExternalLinkModal(false);
+                }}
+              >
+                Visit link
+              </Button>
+            </div>
+          }
+        >
+          <p className="mb-4">You're about to visit an external website:</p>
+          <div className="bg-muted p-3 rounded mb-2 break-all">
+            <code>{href}</code>
+          </div>
+        </Modal>
+      </>
+    );
+  }
+
+  // For internal links (user or page links), use the standard Link component
   return (
     <Link
       href={href}
-      target={isExternalLinkType ? "_blank" : undefined}
-      rel={isExternalLinkType ? "noopener noreferrer" : undefined}
       className={`
         my-0.5 px-[8px] ${paddingClass}
         inline-flex items-center
@@ -106,14 +180,11 @@ export const PillLink = ({
       <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
         <span
-          className={`whitespace-nowrap overflow-hidden text-ellipsis flex items-center ${isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link'}`}
+          className={`whitespace-nowrap overflow-hidden text-ellipsis flex items-center ${isUserLinkType ? 'user-link' : 'page-link'}`}
           data-page-id={isPageLinkType ? pageId : undefined}
           data-user-id={isUserLinkType ? pageId : undefined}
         >
           <span className="truncate inline-block max-w-full">{displayTitle}</span>
-          {isExternalLinkType && (
-            <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
-          )}
         </span>
         {byline && (
           <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
