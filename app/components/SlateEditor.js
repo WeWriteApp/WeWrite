@@ -536,7 +536,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
           <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+            <span
+              className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0"
+              style={{ transform: 'translateY(0.15rem)', pointerEvents: 'none' }}
+              tabIndex="-1"
+              aria-hidden="true"
+            >
               {defaultIndex + 1}
             </span>
             <span className="flex-1">{children}</span>
@@ -935,7 +940,10 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
     }
   };
 
-  const handleExternalSubmit = () => {
+  const handleExternalSubmit = (e) => {
+    // Prevent form submission
+    if (e) e.preventDefault();
+
     if (!externalUrl) return;
 
     let finalUrl = externalUrl;
