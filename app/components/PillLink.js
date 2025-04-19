@@ -10,7 +10,7 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-[8px] py-[3px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px]">
+    <div className="my-0.5 px-[8px] py-[2px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px]">
       <ShimmerEffect className="h-3 w-3 rounded-full" />
       <ShimmerEffect className="h-3.5 w-14 rounded-md" />
     </div>
@@ -83,7 +83,7 @@ export const PillLink = ({
   }
 
   // Use padding that properly accommodates descenders
-  const paddingClass = 'py-[3px]';
+  const paddingClass = 'py-[2px]';
 
   return (
     <Link
@@ -106,17 +106,17 @@ export const PillLink = ({
       <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
         <span
-          className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link'}`}
+          className={`whitespace-nowrap overflow-hidden text-ellipsis flex items-center ${isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link'}`}
           data-page-id={isPageLinkType ? pageId : undefined}
           data-user-id={isUserLinkType ? pageId : undefined}
         >
-          <span className="truncate inline-block max-w-full leading-[1.2]">{displayTitle}</span>
+          <span className="truncate inline-block max-w-full">{displayTitle}</span>
           {isExternalLinkType && (
             <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
           )}
         </span>
         {byline && (
-          <span className="text-xs opacity-75 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+          <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
             {byline}
           </span>
         )}
