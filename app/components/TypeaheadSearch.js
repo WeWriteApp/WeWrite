@@ -153,6 +153,7 @@ const TypeaheadSearch = ({
         searchTrimmed: search?.trim(),
         searchTrimmedLength: search?.trim()?.length,
         userId: userId || user?.uid,
+        filterByUserId: userId, // Log if we're filtering by a specific user
         groups: user?.groups,
         characterCount
       });
@@ -165,9 +166,28 @@ const TypeaheadSearch = ({
           groupIds = Object.keys(user.groups);
         }
 
-        const queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
-        const userSearchUrl = `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
-        console.log('Making API requests to:', { queryUrl, userSearchUrl });
+        // Determine if we should filter by a specific user ID
+        const isFilteringByUser = !!userId;
+
+        // Construct the API URL based on whether we're filtering by user
+        let queryUrl;
+        if (isFilteringByUser) {
+          // When filtering by user, we want to search only that user's pages
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&filterByUserId=${userId}&groupIds=${groupIds}`;
+        } else {
+          // Normal search across all accessible pages
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
+        }
+
+        // Only search for users if we're not filtering by a specific user
+        const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
+
+        console.log('Making API requests to:', {
+          queryUrl,
+          userSearchUrl,
+          isFilteringByUser,
+          filterByUserId: userId
+        });
 
         // Add timeout to prevent infinite loading
         const controller = new AbortController();
@@ -175,17 +195,30 @@ const TypeaheadSearch = ({
 
         // Add more comprehensive error handling for fetch
         try {
-          // Fetch both pages and users in parallel using Promise.allSettled to handle partial failures
-          const [pagesResponse, usersResponse] = await Promise.allSettled([
+          // Determine which requests to make based on filtering
+          const fetchPromises = [
             fetch(queryUrl, {
               signal: controller.signal,
               cache: 'no-store' // Prevent caching of search results
-            }),
-            fetch(userSearchUrl, {
-              signal: controller.signal,
-              cache: 'no-store' // Prevent caching of search results
             })
-          ]);
+          ];
+
+          // Only fetch users if we're not filtering by a specific user
+          if (!isFilteringByUser && userSearchUrl) {
+            fetchPromises.push(
+              fetch(userSearchUrl, {
+                signal: controller.signal,
+                cache: 'no-store' // Prevent caching of search results
+              })
+            );
+          }
+
+          // Fetch pages and optionally users in parallel using Promise.allSettled to handle partial failures
+          const responses = await Promise.allSettled(fetchPromises);
+
+          // Extract responses
+          const pagesResponse = responses[0];
+          const usersResponse = isFilteringByUser ? { status: 'fulfilled', value: { ok: true, json: () => Promise.resolve({ users: [] }) } } : responses[1];
 
           clearTimeout(timeoutId);
 

@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "../DashboardLayout";
-import SlateEditor from "../components/SlateEditor";
 import { createPage } from "../firebase/database";
 import PageHeader from "../components/PageHeader";
 import ReactGA from 'react-ga4';
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 import Cookies from 'js-cookie';
+import PageEditor from "../components/PageEditor";
 
 /**
  * A direct page creation component that doesn't rely on any authentication
@@ -24,11 +24,9 @@ export default function DirectCreatePage() {
     username: 'Anonymous',
     displayName: 'Anonymous'
   });
-  const [Page, setPage] = useState({
-    title: "",
-    isPublic: true,
-  });
-  const [editorState, setEditorState] = useState([{ type: "paragraph", children: [{ text: "" }] }]);
+  const [title, setTitle] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
+  const [editorContent, setEditorContent] = useState([{ type: "paragraph", children: [{ text: "" }] }]);
   const [isSaving, setIsSaving] = useState(false);
   const [initialContent, setInitialContent] = useState(null);
   const [error, setError] = useState(null);
@@ -114,7 +112,7 @@ export default function DirectCreatePage() {
     if (titleParam) {
       try {
         const decodedTitle = decodeURIComponent(titleParam);
-        setPage(prev => ({ ...prev, title: decodedTitle }));
+        setTitle(decodedTitle);
       } catch (error) {
         console.error("Error decoding title parameter:", error);
       }
@@ -132,10 +130,8 @@ export default function DirectCreatePage() {
         // Set the initial content
         setInitialContent(parsedContent);
 
-        // Also set the editor state immediately
-        if (setEditorState) {
-          setEditorState(parsedContent);
-        }
+        // Also set the editor content immediately
+        setEditorContent(parsedContent);
 
         // If this is a reply and we have a replyTo parameter, fetch the original page content
         if (isReply && replyToParam && parsedContent) {
@@ -166,14 +162,13 @@ export default function DirectCreatePage() {
     }
   }, [searchParams, isReply]);
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Handle save action
+  const handleSave = async (content) => {
     setIsSaving(true);
     setError(null);
 
     // Check if title is provided
-    if (!Page.title) {
+    if (!title) {
       setError("Please add a title");
       setIsSaving(false);
       return;
@@ -189,19 +184,20 @@ export default function DirectCreatePage() {
       // Get the user ID
       const userId = user?.uid || 'anonymous';
 
-      // Ensure we have valid editor state
-      if (!editorState || !Array.isArray(editorState) || editorState.length === 0) {
-        console.error("Invalid editor state:", editorState);
+      // Ensure we have valid editor content
+      if (!content || !Array.isArray(content) || content.length === 0) {
+        console.error("Invalid editor content:", content);
         setError("Error: Invalid content format");
         setIsSaving(false);
         return;
       }
 
-      console.log("Saving page with editor state:", editorState);
+      console.log("Saving page with editor content:", content);
 
       const data = {
-        ...Page,
-        content: JSON.stringify(editorState),
+        title,
+        isPublic,
+        content: JSON.stringify(content),
         userId: userId,
         username: username,
         lastModified: new Date().toISOString(),
@@ -214,12 +210,12 @@ export default function DirectCreatePage() {
         ReactGA.event({
           category: "Page",
           action: "Add new page",
-          label: Page.title,
+          label: title,
         });
 
         // Track with new analytics system
         analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
-          label: Page.title,
+          label: title,
           page_id: res,
           is_reply: !!isReply,
         });
@@ -235,6 +231,10 @@ export default function DirectCreatePage() {
       console.error("Error creating page:", error);
       setError("Failed to create page: " + (error.message || 'Unknown error'));
     }
+  };
+
+  const handleCancel = () => {
+    router.push("/pages");
   };
 
   // Get username for display
@@ -316,78 +316,29 @@ export default function DirectCreatePage() {
     getUsername();
   }, [urlUsername, user]);
 
-  // Render the page creation form
+  // Render the page creation form using PageEditor
   return (
     <DashboardLayout>
       <PageHeader title={isReply ? "Replying to page" : "New page"} username={displayUsername} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
         <div className="w-full">
-          <form
-            className="space-y-6 px-4 sm:px-6 md:px-8"
-            onSubmit={handleSubmit}
-          >
-            <div className="space-y-6">
-              <div className="max-w-2xl">
-                <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">Title</label>
-                <input
-                  id="title"
-                  type="text"
-                  value={Page.title}
-                  placeholder="Enter page title..."
-                  onChange={(e) => setPage(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 bg-background text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  autoComplete="off"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
-                <div className="min-h-[300px] border border-input rounded-md bg-background">
-                  <SlateEditor
-                    setEditorState={setEditorState}
-                    initialContent={initialContent}
-                    onContentChange={(newContent) => {
-                      console.log('Direct-create: Editor content changed');
-                      setEditorState(newContent);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isPublic"
-                  checked={Page.isPublic}
-                  onChange={(e) => setPage(prev => ({ ...prev, isPublic: e.target.checked }))}
-                  className="h-4 w-4 text-primary border-input rounded focus:ring-primary"
-                  autoComplete="off"
-                />
-                <label htmlFor="isPublic" className="text-sm text-foreground">Public</label>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                disabled={!Page.title || isSaving}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                type="submit"
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault(); // Prevent form submission
-                  router.push("/pages");
-                }}
-                type="button" // Explicitly set as button type to avoid form submission
-                className="bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-            {error && <p className="text-red-500">{error}</p>}
-          </form>
+          <PageEditor
+            title={title}
+            setTitle={setTitle}
+            initialContent={initialContent || editorContent}
+            onContentChange={(content) => {
+              console.log('Direct-create: Editor content changed');
+              setEditorContent(content);
+            }}
+            isPublic={isPublic}
+            setIsPublic={setIsPublic}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            isSaving={isSaving}
+            error={error}
+            isNewPage={true}
+            isReply={isReply}
+          />
         </div>
       </div>
     </DashboardLayout>

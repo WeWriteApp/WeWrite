@@ -82,7 +82,7 @@ async function testBigQueryConnection() {
 }
 
 // Fallback function to search pages in Firestore when BigQuery is not available
-async function searchPagesInFirestore(userId, searchTerm, groupIds = []) {
+async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterByUserId = null) {
   try {
     console.log('Using Firestore fallback for page search');
 
@@ -93,26 +93,41 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = []) {
     // Format search term for case-insensitive search
     const searchTermLower = searchTerm.toLowerCase().trim();
 
-    // Get user's own pages
-    const userPagesQuery = query(
-      collection(db, 'pages'),
-      where('userId', '==', userId),
-      orderBy('lastModified', 'desc'),
-      limit(10)
-    );
+    // Determine if we should filter by a specific user ID
+    const isFilteringByUser = !!filterByUserId;
 
-    const userPagesSnapshot = await getDocs(userPagesQuery);
+    // Get pages based on filtering criteria
+    let pagesQuery;
+    if (isFilteringByUser) {
+      // If filtering by specific user, only get that user's pages
+      pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', filterByUserId),
+        orderBy('lastModified', 'desc'),
+        limit(20)
+      );
+    } else {
+      // Otherwise get the current user's pages
+      pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        orderBy('lastModified', 'desc'),
+        limit(10)
+      );
+    }
+
+    const pagesSnapshot = await getDocs(pagesQuery);
 
     // Filter pages by title client-side (Firestore doesn't support LIKE queries)
     const userPages = [];
-    userPagesSnapshot.forEach(doc => {
+    pagesSnapshot.forEach(doc => {
       const data = doc.data();
       if (!searchTermLower || data.title.toLowerCase().includes(searchTermLower)) {
         userPages.push({
           id: doc.id,
           title: data.title || 'Untitled',
-          isOwned: true,
-          isEditable: true,
+          isOwned: data.userId === userId,
+          isEditable: data.userId === userId,
           userId: data.userId,
           lastModified: data.lastModified,
           type: 'user'
@@ -120,36 +135,38 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = []) {
       }
     });
 
-    // Get public pages
-    const publicPagesQuery = query(
-      collection(db, 'pages'),
-      where('isPublic', '==', true),
-      orderBy('lastModified', 'desc'),
-      limit(20)
-    );
+    // Only get public pages if we're not filtering by a specific user
+    let publicPages = [];
+    if (!isFilteringByUser) {
+      const publicPagesQuery = query(
+        collection(db, 'pages'),
+        where('isPublic', '==', true),
+        orderBy('lastModified', 'desc'),
+        limit(20)
+      );
 
-    const publicPagesSnapshot = await getDocs(publicPagesQuery);
+      const publicPagesSnapshot = await getDocs(publicPagesQuery);
 
-    // Filter public pages by title and exclude user's own pages
-    const publicPages = [];
-    publicPagesSnapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.userId !== userId &&
-          (!searchTermLower || data.title.toLowerCase().includes(searchTermLower))) {
-        publicPages.push({
-          id: doc.id,
-          title: data.title || 'Untitled',
-          isOwned: false,
-          isEditable: false,
-          userId: data.userId,
-          lastModified: data.lastModified,
-          type: 'public'
-        });
-      }
-    });
+      // Filter public pages by title and exclude user's own pages
+      publicPagesSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.userId !== userId &&
+            (!searchTermLower || data.title.toLowerCase().includes(searchTermLower))) {
+          publicPages.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            isOwned: false,
+            isEditable: false,
+            userId: data.userId,
+            lastModified: data.lastModified,
+            type: 'public'
+          });
+        }
+      });
+    }
 
     // Combine and return results
-    return [...userPages, ...publicPages.slice(0, 10)];
+    return isFilteringByUser ? userPages : [...userPages, ...publicPages.slice(0, 10)];
   } catch (error) {
     console.error('Error in Firestore fallback search:', error);
     return [];
@@ -161,6 +178,7 @@ export async function GET(request) {
     // Extract query parameters from the URL
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
+    const filterByUserId = searchParams.get("filterByUserId"); // Add parameter to filter by specific user
     const groupIds = searchParams.get("groupIds")
       ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
       : [];
@@ -182,7 +200,7 @@ export async function GET(request) {
       console.log('BigQuery client not initialized, using Firestore fallback');
 
       // Search for pages in Firestore
-      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds);
+      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
 
       // Search for users if we have a search term
       let users = [];
@@ -245,6 +263,9 @@ export async function GET(request) {
 
     // Skip verification query to reduce BigQuery costs
 
+    // Check if we're filtering by a specific user ID
+    const isFilteringByUser = !!filterByUserId;
+
     // Use a single combined query to reduce BigQuery costs
     const combinedQuery = `
       WITH user_pages AS (
@@ -256,10 +277,10 @@ export async function GET(request) {
           'user' as page_type,
           NULL as groupId
         FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE userId = @userId
+        WHERE userId = ${isFilteringByUser ? '@filterByUserId' : '@userId'}
           AND LOWER(title) LIKE @searchTerm
         ORDER BY lastModified DESC
-        LIMIT 10
+        LIMIT ${isFilteringByUser ? '20' : '10'}
       ),
       ${groupIds.length > 0 ? `
       group_pages AS (
@@ -297,8 +318,8 @@ export async function GET(request) {
       )
 
       SELECT * FROM user_pages
-      ${groupIds.length > 0 ? 'UNION ALL SELECT * FROM group_pages' : ''}
-      UNION ALL SELECT * FROM public_pages
+      ${groupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
+      ${!isFilteringByUser ? 'UNION ALL SELECT * FROM public_pages' : ''}
     `;
 
     // Execute combined query
@@ -306,11 +327,13 @@ export async function GET(request) {
       query: combinedQuery,
       params: {
         userId: userId,
+        ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
         ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
         searchTerm: searchTermFormatted
       },
       types: {
         userId: "STRING",
+        ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
         ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
         searchTerm: "STRING"
       },

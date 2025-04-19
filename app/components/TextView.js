@@ -144,7 +144,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     setIsInitialLoad(true);
   }, [content]);
 
-  // Modified loading animation effect to reduce layout shifts on mobile
+  // Modified loading animation effect to prevent layout shifts
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph-like nodes
@@ -158,50 +158,23 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       // Get total number of nodes
       const totalNodes = paragraphNodes.length;
 
-      // Check if we're on mobile
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      // Load all paragraphs at once to prevent layout shifts
+      // This preserves the fade-in animation but avoids staggered loading
+      setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
 
-      if (totalNodes > 0) {
-        if (isMobile) {
-          // On mobile, load all paragraphs at once to prevent layout shifts
-          // This still preserves the fade-in animation but avoids staggered loading
-          setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
-
-          // Short delay before marking as complete
-          setTimeout(() => {
-            setIsInitialLoad(false);
-
-            // Call onRenderComplete callback
-            if (onRenderComplete && typeof onRenderComplete === 'function') {
-              onRenderComplete();
-            }
-          }, 300);
-        } else {
-          // On desktop, use the original staggered loading effect
-          const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY; // ms between each paragraph appearance
-
-          // Schedule each paragraph to appear with a staggered delay
-          for (let i = 0; i < totalNodes; i++) {
-            setTimeout(() => {
-              setLoadedParagraphs(prev => [...prev, i]);
-            }, i * loadingDelay);
-          }
-
-          // Mark initial load as complete after all paragraphs are loaded
-          setTimeout(() => {
-            setIsInitialLoad(false);
-            setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
-
-            // Call onRenderComplete callback when all paragraphs are loaded
-            if (onRenderComplete && typeof onRenderComplete === 'function') {
-              onRenderComplete();
-            }
-          }, totalNodes * loadingDelay + 100);
-        }
-      } else {
+      // Short delay before marking as complete
+      setTimeout(() => {
         setIsInitialLoad(false);
 
-        // If there are no paragraphs, call onRenderComplete immediately
+        // Call onRenderComplete callback
+        if (onRenderComplete && typeof onRenderComplete === 'function') {
+          onRenderComplete();
+        }
+      }, 300);
+
+      // If there are no paragraphs, call onRenderComplete immediately
+      if (totalNodes === 0) {
+        setIsInitialLoad(false);
         if (onRenderComplete && typeof onRenderComplete === 'function') {
           onRenderComplete();
         }
@@ -278,7 +251,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         isScrolled ? 'pb-16' : ''
       } ${
         canEdit ? 'relative' : ''
-      }`}
+      } min-h-[200px]`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
@@ -379,7 +352,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
     // For array of nodes (multiple paragraphs)
     if (Array.isArray(contents)) {
       return (
-        <div className="relative">
+        <div className="relative min-h-[200px]">
           <div className="prose max-w-full">
             <p className="text-foreground leading-normal text-base">
               {contents.map((node, index) => {
@@ -447,7 +420,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   // If it's an array, map through and render each node
   if (Array.isArray(contents)) {
     return (
-      <div className="w-full text-left">
+      <div className="w-full text-left min-h-[200px]">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
             {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine)}
@@ -774,9 +747,17 @@ const LinkNode = ({ node, index }) => {
 
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
+    // Pass the original page title if available in the node
+    const originalPageTitle = node.pageTitle || null;
+
     return (
       <span className="inline-block">
-        <InternalLinkWithTitle pageId={pageId} href={href} displayText={displayText} />
+        <InternalLinkWithTitle
+          pageId={pageId}
+          href={href}
+          displayText={displayText}
+          originalPageTitle={originalPageTitle}
+        />
       </span>
     );
   }
@@ -843,24 +824,34 @@ const LinkNode = ({ node, index }) => {
 };
 
 // Component for internal links that fetches and displays page titles
-const InternalLinkWithTitle = ({ pageId, href, displayText }) => {
-  const [title, setTitle] = useState(null);
+const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle }) => {
+  const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTitle = async () => {
       setIsLoading(true);
       const pageTitle = await getPageTitle(pageId);
-      setTitle(pageTitle);
+      setCurrentTitle(pageTitle);
       setIsLoading(false);
     };
 
     fetchTitle();
   }, [pageId]);
 
+  // Determine if displayText was customized or not
+  // If originalPageTitle exists and displayText is different, it was customized
+  const wasCustomized = originalPageTitle && displayText !== originalPageTitle;
+
+  // If it was customized, use the custom displayText
+  // If not customized, use the current title from the database
+  const textToDisplay = wasCustomized
+    ? displayText
+    : (currentTitle || (isLoading ? <><span className="inline-block w-3 h-3 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1"></span><span className="text-xs">Loading</span></> : 'Page Link'));
+
   return (
     <PillLink href={href} isPublic={true} className="inline">
-      {displayText || title || (isLoading ? <><div className="loader"></div> Loading</> : 'Page Link')}
+      {textToDisplay}
     </PillLink>
   );
 };
