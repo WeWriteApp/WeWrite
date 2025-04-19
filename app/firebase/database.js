@@ -199,6 +199,8 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
     return () => {};
   }
 
+  console.log(`Setting up listener for page ${pageId} with userId ${userId || 'anonymous'}`);
+
   // Cache for version data to avoid unnecessary reads
   let cachedVersionData = null;
   let cachedLinks = null;
@@ -213,6 +215,11 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() };
+      console.log(`Page data received for ${pageId}:`, {
+        isPublic: pageData.isPublic,
+        userId: pageData.userId,
+        currentUserId: userId
+      });
 
       // Always return the page data for private pages if the user is the owner
       if (!pageData.isPublic && userId && pageData.userId === userId) {

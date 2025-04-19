@@ -1,3 +1,4 @@
+// This is a temporary file to fix the issue
 "use client";
 import React, { useEffect, useState, useContext, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -35,7 +36,7 @@ import {
 import { RecentPagesContext } from "../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../contexts/PageContext";
-import { useLineSettings, LINE_MODES, LineSettingsProvider } from "../contexts/LineSettingsContext";
+import { LineSettingsProvider, useLineSettings } from "../contexts/LineSettingsContext";
 import {
   Dialog,
   DialogContent,
@@ -43,8 +44,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose
-} from './ui/dialog';
+  DialogTrigger,
+} from "./ui/dialog";
 import {
   Command,
   CommandEmpty,
@@ -160,6 +161,10 @@ function SinglePageView({ params }) {
   useEffect(() => {
     if (params.id) {
       setIsLoading(true);
+      
+      // Make sure we pass the user ID to the listenToPageById function
+      const currentUserId = user?.uid || null;
+      console.log(`Setting up page listener with user ID: ${currentUserId || 'anonymous'}`);
 
       const unsubscribe = listenToPageById(params.id, async (data) => {
         if (data.error) {
@@ -214,13 +219,13 @@ function SinglePageView({ params }) {
         }
 
         setIsLoading(false);
-      });
+      }, currentUserId); // Pass the user ID here
 
       return () => {
         unsubscribe();
       };
     }
-  }, [params.id]); // Removed editorState from dependencies to prevent infinite loop
+  }, [params.id, user?.uid]); // Added user?.uid as a dependency
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
