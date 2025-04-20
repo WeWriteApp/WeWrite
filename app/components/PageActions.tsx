@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
-import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft } from "lucide-react";
+import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -235,14 +235,14 @@ export function PageActions({
               className="gap-2 w-full h-10 md:h-8 md:w-auto"
               onClick={() => setIsEditing && setIsEditing(!isEditing)}
             >
-              <Edit className="h-4 w-4" />
+              {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
               {isEditing ? "Cancel" : "Edit"}
             </Button>
             {isEditing && (
               <Button
                 variant="destructive"
                 size="sm"
-                className="gap-2 w-full h-10 md:h-8 md:w-auto"
+                className="gap-2 w-full h-10 md:h-8 md:w-auto text-white"
                 onClick={handleDelete}
               >
                 <Trash2 className="h-4 w-4" />

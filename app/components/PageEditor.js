@@ -416,7 +416,7 @@ const PageEditor = ({
             {isPublic ? (
               <Globe className="h-4 w-4 text-green-500" />
             ) : (
-              <Lock className="h-4 w-4 text-amber-500" />
+              <Lock className="h-4 w-4 text-muted-foreground" />
             )}
             <span className="text-sm font-medium">
               {isPublic ? "Public" : "Private"}
