@@ -1,7 +1,7 @@
 // This is a temporary file to fix the issue
 "use client";
 import React, { useEffect, useState, useContext, useRef, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
@@ -96,6 +96,8 @@ function SinglePageView({ params }) {
   const { user } = useContext(AuthContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
   const { lineMode } = useLineSettings();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -224,6 +226,19 @@ function SinglePageView({ params }) {
       };
     }
   }, [params.id, user?.uid]); // Added user?.uid as a dependency
+
+  // Check for edit=true URL parameter and set isEditing state
+  useEffect(() => {
+    if (searchParams && searchParams.get('edit') === 'true' && !isLoading && page) {
+      // Only set editing mode if the user is the owner of the page
+      if (user && user.uid === page.userId) {
+        console.log('Setting edit mode from URL parameter');
+        setIsEditing(true);
+      } else {
+        console.log('User is not the owner of the page, cannot edit');
+      }
+    }
+  }, [searchParams, isLoading, page, user]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
