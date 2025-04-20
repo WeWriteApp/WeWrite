@@ -21,7 +21,7 @@ const EditPage = ({
   const { setIsEditMode } = usePage();
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
-  const [isPublic, setIsPublic] = useState(page?.isPublic !== false);
+  const [isPublic, setIsPublic] = useState(page?.isPublic === true);
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +41,7 @@ const EditPage = ({
 
     // Update isPublic state when page changes
     if (page) {
-      setIsPublic(page.isPublic !== false);
+      setIsPublic(page.isPublic === true);
     }
   }, [page]);
 
