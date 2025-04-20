@@ -113,7 +113,17 @@ const TextSelectionMenu = ({ contentRef }) => {
 
     // Store the selection in localStorage for retrieval when the link is visited
     // This ensures it persists even if the user closes the browser
-    localStorage.setItem(`highlight_${selectionHash}`, selectedText);
+    try {
+      localStorage.setItem(`highlight_${selectionHash}`, selectedText);
+      console.log('Stored highlight in localStorage:', selectedText);
+      console.log('With key:', `highlight_${selectionHash}`);
+
+      // Verify it was stored correctly
+      const storedValue = localStorage.getItem(`highlight_${selectionHash}`);
+      console.log('Verified stored value:', storedValue);
+    } catch (err) {
+      console.error('Error storing highlight in localStorage:', err);
+    }
 
     // Copy the link to clipboard
     navigator.clipboard.writeText(linkWithSelection)
