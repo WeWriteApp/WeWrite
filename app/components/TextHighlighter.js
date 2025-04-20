@@ -81,8 +81,14 @@ const TextHighlighter = ({ contentRef }) => {
       positionNotification();
     };
 
+    // Handle page navigation/unload to clean up highlights
+    const handleBeforeUnload = () => {
+      dismissHighlight();
+    };
+
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', handleResize);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     // Initial positioning
     positionNotification();
@@ -90,24 +96,20 @@ const TextHighlighter = ({ contentRef }) => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+
+      // Clean up highlights when component unmounts
+      if (window.customHighlightContainer) {
+        window.customHighlightContainer.remove();
+        window.customHighlightContainer = null;
+      }
     };
   }, [isHighlighting]);
 
-  // Function to position the notification above the pledge bar
+  // Function to adjust notification position if needed
   const positionNotification = () => {
-    if (!notificationRef.current) return;
-
-    // Check if pledge bar exists
-    const pledgeBar = document.querySelector('[data-pledge-bar]');
-    const pledgeBarHeight = pledgeBar ? pledgeBar.offsetHeight : 0;
-    const pledgeBarVisible = pledgeBar ? window.getComputedStyle(pledgeBar).display !== 'none' : false;
-
-    // Position the notification above the pledge bar if visible
-    if (pledgeBarVisible) {
-      notificationRef.current.style.bottom = `${pledgeBarHeight + 16}px`;
-    } else {
-      notificationRef.current.style.bottom = '16px';
-    }
+    // No need to adjust position as it's now fixed at the top
+    // This function is kept for compatibility with existing code
   };
 
   // Function to update highlight positions
@@ -202,6 +204,7 @@ const TextHighlighter = ({ contentRef }) => {
           // Create a container for all highlights
           const highlightContainer = document.createElement('div');
           highlightContainer.id = 'custom-text-highlights-container';
+          highlightContainer.className = 'custom-text-highlights';
           highlightContainer.style.position = 'fixed';
           highlightContainer.style.top = '0';
           highlightContainer.style.left = '0';
@@ -209,6 +212,9 @@ const TextHighlighter = ({ contentRef }) => {
           highlightContainer.style.height = '100%';
           highlightContainer.style.pointerEvents = 'none';
           highlightContainer.style.zIndex = '10';
+          // Add darkening overlay effect
+          const isDarkMode = document.documentElement.classList.contains('dark');
+          highlightContainer.style.backgroundColor = isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)';
           document.body.appendChild(highlightContainer);
 
           // Store reference to the container
@@ -224,9 +230,11 @@ const TextHighlighter = ({ contentRef }) => {
             highlightEl.style.left = `${rect.left}px`;
             highlightEl.style.width = `${rect.width}px`;
             highlightEl.style.height = `${rect.height}px`;
-            highlightEl.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+            // Use white background for the punched-out effect
+            highlightEl.style.backgroundColor = 'rgba(255, 255, 255, 1)';
             highlightEl.style.borderRadius = '3px';
-            highlightEl.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.05)';
+            highlightEl.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.3)';
+            highlightEl.style.mixBlendMode = 'lighten';
             highlightEl.style.pointerEvents = 'none';
             highlightContainer.appendChild(highlightEl);
           }
@@ -276,8 +284,7 @@ const TextHighlighter = ({ contentRef }) => {
   return (
     <div
       ref={notificationRef}
-      className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-background border border-border px-4 py-2 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300"
-      style={{ bottom: '16px' }} // Initial position, will be updated by positionNotification
+      className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border px-4 py-2 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top-5 duration-300"
     >
       <span className="text-sm font-medium">
         Text highlighted {highlighterUsername ? `by ${highlighterUsername}` : 'by logged out user'}

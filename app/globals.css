@@ -324,24 +324,35 @@ body {
 
 /* Custom text highlight styles */
 .custom-text-highlights {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: 10;
+  background-color: rgba(0, 0, 0, 0.5); /* Darken the entire screen */
+}
+
+.dark .custom-text-highlights {
+  background-color: rgba(0, 0, 0, 0.7); /* Darker overlay for dark mode */
 }
 
 .custom-text-highlight {
-  position: absolute;
-  background-color: rgba(59, 130, 246, 0.15); /* Blue color with 15% opacity */
+  position: fixed;
+  background-color: rgba(255, 255, 255, 1); /* Punched-out light section */
   border-radius: 3px; /* Rounded corners like VSCode */
   pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.05); /* Subtle border */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* Subtle blue border */
   transition: background-color 0.2s ease;
   margin: 0 -1px; /* Negative margin to ensure highlights connect properly */
   padding: 0 1px; /* Padding to compensate for the negative margin */
+  mix-blend-mode: lighten; /* Ensures the text is visible */
+}
+
+.dark .custom-text-highlight {
+  background-color: rgba(255, 255, 255, 0.9); /* Slightly less bright in dark mode */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* More visible border in dark mode */
 }
 
 /* Style for selected text to override browser default */
