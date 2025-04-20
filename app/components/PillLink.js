@@ -62,7 +62,8 @@ export const PillLink = ({
   // Extract page ID from href to check if user is the owner
   const pageId = href.split('/').pop();
   const pageOwnerId = groupId?.split('_')[0];
-  const isCurrentUserOwner = user && pageOwnerId === user.uid;
+  // Consider both the explicit isOwned prop and the derived ownership from groupId
+  const isCurrentUserOwner = isOwned || (user && pageOwnerId === user.uid);
 
   // Determine if this is a user link or page link
   const isUserLinkType = isUserLink(href);
@@ -70,6 +71,7 @@ export const PillLink = ({
   const isExternalLinkType = isExternalLink(href);
 
   // Determine what title to display - use label prop if provided, otherwise use children
+  // Always show the actual title for private pages when the user is the owner or when explicitly requested
   let displayTitle = (isPublic === false && !isCurrentUserOwner)
     ? "Private Page"
     : (label || children);

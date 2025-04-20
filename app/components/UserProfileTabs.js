@@ -47,7 +47,7 @@ function AnimatedTabsContent({ children, activeTab }) {
 }
 
 // Component to display a list of pages
-function PageList({ pageList, emptyMessage }) {
+function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
   if (!pageList || pageList.length === 0) {
     return <div className="text-center text-muted-foreground py-8">{emptyMessage}</div>;
   }
@@ -62,6 +62,8 @@ function PageList({ pageList, emptyMessage }) {
               variant="primary"
               isPublic={page.isPublic}
               className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+              // Always show the actual title for private pages when viewing your own list
+              isOwned={isCurrentUserList}
             >
               {page.title || "Untitled"}
             </PillLink>
@@ -235,7 +237,7 @@ export default function UserProfileTabs({ profile }) {
                 </div>
               ) : (
                 <>
-                  <PageList pageList={pages} emptyMessage="No public pages yet" />
+                  <PageList pageList={pages} emptyMessage="No public pages yet" isCurrentUserList={isCurrentUser} />
                   {loadingError && (
                     <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                       {loadingError}
@@ -274,7 +276,7 @@ export default function UserProfileTabs({ profile }) {
                     </div>
                   ) : (
                     <>
-                      <PageList pageList={privatePages} emptyMessage="No private pages yet" />
+                      <PageList pageList={privatePages} emptyMessage="No private pages yet" isCurrentUserList={true} />
                       {loadingError && (
                         <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                           {loadingError}

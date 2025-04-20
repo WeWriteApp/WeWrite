@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useContext } from "react";
 import Link from "next/link";
 import { FileText, Lock, Globe, ChevronRight, Plus, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -16,6 +16,7 @@ import {
 } from "./ui/table";
 import { interactiveCard, cn } from "../lib/utils";
 import { PillLink } from "./PillLink";
+import { AuthContext } from "../providers/AuthProvider";
 
 export interface Page {
   id: string;
@@ -109,6 +110,7 @@ export default function PageList({
   groupId
 }: PageListProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const { user } = useContext(AuthContext);
 
   if (loading) {
     return <PageListSkeleton mode={mode} />;
@@ -174,7 +176,7 @@ export default function PageList({
                   isPublic={page.isPublic}
                   byline={page.authorName}
                   className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
-                  isOwned={false}
+                  isOwned={page.userId === user?.uid}
                   isLoading={false}
                   label=""
                 >
