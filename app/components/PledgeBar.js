@@ -419,10 +419,6 @@ const PledgeBar = () => {
               <p className="text-sm text-foreground/60">${pageStats.monthlyIncome.toFixed(2)}/mo</p>
               <p className="text-xs text-foreground/40">Monthly Income</p>
             </div>
-            <div className="text-center">
-              <p className="text-sm text-foreground/60">{pageStats.totalViews}</p>
-              <p className="text-xs text-foreground/40">Views</p>
-            </div>
           </div>
         </div>
 

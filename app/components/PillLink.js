@@ -144,7 +144,13 @@ export const PillLink = ({
               <Button
                 variant="default"
                 onClick={() => {
-                  window.open(href, '_blank', 'noopener,noreferrer');
+                  // Open in new tab and in Safari if in PWA mode
+                  if (window.navigator.standalone) {
+                    // This is a PWA on iOS, open in Safari
+                    window.location.href = href;
+                  } else {
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                  }
                   setShowExternalLinkModal(false);
                 }}
               >

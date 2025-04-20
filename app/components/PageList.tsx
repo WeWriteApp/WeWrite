@@ -185,7 +185,8 @@ export default function PageList({
               </div>
             ))}
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+          {/* Gradient overlay that shows 2 full lines and covers the 3rd line */}
+          <div className="absolute bottom-0 left-0 right-0 h-[calc(1.5rem+4px)] bg-gradient-to-t from-background to-transparent pointer-events-none" />
         </div>
       )}
 
