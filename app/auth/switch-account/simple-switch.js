@@ -17,7 +17,7 @@ export default function SimpleAccountSwitch() {
     const completeAccountSwitch = async () => {
       try {
         setStatus('Getting account data...');
-        
+
         // Get the account to switch to from sessionStorage
         const switchToJson = sessionStorage.getItem('wewrite_switch_to');
         if (!switchToJson) {
@@ -25,10 +25,10 @@ export default function SimpleAccountSwitch() {
           setTimeout(() => router.push('/'), 1000);
           return;
         }
-        
+
         const switchToAccount = JSON.parse(switchToJson);
         console.log('Switching to account:', switchToAccount.email);
-        
+
         // Make sure we're completely signed out of Firebase
         if (auth.currentUser) {
           setStatus('Signing out current user...');
@@ -40,25 +40,44 @@ export default function SimpleAccountSwitch() {
             // Continue anyway
           }
         }
-        
+
         // Set up session cookies
         setStatus('Setting up session cookies...');
         setupSessionCookies(switchToAccount);
-        
+
         // Update session storage
         setStatus('Updating session storage...');
         updateSessionStorage(switchToAccount);
-        
+
+        // Also update localStorage to ensure consistency
+        try {
+          const localStorageAccounts = localStorage.getItem('wewrite_accounts');
+          if (localStorageAccounts) {
+            const accounts = JSON.parse(localStorageAccounts);
+
+            // Update the accounts to mark the current one and ensure others are not current
+            const updatedAccounts = accounts.map(acc => ({
+              ...acc,
+              isCurrent: acc.uid === switchToAccount.uid
+            }));
+
+            localStorage.setItem('wewrite_accounts', JSON.stringify(updatedAccounts));
+          }
+        } catch (error) {
+          console.error('Error updating localStorage:', error);
+          // Continue anyway
+        }
+
         // Clear the account switch flags
         sessionStorage.removeItem('wewrite_switching');
         sessionStorage.removeItem('wewrite_switch_to');
-        
+
         // Also clear any old localStorage items
         localStorage.removeItem('switchToAccount');
         localStorage.removeItem('accountSwitchInProgress');
-        
+
         setStatus('Redirecting to home page...');
-        
+
         // Redirect to home page
         window.location.href = '/';
       } catch (error) {

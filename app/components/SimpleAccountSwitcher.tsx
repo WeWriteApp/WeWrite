@@ -8,6 +8,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { auth } from '../firebase/auth';
 import { signOut } from 'firebase/auth';
 import Cookies from 'js-cookie';
+import { useMultiAccount } from '../providers/MultiAccountProvider';
 
 interface Account {
   uid: string;
@@ -23,6 +24,7 @@ export function SimpleAccountSwitcher() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isAtMaxAccounts, maxAccounts } = useMultiAccount();
 
   // Load accounts from sessionStorage on component mount
   useEffect(() => {
@@ -88,6 +90,7 @@ export function SimpleAccountSwitcher() {
       setIsLoading(true);
 
       // First, update the accounts list to mark this account as current
+      // and ensure all other accounts are marked as not current
       const updatedAccounts = accounts.map(acc => ({
         ...acc,
         isCurrent: acc.uid === account.uid
@@ -95,6 +98,9 @@ export function SimpleAccountSwitcher() {
 
       // Save updated accounts list
       sessionStorage.setItem('wewrite_accounts', JSON.stringify(updatedAccounts));
+
+      // Also update localStorage to ensure consistency
+      localStorage.setItem('wewrite_accounts', JSON.stringify(updatedAccounts));
 
       // Store the account to switch to in sessionStorage
       sessionStorage.setItem('wewrite_switch_to', JSON.stringify(account));
@@ -127,6 +133,12 @@ export function SimpleAccountSwitcher() {
   const handleAddAccount = async () => {
     setIsOpen(false);
     setError(null);
+
+    // Check if we've reached the maximum number of accounts
+    if (isAtMaxAccounts) {
+      setError(`Maximum account limit (${maxAccounts}) reached. Cannot add more accounts.`);
+      return;
+    }
 
     try {
       // Store current user in sessionStorage
@@ -196,6 +208,7 @@ export function SimpleAccountSwitcher() {
           }
         }}
         onAddAccount={handleAddAccount}
+        isAtMaxAccounts={isAtMaxAccounts}
       />
 
       {error && (

@@ -16,6 +16,7 @@ interface AccountSwitcherModalProps {
   currentUser: User | null
   onSwitchAccount: (userId: string) => void
   onAddAccount?: () => void
+  isAtMaxAccounts?: boolean
 }
 
 export function AccountSwitcherModal({
@@ -24,7 +25,8 @@ export function AccountSwitcherModal({
   accounts,
   currentUser,
   onSwitchAccount,
-  onAddAccount
+  onAddAccount,
+  isAtMaxAccounts = false
 }: AccountSwitcherModalProps) {
   const router = useRouter()
 
@@ -98,26 +100,32 @@ export function AccountSwitcherModal({
 
           {onAddAccount && (
             <div className="w-full mt-4">
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2"
-                onClick={(e) => {
-                  // Prevent event propagation
-                  e.preventDefault();
-                  e.stopPropagation();
+              {isAtMaxAccounts ? (
+                <div className="text-sm text-center p-3 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-md">
+                  Maximum logged in accounts is {accounts.length}. To log into another account, you must log out of one.
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={(e) => {
+                    // Prevent event propagation
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                  // Close modal first
-                  onClose();
+                    // Close modal first
+                    onClose();
 
-                  // Call the add account function directly
-                  if (onAddAccount) {
-                    onAddAccount();
-                  }
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Add Account
-              </Button>
+                    // Call the add account function directly
+                    if (onAddAccount) {
+                      onAddAccount();
+                    }
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Account
+                </Button>
+              )}
             </div>
           )}
         </div>

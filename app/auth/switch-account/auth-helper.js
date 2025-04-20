@@ -19,7 +19,7 @@ export const getCustomToken = async (userId) => {
   // });
   // const data = await response.json();
   // return data.token;
-  
+
   // For now, we'll just return a mock token
   return `mock_token_for_${userId}`;
 };
@@ -43,7 +43,7 @@ export const signInWithToken = async (token) => {
  */
 export const setupSessionCookies = (userData) => {
   if (!userData || !userData.uid) return;
-  
+
   // Set cookies for session-based auth
   Cookies.set('wewrite_user_id', userData.uid, { expires: 7 });
   Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
@@ -61,26 +61,26 @@ export const setupSessionCookies = (userData) => {
  */
 export const updateSessionStorage = (userData) => {
   if (!userData || !userData.uid) return;
-  
+
   try {
     // Update wewrite_accounts in sessionStorage
     let accounts = [];
     const accountsJson = sessionStorage.getItem('wewrite_accounts');
-    
+
     if (accountsJson) {
       accounts = JSON.parse(accountsJson);
-      
+
       // Update or add the current user
       const existingIndex = accounts.findIndex(acc => acc.uid === userData.uid);
-      
+
       if (existingIndex >= 0) {
         // Update existing account
-        accounts[existingIndex] = { 
-          ...accounts[existingIndex], 
-          ...userData, 
-          isCurrent: true 
+        accounts[existingIndex] = {
+          ...accounts[existingIndex],
+          ...userData,
+          isCurrent: true
         };
-        
+
         // Mark all other accounts as not current
         accounts = accounts.map(acc => ({
           ...acc,
@@ -88,21 +88,24 @@ export const updateSessionStorage = (userData) => {
         }));
       } else {
         // Add new account
-        accounts.push({ 
-          ...userData, 
-          isCurrent: true 
+        accounts.push({
+          ...userData,
+          isCurrent: true
         });
       }
     } else {
       // Create new accounts array
-      accounts = [{ 
-        ...userData, 
-        isCurrent: true 
+      accounts = [{
+        ...userData,
+        isCurrent: true
       }];
     }
-    
+
     // Save updated accounts to sessionStorage
     sessionStorage.setItem('wewrite_accounts', JSON.stringify(accounts));
+
+    // Also save to localStorage for persistence and to ensure consistency
+    localStorage.setItem('wewrite_accounts', JSON.stringify(accounts));
   } catch (error) {
     console.error('Error updating sessionStorage:', error);
   }
