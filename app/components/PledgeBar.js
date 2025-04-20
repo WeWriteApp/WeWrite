@@ -9,6 +9,7 @@ import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
 import PledgeBarModal from './PledgeBarModal';
+import '../styles/pledge-bar-animations.css';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
@@ -36,6 +37,7 @@ const PledgeBar = () => {
   const [selectedAmount, setSelectedAmount] = useState(0);
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [visible, setVisible] = useState(true);
+  const [animateEntry, setAnimateEntry] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
   const { id: pageId } = useParams();
@@ -50,7 +52,12 @@ const PledgeBar = () => {
 
       // Always show the bar when at the top of the page (or very close to it)
       if (currentScrollY <= 10) {
-        setVisible(true);
+        if (!visible) {
+          setVisible(true);
+          // Trigger animation when re-appearing
+          setTimeout(() => setAnimateEntry(true), 50);
+          setTimeout(() => setAnimateEntry(false), 2000);
+        }
       }
       // Hide immediately on any downward scroll when not at the top
       else if (currentScrollY > lastKnownScrollY) {
@@ -58,7 +65,12 @@ const PledgeBar = () => {
         setVisible(false);
       } else if (currentScrollY < lastKnownScrollY) {
         // Scrolling up - show the bar
-        setVisible(true);
+        if (!visible) {
+          setVisible(true);
+          // Trigger animation when re-appearing
+          setTimeout(() => setAnimateEntry(true), 50);
+          setTimeout(() => setAnimateEntry(false), 2000);
+        }
       }
 
       lastKnownScrollY = currentScrollY;
@@ -390,12 +402,12 @@ const PledgeBar = () => {
   if (isOwnPage) {
     return (
       <div
-        className={`fixed bottom-8 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        }`}
+        } ${animateEntry ? 'spring-and-pulse' : ''}`}
       >
         <div
-          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
+          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
           onClick={() => setShowActivationModal(true)}
         >
           <div className="flex justify-around py-4 px-6">
@@ -431,11 +443,11 @@ const PledgeBar = () => {
   if (!user) {
     return (
       <div
-        className={`fixed bottom-8 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        }`}
+        } ${animateEntry ? 'spring-and-pulse' : ''}`}
       >
-        <div className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg rounded-lg border border-border dark:border-border py-4 px-6 overflow-hidden">
+        <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg rounded-lg border border-border dark:border-border py-4 px-6 overflow-hidden">
           <div className="text-center">
             <p className="text-foreground/70 mb-3">Log in to support this creator</p>
             <div className="flex justify-center space-x-3">
@@ -459,7 +471,7 @@ const PledgeBar = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="w-full max-w-md mx-auto bg-background/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6">
+      <div className="w-full max-w-md mx-auto bg-background/80 dark:bg-gray-800/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6">
         <div className="animate-pulse flex justify-center">
           <div className="h-10 bg-foreground/10 rounded w-3/4"></div>
         </div>
@@ -487,9 +499,9 @@ const PledgeBar = () => {
   return (
     <>
       <div
-        className={`fixed bottom-8 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        }`}
+        } ${animateEntry ? 'spring-and-pulse' : ''}`}
       >
         <CompositionBar
           value={pledges[0]?.amount || 0}
@@ -501,7 +513,7 @@ const PledgeBar = () => {
           onPledgeChange={handlePledgeInteraction}
           onPledgeCustomAmount={handlePledgeCustomAmount}
           onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
+          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
         />
       </div>
 
