@@ -53,7 +53,7 @@ const TextHighlighter = ({ contentRef }) => {
             console.log('No highlight found in localStorage for ID:', highlightId);
           }
         }
-      }, 1500); // Longer delay to ensure content is fully loaded
+      }, 300); // Shorter delay for better user experience
 
       return () => clearTimeout(checkForHighlight);
     }
@@ -63,22 +63,33 @@ const TextHighlighter = ({ contentRef }) => {
   useEffect(() => {
     if (!isHighlighting) return;
 
-    const handleScroll = () => {
-      // Update highlight positions when scrolling
-      if (window.customHighlightContainer) {
-        updateHighlightPositions();
-      }
+    // Use requestAnimationFrame for smooth scrolling updates
+    let ticking = false;
+    let lastScrollY = window.scrollY;
 
-      // Position the notification above the pledge bar
-      positionNotification();
+    const handleScroll = () => {
+      lastScrollY = window.scrollY;
+
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          // Update highlight positions when scrolling
+          if (window.customHighlightContainer) {
+            // Instead of recreating all highlights, just update their positions
+            updateHighlightPositionsOnScroll(lastScrollY);
+          }
+          ticking = false;
+        });
+
+        ticking = true;
+      }
     };
 
     // Update positions on resize as well
     const handleResize = () => {
       if (window.customHighlightContainer) {
+        // On resize, we need to completely recalculate
         updateHighlightPositions();
       }
-      positionNotification();
     };
 
     // Handle page navigation/unload to clean up highlights
@@ -86,12 +97,9 @@ const TextHighlighter = ({ contentRef }) => {
       dismissHighlight();
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleResize);
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // Initial positioning
-    positionNotification();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -112,12 +120,35 @@ const TextHighlighter = ({ contentRef }) => {
     // This function is kept for compatibility with existing code
   };
 
-  // Function to update highlight positions
+  // Function to update highlight positions by recalculating everything
   const updateHighlightPositions = () => {
     if (!contentRef.current || !highlightedText || !window.customHighlightContainer) return;
 
     // Re-highlight the text to update positions
     highlightTextInContent(highlightedText, true);
+  };
+
+  // Function to efficiently update highlight positions during scrolling
+  const updateHighlightPositionsOnScroll = (scrollY) => {
+    if (!window.customHighlightContainer) return;
+
+    // Get all highlight elements
+    const highlights = window.customHighlightContainer.querySelectorAll('.custom-text-highlight');
+
+    // Get the current scroll position
+    const currentScrollY = scrollY;
+
+    // If we have stored the original positions, use them to update
+    if (window.highlightOriginalPositions && window.highlightOriginalPositions.length === highlights.length) {
+      highlights.forEach((highlight, index) => {
+        const originalTop = window.highlightOriginalPositions[index].top;
+        // Update the position based on scroll
+        highlight.style.top = `${originalTop - currentScrollY}px`;
+      });
+    } else {
+      // If we don't have original positions, recalculate everything
+      updateHighlightPositions();
+    }
   };
 
   const highlightTextInContent = (text, isUpdate = false) => {
@@ -211,7 +242,7 @@ const TextHighlighter = ({ contentRef }) => {
           highlightContainer.style.width = '100%';
           highlightContainer.style.height = '100%';
           highlightContainer.style.pointerEvents = 'none';
-          highlightContainer.style.zIndex = '10';
+          highlightContainer.style.zIndex = '40'; // Lower than the notification (z-50)
           // Add darkening overlay effect
           const isDarkMode = document.documentElement.classList.contains('dark');
           highlightContainer.style.backgroundColor = isDarkMode ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)';
@@ -220,21 +251,35 @@ const TextHighlighter = ({ contentRef }) => {
           // Store reference to the container
           highlightContainerRef.current = highlightContainer;
 
+          // Store original positions for efficient scrolling updates
+          window.highlightOriginalPositions = [];
+
           // Create highlight elements for each rect in the range
           for (let i = 0; i < rects.length; i++) {
             const rect = rects[i];
             const highlightEl = document.createElement('div');
             highlightEl.className = 'custom-text-highlight';
             highlightEl.style.position = 'fixed';
-            highlightEl.style.top = `${rect.top}px`;
-            highlightEl.style.left = `${rect.left}px`;
+
+            // Calculate position relative to viewport
+            const top = rect.top + window.scrollY;
+            const left = rect.left + window.scrollX;
+
+            // Store original position for scroll updates
+            window.highlightOriginalPositions.push({ top, left });
+
+            // Set initial position
+            highlightEl.style.top = `${top - window.scrollY}px`;
+            highlightEl.style.left = `${left - window.scrollX}px`;
             highlightEl.style.width = `${rect.width}px`;
             highlightEl.style.height = `${rect.height}px`;
-            // Use white background for the punched-out effect
-            highlightEl.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+
+            // Use mix-blend-mode: difference for the punched-out effect
+            // This creates a "hole" in the overlay where text is visible
+            highlightEl.style.backgroundColor = 'white';
             highlightEl.style.borderRadius = '3px';
-            highlightEl.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.3)';
-            highlightEl.style.mixBlendMode = 'lighten';
+            highlightEl.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.5)';
+            highlightEl.style.mixBlendMode = 'difference';
             highlightEl.style.pointerEvents = 'none';
             highlightContainer.appendChild(highlightEl);
           }
@@ -256,7 +301,7 @@ const TextHighlighter = ({ contentRef }) => {
       } else {
         console.log('Text not found in content');
       }
-    }, 1500); // Longer delay to ensure content is fully loaded
+    }, 300); // Shorter delay for better user experience
   };
 
   const dismissHighlight = () => {
@@ -267,6 +312,17 @@ const TextHighlighter = ({ contentRef }) => {
     if (typeof window !== 'undefined' && window.customHighlightContainer) {
       window.customHighlightContainer.remove();
       window.customHighlightContainer = null;
+    }
+
+    // Remove notification element
+    if (notificationRef.current) {
+      notificationRef.current.remove();
+      notificationRef.current = null;
+    }
+
+    // Clean up stored positions
+    if (window.highlightOriginalPositions) {
+      window.highlightOriginalPositions = null;
     }
 
     // Remove the highlight parameter from the URL
@@ -281,24 +337,46 @@ const TextHighlighter = ({ contentRef }) => {
 
   if (!isHighlighting) return null;
 
-  return (
-    <div
-      ref={notificationRef}
-      className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border px-4 py-2 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top-5 duration-300"
-    >
-      <span className="text-sm font-medium">
-        Text highlighted {highlighterUsername ? `by ${highlighterUsername}` : 'by logged out user'}
-      </span>
-      <button
-        onClick={dismissHighlight}
-        className="px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors text-sm flex items-center gap-1.5"
-        aria-label="Dismiss highlight"
-      >
-        <X className="h-3.5 w-3.5" />
-        <span>Dismiss</span>
-      </button>
-    </div>
-  );
+  // Create a portal for the notification to be rendered at the top of the document
+  useEffect(() => {
+    if (!isHighlighting) return;
+
+    // Create notification element
+    const notificationEl = document.createElement('div');
+    notificationEl.id = 'highlight-notification';
+    notificationEl.className = 'fixed top-0 left-0 right-0 z-50 bg-background border-b border-border px-4 py-2 shadow-md flex items-center justify-between animate-in fade-in slide-in-from-top-5 duration-300';
+    notificationEl.style.zIndex = '100'; // Higher than everything else
+
+    // Create text span
+    const textSpan = document.createElement('span');
+    textSpan.className = 'text-sm font-medium';
+    textSpan.textContent = `Text highlighted ${highlighterUsername ? `by ${highlighterUsername}` : 'by logged out user'}`;
+    notificationEl.appendChild(textSpan);
+
+    // Create dismiss button
+    const dismissButton = document.createElement('button');
+    dismissButton.className = 'px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors text-sm flex items-center gap-1.5';
+    dismissButton.setAttribute('aria-label', 'Dismiss highlight');
+    dismissButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span>Dismiss</span>`;
+    dismissButton.addEventListener('click', dismissHighlight);
+    notificationEl.appendChild(dismissButton);
+
+    // Insert at the beginning of the body, before any other elements
+    document.body.insertBefore(notificationEl, document.body.firstChild);
+
+    // Store reference
+    notificationRef.current = notificationEl;
+
+    return () => {
+      // Clean up
+      if (notificationRef.current) {
+        notificationRef.current.remove();
+      }
+    };
+  }, [isHighlighting, highlighterUsername]);
+
+  // Return null since we're using a portal
+  return null;
 };
 
 export default TextHighlighter;
