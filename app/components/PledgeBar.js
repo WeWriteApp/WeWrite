@@ -65,8 +65,10 @@ const PledgeBar = () => {
         setVisible(false);
       } else if (currentScrollY < lastKnownScrollY) {
         // Scrolling up - show the bar
+        setVisible(true);
+
+        // Only trigger animation if it was previously hidden
         if (!visible) {
-          setVisible(true);
           // Trigger animation when re-appearing
           setTimeout(() => setAnimateEntry(true), 50);
           setTimeout(() => setAnimateEntry(false), 2000);

@@ -83,7 +83,7 @@ const CompositionBar = ({
               )}
 
               <div
-                className="relative h-[56px] rounded-lg overflow-hidden border border-border bg-background dark:bg-black shadow-sm hover:shadow-md transition-shadow"
+                className="relative h-[56px] rounded-lg overflow-hidden border border-border bg-background dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Other pledges background - always show regardless of percentage */}
                 <div

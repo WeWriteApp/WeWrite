@@ -1,10 +1,10 @@
-/* Spring animation for pledge bar */
+/* Spring animation for pledge bar - more subtle */
 @keyframes spring-up {
   0% { transform: translateY(0); }
-  20% { transform: translateY(-10px); }
-  40% { transform: translateY(5px); }
-  60% { transform: translateY(-3px); }
-  80% { transform: translateY(2px); }
+  20% { transform: translateY(-5px); }
+  40% { transform: translateY(3px); }
+  60% { transform: translateY(-2px); }
+  80% { transform: translateY(1px); }
   100% { transform: translateY(0); }
 }
 

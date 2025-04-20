@@ -115,6 +115,9 @@ export function AccountSwitcher() {
     // Save current accounts to localStorage
     saveAccountsToLocalStorage();
 
+    // Store the current URL to return to after login
+    sessionStorage.setItem('wewrite_return_url', window.location.pathname);
+
     // Use localStorage to remember the current user is still logged in
     if (user) {
       // Store user data without trying to access auth token directly
