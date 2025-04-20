@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import TypeaheadSearch from './TypeaheadSearch';
 import { AuthContext } from '../providers/AuthProvider';
 import { appendPageReference } from '../firebase/database';
-import { toast } from './ui/use-toast';
+import { toast } from 'sonner';
 import { usePage } from '../contexts/PageContext';
 
 const AddToPageButton = () => {
@@ -18,19 +18,19 @@ const AddToPageButton = () => {
 
   const handleAddToPage = async (selectedPage) => {
     if (!selectedPage || !page) return;
-    
+
     setIsAdding(true);
-    
+
     try {
       // Create a source page data object with the current page info
       const sourcePageData = {
         id: page.id,
         title: page.title || 'Untitled Page'
       };
-      
+
       // Append the current page reference to the selected page
       const result = await appendPageReference(selectedPage.id, sourcePageData);
-      
+
       if (result) {
         toast({
           title: "Page added successfully",
@@ -60,9 +60,9 @@ const AddToPageButton = () => {
 
   return (
     <>
-      <Button 
-        variant="outline" 
-        size="sm" 
+      <Button
+        variant="outline"
+        size="sm"
         className="gap-2 w-full h-10 md:h-8 md:w-auto"
         onClick={() => setIsOpen(true)}
       >
@@ -79,8 +79,8 @@ const AddToPageButton = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Select a page to add "{page?.title || 'this page'}" to:
             </p>
-            <TypeaheadSearch 
-              placeholder="Search your pages..." 
+            <TypeaheadSearch
+              placeholder="Search your pages..."
               editableOnly={true}
               onSelect={handleAddToPage}
               setShowResults={() => {}}
