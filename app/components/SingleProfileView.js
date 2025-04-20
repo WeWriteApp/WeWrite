@@ -86,8 +86,9 @@ const SingleProfileView = ({ profile }) => {
         <div className="flex items-center mb-4">
           <div className="flex-1">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="outline" size="sm" className="gap-1">
                 <ChevronLeft className="h-4 w-4" />
+                <span>Back</span>
               </Button>
             </Link>
           </div>
@@ -101,12 +102,13 @@ const SingleProfileView = ({ profile }) => {
           <div className="flex-1 flex justify-end">
             {isCurrentUser && (
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full hover:bg-[rgba(255,255,255,0.1)]"
+                variant="outline"
+                size="sm"
+                className="gap-1"
                 onClick={() => router.push('/account')}
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
               </Button>
             )}
             {!isCurrentUser && <div className="w-8" />}
@@ -146,13 +148,13 @@ const SingleProfileView = ({ profile }) => {
               </p>
               <div className="flex justify-center space-x-3">
                 <Link href="/auth/register">
-                  <Button variant="outline" size="sm">
-                    Create Account
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <span>Create Account</span>
                   </Button>
                 </Link>
                 <Link href="/auth/login">
-                  <Button variant="default" size="sm" className="text-white">
-                    Log In
+                  <Button variant="default" size="sm" className="text-white gap-1">
+                    <span>Log In</span>
                   </Button>
                 </Link>
               </div>
