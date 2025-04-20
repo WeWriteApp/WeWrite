@@ -335,7 +335,7 @@ body {
 
 .custom-text-highlight {
   position: absolute;
-  background-color: rgba(59, 130, 246, 0.1); /* Blue color with 10% opacity */
+  background-color: rgba(59, 130, 246, 0.15); /* Blue color with 15% opacity */
   border-radius: 3px; /* Rounded corners like VSCode */
   pointer-events: none;
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.05); /* Subtle border */
@@ -346,6 +346,6 @@ body {
 
 /* Style for selected text to override browser default */
 ::selection {
-  background-color: rgba(59, 130, 246, 0.1); /* Blue color with 10% opacity */
+  background-color: rgba(59, 130, 246, 0.15); /* Blue color with 15% opacity */
   color: inherit; /* Keep the text color unchanged */
 }

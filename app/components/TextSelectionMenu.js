@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Copy, Link } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { AuthContext } from '../providers/AuthProvider';
 
 const TextSelectionMenu = ({ contentRef }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -12,6 +13,7 @@ const TextSelectionMenu = ({ contentRef }) => {
   const [selectionRange, setSelectionRange] = useState(null);
   const menuRef = useRef(null);
   const router = useRouter();
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -118,7 +120,9 @@ const TextSelectionMenu = ({ contentRef }) => {
       if (selectionRange) {
         const rangeInfo = {
           text: selectedText,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          username: user ? (user.username || user.displayName || user.email) : null,
+          userId: user ? user.uid : null
         };
 
         localStorage.setItem(`highlight_${selectionHash}`, JSON.stringify(rangeInfo));

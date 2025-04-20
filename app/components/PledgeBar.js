@@ -404,6 +404,7 @@ const PledgeBar = () => {
   if (isOwnPage) {
     return (
       <div
+        data-pledge-bar
         className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
@@ -441,6 +442,7 @@ const PledgeBar = () => {
   if (!user) {
     return (
       <div
+        data-pledge-bar
         className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
