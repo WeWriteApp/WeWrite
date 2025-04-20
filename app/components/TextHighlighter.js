@@ -17,20 +17,35 @@ const TextHighlighter = ({ contentRef }) => {
           const highlightId = hash.split('highlight=')[1];
 
           // Get the highlighted text from localStorage
-          const storedHighlight = localStorage.getItem(`highlight_${highlightId}`);
+          const storedHighlightData = localStorage.getItem(`highlight_${highlightId}`);
 
-          if (storedHighlight) {
-            console.log('Found highlight in localStorage:', storedHighlight);
-            setHighlightedText(storedHighlight);
-            setIsHighlighting(true);
+          if (storedHighlightData) {
+            try {
+              // Parse the stored highlight data
+              const highlightInfo = JSON.parse(storedHighlightData);
+              console.log('Found highlight in localStorage:', highlightInfo);
 
-            // Highlight the text in the content
-            highlightTextInContent(storedHighlight);
+              if (highlightInfo && highlightInfo.text) {
+                setHighlightedText(highlightInfo.text);
+                setIsHighlighting(true);
+
+                // Highlight the text in the content
+                highlightTextInContent(highlightInfo.text);
+              } else {
+                console.log('Invalid highlight data format');
+              }
+            } catch (err) {
+              // Handle legacy format (plain text)
+              console.log('Using legacy highlight format');
+              setHighlightedText(storedHighlightData);
+              setIsHighlighting(true);
+              highlightTextInContent(storedHighlightData);
+            }
           } else {
             console.log('No highlight found in localStorage for ID:', highlightId);
           }
         }
-      }, 1000); // Longer delay to ensure content is fully loaded
+      }, 1500); // Longer delay to ensure content is fully loaded
 
       return () => clearTimeout(checkForHighlight);
     }
@@ -140,7 +155,8 @@ const TextHighlighter = ({ contentRef }) => {
             highlightEl.style.width = `${rect.width}px`;
             highlightEl.style.height = `${rect.height}px`;
             highlightEl.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-            highlightEl.style.borderRadius = '4px';
+            highlightEl.style.borderRadius = '3px';
+            highlightEl.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.05)';
             highlightEl.style.pointerEvents = 'none';
             highlightContainer.appendChild(highlightEl);
           }

@@ -257,7 +257,7 @@ const TopUsers = () => {
                 {sortedUsers.map((user) => (
                   <TableRow
                     key={user.id}
-                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    className="cursor-pointer hover:bg-accent/5 transition-colors"
                     onClick={() => window.location.href = `/user/${user.id}`}
                   >
                     <TableCell>

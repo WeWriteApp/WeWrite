@@ -114,13 +114,23 @@ const TextSelectionMenu = ({ contentRef }) => {
     // Store the selection in localStorage for retrieval when the link is visited
     // This ensures it persists even if the user closes the browser
     try {
-      localStorage.setItem(`highlight_${selectionHash}`, selectedText);
-      console.log('Stored highlight in localStorage:', selectedText);
-      console.log('With key:', `highlight_${selectionHash}`);
+      // Store both the text and the range information
+      if (selectionRange) {
+        const rangeInfo = {
+          text: selectedText,
+          timestamp: Date.now()
+        };
 
-      // Verify it was stored correctly
-      const storedValue = localStorage.getItem(`highlight_${selectionHash}`);
-      console.log('Verified stored value:', storedValue);
+        localStorage.setItem(`highlight_${selectionHash}`, JSON.stringify(rangeInfo));
+        console.log('Stored highlight in localStorage:', rangeInfo);
+        console.log('With key:', `highlight_${selectionHash}`);
+
+        // Verify it was stored correctly
+        const storedValue = localStorage.getItem(`highlight_${selectionHash}`);
+        console.log('Verified stored value:', storedValue);
+      } else {
+        console.error('No selection range available');
+      }
     } catch (err) {
       console.error('Error storing highlight in localStorage:', err);
     }

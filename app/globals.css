@@ -336,10 +336,16 @@ body {
 .custom-text-highlight {
   position: absolute;
   background-color: rgba(59, 130, 246, 0.1); /* Blue color with 10% opacity */
-  border-radius: 4px; /* More rounded corners like VSCode */
+  border-radius: 3px; /* Rounded corners like VSCode */
   pointer-events: none;
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.05); /* Subtle border */
   transition: background-color 0.2s ease;
   margin: 0 -1px; /* Negative margin to ensure highlights connect properly */
   padding: 0 1px; /* Padding to compensate for the negative margin */
+}
+
+/* Style for selected text to override browser default */
+::selection {
+  background-color: rgba(59, 130, 246, 0.1); /* Blue color with 10% opacity */
+  color: inherit; /* Keep the text color unchanged */
 }
