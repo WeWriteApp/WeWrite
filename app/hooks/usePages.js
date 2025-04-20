@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { db } from "../firebase/database";
 import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 
-// Increase initial page limit to 200 and subsequent loads to 100
-const initialLimitCount = 200;
+// Default limits for page loading
+const DEFAULT_INITIAL_LIMIT = 10; // Default limit for home page
+const USER_PAGE_INITIAL_LIMIT = 200; // Higher limit for user pages
 const loadMoreLimitCount = 100;
 
-const usePages = (userId, includePrivate = true, currentUserId = null) => {
+const usePages = (userId, includePrivate = true, currentUserId = null, isUserPage = false) => {
+  // Use higher limit for user pages, default limit for home page
+  const initialLimitCount = isUserPage ? USER_PAGE_INITIAL_LIMIT : DEFAULT_INITIAL_LIMIT;
   const [loading, setLoading] = useState(true);
   const [pages, setPages] = useState([]);
   const [privatePages, setPrivatePages] = useState([]);

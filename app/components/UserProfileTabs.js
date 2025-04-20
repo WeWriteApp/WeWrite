@@ -93,7 +93,7 @@ export default function UserProfileTabs({ profile }) {
     isMorePrivateLoading,
     fetchMorePages,
     fetchMorePrivatePages
-  } = usePages(profile?.uid, true, user?.uid);
+  } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
 
   // Determine which tabs to show
   const visibleTabs = ["activity", "pages"];

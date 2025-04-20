@@ -18,7 +18,7 @@ export const DataProvider = ({ children }) => {
     loadMorePages,
     isMoreLoading,
     hasMorePages
-  } = usePages(user ? user.uid : null); // Use `user.uid` to fetch pages for the logged-in user
+  } = usePages(user ? user.uid : null, true, user?.uid, false); // Use `user.uid` to fetch pages for the logged-in user, with default limit for home page
 
   // Optionally: Handle filtered pages if needed
   const filtered = [];
