@@ -113,7 +113,7 @@ export const FeatureCarousel = () => {
 
         <div className="relative max-w-3xl mx-auto">
           {/* Carousel container */}
-          <div className="overflow-hidden rounded-xl">
+          <div className="overflow-hidden rounded-xl touch-none">
             <div
               className="flex transition-transform duration-500 ease-in-out touch-pan-x"
               style={{ transform: `translateX(-${activeIndex * 100}%)` }}

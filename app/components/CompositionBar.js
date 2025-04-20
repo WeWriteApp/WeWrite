@@ -112,21 +112,7 @@ const CompositionBar = ({
 
                 {/* Remaining subscription amount is implicit in background */}
 
-                {/* Inner border that appears when there's a value */}
-                {pledgeAmount > 0 && (
-                  <div
-                    className={cn(
-                      "absolute h-full pointer-events-none border-l-2",
-                      isExceeded ? "border-destructive" : "border-primary"
-                    )}
-                    style={{
-                      left: `${otherPledgesPercentage + percentage}%`,
-                      transform: 'translateX(-100%)',
-                      transition: 'left 0.5s ease-in-out, border-color 0.3s ease',
-                      zIndex: 3
-                    }}
-                  ></div>
-                )}
+                {/* Removed the inner border animation */}
 
                 {/* Controls */}
                 <div className="flex justify-between items-center h-full relative z-10 p-0 pointer-events-none">
