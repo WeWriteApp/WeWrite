@@ -129,13 +129,11 @@ function SinglePageView({ params }) {
     // Only allow editing if:
     // 1. Page is loaded (!isLoading)
     // 2. Page exists (page !== null)
-    // 3. Page is public (isPublic)
-    // 4. Page isn't deleted (!isDeleted)
-    // 5. User owns the page
+    // 3. Page isn't deleted (!isDeleted)
+    // 4. User owns the page (regardless of whether it's public or private)
     canEdit: Boolean(
       !isLoading &&
       page !== null &&
-      isPublic &&
       !isDeleted &&
       user?.uid &&
       page?.userId &&
@@ -161,7 +159,7 @@ function SinglePageView({ params }) {
   useEffect(() => {
     if (params.id) {
       setIsLoading(true);
-      
+
       // Make sure we pass the user ID to the listenToPageById function
       const currentUserId = user?.uid || null;
       console.log(`Setting up page listener with user ID: ${currentUserId || 'anonymous'}`);
