@@ -170,6 +170,9 @@
 
     /* Active line highlight in editor */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
+
+    /* Custom text highlight */
+    --accent: var(--accent-h) var(--accent-s) var(--accent-l);
   }
 
   .dark {
@@ -317,4 +320,24 @@ body {
 
 .hover-border-solid:hover {
   border-color: hsl(var(--border));
+}
+
+/* Custom text highlight styles */
+.custom-text-highlights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.custom-text-highlight {
+  position: absolute;
+  background-color: rgba(var(--accent), 0.1);
+  border-radius: 3px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(var(--accent), 0.05);
+  transition: background-color 0.2s ease;
 }

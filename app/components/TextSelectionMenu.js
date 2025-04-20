@@ -16,7 +16,7 @@ const TextSelectionMenu = ({ contentRef }) => {
   useEffect(() => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
-      
+
       if (!selection || selection.rangeCount === 0 || selection.toString().trim() === '') {
         setIsVisible(false);
         return;
@@ -24,26 +24,26 @@ const TextSelectionMenu = ({ contentRef }) => {
 
       // Check if selection is within the content area
       if (!contentRef.current) return;
-      
+
       const range = selection.getRangeAt(0);
       const contentElement = contentRef.current;
-      
+
       // Check if the selection is within the content element
       if (!contentElement.contains(range.commonAncestorContainer)) {
         setIsVisible(false);
         return;
       }
-      
+
       // Check if selection includes paragraph numbers (which should be excluded)
       const paragraphNumbers = contentElement.querySelectorAll('.paragraph-number');
       let includesParagraphNumber = false;
-      
+
       paragraphNumbers.forEach(numElement => {
         if (selection.containsNode(numElement, true)) {
           includesParagraphNumber = true;
         }
       });
-      
+
       if (includesParagraphNumber) {
         // Don't show menu if selection includes paragraph numbers
         setIsVisible(false);
@@ -54,13 +54,13 @@ const TextSelectionMenu = ({ contentRef }) => {
       const selectedText = selection.toString().trim();
       if (selectedText) {
         const rect = range.getBoundingClientRect();
-        
+
         // Position the menu above the selection
         setPosition({
           top: rect.top + window.scrollY - 45, // Position above selection
           left: rect.left + window.scrollX + (rect.width / 2) - 75, // Center horizontally
         });
-        
+
         setSelectedText(selectedText);
         setSelectionRange(range.cloneRange()); // Store a copy of the range
         setIsVisible(true);
@@ -103,17 +103,18 @@ const TextSelectionMenu = ({ contentRef }) => {
   const copyLink = () => {
     // Get current URL
     const currentUrl = window.location.href;
-    
+
     // Create a unique identifier for this selection
     // For simplicity, we'll use a hash of the selected text
     const selectionHash = btoa(selectedText.substring(0, 100)).replace(/[+/=]/g, '');
-    
+
     // Create the link with the selection hash
     const linkWithSelection = `${currentUrl}#highlight=${selectionHash}`;
-    
-    // Store the selection in sessionStorage for retrieval when the link is visited
-    sessionStorage.setItem(`highlight_${selectionHash}`, selectedText);
-    
+
+    // Store the selection in localStorage for retrieval when the link is visited
+    // This ensures it persists even if the user closes the browser
+    localStorage.setItem(`highlight_${selectionHash}`, selectedText);
+
     // Copy the link to clipboard
     navigator.clipboard.writeText(linkWithSelection)
       .then(() => {
