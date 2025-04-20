@@ -12,6 +12,21 @@ import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 
+// Safely check if ReactEditor methods exist before using them
+const safeReactEditor = {
+  focus: (editor) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.focus === 'function') {
+        ReactEditor.focus(editor);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.focus:', error);
+    }
+    return false;
+  }
+};
+
 /**
  * PageEditor Component
  *
@@ -238,13 +253,28 @@ const PageEditor = ({
             // Create a point at the start of the third paragraph (index 2) where "I'm responding..." is
             const point = { path: [2, 0], offset: 0 };
 
-            // Use ReactEditor to focus and select
+            // Use our safe wrapper for ReactEditor.focus
             try {
-              // Focus the editor
-              ReactEditor.focus(editor);
-              // Set the selection to the third paragraph
-              Transforms.select(editor, point);
-              console.log('Cursor positioned at third paragraph for reply');
+              // Use our safe wrapper for ReactEditor.focus
+              const focused = safeReactEditor.focus(editor);
+
+              // Try to select the point
+              try {
+                Transforms.select(editor, point);
+                console.log('Cursor positioned at third paragraph for reply');
+              } catch (selectError) {
+                console.error('Error selecting text:', selectError);
+              }
+
+              // If ReactEditor.focus failed, try DOM fallback
+              if (!focused) {
+                console.warn('Editor focus failed, using DOM fallback');
+                const editorElement = document.querySelector('[data-slate-editor=true]');
+                if (editorElement) {
+                  editorElement.focus();
+                  console.log('Editor focused via DOM');
+                }
+              }
             } catch (reactEditorError) {
               console.error('Error using ReactEditor:', reactEditorError);
 

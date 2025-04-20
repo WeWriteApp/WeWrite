@@ -5,6 +5,31 @@ import SlateEditor from './SlateEditor';
 import { createEditor, Transforms, Editor, Range, Path, Point } from 'slate';
 import { ReactEditor } from 'slate-react';
 
+// Safely check if ReactEditor methods exist before using them
+const safeReactEditor = {
+  focus: (editor) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.focus === 'function') {
+        ReactEditor.focus(editor);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.focus:', error);
+    }
+    return false;
+  },
+  isFocused: (editor) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.isFocused === 'function') {
+        return ReactEditor.isFocused(editor);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.isFocused:', error);
+    }
+    return false;
+  }
+};
+
 /**
  * ReplyEditor Component
  *
@@ -52,14 +77,20 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
 
               // Use ReactEditor to focus and select
               try {
-                // Make sure the editor is focusable
-                if (ReactEditor.isFocusable(editor)) {
-                  ReactEditor.focus(editor);
+                // Use our safe wrapper for ReactEditor.focus
+                const focused = safeReactEditor.focus(editor);
+
+                // Try to select the point
+                try {
                   Transforms.select(editor, point);
-                  console.log('Cursor positioned at response paragraph using ReactEditor');
-                } else {
-                  console.warn('Editor is not focusable');
-                  // Fallback to direct DOM manipulation
+                  console.log('Cursor positioned at response paragraph');
+                } catch (selectError) {
+                  console.error('Error selecting text:', selectError);
+                }
+
+                // If ReactEditor.focus failed, try DOM fallback
+                if (!focused) {
+                  console.warn('Editor focus failed, using DOM fallback');
                   const editorElement = document.querySelector('[data-slate-editor=true]');
                   if (editorElement) {
                     editorElement.focus();

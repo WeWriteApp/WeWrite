@@ -10,6 +10,41 @@ import {
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
+
+// Safely check if ReactEditor methods exist before using them
+const safeReactEditor = {
+  focus: (editor) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.focus === 'function') {
+        ReactEditor.focus(editor);
+        return true;
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.focus:', error);
+    }
+    return false;
+  },
+  toDOMRange: (editor, selection) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.toDOMRange === 'function') {
+        return ReactEditor.toDOMRange(editor, selection);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.toDOMRange:', error);
+    }
+    return null;
+  },
+  isFocused: (editor) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.isFocused === 'function') {
+        return ReactEditor.isFocused(editor);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.isFocused:', error);
+    }
+    return false;
+  }
+};
 import { DataContext } from "../providers/DataProvider";
 import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
@@ -103,7 +138,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   useImperativeHandle(ref, () => ({
     focus: () => {
       try {
-        ReactEditor.focus(editor);
+        // Use our safe wrapper for ReactEditor.focus
+        const focused = safeReactEditor.focus(editor);
 
         // If there's no content, add an empty paragraph
         if (editor.children.length === 0) {
@@ -120,7 +156,20 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
           // Create a new selection at the end of the last text node
           const point = { path, offset: node.text.length };
-          Transforms.select(editor, point);
+          try {
+            Transforms.select(editor, point);
+          } catch (selectError) {
+            console.error('Error selecting text:', selectError);
+          }
+        }
+
+        // If ReactEditor.focus failed, try DOM fallback
+        if (!focused) {
+          const editorElement = document.querySelector('[data-slate-editor=true]');
+          if (editorElement) {
+            editorElement.focus();
+            console.log('Editor focused via DOM fallback');
+          }
         }
       } catch (error) {
         console.error('Error focusing editor:', error);
@@ -150,7 +199,17 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         // Focus the editor after setting content
         setTimeout(() => {
           try {
-            ReactEditor.focus(editor);
+            // Use our safe wrapper for ReactEditor.focus
+            const focused = safeReactEditor.focus(editor);
+
+            // If ReactEditor.focus failed, try DOM fallback
+            if (!focused) {
+              const editorElement = document.querySelector('[data-slate-editor=true]');
+              if (editorElement) {
+                editorElement.focus();
+                console.log('Editor focused via DOM fallback after initialization');
+              }
+            }
           } catch (error) {
             console.error("Error focusing editor after content initialization:", error);
           }
@@ -348,7 +407,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       // First try to use the editor selection if provided
       if (editor && editorSelection) {
         try {
-          const domSelection = ReactEditor.toDOMRange(editor, editorSelection);
+          // Use our safe wrapper for ReactEditor.toDOMRange
+          const domSelection = safeReactEditor.toDOMRange(editor, editorSelection);
           if (domSelection) {
             const rect = domSelection.getBoundingClientRect();
 

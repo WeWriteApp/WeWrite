@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase/database";
-import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs, select } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 
 // Increase initial page limit to 200 and subsequent loads to 100
 const initialLimitCount = 200;
@@ -30,8 +30,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         collection(db, 'pages'),
         where('userId', '==', userId),
         orderBy('lastModified', 'desc'),
-        limit(initialLimitCount),
-        select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
+        limit(initialLimitCount)
       );
     } else {
       // Get only public pages if the current user is not the owner
@@ -40,8 +39,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         where('userId', '==', userId),
         where('isPublic', '==', true),
         orderBy('lastModified', 'desc'),
-        limit(initialLimitCount),
-        select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
+        limit(initialLimitCount)
       );
     }
 
@@ -120,8 +118,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
           where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
           startAfter(lastPageKey),
-          limit(loadMoreLimitCount),
-          select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
+          limit(loadMoreLimitCount)
         );
       } else {
         // Get only public pages if the current user is not the owner
@@ -131,8 +128,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
           where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
           startAfter(lastPageKey),
-          limit(loadMoreLimitCount),
-          select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
+          limit(loadMoreLimitCount)
         );
       }
 
@@ -192,8 +188,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         where('isPublic', '==', false),
         orderBy('lastModified', 'desc'),
         startAfter(lastPrivatePageKey),
-        limit(loadMoreLimitCount),
-        select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
+        limit(loadMoreLimitCount)
       );
 
       setIsMorePrivateLoading(true);
