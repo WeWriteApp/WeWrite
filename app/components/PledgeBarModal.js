@@ -18,11 +18,11 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
       external: true
     }
   } : {
-    title: "Sign in Required",
-    description: "To donate, you must sign in first.",
+    title: "Log in to support this creator",
+    description: "Support your favorite creators with monthly donations that help them continue creating great content.",
     action: {
       href: "/auth/login",
-      label: "Sign in",
+      label: "Log in",
       external: false
     }
   });

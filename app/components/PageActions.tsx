@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
 import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
+import dynamic from 'next/dynamic';
 import { Switch } from "./ui/switch";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -34,6 +35,12 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
+
+// Dynamically import AddToPageButton to avoid SSR issues
+const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
+  ssr: false,
+  loading: () => <Button variant="outline" size="sm" className="gap-2 w-full h-10 md:h-8 md:w-auto" disabled>Loading...</Button>
+});
 
 /**
  * PageActions Component
@@ -271,6 +278,9 @@ export function PageActions({
           />
           <span className="text-sm">Dense mode</span>
         </div>
+
+        {/* Add to Page button - available to all users */}
+        <AddToPageButton />
 
         {/* Reply button removed temporarily */}
       </div>

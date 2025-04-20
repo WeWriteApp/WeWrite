@@ -11,9 +11,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+          "bg-primary text-white shadow hover:bg-primary/90", // Always use white text for better contrast
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-white shadow-sm hover:bg-destructive/90", // Always use white text for better contrast
         outline:
           "border border-theme-medium bg-background shadow-sm hover:bg-accent hover:text-accent-foreground hover:border-theme-strong",
         secondary:

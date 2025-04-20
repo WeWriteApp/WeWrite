@@ -437,7 +437,7 @@ const PledgeBar = () => {
     );
   }
 
-  // If user isn't logged in, show login and create account buttons
+  // If user isn't logged in, show a regular pledge bar that opens login modal when clicked
   if (!user) {
     return (
       <div
@@ -445,23 +445,28 @@ const PledgeBar = () => {
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
       >
-        <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg rounded-lg border border-border dark:border-border py-4 px-6 overflow-hidden">
-          <div className="text-center">
-            <p className="text-foreground/70 mb-3">Log in to support this creator</p>
-            <div className="flex justify-center space-x-3">
-              <Link href="/auth/register">
-                <Button variant="outline" size="sm">
-                  Create Account
-                </Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button variant="default" size="sm" className="text-white">
-                  Log In
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
+        <CompositionBar
+          value={0}
+          max={100}
+          onChange={() => {}}
+          disabled={false}
+          pledges={[{ id: 'placeholder', amount: 0 }]}
+          subscriptionAmount={100}
+          onPledgeChange={() => setShowActivationModal(true)}
+          onPledgeCustomAmount={() => setShowActivationModal(true)}
+          onDeletePledge={() => {}}
+          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+        />
+
+        {/* Pledge Modal for logged-out users - rendered at document level */}
+        {typeof document !== 'undefined' && createPortal(
+          <PledgeBarModal
+            isOpen={showActivationModal}
+            onClose={() => setShowActivationModal(false)}
+            isSignedIn={false}
+          />,
+          document.body
+        )}
       </div>
     );
   }

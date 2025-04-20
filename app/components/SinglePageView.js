@@ -1,6 +1,8 @@
 // This is a temporary file to fix the issue
 "use client";
 import React, { useEffect, useState, useContext, useRef, useCallback } from "react";
+import TextSelectionMenu from "./TextSelectionMenu";
+import TextHighlighter from "./TextHighlighter";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
@@ -98,6 +100,7 @@ function SinglePageView({ params }) {
   const { lineMode } = useLineSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const contentRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -490,14 +493,20 @@ function SinglePageView({ params }) {
               <div className="page-content w-full max-w-none break-words px-1">
                 <PageProvider>
                   <LineSettingsProvider>
-                    <TextView
-                      key={`content-${page.id}`} /* Use stable key based on page ID */
-                      content={editorState}
-                      viewMode={lineMode}
-                      onRenderComplete={handlePageFullyRendered}
-                      setIsEditing={setIsEditing}
-                      canEdit={user?.uid === page?.userId}
-                    />
+                    <div ref={contentRef}>
+                      <TextView
+                        key={`content-${page.id}`} /* Use stable key based on page ID */
+                        content={editorState}
+                        viewMode={lineMode}
+                        onRenderComplete={handlePageFullyRendered}
+                        setIsEditing={setIsEditing}
+                        canEdit={user?.uid === page?.userId}
+                      />
+                      {/* Add text selection menu */}
+                      <TextSelectionMenu contentRef={contentRef} />
+                      {/* Add text highlighter */}
+                      <TextHighlighter contentRef={contentRef} />
+                    </div>
                   </LineSettingsProvider>
                 </PageProvider>
               </div>
