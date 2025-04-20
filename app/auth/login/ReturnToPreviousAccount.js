@@ -6,9 +6,9 @@ import { X } from 'lucide-react';
 
 export default function ReturnToPreviousAccount() {
   const router = useRouter();
-  const isAddingAccount = typeof window !== 'undefined' && 
+  const isAddingAccount = typeof window !== 'undefined' &&
     (sessionStorage.getItem('wewrite_adding_account') === 'true');
-  const returnUrl = typeof window !== 'undefined' ? 
+  const returnUrl = typeof window !== 'undefined' ?
     sessionStorage.getItem('wewrite_return_url') : null;
 
   // Function to return to the previous account/page
@@ -16,12 +16,29 @@ export default function ReturnToPreviousAccount() {
     // Clear the adding account flag
     sessionStorage.removeItem('wewrite_adding_account');
     sessionStorage.removeItem('wewrite_return_url');
-    
-    // Navigate back to the return URL or home page
-    if (returnUrl) {
-      router.push(returnUrl);
+    localStorage.removeItem('addingNewAccount');
+
+    // Get the previous user data
+    const previousUserData = sessionStorage.getItem('wewrite_previous_user');
+    const previousUserSession = localStorage.getItem('previousUserSession');
+
+    if (previousUserSession) {
+      // Restore the previous user session
+      localStorage.setItem('currentUser', previousUserSession);
+
+      // Navigate back to the return URL or home page
+      if (returnUrl) {
+        window.location.href = returnUrl; // Use window.location for full page reload
+      } else {
+        window.location.href = '/'; // Use window.location for full page reload
+      }
     } else {
-      router.push('/');
+      // If no previous session, just navigate back
+      if (returnUrl) {
+        router.push(returnUrl);
+      } else {
+        router.push('/');
+      }
     }
   };
 
@@ -32,9 +49,9 @@ export default function ReturnToPreviousAccount() {
 
   return (
     <div className="absolute top-4 left-4 z-50">
-      <Button 
-        variant="outline" 
-        size="sm" 
+      <Button
+        variant="outline"
+        size="sm"
         onClick={handleReturn}
         className="flex items-center gap-1.5"
       >

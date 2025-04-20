@@ -96,7 +96,7 @@ export const FeatureCarousel = () => {
   };
 
   return (
-    <div className="py-12">
+    <div className="py-12 overflow-visible">
       <div className="container mx-auto px-6">
         <motion.div
           className="text-center mb-12"
@@ -113,7 +113,7 @@ export const FeatureCarousel = () => {
 
         <div className="relative max-w-3xl mx-auto">
           {/* Carousel container */}
-          <div className="overflow-hidden rounded-xl touch-none">
+          <div className="overflow-visible rounded-xl touch-none">
             <div
               className="flex transition-transform duration-500 ease-in-out touch-pan-x"
               style={{ transform: `translateX(-${activeIndex * 100}%)` }}

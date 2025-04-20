@@ -70,10 +70,10 @@ export const FeatureSection = () => {
   ];
 
   return (
-    <section className="py-20 bg-background">
+    <section className="py-20 bg-background overflow-visible">
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
-          <motion.h2 
+          <motion.h2
             className="text-3xl md:text-4xl font-bold mb-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -82,7 +82,7 @@ export const FeatureSection = () => {
           >
             Powerful Features for Modern Writing
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="text-xl text-muted-foreground max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -95,7 +95,7 @@ export const FeatureSection = () => {
 
         <div className="space-y-24">
           {features.map((feature, index) => (
-            <motion.div 
+            <motion.div
               key={index}
               className={`flex flex-col ${index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} items-center gap-12`}
               initial={{ opacity: 0, y: 50 }}
