@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase/database";
-import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs, select } from "firebase/firestore";
 
-const limitCount = 25;
+// Increase initial page limit to 200 and subsequent loads to 100
+const initialLimitCount = 200;
+const loadMoreLimitCount = 100;
 
 const usePages = (userId, includePrivate = true, currentUserId = null) => {
   const [loading, setLoading] = useState(true);
@@ -18,17 +20,18 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
 
   const fetchInitialPages = () => {
     let pagesQuery;
-    
+
     // Check if the current user is the owner of the pages
     const isOwner = currentUserId && userId === currentUserId;
-    
+
     if (includePrivate && isOwner) {
       // Get all pages for the user (both public and private) if the current user is the owner
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         orderBy('lastModified', 'desc'),
-        limit(limitCount)
+        limit(initialLimitCount),
+        select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
       );
     } else {
       // Get only public pages if the current user is not the owner
@@ -37,7 +40,8 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         where('userId', '==', userId),
         where('isPublic', '==', true),
         orderBy('lastModified', 'desc'),
-        limit(limitCount)
+        limit(initialLimitCount),
+        select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
       );
     }
 
@@ -50,7 +54,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
 
       snapshot.forEach((doc) => {
         const pageData = { id: doc.id, ...doc.data() };
-        
+
         // Only include private pages if the current user is the owner
         if (pageData.isPublic) {
           pagesArray.push(pageData);
@@ -62,13 +66,13 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       setPages(pagesArray);
       setPrivatePages(privateArray);
 
-      if (pagesArray.length < limitCount) {
+      if (pagesArray.length < initialLimitCount) {
         setHasMorePages(false);
       } else {
         setHasMorePages(true);
       }
 
-      if (privateArray.length < limitCount) {
+      if (privateArray.length < initialLimitCount) {
         setHasMorePrivatePages(false);
       } else {
         setHasMorePrivatePages(true);
@@ -77,11 +81,11 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       // Set the last document keys for pagination
       const publicDocs = snapshot.docs.filter(doc => doc.data().isPublic);
       const privateDocs = snapshot.docs.filter(doc => !doc.data().isPublic);
-      
+
       if (publicDocs.length > 0) {
         setLastPageKey(publicDocs[publicDocs.length - 1]);
       }
-      
+
       if (privateDocs.length > 0 && isOwner) {
         setLastPrivatePageKey(privateDocs[privateDocs.length - 1]);
       }
@@ -103,10 +107,10 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         setHasMorePages(false);
         throw new Error("No more pages to load");
       }
-      
+
       // Check if the current user is the owner of the pages
       const isOwner = currentUserId && userId === currentUserId;
-      
+
       let moreQuery;
       if (includePrivate && isOwner) {
         // Get public pages for the user
@@ -116,7 +120,8 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
           where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
           startAfter(lastPageKey),
-          limit(limitCount)
+          limit(loadMoreLimitCount),
+          select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
         );
       } else {
         // Get only public pages if the current user is not the owner
@@ -126,34 +131,35 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
           where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
           startAfter(lastPageKey),
-          limit(limitCount)
+          limit(loadMoreLimitCount),
+          select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
         );
       }
-      
+
       setIsMoreLoading(true);
-      
+
       const snapshot = await getDocs(moreQuery);
       const newPagesArray = [];
-      
+
       snapshot.forEach((doc) => {
         const pageData = { id: doc.id, ...doc.data() };
         if (pageData.isPublic) {
           newPagesArray.push(pageData);
         }
       });
-      
+
       setPages((prevPages) => [...prevPages, ...newPagesArray]);
-      
-      if (snapshot.docs.length < limitCount) {
+
+      if (snapshot.docs.length < loadMoreLimitCount) {
         setHasMorePages(false);
       }
-      
+
       if (snapshot.docs.length > 0) {
         setLastPageKey(snapshot.docs[snapshot.docs.length - 1]);
       } else {
         setHasMorePages(false);
       }
-      
+
       setIsMoreLoading(false);
       return newPagesArray;
     } catch (err) {
@@ -163,22 +169,22 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
       throw err;
     }
   };
-  
+
   // Function to fetch more private pages
   const fetchMorePrivatePages = async () => {
     try {
       // Check if the current user is the owner of the pages
       const isOwner = currentUserId && userId === currentUserId;
-      
+
       if (!isOwner) {
         throw new Error("You don't have permission to view private pages");
       }
-      
+
       if (!lastPrivatePageKey) {
         setHasMorePrivatePages(false);
         throw new Error("No more private pages to load");
       }
-      
+
       // Only fetch private pages if the current user is the owner
       const moreQuery = query(
         collection(db, 'pages'),
@@ -186,33 +192,34 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
         where('isPublic', '==', false),
         orderBy('lastModified', 'desc'),
         startAfter(lastPrivatePageKey),
-        limit(limitCount)
+        limit(loadMoreLimitCount),
+        select('title', 'isPublic', 'userId', 'lastModified', 'createdAt', 'groupId', 'username')
       );
-      
+
       setIsMorePrivateLoading(true);
-      
+
       const snapshot = await getDocs(moreQuery);
       const newPrivateArray = [];
-      
+
       snapshot.forEach((doc) => {
         const pageData = { id: doc.id, ...doc.data() };
         if (!pageData.isPublic) {
           newPrivateArray.push(pageData);
         }
       });
-      
+
       setPrivatePages((prevPages) => [...prevPages, ...newPrivateArray]);
-      
-      if (snapshot.docs.length < limitCount) {
+
+      if (snapshot.docs.length < loadMoreLimitCount) {
         setHasMorePrivatePages(false);
       }
-      
+
       if (snapshot.docs.length > 0) {
         setLastPrivatePageKey(snapshot.docs[snapshot.docs.length - 1]);
       } else {
         setHasMorePrivatePages(false);
       }
-      
+
       setIsMorePrivateLoading(false);
       return newPrivateArray;
     } catch (err) {
@@ -227,7 +234,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null) => {
   useEffect(() => {
     if (userId) {
       const unsubscribe = fetchInitialPages();
-      
+
       // Cleanup function
       return () => {
         unsubscribe();

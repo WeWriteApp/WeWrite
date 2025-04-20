@@ -53,7 +53,7 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
   }
 
   return (
-    <div className="relative">
+    <div>
       <div className="flex flex-wrap gap-2 justify-start items-start content-start mt-4">
         {pageList.map((page) => (
           <div key={page.id} className="flex-none max-w-full">
@@ -70,7 +70,6 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
           </div>
         ))}
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
     </div>
   );
 }
