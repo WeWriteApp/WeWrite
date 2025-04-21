@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { getAnalyticsInstance } from '../utils/analytics';
 import { useRouter } from 'next/navigation';
-import { getAnalyticsPageTitle, getAnalyticsPageTitleForId, extractPageIdFromPath } from '../utils/analytics-page-titles';
+import { getAnalyticsPageTitle, getAnalyticsPageTitleForId } from '../utils/analytics-page-titles';
 
 /**
  * UnifiedAnalyticsProvider
@@ -226,7 +226,17 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
    * This helps with tracking specific pages
    */
   const extractPageId = (path: string): string | null => {
-    return extractPageIdFromPath(path);
+    if (!path) return null;
+
+    // Check for /pages/[id] format
+    const pagesMatch = path.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+    if (pagesMatch && pagesMatch[1]) return pagesMatch[1];
+
+    // Check for direct UUID format (20 chars)
+    const uuidMatch = path.match(/\/([a-zA-Z0-9]{20})(?:\/|$)/);
+    if (uuidMatch && uuidMatch[1]) return uuidMatch[1];
+
+    return null;
   };
 
   return (

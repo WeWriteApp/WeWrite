@@ -63,7 +63,7 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
       const pageTitle = getAnalyticsPageTitle(pathname, searchParams, document.title);
 
       // Extract page ID if this is a page route
-      const pageId = extractPageIdFromPath(pathname);
+      const pageId = pathname ? pathname.match(/\/([a-zA-Z0-9]{20})(?:\/|$)/)?.at(1) : null;
 
       // Log page view event with page title
       logEvent(analyticsInstance, 'page_view', {

@@ -1,14 +1,14 @@
 "use client";
 
-import { LoginForm } from "../../components/login-form"
-import { AuthLayout } from "../../components/auth-layout"
+import { ModernLoginForm } from "../../components/modern-login-form"
+import { ModernAuthLayout } from "../../components/modern-auth-layout"
 import ReturnToPreviousAccount from "./ReturnToPreviousAccount"
 
 export default function LoginPage() {
   return (
-    <AuthLayout>
+    <ModernAuthLayout>
       <ReturnToPreviousAccount />
-      <LoginForm />
-    </AuthLayout>
+      <ModernLoginForm />
+    </ModernAuthLayout>
   )
 }

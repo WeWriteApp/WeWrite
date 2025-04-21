@@ -17,7 +17,7 @@ import { Button } from "./components/ui/button";
 import { Plus, FileText, Loader } from "lucide-react";
 import { ShimmerEffect } from "./components/ui/skeleton";
 import { useTheme } from "next-themes";
-import LandingPage from "./components/landing/LandingPage";
+import LandingPage from "./components/landing/SimpleLandingPage";
 import { FloatingActionButton } from "./components/ui/floating-action-button";
 
 export default function Home() {

@@ -50,13 +50,13 @@ export default function ReturnToPreviousAccount() {
   return (
     <div className="absolute top-4 left-4 z-50">
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
         onClick={handleReturn}
-        className="flex items-center gap-1.5"
+        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
       >
         <X className="h-4 w-4" />
-        <span>Cancel</span>
+        <span>Cancel account switch</span>
       </Button>
     </div>
   );
