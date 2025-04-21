@@ -11,6 +11,7 @@ import {
 } from "../providers/ProfilePageProvider";
 import { useAuth } from "../providers/AuthProvider";
 import { Loader, Settings, ChevronLeft, Heart } from "lucide-react";
+import SupporterBadge from "./SupporterBadge";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount } from "../firebase/counters";
@@ -21,6 +22,7 @@ const SingleProfileView = ({ profile }) => {
   const [pageCount, setPageCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
   const [username, setUsername] = useState(profile.username || 'Anonymous');
+  const [supporterTier, setSupporterTier] = useState(profile.tier || null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   // Check if this profile belongs to the current user
@@ -87,8 +89,9 @@ const SingleProfileView = ({ profile }) => {
           </div>
 
           {/* Centered title */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-2">
             <h1 className="text-3xl font-semibold">{username}</h1>
+            {supporterTier && <SupporterBadge tier={supporterTier} showLabel={true} />}
           </div>
 
           {/* Settings button - only visible for current user */}

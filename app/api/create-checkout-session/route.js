@@ -7,18 +7,18 @@ export async function GET(request) {
   try {
     // Initialize Stripe
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    
+
     // Get amount from URL parameters
     const { searchParams } = new URL(request.url);
     const amount = searchParams.get('amount');
-    
+
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       return NextResponse.json(
         { error: 'Invalid amount' },
         { status: 400 }
       );
     }
-    
+
     // Verify the authenticated user
     const user = auth.currentUser;
     if (!user) {
@@ -27,13 +27,13 @@ export async function GET(request) {
         { status: 401 }
       );
     }
-    
+
     const userId = user.uid;
-    
+
     // Create a customer in Stripe if they don't exist yet
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customer;
-    
+
     if (customers.data.length === 0) {
       customer = await stripe.customers.create({
         email: user.email,
@@ -44,10 +44,10 @@ export async function GET(request) {
     } else {
       customer = customers.data[0];
     }
-    
+
     // Round amount to 2 decimal places
     const amountFloat = Math.round(parseFloat(amount) * 100) / 100;
-    
+
     // Create the price
     const price = await stripe.prices.create({
       unit_amount: Math.round(amountFloat * 100), // Convert to cents
@@ -59,7 +59,7 @@ export async function GET(request) {
         name: `WeWrite Monthly Subscription - $${amountFloat}`,
       },
     });
-    
+
     // Create the checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -78,7 +78,7 @@ export async function GET(request) {
         amount: amountFloat.toString()
       }
     });
-    
+
     // Create an inactive subscription in Firestore
     await createSubscription(userId, {
       stripeCustomerId: customer.id,
@@ -89,7 +89,7 @@ export async function GET(request) {
       pledgedAmount: 0,
       createdAt: new Date().toISOString()
     });
-    
+
     // Redirect to the Stripe checkout page
     return NextResponse.redirect(session.url);
   } catch (error) {
@@ -106,11 +106,11 @@ export async function POST(request) {
   try {
     // Initialize Stripe
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    
+
     // Get request body
     const body = await request.json();
-    const { priceId, userId } = body;
-    
+    const { priceId, userId, amount, tierName } = body;
+
     // Verify the authenticated user
     const user = auth.currentUser;
     if (!user || user.uid !== userId) {
@@ -119,11 +119,11 @@ export async function POST(request) {
         { status: 401 }
       );
     }
-    
+
     // Create a customer in Stripe if they don't exist yet
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customer;
-    
+
     if (customers.data.length === 0) {
       customer = await stripe.customers.create({
         email: user.email,
@@ -134,13 +134,49 @@ export async function POST(request) {
     } else {
       customer = customers.data[0];
     }
-    
+
+    // Determine tier based on amount if provided
+    let tier = 'bronze';
+    let finalAmount = 0;
+
+    if (amount) {
+      finalAmount = parseFloat(amount);
+      if (finalAmount >= 50) {
+        tier = finalAmount > 50 ? 'diamond' : 'gold';
+      } else if (finalAmount >= 20) {
+        tier = 'silver';
+      }
+    }
+
+    // Create a price for the custom amount if needed
+    let finalPriceId = priceId;
+
+    if (amount && !priceId) {
+      const price = await stripe.prices.create({
+        unit_amount: Math.round(finalAmount * 100), // Convert to cents
+        currency: 'usd',
+        recurring: {
+          interval: 'month',
+        },
+        product_data: {
+          name: `WeWrite ${tierName || tier.charAt(0).toUpperCase() + tier.slice(1)} Supporter`,
+          metadata: {
+            tier,
+          },
+        },
+        metadata: {
+          tier,
+        },
+      });
+      finalPriceId = price.id;
+    }
+
     // Create the checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
+          price: finalPriceId,
           quantity: 1,
         },
       ],
@@ -149,21 +185,24 @@ export async function POST(request) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/account?canceled=true`,
       customer: customer.id,
       metadata: {
-        firebaseUID: userId
+        firebaseUID: userId,
+        tier: tier,
+        amount: finalAmount.toString()
       }
     });
-    
+
     // Create an inactive subscription in Firestore
     await createSubscription(userId, {
       stripeCustomerId: customer.id,
-      stripePriceId: priceId,
+      stripePriceId: finalPriceId,
       stripeSubscriptionId: null, // Will be updated by webhook
       status: 'pending',
-      amount: 0, // Will be updated by webhook
+      amount: finalAmount || 0, // Will be updated by webhook if not provided
+      tier: tier,
       pledgedAmount: 0,
       createdAt: new Date().toISOString()
     });
-    
+
     return NextResponse.json({ id: session.id });
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -172,4 +211,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-} 
+}

@@ -43,11 +43,10 @@ export default function SiteFooter({ className = "" }) {
       external: true
     },
     {
-      href: "https://opencollective.com/wewrite-app",
+      href: "/support",
       label: "Support us",
       icon: <Heart className="h-3 w-3" />,
-      external: true,
-      forceNewTab: true
+      external: false
     },
     {
       href: "/zRNwhNgIEfLFo050nyAT",

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
+import { getUserSubscription } from '../../firebase/subscription';
 import { app } from '../../firebase/config';
 import { Loader } from '../../components/Loader';
 import SingleProfileView from '../../components/SingleProfileView';
@@ -25,9 +26,15 @@ export default function UserPage({ params }) {
 
         if (userByIdSnapshot.exists()) {
           // Found user by ID
+          const userData = userByIdSnapshot.val();
+
+          // Get user's subscription to check for supporter tier
+          const subscription = await getUserSubscription(id);
+
           setProfile({
             uid: id,
-            ...userByIdSnapshot.val()
+            ...userData,
+            tier: subscription?.tier || null
           });
           setIsLoading(false);
           return;
@@ -44,9 +51,13 @@ export default function UserPage({ params }) {
           const userId = userData[0];
           const userProfile = userData[1];
 
+          // Get user's subscription to check for supporter tier
+          const subscription = await getUserSubscription(userId);
+
           setProfile({
             uid: userId,
-            ...userProfile
+            ...userProfile,
+            tier: subscription?.tier || null
           });
           setIsLoading(false);
           return;

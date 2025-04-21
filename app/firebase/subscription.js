@@ -1,4 +1,4 @@
-import { 
+import {
   getFirestore,
   addDoc,
   collection,
@@ -56,7 +56,7 @@ export const getUserSubscription = async (userId) => {
   try {
     const subscriptionRef = doc(db, "users", userId, "subscription", "current");
     const subscriptionSnap = await getDoc(subscriptionRef);
-    
+
     if (subscriptionSnap.exists()) {
       return { id: subscriptionSnap.id, ...subscriptionSnap.data() };
     } else {
@@ -73,7 +73,7 @@ export const createPledge = async (userId, pageId, pledgeAmount) => {
   try {
     // Round to two decimal places for consistent currency handling
     const roundedAmount = Math.round(Number(pledgeAmount) * 100) / 100;
-    
+
     // Create the pledge document
     const pledgeRef = doc(db, "users", userId, "pledges", pageId);
     await setDoc(pledgeRef, {
@@ -109,10 +109,10 @@ export const updatePledge = async (userId, pageId, newAmount, oldAmount) => {
     // Round to two decimal places for consistent currency handling
     const roundedNewAmount = Math.round(Number(newAmount) * 100) / 100;
     const roundedOldAmount = Math.round(Number(oldAmount) * 100) / 100;
-    
+
     // Calculate the difference
     const amountDifference = roundedNewAmount - roundedOldAmount;
-    
+
     // Update the pledge
     const pledgeRef = doc(db, "users", userId, "pledges", pageId);
     await fsUpdateDoc(pledgeRef, {
@@ -171,7 +171,7 @@ export const getUserPledges = async (userId) => {
   try {
     const pledgesCollectionRef = collection(db, "users", userId, "pledges");
     const querySnapshot = await getDocs(pledgesCollectionRef);
-    
+
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -187,7 +187,7 @@ export const getPledge = async (userId, pageId) => {
   try {
     const pledgeRef = doc(db, "users", userId, "pledges", pageId);
     const pledgeSnap = await getDoc(pledgeRef);
-    
+
     if (pledgeSnap.exists()) {
       return { id: pledgeSnap.id, ...pledgeSnap.data() };
     } else {
@@ -202,9 +202,10 @@ export const getPledge = async (userId, pageId) => {
 // Cancel a subscription (for both demo and real subscriptions)
 export const cancelSubscription = async (subscriptionId) => {
   try {
-    // For real Stripe subscriptions, you would call your API route here
-    // For demo subscriptions, this is handled in the UI by updating the subscription document
-    
+    if (!subscriptionId) {
+      throw new Error('Subscription ID is required');
+    }
+
     // Call the cancel-subscription API route
     const response = await fetch('/api/cancel-subscription', {
       method: 'POST',
@@ -215,8 +216,13 @@ export const cancelSubscription = async (subscriptionId) => {
         subscriptionId,
       }),
     });
-    
+
     const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to cancel subscription');
+    }
+
     return result;
   } catch (error) {
     console.error("Error canceling subscription:", error);
@@ -227,7 +233,7 @@ export const cancelSubscription = async (subscriptionId) => {
 // Listen to changes in user's subscription
 export const listenToUserSubscription = (userId, callback) => {
   const subscriptionRef = doc(db, "users", userId, "subscription", "current");
-  
+
   return onSnapshot(subscriptionRef, (doc) => {
     if (doc.exists()) {
       callback({ id: doc.id, ...doc.data() });
@@ -240,7 +246,7 @@ export const listenToUserSubscription = (userId, callback) => {
 // Listen to changes in user's pledges
 export const listenToUserPledges = (userId, callback) => {
   const pledgesRef = collection(db, "users", userId, "pledges");
-  
+
   return onSnapshot(pledgesRef, (snapshot) => {
     const pledges = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -248,4 +254,4 @@ export const listenToUserPledges = (userId, callback) => {
     }));
     callback(pledges);
   });
-}; 
+};

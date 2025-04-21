@@ -3,6 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
+import SupporterBadge from "./SupporterBadge";
 import { User, Clock, FileText, Lock, Plus, Loader, Info, Heart, UserMinus } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
@@ -48,13 +49,17 @@ function AnimatedTabsContent({ children, activeTab }) {
 
 // Component to display a list of pages
 function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
+  // Get the profile from the parent component context
+  const { profile } = useContext(ProfilePagesContext);
+  // Check if user is a supporter
+  const isSupporter = profile?.tier ? true : false;
   if (!pageList || pageList.length === 0) {
     return <div className="text-center text-muted-foreground py-8">{emptyMessage}</div>;
   }
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 justify-start items-start content-start mt-4">
+      <div className={`flex flex-wrap gap-2 justify-start items-start content-start mt-4 ${!isSupporter && !isCurrentUserList ? 'opacity-70' : ''}`}>
         {pageList.map((page) => (
           <div key={page.id} className="flex-none max-w-full">
             <PillLink

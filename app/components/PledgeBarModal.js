@@ -11,11 +11,11 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
   // Use customContent if provided, otherwise use default content based on sign-in status
   const content = customContent || (isSignedIn ? {
     title: "This feature is coming soon!",
-    description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can support us on OpenCollective!",
+    description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can become an Early Supporter!",
     action: {
-      href: "https://opencollective.com/wewrite-app",
-      label: "Support us",
-      external: true
+      href: "/support",
+      label: "Become a Supporter",
+      external: false
     }
   } : {
     title: "Log in to support this writer",

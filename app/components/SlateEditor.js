@@ -878,7 +878,7 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       ref={ref}
       onClick={handleClick}
       contentEditable={false} // Make the link non-editable
-      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-[#0057FF] text-white border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
+      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-primary text-primary-foreground border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-primary/90 hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
       data-page-id={isPageLinkType ? element.pageId : undefined}
       data-user-id={isUserLinkType ? element.userId : undefined}
     >

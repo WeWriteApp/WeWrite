@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut, Medal, Award, Shield, Diamond, Heart } from 'lucide-react';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
@@ -10,6 +10,7 @@ import {
   getUserSubscription,
   updateSubscription,
   getUserPledges,
+  cancelSubscription,
   getPledge,
   updatePledge,
   createPledge
@@ -21,6 +22,7 @@ import { addUsername, updateEmail as updateFirebaseEmail, logoutUser } from '../
 import { db } from '../firebase/database';
 import AccountDrawer from '../components/AccountDrawer';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import PaymentModal from '../components/PaymentModal';
 import SubscriptionStatusCard from '../components/SubscriptionStatusCard';
@@ -757,33 +759,78 @@ export default function AccountPage() {
             </div>
           </section>
 
-          {/* OpenCollective Section */}
+          {/* Subscription Management Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Support WeWrite</h3>
-            <Alert className="bg-green-500/10 border-green-500/20">
-              <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertTitle className="text-green-600 dark:text-green-400">Payments Coming Soon</AlertTitle>
-              <AlertDescription className="text-green-600 dark:text-green-400">
-                <p className="mb-4">We're working on implementing payments. In the meantime, please support us on OpenCollective to help us continue building WeWrite.</p>
-                <Button asChild className="w-full relative overflow-hidden bg-gradient-to-r from-green-500 via-blue-500 to-green-500 bg-[length:200%_100%] text-white hover:shadow-lg transition-all duration-300 animate-gradient">
-                  <a href="https://opencollective.com/wewrite-app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Support on OpenCollective
-                  </a>
-                </Button>
-
-                <style jsx global>{`
-                  @keyframes gradient-animation {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                  }
-                  .animate-gradient {
-                    animation: gradient-animation 8s ease infinite;
-                  }
-                `}</style>
-              </AlertDescription>
-            </Alert>
+            <h3 className="text-base font-medium mb-4">Subscription</h3>
+            {subscription && subscription.status === 'active' ? (
+              <div className="bg-background rounded-lg border border-border p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    {subscription.tier === 'bronze' && (
+                      <Medal className="h-5 w-5 text-amber-600" />
+                    )}
+                    {subscription.tier === 'silver' && (
+                      <Award className="h-5 w-5 text-slate-400" />
+                    )}
+                    {subscription.tier === 'gold' && (
+                      <Shield className="h-5 w-5 text-yellow-500" />
+                    )}
+                    {subscription.tier === 'diamond' && (
+                      <Diamond className="h-5 w-5 text-blue-400" />
+                    )}
+                    <div>
+                      <p className="font-medium">
+                        {subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Supporter
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        ${subscription.amount}/month
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    {nextPaymentDate && (
+                      <p className="text-sm text-muted-foreground">
+                        Next payment: {nextPaymentDate.toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => createPortalSession(user.uid)}
+                    className="w-full justify-center"
+                  >
+                    Manage Subscription
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to cancel your subscription? Your supporter badge will be removed.')) {
+                        cancelSubscription(subscription.stripeSubscriptionId);
+                      }
+                    }}
+                    className="w-full justify-center"
+                  >
+                    Cancel Subscription
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Alert className="bg-primary/10 border-primary/20">
+                <DollarSign className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-primary">Become a Supporter</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-4">Support WeWrite's development and get exclusive badges on your profile.</p>
+                  <Button asChild className="w-full">
+                    <Link href="/support" className="flex items-center gap-2">
+                      <Heart className="h-4 w-4" />
+                      Become a Supporter
+                    </Link>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
           </section>
 
           {/* Social Media Section */}

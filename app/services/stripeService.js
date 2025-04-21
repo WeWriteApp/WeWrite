@@ -10,9 +10,9 @@ const getStripe = () => {
 };
 
 // Create a checkout session for subscription
-export const createCheckoutSession = async (priceId, userId) => {
+export const createCheckoutSession = async ({ priceId, userId, amount, tierName }) => {
   const stripe = await getStripe();
-  
+
   try {
     // Call your backend API to create a Stripe Checkout Session
     const response = await fetch('/api/create-checkout-session', {
@@ -23,11 +23,17 @@ export const createCheckoutSession = async (priceId, userId) => {
       body: JSON.stringify({
         priceId,
         userId,
+        amount,
+        tierName,
       }),
     });
 
     const session = await response.json();
-    
+
+    if (session.error) {
+      throw new Error(session.error);
+    }
+
     // Redirect to Stripe Checkout
     const result = await stripe.redirectToCheckout({
       sessionId: session.id,
@@ -58,7 +64,7 @@ export const createPortalSession = async (userId) => {
     });
 
     const session = await response.json();
-    
+
     // Redirect to Stripe Customer Portal
     window.location.href = session.url;
   } catch (error) {
@@ -123,4 +129,4 @@ export const cancelSubscription = async (subscriptionId) => {
     console.error('Error in cancelSubscription:', error);
     throw error;
   }
-}; 
+};

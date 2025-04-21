@@ -189,7 +189,7 @@ const SimpleLandingPage = () => {
             >
               WeWrite
             </h1>
-            
+
             <div className="flex items-center space-x-2">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/auth/login">Sign In</Link>
@@ -234,7 +234,7 @@ const SimpleLandingPage = () => {
         <section className="py-16 md:py-20">
           <div className="container mx-auto px-6">
             <div className="flex flex-col lg:flex-row items-center gap-12">
-              <motion.div 
+              <motion.div
                 className="flex-1 text-center lg:text-left"
                 initial="hidden"
                 whileInView="visible"
@@ -283,7 +283,7 @@ const SimpleLandingPage = () => {
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20">
           <div className="container mx-auto px-6">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial="hidden"
               whileInView="visible"
@@ -337,7 +337,7 @@ const SimpleLandingPage = () => {
         {/* Coming Soon Section */}
         <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial="hidden"
               whileInView="visible"
@@ -383,13 +383,9 @@ const SimpleLandingPage = () => {
                     </CardHeader>
                     <CardContent>
                       <Button variant="outline" size="sm" asChild className="w-full">
-                        <a
-                          href="https://opencollective.com/wewrite-app"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Support development
-                        </a>
+                        <Link href="/support">
+                          Become an Early Supporter
+                        </Link>
                       </Button>
                     </CardContent>
                   </Card>
@@ -402,7 +398,7 @@ const SimpleLandingPage = () => {
         {/* About Section */}
         <section id="about" className="py-16 md:py-20">
           <div className="container mx-auto px-6">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial="hidden"
               whileInView="visible"
@@ -437,7 +433,7 @@ const SimpleLandingPage = () => {
               ))}
             </div>
 
-            <motion.div 
+            <motion.div
               className="text-center mt-20"
               initial="hidden"
               whileInView="visible"

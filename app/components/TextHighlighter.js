@@ -60,6 +60,38 @@ const TextHighlighter = ({ contentRef }) => {
   }, [contentRef]);
 
   // Add scroll event listener to update highlight positions
+  // Define dismissHighlight function before it's used in useEffect
+  const dismissHighlight = useCallback(() => {
+    // Clear any browser selection
+    if (typeof window !== 'undefined') {
+      window.getSelection().removeAllRanges();
+
+      // Remove custom highlight elements
+      if (window.customHighlightContainer) {
+        window.customHighlightContainer.remove();
+        window.customHighlightContainer = null;
+      }
+
+      // Clean up stored positions
+      if (window.highlightOriginalPositions) {
+        window.highlightOriginalPositions = null;
+      }
+
+      // Remove the highlight parameter from the URL
+      const url = window.location.href.split('#')[0];
+      window.history.replaceState({}, document.title, url);
+    }
+
+    // Remove notification element
+    if (notificationRef.current) {
+      notificationRef.current.remove();
+      notificationRef.current = null;
+    }
+
+    setIsHighlighting(false);
+    setHighlightedText('');
+  }, []);
+
   useEffect(() => {
     if (!isHighlighting) return;
 
@@ -304,36 +336,7 @@ const TextHighlighter = ({ contentRef }) => {
     }, 300); // Shorter delay for better user experience
   };
 
-  const dismissHighlight = useCallback(() => {
-    // Clear any browser selection
-    if (typeof window !== 'undefined') {
-      window.getSelection().removeAllRanges();
-
-      // Remove custom highlight elements
-      if (window.customHighlightContainer) {
-        window.customHighlightContainer.remove();
-        window.customHighlightContainer = null;
-      }
-
-      // Clean up stored positions
-      if (window.highlightOriginalPositions) {
-        window.highlightOriginalPositions = null;
-      }
-
-      // Remove the highlight parameter from the URL
-      const url = window.location.href.split('#')[0];
-      window.history.replaceState({}, document.title, url);
-    }
-
-    // Remove notification element
-    if (notificationRef.current) {
-      notificationRef.current.remove();
-      notificationRef.current = null;
-    }
-
-    setIsHighlighting(false);
-    setHighlightedText('');
-  }, []);
+  // dismissHighlight function is now defined above
 
   // Create a portal for the notification to be rendered at the top of the document
   useEffect(() => {

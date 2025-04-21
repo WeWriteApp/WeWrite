@@ -11,12 +11,20 @@ import {
   query,
   where,
   orderBy,
-  limit
+  limit,
+  startAfter,
+  writeBatch,
+  select,
+  Timestamp
 } from "firebase/firestore";
 
 import { app } from "./config";
 import { rtdb } from "./rtdb";
 import { get, ref } from "firebase/database";
+
+// Import utility functions
+import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
+import { trackQueryPerformance } from "../utils/queryMonitor";
 
 export const db = getFirestore(app);
 
@@ -334,79 +342,104 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
 };
 
 export const getPageById = async (pageId, userId = null) => {
-  try {
-    // Validate pageId
-    if (!pageId) {
-      console.error("getPageById called with empty pageId");
-      return { pageData: null, error: "Invalid page ID" };
-    }
-
-    // Get the page document
-    const pageRef = doc(db, "pages", pageId);
-    const docSnap = await getDoc(pageRef);
-
-    if (docSnap.exists()) {
-      const pageData = { id: docSnap.id, ...docSnap.data() };
-
-      // Always allow access to private pages if the user is the owner
-      if (!pageData.isPublic && userId && pageData.userId === userId) {
-        // User is the owner, allow access to their private page
-        console.log(`Owner access granted to private page ${pageId} for user ${userId}`);
-      } else {
-        // Check access permissions for non-owners
-        const accessCheck = await checkPageAccess(pageData, userId);
-        if (!accessCheck.hasAccess) {
-          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-          return { pageData: null, error: accessCheck.error };
-        }
+  return await trackQueryPerformance('getPageById', async () => {
+    try {
+      // Validate pageId
+      if (!pageId) {
+        console.error("getPageById called with empty pageId");
+        return { pageData: null, error: "Invalid page ID" };
       }
 
-      // Check if the page has content directly (from a save operation)
-      if (pageData.content) {
-        try {
-          // Create a version data object from the page content
-          const versionData = {
-            content: pageData.content,
-            createdAt: pageData.lastModified || new Date().toISOString(),
-            userId: pageData.userId || 'unknown'
-          };
+      // Check cache first (only for public pages or if user is the owner)
+      const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+      const cachedData = getCacheItem(cacheKey);
+
+      if (cachedData) {
+        console.log(`Using cached data for page ${pageId}`);
+        return cachedData;
+      }
+
+      // Get the page document with only the fields we need
+      const pageRef = doc(db, "pages", pageId);
+      const docSnap = await getDoc(pageRef);
+
+      if (docSnap.exists()) {
+        const pageData = { id: docSnap.id, ...docSnap.data() };
+
+        // Always allow access to private pages if the user is the owner
+        if (!pageData.isPublic && userId && pageData.userId === userId) {
+          // User is the owner, allow access to their private page
+          console.log(`Owner access granted to private page ${pageId} for user ${userId}`);
+        } else {
+          // Check access permissions for non-owners
+          const accessCheck = await checkPageAccess(pageData, userId);
+          if (!accessCheck.hasAccess) {
+            console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
+            return { pageData: null, error: accessCheck.error };
+          }
+        }
+
+        // Check if the page has content directly (from a save operation)
+        if (pageData.content) {
+          try {
+            // Create a version data object from the page content
+            const versionData = {
+              content: pageData.content,
+              createdAt: pageData.lastModified || new Date().toISOString(),
+              userId: pageData.userId || 'unknown'
+            };
+
+            // Extract links
+            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+
+            const result = { pageData, versionData, links };
+
+            // Cache the result (only for public pages or if user is the owner)
+            if (pageData.isPublic || (userId && pageData.userId === userId)) {
+              setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+            }
+
+            console.log("getPageById: Using content directly from page document");
+            return result;
+          } catch (error) {
+            console.error("Error parsing page content in getPageById:", error);
+            // Continue to fetch from version document as fallback
+          }
+        }
+
+        // Get the current version ID
+        const currentVersionId = pageData.currentVersion;
+
+        // Get the version document
+        const versionCollectionRef = collection(db, "pages", pageId, "versions");
+        const versionRef = doc(versionCollectionRef, currentVersionId);
+        const versionSnap = await getDoc(versionRef);
+
+        if (versionSnap.exists()) {
+          const versionData = versionSnap.data();
 
           // Extract links
           const links = extractLinksFromNodes(JSON.parse(versionData.content));
 
-          console.log("getPageById: Using content directly from page document");
-          return { pageData, versionData, links };
-        } catch (error) {
-          console.error("Error parsing page content in getPageById:", error);
-          // Continue to fetch from version document as fallback
+          const result = { pageData, versionData, links };
+
+          // Cache the result (only for public pages or if user is the owner)
+          if (pageData.isPublic || (userId && pageData.userId === userId)) {
+            setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+          }
+
+          return result;
+        } else {
+          return { pageData: null, error: "Version not found" };
         }
-      }
-
-      // Get the current version ID
-      const currentVersionId = pageData.currentVersion;
-
-      // Get the version document
-      const versionCollectionRef = collection(db, "pages", pageId, "versions");
-      const versionRef = doc(versionCollectionRef, currentVersionId);
-      const versionSnap = await getDoc(versionRef);
-
-      if (versionSnap.exists()) {
-        const versionData = versionSnap.data();
-
-        // Extract links
-        const links = extractLinksFromNodes(JSON.parse(versionData.content));
-
-        return { pageData, versionData, links };
       } else {
-        return { pageData: null, error: "Version not found" };
+        return { pageData: null, error: "Page not found" };
       }
-    } else {
-      return { pageData: null, error: "Page not found" };
+    } catch (error) {
+      console.error("Error fetching page:", error);
+      return { pageData: null, error: "Error fetching page" };
     }
-  } catch (error) {
-    console.error("Error fetching page:", error);
-    return { pageData: null, error: "Error fetching page" };
-  }
+  }, { pageId, userId });
 };
 
 export const getVersionsByPageId = async (pageId) => {
@@ -1198,105 +1231,171 @@ export const searchUsers = async (searchQuery, limit = 10) => {
   }
 };
 
-export async function getUserPages(userId, includePrivate = false, currentUserId = null) {
-  try {
-    // Get user's own pages from Firestore
-    const pagesRef = collection(db, "pages");
-    let pageQuery;
+export async function getUserPages(userId, includePrivate = false, currentUserId = null, lastVisible = null, pageSize = 200) {
+  return await trackQueryPerformance('getUserPages', async () => {
+    try {
+      // Check cache first (only for public pages)
+      if (!includePrivate && !lastVisible) {
+        const cacheKey = generateCacheKey('userPages', userId, 'public');
+        const cachedData = getCacheItem(cacheKey);
 
-    if (includePrivate && userId === currentUserId) {
-      // If viewing own profile and includePrivate is true, get all pages
-      pageQuery = query(
-        pagesRef,
-        where("userId", "==", userId),
-        orderBy("lastModified", "desc")
-      );
-    } else {
-      // If viewing someone else's profile, only get public pages
-      pageQuery = query(
-        pagesRef,
-        where("userId", "==", userId),
-        where("isPublic", "==", true),
-        orderBy("lastModified", "desc")
-      );
-    }
-
-    const pagesSnapshot = await getDocs(pageQuery);
-    const pages = [];
-
-    pagesSnapshot.forEach((doc) => {
-      pages.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-
-    // Get pages from groups the user is a member of
-    const rtdb = getDatabase();
-    const groupsRef = ref(rtdb, 'groups');
-    const groupsSnapshot = await get(groupsRef);
-
-    if (groupsSnapshot.exists()) {
-      const groups = groupsSnapshot.val();
-
-      // Find groups where user is a member
-      const userGroups = Object.entries(groups)
-        .filter(([_, groupData]) =>
-          groupData.members && groupData.members[userId]
-        )
-        .map(([groupId, groupData]) => ({
-          id: groupId,
-          ...groupData
-        }));
-
-      // For each group, get all pages
-      for (const group of userGroups) {
-        // Skip private groups if the current user is not a member or owner
-        if (!group.isPublic && currentUserId !== userId) {
-          // If current user is not the group owner and not a member, skip this group
-          if (group.owner !== currentUserId &&
-              (!group.members || !group.members[currentUserId])) {
-            continue;
-          }
+        if (cachedData) {
+          console.log(`Using cached data for user pages (${userId})`);
+          return cachedData;
         }
+      }
 
-        if (group.pages) {
-          // Get detailed page data for each page in the group
-          const groupPageIds = Object.keys(group.pages);
+      // Get user's own pages from Firestore with field selection
+      const pagesRef = collection(db, "pages");
+      let pageQuery;
 
-          for (const pageId of groupPageIds) {
-            // Check if we already have this page (user might own pages in their groups)
-            if (!pages.some(p => p.id === pageId)) {
-              // Get the page data from Firestore
-              const pageRef = doc(db, "pages", pageId);
-              const pageSnap = await getDoc(pageRef);
+      // Note: We'll use field selection in a future update when we migrate to Firestore v10
+      // which has better support for field selection with complex queries
 
-              if (pageSnap.exists()) {
-                const pageData = pageSnap.data();
-                pages.push({
-                  id: pageId,
-                  ...pageData,
-                  // Add group information
-                  groupId: group.id,
-                  groupName: group.name
-                });
+      // Build the query with cursor-based pagination
+      if (includePrivate && userId === currentUserId) {
+        // If viewing own profile and includePrivate is true, get all pages
+        pageQuery = query(
+          pagesRef,
+          where("userId", "==", userId),
+          orderBy("lastModified", "desc")
+        );
+      } else {
+        // If viewing someone else's profile, only get public pages
+        pageQuery = query(
+          pagesRef,
+          where("userId", "==", userId),
+          where("isPublic", "==", true),
+          orderBy("lastModified", "desc")
+        );
+      }
+
+      // Add pagination
+      if (lastVisible) {
+        pageQuery = query(pageQuery, startAfter(lastVisible), limit(pageSize));
+      } else {
+        pageQuery = query(pageQuery, limit(pageSize));
+      }
+
+      // Execute the query with field selection
+      const pagesSnapshot = await getDocs(pageQuery);
+      const pages = [];
+
+      // Store the last document for pagination
+      const lastDoc = pagesSnapshot.docs.length > 0 ?
+        pagesSnapshot.docs[pagesSnapshot.docs.length - 1] : null;
+
+      pagesSnapshot.forEach((doc) => {
+        pages.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      // Get pages from groups the user is a member of
+      const groupsRef = ref(rtdb, 'groups');
+      const groupsSnapshot = await get(groupsRef);
+
+      if (groupsSnapshot.exists()) {
+        const groups = groupsSnapshot.val();
+
+        // Find groups where user is a member
+        const userGroups = Object.entries(groups)
+          .filter(([_, groupData]) =>
+            groupData.members && groupData.members[userId]
+          )
+          .map(([groupId, groupData]) => ({
+            id: groupId,
+            ...groupData
+          }));
+
+        // For each group, get all pages using batch operations
+        if (userGroups.length > 0) {
+          // Collect all group page IDs
+          const groupPageIds = [];
+          const groupInfoByPageId = {};
+
+          for (const group of userGroups) {
+            // Skip private groups if the current user is not a member or owner
+            if (!group.isPublic && currentUserId !== userId) {
+              if (group.owner !== currentUserId &&
+                  (!group.members || !group.members[currentUserId])) {
+                continue;
+              }
+            }
+
+            if (group.pages) {
+              // Get page IDs from this group
+              const pageIds = Object.keys(group.pages);
+
+              for (const pageId of pageIds) {
+                // Check if we already have this page
+                if (!pages.some(p => p.id === pageId) && !groupPageIds.includes(pageId)) {
+                  groupPageIds.push(pageId);
+                  groupInfoByPageId[pageId] = {
+                    groupId: group.id,
+                    groupName: group.name
+                  };
+                }
               }
             }
           }
+
+          // Batch fetch pages in chunks of 10 (Firestore limit for 'in' queries)
+          const batchSize = 10;
+          for (let i = 0; i < groupPageIds.length; i += batchSize) {
+            const batch = groupPageIds.slice(i, i + batchSize);
+
+            if (batch.length === 0) continue;
+
+            // Create a query for this batch
+            const batchQuery = query(
+              collection(db, 'pages'),
+              where('__name__', 'in', batch)
+            );
+
+            const batchSnapshot = await getDocs(batchQuery);
+
+            batchSnapshot.forEach(doc => {
+              const pageData = doc.data();
+              const groupInfo = groupInfoByPageId[doc.id];
+
+              pages.push({
+                id: doc.id,
+                ...pageData,
+                // Add group information
+                groupId: groupInfo.groupId,
+                groupName: groupInfo.groupName
+              });
+            });
+          }
         }
       }
+
+      // Sort all pages by last modified date
+      pages.sort((a, b) => {
+        const dateA = new Date(a.lastModified || a.createdAt || 0);
+        const dateB = new Date(b.lastModified || b.createdAt || 0);
+        return dateB - dateA; // Descending order (newest first)
+      });
+
+      // Create result object with pagination info
+      const result = {
+        pages,
+        lastVisible: lastDoc,
+        hasMore: pages.length === pageSize
+      };
+
+      // Cache the result (only for public pages and first page)
+      if (!includePrivate && !lastVisible) {
+        const cacheKey = generateCacheKey('userPages', userId, 'public');
+        setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error getting user pages:", error);
+      return { pages: [], lastVisible: null, hasMore: false };
     }
-
-    // Sort all pages by last modified date
-    pages.sort((a, b) => {
-      const dateA = new Date(a.lastModified || a.createdAt || 0);
-      const dateB = new Date(b.lastModified || b.createdAt || 0);
-      return dateB - dateA; // Descending order (newest first)
-    });
-
-    return pages;
-  } catch (error) {
-    console.error("Error getting user pages:", error);
-    return [];
-  }
+  }, { userId, includePrivate, currentUserId, pageSize });
 };

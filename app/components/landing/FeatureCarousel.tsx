@@ -214,12 +214,10 @@ export const FeatureCarousel = () => {
                       {(feature.status === 'coming-soon' || feature.status === 'in-progress') && (
                         <Button variant="outline" asChild>
                           <a
-                            href="https://opencollective.com/wewrite-app"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="/support"
                             className="text-sm"
                           >
-                            Support development on OpenCollective
+                            Become an Early Supporter
                           </a>
                         </Button>
                       )}
