@@ -31,7 +31,7 @@ export default function AccentColorSelector() {
         <Label className="text-sm font-medium">Accent Color</Label>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {ACCENT_COLORS.map((color) => {
           const isSelected = accentColor === color;
           const colorValue = ACCENT_COLOR_VALUES[color];

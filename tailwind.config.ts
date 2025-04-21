@@ -60,23 +60,7 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
-      // Use CSS variables for theme-dependent colors
-      backgroundColor: {
-        'background-light': 'var(--light-background-color)',
-        'primary-custom': 'var(--primary-color)',
-        'secondary-custom': 'var(--secondary-color)',
-        'reactangle': '#FFFFFF1F',
-        'active-bar': '#0083FD',
-        'gray-bar': '#FFFFFF5E'
-      },
-      textColor: {
-        'primary-custom': 'var(--primary-color)',
-        'secondary-custom': 'var(--secondary-color)',
-        'button': 'var(--button-text)'
-      },
-      borderColor: {
-        'primary-custom': 'var(--primary-color)',
-      },
+      // Removed custom colors in favor of Radix colors
       width: {
         'action-button': '50px',
       },

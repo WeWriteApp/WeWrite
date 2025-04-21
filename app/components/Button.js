@@ -5,14 +5,14 @@ const Button = ({ children, onClick, disabled, type = "primary", variant = "defa
 
   const pillStyles = `
     inline-flex items-center justify-center
-    bg-[#0057FF]
-    border-[1.5px] border-[rgba(255,255,255,0.3)]
-    text-white
+    bg-primary
+    border-[1.5px] border-primary/30
+    text-primary-foreground
     text-base
     px-4 py-2
     rounded-[14px]
-    hover:bg-[#0046CC]
-    hover:border-[rgba(255,255,255,0.5)]
+    hover:bg-primary/90
+    hover:border-primary/50
   `;
 
   const defaultStyles = type === "secondary"

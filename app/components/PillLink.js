@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
 
 export const PillLinkSkeleton = () => {
   return (
-    <div className="my-0.5 px-[8px] py-[2px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-background/40 border-[1.5px] border-[rgba(255,255,255,0.1)] min-w-[80px] max-w-[120px]">
+    <div className="my-0.5 px-[8px] py-[2px] inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium rounded-[8px] bg-muted/40 border-[1.5px] border-border/10 min-w-[80px] max-w-[120px]">
       <ShimmerEffect className="h-3 w-3 rounded-full" />
       <ShimmerEffect className="h-3.5 w-14 rounded-md" />
     </div>
@@ -47,13 +47,13 @@ export const PillLink = ({
 
   if (variant === "primary") {
     variantStyles = `
-      bg-[#0057FF] text-white
-      border-[1.5px] border-[rgba(255,255,255,0.2)]
-      hover:bg-[#0046CC] hover:border-[rgba(255,255,255,0.3)]
+      bg-primary text-primary-foreground
+      border-[1.5px] border-primary/20
+      hover:bg-primary/90 hover:border-primary/30
     `;
   } else if (variant === "secondary") {
     variantStyles = `
-      bg-accent/50 text-foreground
+      bg-accent/50 text-accent-foreground
       border-[1.5px] border-border/40
       hover:bg-accent/70 hover:border-border
     `;

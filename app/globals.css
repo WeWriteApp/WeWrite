@@ -147,24 +147,33 @@
     --accent-s: 91%;
     --accent-l: 60%;
 
-    --background: 0 0% 100%; /* Level 0 - Background */
-    --foreground: 222.2 84% 4.9%; /* Level 10 - Max contrast for text */
+    /* Radix Colors - Light Mode */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
+
     --primary: var(--accent-h) var(--accent-s) var(--accent-l);
-    --primary-foreground: 222.2 84% 4.9%; /* Level 10 - Button text */
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: var(--accent-h) 30% 96.1%;
-    --accent-foreground: var(--accent-h) 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 20% 85%; /* Lighter, more subtle border for light mode */
-    --input: 214.3 31.8% 91.4%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: var(--accent-h) 30% 96%;
+    --accent-foreground: var(--accent-h) 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: var(--accent-h) var(--accent-s) var(--accent-l);
     --radius: 0.5rem;
 
@@ -176,25 +185,34 @@
   }
 
   .dark {
-    --background: 0 0% 0%; /* Pure black background for dark mode */
-    --foreground: 0 0% 100%; /* Level 10 - Max contrast for text */
-    --card: 222.2 84% 4.9%;
+    /* Radix Colors - Dark Mode */
+    --background: 0 0% 0%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 5%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+
+    --popover: 222 47% 5%;
     --popover-foreground: 210 40% 98%;
+
     --primary: var(--accent-h) var(--accent-s) var(--accent-l);
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217 33% 18%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: var(--accent-h) 32.6% 17.5%;
+
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: var(--accent-h) 33% 18%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%; /* Brighter red for better contrast in dark mode */
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 25%; /* Slightly lighter border for dark mode */
-    --input: 217.2 32.6% 17.5%;
-    --ring: var(--accent-h) 76.3% 48%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 25%;
+    --input: 217 33% 18%;
+    --ring: var(--accent-h) 76% 48%;
     --radius: 0.5rem;
 
     /* Active line highlight in editor - darker in dark mode */

@@ -15,21 +15,47 @@ try {
   });
 }
 
+// Import Radix colors
+import {
+  blue,
+  red,
+  green,
+  amber,
+  purple,
+  sky,
+  slate,
+  grass,
+  tomato,
+  indigo
+} from '@radix-ui/colors';
+
 // Define available accent colors
 export const ACCENT_COLORS = {
   RED: 'red',
   GREEN: 'green',
   BLUE: 'blue',
+  AMBER: 'amber',
+  PURPLE: 'purple',
+  SKY: 'sky',
+  INDIGO: 'indigo',
+  TOMATO: 'tomato',
+  GRASS: 'grass',
   CUSTOM1: 'custom1',
   CUSTOM2: 'custom2',
   CUSTOM3: 'custom3'
 };
 
-// Color values for each accent color
+// Color values for each accent color using Radix colors
 export const ACCENT_COLOR_VALUES = {
-  [ACCENT_COLORS.RED]: 'hsl(0, 84%, 60%)',
-  [ACCENT_COLORS.GREEN]: 'hsl(120, 84%, 60%)',
-  [ACCENT_COLORS.BLUE]: '#1768FF',
+  [ACCENT_COLORS.RED]: red.red9,
+  [ACCENT_COLORS.GREEN]: green.green9,
+  [ACCENT_COLORS.BLUE]: blue.blue9,
+  [ACCENT_COLORS.AMBER]: amber.amber9,
+  [ACCENT_COLORS.PURPLE]: purple.purple9,
+  [ACCENT_COLORS.SKY]: sky.sky9,
+  [ACCENT_COLORS.INDIGO]: indigo.indigo9,
+  [ACCENT_COLORS.TOMATO]: tomato.tomato9,
+  [ACCENT_COLORS.GRASS]: grass.grass9,
   [ACCENT_COLORS.CUSTOM1]: '#FF5733', // Default to a coral/orange
   [ACCENT_COLORS.CUSTOM2]: '#9B59B6', // Default to a purple
   [ACCENT_COLORS.CUSTOM3]: '#3498DB'  // Default to a light blue
@@ -284,6 +310,21 @@ export function AccentColorProvider({ children }) {
     document.documentElement.style.setProperty('--primary-h', h);
     document.documentElement.style.setProperty('--primary-s', `${s}%`);
     document.documentElement.style.setProperty('--primary-l', `${l}%`);
+
+    // Update accent color in Radix color system
+    document.documentElement.style.setProperty('--accent-1', `hsl(${h}, ${Math.max(5, s-85)}%, ${Math.min(99, l+30)}%)`);
+    document.documentElement.style.setProperty('--accent-2', `hsl(${h}, ${Math.max(10, s-75)}%, ${Math.min(97, l+25)}%)`);
+    document.documentElement.style.setProperty('--accent-3', `hsl(${h}, ${Math.max(15, s-65)}%, ${Math.min(95, l+20)}%)`);
+    document.documentElement.style.setProperty('--accent-4', `hsl(${h}, ${Math.max(20, s-55)}%, ${Math.min(92, l+15)}%)`);
+    document.documentElement.style.setProperty('--accent-5', `hsl(${h}, ${Math.max(25, s-45)}%, ${Math.min(90, l+10)}%)`);
+    document.documentElement.style.setProperty('--accent-6', `hsl(${h}, ${Math.max(30, s-35)}%, ${Math.min(85, l+5)}%)`);
+    document.documentElement.style.setProperty('--accent-7', `hsl(${h}, ${Math.max(35, s-25)}%, ${Math.min(80, l)}%)`);
+    document.documentElement.style.setProperty('--accent-8', `hsl(${h}, ${Math.max(40, s-15)}%, ${Math.max(55, l-5)}%)`);
+    document.documentElement.style.setProperty('--accent-9', `hsl(${h}, ${Math.max(45, s-5)}%, ${Math.max(50, l-10)}%)`);
+    document.documentElement.style.setProperty('--accent-10', `hsl(${h}, ${Math.max(50, s)}%, ${Math.max(45, l-15)}%)`);
+    document.documentElement.style.setProperty('--accent-11', `hsl(${h}, ${Math.max(55, s+5)}%, ${Math.max(40, l-20)}%)`);
+    document.documentElement.style.setProperty('--accent-12', `hsl(${h}, ${Math.max(60, s+10)}%, ${Math.max(35, l-25)}%)`);
+
 
     // Calculate and set text color
     const newTextColor = getTextColorForBackground(colorValue);
