@@ -14,10 +14,14 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Helper function to get username from Firestore (primary) or Firebase Realtime Database (fallback)
+  // Helper function to get username and subscription info from Firestore (primary) or Firebase Realtime Database (fallback)
   const getUsernameById = async (userId) => {
     try {
-      if (!userId) return null;
+      if (!userId) return { username: null };
+
+      let username = null;
+      let tier = null;
+      let subscriptionStatus = null;
 
       // First try to get username from Firestore (this is the primary source)
       try {
@@ -27,27 +31,42 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
         if (userDoc.exists()) {
           const userData = userDoc.data();
           if (userData.username) {
-            return userData.username;
+            username = userData.username;
           }
         }
+
+        // Get subscription information
+        const subscriptionDoc = await getDoc(doc(db, 'subscriptions', userId));
+        if (subscriptionDoc.exists()) {
+          const subscriptionData = subscriptionDoc.data();
+          tier = subscriptionData.tier;
+          subscriptionStatus = subscriptionData.status;
+        }
       } catch (firestoreErr) {
-        console.error("Error fetching username from Firestore:", firestoreErr);
-        // Continue to try RTDB as fallback
+        console.error("Error fetching user data from Firestore:", firestoreErr);
+        // Continue to try RTDB as fallback for username
       }
 
       // Fallback to RTDB if Firestore doesn't have the username
-      const rtdb = getDatabase();
-      const userRef = ref(rtdb, `users/${userId}`);
-      const snapshot = await get(userRef);
+      if (!username) {
+        const rtdb = getDatabase();
+        const userRef = ref(rtdb, `users/${userId}`);
+        const snapshot = await get(userRef);
 
-      if (snapshot.exists()) {
-        const userData = snapshot.val();
-        return userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
+        }
       }
-      return null;
+
+      return {
+        username,
+        tier,
+        subscriptionStatus
+      };
     } catch (err) {
-      console.error("Error fetching username:", err);
-      return null;
+      console.error("Error fetching user data:", err);
+      return { username: null };
     }
   };
 
@@ -219,12 +238,17 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
                 // Get the user who made the edit
                 let username = null;
                 let userId = null;
+                let tier = null;
+                let subscriptionStatus = null;
 
                 // Try to get username from the version data first
                 if (currentVersion.userId) {
                   userId = currentVersion.userId;
-                  // If we have userId, try to fetch username from the database
-                  username = await getUsernameById(currentVersion.userId);
+                  // If we have userId, try to fetch username and subscription info from the database
+                  const userData = await getUsernameById(currentVersion.userId);
+                  username = userData.username;
+                  tier = userData.tier;
+                  subscriptionStatus = userData.subscriptionStatus;
                 }
 
                 // Use page content directly if available, otherwise use version content
@@ -240,6 +264,8 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
                   userId: userId,
                   isPublic: pageData.isPublic || false,
                   isNewPage: true, // Flag to indicate this is a new page
+                  tier: tier,
+                  subscriptionStatus: subscriptionStatus
                 };
               }
 
@@ -264,12 +290,17 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
               // Get the user who made the edit
               let username = null;
               let userId = null;
+              let tier = null;
+              let subscriptionStatus = null;
 
               // Try to get username from the version data first
               if (currentVersion.userId) {
                 userId = currentVersion.userId;
-                // If we have userId, try to fetch username from the database
-                username = await getUsernameById(currentVersion.userId);
+                // If we have userId, try to fetch username and subscription info from the database
+                const userData = await getUsernameById(currentVersion.userId);
+                username = userData.username;
+                tier = userData.tier;
+                subscriptionStatus = userData.subscriptionStatus;
               }
 
               // Use page content directly if available, otherwise use version content
@@ -284,6 +315,8 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
                 username: username,
                 userId: userId,
                 isPublic: pageData.isPublic || false,
+                tier: tier,
+                subscriptionStatus: subscriptionStatus
               };
             } catch (err) {
               console.error("Error processing page versions:", err);
@@ -447,12 +480,17 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             // Get the user who made the edit
             let username = null;
             let userId = null;
+            let tier = null;
+            let subscriptionStatus = null;
 
             // Try to get username from the version data first
             if (currentVersion.userId) {
               userId = currentVersion.userId;
-              // If we have userId, try to fetch username from the database
-              username = await getUsernameById(currentVersion.userId);
+              // If we have userId, try to fetch username and subscription info from the database
+              const userData = await getUsernameById(currentVersion.userId);
+              username = userData.username;
+              tier = userData.tier;
+              subscriptionStatus = userData.subscriptionStatus;
             }
 
             // Use page content directly if available, otherwise use version content
@@ -468,6 +506,8 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
               userId: userId,
               isPublic: pageData.isPublic || false,
               isNewPage: true, // Flag to indicate this is a new page
+              tier: tier,
+              subscriptionStatus: subscriptionStatus
             };
           }
 
@@ -492,12 +532,17 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // Get the user who made the edit
           let username = null;
           let userId = null;
+          let tier = null;
+          let subscriptionStatus = null;
 
           // Try to get username from the version data first
           if (currentVersion.userId) {
             userId = currentVersion.userId;
-            // If we have userId, try to fetch username from the database
-            username = await getUsernameById(currentVersion.userId);
+            // If we have userId, try to fetch username and subscription info from the database
+            const userData = await getUsernameById(currentVersion.userId);
+            username = userData.username;
+            tier = userData.tier;
+            subscriptionStatus = userData.subscriptionStatus;
           }
 
           // Use page content directly if available, otherwise use version content
@@ -512,6 +557,8 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             username: username,
             userId: userId,
             isPublic: pageData.isPublic || false,
+            tier: tier,
+            subscriptionStatus: subscriptionStatus
           };
         } catch (err) {
           console.error("Error processing page versions:", err);

@@ -6,11 +6,23 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../firebase/config';
-import ClientPage from '../pages/[id]/client-page.tsx';
+import ClientPage from '../pages/[id]/client-page';
 import { Loader } from '../components/Loader';
 
 export default function GlobalIDPage({ params }) {
-  const { id } = params;
+  // Extract the ID from params and handle potential slashes
+  let { id } = params;
+
+  // If the ID contains encoded slashes, decode them
+  if (id.includes('%2F')) {
+    id = decodeURIComponent(id);
+  }
+
+  // If the ID contains slashes, extract the first part
+  if (id.includes('/')) {
+    id = id.split('/')[0];
+  }
+
   const router = useRouter();
   const [contentType, setContentType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -424,3 +424,71 @@ body {
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+/* Ensure proper text contrast in pill links */
+.bg-primary {
+  color: #ffffff !important; /* Force white text for all primary backgrounds */
+}
+
+/* Force white text for all pill links with primary background */
+a[class*="bg-primary"], button[class*="bg-primary"], div[class*="bg-primary"] {
+  color: #ffffff !important;
+}
+
+/* Ensure outline pills use the accent color for text */
+a.bg-transparent, button.bg-transparent, div.bg-transparent {
+  color: hsl(var(--primary)) !important;
+}
+
+/* Comprehensive fix for text contrast issues */
+/* Ensure all text has sufficient contrast against its background */
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Ensure tab text is always readable */
+[role="tab"] {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure text in light mode has sufficient contrast */
+.light [role="tab"],
+.light .text-muted-foreground,
+.light .text-foreground {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Ensure text in dark mode has sufficient contrast */
+.dark [role="tab"],
+.dark .text-muted-foreground,
+.dark .text-foreground {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Neutral alpha utility classes for consistent hover states */
+.bg-neutral-alpha-2 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark .bg-neutral-alpha-2 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Hover state for neutral alpha */
+.hover\:bg-neutral-alpha-2:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark .hover\:bg-neutral-alpha-2:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Dotted stroke for inactive supporter icons */
+.stroke-dasharray-2 {
+  stroke-dasharray: 2;
+}
+
+/* Force white text on dark backgrounds for better readability */
+[style*="background-color"] {
+  color-scheme: light dark;
+}

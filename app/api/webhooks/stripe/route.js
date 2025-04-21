@@ -4,14 +4,14 @@ import { updateSubscription } from '../../../firebase/subscription';
 
 // Helper function to determine tier based on amount
 function determineTierFromAmount(amount) {
-  if (amount >= 51) {
-    return 'diamond';
+  if (amount >= 100) {
+    return 'tier4';
   } else if (amount >= 50) {
-    return 'gold';
+    return 'tier3';
   } else if (amount >= 20) {
-    return 'silver';
+    return 'tier2';
   }
-  return 'bronze';
+  return 'tier1';
 }
 
 // Initialize Stripe

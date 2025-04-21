@@ -79,7 +79,7 @@ export const ACCENT_COLORS = {
 export const ACCENT_COLOR_VALUES = {
   [ACCENT_COLORS.RED]: red.red9,
   [ACCENT_COLORS.GREEN]: green.green9,
-  [ACCENT_COLORS.BLUE]: '#0052CC', // Darker blue (similar to Atlassian blue)
+  [ACCENT_COLORS.BLUE]: '#1768FF', // Updated blue color
   [ACCENT_COLORS.AMBER]: amber.amber9,
   [ACCENT_COLORS.PURPLE]: purple.purple9,
   [ACCENT_COLORS.SKY]: sky.sky9,
@@ -380,11 +380,71 @@ export function AccentColorProvider({ children }) {
     // Calculate and set text colors with proper contrast for different UI elements
 
     // Primary/accent color text (buttons, etc)
-    const primaryTextColor = getBestTextColor(colorValue, {
-      level: 'AA',
-      size: 'normal',
-      preferredColors: ['#ffffff', '#000000']
-    });
+    // Use a more aggressive approach to ensure contrast
+    let primaryTextColor;
+    try {
+      // Parse the color to determine its brightness
+      let r, g, b;
+
+      if (colorValue.startsWith('#')) {
+        // Handle hex colors
+        const hex = colorValue.replace('#', '');
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+      } else if (colorValue.startsWith('hsl')) {
+        // Handle HSL colors - convert to RGB first
+        const hslMatch = colorValue.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+        if (hslMatch) {
+          const h = parseInt(hslMatch[1]) / 360;
+          const s = parseInt(hslMatch[2]) / 100;
+          const l = parseInt(hslMatch[3]) / 100;
+
+          // HSL to RGB conversion
+          if (s === 0) {
+            r = g = b = Math.round(l * 255);
+          } else {
+            const hue2rgb = (p, q, t) => {
+              if (t < 0) t += 1;
+              if (t > 1) t -= 1;
+              if (t < 1/6) return p + (q - p) * 6 * t;
+              if (t < 1/2) return q;
+              if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+              return p;
+            };
+
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+            g = Math.round(hue2rgb(p, q, h) * 255);
+            b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+          }
+        }
+      } else if (colorValue.startsWith('rgb')) {
+        // Handle RGB colors
+        const rgbMatch = colorValue.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (rgbMatch) {
+          r = parseInt(rgbMatch[1]);
+          g = parseInt(rgbMatch[2]);
+          b = parseInt(rgbMatch[3]);
+        }
+      }
+
+      // Calculate perceived brightness using the formula: (0.299*R + 0.587*G + 0.114*B)
+      const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+      // Use white text for darker backgrounds (brightness < 0.6)
+      // Use black text for lighter backgrounds (brightness >= 0.6)
+      primaryTextColor = brightness < 0.6 ? '#ffffff' : '#000000';
+    } catch (error) {
+      console.error('Error determining text color:', error);
+      // Fall back to the standard contrast function if there's an error
+      primaryTextColor = getBestTextColor(colorValue, {
+        level: 'AAA',
+        size: 'normal',
+        preferredColors: ['#ffffff', '#000000']
+      });
+    }
     setTextColor(primaryTextColor);
     document.documentElement.style.setProperty('--accent-text', primaryTextColor);
     document.documentElement.style.setProperty('--primary-foreground', primaryTextColor);
@@ -406,13 +466,23 @@ export function AccentColorProvider({ children }) {
       { name: '--accent-12-foreground', bg: `hsl(${h}, ${Math.max(60, s+10)}%, ${Math.max(35, l-25)}%)` }
     ];
 
-    // Set foreground colors for each accent shade
+    // Set foreground colors for each accent shade using brightness calculation
     accentShades.forEach(shade => {
-      const textColor = getBestTextColor(shade.bg, {
-        level: 'AA',
-        size: 'normal',
-        preferredColors: ['#ffffff', '#000000']
-      });
+      // Convert HSL to RGB to calculate brightness
+      const hslValues = shade.bg.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+      let textColor = '#000000'; // Default to black
+
+      if (hslValues) {
+        const h = parseInt(hslValues[1]) / 360;
+        const s = parseInt(hslValues[2]) / 100;
+        const l = parseInt(hslValues[3]) / 100;
+
+        // Simple brightness check - if luminance is below 60%, use white text
+        if (l < 0.6) {
+          textColor = '#ffffff';
+        }
+      }
+
       document.documentElement.style.setProperty(shade.name, textColor);
     });
 

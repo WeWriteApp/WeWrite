@@ -8,6 +8,7 @@ import { generateSimpleDiff, generateTextDiff } from "../utils/generateTextDiff"
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { SupporterIcon } from "./SupporterIcon";
 
 /**
  * ActivityCard component displays a single activity card
@@ -62,10 +63,15 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
             {isNewPage ? "created by" : "edited by"} {" "}
             <Link
               href={`/user/${activity.userId}`}
-              className="hover:underline text-primary"
+              className="hover:underline text-primary inline-flex items-center gap-1"
               onClick={(e) => e.stopPropagation()}
             >
               {activity.username || "anonymous"}
+              <SupporterIcon
+                tier={activity.tier}
+                status={activity.subscriptionStatus}
+                size="sm"
+              />
             </Link>
           </div>
         </div>

@@ -15,6 +15,7 @@ import SupporterBadge from "./SupporterBadge";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount } from "../firebase/counters";
+import { getUserSubscription } from "../firebase/subscription";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -23,6 +24,8 @@ const SingleProfileView = ({ profile }) => {
   const [followerCount, setFollowerCount] = useState(0);
   const [username, setUsername] = useState(profile.username || 'Anonymous');
   const [supporterTier, setSupporterTier] = useState(profile.tier || null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(profile.subscriptionStatus || null);
+  const [isLoadingTier, setIsLoadingTier] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   // Check if this profile belongs to the current user
@@ -75,6 +78,77 @@ const SingleProfileView = ({ profile }) => {
     fetchStats();
   }, [profile.uid]);
 
+  // Fetch user's subscription tier
+  useEffect(() => {
+    const fetchSubscriptionTier = async () => {
+      if (profile.uid) {
+        try {
+          setIsLoadingTier(true);
+
+          // Get the user's subscription data
+          const subscription = await getUserSubscription(profile.uid);
+
+          // Always set the subscription status if available
+          if (subscription) {
+            setSubscriptionStatus(subscription.status);
+
+            // Determine tier based on subscription amount if active
+            if (subscription.status === 'active' || subscription.status === 'trialing') {
+              let tier = null;
+              const amount = subscription.amount;
+
+              if (amount >= 10 && amount < 20) {
+                tier = 'tier1';
+              } else if (amount >= 20 && amount < 50) {
+                tier = 'tier2';
+              } else if (amount >= 50 && amount < 100) {
+                tier = 'tier3';
+              } else if (amount >= 100) {
+                tier = 'tier4';
+              }
+
+              // Log the tier determination for debugging
+              console.log(`Determined tier for user ${profile.uid}: ${tier} (amount: ${amount})`);
+
+              // If tier is already set in the subscription data, use that instead
+              if (subscription.tier) {
+                console.log(`Using tier from subscription data: ${subscription.tier}`);
+                // Convert legacy tier names if needed
+                if (subscription.tier === 'bronze') {
+                  tier = 'tier1';
+                } else if (subscription.tier === 'silver') {
+                  tier = 'tier2';
+                } else if (subscription.tier === 'gold') {
+                  tier = 'tier3';
+                } else if (subscription.tier === 'diamond') {
+                  tier = 'tier4';
+                } else {
+                  tier = subscription.tier;
+                }
+              }
+
+              setSupporterTier(tier);
+            } else {
+              // No active subscription
+              setSupporterTier(null);
+            }
+          } else {
+            // No subscription data
+            setSubscriptionStatus(null);
+            setSupporterTier(null);
+          }
+        } catch (error) {
+          console.error('Error fetching subscription tier:', error);
+          setSupporterTier(null);
+        } finally {
+          setIsLoadingTier(false);
+        }
+      }
+    };
+
+    fetchSubscriptionTier();
+  }, [profile.uid]);
+
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
@@ -91,7 +165,11 @@ const SingleProfileView = ({ profile }) => {
           {/* Centered title */}
           <div className="flex items-center justify-center gap-2">
             <h1 className="text-3xl font-semibold">{username}</h1>
-            {supporterTier && <SupporterBadge tier={supporterTier} showLabel={true} />}
+            {isLoadingTier ? (
+              <Loader className="h-4 w-4 animate-spin" />
+            ) : (
+              supporterTier && <SupporterBadge tier={supporterTier} showLabel={true} />
+            )}
           </div>
 
           {/* Settings button - only visible for current user */}
@@ -133,6 +211,29 @@ const SingleProfileView = ({ profile }) => {
               )}
             </span>
             <span className="text-xs text-muted-foreground">followers</span>
+          </div>
+
+          {/* Subscription Status - Always show status */}
+          <div className="flex flex-col items-center">
+            {subscriptionStatus ? (
+              <span className={
+                `text-sm font-medium px-2 py-1 rounded-full ${
+                  subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'bg-muted text-muted-foreground border border-border'
+                }`
+              }>
+                {subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
+                  ? 'Active Supporter'
+                  : subscriptionStatus === 'canceled'
+                    ? 'Former Supporter'
+                    : 'Not Supporting'}
+              </span>
+            ) : (
+              <span className="text-sm font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
+                Not Supporting
+              </span>
+            )}
           </div>
         </div>
 

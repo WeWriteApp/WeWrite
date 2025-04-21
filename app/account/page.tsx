@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut, Medal, Award, Shield, Diamond, Heart } from 'lucide-react';
+import { useState, useEffect, useRef, Fragment } from 'react';
+import { ChevronRight, ChevronLeft, Plus, Minus, Youtube, Instagram, Twitter, DollarSign, LogOut, Heart } from 'lucide-react';
+import { SupporterIcon } from '../components/SupporterIcon';
 import Stepper from '../components/Stepper';
 import CompositionBar from '../components/CompositionBar.js';
 import Checkout from '../components/Checkout';
@@ -119,6 +120,9 @@ export default function AccountPage() {
   const [customSubscriptionAmount, setCustomSubscriptionAmount] = useState('');
   const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Check if pledges order matches current sort order
   useEffect(() => {
@@ -132,6 +136,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user) {
+      console.log('Loading user data for user:', user.uid);
       loadUserData();
     } else {
       router.push('/');
@@ -178,6 +183,10 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (nextPaymentDate) {
+      // Update immediately
+      updateTimeUntilPayment();
+
+      // Then set up interval for continuous updates
       const timer = setInterval(updateTimeUntilPayment, 1000);
       return () => clearInterval(timer);
     }
@@ -190,19 +199,54 @@ export default function AccountPage() {
     }
   }, [sortOrder]);
 
+  const fetchPaymentHistory = async (userId) => {
+    if (!userId) return;
+
+    try {
+      setIsLoadingHistory(true);
+
+      // Call the API to get payment history
+      const response = await fetch('/api/payment-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment history');
+      }
+
+      const data = await response.json();
+      setPaymentHistory(data.payments || []);
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   const loadUserData = async () => {
     if (!user) return;
 
     try {
       // Load subscription data
       const userSubscription = await getUserSubscription(user.uid);
+      console.log('User subscription data:', userSubscription);
       if (userSubscription) {
         const subscription = userSubscription as unknown as Subscription;
         setSubscription(subscription);
+        console.log('Setting subscription with status:', subscription.status);
 
         if (subscription.billingCycleEnd) {
           setNextPaymentDate(new Date(subscription.billingCycleEnd));
           updateTimeUntilPayment();
+        }
+
+        // Fetch payment history if subscription is active
+        if (subscription.status === 'active') {
+          fetchPaymentHistory(user.uid);
         }
 
         // Set the selected subscription button based on the subscription amount
@@ -482,14 +526,47 @@ export default function AccountPage() {
     }
   };
 
+  const createPortalSession = async (userId) => {
+    if (!userId) return;
+
+    try {
+      setLoading(true);
+
+      // Call the create portal session API
+      const response = await fetch('/api/create-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create portal session');
+      }
+
+      const { url } = await response.json();
+
+      // Redirect to the Stripe Customer Portal
+      window.location.href = url;
+    } catch (error) {
+      console.error('Error creating portal session:', error);
+      alert('Failed to open subscription management portal. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCancelSubscription = async () => {
     if (!user || !subscription?.stripeSubscriptionId) return;
 
     try {
       // Show confirmation dialog
-      if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments.')) {
+      if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your supporter badge.')) {
         return;
       }
+
+      setLoading(true);
 
       // Call the cancel subscription API
       const response = await fetch('/api/cancel-subscription', {
@@ -514,13 +591,15 @@ export default function AccountPage() {
       });
 
       // Show success message
-      alert('Your subscription has been canceled successfully.');
+      alert('Your subscription has been canceled successfully. Your supporter badge will be removed.');
 
       // Reload user data to reflect changes from server
       loadUserData();
     } catch (error) {
       console.error('Error canceling subscription:', error);
       alert('Failed to cancel subscription. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -690,15 +769,14 @@ export default function AccountPage() {
   return (
     <div className="px-5 py-4 max-w-3xl mx-auto">
       <div className="flex items-center mb-6">
-        <button
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => router.push('/')}
-          className="flex items-center text-sm mr-4 px-3 py-1.5 rounded-md bg-background/80 hover:bg-background/90 border border-border/50"
+          className="mr-4"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          Back
-        </button>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
         <h1 className="text-2xl font-bold">Account Settings</h1>
       </div>
 
@@ -762,64 +840,99 @@ export default function AccountPage() {
           {/* Subscription Management Section */}
           <section>
             <h3 className="text-base font-medium mb-4">Subscription</h3>
-            {subscription && subscription.status === 'active' ? (
-              <div className="bg-background rounded-lg border border-border p-4">
+            {console.log('Rendering subscription section with:', subscription)}
+            {subscription && (subscription.status === 'active' || subscription.status === 'trialing') ? (
+              <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    {subscription.tier === 'bronze' && (
-                      <Medal className="h-5 w-5 text-amber-600" />
-                    )}
-                    {subscription.tier === 'silver' && (
-                      <Award className="h-5 w-5 text-slate-400" />
-                    )}
-                    {subscription.tier === 'gold' && (
-                      <Shield className="h-5 w-5 text-yellow-500" />
-                    )}
-                    {subscription.tier === 'diamond' && (
-                      <Diamond className="h-5 w-5 text-blue-400" />
-                    )}
+                    <div className="h-5 w-5">
+                      <SupporterIcon
+                        tier={subscription.tier}
+                        status={subscription.status}
+                        size="lg"
+                      />
+                    </div>
                     <div>
                       <p className="font-medium">
-                        {subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Supporter
+                        {subscription.tier ? (
+                          subscription.tier.startsWith('tier') ?
+                            `Tier ${subscription.tier.slice(4)} Supporter` :
+                            `${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Supporter`
+                        ) : 'Supporter'}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        ${subscription.amount}/month
-                      </p>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm text-muted-foreground">
+                          ${subscription.amount}/month
+                        </p>
+                        <p className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 inline-block w-fit">
+                          {subscription.status === 'active' ? 'Active' : subscription.status === 'trialing' ? 'Trial' : subscription.status}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div>
                     {nextPaymentDate && (
-                      <p className="text-sm text-muted-foreground">
-                        Next payment: {nextPaymentDate.toLocaleDateString()}
-                      </p>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          Next payment: {nextPaymentDate.toLocaleDateString()}
+                        </p>
+                        <p className="text-xs font-mono text-primary">
+                          {timeUntilPayment}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-3">
+                {/* Payment History */}
+                <div className="mt-4 border-t border-border pt-4">
+                  <h4 className="text-sm font-medium mb-2">Payment History</h4>
+                  {isLoadingHistory ? (
+                    <div className="py-4 flex justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                    </div>
+                  ) : paymentHistory.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {paymentHistory.map((payment, index) => (
+                        <div key={index} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0">
+                          <div>
+                            <p className="text-sm font-medium">${payment.amount.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground">{new Date(payment.created * 1000).toLocaleDateString()}</p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100'}`}>
+                            {payment.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">No payment history available</p>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3 mt-4">
                   <Button
                     variant="outline"
                     onClick={() => createPortalSession(user.uid)}
-                    className="w-full justify-center"
+                    className="w-full justify-center border-border hover:bg-background"
+                    disabled={loading}
                   >
-                    Manage Subscription
+                    {loading ? 'Loading...' : 'Manage Subscription'}
                   </Button>
                   <Button
                     variant="destructive"
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to cancel your subscription? Your supporter badge will be removed.')) {
-                        cancelSubscription(subscription.stripeSubscriptionId);
-                      }
-                    }}
+                    onClick={handleCancelSubscription}
                     className="w-full justify-center"
+                    disabled={loading}
                   >
-                    Cancel Subscription
+                    {loading ? 'Processing...' : 'Cancel Subscription'}
                   </Button>
                 </div>
               </div>
             ) : (
-              <Alert className="bg-primary/10 border-primary/20">
+              <Alert className="bg-card border-border">
                 <DollarSign className="h-4 w-4 text-primary" />
-                <AlertTitle className="text-primary">Become a Supporter</AlertTitle>
+                <AlertTitle>Become a Supporter</AlertTitle>
                 <AlertDescription>
                   <p className="mb-4">Support WeWrite's development and get exclusive badges on your profile.</p>
                   <Button asChild className="w-full">

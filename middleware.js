@@ -61,6 +61,9 @@ export function middleware(request) {
     }
   }
 
+  // We're not going to handle URLs with slashes in them in the middleware
+  // Instead, we'll let the app/[id]/page.js handle it
+
   // Authentication redirects
 
   // Redirect authenticated users away from auth pages

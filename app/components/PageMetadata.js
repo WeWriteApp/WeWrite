@@ -13,16 +13,16 @@ import Sparkline from './Sparkline';
 import FollowButton from './FollowButton';
 import { getPageFollowerCount } from '../firebase/follows';
 
-// MetadataItem component for the dark card layout
+// MetadataItem component for the card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
   <div className="w-full max-w-md">
     {/* Desktop: Card layout */}
-    <div className="hidden md:flex bg-background--light dark:bg-background rounded-2xl p-4 items-center justify-between">
-      <span className="text-text text-base">{label}</span>
+    <div className="hidden md:flex bg-card dark:bg-neutral-alpha-2 rounded-2xl p-4 items-center justify-between border border-border/40 shadow-sm">
+      <span className="text-card-foreground text-base">{label}</span>
       <div className="flex items-center gap-3">
         {value && value !== "None" ? (
           <>
-            <div className="bg-[#0066FF] hover:bg-[#0052CC] px-4 py-1.5 rounded-full text-white text-base font-medium shadow-[0_0_12px_rgba(0,102,255,0.25)] flex items-center gap-2 transition-all">
+            <div className="bg-card dark:bg-card border border-border/60 px-4 py-1.5 rounded-full text-card-foreground text-base font-medium shadow-sm flex items-center gap-2 transition-all">
               {typeof value === 'object' ? value : (
                 <>{value}</>
               )}
@@ -42,11 +42,11 @@ const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
     {/* Mobile: List item with divider */}
     <div className="md:hidden flex flex-col">
       <div className="flex items-center justify-between py-4">
-        <span className="text-text text-base">{label}</span>
+        <span className="text-card-foreground text-base">{label}</span>
         <div className="flex items-center gap-3">
           {value && value !== "None" ? (
             <>
-              <div className="bg-[#0066FF] hover:bg-[#0052CC] px-4 py-1.5 rounded-full text-white text-base font-medium shadow-[0_0_12px_rgba(0,102,255,0.25)] flex items-center gap-2 transition-all">
+              <div className="bg-card dark:bg-card border border-border/60 px-4 py-1.5 rounded-full text-card-foreground text-base font-medium shadow-sm flex items-center gap-2 transition-all">
                 {typeof value === 'object' ? value : (
                   <>{value}</>
                 )}
@@ -284,12 +284,12 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   }, [page.userId, page.id]);
 
   return (
-    <div className="bg-background rounded-2xl p-6 transition-all duration-300">
+    <div className="bg-card dark:bg-card rounded-2xl p-6 transition-all duration-300 border border-border/40 shadow-sm">
       <div
         className="flex items-center gap-2 cursor-pointer mb-6"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <h2 className="text-lg font-medium text-text">About page</h2>
+        <h2 className="text-lg font-medium text-card-foreground">About page</h2>
         {isCollapsed ? (
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         ) : (
@@ -362,9 +362,9 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
 
         {/* Related pages */}
         <div>
-          <h3 className="text-text-secondary mb-2">Related pages</h3>
+          <h3 className="text-muted-foreground mb-2">Related pages</h3>
           {isLoadingRelated ? (
-            <div className="bg-background--light dark:bg-background rounded-2xl p-4 flex items-center justify-center">
+            <div className="bg-card dark:bg-card rounded-2xl p-4 flex items-center justify-center border border-border/40 shadow-sm">
               <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
             </div>
           ) : relatedPages.length > 0 ? (
@@ -382,8 +382,8 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
               ))}
             </div>
           ) : (
-            <div className="bg-background--light dark:bg-background rounded-2xl p-4">
-              <span className="text-text-secondary">No related pages found</span>
+            <div className="bg-card dark:bg-card rounded-2xl p-4 border border-border/40 shadow-sm">
+              <span className="text-muted-foreground">No related pages found</span>
             </div>
           )}
         </div>
@@ -434,14 +434,14 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
 
         {/* Location */}
         <div>
-          <h3 className="text-text-secondary mb-2">Location</h3>
+          <h3 className="text-muted-foreground mb-2">Location</h3>
           {page.location ? (
-            <div className="w-full h-48 rounded-2xl overflow-hidden bg-background">
+            <div className="w-full h-48 rounded-2xl overflow-hidden bg-card dark:bg-card border border-border/40 shadow-sm">
               {/* Map component will go here */}
             </div>
           ) : (
-            <div className="bg-background--light dark:bg-background rounded-2xl p-4">
-              <span className="text-text-secondary">None</span>
+            <div className="bg-card dark:bg-card rounded-2xl p-4 border border-border/40 shadow-sm">
+              <span className="text-muted-foreground">None</span>
             </div>
           )}
         </div>

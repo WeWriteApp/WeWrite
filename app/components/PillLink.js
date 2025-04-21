@@ -52,6 +52,11 @@ export const PillLink = ({
     }
   }
 
+  // Set text color based on pill style
+  // Filled style uses white text, outline style uses accent color
+  const { pillStyle } = usePillStyle();
+  const textColorStyle = {};  // No inline style needed, we'll use CSS classes
+
   // Base styles for all pill links
   const baseStyles = `
     inline-flex items-center
@@ -79,7 +84,7 @@ export const PillLink = ({
           }}
           className={baseStyles}
           tabIndex={0}
-
+          style={textColorStyle}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
           <span className="pill-text">{displayTitle}</span>
@@ -129,7 +134,7 @@ export const PillLink = ({
       tabIndex={0}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
-
+      style={textColorStyle}
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       <span className="pill-text">{displayTitle}</span>

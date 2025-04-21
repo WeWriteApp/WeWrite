@@ -162,7 +162,7 @@ export function AccountSwitcher() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-accent transition-colors overflow-hidden"
+        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-neutral-alpha-2 dark:hover:bg-accent transition-colors overflow-hidden"
       >
         <div className="flex flex-col items-start min-w-0 flex-1 mr-2">
           <span className="font-medium truncate w-full">{user?.username || 'Anonymous'}</span>

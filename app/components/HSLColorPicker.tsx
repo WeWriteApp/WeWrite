@@ -88,118 +88,269 @@ const hslToHex = (h: number, s: number, l: number): string => {
 export default function HSLColorPicker({ onApply, initialColor = '#0052CC' }: HSLColorPickerProps) {
   // Convert initial color to HSL
   const initialHSL = hexToHSL(initialColor);
-  
-  // State for HSL values
-  const [hue, setHue] = useState(initialHSL.h);
-  const [saturation, setSaturation] = useState(initialHSL.s);
-  const [luminance, setLuminance] = useState(initialHSL.l);
-  
+
+  // Use refs instead of state to avoid re-renders
+  const hueRef = React.useRef<number>(initialHSL.h);
+  const saturationRef = React.useRef<number>(initialHSL.s);
+  const luminanceRef = React.useRef<number>(initialHSL.l);
+
+  // Refs for DOM elements
+  const hueDotRef = React.useRef<HTMLDivElement>(null);
+  const saturationDotRef = React.useRef<HTMLDivElement>(null);
+  const luminanceDotRef = React.useRef<HTMLDivElement>(null);
+  const hueBarRef = React.useRef<HTMLDivElement>(null);
+  const saturationBarRef = React.useRef<HTMLDivElement>(null);
+  const luminanceBarRef = React.useRef<HTMLDivElement>(null);
+
+  // Display state (only for labels, doesn't affect performance)
+  const [hueDisplay, setHueDisplay] = useState(initialHSL.h);
+  const [saturationDisplay, setSaturationDisplay] = useState(initialHSL.s);
+  const [luminanceDisplay, setLuminanceDisplay] = useState(initialHSL.l);
+
   // Enforce luminance constraints to ensure good contrast
   const MIN_LUMINANCE = 20; // Prevent colors that are too dark
   const MAX_LUMINANCE = 80; // Prevent colors that are too light
-  
-  // Current color in HSL format
-  const currentHSLColor = `hsl(${hue}, ${saturation}%, ${luminance}%)`;
-  
-  // Current color in hex format (for display and compatibility)
-  const currentHexColor = hslToHex(hue, saturation, luminance);
-  
-  // Handle slider changes with constraints
-  const handleLuminanceChange = (value: number[]) => {
-    const newLuminance = Math.max(MIN_LUMINANCE, Math.min(MAX_LUMINANCE, value[0]));
-    setLuminance(newLuminance);
-  };
-  
-  // Apply the color
-  const handleApply = () => {
-    onApply(currentHSLColor);
-  };
-  
+
+  // Debounce timer ref
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Update the color with debouncing
+  const updateColor = React.useCallback(() => {
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    // Set a new timer
+    timerRef.current = setTimeout(() => {
+      const hslColor = `hsl(${hueRef.current}, ${saturationRef.current}%, ${luminanceRef.current}%)`;
+      onApply(hslColor);
+    }, 300);
+  }, [onApply]);
+
+  // Update dot positions and colors
+  const updateDots = React.useCallback(() => {
+    if (hueDotRef.current && hueBarRef.current) {
+      hueDotRef.current.style.left = `${(hueRef.current / 359) * 100}%`;
+      hueDotRef.current.style.backgroundColor = `hsl(${hueRef.current}, 100%, 50%)`;
+    }
+
+    if (saturationDotRef.current && saturationBarRef.current) {
+      saturationDotRef.current.style.left = `${saturationRef.current}%`;
+      saturationDotRef.current.style.backgroundColor = `hsl(${hueRef.current}, ${saturationRef.current}%, ${luminanceRef.current}%)`;
+      saturationBarRef.current.style.background = `linear-gradient(to right, hsl(${hueRef.current}, 0%, ${luminanceRef.current}%), hsl(${hueRef.current}, 100%, ${luminanceRef.current}%))`;
+    }
+
+    if (luminanceDotRef.current && luminanceBarRef.current) {
+      luminanceDotRef.current.style.left = `${luminanceRef.current}%`;
+      luminanceDotRef.current.style.backgroundColor = `hsl(${hueRef.current}, ${saturationRef.current}%, ${luminanceRef.current}%)`;
+      luminanceBarRef.current.style.background = `linear-gradient(to right, hsl(${hueRef.current}, ${saturationRef.current}%, 0%), hsl(${hueRef.current}, ${saturationRef.current}%, 50%), hsl(${hueRef.current}, ${saturationRef.current}%, 100%))`;
+    }
+
+    // Update display values (doesn't affect performance)
+    setHueDisplay(hueRef.current);
+    setSaturationDisplay(saturationRef.current);
+    setLuminanceDisplay(luminanceRef.current);
+  }, []);
+
+  // Handle hue change
+  const handleHueChange = React.useCallback((clientX: number) => {
+    if (!hueBarRef.current) return;
+
+    const rect = hueBarRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const newHue = Math.round((x / rect.width) * 359);
+    hueRef.current = Math.max(0, Math.min(359, newHue));
+
+    updateDots();
+    updateColor();
+  }, [updateDots, updateColor]);
+
+  // Handle saturation change
+  const handleSaturationChange = React.useCallback((clientX: number) => {
+    if (!saturationBarRef.current) return;
+
+    const rect = saturationBarRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const newSaturation = Math.round((x / rect.width) * 100);
+    saturationRef.current = Math.max(0, Math.min(100, newSaturation));
+
+    updateDots();
+    updateColor();
+  }, [updateDots, updateColor]);
+
+  // Handle luminance change
+  const handleLuminanceChange = React.useCallback((clientX: number) => {
+    if (!luminanceBarRef.current) return;
+
+    const rect = luminanceBarRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const rawLuminance = Math.round((x / rect.width) * 100);
+    luminanceRef.current = Math.max(MIN_LUMINANCE, Math.min(MAX_LUMINANCE, rawLuminance));
+
+    updateDots();
+    updateColor();
+  }, [updateDots, updateColor]);
+
+  // Set up mouse and touch event handlers
+  useEffect(() => {
+    // Initialize dot positions
+    updateDots();
+
+    // Clean up function
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [updateDots]);
+
   return (
-    <div className="space-y-4">
-      {/* Color preview */}
-      <div 
-        className="h-12 w-full rounded-md border"
-        style={{ backgroundColor: currentHSLColor }}
-      />
-      
-      {/* Hue slider */}
+    <div className="space-y-6">
+      {/* Saturation color bar with dot */}
       <div className="space-y-2">
         <div className="flex justify-between">
-          <Label className="text-xs">Hue: {hue}°</Label>
+          <Label className="text-xs">Saturation: {saturationDisplay}%</Label>
         </div>
-        <div 
-          className="h-4 rounded-md w-full" 
-          style={{ 
+        <div
+          ref={saturationBarRef}
+          className="h-12 rounded-md w-full relative cursor-pointer"
+          onMouseDown={(e) => {
+            handleSaturationChange(e.clientX);
+
+            const handleMouseMove = (e: MouseEvent) => {
+              handleSaturationChange(e.clientX);
+            };
+
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            handleSaturationChange(e.touches[0].clientX);
+
+            const handleTouchMove = (e: TouchEvent) => {
+              handleSaturationChange(e.touches[0].clientX);
+            };
+
+            const handleTouchEnd = () => {
+              document.removeEventListener('touchmove', handleTouchMove);
+              document.removeEventListener('touchend', handleTouchEnd);
+            };
+
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
+          }}
+        >
+          <div
+            ref={saturationDotRef}
+            className="absolute top-0 bottom-0 w-8 h-8 my-auto rounded-full border-2 border-white shadow-md transform -translate-x-1/2"
+          />
+        </div>
+      </div>
+
+      {/* Luminance color bar with dot */}
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Label className="text-xs">Luminance: {luminanceDisplay}%</Label>
+          <Label className="text-xs text-muted-foreground">(Limited for readability)</Label>
+        </div>
+        <div
+          ref={luminanceBarRef}
+          className="h-12 rounded-md w-full relative cursor-pointer"
+          onMouseDown={(e) => {
+            handleLuminanceChange(e.clientX);
+
+            const handleMouseMove = (e: MouseEvent) => {
+              handleLuminanceChange(e.clientX);
+            };
+
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            handleLuminanceChange(e.touches[0].clientX);
+
+            const handleTouchMove = (e: TouchEvent) => {
+              handleLuminanceChange(e.touches[0].clientX);
+            };
+
+            const handleTouchEnd = () => {
+              document.removeEventListener('touchmove', handleTouchMove);
+              document.removeEventListener('touchend', handleTouchEnd);
+            };
+
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
+          }}
+        >
+          <div
+            ref={luminanceDotRef}
+            className="absolute top-0 bottom-0 w-8 h-8 my-auto rounded-full border-2 border-white shadow-md transform -translate-x-1/2"
+          />
+        </div>
+      </div>
+
+      {/* Hue color bar with dot */}
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Label className="text-xs">Color: {hueDisplay}°</Label>
+        </div>
+        <div
+          ref={hueBarRef}
+          className="h-12 rounded-md w-full relative cursor-pointer"
+          style={{
             background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
           }}
-        >
-          <Slider
-            value={[hue]}
-            min={0}
-            max={359}
-            step={1}
-            onValueChange={(value) => setHue(value[0])}
-            className="mt-[-8px]"
-          />
-        </div>
-      </div>
-      
-      {/* Saturation slider */}
-      <div className="space-y-2">
-        <div className="flex justify-between">
-          <Label className="text-xs">Saturation: {saturation}%</Label>
-        </div>
-        <div 
-          className="h-4 rounded-md w-full" 
-          style={{ 
-            background: `linear-gradient(to right, hsl(${hue}, 0%, ${luminance}%), hsl(${hue}, 100%, ${luminance}%))`
+          onMouseDown={(e) => {
+            handleHueChange(e.clientX);
+
+            const handleMouseMove = (e: MouseEvent) => {
+              handleHueChange(e.clientX);
+            };
+
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            handleHueChange(e.touches[0].clientX);
+
+            const handleTouchMove = (e: TouchEvent) => {
+              handleHueChange(e.touches[0].clientX);
+            };
+
+            const handleTouchEnd = () => {
+              document.removeEventListener('touchmove', handleTouchMove);
+              document.removeEventListener('touchend', handleTouchEnd);
+            };
+
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd);
           }}
         >
-          <Slider
-            value={[saturation]}
-            min={0}
-            max={100}
-            step={1}
-            onValueChange={(value) => setSaturation(value[0])}
-            className="mt-[-8px]"
+          <div
+            ref={hueDotRef}
+            className="absolute top-0 bottom-0 w-8 h-8 my-auto rounded-full border-2 border-white shadow-md transform -translate-x-1/2"
           />
         </div>
       </div>
-      
-      {/* Luminance slider with constraints */}
-      <div className="space-y-2">
-        <div className="flex justify-between">
-          <Label className="text-xs">Luminance: {luminance}%</Label>
-          <Label className="text-xs text-muted-foreground">(Limited to {MIN_LUMINANCE}-{MAX_LUMINANCE}% for readability)</Label>
-        </div>
-        <div 
-          className="h-4 rounded-md w-full" 
-          style={{ 
-            background: `linear-gradient(to right, hsl(${hue}, ${saturation}%, 0%), hsl(${hue}, ${saturation}%, 50%), hsl(${hue}, ${saturation}%, 100%))`
-          }}
-        >
-          <Slider
-            value={[luminance]}
-            min={MIN_LUMINANCE}
-            max={MAX_LUMINANCE}
-            step={1}
-            onValueChange={(value) => handleLuminanceChange(value)}
-            className="mt-[-8px]"
-          />
-        </div>
-      </div>
-      
-      {/* Hex color display */}
-      <div className="flex items-center gap-2">
-        <Label className="text-xs">Hex:</Label>
-        <code className="bg-muted px-2 py-1 rounded text-xs">{currentHexColor}</code>
-      </div>
-      
-      {/* Apply button */}
-      <Button onClick={handleApply} size="sm" className="w-full">
-        Apply Custom Color
-      </Button>
     </div>
   );
 }

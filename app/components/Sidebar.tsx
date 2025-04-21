@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { X } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, ChevronLeft, ChevronRight, Palette, Settings, Check } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
@@ -20,8 +21,28 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const [currentSection, setCurrentSection] = useState<string | null>(null)
 
-  // Logout functionality moved to account settings page
+  // Reset to main menu when sidebar closes
+  useEffect(() => {
+    if (!isOpen) {
+      // Small delay to ensure the animation completes before resetting
+      const timeout = setTimeout(() => {
+        setCurrentSection(null);
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [isOpen])
+
+  // Function to navigate to a section
+  const navigateToSection = (section: string) => {
+    setCurrentSection(section)
+  }
+
+  // Function to go back to main menu
+  const goBackToMain = () => {
+    setCurrentSection(null)
+  }
 
   const themeOptions = [
     {
@@ -96,6 +117,86 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   ]
 
+  // Render the appropriate section based on currentSection
+  const renderSection = () => {
+    switch (currentSection) {
+      case 'appearance':
+        return (
+          <div className="animate-in slide-in-from-right-4 duration-300 ease-out">
+            <div className="flex items-center mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={goBackToMain}
+                className="mr-2 hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                aria-label="Go back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <h3 className="text-lg font-semibold">Appearance</h3>
+            </div>
+
+            <div className="flex flex-col space-y-4">
+              {/* Theme Options */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
+                {themeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setTheme(option.value)}
+                    className={cn(
+                      "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
+                      "hover:bg-muted",
+                      theme === option.value && "bg-muted"
+                    )}
+                  >
+                    <div className="flex items-center">
+                      {option.icon}
+                      {option.label}
+                    </div>
+                    {theme === option.value && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Accent Color Switcher */}
+              <AccentColorSwitcher />
+
+              {/* Pill Style Toggle */}
+              <PillStyleToggle />
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex flex-col space-y-6 animate-in fade-in-50 duration-300 ease-out">
+            {/* Account Switcher */}
+            <div className="mb-2">
+              <SimpleAccountSwitcher />
+            </div>
+
+            {/* Main Menu Items */}
+            <div className="space-y-1">
+              <button
+                onClick={() => navigateToSection('appearance')}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+              >
+                <div className="flex items-center">
+                  <Palette className="h-5 w-5 mr-2" />
+                  <span>Appearance</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+
+              {/* Add more main menu items here */}
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -122,51 +223,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-muted"
+              className="h-8 w-8 rounded-full hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               aria-label="Close sidebar"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          <div className="flex flex-col space-y-6">
-            {/* Account Switcher */}
-            <div className="mb-2">
-              <SimpleAccountSwitcher />
-            </div>
-
-            {/* Theme Options */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
-              {themeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  className={cn(
-                    "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    theme === option.value && "bg-accent text-accent-foreground"
-                  )}
-                >
-                  <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
-                    {theme === option.value && (
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  {option.icon}
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Accent Color Switcher */}
-            <AccentColorSwitcher />
-
-            {/* Pill Style Toggle */}
-            <PillStyleToggle />
-
-            {/* Additional sidebar items can be added here in the future */}
-          </div>
+          {renderSection()}
         </div>
       </div>
     </>

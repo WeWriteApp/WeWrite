@@ -1,21 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
-import { Palette } from "lucide-react";
+import { Palette, Check } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../contexts/AccentColorContext";
 import { Button } from "./ui/button";
-import { getBestTextColor } from "../utils/accessibility";
-import HSLColorPicker from "./HSLColorPicker";
 
 interface AccentColorSwitcherProps {
   compact?: boolean;
 }
 
 export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProps) {
-  const { accentColor, changeAccentColor, setCustomColor } = useAccentColor();
-  const [customColor, setCustomColorValue] = useState('#0052CC'); // Default blue
+  const { accentColor, changeAccentColor } = useAccentColor();
 
   // Define a limited set of colors for the sidebar switcher
   const colorOptions = [
@@ -34,48 +30,29 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
             key={option.value}
             onClick={() => changeAccentColor(option.value)}
             className={cn(
-              "flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
-              "hover:bg-accent hover:text-accent-foreground",
-              accentColor === option.value && "bg-accent text-accent-foreground"
+              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
+              "hover:bg-muted",
+              accentColor === option.value && "bg-muted"
             )}
           >
-            <div className="flex items-center justify-center w-5 h-5 rounded-full border mr-2">
-              {accentColor === option.value && (
-                <div className="w-3 h-3 rounded-full bg-primary" />
+            <div className="flex items-center">
+              {/* Color indicator */}
+              <div
+                className="w-4 h-4 rounded-full mr-2"
+                style={{ backgroundColor: option.color }}
+              />
+
+              {/* Text */}
+              {!compact && (
+                <span className="text-sm">{option.label}</span>
               )}
             </div>
 
-            {/* Color indicator */}
-            <div className="flex items-center mr-2">
-              <div
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: option.color }}
-              />
-            </div>
-
-            {/* Text */}
-            {!compact && (
-              <span className="text-sm">{option.label}</span>
+            {accentColor === option.value && (
+              <Check className="h-4 w-4 text-primary" />
             )}
           </button>
         ))}
-      </div>
-
-      {/* Custom Color Picker */}
-      <div className="mt-4 px-2">
-        <h3 className="text-sm font-medium text-muted-foreground mb-3">Custom Color</h3>
-        <HSLColorPicker
-          initialColor={customColor}
-          onApply={(hslColor) => {
-            const customColorKey = 'custom1';
-            // First update the custom color
-            setCustomColor(customColorKey, hslColor);
-            // Then use setTimeout to ensure the state is updated before changing the accent color
-            setTimeout(() => {
-              changeAccentColor(customColorKey);
-            }, 0);
-          }}
-        />
       </div>
     </div>
   );

@@ -34,7 +34,8 @@ export default function UserPage({ params }) {
           setProfile({
             uid: id,
             ...userData,
-            tier: subscription?.tier || null
+            tier: subscription?.tier || null,
+            subscriptionStatus: subscription?.status || null
           });
           setIsLoading(false);
           return;
@@ -57,7 +58,8 @@ export default function UserPage({ params }) {
           setProfile({
             uid: userId,
             ...userProfile,
-            tier: subscription?.tier || null
+            tier: subscription?.tier || null,
+            subscriptionStatus: subscription?.status || null
           });
           setIsLoading(false);
           return;

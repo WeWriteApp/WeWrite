@@ -2,7 +2,7 @@
 import { useState, useEffect, useContext } from "react";
 import Image from "next/image";
 import { AuthContext } from "../providers/AuthProvider";
-import { collection, getDocs, Timestamp, query, limit } from "firebase/firestore";
+import { collection, getDocs, Timestamp, query, limit, getDoc, doc } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { Trophy, Clock, ChevronRight, Info, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { db } from "../firebase/config";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { PillLink } from "./PillLink";
+import { SupporterIcon } from "./SupporterIcon";
 
 const UserListSkeleton = () => {
   return (
@@ -122,20 +123,36 @@ const TopUsers = () => {
 
                   console.log("TopUsers: Processing user data");
                   // Process users for all-time leaderboard
-                  const allTimeUsersArray = Object.entries(data).map(([id, userData]) => {
+                  const allTimeUsersArray = await Promise.all(Object.entries(data).map(async ([id, userData]) => {
                     // Get the username and remove @ symbol if present
                     let username = userData.username || userData.displayName || "Unknown User";
                     if (username.startsWith('@')) {
                       username = username.substring(1);
                     }
 
+                    // Fetch subscription information
+                    let tier = null;
+                    let subscriptionStatus = null;
+                    try {
+                      const subscriptionDoc = await getDoc(doc(db, 'subscriptions', id));
+                      if (subscriptionDoc.exists()) {
+                        const subscriptionData = subscriptionDoc.data();
+                        tier = subscriptionData.tier;
+                        subscriptionStatus = subscriptionData.status;
+                      }
+                    } catch (err) {
+                      console.error(`Error fetching subscription for user ${id}:`, err);
+                    }
+
                     return {
                       id,
                       username,
                       photoURL: userData.photoURL,
-                      pageCount: pageCountsByUser[id] || 0
+                      pageCount: pageCountsByUser[id] || 0,
+                      tier,
+                      subscriptionStatus
                     };
-                  });
+                  }));
 
                   // Sort users by page count (including users with 0 pages)
                   const sortedAllTimeUsers = allTimeUsersArray
@@ -269,7 +286,14 @@ const TopUsers = () => {
                               variant="primary"
                               onClick={(e) => e.stopPropagation()} // Prevent double navigation
                             >
-                              {user.username || "Unknown User"}
+                              <span className="flex items-center gap-1">
+                                {user.username || "Unknown User"}
+                                <SupporterIcon
+                                  tier={user.tier}
+                                  status={user.subscriptionStatus}
+                                  size="sm"
+                                />
+                              </span>
                             </PillLink>
                           </TooltipTrigger>
                           <TooltipContent>

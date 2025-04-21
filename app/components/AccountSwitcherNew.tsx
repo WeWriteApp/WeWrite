@@ -29,7 +29,7 @@ export function AccountSwitcherNew() {
   const loadAccounts = () => {
     // Get saved accounts
     const savedAccounts = AuthManager.getSavedAccounts();
-    
+
     // Always include current user if available and not already in the list
     if (user) {
       const currentAccount = {
@@ -38,10 +38,10 @@ export function AccountSwitcherNew() {
         username: user.username || user.displayName || '',
         displayName: user.displayName || user.username || ''
       };
-      
+
       // Save current user to accounts list
       AuthManager.saveAccount(currentAccount);
-      
+
       // Reload accounts after saving
       const updatedAccounts = AuthManager.getSavedAccounts();
       setAccounts(updatedAccounts);
@@ -52,20 +52,20 @@ export function AccountSwitcherNew() {
 
   const handleAccountClick = async (account: Account) => {
     setIsOpen(false);
-    
+
     // If it's the current user, go to account settings
     if (user && user.uid === account.uid) {
       router.push('/account');
       return;
     }
-    
+
     // Otherwise, switch to the selected account
     try {
       setIsLoading(true);
-      
+
       // Switch to the selected account
       await AuthManager.switchToAccount(account);
-      
+
       // Redirect to account switch page
       router.push('/auth/switch-account');
     } catch (error) {
@@ -76,11 +76,11 @@ export function AccountSwitcherNew() {
 
   const handleAddAccount = async () => {
     setIsOpen(false);
-    
+
     try {
       // Sign out but keep accounts
       await AuthManager.signOutUser(true);
-      
+
       // Redirect to login page
       router.push('/auth/login');
     } catch (error) {
@@ -92,7 +92,7 @@ export function AccountSwitcherNew() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-accent transition-colors overflow-hidden"
+        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-neutral-alpha-2 dark:hover:bg-accent transition-colors overflow-hidden"
         disabled={isLoading}
       >
         <div className="flex flex-col items-start min-w-0 flex-1 mr-2">
