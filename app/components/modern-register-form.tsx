@@ -305,39 +305,14 @@ export function ModernRegisterForm({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full h-10"
-          onClick={() => router.push('/auth/login')}
-        >
-          Sign in with existing account
-        </Button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          className="w-full h-10 text-muted-foreground hover:text-foreground"
-          onClick={async () => {
-            try {
-              setIsLoading(true);
-              await loginAnonymously();
-              localStorage.setItem('authRedirectPending', 'true');
-              setTimeout(() => {
-                localStorage.removeItem('authRedirectPending');
-                window.location.href = "/";
-              }, 1500);
-            } catch (error) {
-              console.error("Anonymous login error:", error);
-              setError("Failed to sign in anonymously");
-              setIsLoading(false);
-            }
-          }}
-        >
-          Continue anonymously
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full h-10"
+        onClick={() => router.push('/auth/login')}
+      >
+        Sign in with existing account
+      </Button>
     </form>
   )
 }

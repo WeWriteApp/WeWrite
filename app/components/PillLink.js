@@ -112,6 +112,14 @@ export const PillLink = ({
             ${className || ''}
             max-w-full
           `}
+          tabIndex={0}
+          // Prevent keyboard navigation inside the pill link
+          onKeyDown={(e) => {
+            // If left or right arrow keys are pressed, prevent default behavior
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              e.preventDefault();
+            }
+          }}
         >
           <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
             {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
@@ -184,6 +192,14 @@ export const PillLink = ({
         ${className || ''}
         max-w-full
       `}
+      tabIndex={0}
+      // Prevent keyboard navigation inside the pill link
+      onKeyDown={(e) => {
+        // If left or right arrow keys are pressed, prevent default behavior
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+        }
+      }}
     >
       <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}

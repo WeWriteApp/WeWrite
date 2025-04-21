@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import Image from "next/image";
+import { Image } from "./ui/image";
 import Link from "next/link";
 import { cn } from "../lib/utils";
 
@@ -12,9 +12,9 @@ interface ModernAuthLayoutProps {
   showLogo?: boolean;
 }
 
-export function ModernAuthLayout({ 
-  children, 
-  title, 
+export function ModernAuthLayout({
+  children,
+  title,
   description,
   showLogo = true
 }: ModernAuthLayoutProps) {
@@ -35,11 +35,11 @@ export function ModernAuthLayout({
             <div className="mb-8 text-center">
               <Link href="/" className="inline-block">
                 <div className="flex items-center justify-center">
-                  <Image 
-                    src="/logo.png" 
-                    alt="WeWrite Logo" 
-                    width={40} 
-                    height={40} 
+                  <Image
+                    src="/logo.png"
+                    alt="WeWrite Logo"
+                    width={40}
+                    height={40}
                     className="mr-2"
                   />
                   <span className="text-2xl font-bold text-primary">WeWrite</span>
@@ -47,33 +47,22 @@ export function ModernAuthLayout({
               </Link>
             </div>
           )}
-          
+
           {(title || description) && (
             <div className="mb-8 text-center">
               {title && <h1 className="text-2xl font-bold mb-2">{title}</h1>}
               {description && <p className="text-muted-foreground">{description}</p>}
             </div>
           )}
-          
+
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8">
             {children}
           </div>
-          
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>
-              By continuing, you agree to our{" "}
-              <Link href="/terms" className="text-primary hover:underline">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-primary hover:underline">
-                Privacy Policy
-              </Link>
-            </p>
-          </div>
+
+          {/* Terms and privacy policy removed */}
         </div>
       </div>
-      
+
       {/* Right side - Image and branding */}
       <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-blue-500 to-indigo-600 relative">
         <div className="absolute inset-0 bg-black/20 z-10"></div>
@@ -89,8 +78,8 @@ export function ModernAuthLayout({
                 <div className="text-sm">Easy to use interface</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
-                <div className="text-2xl font-bold">Secure</div>
-                <div className="text-sm">Your data is protected</div>
+                <div className="text-2xl font-bold">Creative</div>
+                <div className="text-sm">Express your ideas</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center">
                 <div className="text-2xl font-bold">Social</div>
