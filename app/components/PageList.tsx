@@ -113,7 +113,9 @@ export default function PageList({
   const { user } = useContext(AuthContext);
 
   if (loading) {
-    return <PageListSkeleton mode={mode} />;
+    return <div style={{ minHeight: '200px' }}>
+      <PageListSkeleton mode={mode} />
+    </div>;
   }
 
   if (!pages || pages.length === 0) {

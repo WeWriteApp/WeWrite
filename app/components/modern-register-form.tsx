@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
-import { createUser, addUsername, checkUsernameAvailability } from "../firebase/auth"
+import { createUser, addUsername, checkUsernameAvailability, loginAnonymously } from "../firebase/auth"
 import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../components/ui/separator"
@@ -25,7 +25,7 @@ export function ModernRegisterForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
-  
+
   // Username validation state
   const [isChecking, setIsChecking] = useState(false)
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
@@ -48,7 +48,7 @@ export function ModernRegisterForm({
     // Reset validation state
     setValidationError(null)
     setValidationMessage(null)
-    
+
     // Skip validation for empty or too short usernames
     if (!value || value.length < 3) {
       setIsAvailable(null)
@@ -58,7 +58,7 @@ export function ModernRegisterForm({
       }
       return
     }
-    
+
     // Check for valid characters (letters, numbers, underscores)
     const validUsernameRegex = /^[a-zA-Z0-9_]+$/
     if (!validUsernameRegex.test(value)) {
@@ -67,7 +67,7 @@ export function ModernRegisterForm({
       setValidationMessage("Username can only contain letters, numbers, and underscores")
       return
     }
-    
+
     // Check availability
     setIsChecking(true)
     try {
@@ -96,7 +96,7 @@ export function ModernRegisterForm({
       setValidationError(null)
       setValidationMessage(null)
     }
-    
+
     return () => {
       checkUsername.cancel()
     }
@@ -128,16 +128,16 @@ export function ModernRegisterForm({
 
     try {
       const result = await createUser(email, password)
-      
+
       if (result.user) {
         // Add username to the user account
         try {
           await addUsername(result.user.uid, username)
           console.log("Username added successfully")
-          
+
           // Show redirect overlay
           setIsRedirecting(true)
-          
+
           // Redirect to home page after a short delay
           localStorage.setItem('authRedirectPending', 'true')
           setTimeout(() => {
@@ -153,11 +153,11 @@ export function ModernRegisterForm({
         // Handle error from createUser
         const errorCode = result.code || ""
         let errorMessage = result.message || "Failed to create account. Please try again."
-        
+
         if (errorCode.includes("email-already-in-use")) {
           errorMessage = "Email already in use. Try logging in instead."
         }
-        
+
         setError(errorMessage)
         setIsLoading(false)
       }
@@ -177,10 +177,10 @@ export function ModernRegisterForm({
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl font-bold">Create your account</h1>
         <p className="text-sm text-muted-foreground">
-          Enter your details below to create your account
+          Pick a username, start writing anonymously
         </p>
       </div>
-      
+
       <div className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="username" className={cn(
@@ -229,7 +229,7 @@ export function ModernRegisterForm({
             </p>
           )}
         </div>
-        
+
         <div className="grid gap-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Email
@@ -246,7 +246,7 @@ export function ModernRegisterForm({
             autoComplete="email"
           />
         </div>
-        
+
         <div className="grid gap-2">
           <Label htmlFor="password" className="text-sm font-medium">
             Password
@@ -293,7 +293,7 @@ export function ModernRegisterForm({
           )}
         </Button>
       </div>
-      
+
       <div className="relative my-2">
         <div className="absolute inset-0 flex items-center">
           <Separator className="w-full" />
@@ -304,15 +304,40 @@ export function ModernRegisterForm({
           </span>
         </div>
       </div>
-      
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full h-10"
-        onClick={() => router.push('/auth/login')}
-      >
-        Sign in with existing account
-      </Button>
+
+      <div className="flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-10"
+          onClick={() => router.push('/auth/login')}
+        >
+          Sign in with existing account
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full h-10 text-muted-foreground hover:text-foreground"
+          onClick={async () => {
+            try {
+              setIsLoading(true);
+              await loginAnonymously();
+              localStorage.setItem('authRedirectPending', 'true');
+              setTimeout(() => {
+                localStorage.removeItem('authRedirectPending');
+                window.location.href = "/";
+              }, 1500);
+            } catch (error) {
+              console.error("Anonymous login error:", error);
+              setError("Failed to sign in anonymously");
+              setIsLoading(false);
+            }
+          }}
+        >
+          Continue anonymously
+        </Button>
+      </div>
     </form>
   )
 }

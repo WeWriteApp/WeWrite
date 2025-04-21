@@ -179,8 +179,8 @@ export default function UserProfileTabs({ profile }) {
     <div className="mt-6">
       <Tabs defaultValue="activity" onValueChange={handleTabChange} className="w-full">
         <div className="relative border-b border-border/40 mb-4">
-          <div className="overflow-x-auto scrollbar-hide">
-            <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start">
+          <div className="overflow-x-auto scrollbar-hide pb-0.5">
+            <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
               <TabsTrigger
                 value="activity"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"

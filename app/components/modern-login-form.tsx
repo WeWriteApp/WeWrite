@@ -8,7 +8,7 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
-import { loginUser } from "../firebase/auth"
+import { loginUser, loginAnonymously } from "../firebase/auth"
 import { Loader2 } from "lucide-react"
 import { Separator } from "../components/ui/separator"
 
@@ -109,7 +109,7 @@ export function ModernLoginForm({
           Enter your details below to sign in to your account
         </p>
       </div>
-      
+
       <div className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="email" className="text-sm font-medium">
@@ -127,7 +127,7 @@ export function ModernLoginForm({
             autoComplete="email"
           />
         </div>
-        
+
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password" className="text-sm font-medium">
@@ -180,7 +180,7 @@ export function ModernLoginForm({
           )}
         </Button>
       </div>
-      
+
       <div className="relative my-2">
         <div className="absolute inset-0 flex items-center">
           <Separator className="w-full" />
@@ -191,15 +191,40 @@ export function ModernLoginForm({
           </span>
         </div>
       </div>
-      
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full h-10"
-        onClick={() => router.push('/auth/register')}
-      >
-        Create an account
-      </Button>
+
+      <div className="flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-10"
+          onClick={() => router.push('/auth/register')}
+        >
+          Create an account
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full h-10 text-muted-foreground hover:text-foreground"
+          onClick={async () => {
+            try {
+              setIsLoading(true);
+              await loginAnonymously();
+              localStorage.setItem('authRedirectPending', 'true');
+              setTimeout(() => {
+                localStorage.removeItem('authRedirectPending');
+                window.location.href = "/";
+              }, 1500);
+            } catch (error) {
+              console.error("Anonymous login error:", error);
+              setError("Failed to sign in anonymously");
+              setIsLoading(false);
+            }
+          }}
+        >
+          Continue anonymously
+        </Button>
+      </div>
     </form>
   )
 }

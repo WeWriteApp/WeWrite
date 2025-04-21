@@ -13,7 +13,7 @@ import { useAuth } from "../providers/AuthProvider";
 import { Loader, Settings, ChevronLeft, Heart } from "lucide-react";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
-import { getUserFollowerCount } from "../firebase/follows";
+import { getUserFollowerCount, getUserPageCount } from "../firebase/counters";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -46,28 +46,21 @@ const SingleProfileView = ({ profile }) => {
     fetchUsername();
   }, [profile.uid, profile.username]);
 
-  // Fetch follower count and page count
+  // Fetch follower count and page count using optimized counters
   useEffect(() => {
     const fetchStats = async () => {
       if (profile.uid) {
         try {
           setIsLoadingStats(true);
 
-          // Get follower count
-          const count = await getUserFollowerCount(profile.uid);
-          setFollowerCount(count);
+          // Get follower count and page count in parallel
+          const [followerCountResult, pageCountResult] = await Promise.all([
+            getUserFollowerCount(profile.uid),
+            getUserPageCount(profile.uid)
+          ]);
 
-          // Get page count from Firestore
-          const { collection, query, where, getDocs } = await import('firebase/firestore');
-          const { db } = await import('../firebase/database');
-
-          const pagesQuery = query(
-            collection(db, 'pages'),
-            where('userId', '==', profile.uid)
-          );
-
-          const pagesSnapshot = await getDocs(pagesQuery);
-          setPageCount(pagesSnapshot.size);
+          setFollowerCount(followerCountResult);
+          setPageCount(pageCountResult);
 
         } catch (error) {
           console.error('Error fetching user stats:', error);

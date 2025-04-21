@@ -1,6 +1,6 @@
 import {app} from './config';
 import { getAuth } from "firebase/auth";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail as firebaseUpdateEmail } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail as firebaseUpdateEmail, signInAnonymously } from 'firebase/auth';
 import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import Cookies from 'js-cookie';
 
@@ -160,5 +160,32 @@ export const checkUsernameAvailability = async (username) => {
   } catch (error) {
     console.error("Error checking username availability:", error);
     return { isAvailable: false, message: "Error checking username" };
+  }
+}
+
+/**
+ * Sign in anonymously
+ *
+ * @returns {Promise<Object>} Result object with user or error
+ */
+export const loginAnonymously = async () => {
+  try {
+    const userCredential = await signInAnonymously(auth);
+
+    // Create a basic profile for the anonymous user
+    const userDocRef = doc(db, 'users', userCredential.user.uid);
+    await setDoc(userDocRef, {
+      email: null,
+      username: `anonymous_${Math.floor(Math.random() * 10000)}`,
+      displayName: 'Anonymous User',
+      isAnonymous: true,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    }, { merge: true });
+
+    return { user: userCredential.user };
+  } catch (error) {
+    console.error("Anonymous login error:", error);
+    return { code: error.code, message: error.message };
   }
 }
