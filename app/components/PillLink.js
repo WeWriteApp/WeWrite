@@ -91,7 +91,7 @@ export const PillLink = ({
           }}
           className={`
             my-0.5 px-[8px] ${paddingClass}
-            inline-flex items-center
+            inline-flex items-center gap-1.5
             text-sm font-medium
             rounded-[8px]
             transition-colors duration-200
@@ -110,20 +110,16 @@ export const PillLink = ({
             }
           }}
         >
-          <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
             {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-            <span
-              className={`whitespace-nowrap overflow-hidden text-ellipsis flex items-center external-link`}
-            >
-              <span className="truncate inline-block max-w-full">{displayTitle}</span>
-              <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis external-link">
+              {displayTitle}
             </span>
+            <ExternalLink className="h-3 w-3 flex-shrink-0" />
             {byline && (
               <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
                 {byline}
               </span>
             )}
-          </div>
         </a>
 
         <Modal
@@ -171,7 +167,7 @@ export const PillLink = ({
       href={href}
       className={`
         my-0.5 px-[8px] ${paddingClass}
-        inline-flex items-center
+        inline-flex items-center gap-1.5
         text-sm font-medium
         rounded-[8px]
         transition-colors duration-200
@@ -189,14 +185,11 @@ export const PillLink = ({
           e.preventDefault();
         }
       }}
+      data-page-id={isPageLinkType ? pageId : undefined}
+      data-user-id={isUserLinkType ? pageId : undefined}
     >
-      <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <span
-          className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : 'page-link'}`}
-          data-page-id={isPageLinkType ? pageId : undefined}
-          data-user-id={isUserLinkType ? pageId : undefined}
-        >
+        <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : 'page-link'}`}>
           {displayTitle}
         </span>
         {byline && (
@@ -204,7 +197,6 @@ export const PillLink = ({
             {byline}
           </span>
         )}
-      </div>
     </Link>
   );
 }
