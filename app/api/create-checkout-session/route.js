@@ -185,10 +185,13 @@ export async function POST(request) {
       }
     }
 
-    // Create a price for the custom amount if needed
-    let finalPriceId = priceId;
+    // Always create a new price based on the amount
+    console.log('Creating price with:', { amount: finalAmount, tier, tierName });
 
-    if (amount && !priceId) {
+    // Create a new price for this subscription
+    let finalPriceId = null;
+
+    if (finalAmount > 0) {
       const price = await stripe.prices.create({
         unit_amount: Math.round(finalAmount * 100), // Convert to cents
         currency: 'usd',
@@ -209,6 +212,16 @@ export async function POST(request) {
     }
 
     // Create the checkout session
+    console.log('Creating checkout session with price ID:', finalPriceId);
+
+    // Ensure we have a valid price ID
+    if (!finalPriceId) {
+      return NextResponse.json(
+        { error: 'No valid price ID was created or provided' },
+        { status: 400 }
+      );
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [

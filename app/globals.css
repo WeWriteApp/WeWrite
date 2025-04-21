@@ -276,12 +276,14 @@ input[type="number"] {
   pointer-events: none;
 }
 
+/* Light mode - slightly darker inner border */
 .inner-border-neutral-alpha-3::after {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+/* Dark mode - slightly lighter inner border */
 .dark .inner-border-neutral-alpha-3::after {
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Basic styling for html and body */

@@ -125,8 +125,9 @@ export default function SupportPage() {
       });
 
       // Create a checkout session with Stripe
+      // Don't use a fixed priceId, let the API create a dynamic price based on the amount
       const response = await createCheckoutSession({
-        priceId: 'price_monthly_support', // This will be mapped to the correct price ID in the API
+        priceId: null, // Let the API create a dynamic price
         userId: user.uid,
         amount: amount,
         tierName: selectedTierObj.name

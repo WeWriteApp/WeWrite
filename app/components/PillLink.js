@@ -193,11 +193,11 @@ export const PillLink = ({
       <div className="flex items-center gap-1.5 flex-nowrap max-w-full">
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
         <span
-          className={`whitespace-nowrap overflow-hidden text-ellipsis flex items-center ${isUserLinkType ? 'user-link' : 'page-link'}`}
+          className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : 'page-link'}`}
           data-page-id={isPageLinkType ? pageId : undefined}
           data-user-id={isUserLinkType ? pageId : undefined}
         >
-          <span className="truncate inline-block max-w-full">{displayTitle}</span>
+          {displayTitle}
         </span>
         {byline && (
           <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
