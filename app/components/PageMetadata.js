@@ -284,7 +284,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   }, [page.userId, page.id]);
 
   return (
-    <div className="bg-card dark:bg-card rounded-2xl p-6 transition-all duration-300 border border-border/40 shadow-sm">
+    <div className="bg-card dark:bg-card rounded-2xl p-6 transition-all duration-300 border border-border/40 shadow-sm" data-metadata-section>
       <div
         className="flex items-center gap-2 cursor-pointer mb-6"
         onClick={() => setIsCollapsed(!isCollapsed)}

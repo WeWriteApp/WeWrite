@@ -4,6 +4,7 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { auth } from "../firebase/auth";
+import { getUserSubscription } from "../firebase/subscription";
 
 /**
  * Gets the username for a given user ID
@@ -98,4 +99,55 @@ export const ensurePageUsername = async (pageData) => {
     ...pageData,
     username: pageData.username || "Anonymous"
   };
+
+/**
+ * Gets the subscription tier and status for a given user ID
+ * @param {string} userId - The user ID to get the subscription tier for
+ * @returns {Promise<Object>} - Object containing tier and status
+ */
+export const getUserSubscriptionTier = async (userId) => {
+  if (!userId) return { tier: null, status: null };
+
+  try {
+    // Get the user's subscription data
+    const subscription = await getUserSubscription(userId);
+
+    if (!subscription) {
+      return { tier: null, status: null };
+    }
+
+    // Return the tier and status
+    let tier = subscription.tier;
+    const status = subscription.status;
+
+    // Convert legacy tier names if needed
+    if (tier === 'bronze') {
+      tier = 'tier1';
+    } else if (tier === 'silver') {
+      tier = 'tier2';
+    } else if (tier === 'gold') {
+      tier = 'tier3';
+    } else if (tier === 'diamond') {
+      tier = 'tier4';
+    }
+
+    // If no tier is set but we have an amount, determine tier based on amount
+    if (!tier && subscription.amount && (status === 'active' || status === 'trialing')) {
+      const amount = subscription.amount;
+      if (amount >= 100) {
+        tier = 'tier4';
+      } else if (amount >= 50) {
+        tier = 'tier3';
+      } else if (amount >= 20) {
+        tier = 'tier2';
+      } else if (amount >= 10) {
+        tier = 'tier1';
+      }
+    }
+
+    return { tier, status };
+  } catch (error) {
+    console.error('Error fetching subscription tier:', error);
+    return { tier: null, status: null };
+  }
 };

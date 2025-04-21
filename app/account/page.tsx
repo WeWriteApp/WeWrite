@@ -551,7 +551,7 @@ export default function AccountPage() {
       window.location.href = url;
     } catch (error) {
       console.error('Error creating portal session:', error);
-      alert('Failed to open subscription management portal. Please try again.');
+      alert('Failed to open subscription management portal: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -597,7 +597,7 @@ export default function AccountPage() {
       loadUserData();
     } catch (error) {
       console.error('Error canceling subscription:', error);
-      alert('Failed to cancel subscription. Please try again.');
+      alert('Failed to cancel subscription: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -862,7 +862,7 @@ export default function AccountPage() {
                       </p>
                       <div className="flex flex-col gap-1">
                         <p className="text-sm text-muted-foreground">
-                          ${subscription.amount}/month
+                          ${subscription.amount}/month - Supporting WeWrite development
                         </p>
                         <p className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 inline-block w-fit">
                           {subscription.status === 'active' ? 'Active' : subscription.status === 'trialing' ? 'Trial' : subscription.status}

@@ -9,6 +9,7 @@ import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
 import PledgeBarModal from './PledgeBarModal';
+import { ChevronDown } from 'lucide-react';
 import '../styles/pledge-bar-animations.css';
 
 const PledgeBar = () => {
@@ -39,8 +40,17 @@ const PledgeBar = () => {
   const [visible, setVisible] = useState(true);
   const [animateEntry, setAnimateEntry] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showMoreButton, setShowMoreButton] = useState(true);
 
   const { id: pageId } = useParams();
+
+  // Function to scroll to metadata section
+  const scrollToMetadata = () => {
+    const metadataSection = document.querySelector('[data-metadata-section]');
+    if (metadataSection) {
+      metadataSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   // Handle scroll events to hide/show the pledge bar
   useEffect(() => {
@@ -500,9 +510,7 @@ const PledgeBar = () => {
   return (
     <>
       <div
-        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        } ${animateEntry ? 'spring-and-pulse' : ''}`}
+        className={`fixed bottom-12 left-8 right-8 z-50 flex flex-col items-center gap-2 transition-all duration-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'} ${animateEntry ? 'spring-and-pulse' : ''}`}
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
         <CompositionBar
@@ -517,6 +525,18 @@ const PledgeBar = () => {
           onDeletePledge={() => {}}
           className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
         />
+
+        {showMoreButton && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground flex items-center gap-1 hover:bg-transparent hover:text-foreground transition-colors"
+            onClick={scrollToMetadata}
+          >
+            <span>More</span>
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        )}
       </div>
 
       {/* Pledge Modal - rendered at document level to ensure proper positioning */}

@@ -6,7 +6,9 @@ import { Button } from "./ui/button";
 import { Loader, ChevronLeft, Share2, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { getUsernameById } from "../utils/userUtils";
+import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
+import { SupporterIcon } from "./SupporterIcon";
+import { TierModal } from "./TierModal";
 
 export interface PageHeaderProps {
   title?: string;
@@ -17,6 +19,8 @@ export interface PageHeaderProps {
   groupName?: string;
   scrollDirection?: string;
   isPrivate?: boolean;
+  tier?: string;
+  subscriptionStatus?: string;
 }
 
 export default function PageHeader({
@@ -28,6 +32,8 @@ export default function PageHeader({
   groupName,
   // scrollDirection is not used but kept for compatibility
   isPrivate = false,
+  tier: initialTier,
+  subscriptionStatus: initialStatus,
 }: PageHeaderProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = React.useState(false);
@@ -36,6 +42,29 @@ export default function PageHeader({
   const headerRef = React.useRef<HTMLDivElement>(null);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
+  const [tier, setTier] = React.useState<string | null>(initialTier || null);
+  const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
+  const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
+
+  // Fetch username if not provided but userId is available
+  React.useEffect(() => {
+    const fetchTierInfo = async () => {
+      if (userId) {
+        try {
+          setIsLoadingTier(true);
+          const { tier: fetchedTier, status } = await getUserSubscriptionTier(userId);
+          setTier(fetchedTier);
+          setSubscriptionStatus(status);
+        } catch (error) {
+          console.error('Error fetching tier info:', error);
+        } finally {
+          setIsLoadingTier(false);
+        }
+      }
+    };
+
+    fetchTierInfo();
+  }, [userId]);
 
   // Fetch username if not provided but userId is available
   React.useEffect(() => {
@@ -299,9 +328,24 @@ export default function PageHeader({
                         <>
                           {isScrolled ? "" : "by"}{" "}
                           {userId ? (
-                            <Link href={`/user/${userId}`} className="hover:underline">
-                              <span data-component-name="PageHeader">{displayUsername}</span>
-                            </Link>
+                            <div className="flex items-center gap-1">
+                              <Link href={`/user/${userId}`} className="hover:underline">
+                                <span data-component-name="PageHeader">{displayUsername}</span>
+                              </Link>
+                              {isLoadingTier ? (
+                                <Loader className="h-3 w-3 animate-spin" />
+                              ) : tier ? (
+                                <TierModal>
+                                  <div className="cursor-pointer">
+                                    <SupporterIcon
+                                      tier={tier}
+                                      status={subscriptionStatus}
+                                      size="sm"
+                                    />
+                                  </div>
+                                </TierModal>
+                              ) : null}
+                            </div>
                           ) : (
                             <span data-component-name="PageHeader">{displayUsername}</span>
                           )}

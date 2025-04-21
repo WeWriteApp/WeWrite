@@ -170,13 +170,12 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         </>
       );
     } else if (tier === 'tier4') {
-      // Circle with diamond shape
+      // Circle with diamond shape that fills the circle
       svgContent = (
         <path
-          d="M50,30 L65,50 L50,70 L35,50 Z"
+          d="M50,20 L80,50 L50,80 L20,50 Z"
           fill="currentColor"
           stroke="none"
-          transform="scale(0.7)"
         />
       );
     }
@@ -197,7 +196,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
           r="45"
           fill="transparent"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeDasharray={strokeDasharray}
         />
         {/* Tier-specific content - only visible if active */}
@@ -211,7 +210,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${badgeContent.bgColor} ${badgeContent.borderColor} border ${className}`}
+            className={`inline-flex items-center gap-2 px-2 py-1 rounded-full ${badgeContent.bgColor} ${badgeContent.borderColor} border ${className}`}
           >
             <SvgIcon />
             {showLabel && (

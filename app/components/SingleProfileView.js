@@ -10,8 +10,10 @@ import {
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
 import { useAuth } from "../providers/AuthProvider";
-import { Loader, Settings, ChevronLeft, Heart } from "lucide-react";
+import { Loader, Settings, ChevronLeft, Heart, Users, Eye } from "lucide-react";
 import SupporterBadge from "./SupporterBadge";
+import { SupporterIcon } from "./SupporterIcon";
+import { TierModal } from "./TierModal";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount } from "../firebase/counters";
@@ -152,7 +154,8 @@ const SingleProfileView = ({ profile }) => {
   return (
     <ProfilePagesProvider userId={profile.uid}>
       <div className="p-2">
-        <div className="flex items-center mb-4">
+        {/* Navigation bar */}
+        <div className="flex items-center mb-6">
           <div className="flex-1">
             <Link href="/">
               <Button variant="outline" size="sm" className="gap-1">
@@ -160,16 +163,6 @@ const SingleProfileView = ({ profile }) => {
                 <span>Back</span>
               </Button>
             </Link>
-          </div>
-
-          {/* Centered title */}
-          <div className="flex items-center justify-center gap-2">
-            <h1 className="text-3xl font-semibold">{username}</h1>
-            {isLoadingTier ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              supporterTier && <SupporterBadge tier={supporterTier} showLabel={true} />
-            )}
           </div>
 
           {/* Settings button - only visible for current user */}
@@ -189,8 +182,43 @@ const SingleProfileView = ({ profile }) => {
           </div>
         </div>
 
+        {/* Username row with tier icon */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Link href={`/user/${profile.uid}`} className="hover:underline">
+              <h1 className="text-3xl font-semibold">{username}</h1>
+            </Link>
+            {isLoadingTier ? (
+              <Loader className="h-5 w-5 animate-spin" />
+            ) : (
+              <TierModal>
+                <div className="cursor-pointer">
+                  <SupporterIcon
+                    tier={supporterTier}
+                    status={subscriptionStatus}
+                    size="lg"
+                  />
+                </div>
+              </TierModal>
+            )}
+          </div>
+
+          {/* Tier badge - only show if there's a tier */}
+          {supporterTier && (
+            <TierModal>
+              <div className="cursor-pointer">
+                <SupporterBadge
+                  tier={supporterTier}
+                  status={subscriptionStatus}
+                  showLabel={true}
+                />
+              </div>
+            </TierModal>
+          )}
+        </div>
+
         {/* User stats */}
-        <div className="flex flex-wrap gap-4 items-center justify-center mb-4">
+        <div className="flex flex-wrap gap-6 items-center justify-center mb-6">
           <div className="flex flex-col items-center">
             <span className="text-lg font-semibold">
               {isLoadingStats ? (
@@ -199,7 +227,10 @@ const SingleProfileView = ({ profile }) => {
                 pageCount
               )}
             </span>
-            <span className="text-xs text-muted-foreground">pages</span>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Users className="h-3 w-3" />
+              <span>pages</span>
+            </div>
           </div>
 
           <div className="flex flex-col items-center">
@@ -210,30 +241,24 @@ const SingleProfileView = ({ profile }) => {
                 followerCount
               )}
             </span>
-            <span className="text-xs text-muted-foreground">followers</span>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Heart className="h-3 w-3" />
+              <span>followers</span>
+            </div>
           </div>
 
-          {/* Subscription Status - Always show status */}
           <div className="flex flex-col items-center">
-            {subscriptionStatus ? (
-              <span className={
-                `text-sm font-medium px-2 py-1 rounded-full ${
-                  subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'bg-muted text-muted-foreground border border-border'
-                }`
-              }>
-                {subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
-                  ? 'Active Supporter'
-                  : subscriptionStatus === 'canceled'
-                    ? 'Former Supporter'
-                    : 'Not Supporting'}
-              </span>
-            ) : (
-              <span className="text-sm font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground border border-border">
-                Not Supporting
-              </span>
-            )}
+            <span className="text-lg font-semibold">
+              {isLoadingStats ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                profile.viewCount || 0
+              )}
+            </span>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Eye className="h-3 w-3" />
+              <span>views</span>
+            </div>
           </div>
         </div>
 
