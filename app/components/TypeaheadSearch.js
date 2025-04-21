@@ -38,7 +38,8 @@ const TypeaheadSearch = ({
   editableOnly = false, // New prop to filter for editable pages only
   initialSearch = "", // New prop to set initial search value
   displayText = "", // Display text for the link
-  setDisplayText = null // Function to update display text
+  setDisplayText = null, // Function to update display text
+  preventRedirect = false // New prop to prevent redirection after page creation
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -628,8 +629,11 @@ const TypeaheadSearch = ({
                             userId: user.uid,
                           });
 
-                          // Redirect to the edit view of the newly created page
-                          router.push(`/${newPageId}?edit=true`);
+                          // Only redirect if preventRedirect is false
+                          if (!preventRedirect) {
+                            // Redirect to the edit view of the newly created page
+                            router.push(`/${newPageId}?edit=true`);
+                          }
                         } else {
                           console.error("Failed to create new page");
                         }

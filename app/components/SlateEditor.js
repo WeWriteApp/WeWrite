@@ -1085,6 +1085,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                     initialSelectedId={selectedPageId}
                     displayText={displayText}
                     setDisplayText={setDisplayText}
+                    preventRedirect={true} // Prevent redirection when creating a page from the link editor
                     onInputChange={(value) => {
                       // If the input looks like a URL, switch to external tab and fill the URL field
                       if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
