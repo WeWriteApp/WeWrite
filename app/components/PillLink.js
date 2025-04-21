@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Lock, ExternalLink } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
-import { useTheme } from "next-themes";
 import { useAuth } from "../providers/AuthProvider";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import Modal from "./ui/modal";
@@ -30,20 +29,19 @@ export const PillLink = ({
 }) => {
   // Hooks
   const { user } = useAuth();
-  const { theme } = useTheme();
   const { getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
-
+  
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
-
+  
   // Determine link properties
   const showLock = isPublic === false;
   const isUserLinkType = isUserLink(href);
   const isPageLinkType = isPageLink(href);
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
-
+  
   // Format display title
   let displayTitle = children;
   if (typeof children === 'string') {
@@ -53,8 +51,9 @@ export const PillLink = ({
       displayTitle = formatPageTitle(children);
     }
   }
-
-  // Base styles for all pill links
+  
+  // Base styles for all pill links - ABSOLUTELY NO NESTING
+  // Added whitespace-nowrap and truncate to prevent text wrapping
   const baseStyles = `
     inline-flex items-center
     my-0.5 px-2 py-0.5
@@ -62,11 +61,13 @@ export const PillLink = ({
     rounded-lg
     transition-colors
     shadow-sm
+    whitespace-nowrap
+    max-w-full
     ${getPillStyleClasses()}
     ${groupId ? 'opacity-90' : ''}
     ${className}
   `.trim().replace(/\s+/g, ' ');
-
+  
   // External link with confirmation modal
   if (isExternalLinkType) {
     return (
@@ -79,13 +80,14 @@ export const PillLink = ({
           }}
           className={baseStyles}
           tabIndex={0}
+          style={{textOverflow: 'ellipsis', overflow: 'hidden'}}
         >
-          {showLock ? <Lock size={14} className="mr-1 flex-shrink-0" /> : null}
+          {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
           {displayTitle}
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
-          {byline ? <span className="ml-1 text-xs opacity-75">{byline}</span> : null}
+          {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
         </a>
-
+        
         <Modal
           isOpen={showExternalLinkModal}
           onClose={() => setShowExternalLinkModal(false)}
@@ -119,7 +121,7 @@ export const PillLink = ({
       </>
     );
   }
-
+  
   // Internal link (user or page)
   return (
     <Link
@@ -128,10 +130,11 @@ export const PillLink = ({
       tabIndex={0}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
+      style={{textOverflow: 'ellipsis', overflow: 'hidden'}}
     >
-      {showLock ? <Lock size={14} className="mr-1 flex-shrink-0" /> : null}
+      {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       {displayTitle}
-      {byline ? <span className="ml-1 text-xs opacity-75">{byline}</span> : null}
+      {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
     </Link>
   );
 };

@@ -1,16 +1,20 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import { Palette } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../contexts/AccentColorContext";
+import { Button } from "./ui/button";
+import { getBestTextColor } from "../utils/accessibility";
 
 interface AccentColorSwitcherProps {
   compact?: boolean;
 }
 
 export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProps) {
-  const { accentColor, changeAccentColor } = useAccentColor();
+  const { accentColor, changeAccentColor, setCustomColor } = useAccentColor();
+  const [customColor, setCustomColorValue] = useState('#0052CC'); // Default blue
 
   // Define a limited set of colors for the sidebar switcher
   const colorOptions = [
@@ -54,6 +58,38 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
             )}
           </button>
         ))}
+      </div>
+
+      {/* Custom Color Picker */}
+      <div className="mt-4 px-2">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">Custom Color</h3>
+        <div className="flex items-center gap-2 mb-2">
+          <input
+            type="color"
+            value={customColor}
+            onChange={(e) => setCustomColorValue(e.target.value)}
+            className="w-8 h-8 rounded cursor-pointer"
+          />
+          <div className="flex-1">
+            <input
+              type="text"
+              value={customColor}
+              onChange={(e) => setCustomColorValue(e.target.value)}
+              className="w-full px-2 py-1 border rounded-md text-sm"
+            />
+          </div>
+        </div>
+        <Button
+          onClick={() => {
+            const customColorKey = 'custom1';
+            setCustomColor(customColorKey, customColor);
+            changeAccentColor(customColorKey);
+          }}
+          size="sm"
+          className="w-full mt-1"
+        >
+          Apply Custom Color
+        </Button>
       </div>
     </div>
   );
