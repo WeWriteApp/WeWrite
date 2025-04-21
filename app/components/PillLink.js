@@ -31,17 +31,17 @@ export const PillLink = ({
   const { user } = useAuth();
   const { getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
-  
+
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
-  
+
   // Determine link properties
   const showLock = isPublic === false;
   const isUserLinkType = isUserLink(href);
   const isPageLinkType = isPageLink(href);
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
-  
+
   // Format display title
   let displayTitle = children;
   if (typeof children === 'string') {
@@ -51,9 +51,8 @@ export const PillLink = ({
       displayTitle = formatPageTitle(children);
     }
   }
-  
-  // Base styles for all pill links - ABSOLUTELY NO NESTING
-  // Added whitespace-nowrap and truncate to prevent text wrapping
+
+  // Base styles for all pill links
   const baseStyles = `
     inline-flex items-center
     my-0.5 px-2 py-0.5
@@ -62,12 +61,13 @@ export const PillLink = ({
     transition-colors
     shadow-sm
     whitespace-nowrap
-    max-w-full
+    overflow-hidden
+    text-ellipsis
     ${getPillStyleClasses()}
     ${groupId ? 'opacity-90' : ''}
     ${className}
   `.trim().replace(/\s+/g, ' ');
-  
+
   // External link with confirmation modal
   if (isExternalLinkType) {
     return (
@@ -80,14 +80,14 @@ export const PillLink = ({
           }}
           className={baseStyles}
           tabIndex={0}
-          style={{textOverflow: 'ellipsis', overflow: 'hidden'}}
+
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
           {displayTitle}
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
         </a>
-        
+
         <Modal
           isOpen={showExternalLinkModal}
           onClose={() => setShowExternalLinkModal(false)}
@@ -121,7 +121,7 @@ export const PillLink = ({
       </>
     );
   }
-  
+
   // Internal link (user or page)
   return (
     <Link
@@ -130,7 +130,7 @@ export const PillLink = ({
       tabIndex={0}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
-      style={{textOverflow: 'ellipsis', overflow: 'hidden'}}
+
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       {displayTitle}

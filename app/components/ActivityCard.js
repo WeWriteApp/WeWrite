@@ -46,26 +46,26 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
         isCarousel && "h-full flex flex-col"
       )}
     >
-      <div className="flex justify-between items-center gap-1.5 mb-2">
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-[70%]">
-          <div className="flex-none max-w-full">
-            <PillLink href={`/${activity.pageId}`} variant="primary" className="max-w-full">
+      <div className="flex flex-col gap-2 mb-2">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex-none max-w-[75%]">
+            <PillLink href={`/${activity.pageId}`} className="max-w-full">
               {activity.pageName || "Untitled page"}
             </PillLink>
           </div>
-          <span className="text-xs text-muted-foreground truncate">
-            {isNewPage ? "created by" : "edited by"} {" "}
-            <Link
-              href={`/user/${activity.userId}`}
-              className="hover:underline text-primary"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {activity.username || "anonymous"}
-            </Link>
+          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+            {formatRelativeTime(activity.timestamp)}
           </span>
         </div>
-        <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-1">
-          {formatRelativeTime(activity.timestamp)}
+        <span className="text-xs text-muted-foreground truncate">
+          {isNewPage ? "created by" : "edited by"} {" "}
+          <Link
+            href={`/user/${activity.userId}`}
+            className="hover:underline text-primary"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {activity.username || "anonymous"}
+          </Link>
         </span>
       </div>
 
