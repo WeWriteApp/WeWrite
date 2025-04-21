@@ -533,13 +533,51 @@ export function AccentColorProvider({ children }) {
 
     console.log('Setting custom color:', { customSlot, colorValue });
 
+    // Handle HSL color format
+    let processedColorValue = colorValue;
+
+    // If the color is in HSL format, we'll store it as is but also generate a hex version for compatibility
+    if (colorValue.startsWith('hsl')) {
+      // We'll still use the HSL value directly for CSS variables
+      processedColorValue = colorValue;
+    }
+
     // Update the custom color
-    const newCustomColors = { ...customColors, [customSlot]: colorValue };
+    const newCustomColors = { ...customColors, [customSlot]: processedColorValue };
     setCustomColors(newCustomColors);
     localStorage.setItem('customAccentColors', JSON.stringify(newCustomColors));
 
     // Get the color name using the color naming library
-    const colorName = getColorName(colorValue);
+    // For HSL colors, we'll extract the hue to generate a more meaningful name
+    let colorName;
+    if (colorValue.startsWith('hsl')) {
+      const hslMatch = colorValue.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+      if (hslMatch) {
+        const h = parseInt(hslMatch[1]);
+        const s = parseInt(hslMatch[2]);
+        const l = parseInt(hslMatch[3]);
+
+        // Generate a name based on hue
+        if (h >= 0 && h < 30) colorName = 'Red-Orange';
+        else if (h >= 30 && h < 60) colorName = 'Orange';
+        else if (h >= 60 && h < 90) colorName = 'Yellow';
+        else if (h >= 90 && h < 150) colorName = 'Green';
+        else if (h >= 150 && h < 210) colorName = 'Cyan';
+        else if (h >= 210 && h < 270) colorName = 'Blue';
+        else if (h >= 270 && h < 330) colorName = 'Purple';
+        else colorName = 'Red';
+
+        // Add saturation and lightness info
+        if (s < 30) colorName = 'Desaturated ' + colorName;
+        if (l < 30) colorName = 'Dark ' + colorName;
+        else if (l > 70) colorName = 'Light ' + colorName;
+      } else {
+        colorName = 'Custom HSL';
+      }
+    } else {
+      colorName = getColorName(processedColorValue);
+    }
+
     console.log('Generated color name:', colorName, 'for color:', colorValue);
 
     // Update the color name in state
@@ -552,7 +590,7 @@ export function AccentColorProvider({ children }) {
 
     // If this is the currently selected color, update the CSS variables
     if (accentColor === customSlot) {
-      updateCSSVariables(customSlot, colorValue);
+      updateCSSVariables(customSlot, processedColorValue);
     }
   };
 

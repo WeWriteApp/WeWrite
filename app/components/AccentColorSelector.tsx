@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { Palette } from 'lucide-react';
 import { Button } from './ui/button';
 import { getBestTextColor } from '../utils/accessibility';
+import HSLColorPicker from './HSLColorPicker';
 
 export default function AccentColorSelector() {
   const { accentColor, customColors, colorNames, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
@@ -91,24 +92,19 @@ export default function AccentColorSelector() {
       {/* Custom Color Picker */}
       <div className="mt-4">
         <Label className="text-sm font-medium mb-2 block">Custom Color</Label>
-        <div className="flex items-center gap-3 mb-4">
-          <input
-            type="color"
-            value={customColor}
-            onChange={handleCustomColorChange}
-            className="w-10 h-10 rounded cursor-pointer"
+        <div className="mb-4">
+          <HSLColorPicker
+            initialColor={customColor}
+            onApply={(hslColor) => {
+              const customColorKey = 'custom1';
+              // First update the custom color
+              setCustomColor(customColorKey, hslColor);
+              // Then use setTimeout to ensure the state is updated before changing the accent color
+              setTimeout(() => {
+                changeAccentColor(customColorKey);
+              }, 0);
+            }}
           />
-          <div className="flex-1">
-            <input
-              type="text"
-              value={customColor}
-              onChange={(e) => setCustomColor(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md text-sm"
-            />
-          </div>
-          <Button onClick={handleApplyCustomColor} size="sm">
-            Apply
-          </Button>
         </div>
 
         <Label className="text-sm font-medium mb-2 block">Saved Custom Colors</Label>

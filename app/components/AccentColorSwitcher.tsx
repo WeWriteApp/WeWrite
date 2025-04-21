@@ -7,6 +7,7 @@ import { cn } from "../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../contexts/AccentColorContext";
 import { Button } from "./ui/button";
 import { getBestTextColor } from "../utils/accessibility";
+import HSLColorPicker from "./HSLColorPicker";
 
 interface AccentColorSwitcherProps {
   compact?: boolean;
@@ -63,37 +64,18 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
       {/* Custom Color Picker */}
       <div className="mt-4 px-2">
         <h3 className="text-sm font-medium text-muted-foreground mb-3">Custom Color</h3>
-        <div className="flex items-center gap-2 mb-2">
-          <input
-            type="color"
-            value={customColor}
-            onChange={(e) => setCustomColorValue(e.target.value)}
-            className="w-8 h-8 rounded cursor-pointer"
-          />
-          <div className="flex-1">
-            <input
-              type="text"
-              value={customColor}
-              onChange={(e) => setCustomColorValue(e.target.value)}
-              className="w-full px-2 py-1 border rounded-md text-sm"
-            />
-          </div>
-        </div>
-        <Button
-          onClick={() => {
+        <HSLColorPicker
+          initialColor={customColor}
+          onApply={(hslColor) => {
             const customColorKey = 'custom1';
             // First update the custom color
-            setCustomColor(customColorKey, customColor);
+            setCustomColor(customColorKey, hslColor);
             // Then use setTimeout to ensure the state is updated before changing the accent color
             setTimeout(() => {
               changeAccentColor(customColorKey);
             }, 0);
           }}
-          size="sm"
-          className="w-full mt-1"
-        >
-          Apply Custom Color
-        </Button>
+        />
       </div>
     </div>
   );
