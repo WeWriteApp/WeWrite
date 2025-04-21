@@ -417,3 +417,10 @@ body {
   background-color: rgba(59, 130, 246, 0.15); /* Blue color with 15% opacity */
   color: inherit; /* Keep the text color unchanged */
 }
+
+/* Pill link text truncation - only truncates when necessary */
+.pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

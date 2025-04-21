@@ -51,7 +51,7 @@ const supporterTiers = [
     name: 'Diamond Supporter',
     amount: 'Custom',
     icon: <Diamond className="h-6 w-6 text-blue-400" />,
-    description: 'Support WeWrite with a custom amount (minimum $50) and get a Diamond supporter badge.',
+    description: 'Support WeWrite with a custom amount (minimum $51) and get a Diamond supporter badge.',
     color: 'bg-blue-400',
     textColor: 'text-blue-400',
     borderColor: 'border-blue-400/20',
@@ -109,8 +109,8 @@ export default function SupportPage() {
 
       if (selectedTierObj.isCustom) {
         amount = parseInt(customAmount, 10);
-        if (isNaN(amount) || amount < 50) {
-          setError('Custom amount must be at least $50');
+        if (isNaN(amount) || amount < 51) {
+          setError('Custom amount must be at least $51');
           setLoading(false);
           return;
         }
@@ -213,6 +213,9 @@ export default function SupportPage() {
               </div>
               <CardDescription>
                 {tier.description}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Once writer payouts are built, you'll be able to donate parts of your subscription to writers. For now, your subscription will go to support WeWrite's development costs!
+                </p>
               </CardDescription>
             </CardHeader>
             <CardContent>

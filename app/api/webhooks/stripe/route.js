@@ -4,8 +4,10 @@ import { updateSubscription } from '../../../firebase/subscription';
 
 // Helper function to determine tier based on amount
 function determineTierFromAmount(amount) {
-  if (amount >= 50) {
-    return amount > 50 ? 'diamond' : 'gold';
+  if (amount >= 51) {
+    return 'diamond';
+  } else if (amount >= 50) {
+    return 'gold';
   } else if (amount >= 20) {
     return 'silver';
   }

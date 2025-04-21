@@ -61,8 +61,7 @@ export const PillLink = ({
     transition-colors
     shadow-sm
     whitespace-nowrap
-    overflow-hidden
-    text-ellipsis
+    max-w-full
     ${getPillStyleClasses()}
     ${groupId ? 'opacity-90' : ''}
     ${className}
@@ -83,7 +82,7 @@ export const PillLink = ({
 
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          {displayTitle}
+          <span className="pill-text">{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
         </a>
@@ -133,7 +132,7 @@ export const PillLink = ({
 
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-      {displayTitle}
+      <span className="pill-text">{displayTitle}</span>
       {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
     </Link>
   );

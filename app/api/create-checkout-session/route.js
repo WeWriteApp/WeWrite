@@ -178,8 +178,10 @@ export async function POST(request) {
 
     if (amount) {
       finalAmount = parseFloat(amount);
-      if (finalAmount >= 50) {
-        tier = finalAmount > 50 ? 'diamond' : 'gold';
+      if (finalAmount >= 51) {
+        tier = 'diamond';
+      } else if (finalAmount >= 50) {
+        tier = 'gold';
       } else if (finalAmount >= 20) {
         tier = 'silver';
       }

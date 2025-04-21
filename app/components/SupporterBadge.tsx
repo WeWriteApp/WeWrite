@@ -14,7 +14,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
   if (!tier) return null;
 
   let badgeContent;
-  
+
   switch (tier.toLowerCase()) {
     case 'bronze':
       badgeContent = {
@@ -50,7 +50,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         icon: <Diamond className="h-4 w-4 text-blue-400" />,
         label: 'Diamond Supporter',
-        tooltip: 'Diamond Supporter - $50+/month',
+        tooltip: 'Diamond Supporter - $51+/month',
         bgColor: 'bg-blue-400/10',
         borderColor: 'border-blue-400/20',
         textColor: 'text-blue-400'
@@ -64,7 +64,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div 
+          <div
             className={`inline-flex items-center gap-1 px-2 py-1 rounded-full ${badgeContent.bgColor} ${badgeContent.borderColor} border ${className}`}
           >
             {badgeContent.icon}
