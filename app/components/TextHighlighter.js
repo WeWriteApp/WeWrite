@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 
 const TextHighlighter = ({ contentRef }) => {
@@ -112,7 +112,7 @@ const TextHighlighter = ({ contentRef }) => {
         window.customHighlightContainer = null;
       }
     };
-  }, [isHighlighting]);
+  }, [isHighlighting, dismissHighlight]);
 
   // Function to adjust notification position if needed
   const positionNotification = () => {
@@ -304,14 +304,25 @@ const TextHighlighter = ({ contentRef }) => {
     }, 300); // Shorter delay for better user experience
   };
 
-  const dismissHighlight = () => {
+  const dismissHighlight = useCallback(() => {
     // Clear any browser selection
-    window.getSelection().removeAllRanges();
+    if (typeof window !== 'undefined') {
+      window.getSelection().removeAllRanges();
 
-    // Remove custom highlight elements
-    if (typeof window !== 'undefined' && window.customHighlightContainer) {
-      window.customHighlightContainer.remove();
-      window.customHighlightContainer = null;
+      // Remove custom highlight elements
+      if (window.customHighlightContainer) {
+        window.customHighlightContainer.remove();
+        window.customHighlightContainer = null;
+      }
+
+      // Clean up stored positions
+      if (window.highlightOriginalPositions) {
+        window.highlightOriginalPositions = null;
+      }
+
+      // Remove the highlight parameter from the URL
+      const url = window.location.href.split('#')[0];
+      window.history.replaceState({}, document.title, url);
     }
 
     // Remove notification element
@@ -320,22 +331,9 @@ const TextHighlighter = ({ contentRef }) => {
       notificationRef.current = null;
     }
 
-    // Clean up stored positions
-    if (window.highlightOriginalPositions) {
-      window.highlightOriginalPositions = null;
-    }
-
-    // Remove the highlight parameter from the URL
-    if (typeof window !== 'undefined') {
-      const url = window.location.href.split('#')[0];
-      window.history.replaceState({}, document.title, url);
-    }
-
     setIsHighlighting(false);
     setHighlightedText('');
-  };
-
-  if (!isHighlighting) return null;
+  }, []);
 
   // Create a portal for the notification to be rendered at the top of the document
   useEffect(() => {
@@ -371,11 +369,15 @@ const TextHighlighter = ({ contentRef }) => {
       // Clean up
       if (notificationRef.current) {
         notificationRef.current.remove();
+        notificationRef.current = null;
       }
     };
   }, [isHighlighting, highlighterUsername]);
 
-  // Return null since we're using a portal
+  // Return null if not highlighting
+  if (!isHighlighting) return null;
+
+  // Return null since we're using a portal for the actual UI
   return null;
 };
 
