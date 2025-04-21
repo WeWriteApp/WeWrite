@@ -2,30 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/app/utils/currentUser';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { getCurrentUser } from '../utils/currentUser';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 
 export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
-  
+
   // Check if user is authorized to access admin page
   useEffect(() => {
     const checkAuth = async () => {
       try {
         setLoading(true);
         const currentUser = getCurrentUser();
-        
+
         if (!currentUser) {
           router.push('/login');
           return;
         }
-        
+
         setUser(currentUser);
-        
+
         // Check if user is an admin (replace with your admin check logic)
         // For now, we'll use a hardcoded list of admin emails
         const adminEmails = [
@@ -33,13 +33,13 @@ export default function AdminPage() {
           'jamie@wewrite.com',
           // Add other admin emails here
         ];
-        
+
         if (adminEmails.includes(currentUser.email)) {
           setAuthorized(true);
         } else {
           router.push('/');
         }
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Error checking auth:', error);
@@ -47,10 +47,10 @@ export default function AdminPage() {
         router.push('/');
       }
     };
-    
+
     checkAuth();
   }, [router]);
-  
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -63,7 +63,7 @@ export default function AdminPage() {
       </div>
     );
   }
-  
+
   if (!authorized) {
     return (
       <div className="container mx-auto py-8">
@@ -79,7 +79,7 @@ export default function AdminPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex flex-col gap-6">
@@ -89,7 +89,7 @@ export default function AdminPage() {
             Manage and monitor your WeWrite application
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AdminCard
             title="Database Management"
@@ -97,35 +97,35 @@ export default function AdminPage() {
             icon="📊"
             onClick={() => router.push('/admin/database')}
           />
-          
+
           <AdminCard
             title="User Management"
             description="Manage users and permissions"
             icon="👥"
             onClick={() => router.push('/admin/users')}
           />
-          
+
           <AdminCard
             title="Content Moderation"
             description="Review and moderate content"
             icon="📝"
             onClick={() => router.push('/admin/moderation')}
           />
-          
+
           <AdminCard
             title="System Settings"
             description="Configure system settings"
             icon="⚙️"
             onClick={() => router.push('/admin/settings')}
           />
-          
+
           <AdminCard
             title="Analytics"
             description="View usage analytics and reports"
             icon="📈"
             onClick={() => router.push('/admin/analytics')}
           />
-          
+
           <AdminCard
             title="Subscription Management"
             description="Manage subscription plans and payments"

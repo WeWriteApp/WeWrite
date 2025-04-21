@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/app/utils/currentUser';
-import DatabaseStats from '@/app/components/admin/DatabaseStats';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getQueryStatsSummary } from '@/app/utils/queryMonitor';
+import { getCurrentUser } from '../../utils/currentUser';
+import DatabaseStats from '../../components/admin/DatabaseStats';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { getQueryStatsSummary } from '../../utils/queryMonitor';
 
 export default function DatabaseAdminPage() {
   const router = useRouter();
@@ -16,21 +16,21 @@ export default function DatabaseAdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState('stats');
   const [querySummary, setQuerySummary] = useState(null);
-  
+
   // Check if user is authorized to access admin page
   useEffect(() => {
     const checkAuth = async () => {
       try {
         setLoading(true);
         const currentUser = getCurrentUser();
-        
+
         if (!currentUser) {
           router.push('/login');
           return;
         }
-        
+
         setUser(currentUser);
-        
+
         // Check if user is an admin (replace with your admin check logic)
         // For now, we'll use a hardcoded list of admin emails
         const adminEmails = [
@@ -38,13 +38,13 @@ export default function DatabaseAdminPage() {
           'jamie@wewrite.com',
           // Add other admin emails here
         ];
-        
+
         if (adminEmails.includes(currentUser.email)) {
           setAuthorized(true);
         } else {
           router.push('/');
         }
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Error checking auth:', error);
@@ -52,22 +52,22 @@ export default function DatabaseAdminPage() {
         router.push('/');
       }
     };
-    
+
     checkAuth();
   }, [router]);
-  
+
   // Update query summary periodically
   useEffect(() => {
     const updateSummary = () => {
       setQuerySummary(getQueryStatsSummary());
     };
-    
+
     updateSummary();
     const interval = setInterval(updateSummary, 5000);
-    
+
     return () => clearInterval(interval);
   }, []);
-  
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -80,7 +80,7 @@ export default function DatabaseAdminPage() {
       </div>
     );
   }
-  
+
   if (!authorized) {
     return (
       <div className="container mx-auto py-8">
@@ -96,7 +96,7 @@ export default function DatabaseAdminPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex flex-col gap-6">
@@ -111,18 +111,18 @@ export default function DatabaseAdminPage() {
             Back to Admin
           </Button>
         </div>
-        
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="stats">Database Stats</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="optimization">Optimization</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="stats">
             <DatabaseStats />
           </TabsContent>
-          
+
           <TabsContent value="performance">
             <Card>
               <CardHeader>
@@ -170,7 +170,7 @@ export default function DatabaseAdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="optimization">
             <Card>
               <CardHeader>
@@ -206,7 +206,7 @@ export default function DatabaseAdminPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-muted/50 p-4 rounded-lg">
                     <h3 className="text-lg font-medium mb-2">Manual Optimization Tools</h3>
                     <p className="mb-4">
@@ -227,7 +227,7 @@ export default function DatabaseAdminPage() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="bg-muted/50 p-4 rounded-lg">
                     <h3 className="text-lg font-medium mb-2">Optimization Recommendations</h3>
                     <ul className="list-disc list-inside space-y-2">
