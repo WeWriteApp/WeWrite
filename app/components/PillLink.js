@@ -47,9 +47,6 @@ export const PillLink = ({
     return <PillLinkSkeleton />;
   }
 
-  // Get styles based on variant and pill style preference
-  const variantStyles = getPillStyleClasses(variant);
-
   // Extract page ID from href to check if user is the owner
   const pageId = href.split('/').pop();
   const pageOwnerId = groupId?.split('_')[0];
@@ -87,6 +84,7 @@ export const PillLink = ({
     rounded-[8px]
     transition-colors duration-200
     shadow-sm
+    whitespace-nowrap overflow-hidden text-ellipsis
     ${variantStyles}
     ${groupId ? 'opacity-90' : ''}
     ${className || ''}
@@ -113,14 +111,10 @@ export const PillLink = ({
             }
           }}
         >
-            {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-            <span className="whitespace-nowrap overflow-hidden text-ellipsis external-link">{displayTitle}</span>
+            {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0 mr-1" />}
+            {displayTitle}
             <ExternalLink className="h-3 w-3 flex-shrink-0 ml-1" />
-            {byline && (
-              <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
-                {byline}
-              </span>
-            )}
+            {byline && <span className="ml-1 text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">{byline}</span>}
         </a>
 
         <Modal
@@ -178,13 +172,9 @@ export const PillLink = ({
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
     >
-        {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : 'page-link'}`}>{displayTitle}</span>
-        {byline && (
-          <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
-            {byline}
-          </span>
-        )}
+        {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0 mr-1" />}
+        {displayTitle}
+        {byline && <span className="ml-1 text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">{byline}</span>}
     </Link>
   );
 }
