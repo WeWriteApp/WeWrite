@@ -33,17 +33,17 @@ export const PillLink = ({
   const { theme } = useTheme();
   const { getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
-  
+
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
-  
+
   // Determine link properties
   const showLock = isPublic === false;
   const isUserLinkType = isUserLink(href);
   const isPageLinkType = isPageLink(href);
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
-  
+
   // Format display title
   let displayTitle = children;
   if (typeof children === 'string') {
@@ -53,7 +53,7 @@ export const PillLink = ({
       displayTitle = formatPageTitle(children);
     }
   }
-  
+
   // Base styles for all pill links
   const baseStyles = `
     inline-flex items-center
@@ -66,7 +66,7 @@ export const PillLink = ({
     ${groupId ? 'opacity-90' : ''}
     ${className}
   `.trim().replace(/\s+/g, ' ');
-  
+
   // External link with confirmation modal
   if (isExternalLinkType) {
     return (
@@ -80,12 +80,12 @@ export const PillLink = ({
           className={baseStyles}
           tabIndex={0}
         >
-          {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className="truncate">{displayTitle}</span>
+          {showLock ? <Lock size={14} className="mr-1 flex-shrink-0" /> : null}
+          {displayTitle}
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
-          {byline && <span className="ml-1 text-xs opacity-75">{byline}</span>}
+          {byline ? <span className="ml-1 text-xs opacity-75">{byline}</span> : null}
         </a>
-        
+
         <Modal
           isOpen={showExternalLinkModal}
           onClose={() => setShowExternalLinkModal(false)}
@@ -119,7 +119,7 @@ export const PillLink = ({
       </>
     );
   }
-  
+
   // Internal link (user or page)
   return (
     <Link
@@ -129,9 +129,9 @@ export const PillLink = ({
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
     >
-      {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-      <span className="truncate">{displayTitle}</span>
-      {byline && <span className="ml-1 text-xs opacity-75">{byline}</span>}
+      {showLock ? <Lock size={14} className="mr-1 flex-shrink-0" /> : null}
+      {displayTitle}
+      {byline ? <span className="ml-1 text-xs opacity-75">{byline}</span> : null}
     </Link>
   );
 };

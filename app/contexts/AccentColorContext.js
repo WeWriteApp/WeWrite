@@ -254,53 +254,13 @@ const parseColorToRGB = (color) => {
   return { r, g, b };
 };
 
-// Calculate text color for background to ensure WCAG 2.0 compliance
+// Use the imported getBestTextColor function from accessibility.ts
 export const getTextColorForBackground = (bgColor, options = {}) => {
-  try {
-    // Default options
-    const {
-      minContrastRatio = 4.5, // WCAG AA standard for normal text
-      preferredTextColors = ['#ffffff', '#000000'], // White and black are standard choices
-      fallbackTextColor = '#ffffff' // Default to white if we can't meet contrast requirements
-    } = options;
-
-    // Parse background color to RGB
-    const bgRGB = parseColorToRGB(bgColor);
-
-    // Calculate background luminance
-    const bgLuminance = getLuminance(bgRGB.r, bgRGB.g, bgRGB.b);
-
-    // Calculate contrast ratios for each preferred text color
-    const contrastRatios = preferredTextColors.map(textColor => {
-      const textRGB = parseColorToRGB(textColor);
-      const textLuminance = getLuminance(textRGB.r, textRGB.g, textRGB.b);
-      const ratio = getContrastRatio(bgLuminance, textLuminance);
-      return { color: textColor, ratio };
-    });
-
-    // Sort by contrast ratio (highest first)
-    contrastRatios.sort((a, b) => b.ratio - a.ratio);
-
-    // Log contrast information for debugging
-    console.log(`Background color: ${bgColor}, Luminance: ${bgLuminance.toFixed(3)}`);
-    contrastRatios.forEach(({ color, ratio }) => {
-      console.log(`Text color: ${color}, Contrast ratio: ${ratio.toFixed(2)}`);
-    });
-
-    // Check if any color meets our minimum contrast ratio
-    const bestOption = contrastRatios.find(option => option.ratio >= minContrastRatio);
-
-    if (bestOption) {
-      return bestOption.color;
-    }
-
-    // If no color meets the minimum, return the one with the highest contrast
-    console.warn(`No text color meets minimum contrast ratio of ${minContrastRatio} for background ${bgColor}`);
-    return contrastRatios[0].color;
-  } catch (error) {
-    console.error('Error calculating text color:', error);
-    return '#ffffff'; // Default to white in case of error
-  }
+  return getBestTextColor(bgColor, {
+    level: 'AA',
+    size: 'normal',
+    preferredColors: ['#ffffff', '#000000']
+  });
 };
 
 const AccentColorContext = createContext();

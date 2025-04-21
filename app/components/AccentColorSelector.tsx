@@ -5,13 +5,26 @@ import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES, getTextColorForBack
 import { cn } from '../lib/utils';
 import { Label } from './ui/label';
 import { Palette } from 'lucide-react';
+import { Button } from './ui/button';
+import { getBestTextColor } from '../utils/accessibility';
 
 export default function AccentColorSelector() {
   const { accentColor, customColors, colorNames, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
+  const [customColor, setCustomColor] = useState('#0052CC'); // Default blue
 
   const handleColorSelect = (color: string) => {
     console.log('Color selected:', color);
     changeAccentColor(color);
+  };
+
+  const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomColor(e.target.value);
+  };
+
+  const handleApplyCustomColor = () => {
+    const customColorKey = 'custom1';
+    setCustomColor(customColorKey, customColor);
+    changeAccentColor(customColorKey);
   };
 
   // Force re-render when colorNames change
@@ -71,8 +84,30 @@ export default function AccentColorSelector() {
         })}
       </div>
 
+      {/* Custom Color Picker */}
       <div className="mt-4">
-        <Label className="text-sm font-medium mb-2 block">Custom Colors</Label>
+        <Label className="text-sm font-medium mb-2 block">Custom Color</Label>
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            type="color"
+            value={customColor}
+            onChange={handleCustomColorChange}
+            className="w-10 h-10 rounded cursor-pointer"
+          />
+          <div className="flex-1">
+            <input
+              type="text"
+              value={customColor}
+              onChange={(e) => setCustomColor(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md text-sm"
+            />
+          </div>
+          <Button onClick={handleApplyCustomColor} size="sm">
+            Apply
+          </Button>
+        </div>
+
+        <Label className="text-sm font-medium mb-2 block">Saved Custom Colors</Label>
         <div className="grid grid-cols-4 gap-2">
           {Object.keys(customColors).map((colorKey) => {
             const isSelected = accentColor === colorKey;

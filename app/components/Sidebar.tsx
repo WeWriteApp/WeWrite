@@ -11,7 +11,6 @@ import { useTheme } from "next-themes"
 import { SimpleAccountSwitcher } from "./SimpleAccountSwitcher"
 import { AccentColorSwitcher } from "./AccentColorSwitcher"
 import PillStyleToggle from "./PillStyleToggle"
-import CustomColorPicker from "./CustomColorPicker"
 
 interface SidebarProps {
   isOpen: boolean
@@ -162,9 +161,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* Accent Color Switcher */}
             <AccentColorSwitcher />
-
-            {/* Custom Color Picker */}
-            <CustomColorPicker />
 
             {/* Pill Style Toggle */}
             <PillStyleToggle />
