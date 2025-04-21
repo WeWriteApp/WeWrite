@@ -20,6 +20,7 @@ import { Placeholder } from "./components/ui/placeholder";
 import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/SimpleLandingPage";
 import { FloatingActionButton } from "./components/ui/floating-action-button";
+import SiteFooter from "./components/SiteFooter";
 
 export default function Home() {
   const { user, loading: authLoading } = useContext(AuthContext);
@@ -137,6 +138,7 @@ export default function Home() {
 
         <FloatingActionButton href="/direct-create" />
       </main>
+      <SiteFooter />
     </>
   );
 }

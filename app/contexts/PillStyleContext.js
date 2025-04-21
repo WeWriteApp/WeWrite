@@ -26,7 +26,7 @@ export function PillStyleProvider({ children }) {
   // Try to load from localStorage, default to filled
   const [pillStyle, setPillStyle] = useState(PILL_STYLES.FILLED);
   const { theme } = useTheme();
-  
+
   // Load saved preference on mount
   useEffect(() => {
     const savedStyle = localStorage.getItem('pillStyle');
@@ -44,40 +44,22 @@ export function PillStyleProvider({ children }) {
   };
 
   // Get the appropriate classes based on the current pill style
-  const getPillStyleClasses = (variant = 'primary') => {
+  const getPillStyleClasses = () => {
     if (pillStyle === PILL_STYLES.OUTLINE) {
-      if (variant === 'primary') {
-        return `
-          bg-transparent text-primary
-          border-[1.5px] border-primary/40
-          hover:bg-primary/10 hover:border-primary/60
-          shadow-inner
-        `;
-      } else if (variant === 'secondary') {
-        return `
-          bg-transparent text-accent-foreground
-          border-[1.5px] border-border/60
-          hover:bg-accent/20 hover:border-border
-          shadow-inner
-        `;
-      }
+      return `
+        bg-transparent text-primary
+        border-[1.5px] border-primary/40
+        hover:bg-primary/10 hover:border-primary/60
+        shadow-inner
+      `;
     } else {
       // Default filled style
-      if (variant === 'primary') {
-        return `
-          bg-primary text-primary-foreground
-          border-[1.5px] border-primary/20
-          hover:bg-primary/90 hover:border-primary/30
-          inner-border inner-border-neutral-alpha-3
-        `;
-      } else if (variant === 'secondary') {
-        return `
-          bg-accent/50 text-accent-foreground
-          border-[1.5px] border-border/40
-          hover:bg-accent/70 hover:border-border
-          inner-border inner-border-neutral-alpha-3
-        `;
-      }
+      return `
+        bg-primary text-primary-foreground
+        border-[1.5px] border-primary/20
+        hover:bg-primary/90 hover:border-primary/30
+        inner-border inner-border-neutral-alpha-3
+      `;
     }
   };
 
@@ -91,9 +73,9 @@ export function PillStyleProvider({ children }) {
   };
 
   return (
-    <PillStyleContext.Provider value={{ 
-      pillStyle, 
-      changePillStyle, 
+    <PillStyleContext.Provider value={{
+      pillStyle,
+      changePillStyle,
       getPillStyleClasses,
       getTextColorForPill
     }}>

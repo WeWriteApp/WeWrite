@@ -8,7 +8,7 @@ import { PillLink } from "./PillLink";
 
 export default function PillStyleToggle() {
   const { pillStyle, changePillStyle } = usePillStyle();
-  
+
   const handleToggle = (checked) => {
     changePillStyle(checked ? PILL_STYLES.OUTLINE : PILL_STYLES.FILLED);
   };
@@ -28,12 +28,11 @@ export default function PillStyleToggle() {
           aria-label="Toggle pill style"
         />
       </div>
-      
+
       {/* Preview */}
       <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-md">
         <PillLink href="#" isPublic={true}>Example Page</PillLink>
         <PillLink href="#" isPublic={false}>Private Page</PillLink>
-        <PillLink href="#" isPublic={true} variant="secondary">Secondary</PillLink>
       </div>
     </div>
   );

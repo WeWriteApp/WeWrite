@@ -4,7 +4,6 @@ import * as React from "react";
 import { Palette } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../contexts/AccentColorContext";
-import { ContrastPreview } from "./ContrastPreview";
 
 interface AccentColorSwitcherProps {
   compact?: boolean;
@@ -16,7 +15,6 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
   // Define a limited set of colors for the sidebar switcher
   const colorOptions = [
     { value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE], label: "Blue" },
-    { value: ACCENT_COLORS.INDIGO, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.INDIGO], label: "Indigo" },
     { value: ACCENT_COLORS.PURPLE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.PURPLE], label: "Purple" },
     { value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED], label: "Red" },
     { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN], label: "Green" }
@@ -42,18 +40,12 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
               )}
             </div>
 
-            {/* Color indicator with contrast preview */}
+            {/* Color indicator */}
             <div className="flex items-center mr-2">
               <div
-                className="w-4 h-4 rounded-full mr-1"
+                className="w-4 h-4 rounded-full"
                 style={{ backgroundColor: option.color }}
               />
-              {!compact && (
-                <ContrastPreview
-                  backgroundColor={option.color}
-                  className="scale-75 origin-left"
-                />
-              )}
             </div>
 
             {/* Text */}

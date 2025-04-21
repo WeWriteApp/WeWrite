@@ -30,7 +30,6 @@ export const PillLink = ({
   isOwned,
   byline,
   isLoading,
-  variant = "primary",
   label
 }) => {
   const { user } = useAuth();
@@ -40,6 +39,9 @@ export const PillLink = ({
   const isDark = theme === "dark";
   const { pillStyle, getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
+
+  // Get pill style classes
+  const variantStyles = getPillStyleClasses();
 
   if (isLoading) {
     return <PillLinkSkeleton />;
