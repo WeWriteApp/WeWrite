@@ -251,7 +251,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         isScrolled ? 'pb-16' : ''
       } ${
         canEdit ? 'relative' : ''
-      } min-h-[200px]`}
+      } min-h-screen`}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
@@ -352,7 +352,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
     // For array of nodes (multiple paragraphs)
     if (Array.isArray(contents)) {
       return (
-        <div className="relative min-h-[200px]">
+        <div className="relative min-h-screen">
           <div className="prose max-w-full">
             <p className="text-foreground leading-normal text-base">
               {contents.map((node, index) => {
@@ -420,7 +420,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   // If it's an array, map through and render each node
   if (Array.isArray(contents)) {
     return (
-      <div className="w-full text-left min-h-[200px]">
+      <div className="w-full text-left min-h-screen">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
             {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine)}
