@@ -12,6 +12,7 @@ import GAProvider from "./providers/GAProvider"
 import { AnalyticsProvider } from "./providers/AnalyticsProvider"
 import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
+import { PillStyleProvider } from "./contexts/PillStyleContext"
 
 const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
@@ -45,11 +46,13 @@ export default function RootLayout({
                 <AnalyticsProvider>
                   <GAProvider>
                     <ToastProvider>
-                      <ClientLayout>
-                        {children}
-                      </ClientLayout>
-                      <Analytics debug={process.env.NODE_ENV === 'development'} />
-                      <SpeedInsights />
+                      <PillStyleProvider>
+                        <ClientLayout>
+                          {children}
+                        </ClientLayout>
+                        <Analytics debug={process.env.NODE_ENV === 'development'} />
+                        <SpeedInsights />
+                      </PillStyleProvider>
                     </ToastProvider>
                   </GAProvider>
                 </AnalyticsProvider>

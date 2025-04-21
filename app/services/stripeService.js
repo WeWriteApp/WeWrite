@@ -14,6 +14,8 @@ export const createCheckoutSession = async ({ priceId, userId, amount, tierName 
   const stripe = await getStripe();
 
   try {
+    console.log('Creating checkout session with params:', { priceId, userId, amount, tierName });
+
     // Call your backend API to create a Stripe Checkout Session
     const response = await fetch('/api/create-checkout-session', {
       method: 'POST',
@@ -28,24 +30,46 @@ export const createCheckoutSession = async ({ priceId, userId, amount, tierName 
       }),
     });
 
+    // Check if the response is ok before parsing JSON
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API error response:', response.status, errorText);
+
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.error || `API error: ${response.status}`);
+      } catch (e) {
+        throw new Error(`API error: ${response.status} - ${errorText.substring(0, 100)}`);
+      }
+    }
+
     const session = await response.json();
 
     if (session.error) {
+      console.error('Session error:', session.error);
       throw new Error(session.error);
     }
 
+    if (!session.id) {
+      console.error('Missing session ID in response:', session);
+      throw new Error('Invalid session response from server');
+    }
+
     // Redirect to Stripe Checkout
+    console.log('Redirecting to Stripe checkout with session ID:', session.id);
     const result = await stripe.redirectToCheckout({
       sessionId: session.id,
     });
 
     if (result.error) {
-      console.error(result.error.message);
+      console.error('Stripe redirect error:', result.error);
       throw new Error(result.error.message);
     }
+
+    return session;
   } catch (error) {
     console.error('Error in createCheckoutSession:', error);
-    throw error;
+    return { error: error.message };
   }
 };
 

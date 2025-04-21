@@ -9,6 +9,8 @@ import { motion } from "framer-motion";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import Modal from "./ui/modal";
 import { Button } from "./ui/button";
+import { usePillStyle } from "../contexts/PillStyleContext";
+import { getBestTextColor } from "../utils/accessibility";
 
 export const PillLinkSkeleton = () => {
   return (
@@ -36,28 +38,15 @@ export const PillLink = ({
   const showLock = isPublic === false;
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { pillStyle, getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
   if (isLoading) {
     return <PillLinkSkeleton />;
   }
 
-  // Determine styles based on variant
-  let variantStyles = "";
-
-  if (variant === "primary") {
-    variantStyles = `
-      bg-primary text-primary-foreground
-      border-[1.5px] border-primary/20
-      hover:bg-primary/90 hover:border-primary/30
-    `;
-  } else if (variant === "secondary") {
-    variantStyles = `
-      bg-accent/50 text-accent-foreground
-      border-[1.5px] border-border/40
-      hover:bg-accent/70 hover:border-border
-    `;
-  }
+  // Get styles based on variant and pill style preference
+  const variantStyles = getPillStyleClasses(variant);
 
   // Extract page ID from href to check if user is the owner
   const pageId = href.split('/').pop();

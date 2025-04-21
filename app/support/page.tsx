@@ -100,13 +100,13 @@ export default function SupportPage() {
       setError(null);
 
       const selectedTierObj = supporterTiers.find(tier => tier.id === selectedTier);
-      
+
       if (!selectedTierObj) {
         throw new Error('Invalid tier selected');
       }
 
       let amount = 0;
-      
+
       if (selectedTierObj.isCustom) {
         amount = parseInt(customAmount, 10);
         if (isNaN(amount) || amount < 50) {
@@ -118,18 +118,40 @@ export default function SupportPage() {
         amount = selectedTierObj.amount as number;
       }
 
+      console.log('Creating checkout session with:', {
+        userId: user.uid,
+        amount,
+        tierName: selectedTierObj.name
+      });
+
       // Create a checkout session with Stripe
-      await createCheckoutSession({
+      const response = await createCheckoutSession({
         priceId: 'price_monthly_support', // This will be mapped to the correct price ID in the API
         userId: user.uid,
         amount: amount,
         tierName: selectedTierObj.name
       });
 
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
       // The user will be redirected to Stripe Checkout by the createCheckoutSession function
     } catch (err: any) {
       console.error('Error creating subscription:', err);
-      setError(err.message || 'Failed to create subscription');
+
+      // More detailed error message
+      let errorMessage = 'Failed to create subscription';
+
+      if (err.message) {
+        if (err.message.includes('Unauthorized')) {
+          errorMessage = 'Authentication error. Please try logging out and back in.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -147,7 +169,7 @@ export default function SupportPage() {
           Back to Home
         </Link>
       </div>
-      
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Become an Early Supporter</h1>
         <p className="text-muted-foreground">
@@ -159,19 +181,19 @@ export default function SupportPage() {
         <DollarSign className="h-5 w-5 text-primary" />
         <AlertTitle className="text-primary">About Writer Payouts</AlertTitle>
         <AlertDescription>
-          Right now, you're just donating to the platform to help us with development costs. 
-          But once writer payouts is built, you'll be able to donate part of your monthly 
+          Right now, you're just donating to the platform to help us with development costs.
+          But once writer payouts is built, you'll be able to donate part of your monthly
           subscription directly to pages, which goes to the page's author.
         </AlertDescription>
       </Alert>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {supporterTiers.map((tier) => (
-          <Card 
+          <Card
             key={tier.id}
             className={`cursor-pointer transition-all duration-200 ${
-              selectedTier === tier.id 
-                ? `ring-2 ring-primary ${tier.bgColor}` 
+              selectedTier === tier.id
+                ? `ring-2 ring-primary ${tier.bgColor}`
                 : 'hover:border-primary/50 hover:bg-accent/50'
             }`}
             onClick={() => handleTierSelect(tier.id)}
@@ -224,9 +246,9 @@ export default function SupportPage() {
       )}
 
       <div className="flex justify-end">
-        <Button 
-          size="lg" 
-          onClick={handleSubscribe} 
+        <Button
+          size="lg"
+          onClick={handleSubscribe}
           disabled={!selectedTier || loading}
           className="w-full md:w-auto"
         >

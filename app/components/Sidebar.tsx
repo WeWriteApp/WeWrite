@@ -10,6 +10,7 @@ import { Button } from "./ui/button"
 import { useTheme } from "next-themes"
 import { SimpleAccountSwitcher } from "./SimpleAccountSwitcher"
 import { AccentColorSwitcher } from "./AccentColorSwitcher"
+import PillStyleToggle from "./PillStyleToggle"
 
 interface SidebarProps {
   isOpen: boolean
@@ -160,6 +161,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* Accent Color Switcher */}
             <AccentColorSwitcher />
+
+            {/* Pill Style Toggle */}
+            <PillStyleToggle />
 
             {/* Additional sidebar items can be added here in the future */}
           </div>

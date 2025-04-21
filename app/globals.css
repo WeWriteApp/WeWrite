@@ -260,6 +260,30 @@ input[type="number"] {
   /* Remove the spinner in Firefox */
 }
 
+/* Inner border utility for pill links */
+.inner-border {
+  position: relative;
+}
+
+.inner-border::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  border-radius: 6px; /* Slightly smaller than the outer radius */
+  pointer-events: none;
+}
+
+.inner-border-neutral-alpha-3::after {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .inner-border-neutral-alpha-3::after {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 /* Basic styling for html and body */
 html,
 body {
