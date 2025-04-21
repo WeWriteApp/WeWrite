@@ -46,27 +46,29 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
         isCarousel && "h-full flex flex-col"
       )}
     >
-      <div className="flex flex-col gap-2 mb-2">
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex-none max-w-[75%]">
-            <PillLink href={`/${activity.pageId}`} className="max-w-full">
-              {activity.pageName || "Untitled page"}
-            </PillLink>
+      <div className="flex flex-col gap-1.5 mb-2 w-full overflow-hidden">
+        <div className="flex flex-col w-full">
+          <div className="flex justify-between items-center w-full">
+            <div className="flex-shrink min-w-0 max-w-[70%] overflow-hidden">
+              <PillLink href={`/${activity.pageId}`} className="max-w-full">
+                {activity.pageName || "Untitled page"}
+              </PillLink>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto">
+              {formatRelativeTime(activity.timestamp)}
+            </span>
           </div>
-          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-            {formatRelativeTime(activity.timestamp)}
-          </span>
+          <div className="text-xs text-muted-foreground truncate mt-1.5">
+            {isNewPage ? "created by" : "edited by"} {" "}
+            <Link
+              href={`/user/${activity.userId}`}
+              className="hover:underline text-primary"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {activity.username || "anonymous"}
+            </Link>
+          </div>
         </div>
-        <span className="text-xs text-muted-foreground truncate">
-          {isNewPage ? "created by" : "edited by"} {" "}
-          <Link
-            href={`/user/${activity.userId}`}
-            className="hover:underline text-primary"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {activity.username || "anonymous"}
-          </Link>
-        </span>
       </div>
 
       <div className={cn(
