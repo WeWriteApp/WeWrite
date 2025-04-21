@@ -76,8 +76,20 @@ export const PillLink = ({
     }
   }
 
-  // Use padding that properly accommodates descenders
+  // Use consistent padding and styling for all pill links
   const paddingClass = 'py-[2px]';
+  const pillLinkBaseClass = `
+    my-0.5 px-[8px] ${paddingClass}
+    inline-flex items-center gap-1.5
+    text-sm font-medium
+    rounded-[8px]
+    transition-colors duration-200
+    shadow-sm
+    ${variantStyles}
+    ${groupId ? 'opacity-90' : ''}
+    ${className || ''}
+    max-w-full
+  `;
 
   // For external links, we'll use a custom handler to show a confirmation modal
   if (isExternalLinkType) {
@@ -89,18 +101,7 @@ export const PillLink = ({
             e.preventDefault();
             setShowExternalLinkModal(true);
           }}
-          className={`
-            my-0.5 px-[8px] ${paddingClass}
-            inline-flex items-center gap-1.5
-            text-sm font-medium
-            rounded-[8px]
-            transition-colors duration-200
-            shadow-sm
-            ${variantStyles}
-            ${groupId ? 'opacity-90' : ''}
-            ${className || ''}
-            max-w-full
-          `}
+          className={pillLinkBaseClass}
           tabIndex={0}
           // Prevent keyboard navigation inside the pill link
           onKeyDown={(e) => {
@@ -111,10 +112,8 @@ export const PillLink = ({
           }}
         >
             {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-            <span className="whitespace-nowrap overflow-hidden text-ellipsis external-link">
-              {displayTitle}
-            </span>
-            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis external-link">{displayTitle}</span>
+            <ExternalLink className="h-3 w-3 flex-shrink-0 ml-1" />
             {byline && (
               <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
                 {byline}
@@ -165,18 +164,7 @@ export const PillLink = ({
   return (
     <Link
       href={href}
-      className={`
-        my-0.5 px-[8px] ${paddingClass}
-        inline-flex items-center gap-1.5
-        text-sm font-medium
-        rounded-[8px]
-        transition-colors duration-200
-        shadow-sm
-        ${variantStyles}
-        ${groupId ? 'opacity-90' : ''}
-        ${className || ''}
-        max-w-full
-      `}
+      className={pillLinkBaseClass}
       tabIndex={0}
       // Prevent keyboard navigation inside the pill link
       onKeyDown={(e) => {
@@ -189,9 +177,7 @@ export const PillLink = ({
       data-user-id={isUserLinkType ? pageId : undefined}
     >
         {showLock && <Lock className="h-3.5 w-3.5 flex-shrink-0" />}
-        <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : 'page-link'}`}>
-          {displayTitle}
-        </span>
+        <span className={`whitespace-nowrap overflow-hidden text-ellipsis ${isUserLinkType ? 'user-link' : 'page-link'}`}>{displayTitle}</span>
         {byline && (
           <span className="text-xs opacity-75 whitespace-nowrap overflow-hidden text-ellipsis">
             {byline}
