@@ -20,7 +20,7 @@ export async function GET(request) {
     }
 
     // Verify the authenticated user
-    const user = auth.currentUser;
+    let user = auth.currentUser;
 
     // Log authentication state for debugging
     console.log('Auth state (GET):', {
@@ -34,6 +34,15 @@ export async function GET(request) {
           { error: 'Unauthorized', details: 'User not authenticated' },
           { status: 401 }
         );
+      }
+    } else {
+      // In development, if user is null, create a mock user for testing
+      if (!user) {
+        user = {
+          uid: 'test-user-id',
+          email: 'test@example.com'
+        };
+        console.log('Created mock user for development (GET):', user);
       }
     }
 
@@ -121,7 +130,7 @@ export async function POST(request) {
     const { priceId, userId, amount, tierName } = body;
 
     // Verify the authenticated user
-    const user = auth.currentUser;
+    let user = auth.currentUser;
 
     // Log authentication state for debugging
     console.log('Auth state:', {
@@ -136,6 +145,15 @@ export async function POST(request) {
           { error: 'Unauthorized', details: 'User not authenticated or user ID mismatch' },
           { status: 401 }
         );
+      }
+    } else {
+      // In development, if user is null, create a mock user for testing
+      if (!user) {
+        user = {
+          uid: userId || 'test-user-id',
+          email: 'test@example.com'
+        };
+        console.log('Created mock user for development:', user);
       }
     }
 
