@@ -1,17 +1,17 @@
 /* Spring animation for pledge bar - more subtle */
 @keyframes spring-up {
-  0% { transform: translateY(0); }
-  20% { transform: translateY(-5px); }
-  40% { transform: translateY(3px); }
-  60% { transform: translateY(-2px); }
-  80% { transform: translateY(1px); }
+  0% { transform: translateY(20px); opacity: 0; }
+  40% { transform: translateY(-5px); opacity: 1; }
+  60% { transform: translateY(3px); }
+  80% { transform: translateY(-2px); }
+  90% { transform: translateY(1px); }
   100% { transform: translateY(0); }
 }
 
 /* Pulse animation for pledge bar */
 @keyframes pulse-brightness {
   0% { filter: brightness(1); }
-  50% { filter: brightness(1.15); }
+  50% { filter: brightness(1.1); }
   100% { filter: brightness(1); }
 }
 
@@ -25,5 +25,5 @@
 
 /* Combined animation class */
 .spring-and-pulse {
-  animation: spring-up 0.7s ease-out, pulse-brightness 1.2s ease-in-out;
+  animation: spring-up 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275), pulse-brightness 1.2s ease-in-out;
 }

@@ -18,8 +18,8 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
       external: true
     }
   } : {
-    title: "Log in to support this creator",
-    description: "Support your favorite creators with monthly donations that help them continue creating great content.",
+    title: "Log in to support this writer",
+    description: "Support your favorite writers with monthly donations that help them continue creating great content.",
     action: {
       href: "/auth/login",
       label: "Log in",
@@ -27,11 +27,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
     }
   });
 
-  // Sort social links in the specified order: twitter, youtube, instagram
-  const sortedSocialLinks = [...socialLinks].sort((a, b) => {
-    const order = { twitter: 1, youtube: 2, instagram: 3 };
-    return order[a.platform] - order[b.platform];
-  });
+  // No social links in the login modal
 
   return (
     <Modal
@@ -73,30 +69,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
           </Button>
         </div>
 
-        {/* Social Links Section */}
-        <div className="pt-4 border-t border-border">
-          <h3 className="text-sm font-medium mb-3 text-center">Follow us for updates</h3>
-          <div className="flex flex-col gap-2 w-full">
-            {sortedSocialLinks.map((link) => (
-              <Button
-                key={link.platform}
-                variant="outline"
-                asChild
-                className="w-full justify-center text-foreground hover:text-foreground/90"
-              >
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <SocialIcon platform={link.platform} className="h-5 w-5" />
-                  <span>{link.label}</span>
-                </a>
-              </Button>
-            ))}
-          </div>
-        </div>
+        {/* No social links section */}
       </div>
     </Modal>
   );

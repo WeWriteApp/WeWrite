@@ -408,6 +408,7 @@ const PledgeBar = () => {
         className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
+        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
         <div
           className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
@@ -446,6 +447,7 @@ const PledgeBar = () => {
         className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
+        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
         <CompositionBar
           value={0}
@@ -473,15 +475,9 @@ const PledgeBar = () => {
     );
   }
 
-  // Loading state
+  // Loading state - now hidden to prevent layout shift
   if (loading) {
-    return (
-      <div className="w-full max-w-md mx-auto bg-background/80 dark:bg-gray-800/80 shadow-lg rounded-lg backdrop-blur-md border-theme-light py-4 px-6">
-        <div className="animate-pulse flex justify-center">
-          <div className="h-10 bg-foreground/10 rounded w-3/4"></div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const handlePledgeInteraction = (pledgeId, change) => {
@@ -507,6 +503,7 @@ const PledgeBar = () => {
         className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
+        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
         <CompositionBar
           value={pledges[0]?.amount || 0}
