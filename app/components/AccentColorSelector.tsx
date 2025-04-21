@@ -23,8 +23,12 @@ export default function AccentColorSelector() {
 
   const handleApplyCustomColor = () => {
     const customColorKey = 'custom1';
+    // First update the custom color
     setCustomColor(customColorKey, customColor);
-    changeAccentColor(customColorKey);
+    // Then use setTimeout to ensure the state is updated before changing the accent color
+    setTimeout(() => {
+      changeAccentColor(customColorKey);
+    }, 0);
   };
 
   // Force re-render when colorNames change
@@ -154,8 +158,12 @@ export default function AccentColorSelector() {
               // Generate a random color
               const randomColor = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
               const newColorKey = `custom-${Date.now()}`;
+              // First update the custom color
               setCustomColor(newColorKey, randomColor);
-              changeAccentColor(newColorKey);
+              // Then use setTimeout to ensure the state is updated before changing the accent color
+              setTimeout(() => {
+                changeAccentColor(newColorKey);
+              }, 0);
             }}
             title="Add custom color"
           >

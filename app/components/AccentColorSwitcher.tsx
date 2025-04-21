@@ -82,8 +82,12 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
         <Button
           onClick={() => {
             const customColorKey = 'custom1';
+            // First update the custom color
             setCustomColor(customColorKey, customColor);
-            changeAccentColor(customColorKey);
+            // Then use setTimeout to ensure the state is updated before changing the accent color
+            setTimeout(() => {
+              changeAccentColor(customColorKey);
+            }, 0);
           }}
           size="sm"
           className="w-full mt-1"
