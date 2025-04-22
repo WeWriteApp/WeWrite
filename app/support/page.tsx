@@ -19,10 +19,10 @@ import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 const supporterTiers = [
   {
     id: 'tier1',
-    name: 'Tier 1 Supporter',
+    name: 'Tier 1 Subscription',
     amount: 10,
     icon: <SupporterIcon tier="tier1" status="active" size="lg" />,
-    description: 'Support WeWrite development and get a Tier 1 supporter badge on your profile.',
+    description: 'Subscribe to WeWrite for $10/month and get a Tier 1 badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
     borderColor: 'border-gray-300 dark:border-gray-700',
@@ -30,10 +30,10 @@ const supporterTiers = [
   },
   {
     id: 'tier2',
-    name: 'Tier 2 Supporter',
+    name: 'Tier 2 Subscription',
     amount: 20,
     icon: <SupporterIcon tier="tier2" status="active" size="lg" />,
-    description: 'Support WeWrite development and get a Tier 2 supporter badge on your profile.',
+    description: 'Subscribe to WeWrite for $20/month and get a Tier 2 badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
     borderColor: 'border-gray-300 dark:border-gray-700',
@@ -41,10 +41,10 @@ const supporterTiers = [
   },
   {
     id: 'tier3',
-    name: 'Tier 3 Supporter',
+    name: 'Tier 3 Subscription',
     amount: 50,
     icon: <SupporterIcon tier="tier3" status="active" size="lg" />,
-    description: 'Support WeWrite development and get a Tier 3 supporter badge on your profile.',
+    description: 'Subscribe to WeWrite for $50/month and get a Tier 3 badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
     borderColor: 'border-gray-300 dark:border-gray-700',
@@ -52,10 +52,10 @@ const supporterTiers = [
   },
   {
     id: 'tier4',
-    name: 'Tier 4 Supporter',
+    name: 'Tier 4 Subscription',
     amount: 'Custom',
     icon: <SupporterIcon tier="tier4" status="active" size="lg" />,
-    description: 'Support WeWrite with a custom amount (minimum $100) and get a Tier 4 supporter badge.',
+    description: 'Subscribe to WeWrite with a custom amount (minimum $100) and get a Tier 4 badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
     borderColor: 'border-gray-300 dark:border-gray-700',
@@ -73,6 +73,7 @@ export default function SupportPage() {
   const [error, setError] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [cancelLoading, setCancelLoading] = useState<boolean>(false);
+  const [customAmountError, setCustomAmountError] = useState<boolean>(false);
 
   useEffect(() => {
     if (!user) {
@@ -145,6 +146,14 @@ export default function SupportPage() {
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '');
     setCustomAmount(value);
+
+    // Validate in real-time
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue) || numValue < 100) {
+      setCustomAmountError(true);
+    } else {
+      setCustomAmountError(false);
+    }
   };
 
   // For testing purposes - create a test subscription
@@ -175,7 +184,7 @@ export default function SupportPage() {
     if (!user || !subscription?.stripeSubscriptionId) return;
 
     // Show confirmation dialog
-    if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your supporter badge.')) {
+    if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your subscription badge.')) {
       return;
     }
 
@@ -216,7 +225,7 @@ export default function SupportPage() {
     }
 
     if (!selectedTier) {
-      setError('Please select a supporter tier');
+      setError('Please select a subscription tier');
       return;
     }
 
@@ -297,9 +306,9 @@ export default function SupportPage() {
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Become an Early Supporter</h1>
+        <h1 className="text-3xl font-bold mb-2">WeWrite Subscriptions</h1>
         <p className="text-muted-foreground">
-          Support WeWrite's development and get exclusive badges on your profile.
+          Subscribe to WeWrite to support development and get exclusive badges on your profile. In the future, your subscription will also help support other writers on the platform.
         </p>
       </div>
 
@@ -406,22 +415,27 @@ export default function SupportPage() {
                 <span className="text-2xl font-bold text-foreground">
                   {tier.isCustom ? (
                     <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        value={customAmount}
-                        onChange={handleCustomAmountChange}
-                        className="w-full text-lg font-bold text-foreground bg-background"
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={selectedTier !== tier.id}
-                        ref={(input) => {
-                          // Focus the input when the tier is selected
-                          if (selectedTier === tier.id && input) {
-                            input.focus();
-                          }
-                        }}
-                      />
+                      <div className="w-full">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={customAmount}
+                          onChange={handleCustomAmountChange}
+                          className={`w-full text-lg font-bold text-foreground bg-background ${customAmountError && selectedTier === tier.id ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={selectedTier !== tier.id}
+                          ref={(input) => {
+                            // Focus the input when the tier is selected
+                            if (selectedTier === tier.id && input) {
+                              input.focus();
+                            }
+                          }}
+                        />
+                        {customAmountError && selectedTier === tier.id && (
+                          <p className="text-red-500 text-sm mt-1">Must be at least $100</p>
+                        )}
+                      </div>
                       {/* Always render the button to prevent layout shift, but disable it when not selected */}
                       <Button
                         variant="outline"
@@ -454,6 +468,13 @@ export default function SupportPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">About WeWrite Subscriptions</h3>
+        <p className="text-sm text-blue-700 dark:text-blue-400">
+          Currently, all subscription payments go directly to supporting WeWrite's development. In the future, we plan to enable subscriptions to support individual writers on the platform, allowing you to directly fund the creators you love.
+        </p>
+      </div>
 
       <div className="flex justify-end">
         <Button

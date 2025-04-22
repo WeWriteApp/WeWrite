@@ -207,10 +207,10 @@ const SingleProfileView = ({ profile }) => {
                       size="md"
                     />
                     <span className="text-sm font-medium">
-                      {supporterTier === 'tier1' ? 'Tier 1 Supporter' :
-                       supporterTier === 'tier2' ? 'Tier 2 Supporter' :
-                       supporterTier === 'tier3' ? 'Tier 3 Supporter' :
-                       supporterTier === 'tier4' ? 'Tier 4 Supporter' : 'Supporter'}
+                      {supporterTier === 'tier1' ? 'Tier 1 Subscription' :
+                       supporterTier === 'tier2' ? 'Tier 2 Subscription' :
+                       supporterTier === 'tier3' ? 'Tier 3 Subscription' :
+                       supporterTier === 'tier4' ? 'Tier 4 Subscription' : 'Subscription'}
                     </span>
                   </div>
                 )}

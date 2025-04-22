@@ -22,8 +22,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
   switch (tier.toLowerCase()) {
     case 'tier1':
       badgeContent = {
-        label: 'Tier 1 Supporter',
-        tooltip: 'Tier 1 Supporter - $10/month',
+        label: 'Tier 1 Subscription',
+        tooltip: 'Tier 1 Subscription - $10/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -31,8 +31,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'tier2':
       badgeContent = {
-        label: 'Tier 2 Supporter',
-        tooltip: 'Tier 2 Supporter - $20/month',
+        label: 'Tier 2 Subscription',
+        tooltip: 'Tier 2 Subscription - $20/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -40,8 +40,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'tier3':
       badgeContent = {
-        label: 'Tier 3 Supporter',
-        tooltip: 'Tier 3 Supporter - $50/month',
+        label: 'Tier 3 Subscription',
+        tooltip: 'Tier 3 Subscription - $50/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -49,8 +49,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'tier4':
       badgeContent = {
-        label: 'Tier 4 Supporter',
-        tooltip: 'Tier 4 Supporter - $100+/month',
+        label: 'Tier 4 Subscription',
+        tooltip: 'Tier 4 Subscription - $100+/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -59,8 +59,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
     // Legacy tier support
     case 'bronze':
       badgeContent = {
-        label: 'Tier 1 Supporter',
-        tooltip: 'Tier 1 Supporter - $10/month',
+        label: 'Tier 1 Subscription',
+        tooltip: 'Tier 1 Subscription - $10/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -69,8 +69,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'silver':
       badgeContent = {
-        label: 'Tier 2 Supporter',
-        tooltip: 'Tier 2 Supporter - $20/month',
+        label: 'Tier 2 Subscription',
+        tooltip: 'Tier 2 Subscription - $20/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -79,8 +79,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'gold':
       badgeContent = {
-        label: 'Tier 3 Supporter',
-        tooltip: 'Tier 3 Supporter - $50/month',
+        label: 'Tier 3 Subscription',
+        tooltip: 'Tier 3 Subscription - $50/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
@@ -89,8 +89,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'diamond':
       badgeContent = {
-        label: 'Tier 4 Supporter',
-        tooltip: 'Tier 4 Supporter - $100+/month',
+        label: 'Tier 4 Subscription',
+        tooltip: 'Tier 4 Subscription - $100+/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
         textColor: 'text-gray-600 dark:text-gray-300'
