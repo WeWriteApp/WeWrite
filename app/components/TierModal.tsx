@@ -67,7 +67,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md m-4 max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Supporter Tiers</DialogTitle>
           <DialogDescription>

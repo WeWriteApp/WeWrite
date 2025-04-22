@@ -182,36 +182,38 @@ const SingleProfileView = ({ profile }) => {
           </div>
         </div>
 
-        {/* Username row with tier icon */}
+        {/* Username row */}
         <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center justify-center gap-2 mb-3">
+          <div className="flex items-center justify-center mb-3">
             <Link href={`/user/${profile.uid}`} className="hover:underline">
               <h1 className="text-3xl font-semibold">{username}</h1>
             </Link>
-            {isLoadingTier ? (
-              <Loader className="h-5 w-5 animate-spin" />
-            ) : (
-              <TierModal>
-                <div className="cursor-pointer">
-                  <SupporterIcon
-                    tier={supporterTier}
-                    status={subscriptionStatus}
-                    size="lg"
-                  />
-                </div>
-              </TierModal>
-            )}
           </div>
 
-          {/* Tier badge - only show if there's a tier */}
-          {supporterTier && (
+          {/* Tier badge as a chip below username - only show if there's a tier or loading */}
+          {(isLoadingTier || supporterTier) && (
             <TierModal>
               <div className="cursor-pointer">
-                <SupporterBadge
-                  tier={supporterTier}
-                  status={subscriptionStatus}
-                  showLabel={true}
-                />
+                {isLoadingTier ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Loading...</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                    <SupporterIcon
+                      tier={supporterTier}
+                      status={subscriptionStatus}
+                      size="md"
+                    />
+                    <span className="text-sm font-medium">
+                      {supporterTier === 'tier1' ? 'Tier 1 Supporter' :
+                       supporterTier === 'tier2' ? 'Tier 2 Supporter' :
+                       supporterTier === 'tier3' ? 'Tier 3 Supporter' :
+                       supporterTier === 'tier4' ? 'Tier 4 Supporter' : 'Supporter'}
+                    </span>
+                  </div>
+                )}
               </div>
             </TierModal>
           )}
