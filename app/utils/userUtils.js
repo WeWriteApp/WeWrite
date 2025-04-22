@@ -99,6 +99,7 @@ export const ensurePageUsername = async (pageData) => {
     ...pageData,
     username: pageData.username || "Anonymous"
   };
+};
 
 /**
  * Gets the subscription tier and status for a given user ID
