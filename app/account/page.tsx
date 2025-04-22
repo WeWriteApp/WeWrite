@@ -541,14 +541,18 @@ export default function AccountPage() {
         body: JSON.stringify({ userId }),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to create portal session');
+        throw new Error(responseData.error || 'Failed to create portal session');
       }
 
-      const { url } = await response.json();
-
       // Redirect to the Stripe Customer Portal
-      window.location.href = url;
+      if (responseData.url) {
+        window.location.href = responseData.url;
+      } else {
+        throw new Error('No portal URL returned from server');
+      }
     } catch (error) {
       console.error('Error creating portal session:', error);
       alert('Failed to open subscription management portal: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -558,7 +562,10 @@ export default function AccountPage() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!user || !subscription?.stripeSubscriptionId) return;
+    if (!user || !subscription?.stripeSubscriptionId) {
+      alert('No active subscription found to cancel.');
+      return;
+    }
 
     try {
       // Show confirmation dialog
@@ -579,8 +586,14 @@ export default function AccountPage() {
         }),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to cancel subscription');
+        throw new Error(responseData.error || 'Failed to cancel subscription');
+      }
+
+      if (!responseData.success) {
+        throw new Error(responseData.message || 'Failed to cancel subscription');
       }
 
       // Update subscription status locally
@@ -857,6 +870,10 @@ export default function AccountPage() {
                         {subscription.tier ? (
                           subscription.tier.startsWith('tier') ?
                             `Tier ${subscription.tier.slice(4)} Supporter` :
+                            subscription.tier === 'bronze' ? 'Tier 1 Supporter' :
+                            subscription.tier === 'silver' ? 'Tier 2 Supporter' :
+                            subscription.tier === 'gold' ? 'Tier 3 Supporter' :
+                            subscription.tier === 'diamond' ? 'Tier 4 Supporter' :
                             `${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Supporter`
                         ) : 'Supporter'}
                       </p>

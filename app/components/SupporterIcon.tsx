@@ -101,10 +101,12 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       );
     } else if (tier === 'tier4') {
       tooltipText = isActive ? 'Tier 4 Supporter - $100+/mo' : 'Inactive Tier 4 Supporter';
-      // Circle with diamond shape that fills the circle
+      // Circle with diamond shape that fills the whole circle
       svgContent = (
-        <path
-          d="M50,20 L80,50 L50,80 L20,50 Z"
+        <circle
+          cx="50"
+          cy="50"
+          r="35"
           fill="currentColor"
           stroke="none"
         />
@@ -132,7 +134,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
                 r="45"
                 fill="transparent"
                 stroke="currentColor"
-                strokeWidth="2.5"
+                strokeWidth="3.5"
                 strokeDasharray={strokeDasharray}
               />
               {/* Tier-specific content - only visible if active */}
