@@ -31,7 +31,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     {
       id: 'tier1',
       name: 'Tier 1 Subscription',
-      description: 'Supporting WeWrite development',
+      description: 'Subscribe to WeWrite for $10/month',
       amount: '$10/mo',
       status: 'active',
       tier: 'tier1'
@@ -39,7 +39,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     {
       id: 'tier2',
       name: 'Tier 2 Subscription',
-      description: 'Supporting WeWrite development',
+      description: 'Subscribe to WeWrite for $20/month',
       amount: '$20/mo',
       status: 'active',
       tier: 'tier2'
@@ -47,7 +47,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     {
       id: 'tier3',
       name: 'Tier 3 Subscription',
-      description: 'Supporting WeWrite development',
+      description: 'Subscribe to WeWrite for $50/month',
       amount: '$50/mo',
       status: 'active',
       tier: 'tier3'
@@ -55,7 +55,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     {
       id: 'tier4',
       name: 'Tier 4 Subscription',
-      description: 'Supporting WeWrite development',
+      description: 'Subscribe to WeWrite for $100+/month',
       amount: '$100+/mo',
       status: 'active',
       tier: 'tier4'
@@ -67,11 +67,11 @@ export function TierModal({ children, trigger }: TierModalProps) {
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md mx-4 my-8 max-h-[80vh] overflow-y-auto w-[calc(100%-2rem)]">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg animate-in fade-in-0 zoom-in-95 duration-300">
         <DialogHeader>
           <DialogTitle>Subscription Tiers</DialogTitle>
           <DialogDescription>
-            Subscribe to WeWrite to support development and get a badge on your profile.
+            Right now, subscriptions help to pay for the cost of developing WeWrite. In the future, you'll be able to donate parts of your subscription directly to writers, to support their writing practice.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

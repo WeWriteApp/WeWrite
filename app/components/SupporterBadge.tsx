@@ -24,8 +24,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 1 Subscription',
         tooltip: 'Tier 1 Subscription - $10/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
@@ -33,8 +33,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 2 Subscription',
         tooltip: 'Tier 2 Subscription - $20/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
@@ -42,8 +42,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 3 Subscription',
         tooltip: 'Tier 3 Subscription - $50/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
@@ -51,8 +51,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 4 Subscription',
         tooltip: 'Tier 4 Subscription - $100+/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
@@ -61,8 +61,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 1 Subscription',
         tooltip: 'Tier 1 Subscription - $10/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier1';
@@ -71,8 +71,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 2 Subscription',
         tooltip: 'Tier 2 Subscription - $20/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier2';
@@ -81,8 +81,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 3 Subscription',
         tooltip: 'Tier 3 Subscription - $50/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier3';
@@ -91,8 +91,8 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       badgeContent = {
         label: 'Tier 4 Subscription',
         tooltip: 'Tier 4 Subscription - $100+/month',
-        bgColor: 'bg-gray-100 dark:bg-gray-800',
-        borderColor: 'border-gray-300 dark:border-gray-700',
+        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
+        borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier4';

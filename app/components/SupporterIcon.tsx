@@ -31,14 +31,14 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   const dotSize = dotSizes[size];
 
   // Get the appropriate tooltip text based on tier and status
-  let tooltipText = 'Not a supporter - $0/mo';
+  let tooltipText = 'No subscription - $0/mo';
 
   // Custom SVG content based on tier
   let svgContent = null;
 
   if (tier) {
     if (tier === 'tier1') {
-      tooltipText = isActive ? 'Tier 1 Supporter - $10/mo' : 'Inactive Tier 1 Supporter';
+      tooltipText = isActive ? 'Tier 1 Subscription - $10/mo' : 'Inactive Tier 1 Subscription';
       // One dot
       svgContent = (
         <circle
@@ -50,7 +50,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
         />
       );
     } else if (tier === 'tier2') {
-      tooltipText = isActive ? 'Tier 2 Supporter - $20/mo' : 'Inactive Tier 2 Supporter';
+      tooltipText = isActive ? 'Tier 2 Subscription - $20/mo' : 'Inactive Tier 2 Subscription';
       // Two dots horizontal
       svgContent = (
         <>
@@ -71,7 +71,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
         </>
       );
     } else if (tier === 'tier3') {
-      tooltipText = isActive ? 'Tier 3 Supporter - $50/mo' : 'Inactive Tier 3 Supporter';
+      tooltipText = isActive ? 'Tier 3 Subscription - $50/mo' : 'Inactive Tier 3 Subscription';
       // Three dots in a triangle
       svgContent = (
         <>
@@ -99,22 +99,22 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
         </>
       );
     } else if (tier === 'tier4') {
-      tooltipText = isActive ? 'Tier 4 Supporter - $100+/mo' : 'Inactive Tier 4 Supporter';
-      // Filled equilateral triangle
+      tooltipText = isActive ? 'Tier 4 Subscription - $100+/mo' : 'Inactive Tier 4 Subscription';
+      // Filled equilateral triangle with rounded corners
       svgContent = (
         <path
-          d="M50,30 L20,80 L80,80 Z"
+          d="M50,30 C50,30 48,32 46,35 L24,75 C22,78 20,80 20,80 C20,80 22,80 25,80 L75,80 C78,80 80,80 80,80 C80,80 78,78 76,75 L54,35 C52,32 50,30 50,30 Z"
           fill="currentColor"
           stroke="none"
         />
       );
     }
   } else {
-    // None: X
+    // None: X - thicker lines
     svgContent = (
       <>
-        <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" strokeWidth="3" />
-        <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" strokeWidth="3" />
+        <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+        <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
       </>
     );
   }

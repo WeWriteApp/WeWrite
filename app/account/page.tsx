@@ -858,17 +858,17 @@ export default function AccountPage() {
                       <p className="font-medium">
                         {subscription.tier ? (
                           subscription.tier.startsWith('tier') ?
-                            `Tier ${subscription.tier.slice(4)} Supporter` :
-                            subscription.tier === 'bronze' ? 'Tier 1 Supporter' :
-                            subscription.tier === 'silver' ? 'Tier 2 Supporter' :
-                            subscription.tier === 'gold' ? 'Tier 3 Supporter' :
-                            subscription.tier === 'diamond' ? 'Tier 4 Supporter' :
-                            `${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Supporter`
-                        ) : 'Supporter'}
+                            `Tier ${subscription.tier.slice(4)} Subscription` :
+                            subscription.tier === 'bronze' ? 'Tier 1 Subscription' :
+                            subscription.tier === 'silver' ? 'Tier 2 Subscription' :
+                            subscription.tier === 'gold' ? 'Tier 3 Subscription' :
+                            subscription.tier === 'diamond' ? 'Tier 4 Subscription' :
+                            `${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Subscription`
+                        ) : 'Subscription'}
                       </p>
                       <div className="flex flex-col gap-1">
                         <p className="text-sm text-muted-foreground">
-                          ${subscription.amount}/month - Supporting WeWrite development
+                          ${subscription.amount}/month - Subscription to WeWrite
                         </p>
                         <p className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 inline-block w-fit">
                           {subscription.status === 'active' ? 'Active' : subscription.status === 'trialing' ? 'Trial' : subscription.status}
@@ -938,13 +938,13 @@ export default function AccountPage() {
             ) : (
               <Alert className="bg-card border-border">
                 <DollarSign className="h-4 w-4 text-primary" />
-                <AlertTitle>Become a Supporter</AlertTitle>
+                <AlertTitle>Subscribe to WeWrite</AlertTitle>
                 <AlertDescription>
-                  <p className="mb-4">Support WeWrite's development and get exclusive badges on your profile.</p>
+                  <p className="mb-4">Subscribe to WeWrite to support development and get exclusive badges on your profile.</p>
                   <Button asChild className="w-full">
                     <Link href="/support" className="flex items-center gap-2">
                       <Heart className="h-4 w-4" />
-                      Become a Supporter
+                      Subscribe Now
                     </Link>
                   </Button>
                 </AlertDescription>

@@ -193,27 +193,28 @@ const SingleProfileView = ({ profile }) => {
             </Link>
           </div>
 
-          {/* Tier badge as a chip below username - only show if there's a tier or loading */}
-          {(isLoadingTier || supporterTier) && (
+          {/* Tier badge as a chip below username - always show */}
+          {(
             <TierModal>
               <div className="cursor-pointer">
                 {isLoadingTier ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
                     <Loader className="h-4 w-4 animate-spin" />
                     <span className="text-sm">Loading...</span>
                   </div>
                 ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
                     <SupporterIcon
                       tier={supporterTier}
                       status={subscriptionStatus}
                       size="md"
                     />
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {supporterTier === 'tier1' ? 'Tier 1 Subscription' :
                        supporterTier === 'tier2' ? 'Tier 2 Subscription' :
                        supporterTier === 'tier3' ? 'Tier 3 Subscription' :
-                       supporterTier === 'tier4' ? 'Tier 4 Subscription' : 'Subscription'}
+                       supporterTier === 'tier4' ? 'Tier 4 Subscription' :
+                       'No Subscription'}
                     </span>
                   </div>
                 )}
