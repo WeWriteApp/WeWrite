@@ -129,8 +129,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
               height={iconSize}
               viewBox="0 0 100 100"
               xmlns="http://www.w3.org/2000/svg"
-              className={isActive ? '' : 'opacity-50'}
-              style={{ color: 'inherit' }}
+              className={`${isActive ? '' : 'opacity-50'} text-gray-800 dark:text-gray-200`}
             >
               {/* Tier-specific content */}
               {svgContent}

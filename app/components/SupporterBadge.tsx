@@ -26,7 +26,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 1 Subscription - $10/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
     case 'tier2':
@@ -35,7 +35,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 2 Subscription - $20/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
     case 'tier3':
@@ -44,7 +44,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 3 Subscription - $50/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
     case 'tier4':
@@ -53,7 +53,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 4 Subscription - $100+/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
     // Legacy tier support
@@ -63,7 +63,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 1 Subscription - $10/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier1';
       break;
@@ -73,7 +73,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 2 Subscription - $20/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier2';
       break;
@@ -83,7 +83,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 3 Subscription - $50/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier3';
       break;
@@ -93,7 +93,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         tooltip: 'Tier 4 Subscription - $100+/month',
         bgColor: 'bg-gray-100 dark:bg-gray-800',
         borderColor: 'border-gray-300 dark:border-gray-700',
-        textColor: 'text-gray-600 dark:text-gray-300'
+        textColor: 'text-gray-800 dark:text-gray-200'
       };
       tier = 'tier4';
       break;

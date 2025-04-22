@@ -76,6 +76,8 @@ export const createCheckoutSession = async ({ priceId, userId, amount, tierName 
 // Create a portal session for managing subscription
 export const createPortalSession = async (userId) => {
   try {
+    console.log('Creating portal session for user:', userId);
+
     // Call your backend API to create a Stripe Customer Portal session
     const response = await fetch('/api/create-portal-session', {
       method: 'POST',
@@ -87,13 +89,38 @@ export const createPortalSession = async (userId) => {
       }),
     });
 
+    // Check if the response is ok before parsing JSON
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Portal session API error:', response.status, errorText);
+
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.error || `API error: ${response.status}`);
+      } catch (e) {
+        throw new Error(`API error: ${response.status} - ${errorText.substring(0, 100)}`);
+      }
+    }
+
     const session = await response.json();
 
+    if (session.error) {
+      console.error('Portal session error:', session.error);
+      throw new Error(session.error);
+    }
+
+    if (!session.url) {
+      console.error('Missing URL in portal session response:', session);
+      throw new Error('Invalid portal session response from server');
+    }
+
+    console.log('Redirecting to Stripe Customer Portal');
     // Redirect to Stripe Customer Portal
     window.location.href = session.url;
+    return { success: true };
   } catch (error) {
     console.error('Error in createPortalSession:', error);
-    throw error;
+    return { error: error.message };
   }
 };
 

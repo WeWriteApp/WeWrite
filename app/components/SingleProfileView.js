@@ -16,7 +16,7 @@ import { SupporterIcon } from "./SupporterIcon";
 import { TierModal } from "./TierModal";
 import { Button } from "./ui/button";
 import UserProfileTabs from "./UserProfileTabs";
-import { getUserFollowerCount, getUserPageCount } from "../firebase/counters";
+import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../firebase/counters";
 import { getUserSubscription } from "../firebase/subscription";
 
 const SingleProfileView = ({ profile }) => {
@@ -24,6 +24,7 @@ const SingleProfileView = ({ profile }) => {
   const router = useRouter();
   const [pageCount, setPageCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
+  const [viewCount, setViewCount] = useState(profile.viewCount || 0);
   const [username, setUsername] = useState(profile.username || 'Anonymous');
   const [supporterTier, setSupporterTier] = useState(profile.tier || null);
   const [subscriptionStatus, setSubscriptionStatus] = useState(profile.subscriptionStatus || null);
@@ -60,14 +61,16 @@ const SingleProfileView = ({ profile }) => {
         try {
           setIsLoadingStats(true);
 
-          // Get follower count and page count in parallel
-          const [followerCountResult, pageCountResult] = await Promise.all([
+          // Get follower count, page count, and view count in parallel
+          const [followerCountResult, pageCountResult, viewCountResult] = await Promise.all([
             getUserFollowerCount(profile.uid),
-            getUserPageCount(profile.uid)
+            getUserPageCount(profile.uid),
+            getUserTotalViewCount(profile.uid)
           ]);
 
           setFollowerCount(followerCountResult);
           setPageCount(pageCountResult);
+          setViewCount(viewCountResult);
 
         } catch (error) {
           console.error('Error fetching user stats:', error);
@@ -254,7 +257,7 @@ const SingleProfileView = ({ profile }) => {
               {isLoadingStats ? (
                 <Loader className="h-4 w-4 animate-spin" />
               ) : (
-                profile.viewCount || 0
+                viewCount
               )}
             </span>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">

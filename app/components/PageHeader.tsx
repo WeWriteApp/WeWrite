@@ -326,9 +326,9 @@ export default function PageHeader({
                         </Link>
                       ) : (
                         <>
-                          {isScrolled ? "" : "by"}{" "}
+                          <span className="whitespace-nowrap">{isScrolled ? "" : "by "}</span>
                           {userId ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 inline-flex">
                               <Link href={`/user/${userId}`} className="hover:underline">
                                 <span data-component-name="PageHeader">{displayUsername}</span>
                               </Link>

@@ -18,6 +18,7 @@ import {
 } from '../firebase/subscription';
 import { getDocById } from '../firebase/database';
 import { loadStripe } from '@stripe/stripe-js';
+import { createPortalSession as createStripePortalSession } from '../services/stripeService';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { addUsername, updateEmail as updateFirebaseEmail, logoutUser } from '../firebase/auth';
 import { db } from '../firebase/database';
@@ -532,27 +533,15 @@ export default function AccountPage() {
     try {
       setLoading(true);
 
-      // Call the create portal session API
-      const response = await fetch('/api/create-portal-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
-      });
+      // Use the improved createPortalSession function from stripeService
+      const result = await createStripePortalSession(userId);
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create portal session');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      // Redirect to the Stripe Customer Portal
-      if (responseData.url) {
-        window.location.href = responseData.url;
-      } else {
-        throw new Error('No portal URL returned from server');
-      }
+      // The redirect happens in the stripeService function
+      // No need to do anything else here
     } catch (error) {
       console.error('Error creating portal session:', error);
       alert('Failed to open subscription management portal: ' + (error instanceof Error ? error.message : 'Unknown error'));

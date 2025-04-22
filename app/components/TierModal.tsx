@@ -22,15 +22,15 @@ export function TierModal({ children, trigger }: TierModalProps) {
   const tiers = [
     {
       id: 'none',
-      name: 'Non-Supporter',
-      description: 'Not currently supporting WeWrite',
+      name: 'No Subscription',
+      description: 'Not currently subscribed to WeWrite',
       amount: '$0/mo',
       status: null,
       tier: null
     },
     {
       id: 'tier1',
-      name: 'Tier 1 Supporter',
+      name: 'Tier 1 Subscription',
       description: 'Supporting WeWrite development',
       amount: '$10/mo',
       status: 'active',
@@ -38,7 +38,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     },
     {
       id: 'tier2',
-      name: 'Tier 2 Supporter',
+      name: 'Tier 2 Subscription',
       description: 'Supporting WeWrite development',
       amount: '$20/mo',
       status: 'active',
@@ -46,7 +46,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     },
     {
       id: 'tier3',
-      name: 'Tier 3 Supporter',
+      name: 'Tier 3 Subscription',
       description: 'Supporting WeWrite development',
       amount: '$50/mo',
       status: 'active',
@@ -54,7 +54,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
     },
     {
       id: 'tier4',
-      name: 'Tier 4 Supporter',
+      name: 'Tier 4 Subscription',
       description: 'Supporting WeWrite development',
       amount: '$100+/mo',
       status: 'active',
@@ -67,11 +67,11 @@ export function TierModal({ children, trigger }: TierModalProps) {
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md m-4 max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md mx-4 my-8 max-h-[80vh] overflow-y-auto w-[calc(100%-2rem)]">
         <DialogHeader>
-          <DialogTitle>Supporter Tiers</DialogTitle>
+          <DialogTitle>Subscription Tiers</DialogTitle>
           <DialogDescription>
-            Support WeWrite development and get a supporter badge on your profile.
+            Subscribe to WeWrite to support development and get a badge on your profile.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -93,7 +93,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
           </div>
           <div className="mt-6 text-center">
             <Link href="/support">
-              <Button>Become a Supporter</Button>
+              <Button>Subscribe Now</Button>
             </Link>
           </div>
         </div>
