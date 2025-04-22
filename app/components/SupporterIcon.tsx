@@ -22,9 +22,9 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   };
 
   const dotSizes = {
-    sm: '3px',
-    md: '4px',
-    lg: '5px'
+    sm: '4px',
+    md: '5px',
+    lg: '6px'
   };
 
   const iconSize = iconSizes[size];
@@ -32,7 +32,6 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
 
   // Get the appropriate tooltip text based on tier and status
   let tooltipText = 'Not a supporter - $0/mo';
-  let strokeDasharray = !isActive ? '2' : 'none';
 
   // Custom SVG content based on tier
   let svgContent = null;
@@ -40,7 +39,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   if (tier) {
     if (tier === 'tier1') {
       tooltipText = isActive ? 'Tier 1 Supporter - $10/mo' : 'Inactive Tier 1 Supporter';
-      // Circle with one dot in center
+      // One dot
       svgContent = (
         <circle
           cx="50%"
@@ -52,18 +51,18 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       );
     } else if (tier === 'tier2') {
       tooltipText = isActive ? 'Tier 2 Supporter - $20/mo' : 'Inactive Tier 2 Supporter';
-      // Circle with two dots
+      // Two dots horizontal
       svgContent = (
         <>
           <circle
-            cx="40%"
+            cx="35%"
             cy="50%"
             r={dotSize}
             fill="currentColor"
             stroke="none"
           />
           <circle
-            cx="60%"
+            cx="65%"
             cy="50%"
             r={dotSize}
             fill="currentColor"
@@ -73,26 +72,26 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       );
     } else if (tier === 'tier3') {
       tooltipText = isActive ? 'Tier 3 Supporter - $50/mo' : 'Inactive Tier 3 Supporter';
-      // Circle with three dots in a triangle
+      // Three dots in a triangle
       svgContent = (
         <>
           <circle
             cx="50%"
-            cy="35%"
+            cy="30%"
             r={dotSize}
             fill="currentColor"
             stroke="none"
           />
           <circle
-            cx="35%"
-            cy="60%"
+            cx="30%"
+            cy="65%"
             r={dotSize}
             fill="currentColor"
             stroke="none"
           />
           <circle
-            cx="65%"
-            cy="60%"
+            cx="70%"
+            cy="65%"
             r={dotSize}
             fill="currentColor"
             stroke="none"
@@ -101,17 +100,23 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       );
     } else if (tier === 'tier4') {
       tooltipText = isActive ? 'Tier 4 Supporter - $100+/mo' : 'Inactive Tier 4 Supporter';
-      // Circle with diamond shape that fills the whole circle
+      // Filled triangle
       svgContent = (
-        <circle
-          cx="50"
-          cy="50"
-          r="35"
+        <path
+          d="M50,25 L25,75 L75,75 Z"
           fill="currentColor"
           stroke="none"
         />
       );
     }
+  } else {
+    // None: X
+    svgContent = (
+      <>
+        <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" strokeWidth="2" />
+        <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" strokeWidth="2" />
+      </>
+    );
   }
 
   return (
@@ -127,18 +132,8 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
               className={isActive ? '' : 'opacity-50'}
               style={{ color: 'inherit' }}
             >
-              {/* Main circle - always an outline */}
-              <circle
-                cx="50"
-                cy="50"
-                r="45"
-                fill="transparent"
-                stroke="currentColor"
-                strokeWidth="3.5"
-                strokeDasharray={strokeDasharray}
-              />
-              {/* Tier-specific content - only visible if active */}
-              {isActive && svgContent}
+              {/* Tier-specific content */}
+              {svgContent}
             </svg>
           </span>
         </TooltipTrigger>

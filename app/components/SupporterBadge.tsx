@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { SupporterIcon } from './SupporterIcon';
 
 interface SupporterBadgeProps {
   tier?: string;
@@ -100,109 +101,9 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       return null;
   }
 
-  // Create the SVG icon
+  // Use the SupporterIcon component
   const SvgIcon = () => {
-    const iconSize = '16px';
-    const dotSize = '4px';
-
-    // Get the appropriate styling
-    let strokeDasharray = !isActive ? '2' : 'none';
-
-    // Custom SVG content based on tier
-    let svgContent = null;
-
-    if (tier === 'tier1') {
-      // Circle with one dot in center
-      svgContent = (
-        <circle
-          cx="50%"
-          cy="50%"
-          r={dotSize}
-          fill="currentColor"
-          stroke="none"
-        />
-      );
-    } else if (tier === 'tier2') {
-      // Circle with two dots
-      svgContent = (
-        <>
-          <circle
-            cx="40%"
-            cy="50%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-          <circle
-            cx="60%"
-            cy="50%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-        </>
-      );
-    } else if (tier === 'tier3') {
-      // Circle with three dots in a triangle
-      svgContent = (
-        <>
-          <circle
-            cx="50%"
-            cy="35%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-          <circle
-            cx="35%"
-            cy="60%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-          <circle
-            cx="65%"
-            cy="60%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-        </>
-      );
-    } else if (tier === 'tier4') {
-      // Circle with diamond shape that fills the circle
-      svgContent = (
-        <path
-          d="M50,20 L80,50 L50,80 L20,50 Z"
-          fill="currentColor"
-          stroke="none"
-        />
-      );
-    }
-
-    return (
-      <svg
-        width={iconSize}
-        height={iconSize}
-        viewBox="0 0 100 100"
-        xmlns="http://www.w3.org/2000/svg"
-        className={isActive ? '' : 'opacity-50'}
-        style={{ color: 'inherit' }}
-      >
-        {/* Main circle - always an outline */}
-        <circle
-          cx="50"
-          cy="50"
-          r="45"
-          fill="transparent"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeDasharray={strokeDasharray}
-        />
-        {/* Tier-specific content - only visible if active */}
-        {isActive && svgContent}
-      </svg>
-    );
+    return <SupporterIcon tier={tier} status={status} size="sm" />;
   };
 
   return (
