@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { updateSubscription } from '../../../firebase/subscription';
+import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 
 // Helper function to determine tier based on amount
 function determineTierFromAmount(amount) {
@@ -14,9 +15,11 @@ function determineTierFromAmount(amount) {
   return 'tier1';
 }
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// Initialize Stripe with the appropriate key based on environment
+const stripeSecretKey = getStripeSecretKey();
+const stripe = new Stripe(stripeSecretKey);
+const endpointSecret = getStripeWebhookSecret();
+console.log('Stripe initialized for webhook handler');
 
 export async function POST(request) {
   try {

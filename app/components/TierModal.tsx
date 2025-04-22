@@ -59,14 +59,6 @@ export function TierModal({ children, trigger }: TierModalProps) {
       amount: '$100+/mo',
       status: 'active',
       tier: 'tier4'
-    },
-    {
-      id: 'inactive',
-      name: 'Inactive Supporter',
-      description: 'Previously supported WeWrite',
-      amount: '$0/mo',
-      status: 'inactive',
-      tier: 'tier1'
     }
   ];
 
@@ -75,7 +67,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Supporter Tiers</DialogTitle>
           <DialogDescription>

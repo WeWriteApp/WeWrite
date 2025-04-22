@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
-import { ArrowLeft, Check, Shield, DollarSign, Diamond, Award, Medal, AlertTriangle, XCircle } from 'lucide-react';
+import { ArrowLeft, Check, Shield, DollarSign, Diamond, Award, Medal, AlertTriangle, XCircle, Users, Heart, Eye } from 'lucide-react';
+import { SupporterIcon } from '../components/SupporterIcon';
 import Link from 'next/link';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
@@ -13,52 +14,14 @@ import { createCheckoutSession } from '../services/stripeService';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 
-// Custom SVG icons for each tier
-const TierIcon = ({ tier, size = 24 }: { tier: string, size?: number }) => {
-  const dotSize = size / 6;
-
-  if (tier === 'tier1') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="45" fill="transparent" stroke="currentColor" strokeWidth="2" />
-        <circle cx="50" cy="50" r={dotSize} fill="currentColor" />
-      </svg>
-    );
-  } else if (tier === 'tier2') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="45" fill="transparent" stroke="currentColor" strokeWidth="2" />
-        <circle cx="40" cy="50" r={dotSize} fill="currentColor" />
-        <circle cx="60" cy="50" r={dotSize} fill="currentColor" />
-      </svg>
-    );
-  } else if (tier === 'tier3') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="45" fill="transparent" stroke="currentColor" strokeWidth="2" />
-        <circle cx="50" cy="35" r={dotSize} fill="currentColor" />
-        <circle cx="35" cy="60" r={dotSize} fill="currentColor" />
-        <circle cx="65" cy="60" r={dotSize} fill="currentColor" />
-      </svg>
-    );
-  } else if (tier === 'tier4') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="45" fill="transparent" stroke="currentColor" strokeWidth="2" />
-        <path d="M50,30 L65,50 L50,70 L35,50 Z" fill="currentColor" />
-      </svg>
-    );
-  }
-
-  return null;
-};
+// Use the SupporterIcon component for tier icons
 
 const supporterTiers = [
   {
     id: 'tier1',
     name: 'Tier 1 Supporter',
     amount: 10,
-    icon: <TierIcon tier="tier1" size={24} />,
+    icon: <SupporterIcon tier="tier1" status="active" size="lg" />,
     description: 'Support WeWrite development and get a Tier 1 supporter badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
@@ -69,7 +32,7 @@ const supporterTiers = [
     id: 'tier2',
     name: 'Tier 2 Supporter',
     amount: 20,
-    icon: <TierIcon tier="tier2" size={24} />,
+    icon: <SupporterIcon tier="tier2" status="active" size="lg" />,
     description: 'Support WeWrite development and get a Tier 2 supporter badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
@@ -80,7 +43,7 @@ const supporterTiers = [
     id: 'tier3',
     name: 'Tier 3 Supporter',
     amount: 50,
-    icon: <TierIcon tier="tier3" size={24} />,
+    icon: <SupporterIcon tier="tier3" status="active" size="lg" />,
     description: 'Support WeWrite development and get a Tier 3 supporter badge on your profile.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
@@ -91,7 +54,7 @@ const supporterTiers = [
     id: 'tier4',
     name: 'Tier 4 Supporter',
     amount: 'Custom',
-    icon: <TierIcon tier="tier4" size={24} />,
+    icon: <SupporterIcon tier="tier4" status="active" size="lg" />,
     description: 'Support WeWrite with a custom amount (minimum $100) and get a Tier 4 supporter badge.',
     color: 'bg-gray-600',
     textColor: 'text-gray-600 dark:text-gray-300',
@@ -167,6 +130,16 @@ export default function SupportPage() {
   const handleTierSelect = (tierId: string) => {
     setSelectedTier(tierId);
     setError(null);
+
+    // If tier 4 is selected, focus the input after a short delay to allow the UI to update
+    if (tierId === 'tier4') {
+      setTimeout(() => {
+        const input = document.querySelector('input[type="number"]') as HTMLInputElement;
+        if (input) {
+          input.focus();
+        }
+      }, 100);
+    }
   };
 
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -432,14 +405,22 @@ export default function SupportPage() {
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
                 <span className="text-2xl font-bold text-foreground">
                   {tier.isCustom ? (
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                       <Input
-                        type="text"
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={customAmount}
                         onChange={handleCustomAmountChange}
-                        className="w-24 text-lg font-bold text-foreground bg-background"
+                        className="w-full text-lg font-bold text-foreground bg-background"
                         onClick={(e) => e.stopPropagation()}
                         disabled={selectedTier !== tier.id}
+                        ref={(input) => {
+                          // Focus the input when the tier is selected
+                          if (selectedTier === tier.id && input) {
+                            input.focus();
+                          }
+                        }}
                       />
                       {/* Always render the button to prevent layout shift, but disable it when not selected */}
                       <Button

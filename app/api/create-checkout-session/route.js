@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { auth } from '../../firebase/auth';
 import { createSubscription } from '../../firebase/subscription';
+import { getStripeSecretKey } from '../../utils/stripeConfig';
 
 export async function GET(request) {
   try {
-    // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // Initialize Stripe with the appropriate key based on environment
+    const stripeSecretKey = getStripeSecretKey();
+    const stripe = new Stripe(stripeSecretKey);
+    console.log('Stripe initialized for checkout session (GET)');
 
     // Get amount from URL parameters
     const { searchParams } = new URL(request.url);
@@ -122,8 +125,10 @@ export async function GET(request) {
 // Keep the POST method for backward compatibility
 export async function POST(request) {
   try {
-    // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // Initialize Stripe with the appropriate key based on environment
+    const stripeSecretKey = getStripeSecretKey();
+    const stripe = new Stripe(stripeSecretKey);
+    console.log('Stripe initialized for checkout session (POST)');
 
     // Get request body
     const body = await request.json();

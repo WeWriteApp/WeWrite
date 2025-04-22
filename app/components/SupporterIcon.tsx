@@ -22,9 +22,9 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   };
 
   const dotSizes = {
-    sm: '4px',
-    md: '5px',
-    lg: '6px'
+    sm: '5px',
+    md: '6px',
+    lg: '7px'
   };
 
   const iconSize = iconSizes[size];
@@ -100,10 +100,10 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       );
     } else if (tier === 'tier4') {
       tooltipText = isActive ? 'Tier 4 Supporter - $100+/mo' : 'Inactive Tier 4 Supporter';
-      // Filled triangle
+      // Filled equilateral triangle
       svgContent = (
         <path
-          d="M50,25 L25,75 L75,75 Z"
+          d="M50,30 L20,80 L80,80 Z"
           fill="currentColor"
           stroke="none"
         />
@@ -113,8 +113,8 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
     // None: X
     svgContent = (
       <>
-        <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" strokeWidth="2" />
-        <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" strokeWidth="2" />
+        <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" strokeWidth="3" />
+        <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" strokeWidth="3" />
       </>
     );
   }
