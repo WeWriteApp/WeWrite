@@ -16,7 +16,7 @@ export async function POST(request) {
     const { subscriptionId } = body;
 
     // Verify authenticated user
-    const user = auth.currentUser;
+    let user = auth.currentUser;
     console.log('Auth check for subscription cancellation:', {
       currentUser: user ? { uid: user.uid } : 'null',
       requestedSubscriptionId: subscriptionId
@@ -100,8 +100,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Subscription canceled successfully',
-      subscription: canceledSubscription
+      message: 'Subscription canceled successfully'
     });
   } catch (error) {
     console.error('Error canceling subscription:', error);
