@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
+import TrendingPagesSection from './TrendingPagesSection';
 
 // Animation variants
 const fadeIn = {
@@ -347,6 +348,9 @@ const SimpleLandingPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Trending Pages Section */}
+        <TrendingPagesSection limit={3} />
 
         {/* Coming Soon Section */}
         <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">

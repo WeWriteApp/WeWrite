@@ -335,7 +335,11 @@ export default function PageHeader({
                               {isLoadingTier ? (
                                 <Loader className="h-3 w-3 animate-spin" />
                               ) : tier ? (
-                                <TierModal>
+                                <TierModal
+                                  currentTier={tier}
+                                  currentStatus={subscriptionStatus}
+                                  userId={userId}
+                                >
                                   <div className="cursor-pointer">
                                     <SupporterIcon
                                       tier={tier}

@@ -195,7 +195,11 @@ const SingleProfileView = ({ profile }) => {
 
           {/* Tier badge as a chip below username - always show */}
           {(
-            <TierModal>
+            <TierModal
+              currentTier={supporterTier}
+              currentStatus={subscriptionStatus}
+              userId={profile.uid}
+            >
               <div className="cursor-pointer">
                 {isLoadingTier ? (
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">

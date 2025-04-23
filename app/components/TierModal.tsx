@@ -18,9 +18,12 @@ import { SupporterIcon } from './SupporterIcon';
 interface TierModalProps {
   children: React.ReactNode;
   trigger?: React.ReactNode;
+  currentTier?: string | null;
+  currentStatus?: string | null;
+  userId?: string | null;
 }
 
-export function TierModal({ children, trigger }: TierModalProps) {
+export function TierModal({ children, trigger, currentTier = null, currentStatus = null, userId = null }: TierModalProps) {
   const tiers = [
     {
       id: 'none',
@@ -87,7 +90,10 @@ export function TierModal({ children, trigger }: TierModalProps) {
               const bgColorClass = 'bg-white dark:bg-gray-800';
 
               return (
-                <div key={tier.id} className={`flex items-center gap-3 p-3 rounded-lg border ${bgColorClass}`}>
+                <div
+                  key={tier.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${bgColorClass} ${currentTier === tier.tier ? 'border-primary border-2' : ''}`}
+                >
                   <div className="flex-shrink-0">
                     <SupporterIcon tier={tier.tier} status={tier.status} size="lg" />
                   </div>
@@ -103,8 +109,16 @@ export function TierModal({ children, trigger }: TierModalProps) {
             })}
           </div>
           <div className="mt-6 text-center">
+            {userId && currentTier && currentStatus === 'active' ? (
+              <div className="text-sm text-muted-foreground mb-3">
+                This user has an active {currentTier === 'tier1' ? 'Tier 1' :
+                                        currentTier === 'tier2' ? 'Tier 2' :
+                                        currentTier === 'tier3' ? 'Tier 3' :
+                                        currentTier === 'tier4' ? 'Tier 4' : 'Unknown'} subscription
+              </div>
+            ) : null}
             <Link href="/subscription">
-              <Button>Subscribe Now</Button>
+              <Button>{currentTier && currentStatus === 'active' ? 'Manage Your Subscription' : 'Subscribe Now'}</Button>
             </Link>
           </div>
         </div>

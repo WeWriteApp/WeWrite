@@ -11,7 +11,12 @@ import {
   limit,
   getDocs,
   Timestamp,
-  increment
+  increment,
+  startAfter,
+  endBefore,
+  limitToLast,
+  startAt,
+  endAt
 } from "firebase/firestore";
 import { app } from "./config";
 
@@ -190,5 +195,118 @@ export const getPageTotalViews = async (pageId) => {
   } catch (error) {
     console.error("Error getting total page views:", error);
     return 0;
+  }
+};
+
+/**
+ * Gets the trending pages based on views in the last 24 hours
+ *
+ * @param {number} limitCount - Maximum number of pages to return
+ * @returns {Promise<Array>} - Array of trending pages with their view counts
+ */
+export const getTrendingPages = async (limitCount = 5) => {
+  try {
+    // Get current date and time
+    const now = new Date();
+
+    // Format today's date as YYYY-MM-DD
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Calculate yesterday's date
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Query for today's page views
+    const todayViewsQuery = query(
+      collection(db, "pageViews"),
+      where("date", "==", todayStr),
+      orderBy("totalViews", "desc"),
+      limit(limitCount * 2) // Get more than we need to account for filtering
+    );
+
+    // Query for yesterday's page views
+    const yesterdayViewsQuery = query(
+      collection(db, "pageViews"),
+      where("date", "==", yesterdayStr),
+      orderBy("totalViews", "desc"),
+      limit(limitCount * 2) // Get more than we need to account for filtering
+    );
+
+    // Execute both queries in parallel
+    const [todayViewsSnapshot, yesterdayViewsSnapshot] = await Promise.all([
+      getDocs(todayViewsQuery),
+      getDocs(yesterdayViewsQuery)
+    ]);
+
+    // Combine and process the results
+    const pageViewsMap = new Map();
+
+    // Process yesterday's views
+    yesterdayViewsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const pageId = data.pageId;
+      const currentHour = now.getHours();
+
+      // Only count hours that are within the last 24 hours
+      let views = 0;
+      for (let hour = currentHour + 1; hour < 24; hour++) {
+        views += data.hours[hour] || 0;
+      }
+
+      pageViewsMap.set(pageId, { id: pageId, views });
+    });
+
+    // Process today's views
+    todayViewsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const pageId = data.pageId;
+      const currentHour = now.getHours();
+
+      // Count all hours up to the current hour
+      let views = 0;
+      for (let hour = 0; hour <= currentHour; hour++) {
+        views += data.hours[hour] || 0;
+      }
+
+      // Add to existing entry or create new one
+      if (pageViewsMap.has(pageId)) {
+        pageViewsMap.get(pageId).views += views;
+      } else {
+        pageViewsMap.set(pageId, { id: pageId, views });
+      }
+    });
+
+    // Convert to array and sort by views
+    let trendingPages = Array.from(pageViewsMap.values())
+      .filter(page => page.views > 0) // Only include pages with views
+      .sort((a, b) => b.views - a.views)
+      .slice(0, limitCount);
+
+    // Fetch page titles for the trending pages
+    const pagesWithTitles = await Promise.all(
+      trendingPages.map(async (page) => {
+        try {
+          const pageDoc = await getDoc(doc(db, "pages", page.id));
+          if (pageDoc.exists()) {
+            const pageData = pageDoc.data();
+            return {
+              ...page,
+              title: pageData.title || 'Untitled',
+              userId: pageData.userId
+            };
+          }
+          return { ...page, title: 'Untitled' };
+        } catch (err) {
+          console.error(`Error fetching page data for ${page.id}:`, err);
+          return { ...page, title: 'Untitled' };
+        }
+      })
+    );
+
+    return pagesWithTitles;
+  } catch (error) {
+    console.error("Error getting trending pages:", error);
+    return [];
   }
 };

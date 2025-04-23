@@ -8,6 +8,7 @@ import AddUsername from "./components/AddUsername";
 import TypeaheadSearch from "./components/TypeaheadSearch";
 import LoginBanner from "./components/LoginBanner";
 import RecentActivity from "./components/RecentActivity";
+import TrendingPages from "./components/TrendingPages";
 import MyGroups from "./components/MyGroups";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
@@ -127,9 +128,10 @@ export default function Home() {
           <AllPages />
         </div>
 
-        {/* 3. My Groups - temporarily hidden
-        <MyGroups />
-        */}
+        {/* 3. Trending Pages */}
+        <div style={{ minHeight: isLoading ? '300px' : 'auto' }}>
+          <TrendingPages limit={5} />
+        </div>
 
         {/* 4. Top Users */}
         <div style={{ minHeight: isLoading ? '300px' : 'auto' }}>

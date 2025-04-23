@@ -397,7 +397,7 @@ export default function SubscriptionPage() {
       }
 
       // Call the API to reactivate the subscription
-      const response = await fetch('/api/activate-subscription', {
+      const response = await fetch('/api/reactivate-subscription', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
