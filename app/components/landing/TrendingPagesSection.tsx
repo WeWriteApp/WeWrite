@@ -70,6 +70,18 @@ export default function TrendingPagesSection({ limit = 3 }) {
     );
   }
 
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: [0.22, 1, 0.36, 1]
+      }
+    }
+  };
+
   // Always show the section, even if there's an error or no trending pages
   if (error || trendingPages.length === 0) {
     return (
@@ -96,18 +108,6 @@ export default function TrendingPagesSection({ limit = 3 }) {
       </section>
     );
   }
-
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1]
-      }
-    }
-  };
 
   return (
     <section className="py-16 bg-muted/30">
