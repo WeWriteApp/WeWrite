@@ -290,7 +290,7 @@ const TypeaheadSearch = ({
       } finally {
         setIsSearching(false);
       }
-    }, 500),
+    }, 300),
     [userId]
   );
 

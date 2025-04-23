@@ -12,11 +12,11 @@ export async function GET(request) {
     const searchTerm = searchParams.get("searchTerm");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")) : 10;
 
-    if (!searchTerm || searchTerm.trim().length < 2) {
+    if (!searchTerm || searchTerm.trim().length < 1) {
       return NextResponse.json(
         {
           users: [],
-          message: "searchTerm must be at least 2 characters"
+          message: "searchTerm must be at least 1 character"
         },
         { status: 400 }
       );

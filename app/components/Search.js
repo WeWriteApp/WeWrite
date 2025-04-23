@@ -120,7 +120,7 @@ const Search = () => {
         console.log('Final combined search results:', combinedPages);
 
         // If no results were found and we have a search term, add a fallback user result
-        if (combinedPages.length === 0 && searchTerm && searchTerm.length >= 2) {
+        if (combinedPages.length === 0 && searchTerm && searchTerm.length >= 1) {
           console.log(`No results found for search term: ${searchTerm}, adding fallback`);
 
           // Add a fallback user result that matches the search term
@@ -151,7 +151,7 @@ const Search = () => {
       } finally {
         setIsSearching(false);
       }
-    }, 500),
+    }, 300),
     [user]
   );
 
@@ -216,7 +216,7 @@ const Search = () => {
           searchIconMargin: "0 0 0 12px"
         }}
         fuseOptions={{
-          minMatchCharLength: 2,
+          minMatchCharLength: 1,
         }}
         formatResult={(item) => {
           return (

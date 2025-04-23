@@ -14,32 +14,72 @@ import { getUserSubscription, cancelSubscription, listenToUserSubscription, upda
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Separator } from '../components/ui/separator';
 
+// Helper function to format relative time
+const getRelativeTimeString = (date: Date): string => {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  // Less than a minute
+  if (diffInSeconds < 60) {
+    return 'just now';
+  }
+
+  // Less than an hour
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+  }
+
+  // Less than a day
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+  }
+
+  // Less than a week
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) {
+    return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+  }
+
+  // Less than a month
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  if (diffInWeeks < 4) {
+    return `${diffInWeeks} ${diffInWeeks === 1 ? 'week' : 'weeks'} ago`;
+  }
+
+  // Less than a year
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
+  }
+
+  // More than a year
+  const diffInYears = Math.floor(diffInDays / 365);
+  return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
+};
+
 // Use the SupporterIcon component for tier icons
 const supporterTiers = [
   {
     id: 'tier1',
-    name: 'Tier 1 Subscription',
+    name: 'Tier 1',
     amount: 10,
     icon: <SupporterIcon tier="tier1" status="active" size="xl" />,
   },
   {
     id: 'tier2',
-    name: 'Tier 2 Subscription',
+    name: 'Tier 2',
     amount: 20,
     icon: <SupporterIcon tier="tier2" status="active" size="xl" />,
   },
   {
     id: 'tier3',
-    name: 'Tier 3 Subscription',
-    amount: 50,
-    icon: <SupporterIcon tier="tier3" status="active" size="xl" />,
-  },
-  {
-    id: 'tier4',
-    name: 'Tier 4 Subscription',
+    name: 'Tier 3',
     amount: 'Custom',
-    icon: <SupporterIcon tier="tier4" status="active" size="xl" />,
+    icon: <SupporterIcon tier="tier3" status="active" size="xl" />,
     isCustom: true,
+    minAmount: 50
   }
 ];
 
@@ -104,32 +144,79 @@ export default function SubscriptionPage() {
     // Fetch subscription history
     const fetchSubscriptionHistory = async () => {
       try {
-        // This is a placeholder - you'll need to implement this function in your subscription.js file
-        // const history = await getSubscriptionHistory(user.uid);
-        // For now, we'll use mock data
-        const mockHistory = [
-          {
-            id: 'hist_1',
-            date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days ago
-            amount: 10,
-            status: 'succeeded',
-            description: 'Monthly subscription payment'
-          },
-          {
-            id: 'hist_2',
-            date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-            amount: 10,
-            status: 'succeeded',
-            description: 'Monthly subscription payment'
+        // If we have a subscription, create history entries based on it
+        if (subscription) {
+          const history = [];
+
+          // Add the initial subscription creation
+          if (subscription.createdAt) {
+            history.push({
+              id: 'creation',
+              date: subscription.createdAt,
+              amount: subscription.amount,
+              status: 'succeeded',
+              description: 'Subscription created'
+            });
           }
-        ];
-        setSubscriptionHistory(mockHistory);
+
+          // Add renewal entries if we have billing cycle data
+          if (subscription.billingCycleStart) {
+            // Calculate how many billing cycles have passed
+            const startDate = new Date(subscription.billingCycleStart);
+            const now = new Date();
+            const monthsDiff = (now.getFullYear() - startDate.getFullYear()) * 12 +
+                              now.getMonth() - startDate.getMonth();
+
+            // Add an entry for each month (up to 6 months back)
+            for (let i = 1; i <= Math.min(monthsDiff, 6); i++) {
+              const paymentDate = new Date(startDate);
+              paymentDate.setMonth(startDate.getMonth() + i);
+
+              // Only add entries for dates in the past
+              if (paymentDate <= now) {
+                history.push({
+                  id: `renewal_${i}`,
+                  date: paymentDate.toISOString(),
+                  amount: subscription.amount,
+                  status: 'succeeded',
+                  description: 'Monthly subscription payment'
+                });
+              }
+            }
+          }
+
+          // Add cancellation entry if applicable
+          if (subscription.status === 'canceled' && subscription.canceledAt) {
+            history.push({
+              id: 'cancellation',
+              date: subscription.canceledAt,
+              amount: 0,
+              status: 'canceled',
+              description: 'Subscription canceled'
+            });
+          }
+
+          // Sort by date (newest first)
+          history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          setSubscriptionHistory(history);
+        } else {
+          // No subscription, empty history
+          setSubscriptionHistory([]);
+        }
       } catch (error) {
-        console.error('Error fetching subscription history:', error);
+        console.error('Error creating subscription history:', error);
+        // Fallback to empty history
+        setSubscriptionHistory([]);
       }
     };
 
-    fetchSubscriptionHistory();
+    // Run fetchSubscriptionHistory when subscription changes
+    useEffect(() => {
+      if (subscription) {
+        fetchSubscriptionHistory();
+      }
+    }, [subscription]);
 
     // Clean up listener on unmount
     return () => {
@@ -142,8 +229,8 @@ export default function SubscriptionPage() {
     setSelectedTier(tierId);
     setError(null);
 
-    // If tier 4 is selected, focus the input after a short delay to allow the UI to update
-    if (tierId === 'tier4') {
+    // If tier 3 is selected, focus the input after a short delay to allow the UI to update
+    if (tierId === 'tier3') {
       setTimeout(() => {
         const input = document.querySelector('input[type="number"]') as HTMLInputElement;
         if (input) {
@@ -159,7 +246,7 @@ export default function SubscriptionPage() {
 
     // Validate in real-time
     const numValue = parseInt(value, 10);
-    if (isNaN(numValue) || numValue < 100) {
+    if (isNaN(numValue) || numValue < 50) {
       setCustomAmountError(true);
     } else {
       setCustomAmountError(false);
@@ -229,8 +316,9 @@ export default function SubscriptionPage() {
 
       if (selectedTierObj.isCustom) {
         amount = parseInt(customAmount, 10);
-        if (isNaN(amount) || amount < 100) {
-          setError('Custom amount must be at least $100');
+        const minAmount = selectedTierObj.minAmount || 50;
+        if (isNaN(amount) || amount < minAmount) {
+          setError(`Custom amount must be at least $${minAmount}`);
           setLoading(false);
           return;
         }
@@ -298,8 +386,9 @@ export default function SubscriptionPage() {
 
       if (selectedTierObj.isCustom) {
         amount = parseInt(customAmount, 10);
-        if (isNaN(amount) || amount < 100) {
-          setError('Custom amount must be at least $100');
+        const minAmount = selectedTierObj.minAmount || 50;
+        if (isNaN(amount) || amount < minAmount) {
+          setError(`Custom amount must be at least $${minAmount}`);
           setLoading(false);
           return;
         }
@@ -327,7 +416,7 @@ export default function SubscriptionPage() {
 
       // Redirect to success page or update UI
       alert('Your subscription has been reactivated successfully!');
-      
+
     } catch (err: any) {
       console.error('Error reactivating subscription:', err);
       setError(err.message || 'Failed to reactivate subscription');
@@ -423,25 +512,25 @@ export default function SubscriptionPage() {
             }`}
             onClick={() => handleTierSelect(tier.id)}
           >
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-foreground">{tier.name}</CardTitle>
-                {/* Always render the check container to prevent layout shift, but only show it when selected */}
-                <div className={`rounded-full p-1 ${selectedTier === tier.id ? 'bg-primary text-white' : 'bg-transparent'}`}>
-                  <Check className={`h-4 w-4 ${selectedTier === tier.id ? 'opacity-100' : 'opacity-0'}`} />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Centered Icon */}
-              <div className="flex justify-center items-center mb-6">
+            <CardHeader className="flex flex-col items-center text-center">
+              {/* Centered Icon at the top */}
+              <div className="flex justify-center items-center mb-4">
                 <div className="flex items-center justify-center bg-white dark:bg-white w-16 h-16 rounded-md shadow-sm">
                   {tier.icon}
                 </div>
               </div>
-              
-              {/* Price at bottom left */}
-              <div className="absolute bottom-4 left-4 flex items-center gap-2">
+              <div className="flex justify-between items-center w-full">
+                <CardTitle className="text-foreground text-center mx-auto">{tier.name}</CardTitle>
+                {/* Always render the check container to prevent layout shift, but only show it when selected */}
+                <div className={`rounded-full p-1 absolute top-4 right-4 ${selectedTier === tier.id ? 'bg-primary text-white' : 'bg-transparent'}`}>
+                  <Check className={`h-4 w-4 ${selectedTier === tier.id ? 'opacity-100' : 'opacity-0'}`} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="text-center">
+
+              {/* Price centered at bottom */}
+              <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2">
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
                 <span className="text-2xl font-bold text-foreground">
                   {tier.isCustom ? (
@@ -464,7 +553,7 @@ export default function SubscriptionPage() {
                           }}
                         />
                         {customAmountError && selectedTier === tier.id && (
-                          <p className="text-red-500 text-sm mt-1">Must be at least $100</p>
+                          <p className="text-red-500 text-sm mt-1">Must be at least $50</p>
                         )}
                       </div>
                       {/* Always render the button to prevent layout shift, but disable it when not selected */}
@@ -474,7 +563,7 @@ export default function SubscriptionPage() {
                         className={`border-border text-foreground hover:bg-background/80 ${selectedTier !== tier.id ? 'opacity-0 pointer-events-none' : ''}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          const currentAmount = parseInt(customAmount, 10) || 100;
+                          const currentAmount = parseInt(customAmount, 10) || 50;
                           setCustomAmount((currentAmount + 10).toString());
                         }}
                         disabled={selectedTier !== tier.id}
@@ -521,7 +610,9 @@ export default function SubscriptionPage() {
                       <td className="px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          {new Date(item.date).toLocaleDateString()}
+                          <span title={new Date(item.date).toISOString().split('T')[0]}>
+                            {getRelativeTimeString(new Date(item.date))}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm font-medium">${item.amount.toFixed(2)}</td>
