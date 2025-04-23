@@ -7,7 +7,8 @@ import { getBestTextColor } from '../utils/accessibility';
 // Define the available pill styles
 export const PILL_STYLES = {
   FILLED: 'filled',
-  OUTLINE: 'outline'
+  OUTLINE: 'outline',
+  CLASSIC: 'classic'
 };
 
 // Create the context
@@ -51,6 +52,13 @@ export function PillStyleProvider({ children }) {
         border-[1.5px] border-primary/40
         hover:bg-primary/10 hover:border-primary/60
         shadow-inner
+      `;
+    } else if (pillStyle === PILL_STYLES.CLASSIC) {
+      return `
+        bg-transparent text-primary font-bold
+        border-none
+        hover:underline
+        shadow-none
       `;
     } else {
       // Default filled style

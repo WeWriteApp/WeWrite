@@ -94,7 +94,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
             variants={fadeIn}
           >
             <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
-              <Flame className="h-8 w-8 text-orange-500" />
+              <Flame className="h-8 w-8" />
               <span>Trending on WeWrite</span>
             </h2>
           </motion.div>
@@ -119,7 +119,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
           variants={fadeIn}
         >
           <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
-            <Flame className="h-8 w-8 text-orange-500" />
+            <Flame className="h-8 w-8" />
             <span>Trending on WeWrite</span>
           </h2>
         </motion.div>
@@ -139,9 +139,9 @@ export default function TrendingPagesSection({ limit = 3 }) {
                   <CardTitle className="text-lg">
                     <PillLink
                       href={`/${page.id}`}
-                      label={page.title || 'Untitled'}
-                      truncate={true}
-                    />
+                    >
+                      {page.title || 'Untitled'}
+                    </PillLink>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -153,7 +153,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
                       <SimpleSparkline
                         data={page.hourlyViews}
                         height={40}
-                        color="#1768FF"
+                        color="var(--primary)"
                       />
                     </div>
                   </div>

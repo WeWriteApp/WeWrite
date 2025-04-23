@@ -44,6 +44,21 @@ export default function PillStyleToggle() {
               <Check className="h-4 w-4 text-primary" />
             )}
           </button>
+
+          {/* Radio button for Classic style */}
+          <button
+            onClick={() => changePillStyle(PILL_STYLES.CLASSIC)}
+            className={cn(
+              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
+              "hover:bg-muted",
+              pillStyle === PILL_STYLES.CLASSIC && "bg-muted"
+            )}
+          >
+            <span>Classic</span>
+            {pillStyle === PILL_STYLES.CLASSIC && (
+              <Check className="h-4 w-4 text-primary" />
+            )}
+          </button>
         </div>
       </div>
 
