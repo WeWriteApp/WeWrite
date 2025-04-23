@@ -154,6 +154,13 @@ const SimpleLandingPage = () => {
                 Coming Soon
               </a>
               <a
+                href="#supporters"
+                onClick={(e) => scrollToSection(e, '#supporters')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Supporters
+              </a>
+              <a
                 href="#about"
                 onClick={(e) => scrollToSection(e, '#about')}
                 className="text-sm font-medium hover:text-primary transition-colors"
@@ -217,6 +224,13 @@ const SimpleLandingPage = () => {
               className="text-sm font-medium transition-colors hover:text-primary"
             >
               Coming Soon
+            </a>
+            <a
+              href="#supporters"
+              onClick={(e) => scrollToSection(e, '#supporters')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Supporters
             </a>
             <a
               href="#about"
@@ -395,6 +409,89 @@ const SimpleLandingPage = () => {
           </div>
         </section>
 
+        {/* Supporters Section */}
+        <section id="supporters" className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-6">
+            <motion.div
+              className="text-center mb-16"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Special thanks to those who have a subscription for WeWrite while we're still in beta, working on the rest of the functionality. <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">Read our Roadmap here</Link>.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+                transition={{ delay: 0.1 }}
+              >
+                <Card className="h-full border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-xl">Tier 1 Supporters</CardTitle>
+                    <CardDescription className="text-base mt-2">
+                      Our entry-level supporters who help keep the lights on.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="h-full border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-xl">Tier 2 & 3 Supporters</CardTitle>
+                    <CardDescription className="text-base mt-2">
+                      Dedicated supporters who enable us to build new features faster.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="h-full border border-border">
+                  <CardHeader>
+                    <CardTitle className="text-xl">Tier 4 Supporters</CardTitle>
+                    <CardDescription className="text-base mt-2">
+                      Our most dedicated supporters who make WeWrite possible.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+            </div>
+
+            <motion.div
+              className="text-center mt-12"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Link href="/support">Become a Supporter</Link>
+              </Button>
+            </motion.div>
+          </div>
+        </section>
+
         {/* About Section */}
         <section id="about" className="py-16 md:py-20">
           <div className="container mx-auto px-6">
@@ -440,8 +537,8 @@ const SimpleLandingPage = () => {
               viewport={{ once: true }}
               variants={fadeIn}
             >
-              <h3 className="text-2xl font-bold mb-4">Ready to get started?</h3>
-              <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+              <h3 className="text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h3>
+              <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
                 Join thousands of writers who are already using WeWrite to create and share content.
               </p>
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>

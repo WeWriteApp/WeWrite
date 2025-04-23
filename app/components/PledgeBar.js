@@ -9,7 +9,7 @@ import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
 import PledgeBarModal from './PledgeBarModal';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import '../styles/pledge-bar-animations.css';
 
 const PledgeBar = () => {
@@ -41,14 +41,21 @@ const PledgeBar = () => {
   const [animateEntry, setAnimateEntry] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showMoreButton, setShowMoreButton] = useState(true);
+  const [isAtBottom, setIsAtBottom] = useState(false);
 
   const { id: pageId } = useParams();
 
-  // Function to scroll to metadata section
+  // Function to scroll to metadata section or back to top
   const scrollToMetadata = () => {
-    const metadataSection = document.querySelector('[data-metadata-section]');
-    if (metadataSection) {
-      metadataSection.scrollIntoView({ behavior: 'smooth' });
+    if (isAtBottom) {
+      // Scroll back to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Scroll to metadata section
+      const metadataSection = document.querySelector('[data-metadata-section]');
+      if (metadataSection) {
+        metadataSection.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
@@ -59,6 +66,10 @@ const PledgeBar = () => {
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+
+      // Check if we're at the bottom of the page
+      const isBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
+      setIsAtBottom(isBottom);
 
       // Always show the bar when at the top of the page (or very close to it)
       if (currentScrollY <= 10) {
@@ -533,8 +544,12 @@ const PledgeBar = () => {
             className="text-xs text-muted-foreground flex items-center gap-1 hover:bg-transparent hover:text-foreground transition-colors"
             onClick={scrollToMetadata}
           >
-            <span>More</span>
-            <ChevronDown className="h-3 w-3" />
+            <span>{isAtBottom ? 'Back to top' : 'More'}</span>
+            {isAtBottom ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
           </Button>
         )}
       </div>

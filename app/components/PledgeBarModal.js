@@ -56,7 +56,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
             <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
               <div className="flex space-x-3 w-max min-w-full">
                 {/* Tier 1 */}
-                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50/40 dark:bg-blue-950/10">
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <SupporterIcon tier="tier1" status="active" size="lg" />
@@ -69,7 +69,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
                 </div>
 
                 {/* Tier 2 */}
-                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50/60 dark:bg-blue-950/15">
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <SupporterIcon tier="tier2" status="active" size="lg" />
@@ -82,7 +82,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
                 </div>
 
                 {/* Tier 3 */}
-                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50/80 dark:bg-blue-950/20">
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <SupporterIcon tier="tier3" status="active" size="lg" />
@@ -95,7 +95,7 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
                 </div>
 
                 {/* Tier 4 */}
-                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50 dark:bg-blue-950/30">
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <SupporterIcon tier="tier4" status="active" size="lg" />

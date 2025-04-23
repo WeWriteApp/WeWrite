@@ -83,13 +83,8 @@ export function TierModal({ children, trigger }: TierModalProps) {
         <div className="py-4">
           <div className="space-y-4">
             {tiers.map((tier) => {
-              // Determine background color based on tier
-              const bgColorClass =
-                tier.tier === 'tier4' ? 'bg-blue-50 dark:bg-blue-950/30' :
-                tier.tier === 'tier3' ? 'bg-blue-50/80 dark:bg-blue-950/20' :
-                tier.tier === 'tier2' ? 'bg-blue-50/60 dark:bg-blue-950/15' :
-                tier.tier === 'tier1' ? 'bg-blue-50/40 dark:bg-blue-950/10' :
-                'bg-white dark:bg-gray-800';
+              // Use white background for all tiers
+              const bgColorClass = 'bg-white dark:bg-gray-800';
 
               return (
                 <div key={tier.id} className={`flex items-center gap-3 p-3 rounded-lg border ${bgColorClass}`}>

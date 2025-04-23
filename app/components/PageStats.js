@@ -46,7 +46,7 @@ export default function PageStats({
   return (
     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Views Card */}
-      <div className="flex items-center justify-between p-4 rounded-lg border-accent/20 border bg-accent/10 text-card-foreground shadow-sm">
+      <div className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
         <div className="flex items-center gap-2">
           <Eye className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm font-medium">Views</span>
@@ -70,7 +70,7 @@ export default function PageStats({
 
       {/* Recent Changes Card */}
       <div
-        className="flex items-center justify-between p-4 rounded-lg border-accent/20 border bg-accent/10 text-card-foreground shadow-sm cursor-pointer hover:bg-accent/20 transition-colors"
+        className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={handleViewHistory}
       >
         <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { PageActions } from "./PageActions";
 import WordCounter from "./WordCounter";
 import PageStats from "./PageStats";
-import ConstructionChip from "./ConstructionChip";
+// ConstructionChip removed
 import FollowButton from "./FollowButton";
 import { getPageViewsLast24Hours, getPageTotalViews } from "../firebase/pageViews";
 import { getPageVersions } from "../firebase/database";
@@ -137,8 +137,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         />
       )}
 
-      {/* Construction chip - always visible except in edit mode */}
-      {!isEditing && <ConstructionChip />}
+      {/* Construction chip removed */}
     </div>
   );
 }
