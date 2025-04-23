@@ -334,10 +334,10 @@ const SimpleLandingPage = () => {
                     )}
                     <CardHeader>
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-xl">{feature.title}</CardTitle>
+                        <CardTitle>{feature.title}</CardTitle>
                         {getStatusBadge(feature.status)}
                       </div>
-                      <CardDescription className="text-base mt-2">
+                      <CardDescription>
                         {feature.description}
                       </CardDescription>
                     </CardHeader>
@@ -388,15 +388,15 @@ const SimpleLandingPage = () => {
                     )}
                     <CardHeader>
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-xl">{feature.title}</CardTitle>
+                        <CardTitle>{feature.title}</CardTitle>
                         {getStatusBadge(feature.status)}
                       </div>
-                      <CardDescription className="text-base mt-2">
+                      <CardDescription>
                         {feature.description}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Button variant="outline" size="sm" asChild className="w-full">
+                      <Button variant="outline" asChild className="w-full">
                         <Link href="/subscription">
                           Become a Supporter
                         </Link>
@@ -435,8 +435,8 @@ const SimpleLandingPage = () => {
               >
                 <Card className="h-full border border-border">
                   <CardHeader>
-                    <CardTitle className="text-xl">Tier 1 Supporters</CardTitle>
-                    <CardDescription className="text-base mt-2">
+                    <CardTitle>Tier 1 Supporters</CardTitle>
+                    <CardDescription>
                       Our entry-level supporters who help keep the lights on.
                     </CardDescription>
                   </CardHeader>
@@ -452,8 +452,8 @@ const SimpleLandingPage = () => {
               >
                 <Card className="h-full border border-border">
                   <CardHeader>
-                    <CardTitle className="text-xl">Tier 2 & 3 Supporters</CardTitle>
-                    <CardDescription className="text-base mt-2">
+                    <CardTitle>Tier 2 & 3 Supporters</CardTitle>
+                    <CardDescription>
                       Dedicated supporters who enable us to build new features faster.
                     </CardDescription>
                   </CardHeader>
@@ -469,8 +469,8 @@ const SimpleLandingPage = () => {
               >
                 <Card className="h-full border border-border">
                   <CardHeader>
-                    <CardTitle className="text-xl">Tier 4 Supporters</CardTitle>
-                    <CardDescription className="text-base mt-2">
+                    <CardTitle>Tier 4 Supporters</CardTitle>
+                    <CardDescription>
                       Our most dedicated supporters who make WeWrite possible.
                     </CardDescription>
                   </CardHeader>
@@ -520,8 +520,8 @@ const SimpleLandingPage = () => {
                 >
                   <Card className="h-full">
                     <CardHeader>
-                      <CardTitle className="text-xl">{tech.title}</CardTitle>
-                      <CardDescription className="text-base mt-2">
+                      <CardTitle>{tech.title}</CardTitle>
+                      <CardDescription>
                         {tech.description}
                       </CardDescription>
                     </CardHeader>
@@ -537,7 +537,7 @@ const SimpleLandingPage = () => {
               viewport={{ once: true }}
               variants={fadeIn}
             >
-              <h3 className="text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h3>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h2>
               <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
                 Join thousands of writers who are already using WeWrite to create and share content.
               </p>
