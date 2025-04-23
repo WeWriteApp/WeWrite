@@ -82,6 +82,12 @@ export const logoutUser = async (keepPreviousSession = false) => {
 
 export const addUsername = async (userId, username) => {
   try {
+    // Check if username is available
+    const isAvailable = await checkUsernameAvailability(username);
+    if (!isAvailable) {
+      throw new Error('Username is already taken');
+    }
+
     // Update the username in Firestore users collection
     const userDocRef = doc(db, 'users', userId);
     await updateDoc(userDocRef, {
@@ -94,6 +100,13 @@ export const addUsername = async (userId, username) => {
         displayName: username
       });
     }
+
+    // Reserve the username in the usernames collection
+    const usernameDocRef = doc(db, 'usernames', username.toLowerCase());
+    await setDoc(usernameDocRef, {
+      uid: userId,
+      createdAt: new Date().toISOString()
+    });
 
     return { success: true };
   } catch (error) {
@@ -142,24 +155,21 @@ export const updateEmail = async (user, newEmail) => {
 export const checkUsernameAvailability = async (username) => {
   try {
     if (!username || username.length < 3) {
-      return { isAvailable: false, message: "Username must be at least 3 characters" };
+      return false;
     }
 
     // Check if username contains only alphanumeric characters and underscores
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      return { isAvailable: false, message: "Username can only contain letters, numbers, and underscores" };
+      return false;
     }
 
     const userDoc = doc(db, 'usernames', username.toLowerCase());
     const docSnap = await getDoc(userDoc);
 
-    return {
-      isAvailable: !docSnap.exists(),
-      message: docSnap.exists() ? "Username already taken" : "Username is available"
-    };
+    return !docSnap.exists();
   } catch (error) {
     console.error("Error checking username availability:", error);
-    return { isAvailable: false, message: "Error checking username" };
+    return false;
   }
 }
 

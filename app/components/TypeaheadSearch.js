@@ -453,7 +453,12 @@ const TypeaheadSearch = ({
         }`}
       >
         {isSearching && search.length >= characterCount ? (
-          <Loader />
+          <div className="flex justify-center items-center py-4">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+              <span className="text-sm text-muted-foreground">Searching...</span>
+            </div>
+          </div>
         ) : (
           <>
             {/* User accounts section */}
@@ -588,7 +593,7 @@ const TypeaheadSearch = ({
               </div>
             )}
 
-            {search.length >= 2 && getAllUniquePages().length === 0 && (
+            {search.length >= 2 && !isSearching && getAllUniquePages().length === 0 && (
               <div className="p-3">
                 <button
                   onClick={() => {
@@ -691,7 +696,7 @@ const SingleItemLink = ({ page, search }) => {
         href={`/${page.id}`}
         key={page.id}
         isPublic={page.isPublic}
-        className="flex-shrink-0"
+        className="flex-shrink-0 whitespace-nowrap"
       >
         <span className="truncate">{highlightText(page.title, search)}</span>
       </PillLink>
@@ -761,7 +766,7 @@ const UserItemLink = ({ user, search }) => {
       <PillLink
         href={`/user/${user.id}`}
         key={user.id}
-        className="flex-shrink-0"
+        className="flex-shrink-0 whitespace-nowrap"
       >
         <span className="truncate">{highlightText(user.username, search)}</span>
       </PillLink>

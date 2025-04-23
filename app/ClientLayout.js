@@ -26,6 +26,10 @@ const UsernameWarningBanner = dynamic(() => import('./components/UsernameWarning
   ssr: false
 });
 
+const UsernameEnforcementBanner = dynamic(() => import('./components/UsernameEnforcementBanner'), {
+  ssr: false
+});
+
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
@@ -51,6 +55,7 @@ export default function ClientLayout({ children }) {
                       <Drawer />
                       <div className="flex flex-col min-h-screen bg-background pb-8">
                         {!isAuthPage && <UsernameWarningBanner />}
+                        {!isAuthPage && <UsernameEnforcementBanner />}
                         <main className="flex-grow">
                           {children}
                         </main>

@@ -184,10 +184,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
               limit(limitCount * 2)
             );
           } else {
-            // No user filter, show public pages for everyone
-            // Note: We're not filtering by isPublic here to show all pages in the "all" tab
+            // No user filter, only show public pages for everyone
             pagesQuery = query(
               collection(db, "pages"),
+              where("isPublic", "==", true),
               orderBy("lastModified", "desc"),
               limit(limitCount * 2)
             );
@@ -327,9 +327,18 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // Wait for all promises to resolve
           const activityResults = await Promise.all(activitiesPromises);
 
-          // Filter out null results and limit to requested count
+          // Filter out null results and private pages (unless viewing own profile)
           const validActivities = activityResults
-            .filter(activity => activity !== null)
+            .filter(activity => {
+              // Skip null activities
+              if (activity === null) return false;
+
+              // If viewing own profile, show all pages
+              if (user && user.uid === filterUserId) return true;
+
+              // Otherwise only show public pages
+              return activity.isPublic === true;
+            })
             .slice(0, limitCount);
 
           setActivities(validActivities);
@@ -429,10 +438,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           return;
         }
       } else {
-        // No user filter, show all pages
-        // Note: We're not filtering by isPublic here to show all pages in the "all" tab
+        // No user filter, only show public pages
         moreQuery = query(
           collection(db, "pages"),
+          where("isPublic", "==", true),
           orderBy("lastModified", "desc"),
           startAfter(lastVisible),
           limit(limitCount * 2)
@@ -569,9 +578,18 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
       // Wait for all promises to resolve
       const moreActivityResults = await Promise.all(activitiesPromises);
 
-      // Filter out null results and limit to requested count
+      // Filter out null results and private pages (unless viewing own profile)
       const validMoreActivities = moreActivityResults
-        .filter(activity => activity !== null)
+        .filter(activity => {
+          // Skip null activities
+          if (activity === null) return false;
+
+          // If viewing own profile, show all pages
+          if (user && user.uid === filterUserId) return true;
+
+          // Otherwise only show public pages
+          return activity.isPublic === true;
+        })
         .slice(0, limitCount);
 
       // Add new activities to the existing ones

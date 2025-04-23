@@ -52,10 +52,10 @@ const ConstructionModal = ({ isOpen, onClose }) => {
   // Use the same PledgeBarModal component but with custom content
   const customContent = {
     title: "WeWrite is under construction",
-    description: "We're still working on getting WeWrite all finished, please become an Early Supporter to help us continue development!",
+    description: "You can help support development by activating your subscription.",
     action: {
       href: "/support",
-      label: "Become a Supporter",
+      label: "View Subscription Tiers",
       external: false
     }
   };

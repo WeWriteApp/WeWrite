@@ -6,15 +6,16 @@ import { Button } from "./ui/button";
 import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
 import { DollarSign } from "lucide-react";
+import { SupporterIcon } from "./SupporterIcon";
 
 const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
   // Use customContent if provided, otherwise use default content based on sign-in status
   const content = customContent || (isSignedIn ? {
     title: "This feature is coming soon!",
-    description: "Soon you'll be able to tip to each page from your monthly subscription! We're still building this functionality, and if you'd like to help us get there sooner, you can become an Early Supporter!",
+    description: "You can help support development by activating your subscription.",
     action: {
       href: "/support",
-      label: "Become a Supporter",
+      label: "View Subscription Tiers",
       external: false
     }
   } : {
@@ -49,11 +50,72 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
           {content.description}
         </p>
 
+        {/* Subscription Tiers - Horizontally Scrollable */}
+        {isSignedIn && (
+          <div className="mt-4 mb-6">
+            <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+              <div className="flex space-x-3 w-max min-w-full">
+                {/* Tier 1 */}
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50/40 dark:bg-blue-950/10">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <SupporterIcon tier="tier1" status="active" size="lg" />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="font-medium">Tier 1 Subscription</div>
+                      <div className="text-sm text-muted-foreground">$10/mo</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tier 2 */}
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50/60 dark:bg-blue-950/15">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <SupporterIcon tier="tier2" status="active" size="lg" />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="font-medium">Tier 2 Subscription</div>
+                      <div className="text-sm text-muted-foreground">$20/mo</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tier 3 */}
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50/80 dark:bg-blue-950/20">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <SupporterIcon tier="tier3" status="active" size="lg" />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="font-medium">Tier 3 Subscription</div>
+                      <div className="text-sm text-muted-foreground">$50/mo</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tier 4 */}
+                <div className="flex-none w-[200px] p-3 rounded-lg border bg-blue-50 dark:bg-blue-950/30">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <SupporterIcon tier="tier4" status="active" size="lg" />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="font-medium">Tier 4 Subscription</div>
+                      <div className="text-sm text-muted-foreground">$100+/mo</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Action Button */}
         <div>
           <Button
             asChild
-            className={`w-full ${isSignedIn ? 'bg-gradient-to-r from-green-500 via-blue-500 to-green-500 hover:from-green-600 hover:via-blue-600 hover:to-green-600 text-white animate-gradient bg-[length:200%_auto]' : ''}`}
+            className={`w-full ${isSignedIn ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
             size="lg"
             variant={isSignedIn ? "default" : "outline"}
           >
@@ -68,8 +130,6 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
             </a>
           </Button>
         </div>
-
-        {/* No social links section */}
       </div>
     </Modal>
   );

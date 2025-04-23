@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
 import SupporterBadge from "./SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Heart, UserMinus } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,9 +13,7 @@ import RecentActivity from "./RecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import usePages from "../hooks/usePages";
 import UsernameHistory from "./UsernameHistory";
-import FollowedPages from "./FollowedPages";
-import { unfollowAllPagesByUser } from "../firebase/follows";
-import { toast } from "sonner";
+// Removed unused imports
 
 // Wrapper component for animated tabs content
 function AnimatedTabsContent({ children, activeTab }) {
@@ -84,14 +82,12 @@ export default function UserProfileTabs({ profile }) {
   const { user } = useContext(AuthContext);
   const isCurrentUser = user && profile && user.uid === profile.uid;
   const [loadingError, setLoadingError] = useState(null);
-  const [isUnfollowingAll, setIsUnfollowingAll] = useState(false);
 
   // Use the usePages hook to get the user's pages
   const {
     pages,
     privatePages,
     loading: isLoading,
-    error,
     hasMorePages,
     hasMorePrivatePages,
     isMoreLoading,
@@ -104,7 +100,7 @@ export default function UserProfileTabs({ profile }) {
   const visibleTabs = ["activity", "pages"];
   if (isCurrentUser) {
     visibleTabs.push("private");
-    visibleTabs.push("following");
+    // Removed following tab for own profile
   }
 
   // Handle tab changes
@@ -132,53 +128,7 @@ export default function UserProfileTabs({ profile }) {
     }
   };
 
-  // Unfollow all self-followed pages
-  const handleUnfollowAll = async () => {
-    if (!user || !isCurrentUser) return;
-
-    try {
-      setIsUnfollowingAll(true);
-      const result = await unfollowAllPagesByUser(user.uid);
-
-      if (result.success) {
-        if (result.count > 0) {
-          toast({
-            title: "Pages unfollowed",
-            description: `Successfully unfollowed ${result.count} of your own pages`,
-            variant: "success"
-          });
-
-          // Force refresh the following tab
-          if (activeTab === "following") {
-            // Switch to another tab and back to trigger a refresh
-            setActiveTab("activity");
-            setTimeout(() => setActiveTab("following"), 100);
-          }
-        } else {
-          toast({
-            title: "No self-follows found",
-            description: "You are not following any of your own pages",
-            variant: "info"
-          });
-        }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to unfollow pages. Please try again.",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Error unfollowing all pages:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUnfollowingAll(false);
-    }
-  };
+  // Removed unfollow all function
 
   return (
     <div className="mt-6">
@@ -203,23 +153,13 @@ export default function UserProfileTabs({ profile }) {
               </TabsTrigger>
 
               {isCurrentUser && (
-                <>
-                  <TabsTrigger
-                    value="private"
-                    className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-                  >
-                    <Lock className="h-4 w-4" />
-                    <span>Private</span>
-                  </TabsTrigger>
-
-                  <TabsTrigger
-                    value="following"
-                    className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-                  >
-                    <Heart className="h-4 w-4" />
-                    <span>Following</span>
-                  </TabsTrigger>
-                </>
+                <TabsTrigger
+                  value="private"
+                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+                >
+                  <Lock className="h-4 w-4" />
+                  <span>Private</span>
+                </TabsTrigger>
               )}
             </TabsList>
           </div>
@@ -309,27 +249,7 @@ export default function UserProfileTabs({ profile }) {
                 </AnimatedTabsContent>
               </TabsContent>
 
-              <TabsContent value="following" className="mt-0">
-                <AnimatedTabsContent activeTab={activeTab}>
-                  <div className="mb-4 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUnfollowAll}
-                      disabled={isUnfollowingAll}
-                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      {isUnfollowingAll ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <UserMinus className="h-4 w-4" />
-                      )}
-                      Unfollow my pages
-                    </Button>
-                  </div>
-                  <FollowedPages userId={profile?.uid} limit={20} />
-                </AnimatedTabsContent>
-              </TabsContent>
+              {/* Following tab removed */}
             </>
           )}
         </div>
