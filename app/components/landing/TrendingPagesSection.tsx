@@ -24,10 +24,10 @@ export default function TrendingPagesSection({ limit = 3 }) {
     const fetchTrendingPages = async () => {
       try {
         setLoading(true);
-        
+
         // Get trending pages for the last 24 hours
         const pages = await getTrendingPages(limit);
-        
+
         // For each page, get the hourly view data for sparklines
         const pagesWithSparklines = await Promise.all(
           pages.map(async (page) => {
@@ -46,7 +46,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
             }
           })
         );
-        
+
         setTrendingPages(pagesWithSparklines);
       } catch (err) {
         console.error('Error fetching trending pages:', err);
@@ -70,14 +70,37 @@ export default function TrendingPagesSection({ limit = 3 }) {
     );
   }
 
+  // Always show the section, even if there's an error or no trending pages
   if (error || trendingPages.length === 0) {
-    return null; // Don't show section if there's an error or no trending pages
+    return (
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeIn}
+          >
+            <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
+              <Flame className="h-8 w-8 text-orange-500" />
+              <span>Trending on WeWrite</span>
+            </h2>
+          </motion.div>
+
+          <Card className="max-w-lg mx-auto">
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">No trending pages available yet. Check back soon!</p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    );
   }
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       transition: {
         duration: 0.6,

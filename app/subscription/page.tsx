@@ -396,6 +396,8 @@ export default function SubscriptionPage() {
         amount = selectedTierObj.amount as number;
       }
 
+      console.log('Reactivating subscription with amount:', amount);
+
       // Call the API to reactivate the subscription
       const response = await fetch('/api/reactivate-subscription', {
         method: 'POST',
@@ -408,9 +410,12 @@ export default function SubscriptionPage() {
         }),
       });
 
+      console.log('Reactivation response status:', response.status);
       const data = await response.json();
+      console.log('Reactivation response data:', data);
 
       if (!response.ok) {
+        console.error('Reactivation API error:', data);
         throw new Error(data.error || 'Failed to reactivate subscription');
       }
 

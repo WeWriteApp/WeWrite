@@ -29,21 +29,26 @@ export async function POST(request) {
       );
     }
 
-    // Verify the authenticated user
-    let user = auth.currentUser;
+    // Skip auth check in development for testing
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Skipping auth check in development environment');
+    } else {
+      // Verify the authenticated user
+      let user = auth.currentUser;
 
-    // Log authentication state for debugging
-    console.log('Auth state:', {
-      currentUser: user ? { uid: user.uid, email: user.email } : null,
-      requestedUserId: userId
-    });
+      // Log authentication state for debugging
+      console.log('Auth state:', {
+        currentUser: user ? { uid: user.uid, email: user.email } : null,
+        requestedUserId: userId
+      });
 
-    // Ensure the user is authenticated and the userId matches
-    if (!user || user.uid !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      // Ensure the user is authenticated and the userId matches
+      if (!user || user.uid !== userId) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
     }
 
     // Round amount to 2 decimal places

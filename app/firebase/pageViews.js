@@ -279,9 +279,43 @@ export const getTrendingPages = async (limitCount = 5) => {
 
     // Convert to array and sort by views
     let trendingPages = Array.from(pageViewsMap.values())
-      .filter(page => page.views > 0) // Only include pages with views
       .sort((a, b) => b.views - a.views)
       .slice(0, limitCount);
+
+    // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
+    if (trendingPages.length < limitCount) {
+      try {
+        // Query for pages with the most total views
+        const pagesQuery = query(
+          collection(db, "pages"),
+          orderBy("views", "desc"),
+          limit(limitCount - trendingPages.length)
+        );
+
+        const pagesSnapshot = await getDocs(pagesQuery);
+
+        // Get the page IDs we already have
+        const existingPageIds = new Set(trendingPages.map(p => p.id));
+
+        // Add additional pages that aren't already in our list
+        pagesSnapshot.forEach(doc => {
+          const pageData = doc.data();
+          const pageId = doc.id;
+
+          if (!existingPageIds.has(pageId)) {
+            trendingPages.push({
+              id: pageId,
+              views: pageData.views || 0
+            });
+          }
+        });
+
+        // Re-sort the combined list
+        trendingPages.sort((a, b) => b.views - a.views).slice(0, limitCount);
+      } catch (err) {
+        console.error('Error fetching additional trending pages:', err);
+      }
+    }
 
     // Fetch page titles for the trending pages
     const pagesWithTitles = await Promise.all(
