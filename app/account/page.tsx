@@ -942,7 +942,7 @@ export default function AccountPage() {
                 <AlertDescription>
                   <p className="mb-4">Subscribe to WeWrite to support development and get exclusive badges on your profile.</p>
                   <Button asChild className="w-full">
-                    <Link href="/support" className="flex items-center gap-2">
+                    <Link href="/subscription" className="flex items-center gap-2">
                       <Heart className="h-4 w-4" />
                       Subscribe Now
                     </Link>

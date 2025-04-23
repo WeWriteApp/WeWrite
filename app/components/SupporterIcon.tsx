@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 interface SupporterIconProps {
   tier?: string | null;
   status?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
@@ -18,13 +18,15 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   const iconSizes = {
     sm: '14px',
     md: '16px',
-    lg: '20px'
+    lg: '20px',
+    xl: '32px'
   };
 
   const dotSizes = {
     sm: '5px',
     md: '6px',
-    lg: '7px'
+    lg: '7px',
+    xl: '10px'
   };
 
   const iconSize = iconSizes[size];

@@ -214,10 +214,10 @@ export const FeatureCarousel = () => {
                       {(feature.status === 'coming-soon' || feature.status === 'in-progress') && (
                         <Button variant="outline" asChild>
                           <a
-                            href="/support"
+                            href="/subscription"
                             className="text-sm"
                           >
-                            Become an Early Supporter
+                            Become a Supporter
                           </a>
                         </Button>
                       )}

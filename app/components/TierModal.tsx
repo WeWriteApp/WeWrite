@@ -103,7 +103,7 @@ export function TierModal({ children, trigger }: TierModalProps) {
             })}
           </div>
           <div className="mt-6 text-center">
-            <Link href="/support">
+            <Link href="/subscription">
               <Button>Subscribe Now</Button>
             </Link>
           </div>

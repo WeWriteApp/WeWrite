@@ -43,7 +43,7 @@ export default function SiteFooter({ className = "" }) {
       external: true
     },
     {
-      href: "/support",
+      href: "/subscription",
       label: "Support us",
       icon: <Heart className="h-3 w-3" />,
       external: false

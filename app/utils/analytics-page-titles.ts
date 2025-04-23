@@ -44,7 +44,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/activity': 'Activity Feed',
   '/search': 'Search Page',
   '/leaderboard': 'Leaderboard',
-  '/support': 'Support Page',
+  '/subscription': 'Subscription Page',
   '/account': 'Account Settings',
 
   // Auth pages

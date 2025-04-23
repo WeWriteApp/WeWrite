@@ -397,8 +397,8 @@ const SimpleLandingPage = () => {
                     </CardHeader>
                     <CardContent>
                       <Button variant="outline" size="sm" asChild className="w-full">
-                        <Link href="/support">
-                          Become an Early Supporter
+                        <Link href="/subscription">
+                          Become a Supporter
                         </Link>
                       </Button>
                     </CardContent>
@@ -486,7 +486,7 @@ const SimpleLandingPage = () => {
               variants={fadeIn}
             >
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/support">Become a Supporter</Link>
+                <Link href="/subscription">Become a Supporter</Link>
               </Button>
             </motion.div>
           </div>

@@ -54,7 +54,7 @@ const ConstructionModal = ({ isOpen, onClose }) => {
     title: "WeWrite is under construction",
     description: "You can help support development by activating your subscription.",
     action: {
-      href: "/support",
+      href: "/subscription",
       label: "View Subscription Tiers",
       external: false
     }
