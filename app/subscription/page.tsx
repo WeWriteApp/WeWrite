@@ -95,6 +95,84 @@ export default function SubscriptionPage() {
   const [customAmountError, setCustomAmountError] = useState<boolean>(false);
   const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
 
+  // Fetch subscription history function
+  const fetchSubscriptionHistory = async (currentSubscription) => {
+    try {
+      // If we have a subscription, create history entries based on it
+      if (currentSubscription) {
+        const history = [];
+
+        // Add the initial subscription creation
+        if (currentSubscription.createdAt) {
+          history.push({
+            id: 'creation',
+            date: currentSubscription.createdAt,
+            amount: currentSubscription.amount,
+            status: 'succeeded',
+            description: 'Subscription created'
+          });
+        }
+
+        // Add renewal entries if we have billing cycle data
+        if (currentSubscription.billingCycleStart) {
+          // Calculate how many billing cycles have passed
+          const startDate = new Date(currentSubscription.billingCycleStart);
+          const now = new Date();
+          const monthsDiff = (now.getFullYear() - startDate.getFullYear()) * 12 +
+                            now.getMonth() - startDate.getMonth();
+
+          // Add an entry for each month (up to 6 months back)
+          for (let i = 1; i <= Math.min(monthsDiff, 6); i++) {
+            const paymentDate = new Date(startDate);
+            paymentDate.setMonth(startDate.getMonth() + i);
+
+            // Only add entries for dates in the past
+            if (paymentDate <= now) {
+              history.push({
+                id: `renewal_${i}`,
+                date: paymentDate.toISOString(),
+                amount: currentSubscription.amount,
+                status: 'succeeded',
+                description: 'Monthly subscription payment'
+              });
+            }
+          }
+        }
+
+        // Add cancellation entry if applicable
+        if (currentSubscription.status === 'canceled' && currentSubscription.canceledAt) {
+          history.push({
+            id: 'cancellation',
+            date: currentSubscription.canceledAt,
+            amount: 0,
+            status: 'canceled',
+            description: 'Subscription canceled'
+          });
+        }
+
+        // Sort by date (newest first)
+        history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        setSubscriptionHistory(history);
+      } else {
+        // No subscription, empty history
+        setSubscriptionHistory([]);
+      }
+    } catch (error) {
+      console.error('Error creating subscription history:', error);
+      // Fallback to empty history
+      setSubscriptionHistory([]);
+    }
+  };
+
+  // Effect for subscription changes
+  useEffect(() => {
+    if (subscription) {
+      fetchSubscriptionHistory(subscription);
+    }
+  }, [subscription]);
+
+  // Main effect for user authentication and subscription setup
   useEffect(() => {
     if (!user) {
       router.push('/auth/login?redirect=/subscription');
@@ -125,13 +203,10 @@ export default function SubscriptionPage() {
           } else if (amount >= 20 && amount < 50) {
             setSelectedTier('tier2');
             console.log('Selected tier 2');
-          } else if (amount >= 50 && amount < 100) {
+          } else if (amount >= 50) {
             setSelectedTier('tier3');
-            console.log('Selected tier 3');
-          } else if (amount >= 100) {
-            setSelectedTier('tier4');
             setCustomAmount(amount.toString());
-            console.log('Selected tier 4 with amount:', amount);
+            console.log('Selected tier 3 with amount:', amount);
           }
         } else {
           console.log('Subscription exists but is not active:', userSubscription.status);
@@ -140,83 +215,6 @@ export default function SubscriptionPage() {
         console.log('No subscription found for user');
       }
     });
-
-    // Fetch subscription history
-    const fetchSubscriptionHistory = async () => {
-      try {
-        // If we have a subscription, create history entries based on it
-        if (subscription) {
-          const history = [];
-
-          // Add the initial subscription creation
-          if (subscription.createdAt) {
-            history.push({
-              id: 'creation',
-              date: subscription.createdAt,
-              amount: subscription.amount,
-              status: 'succeeded',
-              description: 'Subscription created'
-            });
-          }
-
-          // Add renewal entries if we have billing cycle data
-          if (subscription.billingCycleStart) {
-            // Calculate how many billing cycles have passed
-            const startDate = new Date(subscription.billingCycleStart);
-            const now = new Date();
-            const monthsDiff = (now.getFullYear() - startDate.getFullYear()) * 12 +
-                              now.getMonth() - startDate.getMonth();
-
-            // Add an entry for each month (up to 6 months back)
-            for (let i = 1; i <= Math.min(monthsDiff, 6); i++) {
-              const paymentDate = new Date(startDate);
-              paymentDate.setMonth(startDate.getMonth() + i);
-
-              // Only add entries for dates in the past
-              if (paymentDate <= now) {
-                history.push({
-                  id: `renewal_${i}`,
-                  date: paymentDate.toISOString(),
-                  amount: subscription.amount,
-                  status: 'succeeded',
-                  description: 'Monthly subscription payment'
-                });
-              }
-            }
-          }
-
-          // Add cancellation entry if applicable
-          if (subscription.status === 'canceled' && subscription.canceledAt) {
-            history.push({
-              id: 'cancellation',
-              date: subscription.canceledAt,
-              amount: 0,
-              status: 'canceled',
-              description: 'Subscription canceled'
-            });
-          }
-
-          // Sort by date (newest first)
-          history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-          setSubscriptionHistory(history);
-        } else {
-          // No subscription, empty history
-          setSubscriptionHistory([]);
-        }
-      } catch (error) {
-        console.error('Error creating subscription history:', error);
-        // Fallback to empty history
-        setSubscriptionHistory([]);
-      }
-    };
-
-    // Run fetchSubscriptionHistory when subscription changes
-    useEffect(() => {
-      if (subscription) {
-        fetchSubscriptionHistory();
-      }
-    }, [subscription]);
 
     // Clean up listener on unmount
     return () => {
