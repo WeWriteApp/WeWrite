@@ -453,35 +453,88 @@ export async function GET(request) {
 
       // Add public pages to results
       if (publicRows && publicRows.length > 0) {
-        // We need to check if each page is actually public since we can't filter by isPublic in BigQuery
-        // We'll use the Firestore fallback to check this
-        const { getDoc, doc } = await import('firebase/firestore');
-        const { db } = await import('../../firebase/database');
+        console.log(`Found ${publicRows.length} potential public pages in BigQuery, checking in Firestore...`);
 
-        // Process each row and check if it's public
-        for (const row of publicRows) {
-          try {
-            // Get the page document from Firestore to check if it's public
-            const pageRef = doc(db, 'pages', row.document_id);
-            const pageDoc = await getDoc(pageRef);
+        try {
+          // We need to check if each page is actually public since we can't filter by isPublic in BigQuery
+          // We'll use the Firestore fallback to check this
+          const { getDoc, doc, getDocs, query, collection, where } = await import('firebase/firestore');
+          const { db } = await import('../../firebase/database');
 
-            // Only add the page if it exists and is public
-            if (pageDoc.exists() && pageDoc.data().isPublic === true) {
-              pages.push({
-                id: row.document_id,
-                title: row.title,
-                isOwned: row.userId === userId, // If user is the creator of the page
-                isEditable: row.userId === userId, // Only the creator can edit public pages
-                userId: row.userId,
-                lastModified: row.lastModified,
-                type: 'public',
-                isPublic: true
+          // Get all document IDs from the public rows
+          const docIds = publicRows.map(row => row.document_id);
+          console.log('Document IDs to check:', docIds);
+
+          // Create a lookup map for the BigQuery results
+          const rowsMap = {};
+          publicRows.forEach(row => {
+            rowsMap[row.document_id] = row;
+          });
+
+          // Batch approach: Query Firestore for all public pages with these IDs
+          // This is more efficient than individual document lookups
+          const batchSize = 10; // Firestore 'in' query supports up to 10 values
+          const publicPages = [];
+
+          // Process in batches of 10 (Firestore limit for 'in' queries)
+          for (let i = 0; i < docIds.length; i += batchSize) {
+            const batchIds = docIds.slice(i, i + batchSize);
+
+            try {
+              // Query for public pages in this batch
+              const publicPagesQuery = query(
+                collection(db, 'pages'),
+                where('isPublic', '==', true),
+                where('__name__', 'in', batchIds)
+              );
+
+              const publicPagesSnapshot = await getDocs(publicPagesQuery);
+              console.log(`Found ${publicPagesSnapshot.size} public pages in batch ${i/batchSize + 1}`);
+
+              // Add each public page to the results
+              publicPagesSnapshot.forEach(doc => {
+                const data = doc.data();
+                const row = rowsMap[doc.id];
+
+                if (row) {
+                  publicPages.push({
+                    id: doc.id,
+                    title: row.title || data.title || 'Untitled',
+                    isOwned: row.userId === userId, // If user is the creator of the page
+                    isEditable: row.userId === userId, // Only the creator can edit public pages
+                    userId: row.userId,
+                    lastModified: row.lastModified || data.lastModified,
+                    type: 'public',
+                    isPublic: true
+                  });
+                }
               });
+            } catch (batchError) {
+              console.error(`Error processing batch ${i/batchSize + 1}:`, batchError);
             }
-          } catch (error) {
-            console.error(`Error checking if page ${row.document_id} is public:`, error);
-            // Skip this page if there's an error
           }
+
+          // Add the public pages to the results
+          pages.push(...publicPages);
+          console.log(`Added ${publicPages.length} verified public pages to results`);
+        } catch (error) {
+          console.error('Error checking public pages in Firestore:', error);
+          // If there's an error checking public pages, just add all the public rows
+          // This ensures we don't completely break search if Firestore check fails
+          console.log('Falling back to adding all potential public pages without verification');
+          publicRows.forEach(row => {
+            pages.push({
+              id: row.document_id,
+              title: row.title,
+              isOwned: row.userId === userId,
+              isEditable: row.userId === userId,
+              userId: row.userId,
+              lastModified: row.lastModified,
+              type: 'public',
+              // Mark as potentially public since we couldn't verify
+              potentiallyPublic: true
+            });
+          });
         }
       }
 
@@ -544,6 +597,240 @@ export async function GET(request) {
     // If BigQuery fails, try the Firestore fallback
     console.log('Attempting Firestore fallback after BigQuery error');
     try {
+      // Check if this is specifically an isPublic field error
+      const isPublicFieldError = error.message && error.message.includes('Unrecognized name: isPublic');
+
+      if (isPublicFieldError) {
+        console.log('Detected missing isPublic field error, using modified BigQuery query');
+
+        try {
+          // Try again with a modified query that doesn't use isPublic
+          const modifiedQuery = `
+            WITH user_pages AS (
+              SELECT
+                document_id,
+                title,
+                userId,
+                lastModified,
+                'user' as page_type,
+                NULL as groupId
+              FROM \`wewrite-ccd82.pages_indexes.pages\`
+              WHERE userId = ${isFilteringByUser ? '@filterByUserId' : '@userId'}
+                AND LOWER(title) LIKE @searchTerm
+              ORDER BY lastModified DESC
+              LIMIT ${isFilteringByUser ? '20' : '10'}
+            ),
+            ${groupIds.length > 0 ? `
+            group_pages AS (
+              SELECT
+                document_id,
+                title,
+                userId,
+                lastModified,
+                'group' as page_type,
+                groupId
+              FROM \`wewrite-ccd82.pages_indexes.pages\`
+              WHERE groupId IN UNNEST(@groupIds)
+                AND LOWER(title) LIKE @searchTerm
+              ORDER BY lastModified DESC
+              LIMIT 5
+            ),` : ''}
+            other_pages AS (
+              SELECT
+                document_id,
+                title,
+                userId,
+                lastModified,
+                'other' as page_type,
+                NULL as groupId
+              FROM \`wewrite-ccd82.pages_indexes.pages\`
+              WHERE userId != @userId
+                AND LOWER(title) LIKE @searchTerm
+                ${groupIds.length > 0 ? `AND document_id NOT IN (
+                  SELECT document_id
+                  FROM \`wewrite-ccd82.pages_indexes.pages\`
+                  WHERE groupId IN UNNEST(@groupIds)
+                )` : ''}
+              ORDER BY lastModified DESC
+              LIMIT 20
+            )
+
+            SELECT * FROM user_pages
+            ${groupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
+            ${!isFilteringByUser ? 'UNION ALL SELECT * FROM other_pages' : ''}
+          `;
+
+          console.log('Executing modified BigQuery query without isPublic field');
+
+          // Execute modified query
+          const [modifiedResults] = await bigquery.query({
+            query: modifiedQuery,
+            params: {
+              userId: userId,
+              ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
+              ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
+              searchTerm: searchTermFormatted
+            },
+            types: {
+              userId: "STRING",
+              ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
+              ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
+              searchTerm: "STRING"
+            },
+          });
+
+          console.log('Modified query results count:', modifiedResults?.length || 0);
+
+          // Separate results by type
+          const userRows = modifiedResults.filter(row => row.page_type === 'user') || [];
+          const groupRows = groupIds.length > 0 ? modifiedResults.filter(row => row.page_type === 'group') || [] : [];
+          const otherRows = modifiedResults.filter(row => row.page_type === 'other') || [];
+
+          // Process results
+          const pages = [];
+
+          // Add user pages to results
+          if (userRows && userRows.length > 0) {
+            userRows.forEach(row => {
+              pages.push({
+                id: row.document_id,
+                title: row.title,
+                isOwned: true, // User owns this page
+                isEditable: true, // User can edit this page since they own it
+                userId: row.userId,
+                lastModified: row.lastModified,
+                type: 'user'
+              });
+            });
+          }
+
+          // Add group pages to results
+          if (groupRows && groupRows.length > 0) {
+            groupRows.forEach(row => {
+              pages.push({
+                id: row.document_id,
+                title: row.title,
+                groupId: row.groupId,
+                isOwned: row.userId === userId, // If user is the creator of the page
+                isEditable: true, // User can edit this page since they're in the group
+                userId: row.userId,
+                lastModified: row.lastModified,
+                type: 'group'
+              });
+            });
+          }
+
+          // For other pages, we need to check in Firestore which ones are public
+          if (otherRows && otherRows.length > 0) {
+            console.log(`Found ${otherRows.length} potential public pages, checking in Firestore...`);
+
+            try {
+              // Import Firestore modules
+              const { getDocs, query, collection, where } = await import('firebase/firestore');
+              const { db } = await import('../../firebase/database');
+
+              // Get all document IDs from the other rows
+              const docIds = otherRows.map(row => row.document_id);
+
+              // Create a lookup map for the BigQuery results
+              const rowsMap = {};
+              otherRows.forEach(row => {
+                rowsMap[row.document_id] = row;
+              });
+
+              // Batch approach: Query Firestore for all public pages with these IDs
+              const batchSize = 10; // Firestore 'in' query supports up to 10 values
+              const publicPages = [];
+
+              // Process in batches of 10 (Firestore limit for 'in' queries)
+              for (let i = 0; i < docIds.length; i += batchSize) {
+                const batchIds = docIds.slice(i, i + batchSize);
+
+                try {
+                  // Query for public pages in this batch
+                  const publicPagesQuery = query(
+                    collection(db, 'pages'),
+                    where('isPublic', '==', true),
+                    where('__name__', 'in', batchIds)
+                  );
+
+                  const publicPagesSnapshot = await getDocs(publicPagesQuery);
+                  console.log(`Found ${publicPagesSnapshot.size} public pages in batch ${i/batchSize + 1}`);
+
+                  // Add each public page to the results
+                  publicPagesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const row = rowsMap[doc.id];
+
+                    if (row) {
+                      publicPages.push({
+                        id: doc.id,
+                        title: row.title || data.title || 'Untitled',
+                        isOwned: row.userId === userId, // If user is the creator of the page
+                        isEditable: row.userId === userId, // Only the creator can edit public pages
+                        userId: row.userId,
+                        lastModified: row.lastModified || data.lastModified,
+                        type: 'public',
+                        isPublic: true
+                      });
+                    }
+                  });
+                } catch (batchError) {
+                  console.error(`Error processing batch ${i/batchSize + 1}:`, batchError);
+                }
+              }
+
+              // Add the public pages to the results
+              pages.push(...publicPages);
+              console.log(`Added ${publicPages.length} verified public pages to results`);
+            } catch (firestoreError) {
+              console.error('Error checking public pages in Firestore:', firestoreError);
+              // If Firestore check fails, don't add any public pages
+            }
+          }
+
+          // Search for users
+          let users = [];
+          if (searchTerm && searchTerm.trim().length > 1) {
+            try {
+              users = await searchUsers(searchTerm, 5);
+              console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+              users = users.map(user => ({
+                id: user.id,
+                username: user.username || "Anonymous",
+                photoURL: user.photoURL || null,
+                type: 'user'
+              }));
+            } catch (userError) {
+              console.error('Error searching for users:', userError);
+            }
+          }
+
+          // Apply scoring if enabled
+          if (useScoring && searchTerm) {
+            const sortedPages = sortSearchResultsByScore(pages, searchTerm);
+            const sortedUsers = sortSearchResultsByScore(users, searchTerm);
+
+            return NextResponse.json({
+              pages: sortedPages,
+              users: sortedUsers,
+              source: "bigquery_without_ispublic"
+            }, { status: 200 });
+          } else {
+            return NextResponse.json({
+              pages,
+              users,
+              source: "bigquery_without_ispublic"
+            }, { status: 200 });
+          }
+        } catch (modifiedQueryError) {
+          console.error('Error executing modified BigQuery query:', modifiedQueryError);
+          // Fall through to Firestore fallback
+        }
+      }
+
+      // If we get here, either it wasn't an isPublic field error or the modified query also failed
       // Search for pages in Firestore
       const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
 
