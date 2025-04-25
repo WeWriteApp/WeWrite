@@ -71,6 +71,34 @@ async function testBigQueryConnection() {
     console.log('Testing BigQuery connection...');
     const [datasets] = await bigquery.getDatasets();
     console.log('BigQuery connection successful. Found datasets:', datasets.map(d => d.id));
+
+    // Check if the pages_indexes dataset exists
+    const pagesIndexesDataset = datasets.find(d => d.id === 'pages_indexes');
+    if (!pagesIndexesDataset) {
+      console.warn('pages_indexes dataset not found in BigQuery');
+    } else {
+      // Check the schema of the pages table
+      try {
+        const [tables] = await bigquery.dataset('pages_indexes').getTables();
+        console.log('Tables in pages_indexes:', tables.map(t => t.id));
+
+        const pagesTable = tables.find(t => t.id === 'pages');
+        if (pagesTable) {
+          const [metadata] = await pagesTable.getMetadata();
+          const schema = metadata.schema.fields;
+          console.log('Pages table schema:', schema.map(f => f.name));
+
+          // Check if isPublic field exists
+          const hasIsPublicField = schema.some(f => f.name === 'isPublic');
+          console.log('isPublic field exists in schema:', hasIsPublicField);
+        } else {
+          console.warn('pages table not found in pages_indexes dataset');
+        }
+      } catch (schemaError) {
+        console.error('Error checking table schema:', schemaError);
+      }
+    }
+
     return true;
   } catch (error) {
     console.error('BigQuery connection test failed:', error);
@@ -325,7 +353,8 @@ export async function GET(request) {
           NULL as groupId
         FROM \`wewrite-ccd82.pages_indexes.pages\`
         WHERE userId != @userId
-          AND isPublic = true
+          -- Note: isPublic field doesn't exist in BigQuery schema
+          -- We'll filter private pages after retrieving results
           AND LOWER(title) LIKE @searchTerm
           ${groupIds.length > 0 ? `AND document_id NOT IN (
             SELECT document_id
@@ -340,6 +369,17 @@ export async function GET(request) {
       ${groupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
       ${!isFilteringByUser ? 'UNION ALL SELECT * FROM public_pages' : ''}
     `;
+
+    // Log the query for debugging
+    console.log('Executing BigQuery query:', {
+      query: combinedQuery,
+      params: {
+        userId: userId,
+        ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
+        ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
+        searchTerm: searchTermFormatted
+      }
+    });
 
     // Execute combined query
     const [combinedResults] = await bigquery.query({
@@ -358,6 +398,15 @@ export async function GET(request) {
       },
     }).catch(error => {
       console.error("Error executing combined query:", error);
+      console.error("Query details:", {
+        query: combinedQuery,
+        params: {
+          userId: userId,
+          ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
+          ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
+          searchTerm: searchTermFormatted
+        }
+      });
       throw error;
     });
 
@@ -404,17 +453,36 @@ export async function GET(request) {
 
       // Add public pages to results
       if (publicRows && publicRows.length > 0) {
-        publicRows.forEach(row => {
-          pages.push({
-            id: row.document_id,
-            title: row.title,
-            isOwned: row.userId === userId, // If user is the creator of the page
-            isEditable: row.userId === userId, // Only the creator can edit public pages
-            userId: row.userId,
-            lastModified: row.lastModified,
-            type: 'public'
-          });
-        });
+        // We need to check if each page is actually public since we can't filter by isPublic in BigQuery
+        // We'll use the Firestore fallback to check this
+        const { getDoc, doc } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/database');
+
+        // Process each row and check if it's public
+        for (const row of publicRows) {
+          try {
+            // Get the page document from Firestore to check if it's public
+            const pageRef = doc(db, 'pages', row.document_id);
+            const pageDoc = await getDoc(pageRef);
+
+            // Only add the page if it exists and is public
+            if (pageDoc.exists() && pageDoc.data().isPublic === true) {
+              pages.push({
+                id: row.document_id,
+                title: row.title,
+                isOwned: row.userId === userId, // If user is the creator of the page
+                isEditable: row.userId === userId, // Only the creator can edit public pages
+                userId: row.userId,
+                lastModified: row.lastModified,
+                type: 'public',
+                isPublic: true
+              });
+            }
+          } catch (error) {
+            console.error(`Error checking if page ${row.document_id} is public:`, error);
+            // Skip this page if there's an error
+          }
+        }
       }
 
       // Also search for users if we have a search term
@@ -472,13 +540,68 @@ export async function GET(request) {
     }
   } catch (error) {
     console.error('Error querying BigQuery:', error);
-    return NextResponse.json({
-      pages: [],
-      users: [],
-      error: {
-        message: error.message,
-        details: error.stack
+
+    // If BigQuery fails, try the Firestore fallback
+    console.log('Attempting Firestore fallback after BigQuery error');
+    try {
+      // Search for pages in Firestore
+      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
+
+      // Search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}" using Firestore fallback`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user'
+          }));
+        } catch (userError) {
+          console.error('Error searching for users in fallback:', userError);
+        }
       }
-    }, { status: 200 });
+
+      // Apply scoring if enabled
+      if (useScoring && searchTerm) {
+        const sortedPages = sortSearchResultsByScore(pages, searchTerm);
+        const sortedUsers = sortSearchResultsByScore(users, searchTerm);
+
+        return NextResponse.json({
+          pages: sortedPages,
+          users: sortedUsers,
+          source: "firestore_fallback_after_bigquery_error",
+          originalError: {
+            message: error.message
+          }
+        }, { status: 200 });
+      } else {
+        return NextResponse.json({
+          pages,
+          users,
+          source: "firestore_fallback_after_bigquery_error",
+          originalError: {
+            message: error.message
+          }
+        }, { status: 200 });
+      }
+    } catch (fallbackError) {
+      console.error('Error in Firestore fallback after BigQuery error:', fallbackError);
+
+      // If both BigQuery and Firestore fallback fail, return the original error
+      return NextResponse.json({
+        pages: [],
+        users: [],
+        error: {
+          message: error.message,
+          details: error.stack,
+          fallbackError: fallbackError.message
+        }
+      }, { status: 200 });
+    }
   }
 }

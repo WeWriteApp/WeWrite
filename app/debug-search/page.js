@@ -9,9 +9,11 @@ import { Loader2 } from "lucide-react";
 export default function DebugSearchPage() {
   const [envInfo, setEnvInfo] = useState(null);
   const [testResults, setTestResults] = useState(null);
+  const [schemaResults, setSchemaResults] = useState(null);
   const [searchTerm, setSearchTerm] = useState("test");
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingSearch, setIsTestingSearch] = useState(false);
+  const [isCheckingSchema, setIsCheckingSchema] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -54,29 +56,50 @@ export default function DebugSearchPage() {
     }
   };
 
+  const checkBigQuerySchema = async () => {
+    setIsCheckingSchema(true);
+    try {
+      // Check the BigQuery schema
+      const response = await fetch('/api/debug/bigquery-schema');
+      const data = await response.json();
+      setSchemaResults({
+        status: response.status,
+        statusText: response.statusText,
+        data
+      });
+    } catch (error) {
+      console.error("Error checking BigQuery schema:", error);
+      setSchemaResults({
+        error: error.message
+      });
+    } finally {
+      setIsCheckingSchema(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">Search Debugging</h1>
-      
+
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">
-          <Button 
-            onClick={() => fetchEnvInfo(true)} 
+          <Button
+            onClick={() => fetchEnvInfo(true)}
             disabled={isLoading}
             variant="outline"
           >
             {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
             Refresh Environment Info
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={() => router.push('/')}
             variant="ghost"
           >
             Back to Home
           </Button>
         </div>
-        
+
         <div className="bg-card p-4 rounded-md border border-border">
           <h2 className="text-lg font-semibold mb-2">Environment Information</h2>
           {envInfo ? (
@@ -88,7 +111,7 @@ export default function DebugSearchPage() {
           )}
         </div>
       </div>
-      
+
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Test Search API</h2>
         <div className="flex items-center gap-2 mb-4">
@@ -98,15 +121,23 @@ export default function DebugSearchPage() {
             placeholder="Search term"
             className="max-w-xs"
           />
-          <Button 
-            onClick={testSearch} 
+          <Button
+            onClick={testSearch}
             disabled={isTestingSearch}
           >
             {isTestingSearch ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
             Test Search
           </Button>
+          <Button
+            onClick={checkBigQuerySchema}
+            disabled={isCheckingSchema}
+            variant="outline"
+          >
+            {isCheckingSchema ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+            Check BigQuery Schema
+          </Button>
         </div>
-        
+
         {testResults && (
           <div className="bg-card p-4 rounded-md border border-border">
             <h3 className="text-md font-semibold mb-2">Search Results</h3>
@@ -118,8 +149,23 @@ export default function DebugSearchPage() {
             </pre>
           </div>
         )}
+
+        {schemaResults && (
+          <div className="bg-card p-4 rounded-md border border-border mt-4">
+            <h3 className="text-md font-semibold mb-2">BigQuery Schema</h3>
+            <div className="mb-2">
+              <span className="font-medium">Status:</span> {schemaResults.status} {schemaResults.statusText}
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">Has isPublic field:</span> {schemaResults.data?.hasIsPublicField ? "✅ Yes" : "❌ No"}
+            </div>
+            <pre className="text-xs overflow-auto p-2 bg-muted rounded-md max-h-60">
+              {JSON.stringify(schemaResults.data, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
-      
+
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-4">Troubleshooting Steps</h2>
         <div className="space-y-2">
@@ -130,6 +176,8 @@ export default function DebugSearchPage() {
             <li>Ensure the Firebase configuration is correct</li>
             <li>Look for any errors in the Vercel logs</li>
             <li>Test the search API directly using the tool above</li>
+            <li>Check if the BigQuery schema has the <code>isPublic</code> field using the "Check BigQuery Schema" button</li>
+            <li>If the <code>isPublic</code> field is missing, the search API will fall back to Firestore</li>
           </ol>
         </div>
       </div>
