@@ -182,7 +182,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative z-0">
       {/* Desktop Header */}
       <header
         className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
@@ -305,10 +305,10 @@ const LandingPage = () => {
         </div>
       </div>
 
-      <main className="pt-32 md:pt-28">
+      <main className="pt-32 md:pt-28 relative z-10">
         {/* Hero Section */}
         <section
-          className="py-16 md:py-20 relative overflow-hidden"
+          className="py-16 md:py-20 relative overflow-hidden z-10"
           ref={heroSectionRef}
           onMouseMove={(e) => {
             if (heroSectionRef.current) {
@@ -325,16 +325,16 @@ const LandingPage = () => {
           }}
           onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
-          {/* Background Image */}
+          {/* Background Image - Reduced opacity of overlay */}
           <div className="absolute inset-0 w-full h-full z-0">
             <Image
               src="/images/landing/hero-image.png"
               alt="Background"
               fill
-              className="object-cover opacity-10"
+              className="object-cover opacity-30"
               priority
             />
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]"></div>
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px]"></div>
           </div>
 
           <div className="container mx-auto px-6 relative z-10">
@@ -387,8 +387,9 @@ const LandingPage = () => {
                     alt="WeWrite App Interface"
                     width={700}
                     height={700}
-                    className="rounded-lg shadow-2xl"
+                    className="rounded-lg shadow-2xl border border-border/30"
                     priority
+                    style={{ zIndex: 5 }}
                   />
                 </motion.div>
               </motion.div>
