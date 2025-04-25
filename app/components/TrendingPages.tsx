@@ -63,7 +63,7 @@ export default function TrendingPages({ limit = 5 }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-orange-500" />
+            <Flame className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Trending Pages</h2>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function TrendingPages({ limit = 5 }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-orange-500" />
+            <Flame className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Trending Pages</h2>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function TrendingPages({ limit = 5 }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-orange-500" />
+            <Flame className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Trending Pages</h2>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function TrendingPages({ limit = 5 }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Flame className="h-4 w-4 text-orange-500" />
+          <Flame className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-lg font-semibold">Trending Pages</h2>
         </div>
       </div>
@@ -133,9 +133,9 @@ export default function TrendingPages({ limit = 5 }) {
                 <td className="py-3 px-4">
                   <PillLink
                     href={`/${page.id}`}
-                    label={page.title || 'Untitled'}
-                    truncate={true}
-                  />
+                  >
+                    {page.title || 'Untitled'}
+                  </PillLink>
                 </td>
                 <td className="py-3 px-4 text-right font-medium">
                   {page.views.toLocaleString()}

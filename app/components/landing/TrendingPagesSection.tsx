@@ -94,7 +94,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
             variants={fadeIn}
           >
             <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
-              <Flame className="h-8 w-8" />
+              <Flame className="h-8 w-8 text-muted-foreground" />
               <span>Trending on WeWrite</span>
             </h2>
           </motion.div>
@@ -119,7 +119,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
           variants={fadeIn}
         >
           <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
-            <Flame className="h-8 w-8" />
+            <Flame className="h-8 w-8 text-muted-foreground" />
             <span>Trending on WeWrite</span>
           </h2>
         </motion.div>
