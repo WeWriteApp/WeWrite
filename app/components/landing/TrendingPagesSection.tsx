@@ -1,19 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { PillLink } from '../PillLink';
-import { Flame, Loader } from 'lucide-react';
+import { Flame, Loader, User } from 'lucide-react';
 import { Sparkline } from '../ui/sparkline';
 import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { getUsernameById } from '../../utils/userUtils';
 
 interface TrendingPage {
   id: string;
   title: string;
   views: number;
   hourlyViews: number[];
+  userId?: string;
+  username?: string;
 }
 
 export default function TrendingPagesSection({ limit = 3 }) {
@@ -29,20 +32,33 @@ export default function TrendingPagesSection({ limit = 3 }) {
         // Get trending pages for the last 24 hours
         const pages = await getTrendingPages(limit);
 
-        // For each page, get the hourly view data for sparklines
+        // For each page, get the hourly view data for sparklines and username
         const pagesWithSparklines = await Promise.all(
           pages.map(async (page) => {
             try {
               const viewData = await getPageViewsLast24Hours(page.id);
+
+              // Get username if userId exists
+              let username = "Anonymous";
+              if (page.userId) {
+                try {
+                  username = await getUsernameById(page.userId);
+                } catch (usernameError) {
+                  console.error(`Error getting username for user ${page.userId}:`, usernameError);
+                }
+              }
+
               return {
                 ...page,
-                hourlyViews: viewData.hourly || Array(24).fill(0)
+                hourlyViews: viewData.hourly || Array(24).fill(0),
+                username: username || "Anonymous"
               };
             } catch (err) {
               console.error(`Error fetching view data for page ${page.id}:`, err);
               return {
                 ...page,
-                hourlyViews: Array(24).fill(0)
+                hourlyViews: Array(24).fill(0),
+                username: page.username || "Anonymous"
               };
             }
           })
@@ -139,8 +155,14 @@ export default function TrendingPagesSection({ limit = 3 }) {
                 <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer">
                   <CardHeader>
                     <CardTitle className="text-lg">
-                      {page.title || 'Untitled'}
+                      <PillLink href={`/${page.id}`}>
+                        {page.title || 'Untitled'}
+                      </PillLink>
                     </CardTitle>
+                    <CardDescription className="flex items-center gap-1 text-xs">
+                      <User className="h-3 w-3" />
+                      {page.username || 'Anonymous'}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-between items-center">

@@ -176,9 +176,129 @@ const SimpleLandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      {/* Desktop Header */}
+      <header
+        className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
+          isScrolled
+            ? 'py-3 bg-background/80 backdrop-blur-xl shadow-md'
+            : 'py-4 bg-background/70 backdrop-blur-lg border-b border-border/10'
+        }`}
+      >
+        <div className="container mx-auto flex justify-between items-center px-6">
+          <div className="flex items-center space-x-6">
+            <h1
+              className="text-2xl font-bold text-primary cursor-pointer"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              WeWrite
+            </h1>
 
-      <main>
+            <nav className="hidden md:flex space-x-6">
+              <a
+                href="#features"
+                onClick={(e) => scrollToSection(e, '#features')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="#coming-soon"
+                onClick={(e) => scrollToSection(e, '#coming-soon')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Coming Soon
+              </a>
+              <a
+                href="#supporters"
+                onClick={(e) => scrollToSection(e, '#supporters')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Supporters
+              </a>
+              <a
+                href="#about"
+                onClick={(e) => scrollToSection(e, '#about')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                About
+              </a>
+            </nav>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <Button variant="secondary" asChild>
+              <Link href="/auth/login">Sign In</Link>
+            </Button>
+            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+              <Link href="/auth/register">Create Account</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
+        <div className={`w-full transition-all duration-200 ${
+          isScrolled
+            ? 'py-2 bg-background/90 backdrop-blur-xl shadow-sm'
+            : 'py-3 bg-background/80 backdrop-blur-lg border-b border-border/10'
+          }`}
+        >
+          <div className="container mx-auto flex justify-between items-center px-4">
+            <h1
+              className="text-xl font-bold text-primary cursor-pointer"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              WeWrite
+            </h1>
+
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/auth/login">Sign In</Link>
+              </Button>
+              <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Link href="/auth/register">Sign Up</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-2">
+          <div className="flex items-center justify-around px-4">
+            <a
+              href="#features"
+              onClick={(e) => scrollToSection(e, '#features')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Features
+            </a>
+            <a
+              href="#coming-soon"
+              onClick={(e) => scrollToSection(e, '#coming-soon')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Coming Soon
+            </a>
+            <a
+              href="#supporters"
+              onClick={(e) => scrollToSection(e, '#supporters')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Supporters
+            </a>
+            <a
+              href="#about"
+              onClick={(e) => scrollToSection(e, '#about')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              About
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <main className="pt-32 md:pt-28">
         {/* Hero Section */}
         <section className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
@@ -423,20 +543,32 @@ const SimpleLandingPage = () => {
               ))}
             </div>
 
+
+          </div>
+        </section>
+
+        {/* Ready to Get Started Section */}
+        <section id="get-started" className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-6">
             <motion.div
-              className="text-center mt-20"
+              className="text-center"
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeIn}
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to get started?</h2>
-              <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-                Join thousands of writers who are already using WeWrite to create and share content.
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
+                Join WeWrite today and start creating, sharing, and earning from your content.
               </p>
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/auth/register">Create Your Free Account</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/auth/login">Sign In</Link>
+                </Button>
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                  <Link href="/auth/register">Create Account</Link>
+                </Button>
+              </div>
             </motion.div>
           </div>
         </section>
