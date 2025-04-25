@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
@@ -64,6 +64,8 @@ const fadeIn = {
 
 const SimpleLandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const heroSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,50 +74,10 @@ const SimpleLandingPage = () => {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // 3D rotation effect for hero image
-    const handleMouseMove = (e: MouseEvent) => {
-      const heroSection = document.querySelector('section:first-of-type') as HTMLElement;
-      const heroImage = document.getElementById('hero-image-container') as HTMLElement;
-
-      if (heroSection && heroImage) {
-        // Get the bounds of the hero section
-        const rect = heroSection.getBoundingClientRect();
-
-        // Calculate mouse position relative to the center of the section
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-
-        // Calculate the rotation angle based on mouse position
-        // Limit the rotation to a small range (-5 to 5 degrees)
-        const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
-        const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
-
-        // Apply the rotation
-        heroImage.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-      }
-    };
-
-    // Reset rotation when mouse leaves
-    const handleMouseLeave = () => {
-      const heroImage = document.getElementById('hero-image-container') as HTMLElement;
-      if (heroImage) {
-        heroImage.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-      }
-    };
-
-    // Add event listeners
-    const heroSection = document.querySelector('section:first-of-type');
-    if (heroSection) {
-      heroSection.addEventListener('mousemove', handleMouseMove);
-      heroSection.addEventListener('mouseleave', handleMouseLeave);
-    }
+    // We'll use a simpler approach for the 3D effect using React state instead of DOM manipulation
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      if (heroSection) {
-        heroSection.removeEventListener('mousemove', handleMouseMove);
-        heroSection.removeEventListener('mouseleave', handleMouseLeave);
-      }
     };
   }, []);
 
@@ -345,7 +307,24 @@ const SimpleLandingPage = () => {
 
       <main className="pt-32 md:pt-28">
         {/* Hero Section */}
-        <section className="py-16 md:py-20 relative overflow-hidden">
+        <section
+          className="py-16 md:py-20 relative overflow-hidden"
+          ref={heroSectionRef}
+          onMouseMove={(e) => {
+            if (heroSectionRef.current) {
+              const rect = heroSectionRef.current.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+
+              // Calculate rotation (limited to ±5 degrees)
+              const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
+              const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
+
+              setRotation({ x: rotateX, y: rotateY });
+            }
+          }}
+          onMouseLeave={() => setRotation({ x: 0, y: 0 })}
+        >
           {/* Background Image */}
           <div className="absolute inset-0 w-full h-full z-0">
             <Image
@@ -394,15 +373,14 @@ const SimpleLandingPage = () => {
                   className="relative w-full max-w-lg mx-auto transform-gpu"
                   whileHover={{ scale: 1.02 }}
                   animate={{
-                    rotateX: 0,
-                    rotateY: 0
+                    rotateX: rotation.x,
+                    rotateY: rotation.y
                   }}
                   transition={{
                     type: "spring",
                     stiffness: 300,
                     damping: 30
                   }}
-                  id="hero-image-container"
                 >
                   <Image
                     src="/images/landing/hero-image.png"
