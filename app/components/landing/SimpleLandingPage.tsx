@@ -53,19 +53,22 @@ const SimpleLandingPage = () => {
       title: "Every Page is a Fundraiser",
       description: "On every page, there's a Pledge bar floating at the bottom. Users set their Budget (subscription) and donate to their favorite pages.",
       status: "in-progress",
-      image: "/images/feature-fundraiser.png"
+      image: "/images/feature-fundraiser.png",
+      pageId: "RFsPq1tbcOMtljwHyIMT"
     },
     {
       title: "No ads",
       description: "Since each page on WeWrite is a fundraiser, we won't need to sell ad space to companies.",
       status: "done",
-      image: "/images/feature-no-ads.png"
+      image: "/images/feature-no-ads.png",
+      pageId: "aJFMqTEKuNEHvOrYE9c2"
     },
     {
       title: "Multiple View Modes",
       description: "Choose between Wrapped, Default, and Spaced reading modes to customize your reading experience.",
       status: "done",
-      image: "/images/feature-1.png"
+      image: "/images/feature-1.png",
+      pageId: "ou1LPmpynpoirLrv99fq"
     }
   ];
 
@@ -74,19 +77,29 @@ const SimpleLandingPage = () => {
       title: "Recurring donations",
       description: "Support your favorite writers with monthly donations that help them continue creating great content.",
       status: "coming-soon",
-      image: "/images/feature-donations.png"
+      image: "/images/feature-donations.png",
+      pageId: "o71h6Lg1wjGSC1pYaKXz"
     },
     {
       title: "Collaborative pages",
       description: "Work together with others on shared documents with real-time collaboration features.",
       status: "coming-soon",
-      image: "/images/feature-collaboration.png"
+      image: "/images/feature-collaboration.png",
+      pageId: "4jw8FdMJHGofMc4G2QTw"
     },
     {
       title: "Map view",
       description: "Visualize your content and connections in an interactive map interface.",
       status: "coming-soon",
-      image: "/images/feature-map-view.png"
+      image: "/images/feature-map-view.png",
+      pageId: "N7Pg3iJ0OQhkpw16MTZW"
+    },
+    {
+      title: "Calendar view",
+      description: "Organize and view your content in a calendar interface.",
+      status: "coming-soon",
+      image: "/images/feature-calendar.png",
+      pageId: "0krXqAU748w43YnWJwE2"
     }
   ];
 
@@ -295,6 +308,9 @@ const SimpleLandingPage = () => {
           </div>
         </section>
 
+        {/* Trending Pages Section - Moved to top */}
+        <TrendingPagesSection limit={3} />
+
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20">
           <div className="container mx-auto px-6">
@@ -321,38 +337,34 @@ const SimpleLandingPage = () => {
                   variants={fadeIn}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="h-full border border-border overflow-hidden">
-                    {feature.image && (
-                      <div className="relative w-full h-48 overflow-hidden">
-                        <Image
-                          src={feature.image}
-                          alt={feature.title}
-                          width={600}
-                          height={300}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle>{feature.title}</CardTitle>
-                        {getStatusBadge(feature.status)}
-                      </div>
-                      <CardDescription>
-                        {feature.description}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
+                  <Link href={`/${feature.pageId}`} className="block h-full">
+                    <Card className="h-full border border-border overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                      {feature.image && (
+                        <div className="relative w-full h-48 overflow-hidden">
+                          <Image
+                            src={feature.image}
+                            alt={feature.title}
+                            width={600}
+                            height={300}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <CardTitle>{feature.title}</CardTitle>
+                          {getStatusBadge(feature.status)}
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  </Link>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Trending Pages Section */}
-        <TrendingPagesSection limit={3} />
-
-        {/* Coming Soon Section */}
+        {/* Coming Soon Section - Moved below features */}
         <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
             <motion.div
@@ -378,35 +390,27 @@ const SimpleLandingPage = () => {
                   variants={fadeIn}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="h-full border border-border overflow-hidden">
-                    {feature.image && (
-                      <div className="relative w-full h-48 overflow-hidden">
-                        <Image
-                          src={feature.image}
-                          alt={feature.title}
-                          width={600}
-                          height={300}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle>{feature.title}</CardTitle>
-                        {getStatusBadge(feature.status)}
-                      </div>
-                      <CardDescription>
-                        {feature.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button variant="outline" asChild className="w-full">
-                        <Link href="/subscription">
-                          Become a Supporter
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  <Link href={`/${feature.pageId}`} className="block h-full">
+                    <Card className="h-full border border-border overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                      {feature.image && (
+                        <div className="relative w-full h-48 overflow-hidden">
+                          <Image
+                            src={feature.image}
+                            alt={feature.title}
+                            width={600}
+                            height={300}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <CardTitle>{feature.title}</CardTitle>
+                          {getStatusBadge(feature.status)}
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  </Link>
                 </motion.div>
               ))}
             </div>

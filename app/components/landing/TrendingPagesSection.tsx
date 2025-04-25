@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { PillLink } from '../PillLink';
 import { Flame, Loader } from 'lucide-react';
-import SimpleSparkline from '../SimpleSparkline';
+import { Sparkline } from '../ui/sparkline';
 import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface TrendingPage {
   id: string;
@@ -134,31 +135,31 @@ export default function TrendingPagesSection({ limit = 3 }) {
               variants={fadeIn}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="h-full hover:shadow-md transition-shadow duration-200">
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    <PillLink
-                      href={`/${page.id}`}
-                    >
+              <Link href={`/${page.id}`} className="block h-full">
+                <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="text-lg">
                       {page.title || 'Untitled'}
-                    </PillLink>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium">
-                      {page.views.toLocaleString()} views in 24h
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium text-muted-foreground">
+                        {page.views.toLocaleString()} views in 24h
+                      </div>
+                      <div className="w-24 h-10">
+                        <Sparkline
+                          data={page.hourlyViews}
+                          height={40}
+                          color="#1768FF"
+                          strokeWidth={1.5}
+                          fillOpacity={0.1}
+                        />
+                      </div>
                     </div>
-                    <div className="w-24 h-12">
-                      <SimpleSparkline
-                        data={page.hourlyViews}
-                        height={40}
-                        color="var(--primary)"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             </motion.div>
           ))}
         </div>
