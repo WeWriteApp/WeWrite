@@ -44,7 +44,7 @@ export function PagePreviewCard({
 
   return (
     <Link href={`/${pageId}`} className="block h-full">
-      <Card className="h-full border border-border hover:shadow-md transition-shadow duration-200 cursor-pointer flex flex-col">
+      <Card className="h-full border border-border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
             <CardTitle className="text-lg">
@@ -59,7 +59,7 @@ export function PagePreviewCard({
           <div className="prose prose-sm dark:prose-invert">
             <p>{truncatedContent}</p>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background via-background/90 to-transparent flex items-end justify-center pb-4">
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-card via-card/90 to-transparent flex items-end justify-center pb-4">
             <Button variant="ghost" size="sm" className="gap-1 text-primary relative z-10">
               Read more <ArrowRight className="h-3.5 w-3.5" />
             </Button>

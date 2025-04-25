@@ -325,16 +325,18 @@ const LandingPage = () => {
           }}
           onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
-          {/* Background Image - Reduced opacity of overlay */}
-          <div className="absolute inset-0 w-full h-full z-0">
-            <Image
-              src="/images/landing/hero-image.png"
-              alt="Background"
-              fill
-              className="object-cover opacity-30"
-              priority
-            />
-            <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px]"></div>
+          {/* Background Image - Blue tinted and cropped */}
+          <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+            <div className="absolute inset-0 -right-8 scale-105"> {/* Crop by shifting and scaling */}
+              <Image
+                src="/images/landing/hero-image.png"
+                alt="Background"
+                fill
+                className="object-cover opacity-30 filter hue-rotate-[210deg]" /* Blue tint with hue-rotate */
+                priority
+              />
+            </div>
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-[2px]"></div>
           </div>
 
           <div className="container mx-auto px-6 relative z-10">
@@ -502,7 +504,7 @@ const LandingPage = () => {
                 variants={fadeIn}
                 transition={{ delay: 0.1 }}
               >
-                <Card className="h-full border border-border">
+                <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <CardTitle>Tier 1 Supporters</CardTitle>
                     <CardDescription>
@@ -519,7 +521,7 @@ const LandingPage = () => {
                 variants={fadeIn}
                 transition={{ delay: 0.2 }}
               >
-                <Card className="h-full border border-border">
+                <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <CardTitle>Tier 2 & 3 Supporters</CardTitle>
                     <CardDescription>
@@ -536,7 +538,7 @@ const LandingPage = () => {
                 variants={fadeIn}
                 transition={{ delay: 0.3 }}
               >
-                <Card className="h-full border border-border">
+                <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <CardTitle>Tier 4 Supporters</CardTitle>
                     <CardDescription>
@@ -577,7 +579,7 @@ const LandingPage = () => {
                   variants={fadeIn}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="h-full">
+                  <Card className="h-full hover:shadow-lg transition-all duration-200">
                     <CardHeader>
                       <CardTitle>{tech.title}</CardTitle>
                       <CardDescription>
