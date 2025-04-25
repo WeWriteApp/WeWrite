@@ -15,6 +15,7 @@ import SupporterBadge from "./SupporterBadge";
 import { SupporterIcon } from "./SupporterIcon";
 import { TierModal } from "./TierModal";
 import { Button } from "./ui/button";
+import UserStreak from "./UserStreak";
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../firebase/counters";
 import { getUserSubscription } from "../firebase/subscription";
@@ -270,6 +271,11 @@ const SingleProfileView = ({ profile }) => {
               <span>views</span>
             </div>
           </div>
+        </div>
+
+        {/* Writing Streak */}
+        <div className="mb-6">
+          <UserStreak userId={profile.uid} />
         </div>
 
         {!user && (

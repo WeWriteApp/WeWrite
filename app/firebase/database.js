@@ -25,6 +25,7 @@ import { get, ref } from "firebase/database";
 // Import utility functions
 import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
 import { trackQueryPerformance } from "../utils/queryMonitor";
+import { recordUserActivity } from "./streaks";
 
 export const db = getFirestore(app);
 
@@ -181,6 +182,10 @@ export const createPage = async (data) => {
         // take the version id and add it as the currentVersion on the page
         await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
         console.log("Updated page with current version ID");
+
+        // Record user activity for streak tracking
+        await recordUserActivity(data.userId);
+        console.log("Recorded user activity for streak tracking");
 
         return pageRef.id;
       } catch (versionError) {
@@ -694,6 +699,12 @@ export const saveNewVersion = async (pageId, data) => {
 
     // Set the new version as the current version
     await setCurrentVersion(pageId, versionRef.id);
+
+    // Record user activity for streak tracking
+    if (data.userId) {
+      await recordUserActivity(data.userId);
+      console.log("Recorded user activity for streak tracking");
+    }
 
     console.log("Page content updated and new version saved successfully");
     return versionRef.id;
