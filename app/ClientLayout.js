@@ -74,8 +74,9 @@ export default function ClientLayout({ children }) {
                     </ActivityFilterProvider>
                   </RecentPagesProvider>
                 </PortfolioProvider>
-              </AuthProvider>
-            </MultiAccountProvider>
+              </NotificationProvider>
+            </AuthProvider>
+          </MultiAccountProvider>
           </DataProvider>
         </LoggingProvider>
       </AccentColorProvider>
