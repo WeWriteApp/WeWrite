@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 
 /**
  * UserStreak component displays a user's writing streak information
- * 
+ *
  * @param {Object} props
  * @param {string} props.userId - The user ID to display streaks for
  */
@@ -21,7 +21,7 @@ const UserStreak = ({ userId }) => {
   useEffect(() => {
     const fetchStreakData = async () => {
       if (!userId) return;
-      
+
       try {
         setLoading(true);
         const data = await getUserStreaks(userId);
@@ -98,13 +98,13 @@ const UserStreak = ({ userId }) => {
             {/* Current Streak */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-orange-500" />
+                <Flame className="h-5 w-5 text-muted-foreground" />
                 <span className="font-medium">Current Streak</span>
               </div>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1 font-semibold">
-                    <span className="text-orange-500">{streakData.currentStreak}</span>
+                    <span className="text-foreground">{streakData.currentStreak}</span>
                     <span className="text-sm text-muted-foreground">days</span>
                   </div>
                 </TooltipTrigger>
@@ -117,13 +117,13 @@ const UserStreak = ({ userId }) => {
             {/* Longest Streak */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-primary" />
+                <Award className="h-5 w-5 text-muted-foreground" />
                 <span className="font-medium">Longest Streak</span>
               </div>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1 font-semibold">
-                    <span className="text-primary">{streakData.longestStreak}</span>
+                    <span className="text-foreground">{streakData.longestStreak}</span>
                     <span className="text-sm text-muted-foreground">days</span>
                   </div>
                 </TooltipTrigger>
