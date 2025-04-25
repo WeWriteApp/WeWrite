@@ -19,8 +19,6 @@ const nextConfig = {
     optimizePackageImports: ['react-icons'],
     // Try to improve performance
     forceSwcTransforms: true,
-    // Skip type checking during build
-    skipTypechecking: true,
   },
   // Add security headers
   async headers() {
