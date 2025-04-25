@@ -139,9 +139,10 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     // Only get public pages if we're not filtering by a specific user
     let publicPages = [];
     if (!isFilteringByUser) {
+      // Explicitly query only for public pages
       const publicPagesQuery = query(
         collection(db, 'pages'),
-        where('isPublic', '==', true),
+        where('isPublic', '==', true), // Only get public pages
         orderBy('lastModified', 'desc'),
         limit(20)
       );
@@ -151,7 +152,9 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       // Filter public pages by title and exclude user's own pages
       publicPagesSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.userId !== userId &&
+        // Double-check that the page is actually public
+        if (data.isPublic === true &&
+            data.userId !== userId &&
             (!searchTermLower || data.title.toLowerCase().includes(searchTermLower))) {
           publicPages.push({
             id: doc.id,
@@ -160,6 +163,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             isEditable: false,
             userId: data.userId,
             lastModified: data.lastModified,
+            isPublic: true,
             type: 'public'
           });
         }
@@ -321,6 +325,7 @@ export async function GET(request) {
           NULL as groupId
         FROM \`wewrite-ccd82.pages_indexes.pages\`
         WHERE userId != @userId
+          AND isPublic = true
           AND LOWER(title) LIKE @searchTerm
           ${groupIds.length > 0 ? `AND document_id NOT IN (
             SELECT document_id

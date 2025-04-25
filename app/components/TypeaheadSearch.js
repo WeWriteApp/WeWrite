@@ -17,6 +17,7 @@ import { useTheme } from "next-themes";
 import { Input } from "./ui/input";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { app } from "../firebase/config";
+import { getBasePageSearchRules, getUserPageSearchRules, buildSearchQueryUrl, applyPrivacyFiltering } from "../utils/searchRules";
 
 // Define a simple Loader component directly in this file
 const Loader = () => {
@@ -167,18 +168,22 @@ const TypeaheadSearch = ({
           groupIds = Object.keys(user.groups);
         }
 
+        // Get search rules based on whether we're filtering by a specific user
+        const searchRules = userId
+          ? getUserPageSearchRules(userId, selectedUserId)
+          : getBasePageSearchRules();
+
         // Determine if we should filter by a specific user ID
         const isFilteringByUser = !!userId;
 
-        // Construct the API URL based on whether we're filtering by user
-        let queryUrl;
-        if (isFilteringByUser) {
-          // When filtering by user, we want to search only that user's pages
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&filterByUserId=${userId}&groupIds=${groupIds}&useScoring=true`;
-        } else {
-          // Normal search across all accessible pages
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}&useScoring=true`;
-        }
+        // Build the search query URL using our centralized search rules
+        const queryUrl = buildSearchQueryUrl({
+          userId: selectedUserId,
+          searchTerm: search,
+          groupIds,
+          filterByUserId: isFilteringByUser ? userId : null,
+          useScoring: searchRules.useScoring
+        });
 
         // Only search for users if we're not filtering by a specific user
         const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
@@ -264,11 +269,14 @@ const TypeaheadSearch = ({
             console.log(`TypeaheadSearch - No results found for search term: ${search}`);
           }
 
+          // Apply privacy filtering to ensure we don't show private pages to users who shouldn't see them
+          const filteredPages = applyPrivacyFiltering(processedPages, selectedUserId);
+
           // Set the pages state with categorized results
           setPages({
-            userPages: processedPages.filter(page => page.type === 'user' || page.isOwned),
-            groupPages: processedPages.filter(page => page.type === 'group' && !page.isOwned),
-            publicPages: processedPages.filter(page => page.type === 'public' && !page.isOwned),
+            userPages: filteredPages.filter(page => page.type === 'user' || page.isOwned),
+            groupPages: filteredPages.filter(page => page.type === 'group' && !page.isOwned),
+            publicPages: filteredPages.filter(page => page.type === 'public' && !page.isOwned),
             users: users // Add the users to the state
           });
         } catch (fetchError) {
