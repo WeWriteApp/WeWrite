@@ -19,7 +19,7 @@ import { Plus, FileText, Loader } from "lucide-react";
 import { ShimmerEffect } from "./components/ui/skeleton";
 import { Placeholder } from "./components/ui/placeholder";
 import { useTheme } from "next-themes";
-import LandingPage from "./components/landing/SimpleLandingPageBasic";
+import LandingPage from "./components/landing/LandingPage";
 import { FloatingActionButton } from "./components/ui/floating-action-button";
 import SiteFooter from "./components/SiteFooter";
 

@@ -1,90 +1,194 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { ArrowRight, Menu, X } from 'lucide-react';
-import { Hero } from './Hero';
-import { FeatureSection } from './FeatureSection';
-import { FeatureCarousel } from './FeatureCarousel';
-import { DeveloperSection } from './DeveloperSection';
+import { Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Badge } from '../../components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "../../components/ui/sheet";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "../../components/ui/navigation-menu";
+import LandingTrendingSection from './LandingTrendingSection';
+import Header from '../Header';
+import { PagePreviewCard } from './PagePreviewCard';
 
-const sectionVariants = {
-  hidden: { opacity: 0, y: 50 },
+// Import mock page content (in a real implementation, this would be fetched from Firebase)
+const pageContents = {
+  "RFsPq1tbcOMtljwHyIMT": {
+    "title": "Every Page is a Fundraiser",
+    "body": "On WeWrite, every page you create is a potential source of income. The Pledge bar at the bottom of each page allows readers to support your work directly.\n\nUnlike traditional platforms that rely on advertising or paywalls, WeWrite empowers creators to earn from their content through direct reader support. This creates a more sustainable ecosystem for quality content.\n\nWhen readers appreciate your work, they can contribute to your page through one-time or recurring donations. This direct connection between creators and supporters fosters a community of engaged readers who value your contributions.",
+    "isPublic": true
+  },
+  "aJFMqTEKuNEHvOrYE9c2": {
+    "title": "No Ads",
+    "body": "WeWrite is committed to providing a clean, distraction-free reading and writing experience. We don't show ads anywhere on the platform.\n\nInstead of relying on advertising revenue, we've built a sustainable model based on direct creator support. This means you can focus on what matters: creating and consuming great content.\n\nNo tracking pixels, no sponsored content, no intrusive banners—just pure content. This creates a better experience for everyone and aligns our incentives with what truly matters: quality writing and engaged readers.",
+    "isPublic": true
+  },
+  "ou1LPmpynpoirLrv99fq": {
+    "title": "Multiple View Modes",
+    "body": "WeWrite offers different reading experiences to suit your preferences. Choose between Wrapped, Default, and Spaced modes to customize how content appears.\n\nWrapped mode provides a more compact reading experience, ideal for longer articles or when you want to see more content at once.\n\nDefault mode balances readability with content density, offering a clean layout that works well for most content types.\n\nSpaced mode increases the whitespace around paragraphs, making it easier to focus on individual sections—perfect for deep reading or complex topics.",
+    "isPublic": true
+  },
+  "o71h6Lg1wjGSC1pYaKXz": {
+    "title": "Recurring Donations",
+    "body": "Support your favorite writers consistently with recurring monthly donations. This feature helps creators establish a predictable income stream while giving supporters a hassle-free way to contribute.\n\nAs a supporter, you can set up automatic monthly contributions to the writers you value most. This ongoing support helps creators focus on producing quality content rather than constantly seeking new funding sources.\n\nFor writers, recurring donations provide financial stability and a deeper connection with your most dedicated readers. You'll be able to see your monthly recurring revenue and plan your content strategy accordingly.",
+    "isPublic": true
+  },
+  "4jw8FdMJHGofMc4G2QTw": {
+    "title": "Collaborative Pages",
+    "body": "Work together with others on shared documents with WeWrite's collaborative features. Multiple contributors can edit and expand on ideas together, creating richer, more diverse content.\n\nCollaboration happens in real-time, allowing for immediate feedback and iteration. This makes WeWrite perfect for team projects, community knowledge bases, or any situation where multiple perspectives enhance the final result.\n\nPage owners can invite specific collaborators or open their pages to public contributions, with full control over edit permissions and content approval.",
+    "isPublic": true
+  },
+  "N7Pg3iJ0OQhkpw16MTZW": {
+    "title": "Map View",
+    "body": "Visualize your content and connections with WeWrite's interactive Map View. This feature transforms your collection of pages into a visual knowledge graph, helping you see relationships between ideas.\n\nMap View makes it easy to navigate complex topics by showing how different pages connect to each other. Discover unexpected relationships between your content or explore how others have linked to your work.\n\nThis visual approach to content organization helps both creators and readers gain new insights and discover content they might otherwise miss in a traditional linear format.",
+    "isPublic": true
+  },
+  "0krXqAU748w43YnWJwE2": {
+    "title": "Calendar View",
+    "body": "Organize and view your content chronologically with Calendar View. This feature helps you track your writing history and plan future content.\n\nFor writers, Calendar View provides insights into your productivity patterns and helps maintain consistent publishing schedules. See at a glance when you've been most active and identify gaps in your content timeline.\n\nReaders can use Calendar View to discover content based on when it was published, making it easier to follow a writer's journey or find the most recent updates on evolving topics.",
+    "isPublic": true
+  }
+};
+
+// Animation variants
+const fadeIn = {
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.22, 1, 0.36, 1]
-    }
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
   }
 };
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const heroSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // We'll use a simpler approach for the 3D effect using React state instead of DOM manipulation
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Smooth scroll function for anchor links
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
-
-    // Extract the id from the href
     const targetId = href.replace('#', '');
     const targetElement = document.getElementById(targetId);
 
     if (targetElement) {
-      // Get the header height to offset the scroll position
       const headerHeight = 80; // Approximate header height in pixels
       const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
-
-      // Smooth scroll to the target position
-      window.scrollTo({
-        top: targetPosition,
-        behavior: 'smooth'
-      });
-
-      // Update URL without scrolling
+      window.scrollTo({ top: targetPosition, behavior: 'smooth' });
       window.history.pushState(null, '', href);
     }
   };
 
+  // Features data
+  const builtFeatures = [
+    {
+      title: "Every Page is a Fundraiser",
+      description: "On every page, there's a Pledge bar floating at the bottom. Users set their Budget (subscription) and donate to their favorite pages.",
+      status: "in-progress",
+      image: "/images/feature-fundraiser.png",
+      pageId: "RFsPq1tbcOMtljwHyIMT"
+    },
+    {
+      title: "No ads",
+      description: "Since each page on WeWrite is a fundraiser, we won't need to sell ad space to companies.",
+      status: "done",
+      image: "/images/feature-no-ads.png",
+      pageId: "aJFMqTEKuNEHvOrYE9c2"
+    },
+    {
+      title: "Multiple View Modes",
+      description: "Choose between Wrapped, Default, and Spaced reading modes to customize your reading experience.",
+      status: "done",
+      image: "/images/feature-1.png",
+      pageId: "ou1LPmpynpoirLrv99fq"
+    }
+  ];
+
+  const comingSoonFeatures = [
+    {
+      title: "Recurring donations",
+      description: "Support your favorite writers with monthly donations that help them continue creating great content.",
+      status: "coming-soon",
+      image: "/images/feature-donations.png",
+      pageId: "o71h6Lg1wjGSC1pYaKXz"
+    },
+    {
+      title: "Collaborative pages",
+      description: "Work together with others on shared documents with real-time collaboration features.",
+      status: "coming-soon",
+      image: "/images/feature-collaboration.png",
+      pageId: "4jw8FdMJHGofMc4G2QTw"
+    },
+    {
+      title: "Map view",
+      description: "Visualize your content and connections in an interactive map interface.",
+      status: "coming-soon",
+      image: "/images/feature-map-view.png",
+      pageId: "N7Pg3iJ0OQhkpw16MTZW"
+    },
+    {
+      title: "Calendar view",
+      description: "Organize and view your content in a calendar interface.",
+      status: "coming-soon",
+      image: "/images/feature-calendar.png",
+      pageId: "0krXqAU748w43YnWJwE2"
+    }
+  ];
+
+  // Tech stack data
+  const techStack = [
+    {
+      title: "Next.js & TypeScript",
+      description: "Built with Next.js 14 and TypeScript for type-safe, performant web applications."
+    },
+    {
+      title: "Firebase Backend",
+      description: "Powered by Firebase for authentication, real-time database, and secure storage."
+    },
+    {
+      title: "Modern UI Libraries",
+      description: "Using Shadcn UI, Radix, and NextUI components for a beautiful, accessible interface."
+    }
+  ];
+
+  // Helper function to render status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'done':
+        return <Badge variant="default" className="bg-green-500">Available Now</Badge>;
+      case 'in-progress':
+        return <Badge variant="secondary" className="bg-amber-500 text-white">In Progress</Badge>;
+      case 'coming-soon':
+        return <Badge variant="outline">Coming Soon</Badge>;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       {/* Desktop Header */}
       <header
-        className={`fixed top-0 left-0 right-0 w-full header-border-transition z-50 transition-all duration-200 hidden md:block ${
+        className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
           isScrolled
             ? 'py-3 bg-background/80 backdrop-blur-xl shadow-md'
-            : 'border-visible py-4 bg-background/70 backdrop-blur-lg'
+            : 'py-4 bg-background/70 backdrop-blur-lg border-b border-border/10'
         }`}
       >
         <div className="container mx-auto flex justify-between items-center px-6">
@@ -96,28 +200,36 @@ const LandingPage = () => {
               WeWrite
             </h1>
 
-            <NavigationMenu>
-              <NavigationMenuList>
-                <NavigationMenuItem>
-                  <a
-                    href="#features"
-                    onClick={(e) => scrollToSection(e, '#features')}
-                    className={navigationMenuTriggerStyle()}
-                  >
-                    Features
-                  </a>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <a
-                    href="#about"
-                    onClick={(e) => scrollToSection(e, '#about')}
-                    className={navigationMenuTriggerStyle()}
-                  >
-                    About
-                  </a>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
+            <nav className="hidden md:flex space-x-6">
+              <a
+                href="#features"
+                onClick={(e) => scrollToSection(e, '#features')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="#coming-soon"
+                onClick={(e) => scrollToSection(e, '#coming-soon')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Coming Soon
+              </a>
+              <a
+                href="#supporters"
+                onClick={(e) => scrollToSection(e, '#supporters')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Supporters
+              </a>
+              <a
+                href="#about"
+                onClick={(e) => scrollToSection(e, '#about')}
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                About
+              </a>
+            </nav>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -133,48 +245,59 @@ const LandingPage = () => {
 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
-        {/* Top Header with Logo and Buttons */}
-        <div className={`w-full header-border-transition transition-all duration-200 ${
+        <div className={`w-full transition-all duration-200 ${
           isScrolled
             ? 'py-2 bg-background/90 backdrop-blur-xl shadow-sm'
-            : 'border-visible py-3 bg-background/80 backdrop-blur-lg'
+            : 'py-3 bg-background/80 backdrop-blur-lg border-b border-border/10'
           }`}
         >
           <div className="container mx-auto flex justify-between items-center px-4">
-            <div className="flex items-center">
-              <h1
-                className="text-xl font-bold text-primary cursor-pointer"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              >
-                WeWrite
-              </h1>
-            </div>
+            <h1
+              className="text-xl font-bold text-primary cursor-pointer"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              WeWrite
+            </h1>
 
             <div className="flex items-center space-x-2">
-              <Button variant="secondary" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild>
                 <Link href="/auth/login">Sign In</Link>
               </Button>
               <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/auth/register">Create Account</Link>
+                <Link href="/auth/register">Sign Up</Link>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Bottom Subheader with Scrollable Links */}
-        <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-2 overflow-x-auto scrollbar-hide">
-          <div className="flex items-center justify-center space-x-8 px-4 min-w-max mx-auto">
+        {/* Mobile Navigation */}
+        <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-2">
+          <div className="flex items-center justify-around px-4">
             <a
               href="#features"
               onClick={(e) => scrollToSection(e, '#features')}
-              className="text-sm font-medium whitespace-nowrap transition-colors hover:text-primary"
+              className="text-sm font-medium transition-colors hover:text-primary"
             >
               Features
             </a>
             <a
+              href="#coming-soon"
+              onClick={(e) => scrollToSection(e, '#coming-soon')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Coming Soon
+            </a>
+            <a
+              href="#supporters"
+              onClick={(e) => scrollToSection(e, '#supporters')}
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Supporters
+            </a>
+            <a
               href="#about"
               onClick={(e) => scrollToSection(e, '#about')}
-              className="text-sm font-medium whitespace-nowrap transition-colors hover:text-primary"
+              className="text-sm font-medium transition-colors hover:text-primary"
             >
               About
             </a>
@@ -182,64 +305,319 @@ const LandingPage = () => {
         </div>
       </div>
 
-      <main className="pt-32 md:pt-16">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
-          <Hero />
-        </motion.div>
+      <main className="pt-32 md:pt-28">
+        {/* Hero Section */}
+        <section
+          className="py-16 md:py-20 relative overflow-hidden"
+          ref={heroSectionRef}
+          onMouseMove={(e) => {
+            if (heroSectionRef.current) {
+              const rect = heroSectionRef.current.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
 
-        <motion.section
-          id="features"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
-          <FeatureCarousel />
-          <FeatureSection />
-        </motion.section>
+              // Calculate rotation (limited to ±5 degrees)
+              const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
+              const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
 
-        <motion.section
-          id="about"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
+              setRotation({ x: rotateX, y: rotateY });
+            }
+          }}
+          onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
-          <DeveloperSection />
-        </motion.section>
-      </main>
+          {/* Background Image */}
+          <div className="absolute inset-0 w-full h-full z-0">
+            <Image
+              src="/images/landing/hero-image.png"
+              alt="Background"
+              fill
+              className="object-cover opacity-10"
+              priority
+            />
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]"></div>
+          </div>
 
-      <motion.footer
-        className="border-theme-medium border-t-only py-8 px-6 bg-background"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={sectionVariants}
-      >
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <p className="text-sm text-muted-foreground"> 2025 WeWrite. All rights reserved.</p>
-            </div>
-            <div className="flex space-x-6">
-              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
-                Terms of Service
-              </Link>
-              <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground">
-                Contact
-              </Link>
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="flex flex-col lg:flex-row items-center gap-12">
+              <motion.div
+                className="flex-1 text-center lg:text-left"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+              >
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                  Write, share, earn.
+                </h1>
+                <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+                  WeWrite is a social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
+                </p>
+                <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
+                  <Button size="lg" variant="outline" asChild>
+                    <Link href="/auth/login">Sign In</Link>
+                  </Button>
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                    <Link href="/auth/register">Create Account</Link>
+                  </Button>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="flex-1 perspective-[1000px]"
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.7 }}
+              >
+                <motion.div
+                  className="relative w-full max-w-lg mx-auto transform-gpu"
+                  whileHover={{ scale: 1.02 }}
+                  animate={{
+                    rotateX: rotation.x,
+                    rotateY: rotation.y
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30
+                  }}
+                >
+                  <Image
+                    src="/images/landing/hero-image.png"
+                    alt="WeWrite App Interface"
+                    width={700}
+                    height={700}
+                    className="rounded-lg shadow-2xl"
+                    priority
+                  />
+                </motion.div>
+              </motion.div>
             </div>
           </div>
-        </div>
-      </motion.footer>
+        </section>
+
+        {/* Trending Pages Section - Moved to top */}
+        <LandingTrendingSection limit={3} />
+
+        {/* Features Section */}
+        <section id="features" className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-6">
+            <motion.div
+              className="text-center mb-16"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Available Features</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Discover what makes WeWrite special
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {builtFeatures.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeIn}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <PagePreviewCard
+                    title={feature.title}
+                    content={pageContents[feature.pageId]?.body || feature.description}
+                    pageId={feature.pageId}
+                    status={feature.status as any}
+                    maxContentLength={150}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Coming Soon Section - Moved below features */}
+        <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">
+          <div className="container mx-auto px-6">
+            <motion.div
+              className="text-center mb-16"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Coming Soon</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Features we're working on for future releases
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {comingSoonFeatures.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeIn}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <PagePreviewCard
+                    title={feature.title}
+                    content={pageContents[feature.pageId]?.body || feature.description}
+                    pageId={feature.pageId}
+                    status={feature.status as any}
+                    maxContentLength={150}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Supporters Section */}
+        <section id="supporters" className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-6">
+            <motion.div
+              className="text-center mb-16"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Special thanks to those who have a subscription for WeWrite while we're still in beta, working on the rest of the functionality. <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">Read our Roadmap here</Link>.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+                transition={{ delay: 0.1 }}
+              >
+                <Card className="h-full border border-border">
+                  <CardHeader>
+                    <CardTitle>Tier 1 Supporters</CardTitle>
+                    <CardDescription>
+                      Our entry-level supporters who help keep the lights on.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="h-full border border-border">
+                  <CardHeader>
+                    <CardTitle>Tier 2 & 3 Supporters</CardTitle>
+                    <CardDescription>
+                      Dedicated supporters who enable us to build new features faster.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeIn}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="h-full border border-border">
+                  <CardHeader>
+                    <CardTitle>Tier 4 Supporters</CardTitle>
+                    <CardDescription>
+                      Our most dedicated supporters who make WeWrite possible.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </motion.div>
+            </div>
+
+
+          </div>
+        </section>
+
+        {/* About Section */}
+        <section id="about" className="py-16 md:py-20 bg-muted/30">
+          <div className="container mx-auto px-6">
+            <motion.div
+              className="text-center mb-16"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">About WeWrite</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Built with modern technologies for the best user experience
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {techStack.map((tech, index) => (
+                <motion.div
+                  key={index}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeIn}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle>{tech.title}</CardTitle>
+                      <CardDescription>
+                        {tech.description}
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+
+          </div>
+        </section>
+
+        {/* Ready to Get Started Section */}
+        <section id="get-started" className="py-16 md:py-20 bg-background">
+          <div className="container mx-auto px-6">
+            <motion.div
+              className="text-center"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
+                Join WeWrite today and start creating, sharing, and earning from your content.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/auth/login">Sign In</Link>
+                </Button>
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                  <Link href="/auth/register">Create Account</Link>
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
