@@ -26,7 +26,7 @@ import { get, ref } from "firebase/database";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
 import { trackQueryPerformance } from "../utils/queryMonitor";
 import { recordUserActivity } from "./streaks";
-import { createLinkNotification } from "./notifications";
+import { createLinkNotification, createAppendNotification } from "./notifications";
 
 export const db = getFirestore(app);
 
@@ -1172,7 +1172,7 @@ export async function prefetchPageTitles(pageIds) {
 }
 
 // Append a reference to a page at the end of another page's content
-export const appendPageReference = async (targetPageId, sourcePageData) => {
+export const appendPageReference = async (targetPageId, sourcePageData, userId = null) => {
   try {
     if (!targetPageId || !sourcePageData) return false;
 
@@ -1223,6 +1223,23 @@ export const appendPageReference = async (targetPageId, sourcePageData) => {
       content: JSON.stringify(newContent),
       lastModified: new Date().toISOString()
     });
+
+    // Create a notification for the source page owner
+    if (sourcePageData.userId && sourcePageData.userId !== (userId || pageData.userId)) {
+      try {
+        await createAppendNotification(
+          sourcePageData.userId, // Target user (owner of the source page)
+          userId || pageData.userId, // Source user (person doing the append)
+          sourcePageData.id, // Source page ID
+          sourcePageData.title, // Source page title
+          targetPageId, // Target page ID
+          pageData.title // Target page title
+        );
+      } catch (notificationError) {
+        console.error("Error creating append notification:", notificationError);
+        // Don't fail the append operation if notification creation fails
+      }
+    }
 
     return true;
   } catch (error) {

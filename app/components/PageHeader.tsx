@@ -273,12 +273,13 @@ export default function PageHeader({
             <div className="flex-1 flex justify-center items-center">
               <div
                 className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform ${
-                  isScrolled ? "flex flex-row items-center gap-2 pl-0" : "max-w-full"
+                  isScrolled ? "flex flex-row items-center gap-2 pl-0 cursor-pointer" : "max-w-full"
                 }`}
                 style={{
                   transform: isScrolled ? "translateY(0)" : "translateY(0)",
                   maxWidth: isScrolled ? "95vw" : "100%"
                 }}
+                onClick={isScrolled ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : undefined}
               >
                 <h1
                   className={`font-semibold transition-all duration-200 ease-out will-change-transform ${

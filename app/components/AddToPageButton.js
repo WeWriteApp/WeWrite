@@ -9,12 +9,14 @@ import { AuthContext } from '../providers/AuthProvider';
 import { appendPageReference } from '../firebase/database';
 import { toast } from 'sonner';
 import { usePage } from '../contexts/PageContext';
+import { useRouter } from 'next/navigation';
 
 const AddToPageButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const { user } = useContext(AuthContext);
   const { page } = usePage();
+  const router = useRouter();
 
   const handleAddToPage = async (selectedPage) => {
     if (!selectedPage || !page) return;
@@ -25,32 +27,25 @@ const AddToPageButton = () => {
       // Create a source page data object with the current page info
       const sourcePageData = {
         id: page.id,
-        title: page.title || 'Untitled Page'
+        title: page.title || 'Untitled Page',
+        userId: page.userId // Include the user ID for notification
       };
 
       // Append the current page reference to the selected page
-      const result = await appendPageReference(selectedPage.id, sourcePageData);
+      const result = await appendPageReference(selectedPage.id, sourcePageData, user.uid);
 
       if (result) {
-        toast({
-          title: "Page added successfully",
-          description: `Added to "${selectedPage.title}"`,
-        });
+        toast.success(`Added to "${selectedPage.title}"`);
         setIsOpen(false);
+
+        // Redirect to the edit state of the target page
+        router.push(`/${selectedPage.id}?edit=true`);
       } else {
-        toast({
-          title: "Error adding page",
-          description: "There was a problem adding this page. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Failed to add page. Please try again.");
       }
     } catch (error) {
       console.error("Error adding page:", error);
-      toast({
-        title: "Error adding page",
-        description: error.message || "There was a problem adding this page. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "An error occurred. Please try again.");
     } finally {
       setIsAdding(false);
     }
@@ -65,9 +60,19 @@ const AddToPageButton = () => {
         size="sm"
         className="gap-2 w-full h-10 md:h-8 md:w-auto"
         onClick={() => setIsOpen(true)}
+        disabled={isAdding}
       >
-        <Plus className="h-4 w-4" />
-        Add to Page
+        {isAdding ? (
+          <>
+            <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+            Adding...
+          </>
+        ) : (
+          <>
+            <Plus className="h-4 w-4" />
+            Add to Page
+          </>
+        )}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

@@ -6,6 +6,13 @@ import WordCounter from "./WordCounter";
 import PageStats from "./PageStats";
 // ConstructionChip removed
 import FollowButton from "./FollowButton";
+import dynamic from "next/dynamic";
+
+// Dynamically import AddToPageButton to avoid SSR issues
+const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
+  ssr: false,
+  loading: () => <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
+});
 import { getPageViewsLast24Hours, getPageTotalViews } from "../firebase/pageViews";
 import { getPageVersions } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
@@ -99,12 +106,15 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
       <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
         {/* Follow button - moved to the top of the list */}
         {!isEditing && !isOwner && user && (
-          <FollowButton
-            pageId={page.id}
-            pageTitle={page.title}
-            pageOwnerId={page.userId}
-            className="w-full md:w-auto"
-          />
+          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+            <FollowButton
+              pageId={page.id}
+              pageTitle={page.title}
+              pageOwnerId={page.userId}
+              className="w-full md:w-auto"
+            />
+            <AddToPageButton />
+          </div>
         )}
 
         <PageActions
