@@ -4,12 +4,53 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { Check } from 'lucide-react';
+import { Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
 import TrendingPagesSection from './TrendingPagesSection';
+import Header from '../Header';
+import { PagePreviewCard } from './PagePreviewCard';
+
+// Import mock page content (in a real implementation, this would be fetched from Firebase)
+const pageContents = {
+  "RFsPq1tbcOMtljwHyIMT": {
+    "title": "Every Page is a Fundraiser",
+    "body": "On WeWrite, every page you create is a potential source of income. The Pledge bar at the bottom of each page allows readers to support your work directly.\n\nUnlike traditional platforms that rely on advertising or paywalls, WeWrite empowers creators to earn from their content through direct reader support. This creates a more sustainable ecosystem for quality content.\n\nWhen readers appreciate your work, they can contribute to your page through one-time or recurring donations. This direct connection between creators and supporters fosters a community of engaged readers who value your contributions.",
+    "isPublic": true
+  },
+  "aJFMqTEKuNEHvOrYE9c2": {
+    "title": "No Ads",
+    "body": "WeWrite is committed to providing a clean, distraction-free reading and writing experience. We don't show ads anywhere on the platform.\n\nInstead of relying on advertising revenue, we've built a sustainable model based on direct creator support. This means you can focus on what matters: creating and consuming great content.\n\nNo tracking pixels, no sponsored content, no intrusive banners—just pure content. This creates a better experience for everyone and aligns our incentives with what truly matters: quality writing and engaged readers.",
+    "isPublic": true
+  },
+  "ou1LPmpynpoirLrv99fq": {
+    "title": "Multiple View Modes",
+    "body": "WeWrite offers different reading experiences to suit your preferences. Choose between Wrapped, Default, and Spaced modes to customize how content appears.\n\nWrapped mode provides a more compact reading experience, ideal for longer articles or when you want to see more content at once.\n\nDefault mode balances readability with content density, offering a clean layout that works well for most content types.\n\nSpaced mode increases the whitespace around paragraphs, making it easier to focus on individual sections—perfect for deep reading or complex topics.",
+    "isPublic": true
+  },
+  "o71h6Lg1wjGSC1pYaKXz": {
+    "title": "Recurring Donations",
+    "body": "Support your favorite writers consistently with recurring monthly donations. This feature helps creators establish a predictable income stream while giving supporters a hassle-free way to contribute.\n\nAs a supporter, you can set up automatic monthly contributions to the writers you value most. This ongoing support helps creators focus on producing quality content rather than constantly seeking new funding sources.\n\nFor writers, recurring donations provide financial stability and a deeper connection with your most dedicated readers. You'll be able to see your monthly recurring revenue and plan your content strategy accordingly.",
+    "isPublic": true
+  },
+  "4jw8FdMJHGofMc4G2QTw": {
+    "title": "Collaborative Pages",
+    "body": "Work together with others on shared documents with WeWrite's collaborative features. Multiple contributors can edit and expand on ideas together, creating richer, more diverse content.\n\nCollaboration happens in real-time, allowing for immediate feedback and iteration. This makes WeWrite perfect for team projects, community knowledge bases, or any situation where multiple perspectives enhance the final result.\n\nPage owners can invite specific collaborators or open their pages to public contributions, with full control over edit permissions and content approval.",
+    "isPublic": true
+  },
+  "N7Pg3iJ0OQhkpw16MTZW": {
+    "title": "Map View",
+    "body": "Visualize your content and connections with WeWrite's interactive Map View. This feature transforms your collection of pages into a visual knowledge graph, helping you see relationships between ideas.\n\nMap View makes it easy to navigate complex topics by showing how different pages connect to each other. Discover unexpected relationships between your content or explore how others have linked to your work.\n\nThis visual approach to content organization helps both creators and readers gain new insights and discover content they might otherwise miss in a traditional linear format.",
+    "isPublic": true
+  },
+  "0krXqAU748w43YnWJwE2": {
+    "title": "Calendar View",
+    "body": "Organize and view your content chronologically with Calendar View. This feature helps you track your writing history and plan future content.\n\nFor writers, Calendar View provides insights into your productivity patterns and helps maintain consistent publishing schedules. See at a glance when you've been most active and identify gaps in your content timeline.\n\nReaders can use Calendar View to discover content based on when it was published, making it easier to follow a writer's journey or find the most recent updates on evolving topics.",
+    "isPublic": true
+  }
+};
 
 // Animation variants
 const fadeIn = {
@@ -135,131 +176,11 @@ const SimpleLandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Header */}
-      <header
-        className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 ${
-          isScrolled
-            ? 'py-3 bg-background/80 backdrop-blur-xl shadow-md'
-            : 'py-4 bg-background/70 backdrop-blur-lg border-b border-border/10'
-        }`}
-      >
-        <div className="container mx-auto flex justify-between items-center px-6">
-          <div className="flex items-center space-x-6">
-            <h1
-              className="text-2xl font-bold text-primary cursor-pointer"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              WeWrite
-            </h1>
+      <Header />
 
-            <nav className="hidden md:flex space-x-6">
-              <a
-                href="#features"
-                onClick={(e) => scrollToSection(e, '#features')}
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Features
-              </a>
-              <a
-                href="#coming-soon"
-                onClick={(e) => scrollToSection(e, '#coming-soon')}
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Coming Soon
-              </a>
-              <a
-                href="#supporters"
-                onClick={(e) => scrollToSection(e, '#supporters')}
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Supporters
-              </a>
-              <a
-                href="#about"
-                onClick={(e) => scrollToSection(e, '#about')}
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                About
-              </a>
-            </nav>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Button variant="secondary" asChild>
-              <Link href="/auth/login">Sign In</Link>
-            </Button>
-            <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-              <Link href="/auth/register">Create Account</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
-        <div className={`w-full transition-all duration-200 ${
-          isScrolled
-            ? 'py-2 bg-background/90 backdrop-blur-xl shadow-sm'
-            : 'py-3 bg-background/80 backdrop-blur-lg border-b border-border/10'
-          }`}
-        >
-          <div className="container mx-auto flex justify-between items-center px-4">
-            <h1
-              className="text-xl font-bold text-primary cursor-pointer"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              WeWrite
-            </h1>
-
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/auth/register">Sign Up</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-2">
-          <div className="flex items-center justify-around px-4">
-            <a
-              href="#features"
-              onClick={(e) => scrollToSection(e, '#features')}
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              Features
-            </a>
-            <a
-              href="#coming-soon"
-              onClick={(e) => scrollToSection(e, '#coming-soon')}
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              Coming Soon
-            </a>
-            <a
-              href="#supporters"
-              onClick={(e) => scrollToSection(e, '#supporters')}
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              Supporters
-            </a>
-            <a
-              href="#about"
-              onClick={(e) => scrollToSection(e, '#about')}
-              className="text-sm font-medium transition-colors hover:text-primary"
-            >
-              About
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <main className="pt-32 md:pt-28">
+      <main>
         {/* Hero Section */}
-        <section className="py-16 md:py-20">
+        <section className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
             <div className="flex flex-col lg:flex-row items-center gap-12">
               <motion.div
@@ -309,10 +230,12 @@ const SimpleLandingPage = () => {
         </section>
 
         {/* Trending Pages Section - Moved to top */}
-        <TrendingPagesSection limit={3} />
+        <section className="py-16 md:py-20 bg-muted/30">
+          <TrendingPagesSection limit={3} />
+        </section>
 
         {/* Features Section */}
-        <section id="features" className="py-16 md:py-20">
+        <section id="features" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
             <motion.div
               className="text-center mb-16"
@@ -337,27 +260,13 @@ const SimpleLandingPage = () => {
                   variants={fadeIn}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Link href={`/${feature.pageId}`} className="block h-full">
-                    <Card className="h-full border border-border overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer">
-                      {feature.image && (
-                        <div className="relative w-full h-48 overflow-hidden">
-                          <Image
-                            src={feature.image}
-                            alt={feature.title}
-                            width={600}
-                            height={300}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <CardTitle>{feature.title}</CardTitle>
-                          {getStatusBadge(feature.status)}
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  </Link>
+                  <PagePreviewCard
+                    title={feature.title}
+                    content={pageContents[feature.pageId]?.body || feature.description}
+                    pageId={feature.pageId}
+                    status={feature.status as any}
+                    maxContentLength={150}
+                  />
                 </motion.div>
               ))}
             </div>
@@ -390,27 +299,13 @@ const SimpleLandingPage = () => {
                   variants={fadeIn}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Link href={`/${feature.pageId}`} className="block h-full">
-                    <Card className="h-full border border-border overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer">
-                      {feature.image && (
-                        <div className="relative w-full h-48 overflow-hidden">
-                          <Image
-                            src={feature.image}
-                            alt={feature.title}
-                            width={600}
-                            height={300}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <CardTitle>{feature.title}</CardTitle>
-                          {getStatusBadge(feature.status)}
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  </Link>
+                  <PagePreviewCard
+                    title={feature.title}
+                    content={pageContents[feature.pageId]?.body || feature.description}
+                    pageId={feature.pageId}
+                    status={feature.status as any}
+                    maxContentLength={150}
+                  />
                 </motion.div>
               ))}
             </div>
@@ -486,22 +381,12 @@ const SimpleLandingPage = () => {
               </motion.div>
             </div>
 
-            <motion.div
-              className="text-center mt-12"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/subscription">Become a Supporter</Link>
-              </Button>
-            </motion.div>
+
           </div>
         </section>
 
         {/* About Section */}
-        <section id="about" className="py-16 md:py-20">
+        <section id="about" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
             <motion.div
               className="text-center mb-16"
@@ -556,27 +441,6 @@ const SimpleLandingPage = () => {
           </div>
         </section>
       </main>
-
-      <footer className="border-t border-border py-8 px-6 bg-background">
-        <div className="container mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <p className="text-sm text-muted-foreground">© 2025 WeWrite. All rights reserved.</p>
-            </div>
-            <div className="flex space-x-6">
-              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
-                Terms of Service
-              </Link>
-              <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
