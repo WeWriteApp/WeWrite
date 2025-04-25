@@ -54,7 +54,24 @@ const PledgeBar = () => {
       // Scroll to metadata section
       const metadataSection = document.querySelector('[data-metadata-section]');
       if (metadataSection) {
-        metadataSection.scrollIntoView({ behavior: 'smooth' });
+        // Use scrollIntoView with additional offset to ensure it's visible
+        metadataSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Add a small delay and additional scroll to ensure it's fully visible
+        setTimeout(() => {
+          const offset = 100; // Adjust this value as needed
+          const elementPosition = metadataSection.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: elementPosition - offset,
+            behavior: 'smooth'
+          });
+        }, 100);
+      } else {
+        // Fallback: if metadata section not found, scroll to bottom of page
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: 'smooth'
+        });
       }
     }
   };

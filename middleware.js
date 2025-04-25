@@ -16,7 +16,9 @@ export function middleware(request) {
   // Define paths that always require authentication
   const requiresAuth = path === "/new" ||
                       path === "/groups/new" ||
-                      path.startsWith("/dashboard");
+                      path.startsWith("/dashboard") ||
+                      path === "/subscription" ||
+                      path === "/subscription/";
 
   // Get the token from the cookies
   const token = request.cookies.get("session")?.value;
