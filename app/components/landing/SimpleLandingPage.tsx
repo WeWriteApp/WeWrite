@@ -336,7 +336,7 @@ const SimpleLandingPage = () => {
                 <div className="relative w-full max-w-md mx-auto">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 rounded-lg z-10"></div>
                   <Image
-                    src="/images/hero-image.png"
+                    src="/images/landing/hero-image.png"
                     alt="WeWrite App Interface"
                     width={600}
                     height={600}
