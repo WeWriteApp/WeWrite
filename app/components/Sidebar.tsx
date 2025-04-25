@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, Palette, Settings, Check } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
@@ -12,6 +12,7 @@ import { useTheme } from "next-themes"
 import { SimpleAccountSwitcher } from "./SimpleAccountSwitcher"
 import { AccentColorSwitcher } from "./AccentColorSwitcher"
 import PillStyleToggle from "./PillStyleToggle"
+import NotificationBadge from "./NotificationBadge"
 
 interface SidebarProps {
   isOpen: boolean
@@ -179,6 +180,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* Main Menu Items */}
             <div className="space-y-1">
+              <button
+                onClick={() => router.push('/notifications')}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+              >
+                <div className="flex items-center">
+                  <Bell className="h-5 w-5 mr-2" />
+                  <span>Notifications</span>
+                </div>
+                <div className="flex items-center">
+                  <NotificationBadge className="mr-2" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </button>
+
               <button
                 onClick={() => navigateToSection('appearance')}
                 className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"

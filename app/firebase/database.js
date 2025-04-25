@@ -26,6 +26,7 @@ import { get, ref } from "firebase/database";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
 import { trackQueryPerformance } from "../utils/queryMonitor";
 import { recordUserActivity } from "./streaks";
+import { createLinkNotification } from "./notifications";
 
 export const db = getFirestore(app);
 
@@ -622,6 +623,53 @@ export const saveNewVersion = async (pageId, data) => {
         return null;
       }
 
+      // Extract links from the content to check for page links
+      const links = extractLinksFromNodes(parsedContent);
+
+      // Process links to create notifications
+      if (links.length > 0 && data.userId) {
+        // Get the current page info for the notification
+        const pageDoc = await getDoc(doc(db, "pages", pageId));
+        const sourcePageTitle = pageDoc.exists() ? pageDoc.data().title || "Untitled Page" : "Untitled Page";
+
+        // Process each link
+        for (const link of links) {
+          // Check if it's a page link (internal link to another page)
+          if (link.url && (link.url.startsWith('/') || link.url.startsWith('/pages/'))) {
+            // Extract the page ID from the URL
+            const targetPageId = link.url.replace('/pages/', '/').replace('/', '');
+
+            if (targetPageId && targetPageId !== pageId) { // Don't notify for self-links
+              try {
+                // Get the target page to check its owner
+                const targetPageDoc = await getDoc(doc(db, "pages", targetPageId));
+
+                if (targetPageDoc.exists()) {
+                  const targetPageData = targetPageDoc.data();
+                  const targetUserId = targetPageData.userId;
+                  const targetPageTitle = targetPageData.title || "Untitled Page";
+
+                  // Create a notification if the target page belongs to another user
+                  if (targetUserId && targetUserId !== data.userId) {
+                    await createLinkNotification(
+                      targetUserId,
+                      data.userId,
+                      targetPageId,
+                      targetPageTitle,
+                      pageId,
+                      sourcePageTitle
+                    );
+                  }
+                }
+              } catch (linkError) {
+                console.error("Error processing link notification:", linkError);
+                // Continue processing other links
+              }
+            }
+          }
+        }
+      }
+
       // Ensure we're using the parsed and re-stringified content for consistency
       contentString = JSON.stringify(parsedContent);
     } catch (error) {
@@ -838,7 +886,11 @@ function extractLinksFromNodes(nodes) {
   function traverse(node) {
     // Check if the node is a link
     if (node.type === 'link' && node.url) {
-      links.push(node.url);
+      links.push({
+        url: node.url,
+        pageId: node.pageId,
+        pageTitle: node.pageTitle
+      });
     }
 
     // Recursively check children if they exist

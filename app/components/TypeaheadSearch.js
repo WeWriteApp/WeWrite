@@ -174,10 +174,10 @@ const TypeaheadSearch = ({
         let queryUrl;
         if (isFilteringByUser) {
           // When filtering by user, we want to search only that user's pages
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&filterByUserId=${userId}&groupIds=${groupIds}`;
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&filterByUserId=${userId}&groupIds=${groupIds}&useScoring=true`;
         } else {
           // Normal search across all accessible pages
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}&useScoring=true`;
         }
 
         // Only search for users if we're not filtering by a specific user

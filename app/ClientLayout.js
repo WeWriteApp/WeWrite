@@ -13,6 +13,7 @@ import { LineSettingsProvider } from "./contexts/LineSettingsContext";
 import { ActivityFilterProvider } from "./contexts/ActivityFilterContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
+import { NotificationProvider } from "./providers/NotificationProvider";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -46,12 +47,13 @@ export default function ClientLayout({ children }) {
           <DataProvider>
             <MultiAccountProvider>
               <AuthProvider>
-                <PortfolioProvider>
-                  <RecentPagesProvider>
-                    <ActivityFilterProvider>
-                      <MobileProvider>
-                        <DrawerProvider>
-                          <LineSettingsProvider>
+                <NotificationProvider>
+                  <PortfolioProvider>
+                    <RecentPagesProvider>
+                      <ActivityFilterProvider>
+                        <MobileProvider>
+                          <DrawerProvider>
+                            <LineSettingsProvider>
                       <Drawer />
                       <div className="flex flex-col min-h-screen bg-background pb-8">
                         {!isAuthPage && <UsernameWarningBanner />}

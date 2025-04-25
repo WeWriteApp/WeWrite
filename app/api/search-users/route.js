@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchUsers } from "../../firebase/database";
+import { sortSearchResultsByScore } from "../../utils/searchUtils";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -36,10 +37,13 @@ export async function GET(request) {
     }));
 
     console.log(`API: Found ${formattedUsers.length} users matching query "${searchTerm}"`);
-    console.log('API: Formatted user results:', formattedUsers);
+
+    // Apply scoring to sort results
+    const sortedUsers = sortSearchResultsByScore(formattedUsers, searchTerm);
+    console.log('API: Sorted user results:', sortedUsers);
 
     // Return formatted results
-    return NextResponse.json({ users: formattedUsers }, { status: 200 });
+    return NextResponse.json({ users: sortedUsers }, { status: 200 });
   } catch (error) {
     console.error('Error searching users:', error);
     return NextResponse.json({

@@ -42,7 +42,7 @@ export default function SearchPage() {
         groupIds = Object.keys(user.groups);
       }
 
-      const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`;
+      const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}&useScoring=true`;
       console.log('Making API request to:', queryUrl);
 
       const response = await fetch(queryUrl);

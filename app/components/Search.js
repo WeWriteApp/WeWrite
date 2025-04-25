@@ -40,7 +40,7 @@ const Search = () => {
         }
 
         // Fetch both pages and users in parallel
-        const pagesUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}`;
+        const pagesUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}&useScoring=true`;
         const usersUrl = `/api/search-users?searchTerm=${encodeURIComponent(searchTerm)}`;
 
         console.log('Making API requests to:', { pagesUrl, usersUrl });

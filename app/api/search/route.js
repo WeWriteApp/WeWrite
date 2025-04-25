@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 import { searchUsers } from "../../firebase/database";
+import { sortSearchResultsByScore } from "../../utils/searchUtils";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -183,6 +184,7 @@ export async function GET(request) {
       ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
       : [];
     const searchTerm = searchParams.get("searchTerm") || "";
+    const useScoring = searchParams.get("useScoring") !== "false"; // Default to true
 
     if (!userId) {
       return NextResponse.json(
@@ -222,11 +224,23 @@ export async function GET(request) {
         }
       }
 
-      return NextResponse.json({
-        pages,
-        users,
-        source: "firestore_fallback"
-      }, { status: 200 });
+      // Apply scoring if enabled
+      if (useScoring && searchTerm) {
+        const sortedPages = sortSearchResultsByScore(pages, searchTerm);
+        const sortedUsers = sortSearchResultsByScore(users, searchTerm);
+
+        return NextResponse.json({
+          pages: sortedPages,
+          users: sortedUsers,
+          source: "firestore_fallback"
+        }, { status: 200 });
+      } else {
+        return NextResponse.json({
+          pages,
+          users,
+          source: "firestore_fallback"
+        }, { status: 200 });
+      }
     }
 
     // Test BigQuery connection first
@@ -427,8 +441,19 @@ export async function GET(request) {
         searchTermFormatted
       });
 
-      // Return formatted results including users
-      return NextResponse.json({ pages, users }, { status: 200 });
+      // Apply scoring if enabled
+      if (useScoring && searchTerm) {
+        const sortedPages = sortSearchResultsByScore(pages, searchTerm);
+        const sortedUsers = sortSearchResultsByScore(users, searchTerm);
+
+        return NextResponse.json({
+          pages: sortedPages,
+          users: sortedUsers
+        }, { status: 200 });
+      } else {
+        // Return formatted results including users without scoring
+        return NextResponse.json({ pages, users }, { status: 200 });
+      }
     } catch (error) {
       console.error('Error processing query results:', error);
       return NextResponse.json({
