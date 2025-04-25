@@ -8,14 +8,12 @@ import TypeaheadSearch from './TypeaheadSearch';
 import { AuthContext } from '../providers/AuthProvider';
 import { appendPageReference } from '../firebase/database';
 import { toast } from 'sonner';
-import { usePage } from '../contexts/PageContext';
 import { useRouter } from 'next/navigation';
 
-const AddToPageButton = () => {
+const AddToPageButton = ({ page }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const { user } = useContext(AuthContext);
-  const { page } = usePage();
   const router = useRouter();
 
   const handleAddToPage = async (selectedPage) => {

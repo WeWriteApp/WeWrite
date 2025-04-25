@@ -10,6 +10,8 @@ import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 import Cookies from 'js-cookie';
 import PageEditor from "../components/PageEditor";
+import { Button } from "../components/ui/button";
+import { ChevronLeft } from "lucide-react";
 
 /**
  * A direct page creation component that doesn't rely on any authentication
@@ -321,6 +323,17 @@ export default function DirectCreatePage() {
     <DashboardLayout>
       <PageHeader title={isReply ? "Replying to page" : "New page"} username={displayUsername} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
+        <div className="flex items-center mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/')}
+            className="flex items-center gap-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </div>
         <div className="w-full">
           <PageEditor
             title={title}

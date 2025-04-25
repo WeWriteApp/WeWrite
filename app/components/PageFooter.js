@@ -117,7 +117,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
               />
             )}
             {/* Always show Add to Page button */}
-            <AddToPageButton />
+            <AddToPageButton page={page} />
           </div>
         )}
 
