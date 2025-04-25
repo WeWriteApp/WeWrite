@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { Twitter, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
+import { X, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
 
 /**
  * SiteFooter component for the application.
@@ -17,23 +17,98 @@ export default function SiteFooter({ className = "" }) {
   // Interactive footer text options
   const [madeWithIndex, setMadeWithIndex] = useState(0);
   const [locationIndex, setLocationIndex] = useState(0);
+  const [isAnimatingMadeWith, setIsAnimatingMadeWith] = useState(false);
+  const [isAnimatingLocation, setIsAnimatingLocation] = useState(false);
+  const madeWithRef = useRef(null);
+  const locationRef = useRef(null);
 
   const madeWithOptions = ["Made with agápē", "Vibe coded"];
   const locationOptions = ["in New York City", "in America", "on Earth"];
 
+  const animateTextChange = (element, newText, callback) => {
+    if (!element) return;
+
+    const originalText = element.innerText;
+    const frames = 10; // Number of animation frames
+    let frame = 0;
+
+    const animate = () => {
+      if (frame < frames) {
+        // During first half, scramble the text
+        if (frame < frames / 2) {
+          const progress = frame / (frames / 2);
+          const scrambleLength = Math.floor(originalText.length * progress);
+          const keepLength = originalText.length - scrambleLength;
+
+          let scrambledText = originalText.substring(0, keepLength);
+          for (let i = 0; i < scrambleLength; i++) {
+            scrambledText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
+          }
+
+          element.innerText = scrambledText;
+        }
+        // During second half, reveal the new text
+        else {
+          const progress = (frame - frames / 2) / (frames / 2);
+          const revealLength = Math.floor(newText.length * progress);
+
+          let revealedText = newText.substring(0, revealLength);
+          for (let i = 0; i < newText.length - revealLength; i++) {
+            revealedText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
+          }
+
+          element.innerText = revealedText;
+        }
+
+        frame++;
+        requestAnimationFrame(animate);
+      } else {
+        // Animation complete
+        element.innerText = newText;
+        callback();
+      }
+    };
+
+    animate();
+  };
+
   const handleMadeWithClick = () => {
-    setMadeWithIndex((prevIndex) => (prevIndex + 1) % madeWithOptions.length);
+    if (isAnimatingMadeWith) return;
+
+    setIsAnimatingMadeWith(true);
+    const nextIndex = (madeWithIndex + 1) % madeWithOptions.length;
+
+    animateTextChange(
+      madeWithRef.current,
+      madeWithOptions[nextIndex],
+      () => {
+        setMadeWithIndex(nextIndex);
+        setIsAnimatingMadeWith(false);
+      }
+    );
   };
 
   const handleLocationClick = () => {
-    setLocationIndex((prevIndex) => (prevIndex + 1) % locationOptions.length);
+    if (isAnimatingLocation) return;
+
+    setIsAnimatingLocation(true);
+    const nextIndex = (locationIndex + 1) % locationOptions.length;
+
+    animateTextChange(
+      locationRef.current,
+      locationOptions[nextIndex],
+      () => {
+        setLocationIndex(nextIndex);
+        setIsAnimatingLocation(false);
+      }
+    );
   };
 
   const footerLinks = [
     {
       href: "https://x.com/WeWriteApp",
       label: "X",
-      icon: <Twitter className="h-3 w-3" />,
+      icon: <X className="h-3 w-3" />,
       external: true
     },
     {
@@ -88,17 +163,19 @@ export default function SiteFooter({ className = "" }) {
           ))}
         </div>
 
-        <div className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground select-none">
           <span
+            ref={madeWithRef}
             onClick={handleMadeWithClick}
-            className="cursor-pointer hover:text-foreground transition-colors"
+            className="cursor-pointer hover:text-foreground transition-colors select-none"
             title="Click me!"
           >
             {madeWithOptions[madeWithIndex]}
           </span>{" "}
           <span
+            ref={locationRef}
             onClick={handleLocationClick}
-            className="cursor-pointer hover:text-foreground transition-colors"
+            className="cursor-pointer hover:text-foreground transition-colors select-none"
             title="Click me too!"
           >
             {locationOptions[locationIndex]}

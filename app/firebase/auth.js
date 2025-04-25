@@ -23,7 +23,23 @@ export const loginUser = async (email, password) => {
     return { user: userCredential.user };
   } catch (error) {
     console.error("Login error:", error);
-    return { code: error.code, message: error.message };
+
+    // Convert Firebase error codes to user-friendly messages
+    let message = "An error occurred during login. Please try again.";
+
+    if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+      message = "Incorrect email or password. Please try again.";
+    } else if (error.code === "auth/invalid-email") {
+      message = "Invalid email address format.";
+    } else if (error.code === "auth/user-disabled") {
+      message = "This account has been disabled.";
+    } else if (error.code === "auth/too-many-requests") {
+      message = "Too many failed login attempts. Please try again later.";
+    } else if (error.code === "auth/network-request-failed") {
+      message = "Network error. Please check your internet connection.";
+    }
+
+    return { code: error.code, message: message };
   }
 }
 

@@ -104,15 +104,19 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
       <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
-        {/* Follow button - moved to the top of the list */}
-        {!isEditing && !isOwner && user && (
+        {/* Action buttons - Follow and Add to Page */}
+        {!isEditing && user && (
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            <FollowButton
-              pageId={page.id}
-              pageTitle={page.title}
-              pageOwnerId={page.userId}
-              className="w-full md:w-auto"
-            />
+            {/* Only show Follow button if not the owner */}
+            {!isOwner && (
+              <FollowButton
+                pageId={page.id}
+                pageTitle={page.title}
+                pageOwnerId={page.userId}
+                className="w-full md:w-auto"
+              />
+            )}
+            {/* Always show Add to Page button */}
             <AddToPageButton />
           </div>
         )}

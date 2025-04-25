@@ -7,9 +7,9 @@ import { ChevronLeft } from 'lucide-react';
 
 /**
  * NavHeader Component
- * 
+ *
  * A reusable header component for navigation in non-page views.
- * 
+ *
  * @param {Object} props
  * @param {string} props.title - The title to display
  * @param {string} props.backUrl - URL to navigate to when back button is clicked
@@ -17,15 +17,15 @@ import { ChevronLeft } from 'lucide-react';
  * @param {React.ReactNode} props.rightContent - Optional content to display on the right side
  * @param {string} props.className - Additional CSS classes
  */
-export default function NavHeader({ 
-  title, 
-  backUrl, 
-  backLabel = "Back", 
+export default function NavHeader({
+  title,
+  backUrl,
+  backLabel = "Back",
   rightContent,
   className = ""
 }) {
   const router = useRouter();
-  
+
   const handleBack = () => {
     if (backUrl) {
       router.push(backUrl);
@@ -33,21 +33,22 @@ export default function NavHeader({
       router.back();
     }
   };
-  
+
   return (
     <div className={`flex items-center justify-between mb-6 ${className}`}>
       <div className="flex items-center">
         {backUrl !== undefined && (
-          <Button variant="outline" size="lg" onClick={handleBack} className="mr-3">
-            <ChevronLeft className="h-5 w-5 mr-2" />
+          <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
+            <ChevronLeft className="h-4 w-4 mr-1" />
             {backLabel}
           </Button>
         )}
-        <h1 className="text-2xl font-bold truncate">
-          {title}
-        </h1>
       </div>
-      
+
+      <h1 className="text-xl font-bold truncate text-center flex-1">
+        {title}
+      </h1>
+
       {rightContent && (
         <div className="flex items-center">
           {rightContent}

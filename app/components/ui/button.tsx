@@ -15,7 +15,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-white shadow-sm hover:bg-destructive/90", // Always use white text for better contrast
         outline:
-          "border border-theme-medium bg-background shadow-sm hover:bg-accent/5 hover:shadow-md hover:border-theme-medium",
+          "border border-theme-medium bg-background shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
         secondary:
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",

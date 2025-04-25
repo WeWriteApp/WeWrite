@@ -53,6 +53,8 @@ const AddToPageButton = () => {
 
   if (!user || !page) return null;
 
+  // Always show the button, even for the page owner
+
   return (
     <>
       <Button
