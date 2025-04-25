@@ -71,7 +71,52 @@ const SimpleLandingPage = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    // 3D rotation effect for hero image
+    const handleMouseMove = (e: MouseEvent) => {
+      const heroSection = document.querySelector('section:first-of-type') as HTMLElement;
+      const heroImage = document.getElementById('hero-image-container') as HTMLElement;
+
+      if (heroSection && heroImage) {
+        // Get the bounds of the hero section
+        const rect = heroSection.getBoundingClientRect();
+
+        // Calculate mouse position relative to the center of the section
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        // Calculate the rotation angle based on mouse position
+        // Limit the rotation to a small range (-5 to 5 degrees)
+        const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
+        const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
+
+        // Apply the rotation
+        heroImage.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      }
+    };
+
+    // Reset rotation when mouse leaves
+    const handleMouseLeave = () => {
+      const heroImage = document.getElementById('hero-image-container') as HTMLElement;
+      if (heroImage) {
+        heroImage.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg)';
+      }
+    };
+
+    // Add event listeners
+    const heroSection = document.querySelector('section:first-of-type');
+    if (heroSection) {
+      heroSection.addEventListener('mousemove', handleMouseMove);
+      heroSection.addEventListener('mouseleave', handleMouseLeave);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (heroSection) {
+        heroSection.removeEventListener('mousemove', handleMouseMove);
+        heroSection.removeEventListener('mouseleave', handleMouseLeave);
+      }
+    };
   }, []);
 
   // Smooth scroll function for anchor links
@@ -300,8 +345,20 @@ const SimpleLandingPage = () => {
 
       <main className="pt-32 md:pt-28">
         {/* Hero Section */}
-        <section className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6">
+        <section className="py-16 md:py-20 relative overflow-hidden">
+          {/* Background Image */}
+          <div className="absolute inset-0 w-full h-full z-0">
+            <Image
+              src="/images/landing/hero-image.png"
+              alt="Background"
+              fill
+              className="object-cover opacity-10"
+              priority
+            />
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]"></div>
+          </div>
+
+          <div className="container mx-auto px-6 relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-12">
               <motion.div
                 className="flex-1 text-center lg:text-left"
@@ -327,23 +384,35 @@ const SimpleLandingPage = () => {
               </motion.div>
 
               <motion.div
-                className="flex-1"
+                className="flex-1 perspective-[1000px]"
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.7 }}
               >
-                <div className="relative w-full max-w-md mx-auto">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 rounded-lg z-10"></div>
+                <motion.div
+                  className="relative w-full max-w-lg mx-auto transform-gpu"
+                  whileHover={{ scale: 1.02 }}
+                  animate={{
+                    rotateX: 0,
+                    rotateY: 0
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30
+                  }}
+                  id="hero-image-container"
+                >
                   <Image
                     src="/images/landing/hero-image.png"
                     alt="WeWrite App Interface"
-                    width={600}
-                    height={600}
-                    className="relative z-0 rounded-lg shadow-xl"
+                    width={700}
+                    height={700}
+                    className="rounded-lg shadow-2xl"
                     priority
                   />
-                </div>
+                </motion.div>
               </motion.div>
             </div>
           </div>
