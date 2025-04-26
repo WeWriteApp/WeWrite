@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
 import { Check, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, LazyMotion, domAnimation } from 'framer-motion';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
@@ -182,7 +182,8 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <LazyMotion features={domAnimation}>
+      <div className="min-h-screen bg-background">
       {/* Desktop Header */}
       <header
         className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
@@ -334,6 +335,8 @@ const LandingPage = () => {
                 fill
                 className="object-cover opacity-20"
                 priority
+                loading="eager"
+                sizes="100vw"
               />
             </div>
             <div className="absolute inset-0 bg-background/70"></div>
@@ -391,6 +394,8 @@ const LandingPage = () => {
                     height={700}
                     className="rounded-lg shadow-2xl border border-border/30"
                     priority
+                    loading="eager"
+                    sizes="(max-width: 768px) 100vw, 700px"
                   />
                 </motion.div>
               </motion.div>
@@ -621,6 +626,7 @@ const LandingPage = () => {
         </section>
       </main>
     </div>
+    </LazyMotion>
   );
 };
 
