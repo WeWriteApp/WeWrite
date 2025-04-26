@@ -5,22 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 import { PillLink } from '../PillLink';
 import { Flame, User, Loader } from 'lucide-react';
 import { Sparkline } from '../ui/sparkline';
-import { motion, LazyMotion, domAnimation } from 'framer-motion';
 import Link from 'next/link';
 import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
 import { getUsernameById } from '../../utils/userUtils';
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.22, 1, 0.36, 1]
-    }
-  }
-};
+// CSS animation class
+const fadeInClass = "animate-fadeIn";
 
 interface TrendingPage {
   id: string;
@@ -109,19 +99,12 @@ export default function LandingTrendingSection({ limit = 3 }) {
     return (
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-6">
-          <LazyMotion features={domAnimation}>
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
+          <div className={`${fadeInClass}`}>
             <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
               <Flame className="h-8 w-8 text-muted-foreground" />
               <span>Trending on WeWrite</span>
             </h2>
-          </motion.div>
-          </LazyMotion>
+          </div>
 
           <Card className="max-w-lg mx-auto">
             <CardContent className="p-6 text-center">
@@ -136,31 +119,20 @@ export default function LandingTrendingSection({ limit = 3 }) {
   return (
     <section className="py-16 bg-muted/30">
       <div className="container mx-auto px-6">
-        <LazyMotion features={domAnimation}>
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeIn}
-          >
+        <div className={`${fadeInClass}`}>
           <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
             <Flame className="h-8 w-8 text-muted-foreground" />
             <span>Trending on WeWrite</span>
           </h2>
-        </motion.div>
-        </LazyMotion>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {trendingPages.map((page, index) => (
-            <LazyMotion features={domAnimation} key={`lazy-${page.id}`}>
-              <motion.div
-                key={page.id}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeIn}
-                transition={{ delay: index * 0.1 }}
-              >
+            <div
+              key={page.id}
+              className={`${fadeInClass}`}
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
               <Link href={`/${page.id}`} className="block h-full">
                 <Card className="h-full hover:shadow-lg transition-all duration-200 cursor-pointer">
                   <CardHeader>
@@ -192,8 +164,7 @@ export default function LandingTrendingSection({ limit = 3 }) {
                   </CardContent>
                 </Card>
               </Link>
-            </motion.div>
-            </LazyMotion>
+            </div>
           ))}
         </div>
       </div>

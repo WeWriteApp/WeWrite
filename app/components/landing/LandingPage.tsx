@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Separator } from "../../components/ui/separator";
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
+import LandingTrendingSection from './LandingTrendingSection';
 
 // Import mock page content (in a real implementation, this would be fetched from Firebase)
 const pageContents = {
@@ -380,30 +381,7 @@ const LandingPage = () => {
         </section>
 
         {/* Trending Pages Section - Moved to top */}
-        <section className="py-16 bg-muted/30">
-          <div className="container mx-auto px-6 text-center">
-            <h2 className="text-3xl font-bold mb-6 flex items-center justify-center gap-2">
-              <Flame className="h-8 w-8 text-muted-foreground" />
-              <span>Trending on WeWrite</span>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="h-full hover:shadow-lg transition-all duration-200">
-                  <CardHeader>
-                    <div className="h-6 w-32 bg-muted/50 rounded-md animate-pulse"></div>
-                    <div className="h-4 w-20 bg-muted/30 rounded-md animate-pulse mt-2"></div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-between items-center">
-                      <div className="h-5 w-24 bg-muted/40 rounded-md animate-pulse"></div>
-                      <div className="w-24 h-10 bg-muted/30 rounded-md animate-pulse"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
+        <LandingTrendingSection limit={3} />
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20 bg-background">

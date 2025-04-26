@@ -264,7 +264,9 @@ export const getTrendingPages = async (limitCount = 5) => {
         views += data.hours[hour] || 0;
       }
 
+      // Only add pages with actual views
       if (views > 0) {
+        console.log(`Yesterday's views for page ${pageId}: ${views}`);
         pageViewsMap.set(pageId, { id: pageId, views });
       }
     });
@@ -283,9 +285,12 @@ export const getTrendingPages = async (limitCount = 5) => {
 
       // Only add pages with actual views
       if (views > 0) {
+        console.log(`Today's views for page ${pageId}: ${views}`);
         // Add to existing entry or create new one
         if (pageViewsMap.has(pageId)) {
-          pageViewsMap.get(pageId).views += views;
+          const totalViews = pageViewsMap.get(pageId).views + views;
+          pageViewsMap.get(pageId).views = totalViews;
+          console.log(`Combined views for page ${pageId}: ${totalViews}`);
         } else {
           pageViewsMap.set(pageId, { id: pageId, views });
         }
@@ -300,14 +305,18 @@ export const getTrendingPages = async (limitCount = 5) => {
     // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
     if (trendingPages.length < limitCount) {
       try {
+        console.log(`Not enough trending pages (${trendingPages.length}), fetching additional pages`);
+
         // Query for pages with the most total views
         const pagesQuery = query(
           collection(db, "pages"),
+          where("views", ">", 0), // Only get pages with views > 0
           orderBy("views", "desc"),
           limit(limitCount - trendingPages.length)
         );
 
         const pagesSnapshot = await getDocs(pagesQuery);
+        console.log(`Found ${pagesSnapshot.size} additional pages with views`);
 
         // Get the page IDs we already have
         const existingPageIds = new Set(trendingPages.map(p => p.id));
@@ -316,17 +325,21 @@ export const getTrendingPages = async (limitCount = 5) => {
         pagesSnapshot.forEach(doc => {
           const pageData = doc.data();
           const pageId = doc.id;
+          const pageViews = pageData.views || 0;
 
-          if (!existingPageIds.has(pageId)) {
+          if (!existingPageIds.has(pageId) && pageViews > 0) {
+            console.log(`Adding page ${pageId} with ${pageViews} total views`);
             trendingPages.push({
               id: pageId,
-              views: pageData.views || 0
+              views: pageViews
             });
           }
         });
 
         // Re-sort the combined list
-        trendingPages.sort((a, b) => b.views - a.views).slice(0, limitCount);
+        trendingPages = trendingPages
+          .sort((a, b) => b.views - a.views)
+          .slice(0, limitCount);
       } catch (err) {
         console.error('Error fetching additional trending pages:', err);
       }
