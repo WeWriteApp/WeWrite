@@ -87,6 +87,8 @@ const config: Config = {
       animation: {
         'gradient-x': 'gradient-x 3s ease infinite',
         'gradient': 'gradient 3s ease infinite',
+        'fadeIn': 'fadeIn 0.5s ease-in-out forwards',
+        'fadeInSlow': 'fadeIn 0.8s ease-in-out forwards',
       },
       keyframes: {
         'gradient-x': {
@@ -103,6 +105,10 @@ const config: Config = {
           '0%': { 'background-position': '0% 50%' },
           '50%': { 'background-position': '100% 50%' },
           '100%': { 'background-position': '0% 50%' },
+        },
+        'fadeIn': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

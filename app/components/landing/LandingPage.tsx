@@ -1,34 +1,15 @@
 "use client";
 
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { Check, ArrowRight, Loader } from 'lucide-react';
-import { motion, LazyMotion, domAnimation, m } from 'framer-motion';
+import { Check, ArrowRight, Flame, Loader, User } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
-import dynamic from 'next/dynamic';
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
-
-// Dynamically import the trending section to improve initial load time
-const LandingTrendingSection = dynamic(() => import('./LandingTrendingSection'), {
-  loading: () => (
-    <div className="py-16 bg-muted/30">
-      <div className="container mx-auto px-6 text-center">
-        <h2 className="text-3xl font-bold mb-6 flex items-center justify-center gap-2">
-          <span>Trending on WeWrite</span>
-        </h2>
-        <div className="flex justify-center">
-          <Loader className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    </div>
-  ),
-  ssr: false
-});
 
 // Import mock page content (in a real implementation, this would be fetched from Firebase)
 const pageContents = {
@@ -69,15 +50,8 @@ const pageContents = {
   }
 };
 
-// Animation variants
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
-  }
-};
+// Simple fade-in animation using CSS
+const fadeInClass = "animate-fadeIn";
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -199,7 +173,6 @@ const LandingPage = () => {
   };
 
   return (
-    <LazyMotion features={domAnimation}>
       <div className="min-h-screen bg-background">
       {/* Desktop Header */}
       <header
@@ -361,12 +334,8 @@ const LandingPage = () => {
 
           <div className="container mx-auto px-6 relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-12">
-              <motion.div
-                className="flex-1 text-center lg:text-left"
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeIn}
+              <div
+                className={`flex-1 text-center lg:text-left ${fadeInClass}`}
               >
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
                   Write, share, earn.
@@ -382,26 +351,16 @@ const LandingPage = () => {
                     <Link href="/auth/register">Create Account</Link>
                   </Button>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div
-                className="flex-1 perspective-[1000px]"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.7 }}
+              <div
+                className={`flex-1 perspective-[1000px] ${fadeInClass}`}
+                style={{ animationDelay: '0.2s' }}
               >
-                <motion.div
-                  className="relative w-full max-w-lg mx-auto transform-gpu"
-                  whileHover={{ scale: 1.02 }}
-                  animate={{
-                    rotateX: rotation.x,
-                    rotateY: rotation.y
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30
+                <div
+                  className="relative w-full max-w-lg mx-auto transform-gpu hover:scale-105 transition-transform duration-300"
+                  style={{
+                    transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`
                   }}
                 >
                   <Image
@@ -414,53 +373,54 @@ const LandingPage = () => {
                     loading="eager"
                     sizes="(max-width: 768px) 100vw, 700px"
                   />
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Trending Pages Section - Moved to top */}
-        <Suspense fallback={
-          <div className="py-16 bg-muted/30">
-            <div className="container mx-auto px-6 text-center">
-              <h2 className="text-3xl font-bold mb-6 flex items-center justify-center gap-2">
-                <span>Trending on WeWrite</span>
-              </h2>
-              <div className="flex justify-center">
-                <Loader className="h-8 w-8 animate-spin text-primary" />
-              </div>
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-6 text-center">
+            <h2 className="text-3xl font-bold mb-6 flex items-center justify-center gap-2">
+              <Flame className="h-8 w-8 text-muted-foreground" />
+              <span>Trending on WeWrite</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="h-full hover:shadow-lg transition-all duration-200">
+                  <CardHeader>
+                    <div className="h-6 w-32 bg-muted/50 rounded-md animate-pulse"></div>
+                    <div className="h-4 w-20 bg-muted/30 rounded-md animate-pulse mt-2"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex justify-between items-center">
+                      <div className="h-5 w-24 bg-muted/40 rounded-md animate-pulse"></div>
+                      <div className="w-24 h-10 bg-muted/30 rounded-md animate-pulse"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
-        }>
-          <LandingTrendingSection limit={3} />
-        </Suspense>
+        </section>
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
-            <motion.div
-              className="text-center mb-16"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
+            <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Available Features</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Discover what makes WeWrite special
               </p>
-            </motion.div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {builtFeatures.map((feature, index) => (
-                <motion.div
+                <div
                   key={index}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={fadeIn}
-                  transition={{ delay: index * 0.1 }}
+                  className={`${fadeInClass}`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <PagePreviewCard
                     title={feature.title}
@@ -469,7 +429,7 @@ const LandingPage = () => {
                     status={feature.status as any}
                     maxContentLength={150}
                   />
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -478,28 +438,19 @@ const LandingPage = () => {
         {/* Coming Soon Section - Moved below features */}
         <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
-            <motion.div
-              className="text-center mb-16"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
+            <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Coming Soon</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Features we're working on for future releases
               </p>
-            </motion.div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {comingSoonFeatures.map((feature, index) => (
-                <motion.div
+                <div
                   key={index}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={fadeIn}
-                  transition={{ delay: index * 0.1 }}
+                  className={`${fadeInClass}`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <PagePreviewCard
                     title={feature.title}
@@ -508,7 +459,7 @@ const LandingPage = () => {
                     status={feature.status as any}
                     maxContentLength={150}
                   />
-                </motion.div>
+                </div>
               ))}
             </div>
           </div>
@@ -517,27 +468,15 @@ const LandingPage = () => {
         {/* Supporters Section */}
         <section id="supporters" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
-            <motion.div
-              className="text-center mb-16"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
+            <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Special thanks to those who have a subscription for WeWrite while we're still in beta, working on the rest of the functionality. <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">Read our Roadmap here</Link>.
               </p>
-            </motion.div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeIn}
-                transition={{ delay: 0.1 }}
-              >
+              <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
                 <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <CardTitle>Tier 1 Supporters</CardTitle>
@@ -546,15 +485,9 @@ const LandingPage = () => {
                     </CardDescription>
                   </CardHeader>
                 </Card>
-              </motion.div>
+              </div>
 
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeIn}
-                transition={{ delay: 0.2 }}
-              >
+              <div className={`${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
                 <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <CardTitle>Tier 2 & 3 Supporters</CardTitle>
@@ -563,15 +496,9 @@ const LandingPage = () => {
                     </CardDescription>
                   </CardHeader>
                 </Card>
-              </motion.div>
+              </div>
 
-              <motion.div
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeIn}
-                transition={{ delay: 0.3 }}
-              >
+              <div className={`${fadeInClass}`} style={{ animationDelay: '0.3s' }}>
                 <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
                     <CardTitle>Tier 4 Supporters</CardTitle>
@@ -580,7 +507,7 @@ const LandingPage = () => {
                     </CardDescription>
                   </CardHeader>
                 </Card>
-              </motion.div>
+              </div>
             </div>
 
 
@@ -590,28 +517,19 @@ const LandingPage = () => {
         {/* About Section */}
         <section id="about" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
-            <motion.div
-              className="text-center mb-16"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
+            <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">About WeWrite</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Built with modern technologies for the best user experience
               </p>
-            </motion.div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               {techStack.map((tech, index) => (
-                <motion.div
+                <div
                   key={index}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={fadeIn}
-                  transition={{ delay: index * 0.1 }}
+                  className={`${fadeInClass}`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <Card className="h-full hover:shadow-lg transition-all duration-200">
                     <CardHeader>
@@ -621,7 +539,7 @@ const LandingPage = () => {
                       </CardDescription>
                     </CardHeader>
                   </Card>
-                </motion.div>
+                </div>
               ))}
             </div>
 
@@ -632,13 +550,7 @@ const LandingPage = () => {
         {/* Ready to Get Started Section */}
         <section id="get-started" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
-            <motion.div
-              className="text-center"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={fadeIn}
-            >
+            <div className={`text-center ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
                 Join WeWrite today and start creating, sharing, and earning from your content.
@@ -651,12 +563,11 @@ const LandingPage = () => {
                   <Link href="/auth/register">Create Account</Link>
                 </Button>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </main>
     </div>
-    </LazyMotion>
   );
 };
 
