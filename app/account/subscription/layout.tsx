@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 
 export default function SubscriptionLayout({
@@ -10,4 +12,4 @@ export default function SubscriptionLayout({
       <main>{children}</main>
     </div>
   );
-} 
+}

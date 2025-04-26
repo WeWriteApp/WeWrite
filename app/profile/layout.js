@@ -1,4 +1,7 @@
-export const metadata = {
+"use client";
+
+// Metadata is now defined in the component
+const metadata = {
   title: 'WeWrite - My Profile',
   description: 'View and manage your WeWrite profile and account settings',
 };

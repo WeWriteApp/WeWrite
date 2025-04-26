@@ -1,3 +1,5 @@
+"use client";
+
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { app } from '../../firebase/config';
 

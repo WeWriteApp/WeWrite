@@ -1,11 +1,12 @@
-import { Metadata } from 'next';
+"use client";
+
 import { getPageMetadata } from '../firebase/database';
 
 export async function generateMetadata({ params }) {
   try {
     const id = params.id;
     const metadata = await getPageMetadata(id);
-    
+
     if (metadata) {
       return {
         title: metadata.title || 'WeWrite',

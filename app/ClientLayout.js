@@ -54,21 +54,21 @@ export default function ClientLayout({ children }) {
                         <MobileProvider>
                           <DrawerProvider>
                             <LineSettingsProvider>
-                      <Drawer />
-                      <div className="flex flex-col min-h-screen bg-background pb-8">
-                        {!isAuthPage && <UsernameWarningBanner />}
-                        {!isAuthPage && <UsernameEnforcementBanner />}
-                        <main className="flex-grow">
-                          {children}
-                        </main>
-                      </div>
-                      {process.env.NODE_ENV === 'development' && (
-                        <>
-                          {/* <GADebugger /> */}
-                          <WindsurfOverlay />
-                        </>
-                      )}
-                          </LineSettingsProvider>
+                              <Drawer />
+                              <div className="flex flex-col min-h-screen bg-background pb-8">
+                                {!isAuthPage && <UsernameWarningBanner />}
+                                {!isAuthPage && <UsernameEnforcementBanner />}
+                                <main className="flex-grow">
+                                  {children}
+                                </main>
+                              </div>
+                              {process.env.NODE_ENV === 'development' && (
+                                <>
+                                  {/* <GADebugger /> */}
+                                  <WindsurfOverlay />
+                                </>
+                              )}
+                            </LineSettingsProvider>
                         </DrawerProvider>
                       </MobileProvider>
                     </ActivityFilterProvider>

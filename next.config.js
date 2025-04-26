@@ -21,17 +21,12 @@ const nextConfig = {
     optimizePackageImports: ['react-icons'],
     // Try to improve performance
     forceSwcTransforms: true,
-    // Skip type checking to speed up builds
-    skipTypeChecking: true,
-    // Skip middleware validation
-    skipMiddlewareUrlNormalize: true,
-    // Skip trailing slash redirect
-    skipTrailingSlashRedirect: true,
     // Improve server components handling
     serverComponentsExternalPackages: ['firebase-admin'],
-    // Improve server actions
-    serverActions: true,
   },
+  // Middleware configuration
+  skipMiddlewareUrlNormalize: true,
+  skipTrailingSlashRedirect: true,
   // Configure environment variables
   env: {
     NEXT_PUBLIC_FIREBASE_PID: process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82',

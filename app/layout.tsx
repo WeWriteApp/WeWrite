@@ -1,3 +1,5 @@
+"use client";
+
 import "./globals.css"
 import "./styles/scrollbar-hide.css"
 import "./styles/loader.css"
@@ -18,9 +20,11 @@ const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata = {
+// Metadata is now defined in the component
+const metadata = {
   title: "WeWrite - Home",
   description: "Create, collaborate, and share your writing with others in real-time",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://wewrite.app"),
 }
 
 export default function RootLayout({
