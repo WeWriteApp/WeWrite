@@ -9,10 +9,12 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
 import { createUser, addUsername, checkUsernameAvailability } from "../firebase/auth"
-import { Check, X } from "lucide-react"
+import { Check, X, AlertCircle } from "lucide-react"
 import { debounce } from "lodash"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 import { AuthRedirectOverlay } from "./AuthRedirectOverlay"
+import { executeReCaptcha, verifyReCaptchaScore } from "../utils/recaptcha"
+import { Alert, AlertDescription } from "../components/ui/alert"
 
 export function RegisterForm({
   className,
@@ -26,6 +28,8 @@ export function RegisterForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [showCaptchaChallenge, setShowCaptchaChallenge] = useState(false)
+  const [captchaError, setCaptchaError] = useState<string | null>(null)
 
   // Username validation states
   const [isChecking, setIsChecking] = useState(false)
@@ -158,6 +162,7 @@ export function RegisterForm({
     }
 
     setError(null)
+    setCaptchaError(null)
     setIsLoading(true)
 
     // Validate username availability before submission
@@ -173,6 +178,31 @@ export function RegisterForm({
     }
 
     try {
+      // Execute reCAPTCHA v3
+      let token;
+      try {
+        token = await executeReCaptcha('register');
+      } catch (captchaError) {
+        console.error('reCAPTCHA execution failed:', captchaError);
+        setShowCaptchaChallenge(true);
+        setIsLoading(false);
+        setCaptchaError('Please complete the CAPTCHA challenge to continue');
+        return;
+      }
+
+      // Verify reCAPTCHA score
+      const verification = await verifyReCaptchaScore(token);
+
+      // If score is too low, show explicit CAPTCHA challenge
+      if (!verification.success || (verification.score && verification.score < 0.5)) {
+        console.log('Low reCAPTCHA score:', verification.score);
+        setShowCaptchaChallenge(true);
+        setIsLoading(false);
+        setCaptchaError('Please complete the CAPTCHA challenge to continue');
+        return;
+      }
+
+      // Proceed with registration if CAPTCHA score is acceptable
       const result = await createUser(email, password)
 
       if (result.user) {
@@ -301,6 +331,21 @@ export function RegisterForm({
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
             <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {captchaError && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2">
+              {captchaError}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {showCaptchaChallenge && (
+          <div className="flex justify-center my-2">
+            <div id="recaptcha-container" className="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
           </div>
         )}
         <LoadingButton

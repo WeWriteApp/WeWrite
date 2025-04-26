@@ -9,8 +9,10 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { useState, useEffect } from "react"
 import { loginUser, loginAnonymously } from "../firebase/auth"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 import { Separator } from "../components/ui/separator"
+import { executeReCaptcha, verifyReCaptchaScore } from "../utils/recaptcha"
+import { Alert, AlertDescription } from "../components/ui/alert"
 
 export function ModernLoginForm({
   className,
@@ -23,6 +25,8 @@ export function ModernLoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
   const [previousAccount, setPreviousAccount] = useState<{ email: string } | null>(null)
+  const [showCaptchaChallenge, setShowCaptchaChallenge] = useState(false)
+  const [captchaError, setCaptchaError] = useState<string | null>(null)
 
   // Validate form inputs
   useEffect(() => {
@@ -50,9 +54,35 @@ export function ModernLoginForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setCaptchaError(null)
     setIsLoading(true)
 
     try {
+      // Execute reCAPTCHA v3
+      let token;
+      try {
+        token = await executeReCaptcha('login');
+      } catch (captchaError) {
+        console.error('reCAPTCHA execution failed:', captchaError);
+        setShowCaptchaChallenge(true);
+        setIsLoading(false);
+        setCaptchaError('Please complete the CAPTCHA challenge to continue');
+        return;
+      }
+
+      // Verify reCAPTCHA score
+      const verification = await verifyReCaptchaScore(token);
+
+      // If score is too low, show explicit CAPTCHA challenge
+      if (!verification.success || (verification.score && verification.score < 0.5)) {
+        console.log('Low reCAPTCHA score:', verification.score);
+        setShowCaptchaChallenge(true);
+        setIsLoading(false);
+        setCaptchaError('Please complete the CAPTCHA challenge to continue');
+        return;
+      }
+
+      // Proceed with login if CAPTCHA score is acceptable
       const result = await loginUser(email, password)
 
       if (result.user) {
@@ -157,6 +187,21 @@ export function ModernLoginForm({
         {error && (
           <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
             {error}
+          </div>
+        )}
+
+        {captchaError && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="ml-2">
+              {captchaError}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {showCaptchaChallenge && (
+          <div className="flex justify-center my-2">
+            <div id="recaptcha-container" className="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
           </div>
         )}
 

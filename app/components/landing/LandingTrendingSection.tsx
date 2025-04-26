@@ -1,37 +1,14 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { PillLink } from '../PillLink';
-import { Flame, User } from 'lucide-react';
+import { Flame, User, Loader } from 'lucide-react';
 import { Sparkline } from '../ui/sparkline';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-
-// Mock data for trending pages
-const mockTrendingPages = [
-  {
-    id: "RFsPq1tbcOMtljwHyIMT",
-    title: "Every Page is a Fundraiser",
-    views: 1245,
-    hourlyViews: [2, 5, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110],
-    username: "jamiegray"
-  },
-  {
-    id: "aJFMqTEKuNEHvOrYE9c2",
-    title: "No Ads",
-    views: 987,
-    hourlyViews: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 45, 40, 35, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
-    username: "wewrite"
-  },
-  {
-    id: "ou1LPmpynpoirLrv99fq",
-    title: "Multiple View Modes",
-    views: 756,
-    hourlyViews: [10, 15, 20, 25, 30, 35, 30, 25, 20, 25, 30, 35, 40, 45, 50, 55, 50, 45, 40, 35, 30, 25, 20, 15],
-    username: "admin"
-  }
-];
+import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
+import { getUsernameById } from '../../utils/userUtils';
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -45,8 +22,114 @@ const fadeIn = {
   }
 };
 
+interface TrendingPage {
+  id: string;
+  title: string;
+  views: number;
+  hourlyViews: number[];
+  userId?: string;
+  username?: string;
+}
+
 export default function LandingTrendingSection({ limit = 3 }) {
-  const trendingPages = mockTrendingPages.slice(0, limit);
+  const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTrendingPages = async () => {
+      try {
+        setLoading(true);
+
+        // Get trending pages for the last 24 hours
+        const pages = await getTrendingPages(limit);
+
+        // For each page, get the hourly view data for sparklines and username
+        const pagesWithSparklines = await Promise.all(
+          pages.map(async (page) => {
+            try {
+              const viewData = await getPageViewsLast24Hours(page.id);
+
+              // Get username if userId exists
+              let username = "Anonymous";
+              if (page.userId) {
+                try {
+                  username = await getUsernameById(page.userId);
+                } catch (usernameError) {
+                  console.error(`Error getting username for user ${page.userId}:`, usernameError);
+                }
+              }
+
+              return {
+                ...page,
+                hourlyViews: viewData.hourly || Array(24).fill(0),
+                username: username || "Anonymous"
+              };
+            } catch (err) {
+              console.error(`Error fetching view data for page ${page.id}:`, err);
+              return {
+                ...page,
+                hourlyViews: Array(24).fill(0),
+                username: page.username || "Anonymous"
+              };
+            }
+          })
+        );
+
+        setTrendingPages(pagesWithSparklines);
+      } catch (err) {
+        console.error('Error fetching trending pages:', err);
+        setError('Failed to load trending pages');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrendingPages();
+  }, [limit]);
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
+            <Flame className="h-8 w-8 text-muted-foreground" />
+            <span>Trending on WeWrite</span>
+          </h2>
+          <div className="flex justify-center items-center py-12">
+            <Loader className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Always show the section, even if there's an error or no trending pages
+  if (error || trendingPages.length === 0) {
+    return (
+      <section className="py-16 bg-muted/30">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeIn}
+          >
+            <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2">
+              <Flame className="h-8 w-8 text-muted-foreground" />
+              <span>Trending on WeWrite</span>
+            </h2>
+          </motion.div>
+
+          <Card className="max-w-lg mx-auto">
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground">No trending pages available yet. Check back soon!</p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 bg-muted/30">
@@ -74,7 +157,7 @@ export default function LandingTrendingSection({ limit = 3 }) {
               transition={{ delay: index * 0.1 }}
             >
               <Link href={`/${page.id}`} className="block h-full">
-                <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                <Card className="h-full hover:shadow-lg transition-all duration-200 cursor-pointer">
                   <CardHeader>
                     <CardTitle className="text-lg">
                       <PillLink href={`/${page.id}`}>

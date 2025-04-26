@@ -118,7 +118,7 @@ export default function TrendingPages({ limit = 5 }) {
           <h2 className="text-lg font-semibold">Trending Pages</h2>
         </div>
       </div>
-      <div className="border border-theme-medium rounded-lg overflow-hidden">
+      <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">

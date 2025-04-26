@@ -244,7 +244,10 @@ export default function PageList({
       {mode === "grid" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayPages.map((page) => (
-            <Link key={page.id} href={`/${page.id}`} className={interactiveCard("h-full")}>
+            <Link key={page.id} href={`/${page.id}`} className={cn(
+              interactiveCard("h-full"),
+              "shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:shadow-lg transition-all duration-200"
+            )}>
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "flex items-center justify-center w-10 h-10 rounded-full",
