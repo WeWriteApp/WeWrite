@@ -1,29 +1,43 @@
-/* Spring animation for pledge bar - more subtle */
+/* Spring animation for pledge bar - more pronounced */
 @keyframes spring-up {
-  0% { transform: translateY(20px); opacity: 0; }
-  40% { transform: translateY(-5px); opacity: 1; }
-  60% { transform: translateY(3px); }
-  80% { transform: translateY(-2px); }
-  90% { transform: translateY(1px); }
+  0% { transform: translateY(30px); opacity: 0; }
+  40% { transform: translateY(-8px); opacity: 1; }
+  60% { transform: translateY(5px); }
+  80% { transform: translateY(-3px); }
+  90% { transform: translateY(2px); }
   100% { transform: translateY(0); }
 }
 
 /* Pulse animation for pledge bar */
 @keyframes pulse-brightness {
-  0% { filter: brightness(1); }
-  50% { filter: brightness(1.1); }
-  100% { filter: brightness(1); }
+  0% { filter: brightness(1); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15); }
+  50% { filter: brightness(1.15); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 6px 70px rgba(0, 0, 0, 0.18); }
+  100% { filter: brightness(1); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15); }
+}
+
+/* Shadow pulse animation */
+@keyframes shadow-pulse {
+  0% { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15); }
+  50% { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 6px 70px rgba(0, 0, 0, 0.18); }
+  100% { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15); }
 }
 
 .spring-up {
-  animation: spring-up 0.7s ease-out;
+  animation: spring-up 0.8s ease-out;
 }
 
 .pulse-brightness {
-  animation: pulse-brightness 1.2s ease-in-out;
+  animation: pulse-brightness 1.5s ease-in-out;
+}
+
+.shadow-pulse {
+  animation: shadow-pulse 1.5s ease-in-out infinite;
 }
 
 /* Combined animation class */
 .spring-and-pulse {
-  animation: spring-up 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275), pulse-brightness 1.2s ease-in-out;
+  animation:
+    spring-up 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    pulse-brightness 1.5s ease-in-out,
+    shadow-pulse 3s ease-in-out infinite;
 }

@@ -449,7 +449,19 @@ const PledgeBar = () => {
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
         <div
-          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
+          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg cursor-pointer transition-all duration-300"
+          style={{
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15)',
+            transform: 'translateY(0)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.15), 0 6px 70px rgba(0, 0, 0, 0.18)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15)';
+          }}
           onClick={() => setShowActivationModal(true)}
         >
           <div className="flex justify-around py-4 px-6">
@@ -487,18 +499,34 @@ const PledgeBar = () => {
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
-        <CompositionBar
-          value={0}
-          max={100}
-          onChange={() => {}}
-          disabled={false}
-          pledges={[{ id: 'placeholder', amount: 0 }]}
-          subscriptionAmount={100}
-          onPledgeChange={() => setShowActivationModal(true)}
-          onPledgeCustomAmount={() => setShowActivationModal(true)}
-          onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-        />
+        <div
+          className="w-full max-w-md mx-auto transition-all duration-300"
+          style={{
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15)',
+            transform: 'translateY(0)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.15), 0 6px 70px rgba(0, 0, 0, 0.18)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15)';
+          }}
+        >
+          <CompositionBar
+            value={0}
+            max={100}
+            onChange={() => {}}
+            disabled={false}
+            pledges={[{ id: 'placeholder', amount: 0 }]}
+            subscriptionAmount={100}
+            onPledgeChange={() => setShowActivationModal(true)}
+            onPledgeCustomAmount={() => setShowActivationModal(true)}
+            onDeletePledge={() => {}}
+            className="w-full bg-background/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg cursor-pointer"
+          />
+        </div>
 
         {/* Pledge Modal for logged-out users - rendered at document level */}
         {typeof document !== 'undefined' && createPortal(
@@ -541,18 +569,34 @@ const PledgeBar = () => {
         className={`fixed bottom-12 left-8 right-8 z-50 flex flex-col items-center gap-2 transition-all duration-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'} ${animateEntry ? 'spring-and-pulse' : ''}`}
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
-        <CompositionBar
-          value={pledges[0]?.amount || 0}
-          max={subscription?.amount || 100}
-          onChange={() => {}}
-          disabled={false}
-          pledges={pledges}
-          subscriptionAmount={subscription?.amount || 0}
-          onPledgeChange={handlePledgeInteraction}
-          onPledgeCustomAmount={handlePledgeCustomAmount}
-          onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
-        />
+        <div
+          className="w-full max-w-md mx-auto transition-all duration-300"
+          style={{
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15)',
+            transform: 'translateY(0)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.15), 0 6px 70px rgba(0, 0, 0, 0.18)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 60px rgba(0, 0, 0, 0.15)';
+          }}
+        >
+          <CompositionBar
+            value={pledges[0]?.amount || 0}
+            max={subscription?.amount || 100}
+            onChange={() => {}}
+            disabled={false}
+            pledges={pledges}
+            subscriptionAmount={subscription?.amount || 0}
+            onPledgeChange={handlePledgeInteraction}
+            onPledgeCustomAmount={handlePledgeCustomAmount}
+            onDeletePledge={() => {}}
+            className="w-full bg-background/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg"
+          />
+        </div>
 
         {showMoreButton && (
           <Button
