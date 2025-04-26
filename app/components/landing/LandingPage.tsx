@@ -182,7 +182,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative z-0">
+    <div className="min-h-screen bg-background">
       {/* Desktop Header */}
       <header
         className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
@@ -305,10 +305,10 @@ const LandingPage = () => {
         </div>
       </div>
 
-      <main className="pt-32 md:pt-28 relative z-10">
+      <main className="pt-32 md:pt-28">
         {/* Hero Section */}
         <section
-          className="py-16 md:py-20 relative overflow-hidden z-10"
+          className="py-16 md:py-20 relative overflow-hidden"
           ref={heroSectionRef}
           onMouseMove={(e) => {
             if (heroSectionRef.current) {
@@ -325,18 +325,18 @@ const LandingPage = () => {
           }}
           onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
-          {/* Background Image - Blue tinted and cropped */}
+          {/* Background Image - Simplified and fixed */}
           <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
             <div className="absolute inset-0 -right-8 scale-105"> {/* Crop by shifting and scaling */}
               <Image
                 src="/images/landing/hero-image.png"
                 alt="Background"
                 fill
-                className="object-cover opacity-30 filter hue-rotate-[210deg]" /* Blue tint with hue-rotate */
+                className="object-cover opacity-20"
                 priority
               />
             </div>
-            <div className="absolute inset-0 bg-background/40 backdrop-blur-[2px]"></div>
+            <div className="absolute inset-0 bg-background/70"></div>
           </div>
 
           <div className="container mx-auto px-6 relative z-10">
@@ -391,7 +391,6 @@ const LandingPage = () => {
                     height={700}
                     className="rounded-lg shadow-2xl border border-border/30"
                     priority
-                    style={{ zIndex: 5 }}
                   />
                 </motion.div>
               </motion.div>
