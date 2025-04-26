@@ -1,17 +1,34 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { Check, ArrowRight } from 'lucide-react';
-import { motion, LazyMotion, domAnimation } from 'framer-motion';
+import { Check, ArrowRight, Loader } from 'lucide-react';
+import { motion, LazyMotion, domAnimation, m } from 'framer-motion';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
-import LandingTrendingSection from './LandingTrendingSection';
+import dynamic from 'next/dynamic';
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
+
+// Dynamically import the trending section to improve initial load time
+const LandingTrendingSection = dynamic(() => import('./LandingTrendingSection'), {
+  loading: () => (
+    <div className="py-16 bg-muted/30">
+      <div className="container mx-auto px-6 text-center">
+        <h2 className="text-3xl font-bold mb-6 flex items-center justify-center gap-2">
+          <span>Trending on WeWrite</span>
+        </h2>
+        <div className="flex justify-center">
+          <Loader className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    </div>
+  ),
+  ssr: false
+});
 
 // Import mock page content (in a real implementation, this would be fetched from Firebase)
 const pageContents = {
@@ -195,7 +212,7 @@ const LandingPage = () => {
         <div className="container mx-auto flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
             <h1
-              className="text-2xl font-bold text-primary cursor-pointer"
+              className="text-2xl font-bold cursor-pointer dark:text-white text-primary"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               WeWrite
@@ -254,7 +271,7 @@ const LandingPage = () => {
         >
           <div className="container mx-auto flex justify-between items-center px-4">
             <h1
-              className="text-xl font-bold text-primary cursor-pointer"
+              className="text-xl font-bold cursor-pointer dark:text-white text-primary"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               WeWrite
@@ -404,7 +421,20 @@ const LandingPage = () => {
         </section>
 
         {/* Trending Pages Section - Moved to top */}
-        <LandingTrendingSection limit={3} />
+        <Suspense fallback={
+          <div className="py-16 bg-muted/30">
+            <div className="container mx-auto px-6 text-center">
+              <h2 className="text-3xl font-bold mb-6 flex items-center justify-center gap-2">
+                <span>Trending on WeWrite</span>
+              </h2>
+              <div className="flex justify-center">
+                <Loader className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            </div>
+          </div>
+        }>
+          <LandingTrendingSection limit={3} />
+        </Suspense>
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20 bg-background">

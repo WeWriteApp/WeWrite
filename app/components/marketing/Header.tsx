@@ -6,7 +6,7 @@ const Header = () => {
   return (
     <header className="py-4 top-0 w-full z-50">
       <div className="container mx-auto flex justify-between items-center">
-        <div className="text-xl text-black font-bold">WeWrite</div>
+        <div className="text-xl font-bold dark:text-white text-primary">WeWrite</div>
         <nav className="space-x-6">
           <a
             href="#"

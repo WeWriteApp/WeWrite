@@ -62,7 +62,7 @@ export default function Header() {
             {/* Logo/Title (centered) */}
             <div className="flex items-center justify-center">
               <Link href="/" className="flex items-center space-x-2 transition-all duration-200 hover:scale-110 hover:text-primary">
-                <span className="font-bold">WeWrite</span>
+                <span className="font-bold dark:text-white text-primary">WeWrite</span>
               </Link>
             </div>
 

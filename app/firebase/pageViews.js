@@ -264,7 +264,9 @@ export const getTrendingPages = async (limitCount = 5) => {
         views += data.hours[hour] || 0;
       }
 
-      pageViewsMap.set(pageId, { id: pageId, views });
+      if (views > 0) {
+        pageViewsMap.set(pageId, { id: pageId, views });
+      }
     });
 
     // Process today's views
@@ -279,11 +281,14 @@ export const getTrendingPages = async (limitCount = 5) => {
         views += data.hours[hour] || 0;
       }
 
-      // Add to existing entry or create new one
-      if (pageViewsMap.has(pageId)) {
-        pageViewsMap.get(pageId).views += views;
-      } else {
-        pageViewsMap.set(pageId, { id: pageId, views });
+      // Only add pages with actual views
+      if (views > 0) {
+        // Add to existing entry or create new one
+        if (pageViewsMap.has(pageId)) {
+          pageViewsMap.get(pageId).views += views;
+        } else {
+          pageViewsMap.set(pageId, { id: pageId, views });
+        }
       }
     });
 
