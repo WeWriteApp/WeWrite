@@ -1,12 +1,28 @@
 /**
  * Firebase Admin Configuration
- * 
+ *
  * This module provides a unified approach to initializing Firebase Admin
  * across the application. It handles different environments and ensures
  * proper credential management.
+ *
+ * IMPORTANT: This module should ONLY be imported in server-side code.
+ * It will throw an error if imported on the client.
  */
 
-import * as admin from 'firebase-admin';
+// Ensure this module is only used on the server
+if (typeof window !== 'undefined') {
+  throw new Error('Firebase Admin cannot be used on the client side. Use client-side Firebase SDK instead.');
+}
+
+// Dynamic import to prevent client-side bundling
+let admin;
+try {
+  // This will only execute on the server
+  admin = require('firebase-admin');
+} catch (error) {
+  console.error('Failed to import firebase-admin:', error);
+  throw new Error('Failed to import firebase-admin. This module should only be used on the server.');
+}
 
 // Singleton pattern to ensure we only initialize the app once
 let firebaseAdmin;
@@ -32,14 +48,14 @@ export function getFirebaseAdmin() {
         auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
         client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
       };
-      
+
       // Initialize with credential if we have the minimum required fields
       if (serviceAccount.project_id) {
         try {
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
-            databaseURL: process.env.FIREBASE_DATABASE_URL || 
-                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 
+            databaseURL: process.env.FIREBASE_DATABASE_URL ||
+                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
                          "https://wewrite-ccd82-default-rtdb.firebaseio.com"
           });
           console.log('Firebase Admin initialized successfully');
@@ -48,8 +64,8 @@ export function getFirebaseAdmin() {
           // Fallback to basic initialization if cert fails
           admin.initializeApp({
             projectId: serviceAccount.project_id,
-            databaseURL: process.env.FIREBASE_DATABASE_URL || 
-                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 
+            databaseURL: process.env.FIREBASE_DATABASE_URL ||
+                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
                          "https://wewrite-ccd82-default-rtdb.firebaseio.com"
           });
           console.log('Firebase Admin initialized with fallback configuration');
@@ -58,7 +74,7 @@ export function getFirebaseAdmin() {
         throw new Error('Missing required project_id for Firebase Admin initialization');
       }
     }
-    
+
     firebaseAdmin = admin;
     return firebaseAdmin;
   } catch (error) {

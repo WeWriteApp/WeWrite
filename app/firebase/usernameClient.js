@@ -1,20 +1,11 @@
 /**
- * Server-side username history management
- *
- * IMPORTANT: This module should ONLY be imported in server-side code.
- * It will throw an error if imported on the client.
+ * Client-side username management functions
+ * This file contains only client-safe code with no Firebase Admin dependencies
  */
 
-// Ensure this module is only used on the server
-if (typeof window !== 'undefined') {
-  throw new Error('This module cannot be used on the client side. Use usernameClient.js instead.');
-}
-
-// Import server-side Firebase Admin
-import { getFirebaseAdmin } from './adminConfig';
-
-// Initialize Firebase Admin
-const admin = getFirebaseAdmin();
+import { db } from './config';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { getDatabase, ref, get, update } from 'firebase/database';
 
 /**
  * Records a username change in the usernameHistory collection
@@ -33,7 +24,7 @@ export const recordUsernameChange = async (userId, oldUsername, newUsername) => 
       newUsername,
       changedAt: serverTimestamp()
     });
-
+    
     return docRef.id;
   } catch (error) {
     console.error('Error recording username change:', error);
@@ -58,10 +49,11 @@ export const getUsernameHistory = async (userId) => {
 };
 
 /**
- * Updates a user's username in both RTDB and Firebase Auth
+ * Updates a user's username in RTDB and Firestore
+ * Note: This is the client-side version that doesn't use Firebase Admin
  * @param {string} userId - The user's ID
  * @param {string} newUsername - The new username
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} - Result of the operation
  */
 export const updateUsername = async (userId, newUsername) => {
   try {
@@ -69,52 +61,39 @@ export const updateUsername = async (userId, newUsername) => {
     const rtdb = getDatabase();
     const userRef = ref(rtdb, `users/${userId}`);
     const snapshot = await get(userRef);
-
+    
     if (!snapshot.exists()) {
       throw new Error("User not found in database");
     }
-
+    
     const userData = snapshot.val();
     const oldUsername = userData.username || "Unknown";
-
+    
     // Check if the new username is different from the current one
     if (oldUsername === newUsername) {
       console.log("Username unchanged, skipping update");
       return { success: true, message: "Username unchanged" };
     }
-
+    
     // Check if the new username is already taken
     const usernamesQuery = query(
       collection(db, "usernames"),
       where("username", "==", newUsername.toLowerCase())
     );
-
+    
     const usernamesSnapshot = await getDocs(usernamesQuery);
-
+    
     if (!usernamesSnapshot.empty) {
       const existingUser = usernamesSnapshot.docs[0].data();
       if (existingUser.userId !== userId) {
         throw new Error("Username already taken");
       }
     }
-
+    
     // Update username in RTDB
     await update(userRef, { username: newUsername });
     console.log("Username updated in RTDB");
-
-    // Update displayName in Firebase Auth (server-side only)
-    if (typeof window === 'undefined' && admin && admin.apps && admin.apps.length > 0) {
-      try {
-        await admin.auth().updateUser(userId, {
-          displayName: newUsername
-        });
-        console.log("DisplayName updated in Firebase Auth");
-      } catch (authError) {
-        console.error("Error updating displayName in Auth:", authError);
-        // Don't throw here, as RTDB update already succeeded
-      }
-    }
-
+    
     // Update username in Firestore usernames collection
     try {
       // Remove old username entry
@@ -122,32 +101,53 @@ export const updateUsername = async (userId, newUsername) => {
         collection(db, "usernames"),
         where("userId", "==", userId)
       );
-
+      
       const oldUsernameSnapshot = await getDocs(oldUsernameQuery);
-
+      
       if (!oldUsernameSnapshot.empty) {
         // Delete old username entries
         for (const doc of oldUsernameSnapshot.docs) {
           await db.collection("usernames").doc(doc.id).delete();
         }
       }
-
+      
       // Add new username entry
-      await db.collection("usernames").doc(newUsername.toLowerCase()).set({
+      await addDoc(collection(db, "usernames"), {
         userId,
         username: newUsername,
         createdAt: serverTimestamp()
       });
-
+      
       console.log("Username updated in Firestore usernames collection");
     } catch (firestoreError) {
       console.error("Error updating username in Firestore:", firestoreError);
       // Don't throw here, as RTDB update already succeeded
     }
-
+    
     // Record the username change in history
     await recordUsernameChange(userId, oldUsername, newUsername);
-
+    
+    // Call the server API to update Firebase Auth displayName
+    try {
+      const response = await fetch('/api/username/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          newUsername
+        }),
+      });
+      
+      if (!response.ok) {
+        console.warn('Server-side username update failed, but client-side update succeeded');
+      }
+    } catch (apiError) {
+      console.error('Error calling username update API:', apiError);
+      // Don't throw here, as client-side updates already succeeded
+    }
+    
     return { success: true, message: "Username updated successfully" };
   } catch (error) {
     console.error("Error updating username:", error);

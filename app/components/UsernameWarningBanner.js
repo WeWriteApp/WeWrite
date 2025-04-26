@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { UsernameModal } from './UsernameModal';
 import { useAuth } from '../providers/AuthProvider';
-import { updateUsername } from '../firebase/usernameHistory';
+import { updateUsername } from '../firebase/usernameClient';
 
 export default function UsernameWarningBanner() {
   const { user, setUser } = useAuth();

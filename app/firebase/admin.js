@@ -1,11 +1,22 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+/**
+ * Server-side Firebase Admin initialization
+ *
+ * IMPORTANT: This module should ONLY be imported in server-side code.
+ * It will throw an error if imported on the client.
+ */
+
+// Ensure this module is only used on the server
+if (typeof window !== 'undefined') {
+  throw new Error('This module cannot be used on the client side.');
+}
+
 import { getFirebaseAdmin } from './adminConfig';
 
 // Singleton pattern to avoid re-initialization
 let app;
 
 export const initAdmin = () => {
-  if (getApps().length === 0) {
+  if (!app) {
     try {
       // Use our unified Firebase Admin initialization
       const admin = getFirebaseAdmin();
@@ -14,18 +25,7 @@ export const initAdmin = () => {
       console.log('Firebase Admin initialized successfully via unified approach');
     } catch (error) {
       console.error('Error initializing Firebase Admin:', error);
-
-      // Fallback to basic initialization if the unified approach fails
-      try {
-        app = initializeApp({
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
-                    process.env.FIREBASE_PROJECT_ID ||
-                    'wewrite-ccd82'
-        });
-        console.log('Firebase Admin initialized with fallback configuration');
-      } catch (fallbackError) {
-        console.error('Fallback initialization also failed:', fallbackError);
-      }
+      throw new Error('Failed to initialize Firebase Admin: ' + error.message);
     }
   }
 
