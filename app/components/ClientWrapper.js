@@ -31,7 +31,7 @@ const UsernameWarningBanner = dynamic(() => import('../components/UsernameWarnin
   ssr: false
 });
 
-const UsernameEnforcementBanner = dynamic(() => import('../components/UsernameEnforcementBanner'), {
+const UsernameEnforcementBanner = dynamic(() => import('../components/UsernameEnforcementModal'), {
   ssr: false
 });
 
@@ -48,10 +48,10 @@ export default function ClientWrapper({ children }) {
     >
       <AccentColorProvider>
         <LoggingProvider>
-          <DataProvider>
-            <MultiAccountProvider>
-              <AuthProvider>
-                <AppProvider>
+          <MultiAccountProvider>
+            <AuthProvider>
+              <AppProvider>
+                <DataProvider>
                   <AnalyticsProvider>
                     <GAProvider>
                       <ToastProvider>
@@ -65,11 +65,11 @@ export default function ClientWrapper({ children }) {
                                       <LineSettingsProvider>
                                         <Drawer />
                                         <div className="flex flex-col min-h-screen bg-background pb-8">
-                                          {!isAuthPage && <UsernameWarningBanner />}
-                                          {!isAuthPage && <UsernameEnforcementBanner />}
                                           <main className="flex-grow">
                                             {children}
                                           </main>
+                                          {!isAuthPage && <UsernameWarningBanner />}
+                                          {!isAuthPage && <UsernameEnforcementBanner />}
                                         </div>
                                         {process.env.NODE_ENV === 'development' && (
                                           <>
@@ -88,10 +88,10 @@ export default function ClientWrapper({ children }) {
                       </ToastProvider>
                     </GAProvider>
                   </AnalyticsProvider>
-                </AppProvider>
-              </AuthProvider>
-            </MultiAccountProvider>
-          </DataProvider>
+                </DataProvider>
+              </AppProvider>
+            </AuthProvider>
+          </MultiAccountProvider>
         </LoggingProvider>
       </AccentColorProvider>
     </ThemeProvider>

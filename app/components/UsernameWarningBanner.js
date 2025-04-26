@@ -6,7 +6,7 @@ import { useAuth } from '../providers/AuthProvider';
 import { updateUsername } from '../firebase/usernameClient';
 
 export default function UsernameWarningBanner() {
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check if user exists and has no username or a generated username
@@ -20,11 +20,8 @@ export default function UsernameWarningBanner() {
       // Update username in Firebase
       await updateUsername(user.uid, username);
 
-      // Update local user state
-      setUser({
-        ...user,
-        username
-      });
+      // Username updated in Firebase, no need to manually update local state
+      // The auth state listener will pick up the change
 
       // Close modal
       setIsModalOpen(false);
