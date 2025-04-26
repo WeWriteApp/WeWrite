@@ -36,6 +36,16 @@ export const recordPageView = async (pageId, userId = null) => {
   try {
     if (!pageId) return;
 
+    // Only count views from the main domain, not Vercel previews
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      // Check if this is a Vercel preview deployment
+      if (hostname.includes('vercel.app') || hostname.includes('localhost')) {
+        console.log("Vercel preview or localhost view, not counting");
+        return;
+      }
+    }
+
     // Check if we've already recorded a view for this page in this session
     const sessionKey = `${pageId}_${userId || 'anonymous'}`;
     if (viewedPages.has(sessionKey)) {

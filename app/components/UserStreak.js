@@ -133,16 +133,7 @@ const UserStreak = ({ userId }) => {
               </Tooltip>
             </div>
 
-            {/* Last Active */}
-            {streakData.lastActiveDate && (
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Last active</span>
-                </div>
-                <span>{new Date(streakData.lastActiveDate).toLocaleDateString()}</span>
-              </div>
-            )}
+
           </div>
         </CardContent>
       </Card>
