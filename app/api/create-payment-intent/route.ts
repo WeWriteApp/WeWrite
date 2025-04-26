@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
+// Add export for dynamic route handling to prevent static build errors
+export const dynamic = 'force-dynamic';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST() {
@@ -17,4 +20,4 @@ export async function POST() {
   } catch (error) {
     return NextResponse.json({ error: 'Error creating payment intent' }, { status: 500 });
   }
-} 
+}

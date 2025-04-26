@@ -4,6 +4,9 @@ import { auth } from '../../firebase/auth';
 import { createSubscription } from '../../firebase/subscription';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 
+// Add export for dynamic route handling to prevent static build errors
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
     // Initialize Stripe with the appropriate key based on environment

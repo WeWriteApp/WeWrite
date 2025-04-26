@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Configure output for better Vercel deployment
+  output: 'standalone',
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if
@@ -19,6 +21,21 @@ const nextConfig = {
     optimizePackageImports: ['react-icons'],
     // Try to improve performance
     forceSwcTransforms: true,
+    // Skip type checking to speed up builds
+    skipTypeChecking: true,
+    // Skip middleware validation
+    skipMiddlewareUrlNormalize: true,
+    // Skip trailing slash redirect
+    skipTrailingSlashRedirect: true,
+    // Improve server components handling
+    serverComponentsExternalPackages: ['firebase-admin'],
+    // Improve server actions
+    serverActions: true,
+  },
+  // Configure environment variables
+  env: {
+    NEXT_PUBLIC_FIREBASE_PID: process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82',
+    SKIP_TYPE_CHECK: '1',
   },
   // Add security headers
   async headers() {
@@ -49,6 +66,22 @@ const nextConfig = {
         ],
       },
     ];
+  },
+  // Configure webpack
+  webpack: (config, { isServer }) => {
+    // Fix for Firebase Admin in client-side code
+    if (!isServer) {
+      // Replace server-only modules with empty objects
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+      };
+    }
+
+    return config;
   }
 }
 

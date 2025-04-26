@@ -18,6 +18,9 @@ if (typeof window === 'undefined') {
   }
 }
 
+// Mark this route as dynamic to prevent static generation errors
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   // Set CORS headers
   const headers = {

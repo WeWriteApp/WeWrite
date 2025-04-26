@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/adminConfig';
 
+// Add export for dynamic route handling to prevent static build errors
+export const dynamic = 'force-dynamic';
+
 // Server-side only imports
 let admin;
 let db;
