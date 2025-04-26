@@ -23,6 +23,8 @@ const nextConfig = {
     forceSwcTransforms: true,
     // Improve server components handling
     serverComponentsExternalPackages: ['firebase-admin'],
+    // Disable static generation for all pages to avoid context provider errors
+    disableStaticGeneration: true,
   },
   // Middleware configuration
   skipMiddlewareUrlNormalize: true,
