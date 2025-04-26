@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { Check, ArrowRight, Flame, Loader, User } from 'lucide-react';
+import { Check, ArrowRight, Flame, Loader, User, Construction, Heart, Wrench, CheckCircle } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
@@ -366,7 +366,10 @@ const LandingPage = () => {
         <section id="features" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Available Features</h2>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+                <h2 className="text-3xl md:text-4xl font-bold">Available Features</h2>
+              </div>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Discover what makes WeWrite special
               </p>
@@ -396,7 +399,10 @@ const LandingPage = () => {
         <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Coming Soon</h2>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Construction className="h-6 w-6 text-amber-500" />
+                <h2 className="text-3xl md:text-4xl font-bold">Coming Soon</h2>
+              </div>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Features we're working on for future releases
               </p>
@@ -426,7 +432,10 @@ const LandingPage = () => {
         <section id="supporters" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Heart className="h-6 w-6 text-red-500 fill-red-500" />
+                <h2 className="text-3xl md:text-4xl font-bold">Our Supporters</h2>
+              </div>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Special thanks to those who have a subscription for WeWrite while we're still in beta, working on the rest of the functionality. <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">Read our Roadmap here</Link>.
               </p>
@@ -502,7 +511,10 @@ const LandingPage = () => {
         <section id="about" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">About WeWrite</h2>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Wrench className="h-6 w-6 text-blue-500" />
+                <h2 className="text-3xl md:text-4xl font-bold">About WeWrite</h2>
+              </div>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Built with modern technologies for the best user experience
               </p>

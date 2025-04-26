@@ -43,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "color-namer": "^1.4.0",
     "date-fns": "^4.1.0",
     "firebase": "^11.5.0",
     "firebase-functions": "^5.1.1",
