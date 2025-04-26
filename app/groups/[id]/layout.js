@@ -1,7 +1,4 @@
-"use client";
-
-// Metadata is now defined in the component
-const metadata = {
+export const metadata = {
   title: 'WeWrite - Group Details',
   description: 'View and manage a specific collaborative writing group',
 };

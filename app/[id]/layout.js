@@ -1,5 +1,3 @@
-"use client";
-
 import { getPageMetadata } from '../firebase/database';
 
 export async function generateMetadata({ params }) {
