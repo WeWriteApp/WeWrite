@@ -1,6 +1,7 @@
 import { db } from './config';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { getDatabase, ref, get, update } from 'firebase/database';
+import { getFirebaseAdmin } from './adminConfig';
 
 // Only import admin in a server context
 let admin;
@@ -8,32 +9,8 @@ let admin;
 // Only initialize Firebase Admin on the server
 if (typeof window === 'undefined') {
   try {
-    // Dynamic import to prevent client-side bundling
-    admin = require('firebase-admin');
-    
-    // Check if app is already initialized
-    try {
-      admin.app();
-    } catch (error) {
-      // Initialize a new app
-      const serviceAccount = {
-        type: 'service_account',
-        project_id: process.env.FIREBASE_PROJECT_ID,
-        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        client_id: process.env.FIREBASE_CLIENT_ID,
-        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_uri: 'https://oauth2.googleapis.com/token',
-        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-        client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL
-      };
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: process.env.FIREBASE_DATABASE_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
-      });
-    }
+    // Use the unified Firebase Admin initialization
+    admin = getFirebaseAdmin();
   } catch (initError) {
     console.error("Error initializing Firebase Admin:", initError);
   }
@@ -56,7 +33,7 @@ export const recordUsernameChange = async (userId, oldUsername, newUsername) => 
       newUsername,
       changedAt: serverTimestamp()
     });
-    
+
     return docRef.id;
   } catch (error) {
     console.error('Error recording username change:', error);
@@ -92,39 +69,39 @@ export const updateUsername = async (userId, newUsername) => {
     const rtdb = getDatabase();
     const userRef = ref(rtdb, `users/${userId}`);
     const snapshot = await get(userRef);
-    
+
     if (!snapshot.exists()) {
       throw new Error("User not found in database");
     }
-    
+
     const userData = snapshot.val();
     const oldUsername = userData.username || "Unknown";
-    
+
     // Check if the new username is different from the current one
     if (oldUsername === newUsername) {
       console.log("Username unchanged, skipping update");
       return { success: true, message: "Username unchanged" };
     }
-    
+
     // Check if the new username is already taken
     const usernamesQuery = query(
       collection(db, "usernames"),
       where("username", "==", newUsername.toLowerCase())
     );
-    
+
     const usernamesSnapshot = await getDocs(usernamesQuery);
-    
+
     if (!usernamesSnapshot.empty) {
       const existingUser = usernamesSnapshot.docs[0].data();
       if (existingUser.userId !== userId) {
         throw new Error("Username already taken");
       }
     }
-    
+
     // Update username in RTDB
     await update(userRef, { username: newUsername });
     console.log("Username updated in RTDB");
-    
+
     // Update displayName in Firebase Auth (server-side only)
     if (typeof window === 'undefined' && admin && admin.apps && admin.apps.length > 0) {
       try {
@@ -137,7 +114,7 @@ export const updateUsername = async (userId, newUsername) => {
         // Don't throw here, as RTDB update already succeeded
       }
     }
-    
+
     // Update username in Firestore usernames collection
     try {
       // Remove old username entry
@@ -145,32 +122,32 @@ export const updateUsername = async (userId, newUsername) => {
         collection(db, "usernames"),
         where("userId", "==", userId)
       );
-      
+
       const oldUsernameSnapshot = await getDocs(oldUsernameQuery);
-      
+
       if (!oldUsernameSnapshot.empty) {
         // Delete old username entries
         for (const doc of oldUsernameSnapshot.docs) {
           await db.collection("usernames").doc(doc.id).delete();
         }
       }
-      
+
       // Add new username entry
       await db.collection("usernames").doc(newUsername.toLowerCase()).set({
         userId,
         username: newUsername,
         createdAt: serverTimestamp()
       });
-      
+
       console.log("Username updated in Firestore usernames collection");
     } catch (firestoreError) {
       console.error("Error updating username in Firestore:", firestoreError);
       // Don't throw here, as RTDB update already succeeded
     }
-    
+
     // Record the username change in history
     await recordUsernameChange(userId, oldUsername, newUsername);
-    
+
     return { success: true, message: "Username updated successfully" };
   } catch (error) {
     console.error("Error updating username:", error);
