@@ -8,9 +8,11 @@ import { Check, ArrowRight, Flame, Loader, User } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
+import { SupporterIcon } from '../SupporterIcon';
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
 import LandingTrendingSection from './LandingTrendingSection';
+import { ImageCarousel } from './ImageCarousel';
 
 // Import mock page content (in a real implementation, this would be fetched from Firebase)
 const pageContents = {
@@ -317,21 +319,7 @@ const LandingPage = () => {
           }}
           onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
-          {/* Background Image - Simplified and fixed */}
-          <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
-            <div className="absolute inset-0 -right-8 scale-105"> {/* Crop by shifting and scaling */}
-              <Image
-                src="/images/landing/hero-image.png"
-                alt="Background"
-                fill
-                className="object-cover opacity-20"
-                priority
-                loading="eager"
-                sizes="100vw"
-              />
-            </div>
-            <div className="absolute inset-0 bg-background/70"></div>
-          </div>
+          {/* No background image */}
 
           <div className="container mx-auto px-6 relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-12">
@@ -355,26 +343,17 @@ const LandingPage = () => {
               </div>
 
               <div
-                className={`flex-1 perspective-[1000px] ${fadeInClass}`}
+                className={`flex-1 ${fadeInClass}`}
                 style={{ animationDelay: '0.2s' }}
               >
-                <div
-                  className="relative w-full max-w-lg mx-auto transform-gpu hover:scale-105 transition-transform duration-300"
-                  style={{
-                    transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`
-                  }}
-                >
-                  <Image
-                    src="/images/landing/hero-image.png"
-                    alt="WeWrite App Interface"
-                    width={700}
-                    height={700}
-                    className="rounded-lg shadow-2xl border border-border/30"
-                    priority
-                    loading="eager"
-                    sizes="(max-width: 768px) 100vw, 700px"
-                  />
-                </div>
+                <ImageCarousel
+                  images={[
+                    "/images/landing/hero-image.png",
+                    "/images/carousel/image-1.png",
+                    "/images/carousel/image-2.png",
+                    "/images/carousel/image-3.png"
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -462,28 +441,55 @@ const LandingPage = () => {
                       Our entry-level supporters who help keep the lights on.
                     </CardDescription>
                   </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                        <SupporterIcon tier="tier1" status="active" size="lg" />
+                      </div>
+                      <p className="text-sm text-center">No supporters yet</p>
+                      <p className="text-xs text-center mt-1">Be the first to support at this tier!</p>
+                    </div>
+                  </CardContent>
                 </Card>
               </div>
 
               <div className={`${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
                 <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
-                    <CardTitle>Tier 2 & 3 Supporters</CardTitle>
+                    <CardTitle>Tier 2 Supporters</CardTitle>
                     <CardDescription>
                       Dedicated supporters who enable us to build new features faster.
                     </CardDescription>
                   </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                        <SupporterIcon tier="tier2" status="active" size="lg" />
+                      </div>
+                      <p className="text-sm text-center">No supporters yet</p>
+                      <p className="text-xs text-center mt-1">Be the first to support at this tier!</p>
+                    </div>
+                  </CardContent>
                 </Card>
               </div>
 
               <div className={`${fadeInClass}`} style={{ animationDelay: '0.3s' }}>
                 <Card className="h-full border border-border hover:shadow-lg transition-all duration-200">
                   <CardHeader>
-                    <CardTitle>Tier 4 Supporters</CardTitle>
+                    <CardTitle>Tier 3 Supporters</CardTitle>
                     <CardDescription>
                       Our most dedicated supporters who make WeWrite possible.
                     </CardDescription>
                   </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                        <SupporterIcon tier="tier3" status="active" size="lg" />
+                      </div>
+                      <p className="text-sm text-center">No supporters yet</p>
+                      <p className="text-xs text-center mt-1">Be the first to support at this tier!</p>
+                    </div>
+                  </CardContent>
                 </Card>
               </div>
             </div>

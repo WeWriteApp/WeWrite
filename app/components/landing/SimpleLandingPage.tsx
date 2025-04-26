@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
-import TrendingPagesSection from './TrendingPagesSection';
+import LandingTrendingSection from './LandingTrendingSection';
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
 
@@ -397,9 +397,7 @@ const SimpleLandingPage = () => {
         </section>
 
         {/* Trending Pages Section - Moved to top */}
-        <section className="py-16 md:py-20 bg-muted/30">
-          <TrendingPagesSection limit={3} />
-        </section>
+        <LandingTrendingSection limit={3} />
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20 bg-background">

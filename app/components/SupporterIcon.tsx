@@ -100,16 +100,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
           />
         </>
       );
-    } else if (tier === 'tier4') {
-      tooltipText = isActive ? 'Tier 4 Subscription - $100+/mo' : 'Inactive Tier 4 Subscription';
-      // Filled equilateral triangle with rounded corners using a path with bezier curves
-      svgContent = (
-        <path
-          d="M50,30 Q50,30 55,35 L75,75 Q80,80 75,80 L25,80 Q20,80 25,75 L45,35 Q50,30 50,30 Z"
-          fill="currentColor"
-          stroke="none"
-        />
-      );
+    // Tier 4 removed - capped at tier 3
     }
   } else {
     // None: X - thicker lines

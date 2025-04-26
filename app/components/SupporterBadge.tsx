@@ -47,15 +47,7 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
         textColor: 'text-gray-800 dark:text-gray-200'
       };
       break;
-    case 'tier4':
-      badgeContent = {
-        label: 'Tier 4 Subscription',
-        tooltip: 'Tier 4 Subscription - $100+/month',
-        bgColor: 'bg-neutral-100 dark:bg-neutral-800',
-        borderColor: 'border-neutral-300 dark:border-neutral-700',
-        textColor: 'text-gray-800 dark:text-gray-200'
-      };
-      break;
+    // Tier 4 removed - capped at tier 3
     // Legacy tier support
     case 'bronze':
       badgeContent = {
@@ -89,13 +81,13 @@ export default function SupporterBadge({ tier, className = '', showLabel = false
       break;
     case 'diamond':
       badgeContent = {
-        label: 'Tier 4 Subscription',
-        tooltip: 'Tier 4 Subscription - $100+/month',
+        label: 'Tier 3 Subscription',
+        tooltip: 'Tier 3 Subscription - $50+/month',
         bgColor: 'bg-neutral-100 dark:bg-neutral-800',
         borderColor: 'border-neutral-300 dark:border-neutral-700',
         textColor: 'text-gray-800 dark:text-gray-200'
       };
-      tier = 'tier4';
+      tier = 'tier3';
       break;
     default:
       return null;
