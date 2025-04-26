@@ -35,43 +35,79 @@ export function getFirebaseAdmin() {
   try {
     // Check if any Firebase apps have been initialized
     if (admin.apps.length === 0) {
-      // Create a service account with fallbacks for each property
-      const serviceAccount = {
-        type: 'service_account',
-        project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82',
-        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || '',
-        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || '',
-        client_email: process.env.FIREBASE_CLIENT_EMAIL || '',
-        client_id: process.env.FIREBASE_CLIENT_ID || '',
-        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_uri: 'https://oauth2.googleapis.com/token',
-        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-        client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
-      };
+      // For Vercel deployment, we'll use a simplified initialization approach
+      // that doesn't require service account credentials
+      const projectId = process.env.FIREBASE_PROJECT_ID ||
+                       process.env.NEXT_PUBLIC_FIREBASE_PID ||
+                       'wewrite-ccd82';
 
-      // Initialize with credential if we have the minimum required fields
-      if (serviceAccount.project_id) {
+      const databaseURL = process.env.FIREBASE_DATABASE_URL ||
+                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
+                         "https://wewrite-ccd82-default-rtdb.firebaseio.com";
+
+      // Check if we have the minimum required service account credentials
+      const hasServiceAccountCreds = process.env.FIREBASE_PRIVATE_KEY &&
+                                    process.env.FIREBASE_CLIENT_EMAIL;
+
+      if (hasServiceAccountCreds) {
         try {
+          // Create a service account with the available credentials
+          // Ensure private_key is properly formatted
+          let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+          // Handle different formats of private key from environment variables
+          if (privateKey) {
+            // Replace escaped newlines with actual newlines if needed
+            if (privateKey.includes('\\n')) {
+              privateKey = privateKey.replace(/\\n/g, '\n');
+            }
+          } else {
+            // If private key is missing, log and throw a specific error
+            console.error('Firebase private key is missing or invalid');
+            throw new Error('Firebase private key is missing or invalid');
+          }
+
+          const serviceAccount = {
+            type: 'service_account',
+            project_id: projectId,
+            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'private-key-id',
+            private_key: privateKey,
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            client_id: process.env.FIREBASE_CLIENT_ID || 'client-id',
+            auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+            token_uri: 'https://oauth2.googleapis.com/token',
+            auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+            client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || ''
+          };
+
+          // Log service account details for debugging (without sensitive info)
+          console.log('Firebase config:', {
+            projectId: serviceAccount.project_id,
+            hasPrivateKey: !!serviceAccount.private_key,
+            hasClientEmail: !!serviceAccount.client_email
+          });
+
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
-            databaseURL: process.env.FIREBASE_DATABASE_URL ||
-                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
-                         "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+            databaseURL: databaseURL
           });
-          console.log('Firebase Admin initialized successfully');
+          console.log('Firebase Admin initialized with service account credentials');
         } catch (certError) {
           console.error('Error initializing with cert, falling back to default:', certError);
-          // Fallback to basic initialization if cert fails
+          // Fallback to basic initialization
           admin.initializeApp({
-            projectId: serviceAccount.project_id,
-            databaseURL: process.env.FIREBASE_DATABASE_URL ||
-                         process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
-                         "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+            projectId: projectId,
+            databaseURL: databaseURL
           });
-          console.log('Firebase Admin initialized with fallback configuration');
+          console.log('Firebase Admin initialized with fallback configuration after cert error');
         }
       } else {
-        throw new Error('Missing required project_id for Firebase Admin initialization');
+        // Initialize without credentials for Vercel deployment
+        admin.initializeApp({
+          projectId: projectId,
+          databaseURL: databaseURL
+        });
+        console.log('Firebase Admin initialized without service account credentials');
       }
     }
 

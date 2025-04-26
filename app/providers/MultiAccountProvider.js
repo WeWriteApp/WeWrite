@@ -48,49 +48,72 @@ export const MultiAccountProvider = ({ children }) => {
 
   // Listen for auth state changes
   useEffect(() => {
+    let isMounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!isMounted) return;
+
       if (user) {
         try {
-          // Get user data from Firestore
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          
+          // Create basic user data from auth
           let userData = {
             uid: user.uid,
-            email: user.email,
+            email: user.email || '',
             username: user.displayName || '',
+            lastUsed: new Date().toISOString()
           };
 
-          if (userDoc.exists()) {
-            const firestoreData = userDoc.data();
-            userData = {
-              ...userData,
-              username: firestoreData.username || user.displayName || '',
-              ...firestoreData
-            };
+          try {
+            // Get additional user data from Firestore
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+
+            if (userDoc.exists()) {
+              const firestoreData = userDoc.data();
+              userData = {
+                ...userData,
+                username: firestoreData.username || user.displayName || '',
+                ...firestoreData
+              };
+            }
+          } catch (firestoreError) {
+            // Log error but continue with basic user data
+            console.error("Error fetching Firestore data:", firestoreError);
           }
 
-          setCurrentAccount(userData);
-          
-          // Update accounts list if this is a new account
-          updateAccountsList(userData);
+          if (isMounted) {
+            setCurrentAccount(userData);
+            // Update accounts list if this is a new account
+            updateAccountsList(userData);
+          }
         } catch (error) {
-          console.error("Error loading user data in MultiAccountProvider:", error);
-          const userData = {
-            uid: user.uid,
-            email: user.email,
-            username: user.displayName || '',
-          };
-          setCurrentAccount(userData);
-          updateAccountsList(userData);
+          console.error("Error in auth state change handler:", error);
+          if (isMounted) {
+            // Still set basic account info even if there was an error
+            const basicUserData = {
+              uid: user.uid,
+              email: user.email || '',
+              username: user.displayName || '',
+              lastUsed: new Date().toISOString()
+            };
+            setCurrentAccount(basicUserData);
+            updateAccountsList(basicUserData);
+          }
         }
       } else {
-        setCurrentAccount(null);
+        if (isMounted) {
+          setCurrentAccount(null);
+        }
       }
-      
-      setLoading(false);
+
+      if (isMounted) {
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // Save accounts to localStorage whenever they change
@@ -105,7 +128,7 @@ export const MultiAccountProvider = ({ children }) => {
     setAccounts(prevAccounts => {
       // Check if this account already exists in the list
       const existingIndex = prevAccounts.findIndex(acc => acc.uid === userData.uid);
-      
+
       if (existingIndex >= 0) {
         // Update existing account
         const updatedAccounts = [...prevAccounts];
@@ -121,13 +144,13 @@ export const MultiAccountProvider = ({ children }) => {
           ...userData,
           lastUsed: new Date().toISOString()
         };
-        
+
         // If we're at the limit, don't add a new account
         if (prevAccounts.length >= MAX_ACCOUNTS) {
           console.warn(`Maximum account limit (${MAX_ACCOUNTS}) reached. Cannot add more accounts.`);
           return prevAccounts;
         }
-        
+
         return [...prevAccounts, newAccount];
       }
     });
@@ -135,38 +158,72 @@ export const MultiAccountProvider = ({ children }) => {
 
   // Switch to a different account
   const switchAccount = async (accountId) => {
-    // First sign out of the current account
-    await signOut(auth);
-    
-    // Find the account to switch to
-    const accountToSwitch = accounts.find(acc => acc.uid === accountId);
-    if (!accountToSwitch || !accountToSwitch.email) {
-      throw new Error("Account not found or missing email");
-    }
-    
-    // We need to prompt for password since we don't store passwords
-    const password = prompt(`Enter password for ${accountToSwitch.email}:`);
-    if (!password) {
-      return false; // User cancelled
-    }
-    
-    try {
-      // Sign in with the selected account
-      await signInWithEmailAndPassword(auth, accountToSwitch.email, password);
-      
-      // Update the last used timestamp
-      setAccounts(prevAccounts => 
-        prevAccounts.map(acc => 
-          acc.uid === accountId 
-            ? { ...acc, lastUsed: new Date().toISOString() } 
-            : acc
-        )
-      );
-      
+    // Don't attempt to switch if it's the same account
+    if (currentAccount?.uid === accountId) {
+      console.log("Already signed in to this account");
       return true;
+    }
+
+    try {
+      // First sign out of the current account
+      await signOut(auth);
+
+      // Find the account to switch to
+      const accountToSwitch = accounts.find(acc => acc.uid === accountId);
+      if (!accountToSwitch) {
+        console.error("Account not found");
+        return false;
+      }
+
+      if (!accountToSwitch.email) {
+        console.error("Account missing email");
+        // Remove invalid account from the list
+        setAccounts(prevAccounts => prevAccounts.filter(acc => acc.uid !== accountId));
+        return false;
+      }
+
+      // We need to prompt for password since we don't store passwords
+      const password = prompt(`Enter password for ${accountToSwitch.email}:`);
+      if (!password) {
+        console.log("User cancelled password entry");
+        return false; // User cancelled
+      }
+
+      try {
+        // Sign in with the selected account
+        await signInWithEmailAndPassword(auth, accountToSwitch.email, password);
+
+        // Update the last used timestamp
+        setAccounts(prevAccounts =>
+          prevAccounts.map(acc =>
+            acc.uid === accountId
+              ? { ...acc, lastUsed: new Date().toISOString() }
+              : acc
+          )
+        );
+
+        return true;
+      } catch (signInError) {
+        console.error("Error signing in:", signInError);
+
+        // Provide more specific error messages
+        if (signInError.code === 'auth/wrong-password') {
+          alert("Incorrect password. Please try again.");
+        } else if (signInError.code === 'auth/user-not-found') {
+          alert("This account no longer exists. It will be removed from your saved accounts.");
+          // Remove the account from the list
+          setAccounts(prevAccounts => prevAccounts.filter(acc => acc.uid !== accountId));
+        } else if (signInError.code === 'auth/too-many-requests') {
+          alert("Too many failed login attempts. Please try again later or reset your password.");
+        } else {
+          alert("Failed to sign in. Please check your password and try again.");
+        }
+
+        return false;
+      }
     } catch (error) {
-      console.error("Error switching account:", error);
-      alert("Failed to sign in. Please check your password and try again.");
+      console.error("Error in account switching process:", error);
+      alert("An error occurred while switching accounts. Please try again.");
       return false;
     }
   };
