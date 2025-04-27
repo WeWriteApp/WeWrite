@@ -55,21 +55,7 @@ export async function POST(request) {
     const amountFloat = Math.round(parseFloat(amount) * 100) / 100;
 
     // Determine tier based on amount
-    let tier = null;
-    if (amountFloat >= 10 && amountFloat < 20) {
-      tier = 'tier1';
-    } else if (amountFloat >= 20 && amountFloat < 50) {
-      tier = 'tier2';
-    } else if (amountFloat >= 50 && amountFloat < 100) {
-      tier = 'tier3';
-    } else if (amountFloat >= 100) {
-      tier = 'tier4';
-    } else {
-      return NextResponse.json(
-        { error: 'Invalid amount for subscription tier' },
-        { status: 400 }
-      );
-    }
+    let tier = amountFloat >= 10 && amountFloat < 20 ? 'tier1' : amountFloat >= 20 && amountFloat < 50 ? 'tier2' : amountFloat >= 50 ? 'tier3' : 'tier0';
 
     // Create a customer in Stripe if they don't exist yet
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });

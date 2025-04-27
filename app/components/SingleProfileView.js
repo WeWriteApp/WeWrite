@@ -109,8 +109,6 @@ const SingleProfileView = ({ profile }) => {
                 tier = 'tier2';
               } else if (amount >= 50 && amount < 100) {
                 tier = 'tier3';
-              } else if (amount >= 100) {
-                tier = 'tier4';
               }
 
               // Log the tier determination for debugging
@@ -126,8 +124,6 @@ const SingleProfileView = ({ profile }) => {
                   tier = 'tier2';
                 } else if (subscription.tier === 'gold') {
                   tier = 'tier3';
-                } else if (subscription.tier === 'diamond') {
-                  tier = 'tier4';
                 } else {
                   tier = subscription.tier;
                 }
@@ -218,7 +214,6 @@ const SingleProfileView = ({ profile }) => {
                       {supporterTier === 'tier1' ? 'Tier 1 Subscription' :
                        supporterTier === 'tier2' ? 'Tier 2 Subscription' :
                        supporterTier === 'tier3' ? 'Tier 3 Subscription' :
-                       supporterTier === 'tier4' ? 'Tier 4 Subscription' :
                        'No Subscription'}
                     </span>
                   </div>

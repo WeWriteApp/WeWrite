@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Ban, Star } from 'lucide-react';
 
 interface SupporterIconProps {
   tier?: string | null;
@@ -11,114 +12,39 @@ interface SupporterIconProps {
 }
 
 export function SupporterIcon({ tier, status, size = 'sm', className = '' }: SupporterIconProps) {
-  // Determine if subscription is active
   const isActive = status === 'active' || status === 'trialing';
-
-  // Set icon size based on the size prop
-  const iconSizes = {
-    sm: '14px',
-    md: '16px',
-    lg: '20px',
-    xl: '32px'
-  };
-
-  const dotSizes = {
-    sm: '5px',
-    md: '6px',
-    lg: '7px',
-    xl: '10px'
-  };
-
+  const iconSizes = { sm: 14, md: 16, lg: 20, xl: 32 };
   const iconSize = iconSizes[size];
-  const dotSize = dotSizes[size];
 
-  // Get the appropriate tooltip text based on tier and status
   let tooltipText = 'No subscription - $0/mo';
+  let iconContent = null;
 
-  // Custom SVG content based on tier
-  let svgContent = null;
-
-  if (tier) {
-    if (tier === 'tier1') {
-      tooltipText = isActive ? 'Tier 1 Subscription - $10/mo' : 'Inactive Tier 1 Subscription';
-      // One dot
-      svgContent = (
-        <circle
-          cx="50%"
-          cy="50%"
-          r={dotSize}
-          fill="currentColor"
-          stroke="none"
-        />
-      );
-    } else if (tier === 'tier2') {
-      tooltipText = isActive ? 'Tier 2 Subscription - $20/mo' : 'Inactive Tier 2 Subscription';
-      // Two dots horizontal
-      svgContent = (
-        <>
-          <circle
-            cx="35%"
-            cy="50%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-          <circle
-            cx="65%"
-            cy="50%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-        </>
-      );
-    } else if (tier === 'tier3') {
-      tooltipText = isActive ? 'Tier 3 Subscription - $50/mo' : 'Inactive Tier 3 Subscription';
-      // Three dots in a triangle
-      svgContent = (
-        <>
-          <circle
-            cx="50%"
-            cy="30%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-          <circle
-            cx="30%"
-            cy="65%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-          <circle
-            cx="70%"
-            cy="65%"
-            r={dotSize}
-            fill="currentColor"
-            stroke="none"
-          />
-        </>
-      );
-    } else if (tier === 'tier4') {
-      tooltipText = isActive ? 'Tier 4 Subscription - $100+/mo' : 'Inactive Tier 4 Subscription';
-      // Filled equilateral triangle with rounded corners using a path with bezier curves
-      svgContent = (
-        <path
-          d="M50,30 Q50,30 55,35 L75,75 Q80,80 75,80 L25,80 Q20,80 25,75 L45,35 Q50,30 50,30 Z"
-          fill="currentColor"
-          stroke="none"
-        />
-      );
-    }
-  } else {
-    // None: Ban/Circle with line icon for inactive/no tier
+  if (!tier || tier === 'tier0' || !isActive) {
     tooltipText = 'No active subscription';
-    svgContent = (
+    iconContent = (
+      <Ban size={iconSize} className="text-gray-400 dark:text-gray-500" />
+    );
+  } else if (tier === 'tier1') {
+    tooltipText = 'Tier 1 Subscription - $10/mo';
+    iconContent = (
+      <Star size={iconSize} className="text-yellow-400 dark:text-yellow-300" fill="#facc15" />
+    );
+  } else if (tier === 'tier2') {
+    tooltipText = 'Tier 2 Subscription - $20/mo';
+    iconContent = (
       <>
-        <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" />
-        <line x1="30" y1="70" x2="70" y2="30" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+        <Star size={iconSize} className="text-yellow-400 dark:text-yellow-300" fill="#facc15" />
+        <Star size={iconSize} className="text-yellow-400 dark:text-yellow-300 ml-1" fill="#facc15" />
       </>
+    );
+  } else if (tier === 'tier3') {
+    tooltipText = 'Tier 3 Subscription - $50+/mo';
+    iconContent = (
+      <span className="flex items-center gap-0.5">
+        <Star size={iconSize} className="text-yellow-400 drop-shadow-glow" fill="#facc15" />
+        <Star size={iconSize} className="text-yellow-400 drop-shadow-glow" fill="#facc15" />
+        <Star size={iconSize} className="text-yellow-400 drop-shadow-glow" fill="#facc15" />
+      </span>
     );
   }
 
@@ -126,18 +52,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
     <TooltipProvider>
       <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
-          <span className={`inline-flex items-center ${className}`}>
-            <svg
-              width={iconSize}
-              height={iconSize}
-              viewBox="0 0 100 100"
-              xmlns="http://www.w3.org/2000/svg"
-              className={`${isActive ? '' : 'opacity-50'} text-gray-800 dark:text-gray-200`}
-            >
-              {/* Tier-specific content */}
-              {svgContent}
-            </svg>
-          </span>
+          <span className={`inline-flex items-center ${className}`}>{iconContent}</span>
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-xs">{tooltipText}</p>

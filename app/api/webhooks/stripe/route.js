@@ -5,14 +5,7 @@ import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/strip
 
 // Helper function to determine tier based on amount
 function determineTierFromAmount(amount) {
-  if (amount >= 100) {
-    return 'tier4';
-  } else if (amount >= 50) {
-    return 'tier3';
-  } else if (amount >= 20) {
-    return 'tier2';
-  }
-  return 'tier1';
+  return amount >= 50 ? 'tier3' : amount >= 20 ? 'tier2' : amount >= 10 ? 'tier1' : 'tier0';
 }
 
 // Initialize Stripe with the appropriate key based on environment

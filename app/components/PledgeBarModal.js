@@ -93,19 +93,6 @@ const PledgeBarModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
                     </div>
                   </div>
                 </div>
-
-                {/* Tier 4 */}
-                <div className="flex-none w-[200px] p-3 rounded-lg border bg-white dark:bg-gray-800">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <SupporterIcon tier="tier4" status="active" size="lg" />
-                    </div>
-                    <div className="flex-grow">
-                      <div className="font-medium">Tier 4 Subscription</div>
-                      <div className="text-sm text-muted-foreground">$100+/mo</div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

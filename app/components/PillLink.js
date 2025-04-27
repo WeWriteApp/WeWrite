@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Lock, ExternalLink } from "lucide-react";
+import { Lock, ExternalLink, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
 import { useAuth } from "../providers/AuthProvider";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
@@ -25,7 +25,8 @@ export const PillLink = ({
   className = "",
   isOwned,
   byline,
-  isLoading
+  isLoading,
+  deleted = false
 }) => {
   // Hooks
   const { user } = useAuth();
@@ -34,6 +35,19 @@ export const PillLink = ({
 
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
+
+  // Deleted page pill
+  if (deleted) {
+    return (
+      <span
+        className={`inline-flex items-center my-0.5 px-2 py-0.5 text-sm font-medium rounded-lg transition-colors shadow-sm whitespace-nowrap max-w-full bg-muted text-muted-foreground opacity-60 cursor-not-allowed ${className}`}
+        style={{ pointerEvents: 'none' }}
+      >
+        <Trash2 size={14} className="mr-1 flex-shrink-0" />
+        <span className="pill-text">deleted page</span>
+      </span>
+    );
+  }
 
   // Determine link properties
   const showLock = isPublic === false;

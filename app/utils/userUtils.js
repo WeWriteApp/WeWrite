@@ -128,21 +128,19 @@ export const getUserSubscriptionTier = async (userId) => {
       tier = 'tier2';
     } else if (tier === 'gold') {
       tier = 'tier3';
-    } else if (tier === 'diamond') {
-      tier = 'tier4';
     }
 
     // If no tier is set but we have an amount, determine tier based on amount
     if (!tier && subscription.amount && (status === 'active' || status === 'trialing')) {
       const amount = subscription.amount;
       if (amount >= 100) {
-        tier = 'tier4';
-      } else if (amount >= 50) {
         tier = 'tier3';
-      } else if (amount >= 20) {
+      } else if (amount >= 50) {
         tier = 'tier2';
-      } else if (amount >= 10) {
+      } else if (amount >= 20) {
         tier = 'tier1';
+      } else if (amount >= 10) {
+        tier = 'tier0';
       }
     }
 

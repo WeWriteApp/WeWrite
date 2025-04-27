@@ -56,14 +56,6 @@ export function TierModal({ children, trigger, currentTier = null, currentStatus
       amount: '$50/mo',
       status: 'active',
       tier: 'tier3'
-    },
-    {
-      id: 'tier4',
-      name: 'Tier 4 Subscription',
-      description: 'Subscribe to WeWrite for $100+/month',
-      amount: '$100+/mo',
-      status: 'active',
-      tier: 'tier4'
     }
   ];
 
@@ -113,8 +105,7 @@ export function TierModal({ children, trigger, currentTier = null, currentStatus
               <div className="text-sm text-muted-foreground mb-3">
                 This user has an active {currentTier === 'tier1' ? 'Tier 1' :
                                         currentTier === 'tier2' ? 'Tier 2' :
-                                        currentTier === 'tier3' ? 'Tier 3' :
-                                        currentTier === 'tier4' ? 'Tier 4' : 'Unknown'} subscription
+                                        currentTier === 'tier3' ? 'Tier 3' : 'Unknown'} subscription
               </div>
             ) : null}
             <Link href="/subscription">
