@@ -4,5 +4,10 @@ export const metadata = {
 };
 
 export default function AuthLayout({ children }) {
-  return children;
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+      <img src="/white.svg" alt="WeWrite Logo" className="w-24 h-24 mb-6" />
+      {children}
+    </div>
+  );
 }

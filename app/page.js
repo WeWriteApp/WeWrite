@@ -84,8 +84,7 @@ export default function Home() {
     return (
       <>
         <Header />
-        <Hero />
-        {/* Add any other landing content here if needed */}
+        <LandingPage />
         <SiteFooter />
       </>
     );
