@@ -141,7 +141,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-3 md:gap-6">
           {trendingPages.map((page, index) => (
             <motion.div
               key={page.id}
@@ -152,19 +152,19 @@ export default function TrendingPagesSection({ limit = 3 }) {
               transition={{ delay: index * 0.1 }}
             >
               <Link href={`/${page.id}`} className="block h-full">
-                <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer">
-                  <CardHeader>
-                    <CardTitle className="text-lg">
+                <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer flex flex-col justify-between">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg mb-2 break-words">
                       <PillLink href={`/${page.id}`}>
                         {page.title || 'Untitled'}
                       </PillLink>
                     </CardTitle>
-                    <CardDescription className="flex items-center gap-1 text-xs">
+                    <CardDescription className="flex items-center gap-1 text-xs mt-1">
                       <User className="h-3 w-3" />
                       {page.username || 'Anonymous'}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0 pb-3">
                     <div className="flex justify-between items-center">
                       <div className="font-medium text-muted-foreground">
                         {page.views.toLocaleString()} views in 24h

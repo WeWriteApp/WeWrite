@@ -64,10 +64,12 @@ export function TierModal({ children, trigger, currentTier = null, currentStatus
       <DialogTrigger asChild>
         {trigger || children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg animate-in fade-in-0 zoom-in-95 duration-300 mx-4 my-8 w-[calc(100%-2rem)]">
-        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg animate-in fade-in-0 zoom-in-95 duration-300 mx-4 my-8 w-[calc(100%-2rem)] px-4">
+        <DialogClose asChild>
+          <Button variant="outline" size="icon" className="absolute right-4 top-4">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Button>
         </DialogClose>
         <DialogHeader>
           <DialogTitle>Subscription Tiers</DialogTitle>
@@ -80,11 +82,11 @@ export function TierModal({ children, trigger, currentTier = null, currentStatus
             {tiers.map((tier) => {
               // Use white background for all tiers
               const bgColorClass = 'bg-white dark:bg-gray-800';
-
+              const borderColorClass = currentTier === tier.tier ? 'border-primary border-2' : 'border-border dark:border-border';
               return (
                 <div
                   key={tier.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border ${bgColorClass} ${currentTier === tier.tier ? 'border-primary border-2' : ''}`}
+                  className={`flex items-center gap-3 p-3 rounded-lg ${bgColorClass} ${borderColorClass}`}
                 >
                   <div className="flex-shrink-0">
                     <SupporterIcon tier={tier.tier} status={tier.status} size="lg" />

@@ -136,7 +136,7 @@ export default function LandingTrendingSection({ limit = 3 }) {
               <Link href={`/${page.id}`} className="block h-full">
                 <Card className="h-full hover:shadow-lg transition-all duration-200 cursor-pointer">
                   <CardHeader>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg mb-2">
                       <PillLink href={`/${page.id}`}>
                         {page.title || 'Untitled'}
                       </PillLink>

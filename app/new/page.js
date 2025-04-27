@@ -75,10 +75,12 @@ export default function NewPage() {
       setTitle("");
       setInitialContent([
         { type: "paragraph", children: [{ text: `Replying to ${page} by ${username}` }] },
-        { type: "paragraph", children: [{ text: "" }] }
+        { type: "paragraph", children: [{ text: "" }] },
+        { type: "paragraph", children: [{ text: "" }] } // Always add a blank line for cursor
       ]);
       setEditorContent([
         { type: "paragraph", children: [{ text: `Replying to ${page} by ${username}` }] },
+        { type: "paragraph", children: [{ text: "" }] },
         { type: "paragraph", children: [{ text: "" }] }
       ]);
     } else {
@@ -138,7 +140,7 @@ export default function NewPage() {
     }
   };
 
-  const handleCancel = () => { router.push("/pages"); };
+  const handleCancel = () => { router.back(); };
 
   // Username for display
   const urlUsername = searchParams.get('username');
