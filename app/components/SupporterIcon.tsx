@@ -112,11 +112,12 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       );
     }
   } else {
-    // None: X - thicker lines
+    // None: Ban/Circle with line icon for inactive/no tier
+    tooltipText = 'No active subscription';
     svgContent = (
       <>
-        <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-        <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+        <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="none" />
+        <line x1="30" y1="70" x2="70" y2="30" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
       </>
     );
   }

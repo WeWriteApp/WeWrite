@@ -106,7 +106,7 @@ export const FeatureSection = () => {
               <div className="flex-1">
                 <Card>
                   <CardHeader>
-                    <Badge className="w-fit mb-2" variant="secondary">{`Feature ${index + 1}`}</Badge>
+                    <Badge className="w-fit mb-2 whitespace-nowrap min-w-[80px]" variant="secondary">{`Feature ${index + 1}`}</Badge>
                     <CardTitle className="text-2xl">{feature.title}</CardTitle>
                     <CardDescription className="text-lg">{feature.description}</CardDescription>
                   </CardHeader>

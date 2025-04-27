@@ -858,12 +858,11 @@ export default function AccountPage() {
                       <p className="font-medium">
                         {subscription.tier ? (
                           subscription.tier.startsWith('tier') ?
-                            `Tier ${subscription.tier.slice(4)} Subscription` :
-                            subscription.tier === 'bronze' ? 'Tier 1 Subscription' :
-                            subscription.tier === 'silver' ? 'Tier 2 Subscription' :
-                            subscription.tier === 'gold' ? 'Tier 3 Subscription' :
-                            subscription.tier === 'diamond' ? 'Tier 4 Subscription' :
-                            `${subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)} Subscription`
+                            subscription.tier === 'tier1' ? 'Tier 1 Subscription' :
+                            subscription.tier === 'tier2' ? 'Tier 2 Subscription' :
+                            subscription.tier === 'tier3' ? 'Tier 3 Subscription' :
+                            'Subscription'
+                          : 'Subscription'
                         ) : 'Subscription'}
                       </p>
                       <div className="flex flex-col gap-1">

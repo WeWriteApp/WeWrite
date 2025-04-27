@@ -248,8 +248,8 @@ const TopUsers = () => {
           )}
 
           {!loading && !error && allTimeUsers.length === 0 && (
-            <div className="p-4 text-sm text-muted-foreground">
-              <p>No users found</p>
+            <div className="p-4 text-sm text-muted-foreground text-center">
+              <p>No supporters yet. Be the first to support a writer!</p>
             </div>
           )}
 
