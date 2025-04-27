@@ -7,6 +7,8 @@ import PageStats from "./PageStats";
 // ConstructionChip removed
 import FollowButton from "./FollowButton";
 import dynamic from "next/dynamic";
+import { Button } from "./ui/button";
+import { Reply } from "lucide-react";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
@@ -106,7 +108,7 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
       <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
         {/* Action buttons - Follow and Add to Page */}
         {!isEditing && user && (
-          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          <div className="flex flex-col md:flex-row gap-3 items-center w-full md:w-auto">
             {/* Only show Follow button if not the owner */}
             {!isOwner && (
               <>
@@ -114,20 +116,21 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
                   pageId={page.id}
                   pageTitle={page.title}
                   pageOwnerId={page.userId}
-                  className="w-full md:w-auto"
+                  className="w-full h-12 px-4 text-base font-semibold"
                 />
                 <a
                   href={`/new?replyTo=${page.id}&page=${encodeURIComponent(page.title)}&username=${encodeURIComponent(page.username || '')}`}
-                  className="w-full md:w-auto mt-2 inline-block"
+                  className="w-full"
                 >
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full md:w-auto">
+                  <Button variant="outline" className="w-full h-12 px-4 text-base font-semibold flex items-center gap-2 justify-center">
+                    <Reply className="h-5 w-5" />
                     Reply to page
-                  </button>
+                  </Button>
                 </a>
               </>
             )}
             {/* Always show Add to Page button */}
-            <AddToPageButton page={page} />
+            <AddToPageButton page={page} className="w-full h-12 px-4 text-base font-semibold" />
           </div>
         )}
 

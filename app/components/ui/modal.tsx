@@ -141,7 +141,7 @@ export function Modal({
           >
             {showCloseButton && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
                 className="absolute right-2 top-2"
                 onClick={onClose}

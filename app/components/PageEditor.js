@@ -67,8 +67,6 @@ const PageEditor = ({
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
   const [titleError, setTitleError] = useState(false);
-  const [replyContent, setReplyContent] = useState(null);
-  const [loadingReplyContent, setLoadingReplyContent] = useState(false);
   const { user } = useContext(AuthContext);
   const editorRef = useRef(null);
   const titleInputRef = useRef(null);
@@ -86,11 +84,9 @@ const PageEditor = ({
 
   // Fetch original page data for reply functionality
   useEffect(() => {
-    // Only fetch original page data if we don't already have initialContent or replyContent
-    if (isReply && replyToId && !initialContent && !replyContent) {
+    // Only fetch original page data if we don't already have initialContent
+    if (isReply && replyToId && !initialContent) {
       console.log("Fetching original page for reply with ID:", replyToId);
-      // Set a flag to indicate we're loading reply content
-      setLoadingReplyContent(true);
 
       // Import the database module to get page details
       import('../firebase/database').then(({ getPageById }) => {
@@ -178,9 +174,6 @@ const PageEditor = ({
             // Double-check the user link structure
             console.log("User link structure:", JSON.stringify(content[0].children[3], null, 2));
 
-            // Set the reply content
-            setReplyContent(content);
-
             // Always update the current editor value for replies
             // This is crucial for the reply content to appear
             setCurrentEditorValue(content);
@@ -192,12 +185,10 @@ const PageEditor = ({
             }
 
             // Set loading flag to false
-            setLoadingReplyContent(false);
             console.log("Reply content loaded successfully");
           }
         }).catch(error => {
           console.error("Error fetching original page for reply:", error);
-          setLoadingReplyContent(false);
         });
       });
     }
@@ -212,11 +203,9 @@ const PageEditor = ({
 
   // Update currentEditorValue when the initialContent prop changes
   useEffect(() => {
-    console.log("initialContent changed, checking if we should update editor value", {
+    console.log("initialContent changed, updating editor value", {
       initialContent: !!initialContent,
-      isReply,
-      replyContent: !!replyContent,
-      loadingReplyContent
+      isReply
     });
 
     if (initialContent) {
@@ -224,21 +213,13 @@ const PageEditor = ({
       // This ensures the pre-filled attribution text is displayed
       console.log("Setting editor value from initialContent", initialContent);
       setCurrentEditorValue(initialContent);
-
-      // If this is a reply with initialContent, we don't need to fetch the original page
-      // and we should store the initialContent as replyContent to protect it
-      if (isReply) {
-        setReplyContent(initialContent);
-        setLoadingReplyContent(false);
-        console.log("Stored initialContent as replyContent for protection", initialContent);
-      }
     }
   }, [initialContent, isReply]);
 
   // Position cursor for reply content
   useEffect(() => {
     // Only run this when reply content is available and cursor hasn't been positioned yet
-    if (isReply && replyContent && !cursorPositioned.current && editorRef.current) {
+    if (isReply && !cursorPositioned.current && editorRef.current) {
       console.log("Attempting to position cursor for reply content");
       // Set cursor positioned flag to prevent multiple positioning attempts
       cursorPositioned.current = true;
@@ -293,27 +274,10 @@ const PageEditor = ({
 
       return () => clearTimeout(timer);
     }
-  }, [replyContent]);
+  }, [isReply]);
 
   // Handle content changes
   const handleContentChange = (value) => {
-    // For replies, protect the attribution line
-    if (isReply && replyContent && value.length > 0 && replyContent.length > 0) {
-      // If the first paragraph (attribution line) was changed, restore it
-      if (JSON.stringify(value[0]) !== JSON.stringify(replyContent[0])) {
-        console.log('Preventing edit of attribution line');
-        value[0] = replyContent[0];
-      }
-
-      // If the second paragraph (blank line) was changed, restore it
-      if (replyContent.length > 1 && value.length > 1) {
-        if (JSON.stringify(value[1]) !== JSON.stringify(replyContent[1])) {
-          console.log('Preventing edit of blank line');
-          value[1] = replyContent[1];
-        }
-      }
-    }
-
     setCurrentEditorValue(value);
     if (onContentChange) {
       onContentChange(value);

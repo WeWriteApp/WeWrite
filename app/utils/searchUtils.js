@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Calculate a match score for a search result
  * 

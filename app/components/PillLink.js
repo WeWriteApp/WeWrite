@@ -12,7 +12,7 @@ import { usePillStyle } from "../contexts/PillStyleContext";
 
 // Simple skeleton loader
 const PillLinkSkeleton = () => (
-  <div className="inline-flex items-center my-0.5 px-2 py-0.5 rounded-lg shadow-sm bg-muted/40">
+  <div className="inline-flex items-center my-0.5 rounded-lg bg-muted/40">
     <ShimmerEffect className="h-4 w-20 rounded-md" />
   </div>
 );
@@ -40,7 +40,7 @@ export const PillLink = ({
   if (deleted) {
     return (
       <span
-        className={`inline-flex items-center my-0.5 px-2 py-0.5 text-sm font-medium rounded-lg transition-colors shadow-sm whitespace-nowrap max-w-full bg-muted text-muted-foreground opacity-60 cursor-not-allowed ${className}`}
+        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap max-w-full bg-muted text-muted-foreground opacity-60 cursor-not-allowed ${className}`}
         style={{ pointerEvents: 'none' }}
       >
         <Trash2 size={14} className="mr-1 flex-shrink-0" />
@@ -71,15 +71,16 @@ export const PillLink = ({
   // No inline style needed, we'll use CSS classes from getPillStyleClasses()
 
   // Base styles for all pill links
+  const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
   const baseStyles = `
     inline-flex items-center
-    my-0.5 px-2 py-0.5
+    my-0.5
     text-sm font-medium
     rounded-lg
     transition-colors
-    shadow-sm
     whitespace-nowrap
     max-w-full
+    ${classicPadding}
     ${getPillStyleClasses()}
     ${groupId ? 'opacity-90' : ''}
     ${className}

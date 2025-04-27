@@ -43,10 +43,23 @@ export async function POST(request) {
     const subscriptionDoc = await getDoc(userSubscriptionDocRef);
     
     let stripeCustomerId = '';
-    
     if (subscriptionDoc.exists()) {
       const subscriptionData = subscriptionDoc.data();
       stripeCustomerId = subscriptionData.stripeCustomerId;
+    }
+
+    // Validate the stored Stripe customer ID if present
+    if (stripeCustomerId) {
+      try {
+        await stripe.customers.retrieve(stripeCustomerId);
+      } catch (err) {
+        // If not found, clear the ID so a new customer will be created below
+        if (err && err.code === 'resource_missing') {
+          stripeCustomerId = '';
+        } else {
+          throw err;
+        }
+      }
     }
     
     // If no customer ID in subscription, check if one already exists in Stripe
@@ -195,4 +208,4 @@ export async function POST(request) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-} 
+}

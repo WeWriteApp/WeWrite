@@ -95,6 +95,14 @@ const SpendingOverview = ({ total, max }: { total: number, max: number }) => {
   );
 };
 
+// Helper to get tier name and icon based on amount
+function getTierInfo(amount: number) {
+  if (amount === 10) return { tier: 'tier1', label: 'Tier 1 Subscription' };
+  if (amount === 20) return { tier: 'tier2', label: 'Tier 2 Subscription' };
+  if (amount >= 50) return { tier: 'tier3', label: 'Tier 3 Subscription' };
+  return { tier: 'custom', label: `Custom Subscription ($${amount}/mo)` };
+}
+
 export default function AccountPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -849,21 +857,14 @@ export default function AccountPage() {
                   <div className="flex items-center gap-2">
                     <div className="h-5 w-5">
                       <SupporterIcon
-                        tier={subscription.tier}
+                        tier={getTierInfo(subscription.amount).tier}
                         status={subscription.status}
                         size="lg"
                       />
                     </div>
                     <div>
                       <p className="font-medium">
-                        {subscription.tier ? (
-                          subscription.tier.startsWith('tier') ?
-                            subscription.tier === 'tier1' ? 'Tier 1 Subscription' :
-                            subscription.tier === 'tier2' ? 'Tier 2 Subscription' :
-                            subscription.tier === 'tier3' ? 'Tier 3 Subscription' :
-                            'Subscription'
-                          : 'Subscription'
-                        ) : 'Subscription'}
+                        {getTierInfo(subscription.amount).label}
                       </p>
                       <div className="flex flex-col gap-1">
                         <p className="text-sm text-muted-foreground">

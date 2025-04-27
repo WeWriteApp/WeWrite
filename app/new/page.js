@@ -12,6 +12,7 @@ import Cookies from 'js-cookie';
 import PageEditor from "../components/PageEditor";
 import { Button } from "../components/ui/button";
 import { ChevronLeft } from "lucide-react";
+import { createReplyAttribution } from "../utils/linkUtils";
 
 export default function NewPage() {
   const router = useRouter();
@@ -72,15 +73,22 @@ export default function NewPage() {
     if (isReply) {
       const page = searchParams.get('page') || '';
       const username = searchParams.get('username') || '';
+      const replyToId = searchParams.get('replyTo') || '';
       setTitle("");
+      const attribution = createReplyAttribution({
+        pageId: replyToId,
+        pageTitle: page,
+        userId: null,
+        username: username
+      });
       setInitialContent([
-        { type: "paragraph", children: [{ text: `Replying to ${page} by ${username}` }] },
-        { type: "paragraph", children: [{ text: "" }] },
-        { type: "paragraph", children: [{ text: "" }] } // Always add a blank line for cursor
+        attribution,
+        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." },
+        { type: "paragraph", children: [{ text: "" }] }
       ]);
       setEditorContent([
-        { type: "paragraph", children: [{ text: `Replying to ${page} by ${username}` }] },
-        { type: "paragraph", children: [{ text: "" }] },
+        attribution,
+        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." },
         { type: "paragraph", children: [{ text: "" }] }
       ]);
     } else {
@@ -140,7 +148,22 @@ export default function NewPage() {
     }
   };
 
-  const handleCancel = () => { router.back(); };
+  const handleBack = () => {
+    // If replying, go back to the original page if possible
+    if (isReply) {
+      const replyToId = searchParams.get('replyTo');
+      if (replyToId) {
+        router.push(`/pages/${replyToId}`);
+        return;
+      }
+    }
+    // Otherwise, go back in history or to home
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
 
   // Username for display
   const urlUsername = searchParams.get('username');
@@ -153,29 +176,30 @@ export default function NewPage() {
 
   return (
     <DashboardLayout>
-      <PageHeader title={isReply ? "Replying to page" : "New page"} username={displayUsername} userId={user?.uid} />
       <div className="container w-full py-6 px-4">
-        <div className="flex items-center mb-4">
-          <Button variant="outline" size="sm" onClick={() => router.push('/')} className="flex items-center gap-1">
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
-        </div>
-        <div className="w-full">
-          <PageEditor
-            title={isReply ? "" : title}
-            setTitle={setTitle}
-            initialContent={initialContent || editorContent}
-            onContentChange={setEditorContent}
-            isPublic={isPublic}
-            setIsPublic={setIsPublic}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            isSaving={isSaving}
-            error={error}
-            isNewPage={true}
-            isReply={isReply}
-          />
+        <div className="flex flex-col items-center w-full">
+          <div className="flex flex-row items-center justify-center w-full mb-4 gap-2">
+            <Button variant="outline" size="sm" onClick={handleBack} className="flex items-center gap-1">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-semibold text-center flex-1">{isReply ? "Replying to page" : "New page"}</h1>
+          </div>
+          <div className="w-full">
+            <PageEditor
+              title={isReply ? "" : title}
+              setTitle={setTitle}
+              initialContent={initialContent || editorContent}
+              onContentChange={setEditorContent}
+              isPublic={isPublic}
+              setIsPublic={setIsPublic}
+              onSave={handleSave}
+              onCancel={handleBack}
+              isSaving={isSaving}
+              error={error}
+              isNewPage={true}
+              isReply={isReply}
+            />
+          </div>
         </div>
       </div>
     </DashboardLayout>

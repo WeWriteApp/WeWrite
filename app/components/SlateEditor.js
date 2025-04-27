@@ -1,3 +1,4 @@
+import { Switch } from "./ui/switch";
 import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import {
   createEditor,
@@ -104,9 +105,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const [initialLinkValues, setInitialLinkValues] = useState({}); // New state to store initial link values
   const editableRef = useRef(null);
   const [lineCount, setLineCount] = useState(0);
-  const [contentInitialized, setContentInitialized] = useState(false);
-
-  // Initialize editor state with proper error handling
+  // Remove contentInitialized state and related logic
+  // Always update initialValue and the editor's value when initialContent changes
   const [initialValue, setInitialValue] = useState(() => {
     try {
       // If initialContent is provided, it takes precedence
@@ -179,9 +179,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   // Use initialContent as the priority content source if available
   useEffect(() => {
-    if (initialContent && !contentInitialized) {
-      console.log("SlateEditor received initialContent:", JSON.stringify(initialContent, null, 2));
-
+    if (initialContent) {
+      // Add debug log to see what initialContent is
+      console.log("SlateEditor initialContent:", JSON.stringify(initialContent, null, 2));
       try {
         // Use initialContent as the priority source
         console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
@@ -192,9 +192,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           console.log("Notifying parent component about initialContent");
           onContentChange(initialContent);
         }
-
-        // Set content as initialized to prevent re-initialization
-        setContentInitialized(true);
 
         // Focus the editor after setting content
         setTimeout(() => {
@@ -218,7 +215,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         console.error("Error setting editor content from initialContent:", error);
       }
     }
-  }, [initialContent, onContentChange, contentInitialized, editor]);
+  }, [initialContent, onContentChange, editor]);
 
   // Make sure initialValue is properly set from initialContent
   useEffect(() => {
@@ -578,6 +575,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   const renderElement = (props) => {
     const { attributes, children, element } = props;
+    if (element.type === "paragraph") {
+      console.log("Rendering paragraph element:", JSON.stringify(element, null, 2));
+    }
 
     switch (element.type) {
       case "link":
@@ -623,10 +623,10 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             <div className="flex-grow">
               <div className="relative">
                 <EditorContent
+                  ref={editableRef}
                   editor={editor}
                   handleKeyDown={handleKeyDown}
                   renderElement={renderElement}
-                  editableRef={editableRef}
                 />
               </div>
             </div>
@@ -732,7 +732,7 @@ const withInlines = (editor) => {
         const newParagraph = { type: 'paragraph', children: [{ text: '' }] };
         Transforms.insertNodes(editor, newParagraph);
       } catch (fallbackError) {
-        console.error('Error in fallback insertBreak:', fallbackError);
+        console.error('Fallback error:', fallbackError);
 
         // Last resort: use the original insertBreak
         try {
@@ -907,120 +907,41 @@ const isLinkActive = (editor) => {
 const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
-  // const [searchActive, setSearchActive] = useState(false);
   const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
-  // const [isNewPageCreating, setIsNewPageCreating] = useState(false);
+  const [showAuthor, setShowAuthor] = useState(false);
+  const [hasChanged, setHasChanged] = useState(false);
 
-  // Handle keyboard shortcuts
+  // Track initial state for change detection
+  const initialState = React.useRef({
+    displayText: initialText,
+    pageTitle: initialPageTitle,
+    selectedPageId: initialPageId,
+    externalUrl: "",
+    showAuthor: false,
+    activeTab: "page"
+  });
+
+  // Enable save if any field changes
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Handle cmd+enter to submit the form
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
+    const changed =
+      displayText !== initialState.current.displayText ||
+      pageTitle !== initialState.current.pageTitle ||
+      selectedPageId !== initialState.current.selectedPageId ||
+      externalUrl !== initialState.current.externalUrl ||
+      showAuthor !== initialState.current.showAuthor ||
+      activeTab !== initialState.current.activeTab;
+    setHasChanged(changed);
+  }, [displayText, pageTitle, selectedPageId, externalUrl, showAuthor, activeTab]);
 
-        if (activeTab === 'external' && externalUrl) {
-          handleExternalSubmit();
-        } else if (activeTab === 'page' && selectedPageId) {
-          // If a page is already selected, submit it
-          const page = { id: selectedPageId, title: pageTitle };
-          handleSave(page);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTab, externalUrl, selectedPageId, pageTitle]);
-
-  // Safely access AuthContext with error handling
-  const authContext = useContext(AuthContext);
-  // const user = authContext?.user;
-
-  // Add error handling for missing auth context
-  useEffect(() => {
-    if (!authContext) {
-      console.warn("AuthContext is not available in LinkEditor");
-    }
-  }, [authContext]);
+  // Validation helpers
+  const isPageValid = activeTab === 'page' && !!selectedPageId;
+  const isExternalValid = activeTab === 'external' && externalUrl && (externalUrl.startsWith('http://') || externalUrl.startsWith('https://'));
+  const canSave = hasChanged && ((activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid));
 
   const handleClose = () => {
     setShowLinkEditor(false);
-  };
-
-  useEffect(() => {
-    // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
-
-  const handleDisplayTextChange = (e) => {
-    setDisplayText(e.target.value);
-  };
-
-  const handleExternalUrlChange = (e) => {
-    setExternalUrl(e.target.value);
-  };
-
-  // Unused but kept for future reference
-  // const resetDisplayText = () => {
-  //   setDisplayText(pageTitle);
-  // };
-
-  const handleSave = (page) => {
-    console.log("LinkEditor - handleSave:", page);
-
-    // Handle newly created page
-    if (page.id) {
-      setSelectedPageId(page.id);
-      setPageTitle(page.title); // Save the original page title
-
-      // If display text is empty or not yet set, use the page title
-      if (!displayText || displayText === initialText) {
-        setDisplayText(page.title);
-      }
-
-      const pageLink = {
-        ...page,
-        url: `/pages/${page.id}`,
-        displayText: displayText || page.title
-      };
-
-      console.log("Selecting page link:", pageLink);
-      onSelect(pageLink);
-
-      // Close the editor if we have a valid page
-      handleClose();
-    } else {
-      console.error("Invalid page data:", page);
-    }
-  };
-
-  const handleExternalSubmit = (e) => {
-    // Prevent form submission
-    if (e) e.preventDefault();
-
-    if (!externalUrl) return;
-
-    let finalUrl = externalUrl;
-    // Add https:// if not present and not a relative URL
-    if (!finalUrl.startsWith('/') && !finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-      finalUrl = 'https://' + finalUrl;
-    }
-
-    // Create a proper external link object
-    onSelect({
-      type: "link",
-      url: finalUrl,
-      displayText: displayText || finalUrl,
-      isExternal: true // Flag to identify this as an external link
-    });
-
-    handleClose();
   };
 
   return (
@@ -1040,7 +961,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
           <div className="p-4 flex items-center justify-between">
             <h2 className="text-base font-medium flex items-center gap-2">
               <LinkIcon className="h-4 w-4" />
-              Create link
+              {isEditing ? 'Edit link' : 'Create link'}
             </h2>
             <button
               onClick={handleClose}
@@ -1080,20 +1001,35 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
               <div className="p-4">
                 <div className="overflow-y-auto max-h-[40vh]">
                   <TypeaheadSearch
-                    onSelect={(page) => handleSave(page)}
+                    onSelect={(page) => {
+                      setSelectedPageId(page.id);
+                      setPageTitle(page.title);
+                      setDisplayText(page.title);
+                    }}
                     placeholder="Search pages..."
                     initialSelectedId={selectedPageId}
                     displayText={displayText}
                     setDisplayText={setDisplayText}
-                    preventRedirect={true} // Prevent redirection when creating a page from the link editor
+                    preventRedirect={true}
                     onInputChange={(value) => {
-                      // If the input looks like a URL, switch to external tab and fill the URL field
                       if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
                         setActiveTab('external');
                         setExternalUrl(value);
                       }
                     }}
                   />
+                  {/* Show Author Switch - now above the button */}
+                  <div className="flex items-center gap-2 mt-4 mb-4">
+                    <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch" />
+                    <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>
+                  </div>
+                  <button
+                    onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
+                    disabled={!canSave}
+                    className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isEditing ? 'Save changes' : 'Insert link'}
+                  </button>
                 </div>
               </div>
             </>
@@ -1122,13 +1058,16 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                     className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
                   />
                 </div>
-
+                <div className="flex items-center gap-2 mb-2">
+                  <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch-ext" />
+                  <label htmlFor="show-author-switch-ext" className="text-sm font-medium select-none">Show author</label>
+                </div>
                 <button
                   onClick={handleExternalSubmit}
-                  disabled={!externalUrl}
+                  disabled={!canSave}
                   className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add External Link
+                  {isEditing ? 'Save changes' : 'Add External Link'}
                 </button>
               </div>
             </>
@@ -1139,8 +1078,8 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
   );
 };
 
-// Custom EditorContent component to apply line mode styles
-const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) => {
+// Use forwardRef for EditorContent so Editable can receive the ref
+const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }, editableRef) => {
   const { lineMode } = useLineSettings();
   const [selectedParagraph, setSelectedParagraph] = useState(null);
 
@@ -1239,47 +1178,7 @@ const EditorContent = ({ editor, handleKeyDown, renderElement, editableRef }) =>
       />
     </motion.div>
   );
-};
-
-// Editor toolbar component - unused but kept for reference
-// const EditorToolbar = ({ editor }) => {
-//   return (
-//     <div className="flex items-center p-2 border-b">
-//       <ToolbarButton
-//         icon={<LinkIcon size={16} />}
-//         tooltip="Insert Link"
-//         onMouseDown={event => {
-//           event.preventDefault();
-//           const url = window.prompt('Enter a URL:');
-//           if (!url) return;
-//           if (!isUrl(url)) return;
-//           wrapLink(editor, url);
-//         }}
-//       />
-//     </div>
-//   );
-// };
-
-// Toolbar button component - unused but kept for reference
-// const ToolbarButton = ({ icon, tooltip, onMouseDown }) => {
-//   return (
-//     <TooltipProvider>
-//       <Tooltip>
-//         <TooltipTrigger asChild>
-//           <button
-//             onMouseDown={onMouseDown}
-//             className="p-1 rounded-full hover:bg-accent mr-1"
-//           >
-//             {icon}
-//           </button>
-//         </TooltipTrigger>
-//         <TooltipContent>
-//           <p>{tooltip}</p>
-//         </TooltipContent>
-//       </Tooltip>
-//     </TooltipProvider>
-//   );
-// };
+});
 
 const Leaf = ({ attributes, children, leaf }) => {
   return (

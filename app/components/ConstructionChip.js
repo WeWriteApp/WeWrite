@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Construction } from 'lucide-react';
-import PledgeBarModal from './PledgeBarModal';
+import SubscriptionActivationModal from './SubscriptionActivationModal';
 
 /**
  * ConstructionChip Component
@@ -67,7 +67,7 @@ const ConstructionModal = ({ isOpen, onClose }) => {
   });
 
   return (
-    <PledgeBarModal
+    <SubscriptionActivationModal
       isOpen={isOpen}
       onClose={onClose}
       isSignedIn={true}

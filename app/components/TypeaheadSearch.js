@@ -18,6 +18,7 @@ import { Input } from "./ui/input";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { app } from "../firebase/config";
 import { getBasePageSearchRules, getUserPageSearchRules, buildSearchQueryUrl, applyPrivacyFiltering } from "../utils/searchRules";
+import { Switch } from "./ui/switch";
 
 // Define a simple Loader component directly in this file
 const Loader = () => {
@@ -40,7 +41,7 @@ const TypeaheadSearch = ({
   initialSearch = "", // New prop to set initial search value
   displayText = "", // Display text for the link
   setDisplayText = null, // Function to update display text
-  preventRedirect = false // New prop to prevent redirection after page creation
+  preventRedirect = false, // New prop to prevent redirection after page creation
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -708,21 +709,11 @@ const SingleItemLink = ({ page, search }) => {
       >
         <span className="truncate">{highlightText(page.title, search)}</span>
       </PillLink>
-      {page.username && page.username !== 'NULL' && (
-        <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
-          by {page.username}
-        </span>
-      )}
     </div>
   );
 };
 
 const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId }) => {
-  // Ensure we have a valid username to display (handle NULL values properly)
-  const displayName = page.username && page.username !== 'NULL'
-    ? page.username
-    : 'Anonymous';
-
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
@@ -746,9 +737,6 @@ const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSele
           }} />
         )}
       </button>
-      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
-        {page.groupId ? 'Group' : `by ${displayName}`}
-      </span>
     </div>
   );
 };

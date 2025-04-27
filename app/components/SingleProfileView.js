@@ -13,7 +13,7 @@ import { useAuth } from "../providers/AuthProvider";
 import { Loader, Settings, ChevronLeft, Heart, Users, Eye } from "lucide-react";
 import SupporterBadge from "./SupporterBadge";
 import { SupporterIcon } from "./SupporterIcon";
-import { TierModal } from "./TierModal";
+import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 import { Button } from "./ui/button";
 import UserStreak from "./UserStreak";
 import UserProfileTabs from "./UserProfileTabs";
@@ -192,10 +192,11 @@ const SingleProfileView = ({ profile }) => {
 
           {/* Tier badge as a chip below username - always show */}
           {(
-            <TierModal
+            <SubscriptionInfoModal
               currentTier={supporterTier}
               currentStatus={subscriptionStatus}
               userId={profile.uid}
+              username={!isCurrentUser ? username : undefined}
             >
               <div className="cursor-pointer">
                 {isLoadingTier ? (
@@ -219,7 +220,7 @@ const SingleProfileView = ({ profile }) => {
                   </div>
                 )}
               </div>
-            </TierModal>
+            </SubscriptionInfoModal>
           )}
         </div>
 

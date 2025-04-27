@@ -8,7 +8,7 @@ import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
-import PledgeBarModal from './PledgeBarModal';
+import SubscriptionActivationModal from './SubscriptionActivationModal';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import '../styles/pledge-bar-animations.css';
 
@@ -466,7 +466,7 @@ const PledgeBar = () => {
 
         {/* Pledge Modal for self view - rendered at document level */}
         {typeof document !== 'undefined' && createPortal(
-          <PledgeBarModal
+          <SubscriptionActivationModal
             isOpen={showActivationModal}
             onClose={() => setShowActivationModal(false)}
             isSignedIn={!!user}
@@ -502,7 +502,7 @@ const PledgeBar = () => {
 
         {/* Pledge Modal for logged-out users - rendered at document level */}
         {typeof document !== 'undefined' && createPortal(
-          <PledgeBarModal
+          <SubscriptionActivationModal
             isOpen={showActivationModal}
             onClose={() => setShowActivationModal(false)}
             isSignedIn={false}
@@ -541,6 +541,17 @@ const PledgeBar = () => {
         className={`fixed bottom-12 left-8 right-8 z-50 flex flex-col items-center gap-2 transition-all duration-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'} ${animateEntry ? 'spring-and-pulse' : ''}`}
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
+        {/* Gradient/blur background for the + more group */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 w-full z-[-1]"
+          style={{
+            background: 'linear-gradient(to top, var(--pledgebar-bg, #fff) 60%, transparent 100%)',
+            WebkitBackdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(8px)',
+            transition: 'background 0.3s',
+          }}
+        />
         <CompositionBar
           value={pledges[0]?.amount || 0}
           max={subscription?.amount || 100}
@@ -558,8 +569,9 @@ const PledgeBar = () => {
           <Button
             variant="ghost"
             size="sm"
-            className="text-xs text-muted-foreground flex items-center gap-1 hover:bg-transparent hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground flex items-center gap-1 hover:bg-transparent hover:text-foreground transition-colors relative"
             onClick={scrollToMetadata}
+            style={{ zIndex: 1 }}
           >
             <span>{isAtBottom ? 'Back to top' : 'More'}</span>
             {isAtBottom ? (
@@ -573,7 +585,7 @@ const PledgeBar = () => {
 
       {/* Pledge Modal - rendered at document level to ensure proper positioning */}
       {typeof document !== 'undefined' && createPortal(
-        <PledgeBarModal
+        <SubscriptionActivationModal
           isOpen={showActivationModal}
           onClose={() => setShowActivationModal(false)}
           isSignedIn={!!user}
@@ -587,8 +599,37 @@ const PledgeBar = () => {
           {/* Custom amount modal content */}
         </div>
       )}
+
+      {/* Mobile Back to Top Button */}
+      {showMobileBackToTop && (
+        <button
+          className="fixed bottom-24 right-4 z-[9999] sm:hidden flex items-center justify-center w-12 h-12 rounded-full bg-background/90 shadow-lg border border-border backdrop-blur-md transition-all duration-200 hover:bg-background/95"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          <ChevronUp className="h-6 w-6 text-primary" />
+        </button>
+      )}
+
+      {/* Desktop Back to Top Button */}
+      {showDesktopBackToTop && (
+        <button
+          className="fixed bottom-24 right-8 z-[9999] hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-background/90 shadow-lg border border-border backdrop-blur-md transition-all duration-200 hover:bg-background/95"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          <ChevronUp className="h-6 w-6 text-primary" />
+        </button>
+      )}
     </>
   );
 };
 
 export default PledgeBar;
+
+// Set CSS variable for pledgebar background color based on theme
+if (typeof window !== 'undefined') {
+  document.documentElement.style.setProperty('--pledgebar-bg', window.matchMedia('(prefers-color-scheme: dark)').matches ? '#18181b' : '#fff');
+}

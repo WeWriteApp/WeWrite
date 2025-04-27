@@ -95,78 +95,88 @@ const DonateBar = () => {
   }
 
   return (
-    <div className="flex flex-col mt-8 fixed bottom-0 left-0 p-4 w-full align-items justify-center z-1">
-      {isConfirmed ? (
-        <div className="flex gap-4 mx-auto bg-background p-4 rounded">
-          <button
-            className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
-            data-tooltip-id="Confirm"
-            data-tooltip-place="top"
-            data-tooltip-content={`Confirm ${donate}`}
-            onClick={() => {
-              addSubscription(donate, id);
-            }}
-          >
-            <Check className="h-6 w-6" />
-            <Tooltip id="Confirm" place="top" />
-          </button>
-          <button
-            className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
-            data-tooltip-id="Cancel"
-            data-tooltip-place="top"
-            data-tooltip-content={"Cancel"}
-            onClick={() => setIsConfirmed(false)}
-          >
-            <X className="h-6 w-6" />
-            <Tooltip id="Cancel" place="top" />
-          </button>
+    <>
+      {/* Gradient background at the bottom, behind the bar */}
+      <div
+        className="fixed left-0 right-0 bottom-0 w-full h-64 z-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)',
+        }}
+      />
+      {/* Floating pledge bar */}
+      <div
+        className="fixed left-1/2 bottom-16 transform -translate-x-1/2 z-10 w-full max-w-md px-4"
+        style={{ pointerEvents: 'auto' }}
+      >
+        <div className="w-full bg-white/80 dark:bg-zinc-900/80 rounded-2xl shadow-2xl flex flex-col items-center justify-center py-3 px-4 backdrop-blur-lg border border-black/20 dark:border-white/20">
+          {isConfirmed ? (
+            <div className="flex gap-4 mx-auto">
+              <button
+                className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+                data-tooltip-id="Confirm"
+                data-tooltip-place="top"
+                data-tooltip-content={`Confirm ${donate}`}
+                onClick={() => {
+                  addSubscription(donate, id);
+                }}
+              >
+                <Check className="h-6 w-6" />
+                <Tooltip id="Confirm" place="top" />
+              </button>
+              <button
+                className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+                data-tooltip-id="Cancel"
+                data-tooltip-place="top"
+                data-tooltip-content={"Cancel"}
+                onClick={() => setIsConfirmed(false)}
+              >
+                <X className="h-6 w-6" />
+                <Tooltip id="Cancel" place="top" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-4 mx-auto">
+              <button
+                className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+                data-tooltip-id="Donate"
+                data-tooltip-place="top"
+                data-tooltip-content={"Donate"}
+                onClick={() => setIsConfirmed(true)}
+              >
+                <DollarSign className="h-6 w-6" />
+                <Tooltip id="Donate" place="top" />
+              </button>
+            </div>
+          )}
+          <div className="flex gap-4 mx-auto mt-2">
+            <button
+              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+              data-tooltip-id="Decrease"
+              data-tooltip-place="top"
+              data-tooltip-content={"Decrease"}
+              onClick={() => setDonate(donate - 1)}
+            >
+              <Minus className="h-6 w-6" />
+              <Tooltip id="Decrease" place="top" />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">{donate}</span>
+              {/* <span className="text-gray-500">/mo</span> */}
+            </div>
+            <button
+              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+              data-tooltip-id="Increase"
+              data-tooltip-place="top"
+              data-tooltip-content={"Increase"}
+              onClick={() => setDonate(donate + 1)}
+            >
+              <Plus className="h-6 w-6" />
+              <Tooltip id="Increase" place="top" />
+            </button>
+          </div>
         </div>
-      ) : (
-        <div className="flex gap-4 mx-auto bg-background p-4 rounded">
-          <button
-            className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
-            data-tooltip-id="Donate"
-            data-tooltip-place="top"
-            data-tooltip-content={"Donate"}
-            onClick={() => setIsConfirmed(true)}
-          >
-            <DollarSign className="h-6 w-6" />
-            <Tooltip id="Donate" place="top" />
-          </button>
-        </div>
-      )}
-
-      <div className="flex gap-4 mx-auto bg-background p-4 rounded">
-        <button
-          className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
-          data-tooltip-id="Decrease"
-          data-tooltip-place="top"
-          data-tooltip-content={"Decrease"}
-          onClick={() => setDonate(donate - 1)}
-        >
-          <Minus className="h-6 w-6" />
-          <Tooltip id="Decrease" place="top" />
-        </button>
-
-        {/* Amount */}
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold">{donate}</span>
-          {/* <span className="text-gray-500">/mo</span> */}
-        </div>
-
-        {/* Increase */}
-        <button
-          className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
-          data-tooltip-id="Increase"
-          data-tooltip-place="top"
-          data-tooltip-content={"Increase"}
-          onClick={() => setDonate(donate + 1)}
-        >
-          <Plus className="h-6 w-6" />
-          <Tooltip id="Increase" place="top" />
-        </button>
       </div>
-    </div>
+    </>
   );
 };
 

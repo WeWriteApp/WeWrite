@@ -28,7 +28,7 @@ export default function SubscriptionSuccessPage() {
       <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
       
       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-6">
-        <p className="text-white/90 mb-2">Your subscription has been activated successfully.</p>
+        <p className="text-foreground mb-2">Your subscription has been activated successfully.</p>
         <p className="text-white/70 text-sm">You now have full access to all WeWrite features and content.</p>
       </div>
       
@@ -44,4 +44,4 @@ export default function SubscriptionSuccessPage() {
       </div>
     </div>
   );
-} 
+}

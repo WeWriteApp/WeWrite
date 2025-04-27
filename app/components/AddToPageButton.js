@@ -10,7 +10,7 @@ import { appendPageReference } from '../firebase/database';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
-const AddToPageButton = ({ page }) => {
+const AddToPageButton = ({ page, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const { user } = useContext(AuthContext);
@@ -58,7 +58,7 @@ const AddToPageButton = ({ page }) => {
       <Button
         variant="outline"
         size="sm"
-        className="gap-2 w-full h-10 md:h-8 md:w-auto"
+        className={`gap-2 w-full md:w-auto ${className}`}
         onClick={() => setIsOpen(true)}
         disabled={isAdding}
       >

@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
 import { SupporterIcon } from "./SupporterIcon";
-import { TierModal } from "./TierModal";
+import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 
 export interface PageHeaderProps {
   title?: string;
@@ -290,7 +290,7 @@ export default function PageHeader({
                       : "text-2xl mb-0.5"
                   }`}
                   style={{
-                    maxWidth: isScrolled ? "80vw" : "100%"
+                    maxWidth: isScrolled ? "60vw" : "100%"
                   }}
                 >
                   {isLoading ? (
@@ -300,65 +300,36 @@ export default function PageHeader({
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <span>{title || "Untitled"}</span>
+                      <span className={isScrolled ? "truncate" : ""} style={isScrolled ? {maxWidth: '40vw', display: 'inline-block', verticalAlign: 'middle'} : {}}>{title || "Untitled"}</span>
                       {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
                     </div>
                   )}
                 </h1>
-                <p
-                  className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
-                    isScrolled
-                      ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block"
-                      : "text-sm mt-0.5 truncate"
-                  }`}
-                  style={{
-                    maxWidth: isScrolled ? "30vw" : "100%"
-                  }}
-                >
+                <p className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${isScrolled ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block" : "text-sm mt-0.5"}`} style={{ maxWidth: isScrolled ? "30vw" : "100%" }}>
                   {isLoading ? (
-                    <span className="inline-flex items-center">
-                      <Loader className="h-3 w-3 animate-spin mr-1" />
-                      <span>Loading author...</span>
-                    </span>
+                    <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading author...</span>
                   ) : (
-                    <>
-                      {isScrolled ? "•" : ""}{" "}
-                      {groupId && groupName ? (
-                        <Link href={`/groups/${groupId}`} className="hover:underline">
-                          <span data-component-name="PageHeader">in {groupName}</span>
-                        </Link>
-                      ) : (
-                        <>
-                          <span className="whitespace-nowrap">{isScrolled ? "" : "by "}</span>
-                          {userId ? (
-                            <div className="flex items-center gap-1 inline-flex">
-                              <Link href={`/user/${userId}`} className="hover:underline">
-                                <span data-component-name="PageHeader">{displayUsername}</span>
-                              </Link>
-                              {isLoadingTier ? (
-                                <Loader className="h-3 w-3 animate-spin" />
-                              ) : tier ? (
-                                <TierModal
-                                  currentTier={tier}
-                                  currentStatus={subscriptionStatus}
-                                  userId={userId}
-                                >
-                                  <div className="cursor-pointer">
-                                    <SupporterIcon
-                                      tier={tier}
-                                      status={subscriptionStatus}
-                                      size="sm"
-                                    />
-                                  </div>
-                                </TierModal>
-                              ) : null}
-                            </div>
+                    groupId && groupName ? (
+                      <Link href={`/groups/${groupId}`} className="hover:underline">
+                        <span data-component-name="PageHeader">in {groupName}</span>
+                      </Link>
+                    ) : (
+                      <span className="flex items-center gap-1 justify-center mx-auto">
+                        <span className="whitespace-nowrap">by</span>
+                        <Link href={`/user/${userId}`} className="hover:underline">
+                          {isLoading || !displayUsername ? (
+                            <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
                           ) : (
                             <span data-component-name="PageHeader">{displayUsername}</span>
                           )}
-                        </>
-                      )}
-                    </>
+                        </Link>
+                        <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
+                          <div className="cursor-pointer flex-shrink-0 flex items-center">
+                            <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
+                          </div>
+                        </SubscriptionInfoModal>
+                      </span>
+                    )
                   )}
                 </p>
               </div>

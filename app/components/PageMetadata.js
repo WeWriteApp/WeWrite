@@ -422,7 +422,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
           />
           <MetadataItem
             label="Followers"
-            value={followerCount > 0 ? followerCount : "None"}
+            value={typeof followerCount === 'number' ? followerCount : 0}
             sparklineData={followerHistory}
           />
           <MetadataItem

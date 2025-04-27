@@ -10,7 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Separator } from "../../components/ui/separator";
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
-import LandingTrendingSection from './LandingTrendingSection';
+import TrendingPages from '../TrendingPages';
+import { useTheme } from "next-themes";
+import { PillLink } from "../PillLink";
 
 // Import mock page content (in a real implementation, this would be fetched from Firebase)
 const pageContents = {
@@ -51,13 +53,26 @@ const pageContents = {
   }
 };
 
+// Carousel images for hero section
+const heroImages = [
+  '/images/landing/LP-01.png',
+  '/images/landing/LP-02.png',
+  '/images/landing/LP-03.png',
+  '/images/landing/LP-04.png',
+  '/images/landing/LP-05.png',
+];
+
 // Simple fade-in animation using CSS
 const fadeInClass = "animate-fadeIn";
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const heroSectionRef = useRef<HTMLElement>(null);
+  const { setTheme, theme } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,6 +87,18 @@ const LandingPage = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxOpen(false);
+      if (e.key === 'ArrowRight') setCarouselIndex((i) => (i + 1) % heroImages.length);
+      if (e.key === 'ArrowLeft') setCarouselIndex((i) => (i - 1 + heroImages.length) % heroImages.length);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightboxOpen]);
 
   // Smooth scroll function for anchor links
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -171,6 +198,12 @@ const LandingPage = () => {
       default:
         return null;
     }
+  };
+
+  // Helper for changing index with direction
+  const goToIndex = (newIdx: number) => {
+    setSlideDirection(newIdx > carouselIndex || (newIdx === 0 && carouselIndex === heroImages.length - 1) ? 'right' : 'left');
+    setCarouselIndex(newIdx);
   };
 
   return (
@@ -317,22 +350,6 @@ const LandingPage = () => {
           }}
           onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
-          {/* Background Image - Simplified and fixed */}
-          <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
-            <div className="absolute inset-0 -right-8 scale-105"> {/* Crop by shifting and scaling */}
-              <Image
-                src="/images/landing/hero-image.png"
-                alt="Background"
-                fill
-                className="object-cover opacity-20"
-                priority
-                loading="eager"
-                sizes="100vw"
-              />
-            </div>
-            <div className="absolute inset-0 bg-background/70"></div>
-          </div>
-
           <div className="container mx-auto px-6 relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-12">
               <div
@@ -354,38 +371,128 @@ const LandingPage = () => {
                 </div>
               </div>
 
-              <div
-                className={`flex-1 perspective-[1000px] ${fadeInClass}`}
-                style={{ animationDelay: '0.2s' }}
-              >
-                <div
-                  className="relative w-full max-w-lg mx-auto transform-gpu hover:scale-105 transition-transform duration-300"
-                  style={{
-                    transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`
-                  }}
-                >
-                  <Image
-                    src="/images/landing/hero-image.png"
-                    alt="WeWrite App Interface"
-                    width={700}
-                    height={700}
-                    className="rounded-lg shadow-2xl border border-border/30"
-                    priority
-                    loading="eager"
-                    sizes="(max-width: 768px) 100vw, 700px"
-                  />
+              <div className={`flex-1 perspective-[1000px] ${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
+                <div className="relative w-full max-w-lg mx-auto transform-gpu transition-transform duration-300">
+                  <button
+                    className="group relative block focus:outline-none"
+                    style={{ width: '100%', background: 'none', border: 'none', padding: 0 }}
+                    onClick={() => setLightboxOpen(true)}
+                    aria-label="Open image lightbox"
+                  >
+                    <Image
+                      key={carouselIndex}
+                      src={heroImages[carouselIndex]}
+                      alt={`WeWrite App Interface ${carouselIndex + 1}`}
+                      width={700}
+                      height={700}
+                      className={`rounded-lg shadow-2xl border border-border/30 cursor-pointer transition-transform duration-300 group-hover:scale-105 slide-${slideDirection}`}
+                      priority
+                      loading="eager"
+                      sizes="(max-width: 768px) 100vw, 700px"
+                    />
+                    {/* Left arrow */}
+                    <button
+                      type="button"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
+                      onClick={e => { e.stopPropagation(); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
+                      aria-label="Previous image"
+                    >
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    {/* Right arrow */}
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
+                      onClick={e => { e.stopPropagation(); goToIndex((carouselIndex + 1) % heroImages.length); }}
+                      aria-label="Next image"
+                    >
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </button>
+                  {/* Filmstrip */}
+                  <div className="flex justify-center gap-2 mt-4">
+                    {heroImages.map((img, idx) => (
+                      <button
+                        key={img}
+                        className={`rounded border-2 ${carouselIndex === idx ? 'border-primary' : 'border-transparent'} focus:outline-none transition-transform duration-200`}
+                        style={{ width: 56, height: 40, overflow: 'hidden', background: 'none', padding: 0, transform: carouselIndex === idx ? 'scale(1.08)' : undefined }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = carouselIndex === idx ? 'scale(1.08)' : 'scale(1)'}
+                        onClick={() => goToIndex(idx)}
+                        aria-label={`Show image ${idx + 1}`}
+                      >
+                        <Image src={img} alt={`Thumbnail ${idx + 1}`} width={56} height={40} className="object-cover w-full h-full transition-transform duration-200" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          {/* Lightbox overlay */}
+          {lightboxOpen && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 animate-fadeInFast" style={{ animation: 'fadeIn 0.2s' }}>
+              <button
+                className="absolute top-6 right-8 text-white text-3xl z-20 hover:text-primary focus:outline-none"
+                onClick={() => setLightboxOpen(false)}
+                aria-label="Close lightbox"
+              >
+                &times;
+              </button>
+              {/* Left arrow */}
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-3 shadow hover:bg-background/90 z-20"
+                onClick={() => goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length)}
+                aria-label="Previous image"
+              >
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              {/* Main image */}
+              <div className="flex flex-col items-center">
+                <Image
+                  key={carouselIndex}
+                  src={heroImages[carouselIndex]}
+                  alt={`Lightbox image ${carouselIndex + 1}`}
+                  width={900}
+                  height={700}
+                  className={`rounded-lg max-h-[80vh] max-w-[90vw] shadow-2xl border border-border/30 transition-all duration-300 slide-${slideDirection}`}
+                  style={{ objectFit: 'contain' }}
+                />
+                {/* Filmstrip in lightbox */}
+                <div className="flex justify-center gap-2 mt-6">
+                  {heroImages.map((img, idx) => (
+                    <button
+                      key={img}
+                      className={`rounded border-2 ${carouselIndex === idx ? 'border-primary' : 'border-transparent'} focus:outline-none`}
+                      style={{ width: 72, height: 48, overflow: 'hidden', background: 'none', padding: 0 }}
+                      onClick={() => goToIndex(idx)}
+                      aria-label={`Show image ${idx + 1}`}
+                    >
+                      <Image src={img} alt={`Lightbox thumbnail ${idx + 1}`} width={72} height={48} className="object-cover w-full h-full" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Right arrow */}
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-3 shadow hover:bg-background/90 z-20"
+                onClick={() => goToIndex((carouselIndex + 1) % heroImages.length)}
+                aria-label="Next image"
+              >
+                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Trending Pages Section - Moved to top */}
-        <LandingTrendingSection limit={3} />
+        <div className="container mx-auto px-6 max-w-5xl">
+          <TrendingPages limit={3} />
+        </div>
 
         {/* Features Section */}
         <section id="features" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6">
+          <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Available Features</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -415,7 +522,7 @@ const LandingPage = () => {
 
         {/* Coming Soon Section - Moved below features */}
         <section id="coming-soon" className="py-16 md:py-20 bg-muted/30">
-          <div className="container mx-auto px-6">
+          <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Coming Soon</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -445,7 +552,7 @@ const LandingPage = () => {
 
         {/* Supporters Section */}
         <section id="supporters" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6">
+          <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -494,7 +601,7 @@ const LandingPage = () => {
 
         {/* About Section */}
         <section id="about" className="py-16 md:py-20 bg-muted/30">
-          <div className="container mx-auto px-6">
+          <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">About WeWrite</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
@@ -525,9 +632,59 @@ const LandingPage = () => {
           </div>
         </section>
 
+        {/* Themes Section */}
+        <section id="themes" className="py-16 md:py-20 bg-muted/20">
+          <div className="container mx-auto px-6 max-w-5xl">
+            <div className={`text-center mb-16 ${fadeInClass}`}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Themes</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                WeWrite allows readers to customize how their reading experience looks
+              </p>
+            </div>
+            <div className="flex flex-col md:flex-row gap-8 justify-center items-center">
+              {/* Color Theme Card */}
+              <div className="w-full md:w-1/2 max-w-md">
+                <div className="rounded-2xl shadow-lg border border-border bg-background p-8 flex flex-col items-center transition-all duration-200 hover:scale-105">
+                  <h3 className="text-2xl font-semibold mb-2">Color Themes</h3>
+                  <p className="mb-4 text-muted-foreground text-center">Switch between Light, Dark, and Sepia modes for a comfortable reading experience.</p>
+                  <div className="flex gap-4 mt-2">
+                    <button
+                      className={`w-12 h-12 rounded-full border-2 border-primary bg-white hover:ring-2 ring-primary transition-all ${theme === 'light' ? 'ring-4 ring-primary' : ''}`}
+                      aria-label="Light theme"
+                      onClick={() => setTheme('light')}
+                    />
+                    <button
+                      className={`w-12 h-12 rounded-full border-2 border-primary bg-neutral-900 hover:ring-2 ring-primary transition-all ${theme === 'dark' ? 'ring-4 ring-primary' : ''}`}
+                      aria-label="Dark theme"
+                      onClick={() => setTheme('dark')}
+                    />
+                    <button
+                      className={`w-12 h-12 rounded-full border-2 border-primary bg-[#f4ecd8] hover:ring-2 ring-primary transition-all ${theme === 'sepia' ? 'ring-4 ring-primary' : ''}`}
+                      aria-label="Sepia theme"
+                      onClick={() => setTheme('sepia')}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Pill Link Style Card */}
+              <div className="w-full md:w-1/2 max-w-md">
+                <div className="rounded-2xl shadow-lg border border-border bg-background p-8 flex flex-col items-center transition-all duration-200 hover:scale-105">
+                  <h3 className="text-2xl font-semibold mb-2">Pill Link Styles</h3>
+                  <p className="mb-4 text-muted-foreground text-center">Choose your favorite style for links and navigation pills.</p>
+                  <div className="flex gap-4 mt-2">
+                    <PillLink href="#" className="px-4 py-2">Filled</PillLink>
+                    <PillLink href="#" className="px-4 py-2" style={{ border: '2px solid var(--primary)', background: 'transparent', color: 'var(--primary)' }}>Outline</PillLink>
+                    <PillLink href="#" className="px-4 py-2" style={{ background: 'transparent', color: 'var(--primary)', fontWeight: 'bold', textDecoration: 'underline' }}>Classic</PillLink>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Ready to Get Started Section */}
         <section id="get-started" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6">
+          <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Get Started?</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
@@ -550,3 +707,22 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
+// Add CSS for slide-left and slide-right
+// In your global CSS or a <style jsx global> block:
+/*
+.slide-left {
+  animation: slideLeft 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.slide-right {
+  animation: slideRight 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(-60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideRight {
+  from { opacity: 0; transform: translateX(60px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+*/
