@@ -78,6 +78,19 @@ export default function UserPage({ params }) {
     fetchUser();
   }, [id, router]);
 
+  useEffect(() => {
+    if (profile && profile.username) {
+      // Send pageview/event to Google Analytics with username
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'view_user_profile', {
+          username: profile.username,
+          user_id: profile.uid,
+          page_path: window.location.pathname,
+        });
+      }
+    }
+  }, [profile]);
+
   if (isLoading) {
     return <Loader />;
   }

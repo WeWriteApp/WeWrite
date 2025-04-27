@@ -156,57 +156,59 @@ export default function SubscriptionPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-medium mb-4">Select a subscription amount</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {subscriptionOptions.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => handleAmountSelect(option.value)}
-                    className={`block w-full p-4 text-center rounded-lg border-2 transition-all duration-200 ${
+                    className={`flex flex-col items-center justify-center w-full p-6 rounded-lg border-2 transition-all duration-200 min-h-[140px] ${
                       selectedAmount === option.value 
                         ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' 
                         : 'border-border bg-card hover:border-primary/50 hover:bg-accent/50'
                     }`}
                   >
-                    <span className="text-lg font-semibold">{option.label}</span>
+                    <span className="text-3xl mb-2">{'★'.repeat(option.value === 10 ? 1 : option.value === 20 ? 2 : 3)}</span>
+                    <span className="text-lg font-semibold mb-1">Tier {subscriptionOptions.indexOf(option) + 1}</span>
+                    <span className="text-base">{option.label}</span>
                   </button>
                 ))}
-                <button
-                  onClick={() => handleAmountSelect('custom')}
-                  className={`block w-full p-4 text-center rounded-lg border-2 transition-all duration-200 ${
+                {/* Custom amount card */}
+                <div
+                  className={`flex flex-col items-center justify-center w-full p-6 rounded-lg border-2 transition-all duration-200 min-h-[140px] ${
                     selectedAmount === 'custom' 
                       ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' 
                       : 'border-border bg-card hover:border-primary/50 hover:bg-accent/50'
                   }`}
+                  onClick={() => handleAmountSelect('custom')}
+                  style={{ cursor: 'pointer' }}
                 >
-                  <span className="text-lg font-semibold">Custom</span>
-                </button>
-              </div>
-            </div>
-
-            {isCustomAmount && (
-              <div className="mt-4">
-                <label htmlFor="custom-amount" className="block text-sm font-medium mb-2">
-                  Enter custom amount (minimum $5)
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-                    $
-                  </span>
-                  <input
-                    id="custom-amount"
-                    type="text"
-                    value={customAmount}
-                    onChange={handleCustomAmountChange}
-                    placeholder="Enter amount"
-                    className="pl-8 w-full md:w-1/3 p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    autoFocus
-                  />
-                  <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-muted-foreground md:right-2/3">
-                    /month
-                  </span>
+                  <span className="text-3xl mb-2">★ ★ ★</span>
+                  <span className="text-lg font-semibold mb-1">Custom</span>
+                  {selectedAmount === 'custom' ? (
+                    <div className="w-full flex flex-col items-center mt-2">
+                      <label htmlFor="custom-amount" className="block text-sm font-medium mb-1">
+                        Enter custom amount (min $5)
+                      </label>
+                      <div className="relative w-full flex items-center justify-center">
+                        <span className="absolute left-3 text-muted-foreground">$</span>
+                        <input
+                          id="custom-amount"
+                          type="text"
+                          value={customAmount}
+                          onChange={handleCustomAmountChange}
+                          placeholder="Amount"
+                          className="pl-7 pr-12 py-2 w-full rounded-md border border-border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary text-center text-lg font-semibold"
+                          autoFocus
+                        />
+                        <span className="absolute right-3 text-muted-foreground">/month</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-base">Custom</span>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
             <div className="mt-8">
               <Button
@@ -227,4 +229,4 @@ export default function SubscriptionPage() {
       )}
     </div>
   );
-} 
+}

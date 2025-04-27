@@ -22,6 +22,7 @@ import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/LandingPage";
 import { FloatingActionButton } from "./components/ui/floating-action-button";
 import SiteFooter from "./components/SiteFooter";
+import { Hero } from "./components/landing/Hero";
 
 export default function Home() {
   const { user, loading: authLoading } = useContext(AuthContext);
@@ -80,7 +81,14 @@ export default function Home() {
 
   // Show landing page for logged-out users
   if (!user) {
-    return <LandingPage />;
+    return (
+      <>
+        <Header />
+        <Hero />
+        {/* Add any other landing content here if needed */}
+        <SiteFooter />
+      </>
+    );
   }
 
   // Show dashboard for logged-in users
