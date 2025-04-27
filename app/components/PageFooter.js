@@ -109,12 +109,22 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
             {/* Only show Follow button if not the owner */}
             {!isOwner && (
-              <FollowButton
-                pageId={page.id}
-                pageTitle={page.title}
-                pageOwnerId={page.userId}
-                className="w-full md:w-auto"
-              />
+              <>
+                <FollowButton
+                  pageId={page.id}
+                  pageTitle={page.title}
+                  pageOwnerId={page.userId}
+                  className="w-full md:w-auto"
+                />
+                <a
+                  href={`/new?replyTo=${page.id}&page=${encodeURIComponent(page.title)}&username=${encodeURIComponent(page.username || '')}`}
+                  className="w-full md:w-auto mt-2 inline-block"
+                >
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full md:w-auto">
+                    Reply to page
+                  </button>
+                </a>
+              </>
             )}
             {/* Always show Add to Page button */}
             <AddToPageButton page={page} />

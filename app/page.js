@@ -117,7 +117,7 @@ export default function Home() {
             )}
           </div>
           <Button variant="outline" asChild>
-            <Link href="/direct-create" className="flex items-center gap-2">
+            <Link href="/new" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New page
             </Link>
@@ -138,7 +138,7 @@ export default function Home() {
           <TopUsers />
         </div>
 
-        <FloatingActionButton href="/direct-create" />
+        <FloatingActionButton href="/new" />
       </main>
       <SiteFooter />
     </>

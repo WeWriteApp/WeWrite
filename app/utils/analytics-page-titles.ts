@@ -38,9 +38,7 @@ export function extractPageIdFromPath(path: string): string | null {
 export const PAGE_TITLE_MAP: Record<string, string> = {
   // Main navigation
   '/': 'Home Page',
-  '/new': 'Create New Page',
-  '/direct-create': 'Direct Create Page',
-  '/direct-reply': 'Direct Reply Page',
+  '/new': 'New Page',
   '/activity': 'Activity Feed',
   '/search': 'Search Page',
   '/leaderboard': 'Leaderboard',

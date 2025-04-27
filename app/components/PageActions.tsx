@@ -218,7 +218,7 @@ export function PageActions({
         });
 
         // Use the direct-reply route instead of the new route
-        router.push(`/direct-reply?title=${params.title}&initialContent=${params.content}&replyTo=${page.id}&username=${params.username}`);
+        router.push(`/new?replyTo=${page.id}&title=${params.title}&initialContent=${params.content}&username=${params.username}`);
       } catch (error) {
         console.error("Error navigating to direct-reply page:", error);
         toast.error("Failed to create reply");

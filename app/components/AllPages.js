@@ -40,7 +40,7 @@ const AllPages = () => {
       pages={formattedPages}
       mode="wrapped"
       showCreateButton={false}
-      createButtonHref="/direct-create"
+      createButtonHref="/new"
       createButtonText="Create a page"
       showViewAll={true}
       viewAllHref={`/user/${user.uid}`}
@@ -55,7 +55,7 @@ const AllPages = () => {
               Create your first page to start writing
             </div>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/direct-create" className="flex items-center gap-2">
+              <Link href="/new" className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 Create a page
               </Link>

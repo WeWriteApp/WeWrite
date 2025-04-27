@@ -125,9 +125,8 @@ export default function SubscriptionPage() {
           for (let i = 1; i <= Math.min(monthsDiff, 6); i++) {
             const paymentDate = new Date(startDate);
             paymentDate.setMonth(startDate.getMonth() + i);
-
-            // Only add entries for dates in the past
-            if (paymentDate <= now) {
+            // Only add entries for dates in the past and valid dates
+            if (paymentDate <= now && !isNaN(paymentDate.getTime())) {
               history.push({
                 id: `renewal_${i}`,
                 date: paymentDate.toISOString(),
@@ -613,7 +612,7 @@ export default function SubscriptionPage() {
                       <td className="px-4 py-3 text-sm">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span title={new Date(item.date).toISOString().split('T')[0]}>
+                          <span title={(() => { const d = new Date(item.date); return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : 'Invalid date'; })()}>
                             {getRelativeTimeString(new Date(item.date))}
                           </span>
                         </div>
