@@ -40,20 +40,7 @@ export const PortfolioProvider = ({ children }) => {
     },
   ]);
   const [payouts, setPayouts] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([
-    {
-      id: "08ZRuAurh0msxGB2cEdc",
-      amount: 10,
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    },
-    {
-      id: "0Cd78pNqhoYmsfjxy3G5",
-      amount: 5,
-      date: new Date(new Date().setDate(new Date().getDate() - 3)),
-      status: "active",
-    },
-  ]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [transactions, setTransactions] = useState([
     {
       id: 1,
@@ -166,6 +153,29 @@ export const PortfolioProvider = ({ children }) => {
     }
     setRemainingBalance(parseInt(remainingBalance) - parseInt(amount));
   };
+
+  // Fetch real subscription status from backend on mount
+  useEffect(() => {
+    async function fetchSubscription() {
+      try {
+        const res = await fetch("/api/account-subscription");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.status) {
+            setSubscriptions([{ ...data }]);
+          } else {
+            setSubscriptions([]);
+          }
+        } else {
+          setSubscriptions([]);
+        }
+      } catch (e) {
+        setSubscriptions([]);
+      }
+    }
+    fetchSubscription();
+  }, []);
+
   useEffect(() => {
     // calculate based on active
     const activeSubscriptions = subscriptions.filter(
@@ -178,6 +188,7 @@ export const PortfolioProvider = ({ children }) => {
 
     setTotalSubscriptionsCost(total);
   }, [subscriptions]);
+
   return (
     <PortfolioContext.Provider
       value={{

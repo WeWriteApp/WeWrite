@@ -13,6 +13,8 @@ import { PagePreviewCard } from './PagePreviewCard';
 import TrendingPages from '../TrendingPages';
 import { useTheme } from "next-themes";
 import { PillLink } from "../PillLink";
+import { useSwipeable } from 'react-swipeable';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // Import mock page content (in a real implementation, this would be fetched from Firebase)
 const pageContents = {
@@ -87,6 +89,23 @@ const LandingPage = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Always set accent color to blue on landing page mount
+  useEffect(() => {
+    // Remove any accent color class from body or html
+    document.body.classList.remove('accent-red', 'accent-green', 'accent-yellow', 'accent-purple', 'accent-pink', 'accent-orange');
+    document.documentElement.classList.remove('accent-red', 'accent-green', 'accent-yellow', 'accent-purple', 'accent-pink', 'accent-orange');
+    // Add blue accent color
+    document.body.classList.add('accent-blue');
+    document.documentElement.classList.add('accent-blue');
+    // Force blue accent color variables for landing page
+    document.documentElement.style.setProperty('--accent-h', '217');
+    document.documentElement.style.setProperty('--accent-s', '91%');
+    document.documentElement.style.setProperty('--accent-l', '60%');
+    document.documentElement.style.setProperty('--accent', '#2563eb'); // Tailwind blue-600
+    // Optionally, set theme to light or system for landing page
+    if (setTheme) setTheme('light');
+  }, [setTheme]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -205,6 +224,15 @@ const LandingPage = () => {
     setSlideDirection(newIdx > carouselIndex || (newIdx === 0 && carouselIndex === heroImages.length - 1) ? 'right' : 'left');
     setCarouselIndex(newIdx);
   };
+
+  // Swipe handlers for carousel
+  const handlers = useSwipeable({
+    onSwipedLeft: () => goToIndex((carouselIndex + 1) % heroImages.length),
+    onSwipedRight: () => goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length),
+    trackMouse: true,
+    trackTouch: true,
+    preventDefaultTouchmoveEvent: true,
+  });
 
   return (
       <div className="min-h-screen bg-background">
@@ -373,57 +401,68 @@ const LandingPage = () => {
 
               <div className={`flex-1 perspective-[1000px] ${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
                 <div className="relative w-full max-w-lg mx-auto transform-gpu transition-transform duration-300">
-                  <button
-                    className="group relative block focus:outline-none"
-                    style={{ width: '100%', background: 'none', border: 'none', padding: 0 }}
-                    onClick={() => setLightboxOpen(true)}
-                    aria-label="Open image lightbox"
-                  >
-                    <Image
-                      key={carouselIndex}
-                      src={heroImages[carouselIndex]}
-                      alt={`WeWrite App Interface ${carouselIndex + 1}`}
-                      width={700}
-                      height={700}
-                      className={`rounded-lg shadow-2xl border border-border/30 cursor-pointer transition-transform duration-300 group-hover:scale-105 slide-${slideDirection}`}
-                      priority
-                      loading="eager"
-                      sizes="(max-width: 768px) 100vw, 700px"
-                    />
-                    {/* Left arrow */}
-                    <button
-                      type="button"
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
-                      onClick={e => { e.stopPropagation(); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
-                      aria-label="Previous image"
-                    >
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
-                    </button>
-                    {/* Right arrow */}
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
-                      onClick={e => { e.stopPropagation(); goToIndex((carouselIndex + 1) % heroImages.length); }}
-                      aria-label="Next image"
-                    >
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  </button>
-                  {/* Filmstrip */}
-                  <div className="flex justify-center gap-2 mt-4">
-                    {heroImages.map((img, idx) => (
-                      <button
-                        key={img}
-                        className={`rounded border-2 ${carouselIndex === idx ? 'border-primary' : 'border-transparent'} focus:outline-none transition-transform duration-200`}
-                        style={{ width: 56, height: 40, overflow: 'hidden', background: 'none', padding: 0, transform: carouselIndex === idx ? 'scale(1.08)' : undefined }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = carouselIndex === idx ? 'scale(1.08)' : 'scale(1)'}
-                        onClick={() => goToIndex(idx)}
-                        aria-label={`Show image ${idx + 1}`}
-                      >
-                        <Image src={img} alt={`Thumbnail ${idx + 1}`} width={56} height={40} className="object-cover w-full h-full transition-transform duration-200" />
-                      </button>
-                    ))}
+                  <div {...handlers} className="relative w-full h-full">
+                    <div className="relative w-full h-full min-h-[320px] flex items-center justify-center">
+                      <AnimatePresence initial={false} custom={slideDirection}>
+                        <motion.button
+                          key={carouselIndex}
+                          initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          exit={{ x: slideDirection === 'right' ? -300 : 300, opacity: 0 }}
+                          transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                          className="group relative block focus:outline-none w-full bg-none border-none p-0"
+                          onClick={() => setLightboxOpen(true)}
+                          aria-label="Open image lightbox"
+                          style={{ position: 'relative' }}
+                        >
+                          <Image
+                            key={carouselIndex}
+                            src={heroImages[carouselIndex]}
+                            alt={`WeWrite App Interface ${carouselIndex + 1}`}
+                            width={700}
+                            height={700}
+                            className={`rounded-lg shadow-2xl border border-border/30 cursor-pointer transition-transform duration-300 group-hover:scale-105 w-full h-auto`}
+                            priority
+                            loading="eager"
+                            sizes="(max-width: 768px) 100vw, 700px"
+                          />
+                          {/* Left arrow */}
+                          <button
+                            type="button"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
+                            onClick={e => { e.stopPropagation(); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
+                            aria-label="Previous image"
+                          >
+                            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                          {/* Right arrow */}
+                          <button
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
+                            onClick={e => { e.stopPropagation(); goToIndex((carouselIndex + 1) % heroImages.length); }}
+                            aria-label="Next image"
+                          >
+                            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+                          </button>
+                        </motion.button>
+                      </AnimatePresence>
+                    </div>
+                    {/* Filmstrip */}
+                    <div className="flex justify-center gap-2 mt-4">
+                      {heroImages.map((img, idx) => (
+                        <button
+                          key={img}
+                          className={`rounded border-2 ${carouselIndex === idx ? 'border-primary' : 'border-transparent'} focus:outline-none transition-transform duration-200`}
+                          style={{ width: 56, height: 40, overflow: 'hidden', background: 'none', padding: 0, transform: carouselIndex === idx ? 'scale(1.08)' : undefined }}
+                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+                          onMouseLeave={e => e.currentTarget.style.transform = carouselIndex === idx ? 'scale(1.08)' : 'scale(1)'}
+                          onClick={() => goToIndex(idx)}
+                          aria-label={`Show image ${idx + 1}`}
+                        >
+                          <Image src={img} alt={`Thumbnail ${idx + 1}`} width={56} height={40} className="object-cover w-full h-full transition-transform duration-200" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -442,22 +481,37 @@ const LandingPage = () => {
               {/* Left arrow */}
               <button
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-3 shadow hover:bg-background/90 z-20"
-                onClick={() => goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length)}
+                onClick={() => { setSlideDirection('left'); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
                 aria-label="Previous image"
               >
                 <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
               </button>
-              {/* Main image */}
-              <div className="flex flex-col items-center">
-                <Image
-                  key={carouselIndex}
-                  src={heroImages[carouselIndex]}
-                  alt={`Lightbox image ${carouselIndex + 1}`}
-                  width={900}
-                  height={700}
-                  className={`rounded-lg max-h-[80vh] max-w-[90vw] shadow-2xl border border-border/30 transition-all duration-300 slide-${slideDirection}`}
-                  style={{ objectFit: 'contain' }}
-                />
+              {/* Main image with animation and fixed container */}
+              <div className="flex flex-col items-center justify-center" style={{ width: 900, height: 700, maxWidth: '90vw', maxHeight: '80vh', minWidth: 320, minHeight: 320 }}>
+                <AnimatePresence initial={false} custom={slideDirection}>
+                  <motion.div
+                    key={carouselIndex}
+                    initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: slideDirection === 'right' ? -300 : 300, opacity: 0 }}
+                    transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ width: '100%', height: '100%', minWidth: 320, minHeight: 320 }}
+                  >
+                    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                      <Image
+                        key={carouselIndex}
+                        src={heroImages[carouselIndex]}
+                        alt={`Lightbox image ${carouselIndex + 1}`}
+                        fill
+                        className="rounded-lg shadow-2xl border border-border/30 object-contain w-full h-full"
+                        style={{ maxWidth: '100%', maxHeight: '100%' }}
+                        sizes="(max-width: 900px) 90vw, 900px"
+                        priority
+                      />
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
                 {/* Filmstrip in lightbox */}
                 <div className="flex justify-center gap-2 mt-6">
                   {heroImages.map((img, idx) => (
@@ -465,7 +519,7 @@ const LandingPage = () => {
                       key={img}
                       className={`rounded border-2 ${carouselIndex === idx ? 'border-primary' : 'border-transparent'} focus:outline-none`}
                       style={{ width: 72, height: 48, overflow: 'hidden', background: 'none', padding: 0 }}
-                      onClick={() => goToIndex(idx)}
+                      onClick={() => { setSlideDirection(idx > carouselIndex ? 'right' : 'left'); goToIndex(idx); }}
                       aria-label={`Show image ${idx + 1}`}
                     >
                       <Image src={img} alt={`Lightbox thumbnail ${idx + 1}`} width={72} height={48} className="object-cover w-full h-full" />
@@ -476,7 +530,7 @@ const LandingPage = () => {
               {/* Right arrow */}
               <button
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-3 shadow hover:bg-background/90 z-20"
-                onClick={() => goToIndex((carouselIndex + 1) % heroImages.length)}
+                onClick={() => { setSlideDirection('right'); goToIndex((carouselIndex + 1) % heroImages.length); }}
                 aria-label="Next image"
               >
                 <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
@@ -629,56 +683,6 @@ const LandingPage = () => {
             </div>
 
 
-          </div>
-        </section>
-
-        {/* Themes Section */}
-        <section id="themes" className="py-16 md:py-20 bg-muted/20">
-          <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Themes</h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                WeWrite allows readers to customize how their reading experience looks
-              </p>
-            </div>
-            <div className="flex flex-col md:flex-row gap-8 justify-center items-center">
-              {/* Color Theme Card */}
-              <div className="w-full md:w-1/2 max-w-md">
-                <div className="rounded-2xl shadow-lg border border-border bg-background p-8 flex flex-col items-center transition-all duration-200 hover:scale-105">
-                  <h3 className="text-2xl font-semibold mb-2">Color Themes</h3>
-                  <p className="mb-4 text-muted-foreground text-center">Switch between Light, Dark, and Sepia modes for a comfortable reading experience.</p>
-                  <div className="flex gap-4 mt-2">
-                    <button
-                      className={`w-12 h-12 rounded-full border-2 border-primary bg-white hover:ring-2 ring-primary transition-all ${theme === 'light' ? 'ring-4 ring-primary' : ''}`}
-                      aria-label="Light theme"
-                      onClick={() => setTheme('light')}
-                    />
-                    <button
-                      className={`w-12 h-12 rounded-full border-2 border-primary bg-neutral-900 hover:ring-2 ring-primary transition-all ${theme === 'dark' ? 'ring-4 ring-primary' : ''}`}
-                      aria-label="Dark theme"
-                      onClick={() => setTheme('dark')}
-                    />
-                    <button
-                      className={`w-12 h-12 rounded-full border-2 border-primary bg-[#f4ecd8] hover:ring-2 ring-primary transition-all ${theme === 'sepia' ? 'ring-4 ring-primary' : ''}`}
-                      aria-label="Sepia theme"
-                      onClick={() => setTheme('sepia')}
-                    />
-                  </div>
-                </div>
-              </div>
-              {/* Pill Link Style Card */}
-              <div className="w-full md:w-1/2 max-w-md">
-                <div className="rounded-2xl shadow-lg border border-border bg-background p-8 flex flex-col items-center transition-all duration-200 hover:scale-105">
-                  <h3 className="text-2xl font-semibold mb-2">Pill Link Styles</h3>
-                  <p className="mb-4 text-muted-foreground text-center">Choose your favorite style for links and navigation pills.</p>
-                  <div className="flex gap-4 mt-2">
-                    <PillLink href="#" className="px-4 py-2">Filled</PillLink>
-                    <PillLink href="#" className="px-4 py-2" style={{ border: '2px solid var(--primary)', background: 'transparent', color: 'var(--primary)' }}>Outline</PillLink>
-                    <PillLink href="#" className="px-4 py-2" style={{ background: 'transparent', color: 'var(--primary)', fontWeight: 'bold', textDecoration: 'underline' }}>Classic</PillLink>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 

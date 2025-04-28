@@ -42,13 +42,6 @@ export function middleware(request) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect /users/[userId] to /user/[id]
-  if (path.startsWith('/users/')) {
-    const id = path.replace('/users/', '');
-    url.pathname = `/user/${id}`;
-    return NextResponse.redirect(url);
-  }
-
   // We're not going to redirect /[id] paths in the middleware
   // Instead, we'll let the /[id] route handle the logic of determining
   // whether it's a page, user, or group

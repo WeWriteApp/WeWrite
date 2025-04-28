@@ -260,8 +260,10 @@ export function PageActions({
         )}
 
         {/* Dense Mode switch - available to all users */}
-        <div
-          className="flex items-center gap-2 w-full h-10 md:h-8 md:w-auto px-3 py-1 border border-input rounded-md cursor-pointer hover:bg-accent/10 transition-colors"
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 w-full h-10 md:h-8 md:w-auto"
           onClick={() => {
             const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
             setCurrentLineMode(newMode); // Update local state immediately
@@ -277,12 +279,21 @@ export function PageActions({
             }}
           />
           <span className="text-sm">Dense mode</span>
-        </div>
+        </Button>
 
         {/* Add to Page button - available to all users */}
         <AddToPageButton />
 
-        {/* Reply button removed temporarily */}
+        {/* Reply button - available to all users */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 w-full h-10 md:h-8 md:w-auto"
+          onClick={handleReply}
+        >
+          <Reply className="h-4 w-4" />
+          Reply
+        </Button>
       </div>
     </div>
   );

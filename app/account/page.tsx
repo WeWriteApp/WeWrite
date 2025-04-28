@@ -145,7 +145,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user) {
-      console.log('Loading user data for user:', user.uid);
+      // Always reload user data on mount or when user changes
       loadUserData();
     } else {
       router.push('/');

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useSwipeable } from 'react-swipeable';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -20,6 +21,7 @@ interface Feature {
 export const FeatureCarousel = () => {
   const [activeCategory, setActiveCategory] = useState<'built' | 'coming-soon'>('built');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
 
   const allFeatures: Feature[] = [
     {
@@ -124,6 +126,31 @@ export const FeatureCarousel = () => {
     setActiveIndex(index);
   };
 
+  // Swipe handlers
+  const handlers = useSwipeable({
+    onSwipedLeft: () => {
+      setDirection(1);
+      nextSlide();
+    },
+    onSwipedRight: () => {
+      setDirection(-1);
+      prevSlide();
+    },
+    trackMouse: true, // allow mouse drag
+    trackTouch: true, // allow touch
+    preventDefaultTouchmoveEvent: true,
+  });
+
+  // Animate on arrow click
+  const handleNext = () => {
+    setDirection(1);
+    nextSlide();
+  };
+  const handlePrev = () => {
+    setDirection(-1);
+    prevSlide();
+  };
+
   return (
     <div className="py-12 overflow-visible">
       <div className="container mx-auto px-6">
@@ -161,83 +188,72 @@ export const FeatureCarousel = () => {
         <div className="relative max-w-3xl mx-auto">
           {/* Carousel container */}
           <div className="overflow-visible rounded-xl touch-none">
-            <div
-              className="flex transition-transform duration-500 ease-in-out touch-pan-x"
-              style={{ transform: `translateX(-${activeIndex * 100}%)` }}
-              onTouchStart={(e) => {
-                const touchStartX = e.touches[0].clientX;
-                const touchMoveHandler = (e: TouchEvent) => {
-                  const touchCurrentX = e.touches[0].clientX;
-                  const diff = touchStartX - touchCurrentX;
-                  if (Math.abs(diff) > 50) { // Threshold to trigger slide
-                    if (diff > 0) {
-                      // Swipe left, go to next slide
-                      nextSlide();
-                    } else {
-                      // Swipe right, go to previous slide
-                      prevSlide();
-                    }
-                    document.removeEventListener('touchmove', touchMoveHandler);
-                  }
-                };
-                document.addEventListener('touchmove', touchMoveHandler, { passive: true });
-                document.addEventListener('touchend', () => {
-                  document.removeEventListener('touchmove', touchMoveHandler);
-                }, { once: true });
-              }}
-            >
-              {features.map((feature, index) => (
-                <div key={index} className="w-full flex-shrink-0">
-                  <Card className="h-full border border-border dark:border-border overflow-hidden">
-                    {feature.image && (
-                      <div className="relative w-full h-48 overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 z-10"></div>
-                        <Image
-                          src={feature.image}
-                          alt={feature.title}
-                          width={600}
-                          height={300}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-2xl">{feature.title}</CardTitle>
-                        {getStatusBadge(feature.status)}
-                      </div>
-                      <CardDescription className="text-lg mt-2">
-                        {feature.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                      {(feature.status === 'coming-soon' || feature.status === 'in-progress') && (
-                        <Button variant="outline" asChild>
-                          <a
-                            href="/subscription"
-                            className="text-sm"
-                          >
-                            Become a Supporter
-                          </a>
-                        </Button>
+            <div {...handlers}>
+              <motion.div
+                key={activeIndex}
+                initial={{ x: direction * 300, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: direction * -300, opacity: 0 }}
+                transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                className="flex transition-none"
+              >
+                {features.map((feature, index) => (
+                  <div
+                    key={index}
+                    className="w-full flex-shrink-0"
+                    style={{ display: index === activeIndex ? 'block' : 'none' }}
+                  >
+                    <Card className="h-full border border-border dark:border-border overflow-hidden">
+                      {feature.image && (
+                        <div className="relative w-full h-48 overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 z-10"></div>
+                          <Image
+                            src={feature.image}
+                            alt={feature.title}
+                            width={600}
+                            height={300}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       )}
-                    </CardFooter>
-                  </Card>
-                </div>
-              ))}
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <CardTitle className="text-2xl">{feature.title}</CardTitle>
+                          {getStatusBadge(feature.status)}
+                        </div>
+                        <CardDescription className="text-lg mt-2">
+                          {feature.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardFooter>
+                        {(feature.status === 'coming-soon' || feature.status === 'in-progress') && (
+                          <Button variant="outline" asChild>
+                            <a
+                              href="/subscription"
+                              className="text-sm"
+                            >
+                              Become a Supporter
+                            </a>
+                          </Button>
+                        )}
+                      </CardFooter>
+                    </Card>
+                  </div>
+                ))}
+              </motion.div>
             </div>
           </div>
 
           {/* Navigation buttons */}
           <button
-            onClick={prevSlide}
+            onClick={handlePrev}
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-background border border-border dark:border-border rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
-            onClick={nextSlide}
+            onClick={handleNext}
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-background border border-border dark:border-border rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
             aria-label="Next slide"
           >

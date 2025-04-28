@@ -3,48 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getBestTextColor, meetsContrastStandards } from '../utils/accessibility';
 
-// Try to import color-namer, but provide a fallback if it fails
-let colorNamer;
-try {
-  colorNamer = require('color-namer');
-} catch (error) {
-  console.warn('color-namer package not available, using fallback color naming');
-  // More robust fallback function that returns a generic name
-  colorNamer = (hex) => {
-    // Basic color name mapping for common colors
-    const basicColorMap = {
-      '#FF0000': 'Red',
-      '#00FF00': 'Green',
-      '#0000FF': 'Blue',
-      '#FFFF00': 'Yellow',
-      '#FF00FF': 'Magenta',
-      '#00FFFF': 'Cyan',
-      '#FF5733': 'Coral',
-      '#9B59B6': 'Purple',
-      '#3498DB': 'Sky Blue',
-      '#0052CC': 'Dark Blue',
-      '#000000': 'Black',
-      '#FFFFFF': 'White'
-    };
-
-    // Normalize hex color
-    const normalizedHex = hex.toUpperCase();
-
-    // Check if it's a basic color we know
-    if (basicColorMap[normalizedHex]) {
-      return {
-        ntc: [{ name: basicColorMap[normalizedHex] }],
-        basic: [{ name: basicColorMap[normalizedHex] }]
-      };
-    }
-
-    return {
-      ntc: [{ name: 'Custom Color' }],
-      basic: [{ name: 'Custom' }]
-    };
-  };
-}
-
 // Import Radix colors
 import {
   blue,
@@ -116,24 +74,6 @@ export const getColorName = (hexColor) => {
     // Check if it's a basic color we know
     if (basicColorMap[normalizedHex]) {
       return basicColorMap[normalizedHex];
-    }
-
-    // Try to get color names from the library
-    try {
-      const names = colorNamer(hexColor);
-
-      // Try to get a name from the 'ntc' list (Name That Color)
-      if (names.ntc && names.ntc.length > 0) {
-        return names.ntc[0].name;
-      }
-
-      // Fall back to the basic list
-      if (names.basic && names.basic.length > 0) {
-        return names.basic[0].name;
-      }
-    } catch (libraryError) {
-      console.warn('Color naming library error:', libraryError);
-      // Continue to fallback
     }
 
     // Fallback: Generate a name based on RGB values

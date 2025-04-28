@@ -9,6 +9,7 @@ import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { SupporterIcon } from "./SupporterIcon";
+import { format } from "date-fns";
 
 /**
  * ActivityCard component displays a single activity card
@@ -40,8 +41,7 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
   const isNewPage = activity.isNewPage;
 
   return (
-    <Link
-      href={`/${activity.pageId}`}
+    <div
       className={interactiveCard(
         "w-full md:max-w-[400px] h-full",
         isCarousel && "h-full flex flex-col"
@@ -55,9 +55,20 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
                 {activity.pageName || "Untitled page"}
               </PillLink>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto">
-              {formatRelativeTime(activity.timestamp)}
-            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto cursor-pointer">
+                    {formatRelativeTime(activity.timestamp)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span>
+                    {activity.timestamp ? format(new Date(activity.timestamp), "yyyy MM/dd hh:mm:ss a") : ""}
+                  </span>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div className="text-xs text-muted-foreground truncate mt-1.5">
             {isNewPage ? "created by" : "edited by"} {" "}
@@ -76,7 +87,6 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
           </div>
         </div>
       </div>
-
       <div className={cn(
         "mt-2 flex items-center justify-between gap-3",
         isCarousel && "flex-grow"
@@ -105,7 +115,6 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
             </div>
           )}
         </div>
-
         <div className="flex-shrink-0 text-xs font-medium flex items-center ml-1">
           {added > 0 ? (
             <TooltipProvider>
@@ -134,7 +143,7 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
           ) : null}
         </div>
       </div>
-    </Link>
+    </div>
   );
 };
 

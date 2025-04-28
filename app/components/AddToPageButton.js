@@ -58,7 +58,7 @@ const AddToPageButton = ({ page, className = "" }) => {
       <Button
         variant="outline"
         size="sm"
-        className={`gap-2 w-full md:w-auto ${className}`}
+        className={`gap-2 w-full h-10 md:h-8 md:w-auto ${className}`}
         onClick={() => setIsOpen(true)}
         disabled={isAdding}
       >

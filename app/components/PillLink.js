@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, forwardRef } from "react";
 import Link from "next/link";
 import { Lock, ExternalLink, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
@@ -17,7 +17,7 @@ const PillLinkSkeleton = () => (
   </div>
 );
 
-export const PillLink = ({
+export const PillLink = forwardRef(({
   children,
   href,
   isPublic,
@@ -27,7 +27,7 @@ export const PillLink = ({
   byline,
   isLoading,
   deleted = false
-}) => {
+}, ref) => {
   // Hooks
   const { user } = useAuth();
   const { getPillStyleClasses } = usePillStyle();
@@ -91,6 +91,7 @@ export const PillLink = ({
     return (
       <>
         <a
+          ref={ref}
           href="#"
           onClick={(e) => {
             e.preventDefault();
@@ -142,6 +143,7 @@ export const PillLink = ({
   // Internal link (user or page)
   return (
     <Link
+      ref={ref}
       href={href}
       className={baseStyles}
       tabIndex={0}
@@ -153,6 +155,6 @@ export const PillLink = ({
       {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
     </Link>
   );
-};
+});
 
 export default PillLink;

@@ -118,13 +118,13 @@ export default function TrendingPages({ limit = 5 }) {
           <h2 className="text-lg font-semibold">Trending Pages</h2>
         </div>
       </div>
-      <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100">
-        <table className="w-full">
+      <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full overflow-x-auto">
+        <table className="min-w-[500px] w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm">Page</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm">Views (24h)</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm">Trend</th>
+              <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
+              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
+              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Trend</th>
             </tr>
           </thead>
           <tbody>

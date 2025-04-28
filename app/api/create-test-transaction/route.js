@@ -36,6 +36,11 @@ export async function POST(request) {
     const userEmail = subscriptionData.email || 'customer@example.com';
     const username = subscriptionData.username || 'Customer';
     
+    // Always use a single product in Stripe (if needed)
+    // Pricing is handled dynamically by our UI/backend, not Stripe prices
+    // No need to reference or create Stripe prices here
+    // Only use the customer and charge the dynamic amount
+
     // Create a test transaction in Stripe
     try {
       // If it's a demo subscription, create a real test customer in Stripe
@@ -71,7 +76,8 @@ export async function POST(request) {
           metadata: {
             userId: userId,
             subscriptionId: subscription.stripeSubscriptionId,
-            simulatedRenewal: 'true'
+            simulatedRenewal: 'true',
+            product: 'Subscription' // Always reference the single product
           },
           off_session: true,
           // Automatically confirm the payment as succeeded in test mode
@@ -85,6 +91,7 @@ export async function POST(request) {
         result = paymentIntent;
       } else {
         // For real Stripe subscriptions, use the Stripe billing API
+        // Always use the single product, but add invoice items dynamically
         const invoice = await stripe.invoices.create({
           customer: customerId,
           auto_advance: true, // auto-finalize the invoice
@@ -92,13 +99,16 @@ export async function POST(request) {
           description: `Manual test renewal for ${userEmail}`
         });
         
-        // Add an invoice item
+        // Add an invoice item for the dynamic amount
         await stripe.invoiceItems.create({
           customer: customerId,
           invoice: invoice.id,
           amount: Math.round(subscription.amount * 100),
           currency: 'usd',
           description: `Subscription renewal test (${new Date().toISOString()})`,
+          metadata: {
+            product: 'Subscription'
+          }
         });
         
         // Finalize and pay the invoice
@@ -140,4 +150,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-} 
+}

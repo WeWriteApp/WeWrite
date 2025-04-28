@@ -81,16 +81,19 @@ export default function NewPage() {
         userId: null,
         username: username
       });
-      setInitialContent([
+      // Create a properly structured reply content with attribution and empty paragraphs
+      const replyContent = [
         attribution,
-        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." },
-        { type: "paragraph", children: [{ text: "" }] }
-      ]);
-      setEditorContent([
-        attribution,
-        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." },
-        { type: "paragraph", children: [{ text: "" }] }
-      ]);
+        { type: "paragraph", children: [{ text: "" }] }, // Empty line after attribution
+        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." } // Where cursor will be positioned
+      ];
+
+      // Set both initial content and editor content to ensure consistency
+      setInitialContent(replyContent);
+      setEditorContent(replyContent);
+
+      // Log the content structure for debugging
+      console.log("Reply content structure:", JSON.stringify(replyContent, null, 2));
     } else {
       const titleParam = searchParams.get('title');
       const contentParam = searchParams.get('initialContent');

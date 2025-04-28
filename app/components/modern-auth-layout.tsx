@@ -31,29 +31,12 @@ export function ModernAuthLayout({
       {/* Left side - Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-white dark:bg-gray-950">
         <div className="w-full max-w-md mx-auto">
-          {showLogo && (
-            <div className="mb-8 text-center">
-              <Link href="/" className="inline-block">
-                <div className="flex items-center justify-center">
-                  <Image
-                    src="/logo.png"
-                    alt="WeWrite Logo"
-                    width={40}
-                    height={40}
-                    className="mr-2"
-                  />
-                  <span className="text-2xl font-bold text-primary">WeWrite</span>
-                </div>
-              </Link>
-            </div>
-          )}
+          {/* Header with only 'Sign in' */}
+          <div className="flex items-center justify-center mb-8 gap-2">
+            <span className="text-2xl font-bold text-primary align-middle">Sign in</span>
+          </div>
 
-          {(title || description) && (
-            <div className="mb-8 text-center">
-              {title && <h1 className="text-2xl font-bold mb-2">{title}</h1>}
-              {description && <p className="text-muted-foreground">{description}</p>}
-            </div>
-          )}
+          {/* Remove title/description block for left side */}
 
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8">
             {children}
@@ -68,7 +51,7 @@ export function ModernAuthLayout({
         <div className="absolute inset-0 bg-black/20 z-10"></div>
         <div className="relative z-20 flex flex-col items-center justify-center w-full p-12 text-white">
           <div className="max-w-md text-center">
-            <h2 className="text-3xl font-bold mb-4">Welcome to WeWrite</h2>
+            <h2 className="text-3xl font-bold mb-4">WeWrite</h2>
             <p className="text-lg mb-8">
               A social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
             </p>

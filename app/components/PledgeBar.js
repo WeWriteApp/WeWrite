@@ -42,6 +42,8 @@ const PledgeBar = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showMoreButton, setShowMoreButton] = useState(true);
   const [isAtBottom, setIsAtBottom] = useState(false);
+  const [showMobileBackToTop, setShowMobileBackToTop] = useState(false);
+  const [showDesktopBackToTop, setShowDesktopBackToTop] = useState(false);
 
   const { id: pageId } = useParams();
 
@@ -83,36 +85,28 @@ const PledgeBar = () => {
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-
       // Check if we're at the bottom of the page
       const isBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
       setIsAtBottom(isBottom);
 
-      // Always show the bar when at the top of the page (or very close to it)
-      if (currentScrollY <= 10) {
+      // Always show the bar when at the top or at the bottom of the page
+      if (currentScrollY <= 10 || isBottom) {
         if (!visible) {
           setVisible(true);
-          // Trigger animation when re-appearing
           setTimeout(() => setAnimateEntry(true), 50);
           setTimeout(() => setAnimateEntry(false), 2000);
         }
       }
-      // Hide immediately on any downward scroll when not at the top
+      // Hide immediately on any downward scroll when not at the top or bottom
       else if (currentScrollY > lastKnownScrollY) {
-        // Scrolling down - hide the bar immediately
         setVisible(false);
       } else if (currentScrollY < lastKnownScrollY) {
-        // Scrolling up - show the bar
         setVisible(true);
-
-        // Only trigger animation if it was previously hidden
         if (!visible) {
-          // Trigger animation when re-appearing
           setTimeout(() => setAnimateEntry(true), 50);
           setTimeout(() => setAnimateEntry(false), 2000);
         }
       }
-
       lastKnownScrollY = currentScrollY;
       setLastScrollY(currentScrollY);
       ticking = false;
@@ -133,6 +127,27 @@ const PledgeBar = () => {
     return () => {
       window.removeEventListener('scroll', onScroll);
     };
+  }, []);
+
+  // Show mobile back to top button when scrolled down on mobile
+  useEffect(() => {
+    const handleScroll = () => {
+      const isMobile = window.innerWidth < 640;
+      setShowMobileBackToTop(isMobile && window.scrollY > 200);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const isDesktop = window.innerWidth >= 640;
+      setShowDesktopBackToTop(isDesktop && window.scrollY > 200);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Detect if we're on a page view
@@ -539,19 +554,8 @@ const PledgeBar = () => {
     <>
       <div
         className={`fixed bottom-12 left-8 right-8 z-50 flex flex-col items-center gap-2 transition-all duration-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'} ${animateEntry ? 'spring-and-pulse' : ''}`}
-        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
+        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0, background: 'none' }}
       >
-        {/* Gradient/blur background for the + more group */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 w-full z-[-1]"
-          style={{
-            background: 'linear-gradient(to top, var(--pledgebar-bg, #fff) 60%, transparent 100%)',
-            WebkitBackdropFilter: 'blur(8px)',
-            backdropFilter: 'blur(8px)',
-            transition: 'background 0.3s',
-          }}
-        />
         <CompositionBar
           value={pledges[0]?.amount || 0}
           max={subscription?.amount || 100}
@@ -598,30 +602,6 @@ const PledgeBar = () => {
         <div>
           {/* Custom amount modal content */}
         </div>
-      )}
-
-      {/* Mobile Back to Top Button */}
-      {showMobileBackToTop && (
-        <button
-          className="fixed bottom-24 right-4 z-[9999] sm:hidden flex items-center justify-center w-12 h-12 rounded-full bg-background/90 shadow-lg border border-border backdrop-blur-md transition-all duration-200 hover:bg-background/95"
-          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Back to top"
-        >
-          <ChevronUp className="h-6 w-6 text-primary" />
-        </button>
-      )}
-
-      {/* Desktop Back to Top Button */}
-      {showDesktopBackToTop && (
-        <button
-          className="fixed bottom-24 right-8 z-[9999] hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-background/90 shadow-lg border border-border backdrop-blur-md transition-all duration-200 hover:bg-background/95"
-          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Back to top"
-        >
-          <ChevronUp className="h-6 w-6 text-primary" />
-        </button>
       )}
     </>
   );

@@ -51,7 +51,6 @@ export function PillStyleProvider({ children }) {
         bg-transparent text-primary
         border-[1.5px] border-primary/40
         hover:bg-primary/10 hover:border-primary/60
-        shadow-inner
       `;
     } else if (pillStyle === PILL_STYLES.CLASSIC) {
       return `
