@@ -183,6 +183,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       // Add debug log to see what initialContent is
       console.log("SlateEditor initialContent:", JSON.stringify(initialContent, null, 2));
       try {
+        // Check if initialContent has an attribution paragraph (for replies)
+        const hasAttribution = initialContent.length > 0 &&
+          initialContent[0].type === "paragraph" &&
+          initialContent[0].children &&
+          initialContent[0].children.some(child =>
+            child.text && child.text.includes("Replying to") ||
+            (child.type === "link" && child.children && child.children[0].text)
+          );
+
+        if (hasAttribution) {
+          console.log("Found attribution in initialContent, ensuring it's preserved");
+        }
+
         // Use initialContent as the priority source
         console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
         setInitialValue(initialContent);
@@ -205,6 +218,18 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
               if (editorElement) {
                 editorElement.focus();
                 console.log('Editor focused via DOM fallback after initialization');
+              }
+            }
+
+            // If this is a reply with attribution, position cursor at the third paragraph
+            if (hasAttribution && initialContent.length >= 3) {
+              try {
+                // Create a point at the start of the third paragraph (index 2)
+                const point = { path: [2, 0], offset: 0 };
+                Transforms.select(editor, point);
+                console.log('Cursor positioned at third paragraph for reply');
+              } catch (selectError) {
+                console.error('Error selecting text in reply:', selectError);
               }
             }
           } catch (error) {
@@ -575,8 +600,17 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   const renderElement = (props) => {
     const { attributes, children, element } = props;
-    if (element.type === "paragraph") {
-      console.log("Rendering paragraph element:", JSON.stringify(element, null, 2));
+
+    // Check if this is an attribution paragraph (first paragraph in a reply)
+    const isAttributionParagraph = element.type === "paragraph" &&
+      element.children &&
+      element.children.some(child =>
+        (child.text && child.text.includes("Replying to")) ||
+        (child.type === "link" && child.children && child.children[0].text)
+      );
+
+    if (isAttributionParagraph) {
+      console.log("Rendering attribution paragraph:", JSON.stringify(element, null, 2));
     }
 
     switch (element.type) {
@@ -584,6 +618,20 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
       case "paragraph":
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
+
+        // Special styling for attribution paragraphs
+        if (isAttributionParagraph) {
+          return (
+            <p {...attributes} className="flex items-start gap-3 py-2.5 bg-primary/5 rounded-md">
+              <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+                {index + 1}
+              </span>
+              <span className="flex-1 font-medium">{children}</span>
+            </p>
+          );
+        }
+
+        // Regular paragraph styling
         return (
           <p {...attributes} className="flex items-start gap-3 py-2.5">
             <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
