@@ -58,19 +58,19 @@ const AddToPageButton = ({ page, className = "" }) => {
       <Button
         variant="outline"
         size="sm"
-        className={`gap-2 w-full h-10 md:h-8 md:w-auto ${className}`}
+        className={`gap-2 w-full h-10 md:h-8 md:w-auto text-sm ${className}`}
         onClick={() => setIsOpen(true)}
         disabled={isAdding}
       >
         {isAdding ? (
           <>
             <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
-            Adding...
+            <span className="text-sm">Adding...</span>
           </>
         ) : (
           <>
             <Plus className="h-4 w-4" />
-            Add to Page
+            <span className="text-sm">Add to Page</span>
           </>
         )}
       </Button>

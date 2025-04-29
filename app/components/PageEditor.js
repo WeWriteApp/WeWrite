@@ -150,6 +150,13 @@ const PageEditor = ({
               console.log("Using username directly from page object:", displayUsername);
             }
 
+            // Make sure we're not using "Anonymous" if we have a userId
+            if (displayUsername === "Anonymous" && originalPage.userId && originalPage.userId !== "anonymous") {
+              // Use the userId as a fallback to ensure we have a link to the user page
+              displayUsername = `User ${originalPage.userId.substring(0, 6)}`;
+              console.log("Using userId-based username as fallback:", displayUsername);
+            }
+
             // Create a direct reply content structure with proper attribution
             // using the utility function for consistent structure
             const content = [
@@ -165,11 +172,24 @@ const PageEditor = ({
             console.log("Final reply content with username:", JSON.stringify(content, null, 2));
             console.log("Username being used:", displayUsername);
 
-            // Ensure the user link has the correct text content
-            if (content[0].children[3].children && content[0].children[3].children[0]) {
-              // Force the username to be displayed correctly in the text
-              content[0].children[3].children[0].text = displayUsername;
-              console.log("Forced username in text content:", displayUsername);
+            // Double-check the user link structure and force the username to be displayed correctly
+            if (content[0].children && content[0].children.length >= 4) {
+              const userLink = content[0].children[3];
+
+              // Ensure the user link has all required properties
+              if (userLink) {
+                userLink.type = "link";
+                userLink.isUser = true;
+                userLink.className = "user-link";
+                userLink.userId = originalPage.userId || "anonymous";
+                userLink.url = `/user/${originalPage.userId || "anonymous"}`;
+
+                // Make sure the text content is correct
+                if (userLink.children && userLink.children[0]) {
+                  userLink.children[0].text = displayUsername;
+                  console.log("Forced username in text content:", displayUsername);
+                }
+              }
             }
 
             // Double-check the user link structure
@@ -341,55 +361,31 @@ const PageEditor = ({
   return (
     <div className="editor-container" style={{ paddingBottom: '60px' }}>
       <div className="mb-4 relative">
-        {/* Completely isolated title input to prevent any interference */}
-        <div
-          className="title-input-container"
-          onClick={(e) => {
-            // Stop propagation to prevent editor focus
-            e.stopPropagation();
-            // Ensure title input gets focus
-            if (titleInputRef.current) {
-              titleInputRef.current.focus();
+        {/* Use a textarea instead of input for better compatibility */}
+        <textarea
+          ref={titleInputRef}
+          value={title}
+          onChange={(e) => {
+            console.log("Title onChange event:", e.target.value);
+            setTitle(e.target.value);
+            if (e.target.value.trim().length > 0) {
+              setTitleError(false);
             }
           }}
-        >
-          <input
-            ref={titleInputRef}
-            type="text"
-            value={title}
-            onChange={(e) => {
-              console.log("Title onChange event:", e.target.value);
-              // Directly update the title state
-              setTitle(e.target.value);
-              // Clear error if title has content
-              if (e.target.value.trim().length > 0) {
-                setTitleError(false);
-              }
-            }}
-            // Completely isolate all events from the editor
-            onKeyDown={(e) => {
-              console.log("Title keydown:", e.key);
-              e.stopPropagation();
-            }}
-            onKeyUp={(e) => e.stopPropagation()}
-            onKeyPress={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            onFocus={(e) => e.stopPropagation()}
-            onBlur={(e) => e.stopPropagation()}
-            className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
-              titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
-            } rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
-            placeholder={isReply ? "Title your reply..." : "Enter a title..."}
-            autoComplete="off"
-            style={{
-              wordWrap: 'break-word',
-              overflowWrap: 'break-word',
-              position: 'relative',
-              zIndex: 10 // Ensure it's above other elements
-            }}
-            autoFocus={isNewPage}
-          />
-        </div>
+          rows={1}
+          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
+            titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
+          } rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal resize-none`}
+          placeholder={isReply ? "Title your reply..." : "Enter a title..."}
+          autoComplete="off"
+          style={{
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            position: 'relative',
+            zIndex: 10 // Ensure it's above other elements
+          }}
+          autoFocus={isNewPage}
+        />
 
         {titleError && (
           <p className="text-destructive text-sm mt-1">Title is required</p>
