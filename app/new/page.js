@@ -71,7 +71,6 @@ export default function NewPage() {
   // Handle reply mode
   useEffect(() => {
     if (isReply) {
-      console.log("Handling reply mode");
       const page = searchParams.get('page') || '';
       const username = searchParams.get('username') || '';
       const replyToId = searchParams.get('replyTo') || '';
@@ -82,22 +81,16 @@ export default function NewPage() {
       // First try to use the initialContent from URL if available
       if (contentParam) {
         try {
-          console.log("Using initialContent from URL parameter");
           const parsedContent = JSON.parse(decodeURIComponent(contentParam));
-          console.log("Parsed content from URL:", JSON.stringify(parsedContent, null, 2));
 
-          // Ensure we have at least 3 paragraphs (attribution, blank line, cursor position)
+          // Ensure we have at least 2 paragraphs (attribution and cursor position)
           let completeContent = [...parsedContent];
           if (completeContent.length < 2) {
-            completeContent.push({ type: "paragraph", children: [{ text: "" }] });
-          }
-          if (completeContent.length < 3) {
             completeContent.push({ type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." });
           }
 
           setInitialContent(completeContent);
           setEditorContent(completeContent);
-          console.log("Set content from URL parameter:", JSON.stringify(completeContent, null, 2));
           return;
         } catch (error) {
           console.error("Error parsing content from URL:", error);
@@ -106,7 +99,6 @@ export default function NewPage() {
       }
 
       // If no valid content from URL, create new attribution
-      console.log("Creating new attribution for reply");
       const attribution = createReplyAttribution({
         pageId: replyToId,
         pageTitle: page,
@@ -114,10 +106,9 @@ export default function NewPage() {
         username: username
       });
 
-      // Create a properly structured reply content with attribution and empty paragraphs
+      // Create a properly structured reply content with attribution and one empty paragraph
       const replyContent = [
-        attribution,
-        { type: "paragraph", children: [{ text: "" }] }, // Empty line after attribution
+        attribution, // This already has the isAttribution flag from createReplyAttribution
         { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." } // Where cursor will be positioned
       ];
 
@@ -125,8 +116,10 @@ export default function NewPage() {
       setInitialContent(replyContent);
       setEditorContent(replyContent);
 
-      // Log the content structure for debugging
-      console.log("Created new reply content structure:", JSON.stringify(replyContent, null, 2));
+      // Force a re-render of the editor with the new content
+      setTimeout(() => {
+        setInitialContent([...replyContent]);
+      }, 100);
     } else {
       // Not a reply - handle normal page creation
       const titleParam = searchParams.get('title');
@@ -142,7 +135,7 @@ export default function NewPage() {
         } catch {}
       }
     }
-  }, [searchParams, isReply]);
+  }, [isReply, searchParams]);
 
   const handleSave = async (content) => {
     setIsSaving(true);

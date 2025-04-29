@@ -362,6 +362,20 @@ const PageEditor = ({
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
       {/* Simple SlateEditor with no nested containers */}
+      <div className="debug-info mb-4 p-2 bg-muted/30 rounded-md">
+        <p className="text-xs text-muted-foreground">
+          Editor content available: {currentEditorValue ? 'Yes' : 'No'} |
+          Has attribution: {currentEditorValue && currentEditorValue.length > 0 &&
+            (currentEditorValue[0].isAttribution ||
+             (currentEditorValue[0].children &&
+              currentEditorValue[0].children.some(c =>
+                (c.text && c.text.includes('Replying to')) ||
+                (c.type === 'link')
+              ))
+            ) ? 'Yes' : 'No'}
+        </p>
+      </div>
+
       <SlateEditor
         ref={editorRef}
         initialContent={currentEditorValue}
@@ -369,6 +383,7 @@ const PageEditor = ({
         onSave={!isSaving ? handleSave : null}
         onDiscard={onCancel}
         onInsert={handleInsertLink}
+        key={JSON.stringify(currentEditorValue?.slice(0, 1))} // Force re-creation when attribution changes
       />
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}

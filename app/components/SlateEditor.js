@@ -184,13 +184,17 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       console.log("SlateEditor initialContent:", JSON.stringify(initialContent, null, 2));
       try {
         // Check if initialContent has an attribution paragraph (for replies)
-        const hasAttribution = initialContent.length > 0 &&
-          initialContent[0].type === "paragraph" &&
-          initialContent[0].children &&
-          initialContent[0].children.some(child =>
-            child.text && child.text.includes("Replying to") ||
-            (child.type === "link" && child.children && child.children[0].text)
-          );
+        const hasAttribution = initialContent.length > 0 && (
+          // Check for explicit isAttribution flag
+          initialContent[0].isAttribution ||
+          // Fall back to content-based detection
+          (initialContent[0].type === "paragraph" &&
+           initialContent[0].children &&
+           initialContent[0].children.some(child =>
+             (child.text && child.text.includes("Replying to")) ||
+             (child.type === "link" && child.children && child.children[0].text)
+           ))
+        );
 
         if (hasAttribution) {
           console.log("Found attribution in initialContent, ensuring it's preserved");
@@ -221,13 +225,13 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
               }
             }
 
-            // If this is a reply with attribution, position cursor at the third paragraph
-            if (hasAttribution && initialContent.length >= 3) {
+            // If this is a reply with attribution, position cursor at the second paragraph
+            if (hasAttribution && initialContent.length >= 2) {
               try {
-                // Create a point at the start of the third paragraph (index 2)
-                const point = { path: [2, 0], offset: 0 };
+                // Create a point at the start of the second paragraph (index 1)
+                const point = { path: [1, 0], offset: 0 };
                 Transforms.select(editor, point);
-                console.log('Cursor positioned at third paragraph for reply');
+                console.log('Cursor positioned at second paragraph for reply');
               } catch (selectError) {
                 console.error('Error selecting text in reply:', selectError);
               }
@@ -602,16 +606,15 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     const { attributes, children, element } = props;
 
     // Check if this is an attribution paragraph (first paragraph in a reply)
-    const isAttributionParagraph = element.type === "paragraph" &&
-      element.children &&
-      element.children.some(child =>
-        (child.text && child.text.includes("Replying to")) ||
-        (child.type === "link" && child.children && child.children[0].text)
-      );
-
-    if (isAttributionParagraph) {
-      console.log("Rendering attribution paragraph:", JSON.stringify(element, null, 2));
-    }
+    // First check for the explicit isAttribution flag
+    const isAttributionParagraph = element.isAttribution ||
+      // Then fall back to content-based detection
+      (element.type === "paragraph" &&
+       element.children &&
+       element.children.some(child =>
+         (child.text && child.text.includes("Replying to")) ||
+         (child.type === "link" && child.children && child.children[0].text)
+       ));
 
     switch (element.type) {
       case "link":
@@ -619,14 +622,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       case "paragraph":
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
 
-        // Special styling for attribution paragraphs
+        // Attribution paragraphs - no special styling, just regular paragraph
         if (isAttributionParagraph) {
           return (
-            <p {...attributes} className="flex items-start gap-3 py-2.5 bg-primary/5 rounded-md">
+            <p {...attributes} className="flex items-start gap-3 py-2.5">
               <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
                 {index + 1}
               </span>
-              <span className="flex-1 font-medium">{children}</span>
+              <span className="flex-1">{children}</span>
             </p>
           );
         }
@@ -658,6 +661,19 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     }
   };
 
+  // Force editor to use the initialValue
+  useEffect(() => {
+    try {
+      // Reset the editor's children to match initialValue
+      editor.children = initialValue;
+      // Force a re-render
+      editor.onChange();
+      console.log("Forced editor to use initialValue:", JSON.stringify(initialValue, null, 2));
+    } catch (error) {
+      console.error("Error forcing editor to use initialValue:", error);
+    }
+  }, [editor, initialValue]);
+
   return (
     <LineSettingsProvider>
       <motion.div
@@ -666,7 +682,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
       >
-        <Slate editor={editor} initialValue={initialValue} onChange={onChange}>
+        <Slate
+          editor={editor}
+          initialValue={initialValue}
+          onChange={onChange}
+          key={JSON.stringify(initialValue)} // Force re-creation when initialValue changes
+        >
           <div className="flex">
             <div className="flex-grow">
               <div className="relative">
@@ -905,17 +926,21 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
   const editor = useSlate();
 
   // Use our utility functions to determine link type
-  const isUserLinkType = isUserLink(element.url);
-  const isPageLinkType = isPageLink(element.url);
-  const isExternalLinkType = isExternalLink(element.url);
+  const isUserLinkType = isUserLink(element.url) || element.isUser || element.className === 'user-link';
+  const isPageLinkType = isPageLink(element.url) || element.pageId || element.className === 'page-link';
+  const isExternalLinkType = isExternalLink(element.url) || element.isExternal || element.className === 'external-link';
 
   // Determine the appropriate class based on link type
   const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
 
   const handleClick = (e) => {
     e.preventDefault();
-    const path = ReactEditor.findPath(editor, element);
-    openLinkEditor(element, path);
+    try {
+      const path = ReactEditor.findPath(editor, element);
+      openLinkEditor(element, path);
+    } catch (error) {
+      console.error("Error handling link click:", error);
+    }
   };
 
   // We'll handle deletion in the editor's main keydown handler instead
@@ -927,8 +952,9 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       onClick={handleClick}
       contentEditable={false} // Make the link non-editable
       className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-primary text-primary-foreground border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-primary/90 hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
-      data-page-id={isPageLinkType ? element.pageId : undefined}
-      data-user-id={isUserLinkType ? element.userId : undefined}
+      data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
+      data-user-id={isUserLinkType ? (element.userId || '') : undefined}
+      data-link-type={linkTypeClass}
     >
       <InlineChromiumBugfix />
       <div className="flex items-center gap-0.5 min-w-0">

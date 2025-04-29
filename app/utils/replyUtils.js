@@ -43,35 +43,36 @@ export const createReplyContent = ({
       // Ensure we have a valid username to display
       const displayUsername = username && username !== "Anonymous" ? username : "Anonymous";
 
-      // Log the username being used
-      console.log(`Creating reply content with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
+      // Create attribution paragraph with explicit flags
+      const attributionParagraph = {
+        type: "paragraph",
+        isAttribution: true, // Add a flag to identify this as an attribution paragraph
+        attributionType: "reply", // Specify the type of attribution
+        children: [
+          { text: `Replying to ` },
+          {
+            type: "link",
+            url: `/pages/${pageId}`,
+            pageId: pageId,
+            pageTitle: pageTitle || "Untitled",
+            className: "page-link",
+            isPageLink: true,
+            children: [{ text: pageTitle || "Untitled" }]
+          },
+          { text: ` by ` },
+          {
+            type: "link",
+            url: `/user/${userId || "anonymous"}`,
+            isUser: true,
+            userId: userId || "anonymous",
+            username: displayUsername,
+            className: "user-link",
+            children: [{ text: displayUsername }]
+          }
+        ]
+      };
 
-      return [
-        {
-          type: "paragraph",
-          children: [
-            { text: `Replying to ` },
-            {
-              type: "link",
-              url: `/${pageId}`,
-              pageId: pageId,
-              pageTitle: pageTitle || "Untitled",
-              className: "page-link",
-              children: [{ text: pageTitle || "Untitled" }]
-            },
-            { text: ` by ` },
-            {
-              type: "link",
-              url: `/user/${userId || "anonymous"}`,
-              isUser: true,
-              userId: userId || "anonymous",
-              username: displayUsername,
-              className: "user-link",
-              children: [{ text: displayUsername }]
-            }
-          ]
-        }
-      ];
+      return [attributionParagraph];
   }
 };
 

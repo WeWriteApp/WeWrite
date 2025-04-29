@@ -22,10 +22,11 @@ export const createPageLink = ({
 }) => {
   return {
     type: "link",
-    url: url || `/${pageId}`,
+    url: url || `/pages/${pageId}`,
     pageId,
     pageTitle: pageTitle || "Untitled",
     className: "page-link",
+    isPageLink: true,
     children: [{ text: pageTitle || "Untitled" }]
   };
 };
@@ -89,17 +90,13 @@ export const createReplyAttribution = ({
     username.trim() !== "Anonymous" ?
     username.trim() : "Anonymous";
 
-  // Log the username being used in the attribution
-  console.log(`Creating reply attribution with username: ${displayUsername}, userId: ${userId}, pageTitle: ${pageTitle}, pageId: ${pageId}`);
-
   // Create the user link with explicit username
   const userLink = createUserLink({ userId, username: displayUsername });
 
-  // Log the created user link to verify structure
-  console.log('Created user link for attribution:', JSON.stringify(userLink, null, 2));
-
   return {
     type: "paragraph",
+    isAttribution: true, // Add a flag to identify this as an attribution paragraph
+    attributionType: "reply", // Specify the type of attribution
     children: [
       { text: "Replying to " },
       createPageLink({ pageId, pageTitle }),
