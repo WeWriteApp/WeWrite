@@ -7,9 +7,9 @@ import { getUserSubscription } from '../../firebase/subscription';
 import { app } from '../../firebase/config';
 import { Loader } from '../../components/Loader';
 import SingleProfileView from '../../components/SingleProfileView';
-import dynamic from 'next/dynamic';
-
-const ActivityCalendar = dynamic(() => import('react-activity-calendar'), { ssr: false });
+import { useTheme } from 'next-themes';
+import { db } from '../../firebase/database';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function UserPage({ params }) {
   const { id } = params;
@@ -17,23 +17,7 @@ export default function UserPage({ params }) {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Placeholder: generate fake activity data for the last 12 months
-  const [activityData, setActivityData] = useState([]);
-  useEffect(() => {
-    // Generate 365 days of fake data
-    const today = new Date();
-    const data = Array.from({ length: 365 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      return {
-        date: date.toISOString().slice(0, 10),
-        count: Math.floor(Math.random() * 5), // Replace with real edit count per day
-        level: 0 // let the calendar auto-calculate level
-      };
-    }).reverse();
-    setActivityData(data);
-  }, []);
+  const { theme } = useTheme();
 
   useEffect(() => {
     async function fetchUser() {
@@ -126,22 +110,6 @@ export default function UserPage({ params }) {
 
   return (
     <>
-      {/* Activity Graph */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-2">Activity</h2>
-        <ActivityCalendar
-          data={activityData}
-          labels={{
-            months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-            weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-            totalCount: '{{count}} edits in {{year}}',
-            legend: { less: 'Less', more: 'More' },
-            tooltip: '{{count}} edits on {{date}}',
-          }}
-          colorScheme="light"
-          weekStart={0}
-        />
-      </div>
       {/* ...existing profile rendering... */}
       <SingleProfileView profile={profile} />
     </>

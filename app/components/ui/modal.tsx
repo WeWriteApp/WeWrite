@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Button } from './button';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-motion';
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,6 +28,51 @@ export function Modal({
   preventClickOutside = false,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const y = useMotionValue(0);
+  const controls = useAnimation();
+  const [isScrollable, setIsScrollable] = useState(false);
+  const [atScrollEdge, setAtScrollEdge] = useState(true);
+
+  // Lock background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Detect if modal content is scrollable
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = contentRef.current;
+    if (el) {
+      setIsScrollable(el.scrollHeight > el.clientHeight + 2);
+      // Listen for scroll to determine if at edge
+      const handleScroll = () => {
+        setAtScrollEdge(
+          el.scrollTop <= 0 || el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+        );
+      };
+      el.addEventListener('scroll', handleScroll);
+      handleScroll();
+      return () => el.removeEventListener('scroll', handleScroll);
+    }
+  }, [isOpen, children]);
+
+  // Swipe-to-dismiss logic
+  const handleDragEnd = async (_: any, info: { offset: { y: number } }) => {
+    if (Math.abs(info.offset.y) > 100 && (atScrollEdge || !isScrollable)) {
+      await controls.start({ opacity: 0, y: info.offset.y > 0 ? 300 : -300, transition: { duration: 0.25 } });
+      onClose();
+    } else {
+      controls.start({ y: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } });
+    }
+  };
 
   // Handle ESC key press
   useEffect(() => {
@@ -122,9 +167,15 @@ export function Modal({
             transition={{ duration: 0.2 }}
           />
 
-          {/* Modal Content */}
+          {/* Modal Content with swipe-to-dismiss */}
           <motion.div
             ref={modalRef}
+            drag={isScrollable ? (atScrollEdge ? 'y' : false) : 'y'}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.3}
+            style={{ y }}
+            animate={controls}
+            onDragEnd={handleDragEnd}
             className={cn(
               "relative bg-background rounded-lg shadow-lg border border-border dark:border-border w-full max-w-md p-6 m-4 z-10",
               className
@@ -157,7 +208,10 @@ export function Modal({
               </div>
             )}
 
-            <div className="py-2">{children}</div>
+            {/* Scrollable content wrapper */}
+            <div ref={contentRef} className="py-2 max-h-[70vh] overflow-y-auto">
+              {children}
+            </div>
 
             {footer && <div className="mt-4">{footer}</div>}
           </motion.div>

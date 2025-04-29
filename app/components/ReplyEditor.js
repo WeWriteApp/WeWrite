@@ -47,6 +47,7 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
 
   // Flag to track if we've positioned the cursor
   const cursorPositioned = useRef(false);
+  const hasAutoFocused = useRef(false);
 
   // Log the initialContent to help with debugging
   console.log("ReplyEditor received initialContent:", initialContent);
@@ -58,70 +59,31 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
   };
 
   useEffect(() => {
-    // Only run this once when the component mounts and initialContent is available
-    if (initialContent && !cursorPositioned.current) {
-      // Set cursor positioned flag to prevent multiple positioning attempts
-      cursorPositioned.current = true;
-
+    // Only run this once on mount
+    if (initialContent && !hasAutoFocused.current && editorRef.current) {
+      hasAutoFocused.current = true;
       // Use a timeout to ensure the editor is fully initialized
       const timer = setTimeout(() => {
         try {
-          // Position cursor at the beginning of the third paragraph (after the attribution and blank line)
-          if (initialContent.length >= 3 && editorRef.current) {
-            const editor = editorRef.current;
-
-            // Check if the editor has the necessary methods
-            if (editor && typeof editor.selection !== 'undefined') {
-              // Create a point at the start of the third paragraph (index 2)
-              const point = { path: [2, 0], offset: 0 };
-
-              // Use ReactEditor to focus and select
-              try {
-                // Use our safe wrapper for ReactEditor.focus
-                const focused = safeReactEditor.focus(editor);
-
-                // Try to select the point
-                try {
-                  Transforms.select(editor, point);
-                  console.log('Cursor positioned at response paragraph');
-                } catch (selectError) {
-                  console.error('Error selecting text:', selectError);
-                }
-
-                // If ReactEditor.focus failed, try DOM fallback
-                if (!focused) {
-                  console.warn('Editor focus failed, using DOM fallback');
-                  const editorElement = document.querySelector('[data-slate-editor=true]');
-                  if (editorElement) {
-                    editorElement.focus();
-                    console.log('Editor focused via DOM');
-                  }
-                }
-              } catch (reactEditorError) {
-                console.error('Error using ReactEditor:', reactEditorError);
-
-                // Fallback to direct DOM manipulation
-                const editorElement = document.querySelector('[data-slate-editor=true]');
-                if (editorElement) {
-                  editorElement.focus();
-                  console.log('Editor focused via DOM');
-                }
-              }
-            } else {
-              console.warn('Editor instance missing selection capability');
-              // Fallback to direct DOM focus
+          // Position cursor at the beginning of the response paragraph (second line)
+          const editor = editorRef.current;
+          if (editor && typeof editor.selection !== 'undefined') {
+            const point = { path: [1, 0], offset: 0 };
+            try {
+              const focused = safeReactEditor.focus(editor);
+              Transforms.select(editor, point);
+            } catch (err) {
+              // Fallback to DOM focus
               const editorElement = document.querySelector('[data-slate-editor=true]');
-              if (editorElement) {
-                editorElement.focus();
-                console.log('Editor focused via DOM (fallback)');
-              }
+              if (editorElement) editorElement.focus();
             }
           }
         } catch (error) {
-          console.error('Error positioning cursor:', error);
+          // Fallback to DOM focus
+          const editorElement = document.querySelector('[data-slate-editor=true]');
+          if (editorElement) editorElement.focus();
         }
-      }, 500); // Increased timeout for better reliability
-
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [initialContent]);
@@ -132,19 +94,15 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
     if (initialContent && value.length > 0 && initialContent.length > 0) {
       // If the first paragraph (attribution line) was changed, restore it
       if (JSON.stringify(value[0]) !== JSON.stringify(initialContent[0])) {
-        console.log('Preventing edit of attribution line');
         value[0] = initialContent[0];
       }
-
       // If the second paragraph (blank line) was changed, restore it
       if (initialContent.length > 1 && value.length > 1) {
         if (JSON.stringify(value[1]) !== JSON.stringify(initialContent[1])) {
-          console.log('Preventing edit of blank line');
           value[1] = initialContent[1];
         }
       }
     }
-
     // Pass the updated value to the parent component
     if (setEditorState) {
       setEditorState(value);

@@ -3,6 +3,8 @@ import Stripe from 'stripe';
 import { auth } from '../../firebase/auth';
 import { getUserSubscription, updateSubscription } from '../../firebase/subscription';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { db } from '../../firebase/database';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(request) {
   try {
@@ -54,12 +56,24 @@ export async function POST(request) {
 
     // Handle demo subscriptions differently
     if (subscriptionId.startsWith('demo_')) {
+      console.log('Canceling demo subscription for user:', user.uid);
+
       // Update the subscription in Firestore
       await updateSubscription(user.uid, {
-        status: 'inactive',
+        status: 'canceled',
         stripeSubscriptionId: null,
         amount: 0,
-        renewalDate: null
+        renewalDate: null,
+        updatedAt: new Date().toISOString(),
+        canceledAt: new Date().toISOString()
+      });
+
+      // Also update the user document to remove tier information
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        tier: null,
+        subscriptionStatus: 'canceled',
+        updatedAt: serverTimestamp()
       });
 
       return NextResponse.json({
@@ -87,9 +101,19 @@ export async function POST(request) {
       // Update the subscription in Firestore
       await updateSubscription(user.uid, {
         status: 'canceled',
-        canceledAt: new Date().toISOString()
+        canceledAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
       console.log('Firestore subscription updated for user:', user.uid);
+
+      // Also update the user document to remove tier information
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        tier: null,
+        subscriptionStatus: 'canceled',
+        updatedAt: serverTimestamp()
+      });
+      console.log('User document updated for user:', user.uid);
     } catch (stripeError) {
       console.error('Error with Stripe cancellation:', stripeError);
       return NextResponse.json(

@@ -234,68 +234,73 @@ export function PageActions({
   return (
     <div className={`w-full ${className}`}>
       {/* All buttons - horizontal on desktop, vertical on mobile */}
-      <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center">
-        {/* Owner-only actions - Edit and Delete buttons */}
-        {isOwner && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 w-full h-10 md:h-8 md:w-auto"
-              onClick={() => setIsEditing && setIsEditing(!isEditing)}
-            >
-              {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-              {isEditing ? "Cancel" : "Edit"}
-            </Button>
-            {isEditing && (
+      <div className="flex flex-col items-stretch gap-3 w-full">
+        {/* Main action buttons - horizontal on desktop, vertical on mobile */}
+        <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center">
+          {/* Owner-only actions - Edit and Delete buttons */}
+          {isOwner && (
+            <>
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
-                className="gap-2 w-full h-10 md:h-8 md:w-auto text-white"
-                onClick={handleDelete}
+                className="gap-2 w-full h-10 md:h-8 md:w-auto"
+                onClick={() => setIsEditing && setIsEditing(!isEditing)}
               >
-                <Trash2 className="h-4 w-4" />
-                Delete
+                {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                <span className="text-sm">{isEditing ? "Cancel" : "Edit"}</span>
               </Button>
-            )}
-          </>
-        )}
+              {isEditing && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2 w-full h-10 md:h-8 md:w-auto text-white"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="text-sm">Delete</span>
+                </Button>
+              )}
+            </>
+          )}
 
-        {/* Dense Mode switch - available to all users */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full h-10 md:h-8 md:w-auto"
-          onClick={() => {
-            const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
-            setCurrentLineMode(newMode); // Update local state immediately
-            setLineMode(newMode); // Update the mode without page reload
-          }}
-        >
-          <Switch
-            checked={currentLineMode === LINE_MODES.DENSE}
-            onCheckedChange={(checked) => {
-              const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+          {/* Reply button - available to all users */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full h-10 md:h-8 md:w-auto"
+            onClick={handleReply}
+          >
+            <Reply className="h-4 w-4" />
+            <span className="text-sm">Reply</span>
+          </Button>
+
+          {/* Add to Page button - styled and placed with other actions */}
+          <AddToPageButton page={page} className="gap-2 w-full h-10 md:h-8 md:w-auto" />
+        </div>
+
+        {/* Dense Mode switch - moved below other buttons */}
+        <div className="mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 w-full h-10 md:h-8 md:w-auto"
+            onClick={() => {
+              const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
               setCurrentLineMode(newMode); // Update local state immediately
               setLineMode(newMode); // Update the mode without page reload
             }}
-          />
-          <span className="text-sm">Dense mode</span>
-        </Button>
-
-        {/* Add to Page button - available to all users */}
-        <AddToPageButton />
-
-        {/* Reply button - available to all users */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full h-10 md:h-8 md:w-auto"
-          onClick={handleReply}
-        >
-          <Reply className="h-4 w-4" />
-          Reply
-        </Button>
+          >
+            <Switch
+              checked={currentLineMode === LINE_MODES.DENSE}
+              onCheckedChange={(checked) => {
+                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+                setCurrentLineMode(newMode); // Update local state immediately
+                setLineMode(newMode); // Update the mode without page reload
+              }}
+            />
+            <span className="text-sm">Dense mode</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -1,18 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
-import { ArrowLeft, Check, AlertTriangle, XCircle, DollarSign, Clock } from 'lucide-react';
+import { ArrowLeft, Check, AlertTriangle, ChevronLeft, ChevronRight, DollarSign, Clock } from 'lucide-react';
 import { SupporterIcon } from '../components/SupporterIcon';
 import Link from 'next/link';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Input } from '../components/ui/input';
 import { createCheckoutSession } from '../services/stripeService';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
+import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
-import { Separator } from '../components/ui/separator';
+import { useSwipeable } from 'react-swipeable';
+import { CustomAmountModal } from '../components/CustomAmountModal';
+import { loadStripe } from '@stripe/stripe-js';
 
 // Helper function to format relative time
 const getRelativeTimeString = (date: Date): string => {
@@ -65,18 +66,21 @@ const supporterTiers = [
     id: 'tier1',
     name: 'Tier 1',
     amount: 10,
+    price: '$10/month',
     icon: <SupporterIcon tier="tier1" status="active" size="xl" />,
   },
   {
     id: 'tier2',
     name: 'Tier 2',
     amount: 20,
+    price: '$20/month',
     icon: <SupporterIcon tier="tier2" status="active" size="xl" />,
   },
   {
     id: 'tier3',
     name: 'Tier 3',
     amount: 'Custom',
+    price: 'From $50/month',
     icon: <SupporterIcon tier="tier3" status="active" size="xl" />,
     isCustom: true,
     minAmount: 50
@@ -90,13 +94,27 @@ export default function SubscriptionPage() {
   const [customAmount, setCustomAmount] = useState<string>('100');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [cancelLoading, setCancelLoading] = useState<boolean>(false);
-  const [customAmountError, setCustomAmountError] = useState<boolean>(false);
+  // Removed unused state
   const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
+  const [customAmountModalOpen, setCustomAmountModalOpen] = useState<boolean>(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Define subscription type
+  interface Subscription {
+    id: string;
+    status: string;
+    amount: number;
+    stripeSubscriptionId?: string;
+    createdAt?: string;
+    billingCycleStart?: string;
+    canceledAt?: string;
+    [key: string]: any;
+  }
 
   // Fetch subscription history function
-  const fetchSubscriptionHistory = async (currentSubscription) => {
+  const fetchSubscriptionHistory = async (currentSubscription: Subscription | null) => {
     try {
       // If we have a subscription, create history entries based on it
       if (currentSubscription) {
@@ -180,7 +198,7 @@ export default function SubscriptionPage() {
 
     // Set up subscription listener
     console.log('Setting up subscription listener for user:', user.uid);
-    const unsubscribe = listenToUserSubscription(user.uid, (userSubscription) => {
+    const unsubscribe = listenToUserSubscription(user.uid, (userSubscription: Subscription | null) => {
       console.log('Subscription data received from listener:', userSubscription);
       setSubscription(userSubscription);
 
@@ -207,11 +225,28 @@ export default function SubscriptionPage() {
             setCustomAmount(amount.toString());
             console.log('Selected tier 3 with amount:', amount);
           }
+        } else if (userSubscription.status === 'canceled') {
+          // For canceled subscriptions, pre-select their previous tier
+          console.log('Canceled subscription detected, pre-selecting previous tier');
+          const amount = userSubscription.amount;
+          if (amount >= 10 && amount < 20) {
+            setSelectedTier('tier1');
+            console.log('Selected tier 1');
+          } else if (amount >= 20 && amount < 50) {
+            setSelectedTier('tier2');
+            console.log('Selected tier 2');
+          } else if (amount >= 50) {
+            setSelectedTier('tier3');
+            setCustomAmount(amount.toString());
+            console.log('Selected tier 3 with amount:', amount);
+          }
         } else {
           console.log('Subscription exists but is not active:', userSubscription.status);
         }
       } else {
         console.log('No subscription found for user');
+        // Reset selected tier when no subscription is found
+        setSelectedTier(null);
       }
     });
 
@@ -226,29 +261,18 @@ export default function SubscriptionPage() {
     setSelectedTier(tierId);
     setError(null);
 
-    // If tier 3 is selected, focus the input after a short delay to allow the UI to update
+    // If tier 3 is selected, open the custom amount modal
     if (tierId === 'tier3') {
-      setTimeout(() => {
-        const input = document.querySelector('input[type="number"]') as HTMLInputElement;
-        if (input) {
-          input.focus();
-        }
-      }, 100);
+      setCustomAmountModalOpen(true);
     }
   };
 
-  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, '');
-    setCustomAmount(value);
-
-    // Validate in real-time
-    const numValue = parseInt(value, 10);
-    if (isNaN(numValue) || numValue < 50) {
-      setCustomAmountError(true);
-    } else {
-      setCustomAmountError(false);
-    }
+  // Handle custom amount confirmation from modal
+  const handleCustomAmountConfirm = (amount: string) => {
+    setCustomAmount(amount);
   };
+
+  // We no longer need this function as the validation is handled in the modal
 
   const handleCancelSubscription = async () => {
     if (!user || !subscription?.stripeSubscriptionId) return;
@@ -416,12 +440,79 @@ export default function SubscriptionPage() {
         throw new Error(data.error || 'Failed to reactivate subscription');
       }
 
-      // Redirect to success page or update UI
-      alert('Your subscription has been reactivated successfully!');
+      // If we have a client secret, redirect to Stripe for payment
+      if (data.clientSecret) {
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+        if (!stripe) {
+          throw new Error('Failed to load Stripe');
+        }
+
+        // Check if we have an existing payment method
+        if (data.hasExistingPaymentMethod) {
+          console.log('Using existing payment method for subscription');
+          try {
+            // Just confirm the payment with the existing payment method
+            const { error } = await stripe.confirmCardPayment(data.clientSecret);
+            if (error) {
+              if (error.type === 'card_error' || error.type === 'validation_error') {
+                throw new Error(error.message || 'Payment confirmation failed');
+              } else {
+                // For other errors, we might need to collect a new payment method
+                throw new Error('Your saved payment method could not be used. Please update your payment information.');
+              }
+            }
+          } catch (paymentError: any) {
+            console.error('Payment error with existing method:', paymentError);
+
+            // If the error is related to the payment method being missing or invalid
+            if (paymentError.message &&
+                (paymentError.message.includes('payment method') ||
+                 paymentError.message.includes('PaymentIntent') ||
+                 paymentError.message.includes('PaymentMethod'))) {
+
+              // Show a more user-friendly error and let them try again
+              throw new Error('Your previous payment method could not be used. Please try again to enter a new payment method.');
+
+              // Note: We're not using the approach below because it doesn't work well in the browser context
+              // Instead, we'll show a clear error message and let the user try again
+              /*
+              console.log('Attempting to collect a new payment method');
+              const { error } = await stripe.confirmCardPayment(data.clientSecret);
+
+              if (error) {
+                throw new Error(error.message || 'Payment confirmation failed');
+              }
+              */
+            } else {
+              // For other errors, just rethrow
+              throw paymentError;
+            }
+          }
+        } else {
+          // No existing payment method, need to collect one
+          console.log('No existing payment method, redirecting to payment collection');
+          const { error } = await stripe.confirmCardPayment(data.clientSecret);
+          if (error) {
+            throw new Error(error.message || 'Payment confirmation failed');
+          }
+        }
+
+        // Payment successful
+        alert('Your subscription has been reactivated successfully!');
+      } else {
+        // No client secret, but operation was successful
+        alert('Your subscription has been reactivated successfully!');
+      }
 
     } catch (err: any) {
       console.error('Error reactivating subscription:', err);
-      setError(err.message || 'Failed to reactivate subscription');
+
+      // Check for specific payment method error
+      if (err.message && err.message.includes('payment method') && err.message.includes('expected to be present')) {
+        setError('Your previous payment method is no longer available. Please try again to enter a new payment method.');
+      } else {
+        setError(err.message || 'Failed to reactivate subscription');
+      }
     } finally {
       setLoading(false);
     }
@@ -448,7 +539,6 @@ export default function SubscriptionPage() {
       </div>
 
       {/* Current Subscription Status */}
-      {console.log('Rendering with subscription:', subscription)}
       {subscription && (subscription.status === 'active' || subscription.status === 'trialing') && (
         <div className="mb-8 p-4 bg-card rounded-lg border border-border shadow-sm">
           <div className="flex flex-col gap-4">
@@ -503,86 +593,107 @@ export default function SubscriptionPage() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {supporterTiers.map((tier) => (
-          <Card
-            key={tier.id}
-            className={`cursor-pointer transition-all duration-200 h-full ${
-              selectedTier === tier.id
-                ? 'border-2 border-primary bg-primary/5'
-                : 'border-2 border-border hover:border-border/80 bg-background hover:bg-background/80 hover:shadow-sm'
-            }`}
-            onClick={() => handleTierSelect(tier.id)}
-          >
-            <CardHeader className="flex flex-col items-center text-center">
-              {/* Centered Icon at the top */}
-              <div className="flex justify-center items-center mb-4">
-                <div className="flex items-center justify-center bg-white dark:bg-white w-16 h-16 rounded-md shadow-sm">
-                  {tier.icon}
-                </div>
-              </div>
-              <div className="flex justify-between items-center w-full">
-                <CardTitle className="text-foreground text-center mx-auto">{tier.name}</CardTitle>
-                {/* Always render the check container to prevent layout shift, but only show it when selected */}
-                <div className={`rounded-full p-1 absolute top-4 right-4 ${selectedTier === tier.id ? 'bg-primary text-white' : 'bg-transparent'}`}>
-                  <Check className={`h-4 w-4 ${selectedTier === tier.id ? 'opacity-100' : 'opacity-0'}`} />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="text-center">
+      {/* Subscription Tiers - Horizontal Carousel */}
+      <div className="relative mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold">Subscription Tiers</h2>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="hidden md:flex"
+              onClick={() => {
+                if (carouselRef.current) {
+                  carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                }
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="hidden md:flex"
+              onClick={() => {
+                if (carouselRef.current) {
+                  carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                }
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-              {/* Price centered at bottom */}
-              <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-2">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-                <span className="text-2xl font-bold text-foreground">
-                  {tier.isCustom ? (
-                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="w-full">
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={customAmount}
-                          onChange={handleCustomAmountChange}
-                          className={`w-full text-lg font-bold text-foreground bg-background ${customAmountError && selectedTier === tier.id ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                          onClick={(e) => e.stopPropagation()}
-                          disabled={selectedTier !== tier.id}
-                          ref={(input) => {
-                            // Focus the input when the tier is selected
-                            if (selectedTier === tier.id && input) {
-                              input.focus();
-                            }
-                          }}
-                        />
-                        {customAmountError && selectedTier === tier.id && (
-                          <p className="text-red-500 text-sm mt-1">Must be at least $50</p>
-                        )}
-                      </div>
-                      {/* Always render the button to prevent layout shift, but disable it when not selected */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={`border-border text-foreground hover:bg-background/80 ${selectedTier !== tier.id ? 'opacity-0 pointer-events-none' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const currentAmount = parseInt(customAmount, 10) || 50;
-                          setCustomAmount((currentAmount + 10).toString());
-                        }}
-                        disabled={selectedTier !== tier.id}
-                      >
-                        Add $10
-                      </Button>
-                    </div>
-                  ) : (
-                    tier.amount
-                  )}
-                </span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <div
+          ref={carouselRef}
+          className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
+          {...useSwipeable({
+            onSwipedLeft: () => {
+              if (carouselRef.current) {
+                carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+              }
+            },
+            onSwipedRight: () => {
+              if (carouselRef.current) {
+                carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+              }
+            },
+            trackMouse: true,
+            trackTouch: true
+          })}
+        >
+          {supporterTiers.map((tier) => (
+            <Card
+              key={tier.id}
+              className={`flex-none w-[280px] h-[320px] snap-center cursor-pointer transition-all duration-200 ${
+                selectedTier === tier.id
+                  ? 'border-2 border-primary bg-primary/5'
+                  : 'border-2 border-border hover:border-border/80 bg-background hover:bg-background/80 hover:shadow-sm'
+              }`}
+              onClick={() => handleTierSelect(tier.id)}
+            >
+              <CardHeader className="flex flex-col items-center text-center">
+                {/* Centered Icon at the top */}
+                <div className="flex justify-center items-center mb-4">
+                  <div className="flex items-center justify-center bg-white dark:bg-white w-16 h-16 rounded-md shadow-sm">
+                    {tier.icon}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center w-full">
+                  <CardTitle className="text-foreground text-center mx-auto">{tier.name}</CardTitle>
+                  {/* Always render the check container to prevent layout shift, but only show it when selected */}
+                  <div className={`rounded-full p-1 absolute top-4 right-4 ${selectedTier === tier.id ? 'bg-primary text-white' : 'bg-transparent'}`}>
+                    <Check className={`h-4 w-4 ${selectedTier === tier.id ? 'opacity-100' : 'opacity-0'}`} />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="text-center flex flex-col items-center justify-center">
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-2xl font-bold text-foreground">
+                    {tier.isCustom ? customAmount : tier.amount}
+                  </span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+
+                <p className="text-muted-foreground text-sm mt-4">
+                  {tier.isCustom ? `Custom amount (min $${tier.minAmount})` : tier.price}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
+
+      {/* Custom Amount Modal */}
+      <CustomAmountModal
+        open={customAmountModalOpen}
+        onOpenChange={setCustomAmountModalOpen}
+        initialAmount={customAmount}
+        onAmountConfirm={handleCustomAmountConfirm}
+        minAmount={50}
+      />
 
       {error && (
         <Alert variant="destructive" className="mb-6">
@@ -657,7 +768,7 @@ export default function SubscriptionPage() {
           className="w-full md:w-auto"
         >
           {loading ? 'Processing...' :
-            subscription && subscription.status === 'active' ? 'Update Subscription' :
+            subscription && (subscription.status === 'active' || subscription.status === 'trialing') ? 'Update Subscription' :
             subscription && subscription.status === 'canceled' ? 'Reactivate Subscription' :
             'Subscribe Now'}
         </Button>

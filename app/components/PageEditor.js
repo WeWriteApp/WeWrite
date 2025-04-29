@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Globe, Lock } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useSearchParams } from "next/navigation";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
@@ -149,6 +150,13 @@ const PageEditor = ({
               console.log("Using username directly from page object:", displayUsername);
             }
 
+            // Make sure we're not using "Anonymous" if we have a userId
+            if (displayUsername === "Anonymous" && originalPage.userId && originalPage.userId !== "anonymous") {
+              // Use the userId as a fallback to ensure we have a link to the user page
+              displayUsername = `User ${originalPage.userId.substring(0, 6)}`;
+              console.log("Using userId-based username as fallback:", displayUsername);
+            }
+
             // Create a direct reply content structure with proper attribution
             // using the utility function for consistent structure
             const content = [
@@ -164,11 +172,24 @@ const PageEditor = ({
             console.log("Final reply content with username:", JSON.stringify(content, null, 2));
             console.log("Username being used:", displayUsername);
 
-            // Ensure the user link has the correct text content
-            if (content[0].children[3].children && content[0].children[3].children[0]) {
-              // Force the username to be displayed correctly in the text
-              content[0].children[3].children[0].text = displayUsername;
-              console.log("Forced username in text content:", displayUsername);
+            // Double-check the user link structure and force the username to be displayed correctly
+            if (content[0].children && content[0].children.length >= 4) {
+              const userLink = content[0].children[3];
+
+              // Ensure the user link has all required properties
+              if (userLink) {
+                userLink.type = "link";
+                userLink.isUser = true;
+                userLink.className = "user-link";
+                userLink.userId = originalPage.userId || "anonymous";
+                userLink.url = `/user/${originalPage.userId || "anonymous"}`;
+
+                // Make sure the text content is correct
+                if (userLink.children && userLink.children[0]) {
+                  userLink.children[0].text = displayUsername;
+                  console.log("Forced username in text content:", displayUsername);
+                }
+              }
             }
 
             // Double-check the user link structure
@@ -194,12 +215,14 @@ const PageEditor = ({
     }
   }, [isReply, replyToId, onContentChange]);
 
-  // Focus the editor when entering edit mode
+  // Focus the editor when entering edit mode, but only if not a new page
   useEffect(() => {
-    if (editorRef.current) {
+    // Only auto-focus the editor if this is not a new page
+    // For new pages, we want to focus the title field first
+    if (editorRef.current && !isNewPage && !isReply) {
       editorRef.current.focus();
     }
-  }, []);
+  }, [isNewPage, isReply]);
 
   // Update currentEditorValue when the initialContent prop changes
   useEffect(() => {
@@ -216,12 +239,13 @@ const PageEditor = ({
     }
   }, [initialContent, isReply]);
 
-  // Position cursor for reply content
+  // Position cursor for reply content - only on initial load
   useEffect(() => {
-    // Only run this when reply content is available and cursor hasn't been positioned yet
-    if (isReply && !cursorPositioned.current && editorRef.current) {
-      console.log("Attempting to position cursor for reply content");
-      // Set cursor positioned flag to prevent multiple positioning attempts
+    // Only run this once when the component mounts and content is available
+    if (isReply && !cursorPositioned.current && editorRef.current && currentEditorValue?.length > 0) {
+      console.log("Initial cursor positioning for reply content");
+
+      // Set cursor positioned flag to prevent any future positioning attempts
       cursorPositioned.current = true;
 
       // Use a timeout to ensure the editor is fully initialized
@@ -230,41 +254,39 @@ const PageEditor = ({
           const editor = editorRef.current;
 
           // Check if the editor has the necessary methods
-          if (editor && typeof editor.selection !== 'undefined') {
-            // Create a point at the start of the third paragraph (index 2) where "I'm responding..." is
-            const point = { path: [2, 0], offset: 0 };
-
-            // Use our safe wrapper for ReactEditor.focus
-            try {
-              // Use our safe wrapper for ReactEditor.focus
-              const focused = safeReactEditor.focus(editor);
-
-              // Try to select the point
+          if (editor) {
+            // Determine the correct paragraph to position cursor at
+            // If there's only one paragraph (the attribution), add a new paragraph
+            if (currentEditorValue.length === 1) {
               try {
+                // Add a new paragraph at the end
+                Transforms.insertNodes(
+                  editor,
+                  { type: 'paragraph', children: [{ text: '' }] },
+                  { at: [1] }
+                );
+                console.log('Added new paragraph for reply');
+              } catch (insertError) {
+                console.error('Error inserting new paragraph:', insertError);
+              }
+            }
+
+            // Now position cursor at the second paragraph (after attribution)
+            try {
+              // Only focus the editor if the title field is not currently focused
+              if (document.activeElement !== titleInputRef.current) {
+                // Use our safe wrapper for ReactEditor.focus
+                safeReactEditor.focus(editor);
+
+                // Create a point at the start of the second paragraph (index 1)
+                const point = { path: [1, 0], offset: 0 };
+
+                // Try to select the point
                 Transforms.select(editor, point);
-                console.log('Cursor positioned at third paragraph for reply');
-              } catch (selectError) {
-                console.error('Error selecting text:', selectError);
+                console.log('Cursor positioned at second paragraph for reply');
               }
-
-              // If ReactEditor.focus failed, try DOM fallback
-              if (!focused) {
-                console.warn('Editor focus failed, using DOM fallback');
-                const editorElement = document.querySelector('[data-slate-editor=true]');
-                if (editorElement) {
-                  editorElement.focus();
-                  console.log('Editor focused via DOM');
-                }
-              }
-            } catch (reactEditorError) {
-              console.error('Error using ReactEditor:', reactEditorError);
-
-              // Fallback to direct DOM manipulation
-              const editorElement = document.querySelector('[data-slate-editor=true]');
-              if (editorElement) {
-                editorElement.focus();
-                console.log('Editor focused via DOM');
-              }
+            } catch (selectError) {
+              console.error('Error selecting text:', selectError);
             }
           }
         } catch (error) {
@@ -274,7 +296,9 @@ const PageEditor = ({
 
       return () => clearTimeout(timer);
     }
-  }, [isReply]);
+  // Empty dependency array ensures this only runs once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle content changes
   const handleContentChange = (value) => {
@@ -337,20 +361,28 @@ const PageEditor = ({
   return (
     <div className="editor-container" style={{ paddingBottom: '60px' }}>
       <div className="mb-4">
-        <input
+        <textarea
           ref={titleInputRef}
-          type="text"
           value={title}
           onChange={(e) => {
+            console.log("Title onChange event:", e.target.value);
             setTitle(e.target.value);
             if (e.target.value.trim().length > 0) {
               setTitleError(false);
             }
           }}
-          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
+          rows={1}
+          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
+            titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
+          } rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal resize-none`}
           placeholder={isReply ? "Title your reply..." : "Enter a title..."}
           autoComplete="off"
-          style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
+          style={{
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            position: 'relative',
+            zIndex: 10 // Ensure it's above other elements
+          }}
           autoFocus={isNewPage}
         />
         {titleError && (
@@ -360,21 +392,6 @@ const PageEditor = ({
 
       {/* Add separator line between actions and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
-
-      {/* Simple SlateEditor with no nested containers */}
-      <div className="debug-info mb-4 p-2 bg-muted/30 rounded-md">
-        <p className="text-xs text-muted-foreground">
-          Editor content available: {currentEditorValue ? 'Yes' : 'No'} |
-          Has attribution: {currentEditorValue && currentEditorValue.length > 0 &&
-            (currentEditorValue[0].isAttribution ||
-             (currentEditorValue[0].children &&
-              currentEditorValue[0].children.some(c =>
-                (c.text && c.text.includes('Replying to')) ||
-                (c.type === 'link')
-              ))
-            ) ? 'Yes' : 'No'}
-        </p>
-      </div>
 
       <SlateEditor
         ref={editorRef}
@@ -416,19 +433,32 @@ const PageEditor = ({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
-              variant="default"
-              className="min-w-[80px]"
-            >
-              {isSaving ? (
-                <div className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-                  <span>Saving</span>
-                </div>
-              ) : "Save"}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
+                      variant="default"
+                      className="min-w-[80px]"
+                    >
+                      {isSaving ? (
+                        <div className="flex items-center gap-2">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
+                          <span>Saving</span>
+                        </div>
+                      ) : "Save"}
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {!title.trim() && (
+                  <TooltipContent>
+                    <p>Add title to save</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>

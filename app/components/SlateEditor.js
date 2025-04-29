@@ -105,6 +105,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const [initialLinkValues, setInitialLinkValues] = useState({}); // New state to store initial link values
   const editableRef = useRef(null);
   const [lineCount, setLineCount] = useState(0);
+  const hasPositionedCursor = useRef(false); // NEW: track if we've set the cursor
   // Remove contentInitialized state and related logic
   // Always update initialValue and the editor's value when initialContent changes
   const [initialValue, setInitialValue] = useState(() => {
@@ -134,6 +135,27 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       return [{ type: "paragraph", children: [{ text: "" }] }];
     }
   });
+  const [visibleParagraphs, setVisibleParagraphs] = useState([]); // Track which paragraphs are visible
+  const revealTimeoutRef = useRef(null);
+
+  // Progressive reveal effect on mount or when initialValue changes
+  useEffect(() => {
+    if (!initialValue || !Array.isArray(initialValue)) return;
+    setVisibleParagraphs([]); // Reset
+    if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
+    let i = 0;
+    function revealNext() {
+      setVisibleParagraphs((prev) => [...prev, i]);
+      i++;
+      if (i < initialValue.length) {
+        revealTimeoutRef.current = setTimeout(revealNext, 5);
+      }
+    }
+    revealNext();
+    return () => {
+      if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
+    };
+  }, [initialValue]);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -179,62 +201,22 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   // Use initialContent as the priority content source if available
   useEffect(() => {
-    if (initialContent) {
+    if (initialContent && !hasPositionedCursor.current) {
+      hasPositionedCursor.current = true;
       // Add debug log to see what initialContent is
       console.log("SlateEditor initialContent:", JSON.stringify(initialContent, null, 2));
       try {
-        // Check if initialContent has an attribution paragraph (for replies)
-        const hasAttribution = initialContent.length > 0 && (
-          // Check for explicit isAttribution flag
-          initialContent[0].isAttribution ||
-          // Fall back to content-based detection
-          (initialContent[0].type === "paragraph" &&
-           initialContent[0].children &&
-           initialContent[0].children.some(child =>
-             (child.text && child.text.includes("Replying to")) ||
-             (child.type === "link" && child.children && child.children[0].text)
-           ))
-        );
-
-        if (hasAttribution) {
-          console.log("Found attribution in initialContent, ensuring it's preserved");
-        }
-
-        // Use initialContent as the priority source
-        console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
         setInitialValue(initialContent);
-
-        // Also notify the parent component if the callback is provided
         if (typeof onContentChange === 'function') {
-          console.log("Notifying parent component about initialContent");
           onContentChange(initialContent);
         }
-
-        // Focus the editor after setting content
+        // Only focus the editor on first mount, do not set cursor to any specific line
         setTimeout(() => {
           try {
-            // Use our safe wrapper for ReactEditor.focus
             const focused = safeReactEditor.focus(editor);
-
-            // If ReactEditor.focus failed, try DOM fallback
             if (!focused) {
               const editorElement = document.querySelector('[data-slate-editor=true]');
-              if (editorElement) {
-                editorElement.focus();
-                console.log('Editor focused via DOM fallback after initialization');
-              }
-            }
-
-            // If this is a reply with attribution, position cursor at the second paragraph
-            if (hasAttribution && initialContent.length >= 2) {
-              try {
-                // Create a point at the start of the second paragraph (index 1)
-                const point = { path: [1, 0], offset: 0 };
-                Transforms.select(editor, point);
-                console.log('Cursor positioned at second paragraph for reply');
-              } catch (selectError) {
-                console.error('Error selecting text in reply:', selectError);
-              }
+              if (editorElement) editorElement.focus();
             }
           } catch (error) {
             console.error("Error focusing editor after content initialization:", error);
@@ -604,60 +586,90 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   const renderElement = (props) => {
     const { attributes, children, element } = props;
-
-    // Check if this is an attribution paragraph (first paragraph in a reply)
-    // First check for the explicit isAttribution flag
-    const isAttributionParagraph = element.isAttribution ||
-      // Then fall back to content-based detection
-      (element.type === "paragraph" &&
-       element.children &&
-       element.children.some(child =>
-         (child.text && child.text.includes("Replying to")) ||
-         (child.type === "link" && child.children && child.children[0].text)
-       ));
-
+    const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
+    // Animate visibility, but always render the node
+    const isVisible = visibleParagraphs.includes(index);
+    const animationStyle = {
+      transition: 'opacity 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1)',
+      opacity: isVisible ? 1 : 0,
+      transform: isVisible ? 'translateY(0px)' : 'translateY(10px)',
+      willChange: 'opacity, transform',
+      pointerEvents: isVisible ? undefined : 'none',
+      maxHeight: isVisible ? undefined : 0,
+    };
     switch (element.type) {
       case "link":
         return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
-      case "paragraph":
+      case "paragraph": {
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
-
         // Attribution paragraphs - no special styling, just regular paragraph
-        if (isAttributionParagraph) {
+        if (element.isAttribution || (element.type === "paragraph" && element.children && element.children.some(child => (child.text && child.text.includes("Replying to")) || (child.type === "link" && child.children && child.children[0].text)))) {
           return (
-            <p {...attributes} className="flex items-start gap-3 py-2.5">
-              <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+            <div className="relative flex items-start gap-3 py-2.5 group" style={animationStyle}>
+              <span
+                contentEditable={false}
+                tabIndex={-1}
+                className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0 pointer-events-none opacity-80 group-hover:opacity-100"
+                aria-hidden="true"
+                style={{ userSelect: 'none', pointerEvents: 'none', alignSelf: 'center' }}
+              >
                 {index + 1}
               </span>
-              <span className="flex-1">{children}</span>
-            </p>
+              <p
+                {...attributes}
+                className="flex-1 ml-8 min-w-0"
+                style={{ position: 'relative' }}
+              >
+                {children}
+              </p>
+            </div>
           );
         }
-
         // Regular paragraph styling
         return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+          <div className="relative flex items-start gap-3 py-2.5 group" style={animationStyle}>
+            <span
+              contentEditable={false}
+              tabIndex={-1}
+              className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0 pointer-events-none opacity-80 group-hover:opacity-100"
+              aria-hidden="true"
+              style={{ userSelect: 'none', pointerEvents: 'none', alignSelf: 'center' }}
+            >
               {index + 1}
             </span>
-            <span className="flex-1">{children}</span>
-          </p>
+            <p
+              {...attributes}
+              className="flex-1 ml-8 min-w-0"
+              style={{ position: 'relative' }}
+            >
+              {children}
+            </p>
+          </div>
         );
-      default:
+      }
+      default: {
         const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
+          <div className="relative flex items-start gap-3 py-2.5 group" style={animationStyle}>
             <span
-              className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0"
-              style={{ transform: 'translateY(0.15rem)', pointerEvents: 'none' }}
-              tabIndex="-1"
+              contentEditable={false}
+              tabIndex={-1}
+              className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0 pointer-events-none opacity-80 group-hover:opacity-100"
               aria-hidden="true"
+              style={{ userSelect: 'none', pointerEvents: 'none', alignSelf: 'center' }}
             >
               {defaultIndex + 1}
             </span>
-            <span className="flex-1">{children}</span>
-          </p>
+            <p
+              {...attributes}
+              className="flex-1 ml-8 min-w-0"
+              style={{ position: 'relative' }}
+            >
+              {children}
+            </p>
+          </div>
         );
+      }
     }
   };
 
@@ -751,14 +763,20 @@ const withInlines = (editor) => {
     }
   }
 
-  // Override insertData to handle URL pasting
+  // Override insertData to handle URL pasting and collapse double newlines
   editor.insertData = data => {
     try {
-      const text = data.getData('text/plain')
-      if (text && isUrl(text)) {
-        wrapLink(editor, text)
+      let text = data.getData('text/plain');
+      if (text) {
+        // Collapse all double (or more) newlines to a single newline
+        text = text.replace(/\n{2,}/g, '\n');
+        if (isUrl(text)) {
+          wrapLink(editor, text);
+        } else {
+          insertText(text);
+        }
       } else {
-        insertData(data)
+        insertData(data);
       }
     } catch (error) {
       console.error('Error in insertData:', error);
@@ -1246,8 +1264,14 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
         renderLeaf={props => <Leaf {...props} />}
         placeholder="Start typing..."
         spellCheck={true}
-        autoFocus
-        onKeyDown={event => handleKeyDown(event, editor)}
+        autoFocus={false} // Don't auto-focus to avoid stealing focus from title
+        onKeyDown={event => {
+          // Only handle key events if this element or its children have focus
+          if (document.activeElement === editableRef.current ||
+              editableRef.current?.contains(document.activeElement)) {
+            handleKeyDown(event, editor);
+          }
+        }}
         className="outline-none min-h-[300px]"
       />
     </motion.div>

@@ -43,7 +43,6 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/search': 'Search Page',
   '/leaderboard': 'Leaderboard',
   '/subscription': 'Subscription Page',
-  '/account': 'Account Settings',
 
   // Auth pages
   '/auth/login': 'Login Page',
@@ -56,7 +55,6 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/account': 'Account Settings',
   '/account/subscription': 'Subscription Settings',
   '/account/payment': 'Payment Settings',
-  '/account/profile': 'Profile Settings',
   '/account/notifications': 'Notification Settings',
   '/account/security': 'Security Settings',
 

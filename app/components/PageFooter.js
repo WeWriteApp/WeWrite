@@ -105,6 +105,13 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
+      {/* Word and character count - moved above action buttons */}
+      {!isEditing && content && (
+        <div className="mb-4 flex flex-wrap gap-4 items-center">
+          <WordCounter content={content} />
+        </div>
+      )}
+
       <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
         {/* Action buttons - Follow and Add to Page */}
         {!isEditing && user && (
@@ -118,19 +125,9 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
                   pageOwnerId={page.userId}
                   className="w-full h-12 px-4 text-base font-semibold"
                 />
-                <a
-                  href={`/new?replyTo=${page.id}&page=${encodeURIComponent(page.title)}&username=${encodeURIComponent(page.username || '')}`}
-                  className="w-full"
-                >
-                  <Button variant="outline" className="w-full h-12 px-4 text-base font-semibold flex items-center gap-2 justify-center">
-                    <Reply className="h-5 w-5" />
-                    Reply to page
-                  </Button>
-                </a>
               </>
             )}
-            {/* Always show Add to Page button */}
-            <AddToPageButton page={page} className="w-full h-12 px-4 text-base font-semibold" />
+            {/* Remove AddToPageButton from here, it will be in PageActions */}
           </div>
         )}
 
@@ -143,13 +140,6 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
           className="action-buttons-container"
         />
       </div>
-
-      {/* Word and character count */}
-      {!isEditing && content && (
-        <div className="mt-4 mb-6 flex flex-wrap gap-4 items-center">
-          <WordCounter content={content} />
-        </div>
-      )}
 
       {/* Similar pages section removed to conserve resources */}
 

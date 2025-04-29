@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { updateSubscription } from '../../../firebase/subscription';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
+import { db } from '../../../firebase/database';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 // Helper function to determine tier based on amount
 function determineTierFromAmount(amount) {
@@ -53,6 +55,8 @@ export async function POST(request) {
                     subscription.metadata?.tier ||
                     determineTierFromAmount(subscription.items.data[0].price.unit_amount / 100);
 
+        console.log(`Webhook: Updating subscription for user ${userId} to active status`);
+
         // Update subscription in Firestore
         await updateSubscription(userId, {
           stripeSubscriptionId: session.subscription,
@@ -62,6 +66,15 @@ export async function POST(request) {
           tier: tier,
           billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
           billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Also update the user document to include tier information for quick access
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          tier: tier,
+          subscriptionStatus: 'active',
+          updatedAt: serverTimestamp()
         });
 
         break;
@@ -86,6 +99,8 @@ export async function POST(request) {
                       subscription.metadata?.tier ||
                       determineTierFromAmount(subscription.items.data[0].price.unit_amount / 100);
 
+          console.log(`Webhook: Updating subscription for user ${userId} to active status (invoice payment)`);
+
           // Update subscription in Firestore
           await updateSubscription(userId, {
             status: 'active',
@@ -94,6 +109,15 @@ export async function POST(request) {
             tier: tier,
             billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
             billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+
+          // Also update the user document to include tier information for quick access
+          const userRef = doc(db, 'users', userId);
+          await updateDoc(userRef, {
+            tier: tier,
+            subscriptionStatus: 'active',
+            updatedAt: serverTimestamp()
           });
         }
 
@@ -137,6 +161,8 @@ export async function POST(request) {
                     subscription.metadata?.tier ||
                     determineTierFromAmount(subscription.items.data[0].price.unit_amount / 100);
 
+        console.log(`Webhook: Updating subscription for user ${userId} to ${subscription.status} status`);
+
         // Update subscription in Firestore
         await updateSubscription(userId, {
           status: subscription.status,
@@ -145,6 +171,15 @@ export async function POST(request) {
           tier: tier,
           billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
           billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Also update the user document to include tier information for quick access
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          tier: tier,
+          subscriptionStatus: subscription.status,
+          updatedAt: serverTimestamp()
         });
 
         break;
@@ -160,9 +195,20 @@ export async function POST(request) {
           break;
         }
 
+        console.log(`Webhook: Updating subscription for user ${userId} to canceled status`);
+
         // Update subscription in Firestore
         await updateSubscription(userId, {
           status: 'canceled',
+          updatedAt: new Date().toISOString(),
+        });
+
+        // Also update the user document to remove tier information
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          tier: null,
+          subscriptionStatus: 'canceled',
+          updatedAt: serverTimestamp()
         });
 
         break;

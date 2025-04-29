@@ -65,12 +65,12 @@ const AddToPageButton = ({ page, className = "" }) => {
         {isAdding ? (
           <>
             <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
-            Adding...
+            <span className="text-sm">Adding...</span>
           </>
         ) : (
           <>
             <Plus className="h-4 w-4" />
-            Add to Page
+            <span className="text-sm">Add to Page</span>
           </>
         )}
       </Button>

@@ -13,9 +13,11 @@ const stripeSecretKey = getStripeSecretKey();
 const stripe = new Stripe(stripeSecretKey);
 console.log('Stripe initialized for payment history');
 
-export async function POST(request) {
+export async function GET(request) {
   try {
-    const { userId } = await request.json();
+    // Get userId from query parameters
+    const url = new URL(request.url);
+    let userId = url.searchParams.get('userId');
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -96,4 +98,9 @@ export async function POST(request) {
     console.error('Error fetching payment history:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
+}
+
+// Also support POST method for backward compatibility
+export async function POST(request) {
+  return GET(request);
 }
