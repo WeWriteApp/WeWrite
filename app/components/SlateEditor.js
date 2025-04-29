@@ -254,11 +254,33 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     }
   }, [initialContent, initialValue]);
 
-  // onchange handler with error handling
+  // onchange handler with error handling and attribution protection
   const onChange = (newValue) => {
     try {
       // Make sure newValue is valid before updating state
       if (Array.isArray(newValue) && newValue.length > 0) {
+        // Check if this is a reply with attribution
+        const hasAttribution = initialValue.length > 0 && (
+          // Check for explicit isAttribution flag
+          initialValue[0].isAttribution ||
+          // Fall back to content-based detection
+          (initialValue[0].type === "paragraph" &&
+           initialValue[0].children &&
+           initialValue[0].children.some(child =>
+             (child.text && child.text.includes("Replying to")) ||
+             (child.type === "link" && child.isPageLink)
+           ))
+        );
+
+        // If this is a reply, protect the attribution line
+        if (hasAttribution && initialValue.length > 0) {
+          // Ensure the attribution line hasn't been modified
+          if (JSON.stringify(newValue[0]) !== JSON.stringify(initialValue[0])) {
+            console.log('Protecting attribution line from changes');
+            newValue[0] = initialValue[0];
+          }
+        }
+
         // Update local state
         setLineCount(newValue.length);
 
@@ -622,14 +644,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       case "paragraph":
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
 
-        // Attribution paragraphs - no special styling, just regular paragraph
+        // Attribution paragraphs - special styling to make it visually distinct
         if (isAttributionParagraph) {
           return (
-            <p {...attributes} className="flex items-start gap-3 py-2.5">
+            <p {...attributes} className="flex items-start gap-3 py-3 mb-2 bg-muted/30 rounded-md border-l-2 border-primary/30">
               <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
                 {index + 1}
               </span>
-              <span className="flex-1">{children}</span>
+              <span className="flex-1 text-muted-foreground">{children}</span>
             </p>
           );
         }

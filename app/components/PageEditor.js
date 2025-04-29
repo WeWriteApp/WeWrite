@@ -194,12 +194,14 @@ const PageEditor = ({
     }
   }, [isReply, replyToId, onContentChange]);
 
-  // Focus the editor when entering edit mode
+  // Focus the editor when entering edit mode, but only if not a new page
   useEffect(() => {
-    if (editorRef.current) {
+    // Only auto-focus the editor if this is not a new page
+    // For new pages, we want to focus the title field first
+    if (editorRef.current && !isNewPage && !isReply) {
       editorRef.current.focus();
     }
-  }, []);
+  }, [isNewPage, isReply]);
 
   // Update currentEditorValue when the initialContent prop changes
   useEffect(() => {
@@ -216,11 +218,12 @@ const PageEditor = ({
     }
   }, [initialContent, isReply]);
 
-  // Position cursor for reply content
+  // Position cursor for reply content - improved version
   useEffect(() => {
     // Only run this when reply content is available and cursor hasn't been positioned yet
-    if (isReply && !cursorPositioned.current && editorRef.current) {
+    if (isReply && !cursorPositioned.current && editorRef.current && currentEditorValue?.length > 0) {
       console.log("Attempting to position cursor for reply content");
+
       // Set cursor positioned flag to prevent multiple positioning attempts
       cursorPositioned.current = true;
 
@@ -230,40 +233,42 @@ const PageEditor = ({
           const editor = editorRef.current;
 
           // Check if the editor has the necessary methods
-          if (editor && typeof editor.selection !== 'undefined') {
-            // Create a point at the start of the third paragraph (index 2) where "I'm responding..." is
-            const point = { path: [2, 0], offset: 0 };
+          if (editor) {
+            // Determine the correct paragraph to position cursor at
+            // If there's only one paragraph (the attribution), add a new paragraph
+            if (currentEditorValue.length === 1) {
+              try {
+                // Add a new paragraph at the end
+                Transforms.insertNodes(
+                  editor,
+                  { type: 'paragraph', children: [{ text: '' }] },
+                  { at: [1] }
+                );
+                console.log('Added new paragraph for reply');
+              } catch (insertError) {
+                console.error('Error inserting new paragraph:', insertError);
+              }
+            }
 
-            // Use our safe wrapper for ReactEditor.focus
+            // Now position cursor at the second paragraph (after attribution)
             try {
               // Use our safe wrapper for ReactEditor.focus
-              const focused = safeReactEditor.focus(editor);
+              safeReactEditor.focus(editor);
+
+              // Create a point at the start of the second paragraph (index 1)
+              const point = { path: [1, 0], offset: 0 };
 
               // Try to select the point
-              try {
-                Transforms.select(editor, point);
-                console.log('Cursor positioned at third paragraph for reply');
-              } catch (selectError) {
-                console.error('Error selecting text:', selectError);
-              }
+              Transforms.select(editor, point);
+              console.log('Cursor positioned at second paragraph for reply');
+            } catch (selectError) {
+              console.error('Error selecting text:', selectError);
 
-              // If ReactEditor.focus failed, try DOM fallback
-              if (!focused) {
-                console.warn('Editor focus failed, using DOM fallback');
-                const editorElement = document.querySelector('[data-slate-editor=true]');
-                if (editorElement) {
-                  editorElement.focus();
-                  console.log('Editor focused via DOM');
-                }
-              }
-            } catch (reactEditorError) {
-              console.error('Error using ReactEditor:', reactEditorError);
-
-              // Fallback to direct DOM manipulation
+              // Fallback to DOM focus
               const editorElement = document.querySelector('[data-slate-editor=true]');
               if (editorElement) {
                 editorElement.focus();
-                console.log('Editor focused via DOM');
+                console.log('Editor focused via DOM fallback');
               }
             }
           }
@@ -274,7 +279,7 @@ const PageEditor = ({
 
       return () => clearTimeout(timer);
     }
-  }, [isReply]);
+  }, [isReply, currentEditorValue]);
 
   // Handle content changes
   const handleContentChange = (value) => {
@@ -347,6 +352,14 @@ const PageEditor = ({
               setTitleError(false);
             }
           }}
+          onClick={(e) => {
+            // Prevent event propagation to stop editor focus
+            e.stopPropagation();
+          }}
+          onFocus={(e) => {
+            // Prevent auto-focusing on editor when title is focused
+            e.stopPropagation();
+          }}
           className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
           placeholder={isReply ? "Title your reply..." : "Enter a title..."}
           autoComplete="off"
@@ -360,21 +373,6 @@ const PageEditor = ({
 
       {/* Add separator line between actions and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
-
-      {/* Simple SlateEditor with no nested containers */}
-      <div className="debug-info mb-4 p-2 bg-muted/30 rounded-md">
-        <p className="text-xs text-muted-foreground">
-          Editor content available: {currentEditorValue ? 'Yes' : 'No'} |
-          Has attribution: {currentEditorValue && currentEditorValue.length > 0 &&
-            (currentEditorValue[0].isAttribution ||
-             (currentEditorValue[0].children &&
-              currentEditorValue[0].children.some(c =>
-                (c.text && c.text.includes('Replying to')) ||
-                (c.type === 'link')
-              ))
-            ) ? 'Yes' : 'No'}
-        </p>
-      </div>
 
       <SlateEditor
         ref={editorRef}
