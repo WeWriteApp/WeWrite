@@ -675,6 +675,11 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
+        onClick={(e) => {
+          // Don't let clicks in the editor container bubble up
+          // This prevents the editor from stealing focus from other elements
+          e.stopPropagation();
+        }}
       >
         <Slate
           editor={editor}
@@ -1240,8 +1245,14 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
         renderLeaf={props => <Leaf {...props} />}
         placeholder="Start typing..."
         spellCheck={true}
-        autoFocus
-        onKeyDown={event => handleKeyDown(event, editor)}
+        autoFocus={false} // Don't auto-focus to avoid stealing focus from title
+        onKeyDown={event => {
+          // Only handle key events if this element or its children have focus
+          if (document.activeElement === editableRef.current ||
+              editableRef.current?.contains(document.activeElement)) {
+            handleKeyDown(event, editor);
+          }
+        }}
         className="outline-none min-h-[300px]"
       />
     </motion.div>

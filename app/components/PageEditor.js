@@ -340,37 +340,57 @@ const PageEditor = ({
 
   return (
     <div className="editor-container" style={{ paddingBottom: '60px' }}>
-      <div className="mb-4">
-        <input
-          ref={titleInputRef}
-          type="text"
-          value={title}
-          onChange={(e) => {
-            setTitle(e.target.value);
-            if (e.target.value.trim().length > 0) {
-              setTitleError(false);
+      <div className="mb-4 relative">
+        {/* Completely isolated title input to prevent any interference */}
+        <div
+          className="title-input-container"
+          onClick={(e) => {
+            // Stop propagation to prevent editor focus
+            e.stopPropagation();
+            // Ensure title input gets focus
+            if (titleInputRef.current) {
+              titleInputRef.current.focus();
             }
           }}
-          onClick={(e) => {
-            // Prevent event propagation to stop editor focus
-            e.stopPropagation();
-            // Ensure the title field maintains focus
-            titleInputRef.current.focus();
-          }}
-          onFocus={(e) => {
-            // Prevent auto-focusing on editor when title is focused
-            e.stopPropagation();
-          }}
-          // Prevent the cursor from moving to the editor when typing in the title field
-          onKeyDown={(e) => {
-            e.stopPropagation();
-          }}
-          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
-          placeholder={isReply ? "Title your reply..." : "Enter a title..."}
-          autoComplete="off"
-          style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
-          autoFocus={isNewPage}
-        />
+        >
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={title}
+            onChange={(e) => {
+              console.log("Title onChange event:", e.target.value);
+              // Directly update the title state
+              setTitle(e.target.value);
+              // Clear error if title has content
+              if (e.target.value.trim().length > 0) {
+                setTitleError(false);
+              }
+            }}
+            // Completely isolate all events from the editor
+            onKeyDown={(e) => {
+              console.log("Title keydown:", e.key);
+              e.stopPropagation();
+            }}
+            onKeyUp={(e) => e.stopPropagation()}
+            onKeyPress={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
+            onBlur={(e) => e.stopPropagation()}
+            className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
+              titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
+            } rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
+            placeholder={isReply ? "Title your reply..." : "Enter a title..."}
+            autoComplete="off"
+            style={{
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              position: 'relative',
+              zIndex: 10 // Ensure it's above other elements
+            }}
+            autoFocus={isNewPage}
+          />
+        </div>
+
         {titleError && (
           <p className="text-destructive text-sm mt-1">Title is required</p>
         )}
