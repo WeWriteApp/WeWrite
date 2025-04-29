@@ -6,6 +6,7 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Globe, Lock } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useSearchParams } from "next/navigation";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
@@ -360,6 +361,10 @@ const PageEditor = ({
             // Prevent auto-focusing on editor when title is focused
             e.stopPropagation();
           }}
+          // Prevent the cursor from moving to the editor when typing in the title field
+          onKeyDown={(e) => {
+            e.stopPropagation();
+          }}
           className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'} rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal`}
           placeholder={isReply ? "Title your reply..." : "Enter a title..."}
           autoComplete="off"
@@ -414,19 +419,32 @@ const PageEditor = ({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
-              variant="default"
-              className="min-w-[80px]"
-            >
-              {isSaving ? (
-                <div className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-                  <span>Saving</span>
-                </div>
-              ) : "Save"}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
+                      variant="default"
+                      className="min-w-[80px]"
+                    >
+                      {isSaving ? (
+                        <div className="flex items-center gap-2">
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
+                          <span>Saving</span>
+                        </div>
+                      ) : "Save"}
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {!title.trim() && (
+                  <TooltipContent>
+                    <p>Add title to save</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>

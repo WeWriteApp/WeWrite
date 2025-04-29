@@ -644,14 +644,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       case "paragraph":
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
 
-        // Attribution paragraphs - special styling to make it visually distinct
+        // Attribution paragraphs - regular styling like other paragraphs
         if (isAttributionParagraph) {
           return (
-            <p {...attributes} className="flex items-start gap-3 py-3 mb-2 bg-muted/30 rounded-md border-l-2 border-primary/30">
+            <p {...attributes} className="flex items-start gap-3 py-2.5">
               <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
                 {index + 1}
               </span>
-              <span className="flex-1 text-muted-foreground">{children}</span>
+              <span className="flex-1">{children}</span>
             </p>
           );
         }
