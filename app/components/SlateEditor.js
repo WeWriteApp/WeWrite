@@ -210,36 +210,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           onContentChange(initialContent);
         }
 
-        // Focus the editor after setting content
-        setTimeout(() => {
-          try {
-            // Use our safe wrapper for ReactEditor.focus
-            const focused = safeReactEditor.focus(editor);
-
-            // If ReactEditor.focus failed, try DOM fallback
-            if (!focused) {
-              const editorElement = document.querySelector('[data-slate-editor=true]');
-              if (editorElement) {
-                editorElement.focus();
-                console.log('Editor focused via DOM fallback after initialization');
-              }
-            }
-
-            // If this is a reply with attribution, position cursor at the second paragraph
-            if (hasAttribution && initialContent.length >= 2) {
-              try {
-                // Create a point at the start of the second paragraph (index 1)
-                const point = { path: [1, 0], offset: 0 };
-                Transforms.select(editor, point);
-                console.log('Cursor positioned at second paragraph for reply');
-              } catch (selectError) {
-                console.error('Error selecting text in reply:', selectError);
-              }
-            }
-          } catch (error) {
-            console.error("Error focusing editor after content initialization:", error);
-          }
-        }, 100);
+        // We'll let the parent component handle cursor positioning
+        // This prevents the editor from stealing focus from the title field
       } catch (error) {
         console.error("Error setting editor content from initialContent:", error);
       }

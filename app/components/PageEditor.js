@@ -219,13 +219,13 @@ const PageEditor = ({
     }
   }, [initialContent, isReply]);
 
-  // Position cursor for reply content - improved version
+  // Position cursor for reply content - only on initial load
   useEffect(() => {
-    // Only run this when reply content is available and cursor hasn't been positioned yet
+    // Only run this once when the component mounts and content is available
     if (isReply && !cursorPositioned.current && editorRef.current && currentEditorValue?.length > 0) {
-      console.log("Attempting to position cursor for reply content");
+      console.log("Initial cursor positioning for reply content");
 
-      // Set cursor positioned flag to prevent multiple positioning attempts
+      // Set cursor positioned flag to prevent any future positioning attempts
       cursorPositioned.current = true;
 
       // Use a timeout to ensure the editor is fully initialized
@@ -253,24 +253,20 @@ const PageEditor = ({
 
             // Now position cursor at the second paragraph (after attribution)
             try {
-              // Use our safe wrapper for ReactEditor.focus
-              safeReactEditor.focus(editor);
+              // Only focus the editor if the title field is not currently focused
+              if (document.activeElement !== titleInputRef.current) {
+                // Use our safe wrapper for ReactEditor.focus
+                safeReactEditor.focus(editor);
 
-              // Create a point at the start of the second paragraph (index 1)
-              const point = { path: [1, 0], offset: 0 };
+                // Create a point at the start of the second paragraph (index 1)
+                const point = { path: [1, 0], offset: 0 };
 
-              // Try to select the point
-              Transforms.select(editor, point);
-              console.log('Cursor positioned at second paragraph for reply');
+                // Try to select the point
+                Transforms.select(editor, point);
+                console.log('Cursor positioned at second paragraph for reply');
+              }
             } catch (selectError) {
               console.error('Error selecting text:', selectError);
-
-              // Fallback to DOM focus
-              const editorElement = document.querySelector('[data-slate-editor=true]');
-              if (editorElement) {
-                editorElement.focus();
-                console.log('Editor focused via DOM fallback');
-              }
             }
           }
         } catch (error) {
@@ -280,7 +276,9 @@ const PageEditor = ({
 
       return () => clearTimeout(timer);
     }
-  }, [isReply, currentEditorValue]);
+  // Empty dependency array ensures this only runs once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle content changes
   const handleContentChange = (value) => {
@@ -356,6 +354,8 @@ const PageEditor = ({
           onClick={(e) => {
             // Prevent event propagation to stop editor focus
             e.stopPropagation();
+            // Ensure the title field maintains focus
+            titleInputRef.current.focus();
           }}
           onFocus={(e) => {
             // Prevent auto-focusing on editor when title is focused
