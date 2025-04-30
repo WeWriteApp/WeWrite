@@ -387,7 +387,7 @@ const LandingPage = () => {
                   Write, share, earn.
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-                  WeWrite is a social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
+                  WeWrite is a free speech platform and social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
                   <Button size="lg" variant="outline" asChild>

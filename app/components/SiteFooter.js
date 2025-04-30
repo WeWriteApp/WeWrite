@@ -23,7 +23,7 @@ export default function SiteFooter({ className = "" }) {
   const locationRef = useRef(null);
 
   const madeWithOptions = ["Made with agápē", "Vibe coded"];
-  const locationOptions = ["in New York City", "in America", "on Earth"];
+  const locationOptions = ["Made in America", "in New York City", "on Earth"];
 
   const animateTextChange = (element, newText, callback) => {
     if (!element) return;
