@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription, fixSubscription } from '../firebase/subscription';
+import { getUserSubscription, cancelSubscription, listenToUserSubscription, fixSubscription, cleanupSubscriptionData } from '../firebase/subscription';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink, Settings, Lock } from 'lucide-react';
+import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { SupporterIcon } from './SupporterIcon';
 import { doc, getDoc } from 'firebase/firestore';
@@ -41,17 +41,95 @@ export default function SubscriptionManagement() {
       };
 
       console.log('Subscription debug info:', debug);
-      setDebugInfo(debug);
+
+      // Check if user subscription data is valid
+      let userSubData = null;
+      if (userSubSnap.exists()) {
+        userSubData = userSubSnap.data();
+        const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
+        const missingFields = requiredFields.filter(field => !userSubData[field]);
+
+        if (missingFields.length > 0) {
+          console.warn(`User subscription data is missing fields: ${missingFields.join(', ')}`);
+          // If status is missing, set it to canceled
+          if (missingFields.includes('status')) {
+            userSubData.status = 'canceled';
+          }
+          // If amount is missing, set it to 0
+          if (missingFields.includes('amount')) {
+            userSubData.amount = 0;
+          }
+          // If tier is missing, set it to null
+          if (missingFields.includes('tier')) {
+            userSubData.tier = null;
+          }
+          // If stripeSubscriptionId is missing, set it to null
+          if (missingFields.includes('stripeSubscriptionId')) {
+            userSubData.stripeSubscriptionId = null;
+          }
+
+          // Fix the subscription data
+          await fixSubscription(userId, userSubData);
+        }
+      }
+
+      // Check if API subscription data is valid
+      let apiSubData = null;
+      if (apiSubSnap.exists()) {
+        apiSubData = apiSubSnap.data();
+        const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
+        const missingFields = requiredFields.filter(field => !apiSubData[field]);
+
+        if (missingFields.length > 0) {
+          console.warn(`API subscription data is missing fields: ${missingFields.join(', ')}`);
+          // If status is missing, set it to canceled
+          if (missingFields.includes('status')) {
+            apiSubData.status = 'canceled';
+          }
+          // If amount is missing, set it to 0
+          if (missingFields.includes('amount')) {
+            apiSubData.amount = 0;
+          }
+          // If tier is missing, set it to null
+          if (missingFields.includes('tier')) {
+            apiSubData.tier = null;
+          }
+          // If stripeSubscriptionId is missing, set it to null
+          if (missingFields.includes('stripeSubscriptionId')) {
+            apiSubData.stripeSubscriptionId = null;
+          }
+        }
+      }
 
       // If we find a subscription in the API path but not in the user path, copy it over
       if (!userSubSnap.exists() && apiSubSnap.exists()) {
         console.log('Found subscription in API path but not in user path, fixing...');
-        const apiData = apiSubSnap.data();
-        await fixSubscription(userId, apiData);
-        return apiData;
+        await fixSubscription(userId, apiSubData);
+        return apiSubData;
       }
 
-      return userSubSnap.exists() ? userSubSnap.data() : null;
+      // If we find a subscription in both locations, make sure they're in sync
+      if (userSubSnap.exists() && apiSubSnap.exists()) {
+        // If the status is different, sync them
+        if (userSubData.status !== apiSubData.status) {
+          console.log('Subscription status mismatch between user and API paths, fixing...');
+          // If either is canceled, use that status
+          if (userSubData.status === 'canceled' || apiSubData.status === 'canceled') {
+            const mergedData = {
+              ...userSubData,
+              ...apiSubData,
+              status: 'canceled',
+              tier: null,
+              amount: 0,
+              stripeSubscriptionId: null
+            };
+            await fixSubscription(userId, mergedData);
+            return mergedData;
+          }
+        }
+      }
+
+      return userSubSnap.exists() ? userSubData : null;
     } catch (error) {
       console.error('Error checking subscription locations:', error);
       return null;
@@ -128,7 +206,7 @@ export default function SubscriptionManagement() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!subscription || !subscription.stripeSubscriptionId) return;
+    if (!user) return;
 
     // Show confirmation dialog
     if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your supporter badge.')) {
@@ -140,43 +218,144 @@ export default function SubscriptionManagement() {
       setError(null);
       setSuccess(null);
 
-      // Call the cancel subscription function
-      const result = await cancelSubscription(subscription.stripeSubscriptionId);
+      // Check if subscription is missing stripeSubscriptionId
+      if (subscription && !subscription.stripeSubscriptionId) {
+        console.log('No stripeSubscriptionId found in subscription data, proceeding with force cleanup');
+
+        // Force cleanup of subscription data
+        if (user) {
+          try {
+            // First clear the current subscription state
+            setSubscription(null);
+
+            // Call the cancel subscription function with forceCleanup flag
+            const result = await fetch('/api/cancel-subscription', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                customerId: subscription?.stripeCustomerId || null,
+                forceCleanup: true // Signal that we want to clean up subscription data even if no active subscription
+              }),
+            });
+
+            const data = await result.json();
+            console.log('Cancellation with force cleanup result:', data);
+
+            // Then use our dedicated cleanup function to ensure all data is properly cleaned up
+            await cleanupSubscriptionData(user.uid);
+            console.log('Subscription data cleaned up successfully');
+
+            setSuccess('Your subscription data has been cleaned up successfully.');
+
+            // Force a page refresh after a short delay
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+
+            return;
+          } catch (cleanupError) {
+            console.error('Error cleaning up subscription data:', cleanupError);
+            setError('Error cleaning up subscription data. Please try again.');
+
+            // Force a page refresh anyway
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+
+            return;
+          }
+        }
+      }
+
+      // Normal flow for subscriptions with stripeSubscriptionId
+      console.log('Attempting to cancel subscription:', subscription?.stripeSubscriptionId || 'unknown');
+      const result = await cancelSubscription(subscription?.stripeSubscriptionId || null, subscription?.stripeCustomerId || null);
 
       // Check if this was a "no subscription found" case, which we now treat as success
       if (result.noSubscription) {
-        console.log('No active subscription found to cancel');
-        setSuccess('No active subscription found.');
+        console.log('No active subscription found to cancel, but data cleaned up');
+        setSuccess('Your subscription data has been cleaned up successfully.');
 
         // Force a complete refresh of the subscription data
         if (user) {
           // First clear the current subscription state
           setSubscription(null);
 
-          // Then fetch fresh data after a short delay to ensure Firestore has updated
-          setTimeout(async () => {
-            try {
-              const subscriptionData = await getUserSubscription(user.uid);
-              console.log('Refreshed subscription data:', subscriptionData);
-              setSubscription(subscriptionData);
+          // Then use our dedicated cleanup function to ensure all data is properly cleaned up
+          try {
+            await cleanupSubscriptionData(user.uid);
+            console.log('Subscription data cleaned up successfully after no subscription found');
 
-              // If we still have subscription data, force a page refresh
-              if (subscriptionData && subscriptionData.status !== 'canceled') {
-                console.log('Subscription data still exists, forcing page refresh');
-                window.location.reload();
-              }
-            } catch (refreshError) {
-              console.error('Error refreshing subscription data:', refreshError);
-            }
-          }, 1000);
+            // Force a page refresh after a short delay
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } catch (cleanupError) {
+            console.error('Error cleaning up subscription data after no subscription found:', cleanupError);
+            // Force a page refresh anyway
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          }
         }
         return;
       }
 
       setSuccess('Your subscription has been canceled successfully.');
+
+      // Force a complete refresh of the subscription data
+      if (user) {
+        // First clear the current subscription state
+        setSubscription(null);
+
+        // Then use our dedicated cleanup function to ensure all data is properly cleaned up
+        try {
+          await cleanupSubscriptionData(user.uid);
+          console.log('Subscription data cleaned up successfully after successful cancellation');
+
+          // Force a page refresh after a short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } catch (cleanupError) {
+          console.error('Error cleaning up subscription data after successful cancellation:', cleanupError);
+          // Force a page refresh anyway
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      } else {
+        // If no user, just refresh the page
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
     } catch (err) {
       console.error('Error canceling subscription:', err);
       setError(err.message || 'Failed to cancel subscription. Please try again.');
+
+      // Even if there's an error, try to clean up the subscription data
+      if (user) {
+        try {
+          console.log('Attempting to clean up subscription data after error');
+
+          // Use the dedicated cleanup function
+          await cleanupSubscriptionData(user.uid);
+
+          // Force a page refresh after a delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        } catch (cleanupError) {
+          console.error('Error cleaning up after failed cancellation:', cleanupError);
+          // Force a page refresh anyway
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        }
+      }
     } finally {
       setCancelLoading(false);
     }

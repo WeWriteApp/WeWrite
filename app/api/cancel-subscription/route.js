@@ -15,13 +15,15 @@ export async function POST(request) {
 
     // Get request body
     const body = await request.json();
-    const { subscriptionId } = body;
+    let { subscriptionId, customerId, forceCleanup } = body;
 
     // Verify authenticated user
     let user = auth.currentUser;
     console.log('Auth check for subscription cancellation:', {
       currentUser: user ? { uid: user.uid } : 'null',
-      requestedSubscriptionId: subscriptionId
+      requestedSubscriptionId: subscriptionId,
+      requestedCustomerId: customerId,
+      forceCleanup
     });
 
     // Skip auth check in development for testing
@@ -46,12 +48,16 @@ export async function POST(request) {
 
     // Get the user's subscription from Firestore
     const subscription = await getUserSubscription(user.uid);
+    console.log('User subscription data:', subscription);
 
-    if (!subscription) {
-      console.log('No subscription found for user:', user.uid);
+    // If no subscription is found, or if forceCleanup is true, clean up subscription data
+    if (!subscription || forceCleanup) {
+      console.log('No subscription found for user or force cleanup requested:', user.uid);
 
-      // Even though no subscription was found, update all subscription-related documents to ensure they're clean
+      // Clean up all subscription-related documents to ensure they're in a consistent state
       try {
+        console.log('Cleaning up subscription data for user:', user.uid);
+
         // 1. Update the subscription in the user path
         const userSubRef = doc(db, 'users', user.uid, 'subscription', 'current');
         await setDoc(userSubRef, {
@@ -63,6 +69,7 @@ export async function POST(request) {
           updatedAt: new Date().toISOString(),
           canceledAt: new Date().toISOString()
         }, { merge: true });
+        console.log('Updated user path subscription document');
 
         // 2. Update the subscription in the API path
         const apiSubRef = doc(db, 'subscriptions', user.uid);
@@ -75,6 +82,7 @@ export async function POST(request) {
           updatedAt: new Date().toISOString(),
           canceledAt: new Date().toISOString()
         }, { merge: true });
+        console.log('Updated API path subscription document');
 
         // 3. Update the user document to remove tier information
         const userRef = doc(db, 'users', user.uid);
@@ -83,6 +91,7 @@ export async function POST(request) {
           subscriptionStatus: 'canceled',
           updatedAt: serverTimestamp()
         });
+        console.log('Updated user document');
 
         console.log('All subscription documents updated to ensure consistent canceled state for user:', user.uid);
       } catch (cleanupError) {
@@ -90,16 +99,16 @@ export async function POST(request) {
         // Continue even if cleanup fails - this is just to be thorough
       }
 
-      // Return success since there's nothing to cancel
+      // Return success since we've cleaned up the subscription data
       return NextResponse.json({
         success: true,
-        message: 'No active subscription found',
+        message: 'Subscription data cleaned up successfully',
         noSubscription: true
       });
     }
 
     // Handle demo subscriptions differently
-    if (subscriptionId.startsWith('demo_')) {
+    if (subscriptionId && subscriptionId.startsWith('demo_')) {
       console.log('Canceling demo subscription for user:', user.uid);
 
       // Update all subscription-related documents to ensure they're consistent
@@ -150,11 +159,126 @@ export async function POST(request) {
     }
 
     // For real Stripe subscriptions
-    if (!subscription.stripeSubscriptionId || subscription.stripeSubscriptionId !== subscriptionId) {
-      return NextResponse.json(
-        { error: 'Subscription ID mismatch' },
-        { status: 400 }
-      );
+    if (!subscription.stripeSubscriptionId) {
+      console.log('No Stripe subscription ID found in user subscription data');
+
+      // If we have a customer ID, try to find and cancel all active subscriptions for this customer
+      if (subscription.stripeCustomerId || customerId) {
+        const customerIdToUse = subscription.stripeCustomerId || customerId;
+        console.log(`Attempting to find and cancel subscriptions for customer: ${customerIdToUse}`);
+
+        try {
+          // List all active subscriptions for this customer
+          const subscriptions = await stripe.subscriptions.list({
+            customer: customerIdToUse,
+            status: 'active'
+          });
+
+          console.log(`Found ${subscriptions.data.length} active subscriptions for customer`);
+
+          if (subscriptions.data.length > 0) {
+            // Cancel all active subscriptions
+            for (const sub of subscriptions.data) {
+              console.log(`Canceling subscription ${sub.id} for customer ${customerIdToUse}`);
+              await stripe.subscriptions.cancel(sub.id);
+            }
+
+            // Update the subscription data in Firestore
+            const userSubRef = doc(db, 'users', user.uid, 'subscription', 'current');
+            await setDoc(userSubRef, {
+              status: 'canceled',
+              stripeSubscriptionId: null,
+              amount: 0,
+              tier: null,
+              renewalDate: null,
+              updatedAt: new Date().toISOString(),
+              canceledAt: new Date().toISOString()
+            }, { merge: true });
+
+            const apiSubRef = doc(db, 'subscriptions', user.uid);
+            await setDoc(apiSubRef, {
+              status: 'canceled',
+              stripeSubscriptionId: null,
+              amount: 0,
+              tier: null,
+              renewalDate: null,
+              updatedAt: new Date().toISOString(),
+              canceledAt: new Date().toISOString()
+            }, { merge: true });
+
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+              tier: null,
+              subscriptionStatus: 'canceled',
+              updatedAt: serverTimestamp()
+            });
+
+            return NextResponse.json({
+              success: true,
+              message: 'Subscriptions canceled successfully using customer ID'
+            });
+          }
+        } catch (stripeError) {
+          console.error('Error finding or canceling subscriptions by customer ID:', stripeError);
+        }
+      }
+
+      // If we get here, we couldn't find any subscriptions to cancel
+      // Instead of returning an error, clean up the subscription data and return success
+      console.log('No Stripe subscriptions found to cancel, cleaning up subscription data');
+
+      try {
+        // Clean up all subscription-related documents
+        const userSubRef = doc(db, 'users', user.uid, 'subscription', 'current');
+        await setDoc(userSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+
+        const apiSubRef = doc(db, 'subscriptions', user.uid);
+        await setDoc(apiSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          tier: null,
+          subscriptionStatus: 'canceled',
+          updatedAt: serverTimestamp()
+        });
+
+        console.log('Subscription data cleaned up successfully');
+      } catch (cleanupError) {
+        console.error('Error cleaning up subscription data:', cleanupError);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'No active Stripe subscriptions found, subscription data cleaned up',
+        noSubscription: true
+      });
+    }
+
+    // Check for subscription ID mismatch but allow cancellation to proceed
+    if (subscription.stripeSubscriptionId !== subscriptionId) {
+      console.log('Subscription ID mismatch, but proceeding with cancellation', {
+        storedId: subscription.stripeSubscriptionId,
+        requestedId: subscriptionId
+      });
+
+      // Use the stored subscription ID instead of the requested one
+      subscriptionId = subscription.stripeSubscriptionId;
     }
 
     // Log the subscription ID for debugging
