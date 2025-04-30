@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../firebase/subscription';
+import { getUserSubscription, cancelSubscription, listenToUserSubscription, fixSubscription } from '../firebase/subscription';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink } from 'lucide-react';
+import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink, Settings, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { SupporterIcon } from './SupporterIcon';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/database';
+import { createPortalSession } from '../services/stripeService';
 
 export default function SubscriptionManagement() {
   const { user } = useAuth();
@@ -19,21 +22,110 @@ export default function SubscriptionManagement() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  // Function to check both possible subscription locations
+  const checkAllSubscriptionLocations = async (userId) => {
+    try {
+      // Check the location used by getUserSubscription
+      const userSubPath = doc(db, "users", userId, "subscription", "current");
+      const userSubSnap = await getDoc(userSubPath);
+
+      // Check the location used in the API route
+      const apiSubPath = doc(db, "subscriptions", userId);
+      const apiSubSnap = await getDoc(apiSubPath);
+
+      const debug = {
+        userSubPathExists: userSubSnap.exists(),
+        apiSubPathExists: apiSubSnap.exists(),
+        userSubData: userSubSnap.exists() ? userSubSnap.data() : null,
+        apiSubData: apiSubSnap.exists() ? apiSubSnap.data() : null
+      };
+
+      console.log('Subscription debug info:', debug);
+      setDebugInfo(debug);
+
+      // If we find a subscription in the API path but not in the user path, copy it over
+      if (!userSubSnap.exists() && apiSubSnap.exists()) {
+        console.log('Found subscription in API path but not in user path, fixing...');
+        const apiData = apiSubSnap.data();
+        await fixSubscription(userId, apiData);
+        return apiData;
+      }
+
+      return userSubSnap.exists() ? userSubSnap.data() : null;
+    } catch (error) {
+      console.error('Error checking subscription locations:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
 
     // Set up subscription listener
     console.log('Setting up subscription listener for user:', user.uid);
+
+    // First, directly fetch the subscription data
+    const fetchSubscriptionDirectly = async () => {
+      try {
+        console.log('Directly fetching subscription data for user:', user.uid);
+        const subscriptionData = await getUserSubscription(user.uid);
+        console.log('Direct subscription fetch result:', subscriptionData);
+
+        if (subscriptionData) {
+          setSubscription(subscriptionData);
+          setLoading(false);
+        } else {
+          // If no subscription found, check all possible locations
+          console.log('No subscription found in primary location, checking all locations...');
+          const allLocationsData = await checkAllSubscriptionLocations(user.uid);
+
+          if (allLocationsData) {
+            console.log('Found subscription in alternative location:', allLocationsData);
+            setSubscription(allLocationsData);
+            setLoading(false);
+          } else {
+            setLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error directly fetching subscription:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchSubscriptionDirectly();
+
+    // Then set up the real-time listener as a backup
     const unsubscribe = listenToUserSubscription(user.uid, (userSubscription) => {
       console.log('Subscription data received from listener:', userSubscription);
-      setSubscription(userSubscription);
-      setLoading(false);
+      if (userSubscription) {
+        setSubscription(userSubscription);
+        setLoading(false);
+      }
     });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
   }, [user]);
+
+  // Function to open Stripe Customer Portal for managing payment methods
+  const handleManagePaymentMethods = async () => {
+    if (!user || !subscription || !subscription.stripeCustomerId) return;
+
+    try {
+      setLoading(true);
+      const result = await createPortalSession(user.uid);
+      if (result.error) {
+        console.error('Error creating portal session:', result.error);
+      }
+      // The portal session redirect is handled by the createPortalSession function
+    } catch (error) {
+      console.error('Error opening payment portal:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCancelSubscription = async () => {
     if (!subscription || !subscription.stripeSubscriptionId) return;
@@ -49,7 +141,37 @@ export default function SubscriptionManagement() {
       setSuccess(null);
 
       // Call the cancel subscription function
-      await cancelSubscription(subscription.stripeSubscriptionId);
+      const result = await cancelSubscription(subscription.stripeSubscriptionId);
+
+      // Check if this was a "no subscription found" case, which we now treat as success
+      if (result.noSubscription) {
+        console.log('No active subscription found to cancel');
+        setSuccess('No active subscription found.');
+
+        // Force a complete refresh of the subscription data
+        if (user) {
+          // First clear the current subscription state
+          setSubscription(null);
+
+          // Then fetch fresh data after a short delay to ensure Firestore has updated
+          setTimeout(async () => {
+            try {
+              const subscriptionData = await getUserSubscription(user.uid);
+              console.log('Refreshed subscription data:', subscriptionData);
+              setSubscription(subscriptionData);
+
+              // If we still have subscription data, force a page refresh
+              if (subscriptionData && subscriptionData.status !== 'canceled') {
+                console.log('Subscription data still exists, forcing page refresh');
+                window.location.reload();
+              }
+            } catch (refreshError) {
+              console.error('Error refreshing subscription data:', refreshError);
+            }
+          }, 1000);
+        }
+        return;
+      }
 
       setSuccess('Your subscription has been canceled successfully.');
     } catch (err) {
@@ -95,6 +217,7 @@ export default function SubscriptionManagement() {
         <CardDescription>Manage your WeWrite subscription</CardDescription>
       </CardHeader>
       <CardContent>
+
         {error && (
           <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
             <div className="flex items-start">
@@ -115,17 +238,17 @@ export default function SubscriptionManagement() {
 
         {isActive && (
           <div className="space-y-4">
-            <Link href="/account/subscription/manage" className="block">
-              <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer">
+            <Link href="/account/subscription/manage" className="block w-full">
+              <div className="flex items-center gap-3 p-4 bg-primary/5 border-2 border-primary rounded-lg hover:border-primary hover:shadow-lg transition-all cursor-pointer group">
                 <div className="flex-shrink-0">
                   <SupporterIcon tier={subscription.tier} status="active" size="lg" />
                 </div>
                 <div className="flex-grow">
-                  <h3 className="font-medium flex items-center gap-2">
+                  <h3 className="font-medium flex items-center gap-2 text-primary">
                     <Check className="h-4 w-4 text-green-500" />
                     <span>Active Subscription</span>
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-foreground">
                     {getTierName(subscription.tier)} - ${subscription.amount}/month
                   </p>
                   {subscription.billingCycleEnd && (
@@ -135,8 +258,8 @@ export default function SubscriptionManagement() {
                     </p>
                   )}
                 </div>
-                <div className="flex-shrink-0 text-muted-foreground">
-                  <ExternalLink className="h-4 w-4" />
+                <div className="flex-shrink-0 text-primary group-hover:text-primary">
+                  <ExternalLink className="h-5 w-5" />
                 </div>
               </div>
             </Link>
@@ -147,7 +270,7 @@ export default function SubscriptionManagement() {
                 size="sm"
                 className="flex items-center gap-2"
                 onClick={handleCancelSubscription}
-                disabled={cancelLoading}
+                disabled={cancelLoading || loading}
               >
                 {cancelLoading ? (
                   <>
@@ -167,12 +290,20 @@ export default function SubscriptionManagement() {
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
-                  asChild
+                  onClick={handleManagePaymentMethods}
+                  disabled={loading}
                 >
-                  <Link href="/subscription">
-                    <CreditCard className="h-4 w-4" />
-                    <span>Manage Payment Methods</span>
-                  </Link>
+                  {loading ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4" />
+                      <span>Manage Payment Methods</span>
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -181,25 +312,30 @@ export default function SubscriptionManagement() {
 
         {isCanceled && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg">
-              <div className="flex-shrink-0">
-                <SupporterIcon tier={null} status="canceled" size="lg" />
+            <Link href="/account/subscription/manage" className="block w-full">
+              <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer group">
+                <div className="flex-shrink-0">
+                  <SupporterIcon tier={null} status="canceled" size="lg" />
+                </div>
+                <div className="flex-grow">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <X className="h-4 w-4 text-destructive" />
+                    <span>Subscription Canceled</span>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your subscription has been canceled.
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-muted-foreground group-hover:text-foreground">
+                  <ExternalLink className="h-5 w-5" />
+                </div>
               </div>
-              <div className="flex-grow">
-                <h3 className="font-medium flex items-center gap-2">
-                  <X className="h-4 w-4 text-destructive" />
-                  <span>Subscription Canceled</span>
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Your subscription has been canceled.
-                </p>
-              </div>
-            </div>
+            </Link>
 
             <Button
               variant="default"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
               asChild
             >
               <Link href="/subscription">
@@ -212,22 +348,27 @@ export default function SubscriptionManagement() {
 
         {isPastDue && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <div className="flex-shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
+            <Link href="/account/subscription/manage" className="block w-full">
+              <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg hover:shadow-sm transition-all cursor-pointer group">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-amber-500" />
+                </div>
+                <div className="flex-grow">
+                  <h3 className="font-medium text-amber-800 dark:text-amber-300">Payment Issue</h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    There was a problem with your last payment. Please update your payment method.
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-amber-500 group-hover:text-amber-600">
+                  <ExternalLink className="h-5 w-5" />
+                </div>
               </div>
-              <div className="flex-grow">
-                <h3 className="font-medium text-amber-800 dark:text-amber-300">Payment Issue</h3>
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                  There was a problem with your last payment. Please update your payment method.
-                </p>
-              </div>
-            </div>
+            </Link>
 
             <Button
               variant="default"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
               asChild
             >
               <Link href="/subscription">
@@ -240,17 +381,22 @@ export default function SubscriptionManagement() {
 
         {isPending && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex-shrink-0">
-                <Clock className="h-6 w-6 text-blue-500" />
+            <Link href="/account/subscription/manage" className="block w-full">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:shadow-sm transition-all cursor-pointer group">
+                <div className="flex-shrink-0">
+                  <Clock className="h-6 w-6 text-blue-500" />
+                </div>
+                <div className="flex-grow">
+                  <h3 className="font-medium text-blue-800 dark:text-blue-300">Subscription Pending</h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-400">
+                    Your subscription is being processed. This may take a few moments.
+                  </p>
+                </div>
+                <div className="flex-shrink-0 text-blue-500 group-hover:text-blue-600">
+                  <ExternalLink className="h-5 w-5" />
+                </div>
               </div>
-              <div className="flex-grow">
-                <h3 className="font-medium text-blue-800 dark:text-blue-300">Subscription Pending</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Your subscription is being processed. This may take a few moments.
-                </p>
-              </div>
-            </div>
+            </Link>
           </div>
         )}
 
@@ -271,7 +417,7 @@ export default function SubscriptionManagement() {
             <Button
               variant="default"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
               asChild
             >
               <Link href="/subscription">
@@ -282,8 +428,8 @@ export default function SubscriptionManagement() {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-center border-t pt-4 text-xs text-muted-foreground">
-        <p>
+      <CardFooter className="flex justify-center border-t pt-4 text-xs text-muted-foreground/70 dark:text-muted-foreground/30">
+        <p className="italic">
           Subscriptions are processed securely through Stripe.
         </p>
       </CardFooter>

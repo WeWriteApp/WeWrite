@@ -1,5 +1,6 @@
 import { Switch } from "./ui/switch";
 import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
+import { AuthContext } from "../providers/AuthProvider";
 import {
   createEditor,
   Transforms,
@@ -47,7 +48,6 @@ const safeReactEditor = {
   }
 };
 import { DataContext } from "../providers/DataProvider";
-import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
 import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
@@ -96,10 +96,9 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
  * @param {Function} onContentChange - Function to update the parent component's state with editor changes
  * @param {Ref} ref - Reference to access editor methods from parent components
  */
-const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, onContentChange }, ref) => {
+const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = null, onContentChange, onInsert }, ref) => {
   const [editor] = useState(() => withInlines(withHistory(withReact(createEditor()))));
   const [showLinkEditor, setShowLinkEditor] = useState(false);
-  const [linkEditorPosition, setLinkEditorPosition] = useState({});
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
   const [selectedLinkPath, setSelectedLinkPath] = useState(null);
   const [initialLinkValues, setInitialLinkValues] = useState({}); // New state to store initial link values
@@ -135,23 +134,27 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       return [{ type: "paragraph", children: [{ text: "" }] }];
     }
   });
-  const [visibleParagraphs, setVisibleParagraphs] = useState([]); // Track which paragraphs are visible
+  // Initialize with all paragraphs visible if initialValue is available
+  const [visibleParagraphs, setVisibleParagraphs] = useState(
+    initialValue && Array.isArray(initialValue)
+      ? Array.from({ length: initialValue.length }, (_, i) => i)
+      : []
+  );
   const revealTimeoutRef = useRef(null);
 
   // Progressive reveal effect on mount or when initialValue changes
   useEffect(() => {
     if (!initialValue || !Array.isArray(initialValue)) return;
-    setVisibleParagraphs([]); // Reset
-    if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
-    let i = 0;
-    function revealNext() {
-      setVisibleParagraphs((prev) => [...prev, i]);
-      i++;
-      if (i < initialValue.length) {
-        revealTimeoutRef.current = setTimeout(revealNext, 5);
-      }
+
+    // Instead of progressive reveal, make all paragraphs visible immediately
+    const allParagraphIndices = Array.from({ length: initialValue.length }, (_, i) => i);
+    setVisibleParagraphs(allParagraphIndices);
+
+    // Clean up any existing timeout
+    if (revealTimeoutRef.current) {
+      clearTimeout(revealTimeoutRef.current);
     }
-    revealNext();
+
     return () => {
       if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
     };
@@ -196,6 +199,34 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       } catch (error) {
         console.error('Error focusing editor:', error);
       }
+    },
+    // Add a method to directly open the link editor
+    openLinkEditor: () => {
+      try {
+        console.log("openLinkEditor called");
+        // Focus the editor first
+        safeReactEditor.focus(editor);
+
+        // Get the current selection or create one at the end if none exists
+        let selection = editor.selection;
+        if (!selection) {
+          console.log("No selection, creating one at the end");
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+          selection = editor.selection;
+        }
+
+        // Show the link editor directly
+        setShowLinkEditor(true);
+        setSelectedLinkElement(null);
+        setSelectedLinkPath(null);
+        console.log("Link editor shown directly");
+      } catch (error) {
+        console.error('Error opening link editor:', error);
+        // Fallback if all else fails
+        setShowLinkEditor(true);
+        console.log("Link editor shown via error fallback");
+      }
     }
   }));
 
@@ -227,6 +258,41 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       }
     }
   }, [initialContent, onContentChange, editor]);
+
+  // Add a global event listener for the @ key
+  useEffect(() => {
+    const handleGlobalKeyDown = (event) => {
+      if (event.key === "@") {
+        console.log("@ key pressed globally");
+
+        // Check if we're in the editor
+        const editorElement = document.querySelector('[data-slate-editor=true]');
+        const isEditorFocused = document.activeElement === editorElement ||
+                               editorElement?.contains(document.activeElement);
+
+        if (isEditorFocused) {
+          console.log("Editor is focused, showing link editor");
+          event.preventDefault();
+
+          // The link editor is centered via CSS, no need to set position
+
+          // Show the link editor directly
+          setShowLinkEditor(true);
+          setSelectedLinkElement(null);
+          setSelectedLinkPath(null);
+          console.log("Link editor shown from global @ key handler");
+        }
+      }
+    };
+
+    // Add the event listener
+    document.addEventListener("keydown", handleGlobalKeyDown);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
 
   // Make sure initialValue is properly set from initialContent
   useEffect(() => {
@@ -398,10 +464,17 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
     if (event.key === "@") {
       event.preventDefault();
-      const { selection } = editor;
+      console.log("@ key pressed, opening link editor");
 
-      if (selection) {
-        showLinkEditorMenu(editor, selection);
+      // Don't insert the @ symbol, just show the link editor directly
+      try {
+        // Show the link editor directly
+        setShowLinkEditor(true);
+        setSelectedLinkElement(null);
+        setSelectedLinkPath(null);
+        console.log("Link editor shown directly from @ key handler");
+      } catch (error) {
+        console.error("Error showing link editor from @ key:", error);
       }
     }
 
@@ -411,65 +484,20 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const showLinkEditorMenu = (editor, editorSelection) => {
+    console.log("showLinkEditorMenu called", { editor: !!editor, editorSelection: !!editorSelection });
     try {
-      // First try to use the editor selection if provided
-      if (editor && editorSelection) {
-        try {
-          // Use our safe wrapper for ReactEditor.toDOMRange
-          const domSelection = safeReactEditor.toDOMRange(editor, editorSelection);
-          if (domSelection) {
-            const rect = domSelection.getBoundingClientRect();
-
-            setLinkEditorPosition({
-              top: rect.bottom + window.pageYOffset,
-              left: rect.left + window.pageXOffset,
-            });
-
-            setShowLinkEditor(true);
-            setSelectedLinkElement(null);
-            setSelectedLinkPath(null);
-            return;
-          }
-        } catch (editorError) {
-          console.warn("Error getting DOM range from editor selection:", editorError);
-          // Continue to fallback method
-        }
-      }
-
-      // Fall back to window.getSelection()
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        console.warn("No selection available");
-        // Position the link editor in the center as a fallback
-        setLinkEditorPosition({
-          top: window.innerHeight / 2,
-          left: window.innerWidth / 2,
-        });
-        setShowLinkEditor(true);
-        return;
-      }
-
-      const range = selection.getRangeAt(0).cloneRange();
-      const rect = range.getBoundingClientRect();
-
-      setLinkEditorPosition({
-        top: rect.bottom + window.pageYOffset,
-        left: rect.left + window.pageXOffset,
-      });
-
+      // Show the link editor directly
       setShowLinkEditor(true);
       setSelectedLinkElement(null);
       setSelectedLinkPath(null);
+      console.log("Link editor shown directly from showLinkEditorMenu");
     } catch (error) {
       console.error("Error showing link editor menu:", error);
-      // Position the link editor in the center if all else fails
-      setLinkEditorPosition({
-        top: window.innerHeight / 2,
-        left: window.innerWidth / 2,
-      });
+      // Fallback if all else fails
       setShowLinkEditor(true);
       setSelectedLinkElement(null);
       setSelectedLinkPath(null);
+      console.log("Link editor shown via error fallback");
     }
   };
 
@@ -480,7 +508,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     setInitialLinkValues({
       text: element.children[0]?.text || "",
       pageId: element.pageId || null,
-      pageTitle: element.pageTitle || ""
+      pageTitle: element.pageTitle || "",
+      url: element.url || "" // Add the URL to the initial values
     });
     setShowLinkEditor(true);
   };
@@ -587,23 +616,22 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   const renderElement = (props) => {
     const { attributes, children, element } = props;
     const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
-    // Animate visibility, but always render the node
-    const isVisible = visibleParagraphs.includes(index);
+
+    // Simple animation style with no visibility conditions
     const animationStyle = {
       transition: 'opacity 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1)',
-      opacity: isVisible ? 1 : 0,
-      transform: isVisible ? 'translateY(0px)' : 'translateY(10px)',
+      opacity: 1,
+      transform: 'translateY(0px)',
       willChange: 'opacity, transform',
-      pointerEvents: isVisible ? undefined : 'none',
-      maxHeight: isVisible ? undefined : 0,
     };
     switch (element.type) {
       case "link":
         return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
       case "paragraph": {
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
-        // Attribution paragraphs - no special styling, just regular paragraph
-        if (element.isAttribution || (element.type === "paragraph" && element.children && element.children.some(child => (child.text && child.text.includes("Replying to")) || (child.type === "link" && child.children && child.children[0].text)))) {
+        // Attribution paragraphs - render as normal text without special styling
+        // Only identify paragraphs that have the explicit isAttribution flag or contain "Replying to" text
+        if (element.isAttribution || (element.type === "paragraph" && element.children && element.children.some(child => child.text && child.text.includes("Replying to")))) {
           return (
             <div className="relative flex items-start gap-3 py-2.5 group" style={animationStyle}>
               <span
@@ -617,8 +645,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
               </span>
               <p
                 {...attributes}
-                className="flex-1 ml-8 min-w-0"
+                className="flex-1 ml-8 min-w-0 attribution-paragraph"
                 style={{ position: 'relative' }}
+                data-attribution="true"
               >
                 {children}
               </p>
@@ -690,15 +719,15 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     <LineSettingsProvider>
       <motion.div
         className="relative rounded-lg bg-background"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 1 }} // Start fully visible
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
       >
         <Slate
           editor={editor}
           initialValue={initialValue}
           onChange={onChange}
-          key={JSON.stringify(initialValue)} // Force re-creation when initialValue changes
+          // Remove the key prop that was causing re-creation and cursor jumps
         >
           <div className="flex">
             <div className="flex-grow">
@@ -708,6 +737,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
                   editor={editor}
                   handleKeyDown={handleKeyDown}
                   renderElement={renderElement}
+                  setShowLinkEditor={setShowLinkEditor}
+                  setSelectedLinkElement={setSelectedLinkElement}
+                  setSelectedLinkPath={setSelectedLinkPath}
                 />
               </div>
             </div>
@@ -717,12 +749,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
       {showLinkEditor && (
         <LinkEditor
-          position={linkEditorPosition}
           onSelect={handleSelection}
           setShowLinkEditor={setShowLinkEditor}
           initialText={initialLinkValues.text || ""}
           initialPageId={initialLinkValues.pageId || null}
           initialPageTitle={initialLinkValues.pageTitle || ""}
+          initialUrl={initialLinkValues.url || ""}
         />
       )}
     </LineSettingsProvider>
@@ -893,7 +925,7 @@ const wrapLink = (editor, url, pageId, pageTitle) => {
     // For page links, ensure they never have @ symbols
     text = formatPageTitle(text);
   } else if (isUserLink(url)) {
-    // For user links, ensure they have @ symbols
+    // For user links, ensure they never have @ symbols
     text = formatUsername(text);
   }
 
@@ -963,6 +995,66 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
 
   // We'll handle deletion in the editor's main keydown handler instead
 
+  // Determine if this link is part of an attribution line
+  const isInAttribution = React.useMemo(() => {
+    try {
+      // Find the parent paragraph
+      const path = ReactEditor.findPath(editor, element);
+      if (path.length >= 2) {
+        const paragraphPath = path.slice(0, path.length - 2);
+        const [paragraphNode] = Editor.node(editor, paragraphPath);
+
+        // Check if the paragraph has the isAttribution flag
+        // or if it contains text that includes "Replying to"
+        // Using the same improved logic as in renderElement
+        return paragraphNode?.isAttribution === true ||
+               (paragraphNode?.children?.some(child =>
+                 child.text && child.text.includes("Replying to")
+               ));
+      }
+    } catch (error) {
+      console.error("Error checking if link is in attribution:", error);
+    }
+    return false;
+  }, [editor, element]);
+
+  // No special styling for links in attribution lines - make them look like regular text
+  const linkStyle = isInAttribution ? {
+    backgroundColor: 'transparent !important',
+    color: 'inherit !important',
+    borderRadius: '0 !important',
+    padding: '0 !important',
+    margin: '0 !important',
+    display: 'inline !important',
+    whiteSpace: 'normal !important',
+    alignItems: 'baseline !important',
+    fontSize: 'inherit !important',
+    fontWeight: 'inherit !important',
+    border: 'none !important',
+    textDecoration: 'none !important',
+    boxShadow: 'none !important',
+    cursor: 'text !important'
+  } : {};
+
+  // If this is in an attribution line, render as plain text
+  if (isInAttribution) {
+    return (
+      <span
+        {...attributes}
+        ref={ref}
+        contentEditable={false}
+        style={linkStyle}
+        className="attribution-text"
+        data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
+        data-user-id={isUserLinkType ? (element.userId || '') : undefined}
+        data-link-type={linkTypeClass}
+      >
+        {children}
+      </span>
+    );
+  }
+
+  // Otherwise render as a normal pill link
   return (
     <a
       {...attributes}
@@ -996,23 +1088,47 @@ const isLinkActive = (editor) => {
   return !!link;
 };
 
-const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
+const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialUrl = "" }) => {
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
-  const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
-  const [externalUrl, setExternalUrl] = useState("");
+  const [externalUrl, setExternalUrl] = useState(initialUrl);
   const [showAuthor, setShowAuthor] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
+  const { user } = useContext(AuthContext); // Get the current user from AuthContext
+
+  // Determine if the URL is an external link and set the activeTab accordingly
+  const isUrlExternal = isExternalLink(initialUrl);
+  const [activeTab, setActiveTab] = useState(isUrlExternal ? "external" : "page"); // "page" or "external"
+
+  // Add event listener for Escape key
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowLinkEditor(false);
+      }
+    };
+
+    // Add the event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [setShowLinkEditor]);
+
+  // Determine if we're editing an existing link or creating a new one
+  const isEditing = !!initialPageId || !!initialText;
 
   // Track initial state for change detection
   const initialState = React.useRef({
     displayText: initialText,
     pageTitle: initialPageTitle,
     selectedPageId: initialPageId,
-    externalUrl: "",
+    externalUrl: initialUrl,
     showAuthor: false,
-    activeTab: "page"
+    activeTab: isUrlExternal ? "external" : "page"
   });
 
   // Enable save if any field changes
@@ -1024,13 +1140,52 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
       externalUrl !== initialState.current.externalUrl ||
       showAuthor !== initialState.current.showAuthor ||
       activeTab !== initialState.current.activeTab;
-    setHasChanged(changed);
-  }, [displayText, pageTitle, selectedPageId, externalUrl, showAuthor, activeTab]);
+
+    // Always enable the save button when toggling "Show author" on an existing link
+    const isEditingExistingLink = isEditing && selectedPageId;
+    const showAuthorChanged = showAuthor !== initialState.current.showAuthor;
+
+    setHasChanged(changed || (isEditingExistingLink && showAuthorChanged));
+  }, [displayText, pageTitle, selectedPageId, externalUrl, showAuthor, activeTab, isEditing]);
 
   // Validation helpers
   const isPageValid = activeTab === 'page' && !!selectedPageId;
   const isExternalValid = activeTab === 'external' && externalUrl && (externalUrl.startsWith('http://') || externalUrl.startsWith('https://'));
   const canSave = hasChanged && ((activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid));
+
+  // Handle changes to the display text input
+  const handleDisplayTextChange = (e) => {
+    setDisplayText(e.target.value);
+  };
+
+  // Handle changes to the external URL input
+  const handleExternalUrlChange = (e) => {
+    setExternalUrl(e.target.value);
+  };
+
+  // Handle submission of external link
+  const handleExternalSubmit = () => {
+    if (isExternalValid) {
+      onSelect({
+        url: externalUrl,
+        displayText: displayText,
+        isExternal: true
+      });
+    }
+  };
+
+  // Handle submission of page link
+  const handleSave = (page) => {
+    if (isPageValid) {
+      // If showAuthor is enabled, add the author information to the page object
+      if (showAuthor) {
+        // Use the current user's username or default to "Anonymous"
+        const authorUsername = user?.username || "Anonymous";
+        page.displayText = `${page.title} by ${authorUsername}`;
+      }
+      onSelect(page);
+    }
+  };
 
   const handleClose = () => {
     setShowLinkEditor(false);
@@ -1150,10 +1305,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                     className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
                   />
                 </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch-ext" />
-                  <label htmlFor="show-author-switch-ext" className="text-sm font-medium select-none">Show author</label>
-                </div>
+
                 <button
                   onClick={handleExternalSubmit}
                   disabled={!canSave}
@@ -1171,7 +1323,14 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
 };
 
 // Use forwardRef for EditorContent so Editable can receive the ref
-const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }, editableRef) => {
+const EditorContent = React.forwardRef(({
+  editor,
+  handleKeyDown,
+  renderElement,
+  setShowLinkEditor,
+  setSelectedLinkElement,
+  setSelectedLinkPath
+}, editableRef) => {
   const { lineMode } = useLineSettings();
   const [selectedParagraph, setSelectedParagraph] = useState(null);
 
@@ -1253,9 +1412,9 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
   return (
     <motion.div
       className={`p-2 ${getLineModeStyles()} w-full`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+      initial={{ opacity: 1 }} // Start fully visible
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       layout
     >
       <Editable
@@ -1266,7 +1425,21 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
         spellCheck={true}
         autoFocus={false} // Don't auto-focus to avoid stealing focus from title
         onKeyDown={event => {
-          // Only handle key events if this element or its children have focus
+          console.log("Key pressed in editor:", event.key);
+          // Always handle the @ key regardless of focus
+          if (event.key === "@") {
+            event.preventDefault();
+            console.log("@ key pressed in onKeyDown handler");
+
+            // Show the link editor directly
+            setShowLinkEditor(true);
+            setSelectedLinkElement(null);
+            setSelectedLinkPath(null);
+            console.log("Link editor shown directly from @ key in onKeyDown");
+            return;
+          }
+
+          // For other keys, only handle if this element or its children have focus
           if (document.activeElement === editableRef.current ||
               editableRef.current?.contains(document.activeElement)) {
             handleKeyDown(event, editor);

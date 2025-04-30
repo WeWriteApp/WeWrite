@@ -297,7 +297,22 @@ export default function SubscriptionPage() {
       } else {
         // Call the cancel subscription function for real Stripe subscriptions
         console.log('Canceling real subscription:', subscription.stripeSubscriptionId);
-        await cancelSubscription(subscription.stripeSubscriptionId);
+        const result = await cancelSubscription(subscription.stripeSubscriptionId);
+
+        // Check if this was a "no subscription found" case, which we now treat as success
+        if (result.noSubscription) {
+          console.log('No active subscription found to cancel');
+
+          // First set subscription to null to force UI update
+          setSubscription(null);
+
+          // Then wait a moment and force a complete page refresh
+          setTimeout(() => {
+            console.log('Forcing page refresh to update subscription state');
+            window.location.reload();
+          }, 1000);
+          return;
+        }
       }
 
       // No need to update local state manually
@@ -347,26 +362,101 @@ export default function SubscriptionPage() {
         amount = selectedTierObj.amount as number;
       }
 
-      console.log('Creating checkout session with:', {
-        userId: user.uid,
-        amount,
-        tierName: selectedTierObj.name
-      });
+      // Check if the user has an existing subscription with payment methods
+      // This includes active, canceled, or past_due subscriptions
+      if (subscription &&
+          subscription.stripeCustomerId &&
+          (subscription.status === 'active' ||
+           subscription.status === 'canceled' ||
+           subscription.status === 'past_due')) {
 
-      // Create a checkout session with Stripe
-      // Don't use a fixed priceId, let the API create a dynamic price based on the amount
-      const response = await createCheckoutSession({
-        priceId: null, // Let the API create a dynamic price
-        userId: user.uid,
-        amount: amount,
-        tierName: selectedTierObj.name
-      });
+        console.log('User has an existing subscription, using reactivate-subscription endpoint to reuse payment method');
 
-      if (response.error) {
-        throw new Error(response.error);
+        // Use the reactivate-subscription endpoint which will reuse the existing payment method
+        const response = await fetch('/api/reactivate-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.uid,
+            amount: amount,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to update subscription');
+        }
+
+        // If we have a client secret, we need to confirm the payment
+        if (data.clientSecret) {
+          const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+          if (!stripe) {
+            throw new Error('Failed to load Stripe');
+          }
+
+          // Check if we have an existing payment method
+          if (data.hasExistingPaymentMethod) {
+            console.log('Using existing payment method for subscription');
+            try {
+              // Just confirm the payment with the existing payment method
+              const { error } = await stripe.confirmCardPayment(data.clientSecret);
+              if (error) {
+                if (error.type === 'card_error' || error.type === 'validation_error') {
+                  throw new Error(error.message || 'Payment confirmation failed');
+                } else {
+                  // For other errors, we might need to collect a new payment method
+                  throw new Error('Your saved payment method could not be used. Please update your payment information.');
+                }
+              }
+
+              // Payment successful
+              alert('Your subscription has been updated successfully!');
+              router.push('/account');
+            } catch (paymentError: any) {
+              console.error('Payment error with existing method:', paymentError);
+
+              // Show a more user-friendly error and let them try again
+              throw new Error('Your previous payment method could not be used. Please try again to enter a new payment method.');
+            }
+          } else {
+            // No existing payment method, need to collect one
+            console.log('No existing payment method, redirecting to payment collection');
+            const { error } = await stripe.confirmCardPayment(data.clientSecret);
+            if (error) {
+              throw new Error(error.message || 'Payment confirmation failed');
+            }
+
+            // Payment successful
+            alert('Your subscription has been updated successfully!');
+            router.push('/account');
+          }
+        } else {
+          // No client secret, but operation was successful
+          alert('Your subscription has been updated successfully!');
+          router.push('/account');
+        }
+      } else {
+        // New subscription, use the create-checkout-session endpoint
+        console.log('Creating new subscription with checkout session');
+
+        // Create a checkout session with Stripe
+        // Don't use a fixed priceId, let the API create a dynamic price based on the amount
+        const response = await createCheckoutSession({
+          priceId: null, // Let the API create a dynamic price
+          userId: user.uid,
+          amount: amount,
+          tierName: selectedTierObj.name
+        });
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        // The user will be redirected to Stripe Checkout by the createCheckoutSession function
       }
-
-      // The user will be redirected to Stripe Checkout by the createCheckoutSession function
     } catch (err: any) {
       console.error('Error creating subscription:', err);
 
@@ -656,7 +746,7 @@ export default function SubscriptionPage() {
               <CardHeader className="flex flex-col items-center text-center">
                 {/* Centered Icon at the top */}
                 <div className="flex justify-center items-center mb-4">
-                  <div className="flex items-center justify-center bg-white dark:bg-white w-16 h-16 rounded-md shadow-sm">
+                  <div className="flex items-center justify-center w-16 h-16">
                     {tier.icon}
                   </div>
                 </div>

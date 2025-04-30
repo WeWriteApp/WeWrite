@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
-import { ArrowLeft, Check, X, Clock, CreditCard, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Check, X, Clock, CreditCard, AlertTriangle, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { SupporterIcon } from '../../../components/SupporterIcon';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
+import { getUserSubscription, cancelSubscription, listenToUserSubscription, fixSubscription } from '../../../firebase/subscription';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
 interface SubscriptionHistoryItem {
@@ -36,8 +36,32 @@ export default function ManageSubscriptionPage() {
       return;
     }
 
-    // Set up subscription listener
+    // First, directly fetch the subscription data
+    const fetchSubscriptionDirectly = async () => {
+      try {
+        console.log('Directly fetching subscription data for user:', user.uid);
+        const subscriptionData = await getUserSubscription(user.uid);
+        console.log('Direct subscription fetch result:', subscriptionData);
+
+        if (subscriptionData) {
+          setSubscription(subscriptionData);
+          setLoading(false);
+
+          // If we have a subscription, fetch payment history
+          if (subscriptionData.status === 'active') {
+            fetchPaymentHistory(user.uid);
+          }
+        }
+      } catch (error) {
+        console.error('Error directly fetching subscription:', error);
+      }
+    };
+
+    fetchSubscriptionDirectly();
+
+    // Set up subscription listener as a backup
     const unsubscribe = listenToUserSubscription(user.uid, (userSubscription) => {
+      console.log('Subscription data received from listener:', userSubscription);
       setSubscription(userSubscription);
       setLoading(false);
 
@@ -78,8 +102,38 @@ export default function ManageSubscriptionPage() {
       setSuccess(null);
 
       // Call the cancel subscription function
-      await cancelSubscription(subscription.stripeSubscriptionId);
-      
+      const result = await cancelSubscription(subscription.stripeSubscriptionId);
+
+      // Check if this was a "no subscription found" case, which we now treat as success
+      if (result.noSubscription) {
+        console.log('No active subscription found to cancel');
+        setSuccess('No active subscription found.');
+
+        // Force a complete refresh of the subscription data
+        if (user) {
+          // First clear the current subscription state
+          setSubscription(null);
+
+          // Then fetch fresh data after a short delay to ensure Firestore has updated
+          setTimeout(async () => {
+            try {
+              const subscriptionData = await getUserSubscription(user.uid);
+              console.log('Refreshed subscription data:', subscriptionData);
+              setSubscription(subscriptionData);
+
+              // If we still have subscription data, force a page refresh
+              if (subscriptionData && subscriptionData.status !== 'canceled') {
+                console.log('Subscription data still exists, forcing page refresh');
+                window.location.reload();
+              }
+            } catch (refreshError) {
+              console.error('Error refreshing subscription data:', refreshError);
+            }
+          }, 1000);
+        }
+        return;
+      }
+
       setSuccess('Your subscription has been canceled successfully.');
     } catch (err: any) {
       console.error('Error canceling subscription:', err);
@@ -91,8 +145,8 @@ export default function ManageSubscriptionPage() {
 
   const getTierName = (tier: string | null) => {
     if (!tier) return 'No Subscription';
-    return tier === 'tier1' ? 'Tier 1' : 
-           tier === 'tier2' ? 'Tier 2' : 
+    return tier === 'tier1' ? 'Tier 1' :
+           tier === 'tier2' ? 'Tier 2' :
            tier === 'tier3' ? 'Tier 3' : 'Custom';
   };
 
@@ -109,7 +163,7 @@ export default function ManageSubscriptionPage() {
             Back to Account
           </Link>
         </div>
-        
+
         <div className="flex justify-center py-12">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
@@ -125,7 +179,7 @@ export default function ManageSubscriptionPage() {
           Back to Account
         </Link>
       </div>
-      
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Manage Subscription</h1>
         <p className="text-muted-foreground">
@@ -154,7 +208,7 @@ export default function ManageSubscriptionPage() {
           <TabsTrigger value="details">Subscription Details</TabsTrigger>
           <TabsTrigger value="history">Payment History</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="details">
           <Card>
             <CardHeader>
@@ -326,7 +380,7 @@ export default function ManageSubscriptionPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="history">
           <Card>
             <CardHeader>
@@ -386,6 +440,8 @@ export default function ManageSubscriptionPage() {
           Currently, all subscription payments go directly to supporting WeWrite's development. In the future, we plan to enable subscriptions to support individual writers on the platform, allowing you to directly fund the creators you love.
         </p>
       </div>
+
+
     </div>
   );
 }

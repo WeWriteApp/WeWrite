@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import SlateEditor from "./SlateEditor";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { Globe, Lock } from "lucide-react";
+import { Globe, Lock, Link } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -344,17 +344,23 @@ const PageEditor = ({
 
   // Handle link insertion
   const handleInsertLink = () => {
-    // Simulate @ key press to trigger link editor
+    // Use the openLinkEditor method directly instead of simulating @ key press
     if (editorRef.current) {
-      editorRef.current.focus();
-      const atEvent = new KeyboardEvent('keydown', {
-        key: '@',
-        code: 'KeyAT',
-        keyCode: 50,
-        which: 50,
-        bubbles: true
-      });
-      document.activeElement.dispatchEvent(atEvent);
+      // Call the openLinkEditor method we added to the SlateEditor ref
+      if (editorRef.current.openLinkEditor) {
+        editorRef.current.openLinkEditor();
+      } else {
+        // Fallback to the old method if openLinkEditor is not available
+        editorRef.current.focus();
+        const atEvent = new KeyboardEvent('keydown', {
+          key: '@',
+          code: 'KeyAT',
+          keyCode: 50,
+          which: 50,
+          bubbles: true
+        });
+        document.activeElement.dispatchEvent(atEvent);
+      }
     }
   };
 
@@ -400,28 +406,50 @@ const PageEditor = ({
         onSave={!isSaving ? handleSave : null}
         onDiscard={onCancel}
         onInsert={handleInsertLink}
-        key={JSON.stringify(currentEditorValue?.slice(0, 1))} // Force re-creation when attribution changes
+        // Remove key prop to prevent re-creation and cursor jumps
       />
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
       <div className="mt-8 mb-16">
         {/* Responsive layout for controls - public/private on left, save/cancel on right (same row on all devices) */}
         <div className="flex flex-row justify-between items-center gap-4 w-full">
-          {/* Public/Private switcher - left aligned */}
-          <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
-            {isPublic ? (
-              <Globe className="h-4 w-4 text-green-500" />
-            ) : (
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className="text-sm font-medium">
-              {isPublic ? "Public" : "Private"}
-            </span>
-            <Switch
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-              aria-label="Toggle page visibility"
-            />
+          {/* Left side controls - Public/Private switcher and Insert Link button */}
+          <div className="flex items-center gap-2">
+            {/* Public/Private switcher */}
+            <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
+              {isPublic ? (
+                <Globe className="h-4 w-4 text-green-500" />
+              ) : (
+                <Lock className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="text-sm font-medium">
+                {isPublic ? "Public" : "Private"}
+              </span>
+              <Switch
+                checked={isPublic}
+                onCheckedChange={setIsPublic}
+                aria-label="Toggle page visibility"
+              />
+            </div>
+
+            {/* Insert Link button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleInsertLink}
+                    variant="outline"
+                    className="flex items-center gap-1.5 bg-background/90 border-input"
+                  >
+                    <Link className="h-4 w-4" />
+                    <span className="text-sm font-medium">Insert Link</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Insert a link to a page or external site</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Save/Cancel buttons - right aligned */}

@@ -4,7 +4,7 @@ import { auth } from '../../firebase/auth';
 import { getUserSubscription, updateSubscription } from '../../firebase/subscription';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 import { db } from '../../firebase/database';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(request) {
   try {
@@ -48,33 +48,100 @@ export async function POST(request) {
     const subscription = await getUserSubscription(user.uid);
 
     if (!subscription) {
-      return NextResponse.json(
-        { error: 'No subscription found' },
-        { status: 400 }
-      );
+      console.log('No subscription found for user:', user.uid);
+
+      // Even though no subscription was found, update all subscription-related documents to ensure they're clean
+      try {
+        // 1. Update the subscription in the user path
+        const userSubRef = doc(db, 'users', user.uid, 'subscription', 'current');
+        await setDoc(userSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+
+        // 2. Update the subscription in the API path
+        const apiSubRef = doc(db, 'subscriptions', user.uid);
+        await setDoc(apiSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+
+        // 3. Update the user document to remove tier information
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          tier: null,
+          subscriptionStatus: 'canceled',
+          updatedAt: serverTimestamp()
+        });
+
+        console.log('All subscription documents updated to ensure consistent canceled state for user:', user.uid);
+      } catch (cleanupError) {
+        console.error('Error cleaning up user subscription data:', cleanupError);
+        // Continue even if cleanup fails - this is just to be thorough
+      }
+
+      // Return success since there's nothing to cancel
+      return NextResponse.json({
+        success: true,
+        message: 'No active subscription found',
+        noSubscription: true
+      });
     }
 
     // Handle demo subscriptions differently
     if (subscriptionId.startsWith('demo_')) {
       console.log('Canceling demo subscription for user:', user.uid);
 
-      // Update the subscription in Firestore
-      await updateSubscription(user.uid, {
-        status: 'canceled',
-        stripeSubscriptionId: null,
-        amount: 0,
-        renewalDate: null,
-        updatedAt: new Date().toISOString(),
-        canceledAt: new Date().toISOString()
-      });
+      // Update all subscription-related documents to ensure they're consistent
+      try {
+        // 1. Update the subscription in the user path
+        const userSubRef = doc(db, 'users', user.uid, 'subscription', 'current');
+        await setDoc(userSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+        console.log('User path subscription document updated for demo cancellation:', user.uid);
 
-      // Also update the user document to remove tier information
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        tier: null,
-        subscriptionStatus: 'canceled',
-        updatedAt: serverTimestamp()
-      });
+        // 2. Update the subscription in the API path
+        const apiSubRef = doc(db, 'subscriptions', user.uid);
+        await setDoc(apiSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+        console.log('API path subscription document updated for demo cancellation:', user.uid);
+
+        // 3. Update the user document to remove tier information
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          tier: null,
+          subscriptionStatus: 'canceled',
+          updatedAt: serverTimestamp()
+        });
+        console.log('User document updated for demo cancellation:', user.uid);
+      } catch (updateError) {
+        console.error('Error updating subscription documents for demo cancellation:', updateError);
+        // Continue even if update fails
+      }
 
       return NextResponse.json({
         success: true,
@@ -98,22 +165,46 @@ export async function POST(request) {
       const canceledSubscription = await stripe.subscriptions.cancel(subscriptionId);
       console.log('Stripe subscription canceled successfully:', canceledSubscription.id);
 
-      // Update the subscription in Firestore
-      await updateSubscription(user.uid, {
-        status: 'canceled',
-        canceledAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      console.log('Firestore subscription updated for user:', user.uid);
+      // Update all subscription-related documents to ensure they're consistent
+      try {
+        // 1. Update the subscription in the user path
+        const userSubRef = doc(db, 'users', user.uid, 'subscription', 'current');
+        await setDoc(userSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+        console.log('User path subscription document updated for user:', user.uid);
 
-      // Also update the user document to remove tier information
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        tier: null,
-        subscriptionStatus: 'canceled',
-        updatedAt: serverTimestamp()
-      });
-      console.log('User document updated for user:', user.uid);
+        // 2. Update the subscription in the API path
+        const apiSubRef = doc(db, 'subscriptions', user.uid);
+        await setDoc(apiSubRef, {
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          amount: 0,
+          tier: null,
+          renewalDate: null,
+          updatedAt: new Date().toISOString(),
+          canceledAt: new Date().toISOString()
+        }, { merge: true });
+        console.log('API path subscription document updated for user:', user.uid);
+
+        // 3. Update the user document to remove tier information
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          tier: null,
+          subscriptionStatus: 'canceled',
+          updatedAt: serverTimestamp()
+        });
+        console.log('User document updated for user:', user.uid);
+      } catch (updateError) {
+        console.error('Error updating subscription documents:', updateError);
+        // Continue even if update fails - the subscription is already canceled in Stripe
+      }
     } catch (stripeError) {
       console.error('Error with Stripe cancellation:', stripeError);
       return NextResponse.json(
