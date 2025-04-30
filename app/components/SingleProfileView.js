@@ -15,7 +15,7 @@ import SupporterBadge from "./SupporterBadge";
 import { SupporterIcon } from "./SupporterIcon";
 import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 import { Button } from "./ui/button";
-import UserStreak from "./UserStreak";
+
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../firebase/counters";
 import { getUserSubscription } from "../firebase/subscription";
@@ -86,69 +86,83 @@ const SingleProfileView = ({ profile }) => {
 
   // Fetch user's subscription tier
   useEffect(() => {
-    const fetchSubscriptionTier = async () => {
+    let unsubscribe = null;
+
+    const setupSubscriptionListener = async () => {
       if (profile.uid) {
         try {
           setIsLoadingTier(true);
 
-          // Get the user's subscription data
-          const subscription = await getUserSubscription(profile.uid);
+          // Set up a real-time listener for subscription changes
+          const { listenToUserSubscription } = await import('../firebase/subscription');
 
-          // Always set the subscription status if available
-          if (subscription) {
-            setSubscriptionStatus(subscription.status);
+          unsubscribe = listenToUserSubscription(profile.uid, (subscription) => {
+            console.log(`Subscription update received for user ${profile.uid}:`, subscription);
 
-            // Determine tier based on subscription amount if active
-            if (subscription.status === 'active' || subscription.status === 'trialing') {
-              let tier = null;
-              const amount = subscription.amount;
+            // Always set the subscription status if available
+            if (subscription) {
+              setSubscriptionStatus(subscription.status);
 
-              if (amount >= 10 && amount < 20) {
-                tier = 'tier1';
-              } else if (amount >= 20 && amount < 50) {
-                tier = 'tier2';
-              } else if (amount >= 50 && amount < 100) {
-                tier = 'tier3';
-              }
+              // Determine tier based on subscription amount if active
+              if (subscription.status === 'active' || subscription.status === 'trialing') {
+                let tier = null;
+                const amount = subscription.amount;
 
-              // Log the tier determination for debugging
-              console.log(`Determined tier for user ${profile.uid}: ${tier} (amount: ${amount})`);
-
-              // If tier is already set in the subscription data, use that instead
-              if (subscription.tier) {
-                console.log(`Using tier from subscription data: ${subscription.tier}`);
-                // Convert legacy tier names if needed
-                if (subscription.tier === 'bronze') {
+                if (amount >= 10 && amount < 20) {
                   tier = 'tier1';
-                } else if (subscription.tier === 'silver') {
+                } else if (amount >= 20 && amount < 50) {
                   tier = 'tier2';
-                } else if (subscription.tier === 'gold') {
+                } else if (amount >= 50 && amount < 100) {
                   tier = 'tier3';
-                } else {
-                  tier = subscription.tier;
                 }
-              }
 
-              setSupporterTier(tier);
+                // Log the tier determination for debugging
+                console.log(`Determined tier for user ${profile.uid}: ${tier} (amount: ${amount})`);
+
+                // If tier is already set in the subscription data, use that instead
+                if (subscription.tier) {
+                  console.log(`Using tier from subscription data: ${subscription.tier}`);
+                  // Convert legacy tier names if needed
+                  if (subscription.tier === 'bronze') {
+                    tier = 'tier1';
+                  } else if (subscription.tier === 'silver') {
+                    tier = 'tier2';
+                  } else if (subscription.tier === 'gold') {
+                    tier = 'tier3';
+                  } else {
+                    tier = subscription.tier;
+                  }
+                }
+
+                setSupporterTier(tier);
+              } else {
+                // No active subscription
+                setSupporterTier(null);
+              }
             } else {
-              // No active subscription
+              // No subscription data
+              setSubscriptionStatus(null);
               setSupporterTier(null);
             }
-          } else {
-            // No subscription data
-            setSubscriptionStatus(null);
-            setSupporterTier(null);
-          }
+
+            setIsLoadingTier(false);
+          });
         } catch (error) {
-          console.error('Error fetching subscription tier:', error);
+          console.error('Error setting up subscription listener:', error);
           setSupporterTier(null);
-        } finally {
           setIsLoadingTier(false);
         }
       }
     };
 
-    fetchSubscriptionTier();
+    setupSubscriptionListener();
+
+    // Clean up the listener when the component unmounts
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [profile.uid]);
 
   return (
@@ -267,11 +281,6 @@ const SingleProfileView = ({ profile }) => {
               <span>views</span>
             </div>
           </div>
-        </div>
-
-        {/* Writing Streak */}
-        <div className="mb-6">
-          <UserStreak userId={profile.uid} />
         </div>
 
         {!user && (
