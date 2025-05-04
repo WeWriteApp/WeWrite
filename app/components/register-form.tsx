@@ -119,11 +119,12 @@ export function RegisterForm({
       isPasswordValid,
       isUsernameValid,
       usernameLength: username.length,
-      isAvailable
+      isAvailable,
+      validationError
     })
 
     setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid)
-  }, [email, password, username, isAvailable])
+  }, [email, password, username, isAvailable, validationError])
 
   // Function to record username history via API
   const recordUsernameHistory = async (userId: string, oldUsername: string, newUsername: string) => {
@@ -195,7 +196,22 @@ export function RegisterForm({
             router.push("/")
           }, 1500)
         } else {
-          setError("Account created but failed to set username. Please update your profile.")
+          // Handle specific username errors
+          if (usernameResult.error === "USERNAME_TAKEN") {
+            setError("Username is already taken. Please choose a different username.")
+            setValidationError("USERNAME_TAKEN")
+            setValidationMessage("Username already taken")
+          } else if (usernameResult.error === "INVALID_CHARS") {
+            setError("Username contains invalid characters. Please use only letters, numbers, and underscores.")
+            setValidationError("INVALID_CHARS")
+            setValidationMessage("Username can only contain letters, numbers, and underscores")
+          } else if (usernameResult.error === "TOO_SHORT") {
+            setError("Username must be at least 3 characters long.")
+            setValidationError("TOO_SHORT")
+            setValidationMessage("Username must be at least 3 characters")
+          } else {
+            setError(usernameResult.message || "Account created but failed to set username. Please update your profile.")
+          }
         }
       } else {
         // Error handling
@@ -248,7 +264,11 @@ export function RegisterForm({
               tabIndex={1}
               className={cn(
                 "bg-background text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3",
-                validationError ? "border-destructive focus-visible:ring-destructive dark:border-red-400 dark:focus-visible:ring-red-400" : "border-input"
+                (validationError || isAvailable === false) ?
+                  "border-destructive focus-visible:ring-destructive dark:border-red-400 dark:focus-visible:ring-red-400" :
+                  isAvailable === true ?
+                    "border-green-500 focus-visible:ring-green-500" :
+                    "border-input"
               )}
             />
             {/* Loading indicator - only show when checking username */}
@@ -257,8 +277,18 @@ export function RegisterForm({
                 <div className="loader"></div>
               </div>
             )}
+            {/* Show validation status icon when not checking */}
+            {username && username.length >= 3 && !isChecking && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                {isAvailable === true ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : isAvailable === false ? (
+                  <X className="h-4 w-4 text-destructive dark:text-red-400" />
+                ) : null}
+              </div>
+            )}
             {/* Show error message for username validation */}
-            {validationError && (
+            {(validationError || (username && username.length >= 3 && isAvailable === false)) && (
               <div className={cn(
                 "flex items-center mt-2 px-2 py-1.5 rounded-md bg-destructive/10 dark:bg-red-500/10 text-destructive dark:text-red-400"
               )}>
@@ -268,6 +298,7 @@ export function RegisterForm({
                    validationError === "INVALID_CHARS" ? "Username contains invalid characters" :
                    validationError === "TOO_SHORT" ? "Username must be at least 3 characters" :
                    validationError === "TOO_LONG" ? "Username is too long" :
+                   isAvailable === false ? "Username already taken" :
                    validationMessage || "Invalid username"}
                 </p>
               </div>
