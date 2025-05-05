@@ -154,26 +154,36 @@ export const PortfolioProvider = ({ children }) => {
     setRemainingBalance(parseInt(remainingBalance) - parseInt(amount));
   };
 
-  // Fetch real subscription status from backend on mount
+  // Fetch real subscription status from backend on mount, but only once
   useEffect(() => {
-    async function fetchSubscription() {
-      try {
-        const res = await fetch("/api/account-subscription");
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.status) {
-            setSubscriptions([{ ...data }]);
+    // Use a flag in localStorage to prevent repeated subscription checks
+    const lastSubscriptionCheck = localStorage.getItem('lastSubscriptionCheck');
+    const now = Date.now();
+    const checkInterval = 3600000; // 1 hour in milliseconds
+
+    // Only check if we haven't checked in the last hour
+    if (!lastSubscriptionCheck || (now - parseInt(lastSubscriptionCheck)) > checkInterval) {
+      async function fetchSubscription() {
+        try {
+          const res = await fetch("/api/account-subscription");
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.status) {
+              setSubscriptions([{ ...data }]);
+            } else {
+              setSubscriptions([]);
+            }
+            // Update the last check timestamp
+            localStorage.setItem('lastSubscriptionCheck', now.toString());
           } else {
             setSubscriptions([]);
           }
-        } else {
+        } catch (e) {
           setSubscriptions([]);
         }
-      } catch (e) {
-        setSubscriptions([]);
       }
+      fetchSubscription();
     }
-    fetchSubscription();
   }, []);
 
   useEffect(() => {

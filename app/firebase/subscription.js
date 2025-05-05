@@ -52,9 +52,15 @@ export const updateSubscription = async (userId, subscriptionData) => {
 };
 
 // Get a user's current subscription
-export const getUserSubscription = async (userId) => {
+export const getUserSubscription = async (userId, options = {}) => {
+  // Control verbose logging with an option
+  const verbose = options.verbose || false;
+
   try {
-    console.log(`[getUserSubscription] Fetching subscription for user: ${userId}`);
+    // Only log in verbose mode
+    if (verbose) {
+      console.log(`[getUserSubscription] Fetching subscription for user: ${userId}`);
+    }
 
     // First check the primary location (user path)
     const subscriptionRef = doc(db, "users", userId, "subscription", "current");
@@ -68,7 +74,9 @@ export const getUserSubscription = async (userId) => {
     const hasUserPathData = subscriptionSnap.exists();
     const hasApiPathData = apiSubscriptionSnap.exists();
 
-    console.log(`[getUserSubscription] Data check: userPath=${hasUserPathData}, apiPath=${hasApiPathData}`);
+    if (verbose) {
+      console.log(`[getUserSubscription] Data check: userPath=${hasUserPathData}, apiPath=${hasApiPathData}`);
+    }
 
     // If we have data in both locations, check if they're consistent
     if (hasUserPathData && hasApiPathData) {
@@ -95,7 +103,9 @@ export const getUserSubscription = async (userId) => {
           const updatedSnap = await getDoc(subscriptionRef);
           const updatedData = { id: updatedSnap.id, ...updatedSnap.data() };
 
-          console.log(`[getUserSubscription] Returning fixed subscription data:`, updatedData);
+          if (verbose) {
+            console.log(`[getUserSubscription] Returning fixed subscription data:`, updatedData);
+          }
           return updatedData;
         }
       }
@@ -104,7 +114,11 @@ export const getUserSubscription = async (userId) => {
     // If we have data in the user path, return it (possibly fixing it first)
     if (hasUserPathData) {
       const subscriptionData = { id: subscriptionSnap.id, ...subscriptionSnap.data() };
-      console.log(`[getUserSubscription] Found subscription in user path:`, subscriptionData);
+
+      if (verbose) {
+        console.log(`[getUserSubscription] Found subscription in user path:`,
+          { status: subscriptionData.status, amount: subscriptionData.amount });
+      }
 
       // Check if the subscription has all the expected fields
       const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
@@ -114,7 +128,9 @@ export const getUserSubscription = async (userId) => {
         console.warn(`[getUserSubscription] Subscription is missing fields: ${missingFields.join(', ')}`);
 
         // Fix the subscription data
-        console.log(`[getUserSubscription] Fixing subscription with missing fields`);
+        if (verbose) {
+          console.log(`[getUserSubscription] Fixing subscription with missing fields`);
+        }
 
         // Create a fixed version with default values for missing fields
         const fixedData = { ...subscriptionData };
@@ -142,7 +158,9 @@ export const getUserSubscription = async (userId) => {
         const updatedSnap = await getDoc(subscriptionRef);
         const updatedData = { id: updatedSnap.id, ...updatedSnap.data() };
 
-        console.log(`[getUserSubscription] Returning fixed subscription data:`, updatedData);
+        if (verbose) {
+          console.log(`[getUserSubscription] Returning fixed subscription data:`, updatedData);
+        }
         return updatedData;
       }
 
@@ -151,7 +169,11 @@ export const getUserSubscription = async (userId) => {
     // If we have data in the API path but not in the user path, copy it over
     else if (hasApiPathData) {
       const apiSubscriptionData = { id: apiSubscriptionSnap.id, ...apiSubscriptionSnap.data() };
-      console.log(`[getUserSubscription] Found subscription in API path:`, apiSubscriptionData);
+
+      if (verbose) {
+        console.log(`[getUserSubscription] Found subscription in API path:`,
+          { status: apiSubscriptionData.status, amount: apiSubscriptionData.amount });
+      }
 
       // Check if the API subscription has all the expected fields
       const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
@@ -180,25 +202,33 @@ export const getUserSubscription = async (userId) => {
         }
 
         // Copy the fixed data to the user path
-        console.log(`[getUserSubscription] Copying fixed API subscription data to user path`);
+        if (verbose) {
+          console.log(`[getUserSubscription] Copying fixed API subscription data to user path`);
+        }
         await fixSubscription(userId, fixedData);
 
         // Get the updated data
         const updatedSnap = await getDoc(subscriptionRef);
         const updatedData = { id: updatedSnap.id, ...updatedSnap.data() };
 
-        console.log(`[getUserSubscription] Returning fixed subscription data:`, updatedData);
+        if (verbose) {
+          console.log(`[getUserSubscription] Returning fixed subscription data:`, updatedData);
+        }
         return updatedData;
       } else {
         // Copy the data to the user path for future use
-        console.log(`[getUserSubscription] Copying subscription data from API path to user path`);
+        if (verbose) {
+          console.log(`[getUserSubscription] Copying subscription data from API path to user path`);
+        }
         await fixSubscription(userId, apiSubscriptionData);
 
         return apiSubscriptionData;
       }
     }
 
-    console.log(`[getUserSubscription] No subscription found in any location for user: ${userId}`);
+    if (verbose) {
+      console.log(`[getUserSubscription] No subscription found in any location for user: ${userId}`);
+    }
     return null;
   } catch (error) {
     console.error("[getUserSubscription] Error getting user subscription:", error);
@@ -305,15 +335,24 @@ export const deletePledge = async (userId, pageId, pledgeAmount) => {
 };
 
 // Get all pledges for a user
-export const getUserPledges = async (userId) => {
+export const getUserPledges = async (userId, options = {}) => {
+  // Control verbose logging with an option
+  const verbose = options.verbose || false;
+
   try {
     const pledgesCollectionRef = collection(db, "users", userId, "pledges");
     const querySnapshot = await getDocs(pledgesCollectionRef);
 
-    return querySnapshot.docs.map(doc => ({
+    const pledges = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+
+    if (verbose) {
+      console.log(`[getUserPledges] Retrieved ${pledges.length} pledges for user: ${userId}`);
+    }
+
+    return pledges;
   } catch (error) {
     console.error("Error getting user pledges:", error);
     return [];
@@ -424,8 +463,14 @@ export const cancelSubscription = async (subscriptionId, customerId = null) => {
 };
 
 // Listen to changes in user's subscription
-export const listenToUserSubscription = (userId, callback) => {
-  console.log(`[listenToUserSubscription] Setting up listeners for user: ${userId}`);
+export const listenToUserSubscription = (userId, callback, options = {}) => {
+  // Control verbose logging with an option
+  const verbose = options.verbose || false;
+
+  // Only log initial setup in verbose mode
+  if (verbose) {
+    console.log(`[listenToUserSubscription] Setting up listeners for user: ${userId}`);
+  }
 
   // Set up listener for the user path
   const userSubRef = doc(db, "users", userId, "subscription", "current");
@@ -434,17 +479,33 @@ export const listenToUserSubscription = (userId, callback) => {
   // Flag to track if we've already called the callback with data
   let hasCalledCallback = false;
 
+  // Track last data to avoid duplicate logs
+  let lastUserData = null;
+  let lastApiData = null;
+
   // Set up listener for the user path
   const userUnsubscribe = onSnapshot(userSubRef, async (doc) => {
     if (doc.exists()) {
       const subscriptionData = { id: doc.id, ...doc.data() };
-      console.log(`[listenToUserSubscription] Received subscription update from user path:`, subscriptionData);
+
+      // Only log in verbose mode or if data has changed significantly
+      const dataChanged = !lastUserData ||
+                          lastUserData.status !== subscriptionData.status ||
+                          lastUserData.amount !== subscriptionData.amount;
+
+      if (verbose && dataChanged) {
+        console.log(`[listenToUserSubscription] Received subscription update from user path:`,
+          { status: subscriptionData.status, amount: subscriptionData.amount });
+      }
+
+      lastUserData = subscriptionData;
 
       // Check if the subscription has all the expected fields
       const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
       const missingFields = requiredFields.filter(field => !subscriptionData[field]);
 
       if (missingFields.length > 0) {
+        // Only log once when we find missing fields
         console.warn(`[listenToUserSubscription] Subscription from user path is missing fields: ${missingFields.join(', ')}`);
 
         // If stripeSubscriptionId is missing but status is active, fix the subscription
@@ -466,7 +527,10 @@ export const listenToUserSubscription = (userId, callback) => {
 
       // If status is active but stripeSubscriptionId is null, fix the subscription
       if (subscriptionData.status === 'active' && !subscriptionData.stripeSubscriptionId) {
-        console.log(`[listenToUserSubscription] Found active status but null stripeSubscriptionId, fixing subscription`);
+        // Only log in verbose mode
+        if (verbose) {
+          console.log(`[listenToUserSubscription] Found active status but null stripeSubscriptionId, fixing subscription`);
+        }
         await fixSubscription(userId, {
           ...subscriptionData,
           status: 'canceled',
@@ -483,7 +547,11 @@ export const listenToUserSubscription = (userId, callback) => {
       hasCalledCallback = true;
       callback(subscriptionData);
     } else {
-      console.log(`[listenToUserSubscription] No subscription document exists in user path for user: ${userId}`);
+      // Only log in verbose mode
+      if (verbose) {
+        console.log(`[listenToUserSubscription] No subscription document exists in user path for user: ${userId}`);
+      }
+
       // Only call callback with null if we haven't already called it with data from the API path
       if (!hasCalledCallback) {
         callback(null);
@@ -497,13 +565,25 @@ export const listenToUserSubscription = (userId, callback) => {
   const apiUnsubscribe = onSnapshot(apiSubRef, async (doc) => {
     if (doc.exists()) {
       const subscriptionData = { id: doc.id, ...doc.data() };
-      console.log(`[listenToUserSubscription] Received subscription update from API path:`, subscriptionData);
+
+      // Only log in verbose mode or if data has changed significantly
+      const dataChanged = !lastApiData ||
+                          lastApiData.status !== subscriptionData.status ||
+                          lastApiData.amount !== subscriptionData.amount;
+
+      if (verbose && dataChanged) {
+        console.log(`[listenToUserSubscription] Received subscription update from API path:`,
+          { status: subscriptionData.status, amount: subscriptionData.amount });
+      }
+
+      lastApiData = subscriptionData;
 
       // Check if the subscription has all the expected fields
       const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
       const missingFields = requiredFields.filter(field => !subscriptionData[field]);
 
       if (missingFields.length > 0) {
+        // Only log once when we find missing fields
         console.warn(`[listenToUserSubscription] Subscription from API path is missing fields: ${missingFields.join(', ')}`);
 
         // If stripeSubscriptionId is missing but status is active, fix the subscription
@@ -525,7 +605,10 @@ export const listenToUserSubscription = (userId, callback) => {
 
       // If status is active but stripeSubscriptionId is null, fix the subscription
       if (subscriptionData.status === 'active' && !subscriptionData.stripeSubscriptionId) {
-        console.log(`[listenToUserSubscription] Found active status but null stripeSubscriptionId in API path, fixing subscription`);
+        // Only log in verbose mode
+        if (verbose) {
+          console.log(`[listenToUserSubscription] Found active status but null stripeSubscriptionId in API path, fixing subscription`);
+        }
         await fixSubscription(userId, {
           ...subscriptionData,
           status: 'canceled',
@@ -540,16 +623,23 @@ export const listenToUserSubscription = (userId, callback) => {
       }
 
       // Copy the data to the user path if it doesn't exist there
-      const userSubSnap = await getDoc(userSubRef);
-      if (!userSubSnap.exists()) {
-        console.log(`[listenToUserSubscription] Copying subscription data from API path to user path`);
-        await fixSubscription(userId, subscriptionData);
+      // But only do this if we're in verbose mode to reduce unnecessary operations
+      if (verbose) {
+        const userSubSnap = await getDoc(userSubRef);
+        if (!userSubSnap.exists()) {
+          console.log(`[listenToUserSubscription] Copying subscription data from API path to user path`);
+          await fixSubscription(userId, subscriptionData);
+        }
       }
 
       hasCalledCallback = true;
       callback(subscriptionData);
     } else {
-      console.log(`[listenToUserSubscription] No subscription document exists in API path for user: ${userId}`);
+      // Only log in verbose mode
+      if (verbose) {
+        console.log(`[listenToUserSubscription] No subscription document exists in API path for user: ${userId}`);
+      }
+
       // Only call callback with null if we haven't already called it with data from the user path
       if (!hasCalledCallback) {
         callback(null);
@@ -567,7 +657,10 @@ export const listenToUserSubscription = (userId, callback) => {
 };
 
 // Listen to changes in user's pledges
-export const listenToUserPledges = (userId, callback) => {
+export const listenToUserPledges = (userId, callback, options = {}) => {
+  // Control verbose logging with an option
+  const verbose = options.verbose || false;
+
   const pledgesRef = collection(db, "users", userId, "pledges");
 
   return onSnapshot(pledgesRef, (snapshot) => {
@@ -575,95 +668,89 @@ export const listenToUserPledges = (userId, callback) => {
       id: doc.id,
       ...doc.data()
     }));
+
+    if (verbose) {
+      console.log(`[listenToUserPledges] Received ${pledges.length} pledges for user: ${userId}`);
+    }
+
     callback(pledges);
   });
 };
 
 // Utility function to fix a subscription that might be missing fields
-export const fixSubscription = async (userId, subscriptionData) => {
+export const fixSubscription = async (userId, subscriptionData, options = {}) => {
+  // Control verbose logging with an option
+  const verbose = options.verbose || false;
+
   try {
-    console.log(`[fixSubscription] Attempting to fix subscription for user: ${userId}`);
-
-    // Get the current subscription first
-    const currentSubscription = await getUserSubscription(userId);
-
-    // Check if there's a subscription in the API path
-    const apiSubscriptionRef = doc(db, "subscriptions", userId);
-    const apiSubscriptionSnap = await getDoc(apiSubscriptionRef);
-
-    // Combine data from all sources, with provided data taking precedence
-    const mergedData = {
-      ...(currentSubscription || {}),
-      ...(apiSubscriptionSnap.exists() ? apiSubscriptionSnap.data() : {}),
-      ...subscriptionData,
-      updatedAt: serverTimestamp(),
-    };
-
-    console.log(`[fixSubscription] Updating with merged data:`, mergedData);
-
-    // Ensure required fields are present
-    const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
-    const missingFields = requiredFields.filter(field => !mergedData[field]);
-
-    if (missingFields.length > 0) {
-      console.warn(`[fixSubscription] Merged data is still missing fields: ${missingFields.join(', ')}`);
-
-      // Fill in missing fields with default values
-      if (missingFields.includes('status')) {
-        mergedData.status = 'canceled';
-      }
-
-      if (missingFields.includes('amount')) {
-        mergedData.amount = 0;
-      }
-
-      if (missingFields.includes('tier')) {
-        mergedData.tier = null;
-      }
-
-      if (missingFields.includes('stripeSubscriptionId')) {
-        mergedData.stripeSubscriptionId = null;
-      }
-
-      console.log(`[fixSubscription] Added default values for missing fields:`, mergedData);
+    if (verbose) {
+      console.log(`[fixSubscription] Attempting to fix subscription for user: ${userId}`);
+      console.log(`[fixSubscription] Calling cleanupSubscriptionData for a complete reset`);
     }
 
-    // If status is 'canceled' or 'active' but missing stripeSubscriptionId, ensure other fields are consistent
-    if (mergedData.status === 'canceled' || (mergedData.status === 'active' && !mergedData.stripeSubscriptionId)) {
-      // If status is active but missing stripeSubscriptionId, change to canceled
-      if (mergedData.status === 'active' && !mergedData.stripeSubscriptionId) {
-        console.log(`[fixSubscription] Found active status but missing stripeSubscriptionId, changing to canceled`);
-        mergedData.status = 'canceled';
+    const cleanupResult = await cleanupSubscriptionData(userId, { verbose });
+
+    if (!cleanupResult) {
+      if (verbose) {
+        console.error(`[fixSubscription] Failed to clean up subscription data`);
       }
-
-      mergedData.tier = null;
-      mergedData.amount = 0;
-      mergedData.stripeSubscriptionId = null;
-
-      // Add canceledAt timestamp if not present
-      if (!mergedData.canceledAt) {
-        mergedData.canceledAt = new Date().toISOString();
-      }
-
-      console.log(`[fixSubscription] Ensured consistent canceled state:`, mergedData);
+      return false;
     }
 
-    // Update the subscription in the user path
-    const subscriptionRef = doc(db, "users", userId, "subscription", "current");
-    await setDoc(subscriptionRef, mergedData, { merge: true });
+    if (verbose) {
+      console.log(`[fixSubscription] Subscription data cleaned up successfully`);
+    }
 
-    // Also update the API path to keep them in sync
-    await setDoc(apiSubscriptionRef, mergedData, { merge: true });
+    // If the caller provided specific subscription data to set, apply it now
+    if (subscriptionData && Object.keys(subscriptionData).length > 0) {
+      if (verbose) {
+        console.log(`[fixSubscription] Applying provided subscription data:`,
+          { status: subscriptionData.status, amount: subscriptionData.amount });
+      }
 
-    // Also update the user document to ensure tier information is consistent
-    const userRef = doc(db, "users", userId);
-    await updateDoc(userRef, {
-      tier: mergedData.tier,
-      subscriptionStatus: mergedData.status,
-      updatedAt: serverTimestamp()
-    });
+      // Create a clean data object with the provided data
+      const finalData = {
+        // Start with default canceled state
+        status: 'canceled',
+        stripeSubscriptionId: null,
+        stripeCustomerId: null,
+        stripePriceId: null,
+        amount: 0,
+        tier: null,
+        renewalDate: null,
+        billingCycleEnd: null,
+        pledgedAmount: 0,
+        updatedAt: new Date().toISOString(),
+        canceledAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        // Override with any provided data
+        ...subscriptionData
+      };
 
-    console.log(`[fixSubscription] Subscription updated successfully in all locations`);
+      // Update the subscription in the user path
+      const subscriptionRef = doc(db, "users", userId, "subscription", "current");
+      await setDoc(subscriptionRef, finalData);
+
+      // Also update the API path
+      const apiSubscriptionRef = doc(db, "subscriptions", userId);
+      await setDoc(apiSubscriptionRef, finalData);
+
+      // Also update the user document
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        tier: finalData.tier,
+        subscriptionStatus: finalData.status,
+        updatedAt: serverTimestamp()
+      });
+
+      if (verbose) {
+        console.log(`[fixSubscription] Applied custom subscription data`);
+      }
+    }
+
+    if (verbose) {
+      console.log(`[fixSubscription] Subscription fixed successfully`);
+    }
     return true;
   } catch (error) {
     console.error("[fixSubscription] Error fixing subscription:", error);
@@ -672,32 +759,48 @@ export const fixSubscription = async (userId, subscriptionData) => {
 };
 
 // Utility function to completely clean up subscription data
-export const cleanupSubscriptionData = async (userId) => {
-  try {
-    console.log(`[cleanupSubscriptionData] Cleaning up subscription data for user: ${userId}`);
+export const cleanupSubscriptionData = async (userId, options = {}) => {
+  // Control verbose logging with an option
+  const verbose = options.verbose || false;
 
-    // Create a clean canceled subscription state
+  try {
+    if (verbose) {
+      if (verbose) {
+      console.log(`[cleanupSubscriptionData] Cleaning up subscription data for user: ${userId}`);
+    }
+    }
+
+    // Create a clean canceled subscription state with ALL possible fields
     const cleanData = {
       status: 'canceled',
       stripeSubscriptionId: null,
-      stripeCustomerId: null, // Also clear the customer ID to prevent future issues
+      stripeCustomerId: null,
+      stripePriceId: null,
       amount: 0,
       tier: null,
       renewalDate: null,
       billingCycleEnd: null,
+      pledgedAmount: 0,
       updatedAt: new Date().toISOString(),
-      canceledAt: new Date().toISOString()
+      canceledAt: new Date().toISOString(),
+      createdAt: new Date().toISOString() // Include this to ensure it exists
     };
 
-    // Update the subscription in the user path
+    // Update the subscription in the user path - use setDoc WITHOUT merge to completely replace
     const subscriptionRef = doc(db, "users", userId, "subscription", "current");
-    await setDoc(subscriptionRef, cleanData, { merge: true });
-    console.log(`[cleanupSubscriptionData] Updated user path subscription document`);
+    await setDoc(subscriptionRef, cleanData);
 
-    // Also update the API path to keep them in sync
+    if (verbose) {
+      console.log(`[cleanupSubscriptionData] Replaced user path subscription document with clean data`);
+    }
+
+    // Also update the API path - use setDoc WITHOUT merge to completely replace
     const apiSubscriptionRef = doc(db, "subscriptions", userId);
-    await setDoc(apiSubscriptionRef, cleanData, { merge: true });
-    console.log(`[cleanupSubscriptionData] Updated API path subscription document`);
+    await setDoc(apiSubscriptionRef, cleanData);
+
+    if (verbose) {
+      console.log(`[cleanupSubscriptionData] Replaced API path subscription document with clean data`);
+    }
 
     // Also update the user document to ensure tier information is consistent
     const userRef = doc(db, "users", userId);
@@ -706,7 +809,10 @@ export const cleanupSubscriptionData = async (userId) => {
       subscriptionStatus: 'canceled',
       updatedAt: serverTimestamp()
     });
-    console.log(`[cleanupSubscriptionData] Updated user document`);
+
+    if (verbose) {
+      console.log(`[cleanupSubscriptionData] Updated user document`);
+    }
 
     // Try to clean up any Stripe subscriptions that might be lingering
     try {
@@ -722,13 +828,18 @@ export const cleanupSubscriptionData = async (userId) => {
       });
 
       const result = await response.json();
-      console.log(`[cleanupSubscriptionData] API cleanup result:`, result);
+
+      if (verbose) {
+        console.log(`[cleanupSubscriptionData] API cleanup result:`, result);
+      }
     } catch (apiError) {
       console.error("[cleanupSubscriptionData] Error calling API cleanup:", apiError);
       // Continue even if this fails - we've already cleaned up the local data
     }
 
-    console.log(`[cleanupSubscriptionData] Subscription data cleaned up successfully for user: ${userId}`);
+    if (verbose) {
+      console.log(`[cleanupSubscriptionData] Subscription data cleaned up successfully for user: ${userId}`);
+    }
     return true;
   } catch (error) {
     console.error("[cleanupSubscriptionData] Error cleaning up subscription data:", error);
