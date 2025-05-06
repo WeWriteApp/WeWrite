@@ -14,6 +14,7 @@ import { isExternalLink } from "../utils/linkFormatters";
 import { Button } from "./ui/button";
 import { ExternalLink } from "lucide-react";
 import Modal from "./ui/modal";
+import "./paragraph-styles.css";
 
 /**
  * TextView Component - Renders text content with different paragraph modes
@@ -185,7 +186,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const getViewModeStyles = () => {
     // Use the effective mode for styling
     if (effectiveMode === LINE_MODES.DENSE) {
-      return 'space-y-0'; // No spacing between paragraphs for dense mode
+      return 'space-y-0 dense-mode'; // No spacing between paragraphs for dense mode
     } else {
       return 'space-y-6'; // Normal spacing between paragraphs
     }
@@ -367,7 +368,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
                     {index > 0 && ' '}
 
                     {/* Paragraph number */}
-                    <span className="text-muted-foreground text-xs select-none ml-1">
+                    <span className="paragraph-number text-xs ml-1">
                       {index + 1}
                     </span>{'\u00A0'}
 
@@ -490,8 +491,8 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
   // Define consistent text size for all modes
   const TEXT_SIZE = "text-base"; // 1rem (16px) for all modes
 
-  // Only used for normal mode now
-  const spacingClass = 'mb-2';
+  // Spacing is now handled by paragraph-with-hanging-indent class
+  const spacingClass = '';
 
   // Handle click to edit
   const handleClick = () => {
@@ -532,7 +533,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
 
   // Consistent paragraph number style for both modes
   const renderParagraphNumber = (index) => (
-    <span className="text-muted-foreground text-sm select-none leading-none">
+    <span className="paragraph-number">
       {index + 1}
     </span>
   );
@@ -555,34 +556,29 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Normal mode - paragraph numbers create indentation */}
-      <div className="flex">
-        {/* Paragraph number - precisely aligned with centerline of first line of text */}
-        <motion.div
-          className="flex-shrink-0 w-6 text-right pr-1 flex items-center justify-end"
-          style={{
-            height: "1.5rem",
-            transform: "translateY(0.15rem)"
-          }}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            delay: 0.05,
-            type: "spring",
-            stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-            damping: ANIMATION_CONSTANTS.SPRING_DAMPING
-          }}
-        >
-          {renderParagraphNumber(index)}
-        </motion.div>
+      {/* Normal mode - paragraph with hanging indent */}
+      <div className="paragraph-container">
+        {/* Paragraph content with hanging indent */}
+        <p className={`paragraph-with-hanging-indent text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
+          {/* Paragraph number inline with first line */}
+          <motion.span
+            className="inline-block mr-1"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{
+              delay: 0.05,
+              type: "spring",
+              stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+              damping: ANIMATION_CONSTANTS.SPRING_DAMPING
+            }}
+          >
+            {renderParagraphNumber(index)}
+          </motion.span>
 
-        {/* Paragraph content */}
-        <div className="flex-1">
-          <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
-            {node.children && node.children.map((child, i) => renderChild(child, i))}
-            {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
-          </p>
-        </div>
+          {/* Paragraph content */}
+          {node.children && node.children.map((child, i) => renderChild(child, i))}
+          {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
+        </p>
       </div>
     </motion.div>
   );
@@ -605,7 +601,7 @@ const CodeBlockNode = ({ node, language, index = 0 }) => {
       }}
     >
       <motion.span
-        className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
+        className="absolute -left-6 top-[0.15rem] paragraph-number text-xs"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{
@@ -658,7 +654,7 @@ const HeadingNode = ({ node, index = 0 }) => {
       }}
     >
       <motion.span
-        className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
+        className="absolute -left-6 top-[0.15rem] paragraph-number text-xs"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{
@@ -698,7 +694,7 @@ const ListNode = ({ node, index = 0 }) => {
       }}
     >
       <motion.span
-        className="absolute -left-6 top-[0.15rem] text-muted-foreground text-xs select-none"
+        className="absolute -left-6 top-[0.15rem] paragraph-number text-xs"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{
