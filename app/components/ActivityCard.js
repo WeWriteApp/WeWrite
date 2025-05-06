@@ -13,8 +13,12 @@ import { format } from "date-fns";
 
 /**
  * ActivityCard component displays a single activity card
+ *
+ * @param {Object} activity - The activity data to display
+ * @param {boolean} isCarousel - Whether this card is in a carousel
+ * @param {boolean} compactLayout - Whether to use a more compact layout with less padding
  */
-const ActivityCard = ({ activity, isCarousel = false }) => {
+const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
 
@@ -44,10 +48,14 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
     <div
       className={interactiveCard(
         "w-full md:max-w-[400px] h-full",
-        isCarousel && "h-full flex flex-col"
+        isCarousel && "h-full flex flex-col",
+        compactLayout && "p-2" // Reduce padding for compact layout
       )}
     >
-      <div className="flex flex-col gap-1.5 mb-2 w-full overflow-hidden">
+      <div className={cn(
+        "flex flex-col gap-1.5 w-full overflow-hidden",
+        compactLayout ? "mb-1" : "mb-2" // Reduce margin for compact layout
+      )}>
         <div className="flex flex-col w-full">
           <div className="flex justify-between items-center w-full">
             <div className="flex-shrink min-w-0 max-w-[70%] overflow-hidden">
@@ -70,7 +78,10 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
               </Tooltip>
             </TooltipProvider>
           </div>
-          <div className="text-xs text-muted-foreground truncate mt-1.5">
+          <div className={cn(
+            "text-xs text-muted-foreground truncate",
+            compactLayout ? "mt-1" : "mt-1.5" // Reduce margin for compact layout
+          )}>
             {isNewPage ? "created by" : "edited by"} {" "}
             <Link
               href={`/user/${activity.userId}`}
@@ -88,14 +99,18 @@ const ActivityCard = ({ activity, isCarousel = false }) => {
         </div>
       </div>
       <div className={cn(
-        "mt-2 flex items-center justify-between gap-3",
-        isCarousel && "flex-grow"
+        "flex items-center justify-between gap-3",
+        isCarousel && "flex-grow",
+        compactLayout ? "mt-1" : "mt-2" // Reduce margin for compact layout
       )}>
         <div className="relative flex-grow min-w-0">
           {textDiff && textDiff.preview && (
             <div className="text-xs overflow-hidden relative">
               {/* Text content */}
-              <div className="overflow-x-hidden text-ellipsis max-h-16">
+              <div className={cn(
+                "overflow-x-hidden text-ellipsis",
+                compactLayout ? "max-h-12" : "max-h-16" // Reduce height for compact layout
+              )}>
                 <span className="text-muted-foreground dark:text-slate-300">...</span>
                 <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.beforeContext}</span>
                 {textDiff.preview.isNew ? (

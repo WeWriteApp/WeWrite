@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import SlateEditor from "./SlateEditor";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { Globe, Lock, Link } from "lucide-react";
+import { Globe, Lock, Link, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -12,6 +12,7 @@ import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
+import MapEditor from "./MapEditor";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -41,6 +42,8 @@ const safeReactEditor = {
  * @param {Function} props.onContentChange - Function to handle content changes
  * @param {boolean} props.isPublic - Whether the page is public
  * @param {Function} props.setIsPublic - Function to toggle page visibility
+ * @param {Object} props.location - Location object with lat and lng properties
+ * @param {Function} props.setLocation - Function to update the location
  * @param {Function} props.onSave - Function to handle saving
  * @param {Function} props.onCancel - Function to handle cancellation
  * @param {boolean} props.isSaving - Whether the page is currently being saved
@@ -56,6 +59,8 @@ const PageEditor = ({
   onContentChange,
   isPublic,
   setIsPublic,
+  location,
+  setLocation,
   onSave,
   onCancel,
   isSaving,
@@ -413,8 +418,8 @@ const PageEditor = ({
       <div className="mt-8 mb-16">
         {/* Responsive layout for controls - public/private on left, save/cancel on right (same row on all devices) */}
         <div className="flex flex-row justify-between items-center gap-4 w-full">
-          {/* Left side controls - Public/Private switcher and Insert Link button */}
-          <div className="flex items-center gap-2">
+          {/* Left side controls - Public/Private switcher, Insert Link button, and Location */}
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Public/Private switcher */}
             <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
               {isPublic ? (
@@ -447,6 +452,23 @@ const PageEditor = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Insert a link to a page or external site</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Location button */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <MapEditor
+                      location={location}
+                      onChange={setLocation}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{location ? 'Edit the location for this page' : 'Add a location to this page'}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

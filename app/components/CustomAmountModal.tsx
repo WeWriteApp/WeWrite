@@ -35,7 +35,7 @@ export function CustomAmountModal({
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '');
     setAmount(value);
-    
+
     // Validate in real-time
     const numValue = parseInt(value, 10);
     if (isNaN(numValue) || numValue < minAmount) {
@@ -57,21 +57,21 @@ export function CustomAmountModal({
       setError(`Custom amount must be at least $${minAmount}`);
       return;
     }
-    
+
     onAmountConfirm(amount);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Custom Subscription Amount</DialogTitle>
           <DialogDescription>
             Enter a custom monthly subscription amount. The minimum is ${minAmount}.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex flex-col gap-4 py-4">
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-muted-foreground" />
@@ -84,19 +84,24 @@ export function CustomAmountModal({
               className={`text-lg font-bold ${error ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
               placeholder={`${minAmount}`}
               autoFocus
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
             />
             <span className="text-muted-foreground">/month</span>
           </div>
-          
+
           {error && (
             <p className="text-red-500 text-sm">{error}</p>
           )}
-          
+
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleAddAmount(10)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddAmount(10);
+              }}
               className="flex items-center gap-1"
             >
               <Plus className="h-3 w-3" /> $10
@@ -104,7 +109,10 @@ export function CustomAmountModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleAddAmount(25)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddAmount(25);
+              }}
               className="flex items-center gap-1"
             >
               <Plus className="h-3 w-3" /> $25
@@ -112,19 +120,34 @@ export function CustomAmountModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleAddAmount(50)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddAmount(50);
+              }}
               className="flex items-center gap-1"
             >
               <Plus className="h-3 w-3" /> $50
             </Button>
           </div>
         </div>
-        
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenChange(false);
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!!error}>
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleConfirm();
+            }}
+            disabled={!!error}
+          >
             Confirm
           </Button>
         </DialogFooter>

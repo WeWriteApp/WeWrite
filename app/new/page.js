@@ -25,6 +25,7 @@ export default function NewPage() {
   });
   const [title, setTitle] = useState("");
   const [isPublic, setIsPublic] = useState(true);
+  const [location, setLocation] = useState(null);
   const [editorContent, setEditorContent] = useState([{ type: "paragraph", children: [{ text: "" }] }]);
   const [isSaving, setIsSaving] = useState(false);
   const [initialContent, setInitialContent] = useState(null);
@@ -157,6 +158,7 @@ export default function NewPage() {
       const data = {
         title: isReply ? "" : title,
         isPublic,
+        location,
         content: JSON.stringify(content),
         userId,
         username,
@@ -222,6 +224,8 @@ export default function NewPage() {
               onContentChange={setEditorContent}
               isPublic={isPublic}
               setIsPublic={setIsPublic}
+              location={location}
+              setLocation={setLocation}
               onSave={handleSave}
               onCancel={handleBack}
               isSaving={isSaving}

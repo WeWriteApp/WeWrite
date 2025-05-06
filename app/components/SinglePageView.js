@@ -4,6 +4,7 @@ import React, { useEffect, useState, useContext, useRef, useCallback } from "rea
 import TextSelectionMenu from "./TextSelectionMenu";
 import TextHighlighter from "./TextHighlighter";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
@@ -20,6 +21,7 @@ import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import PledgeBar from "./PledgeBar";
+import RelatedPages from "./RelatedPages";
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "./ui/button";
@@ -292,19 +294,10 @@ function SinglePageView({ params }) {
 
   const Layout = user ? DashboardLayout : PublicLayout;
 
-  // If the page is deleted, show a message
+  // If the page is deleted, use NotFoundWrapper
   if (isDeleted) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <h1 className="text-2xl font-bold mb-4">Page not found</h1>
-          <p className="text-muted-foreground mb-6">This page may have been deleted or never existed.</p>
-          <Link href="/">
-            <Button>Go Home</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
+    const NotFoundWrapper = dynamic(() => import('../not-found-wrapper'), { ssr: false });
+    return <NotFoundWrapper />;
   }
 
   // If the page belongs to a private group and user doesn't have access
@@ -325,6 +318,12 @@ function SinglePageView({ params }) {
   }
 
   if (!page) {
+    // If the page is not loading and there's no error, use NotFoundWrapper
+    if (!isLoading && !error) {
+      const NotFoundWrapper = dynamic(() => import('../not-found-wrapper'), { ssr: false });
+      return <NotFoundWrapper />;
+    }
+
     return (
       <Layout>
         <Head>
@@ -341,15 +340,7 @@ function SinglePageView({ params }) {
                 <p>{error}</p>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <h2 className="text-xl font-medium mb-2">Page Not Found</h2>
-              <p className="text-muted-foreground mb-4">The page you're looking for doesn't exist or has been removed.</p>
-              <Link href="/">
-                <Button variant="outline">Return Home</Button>
-              </Link>
-            </div>
-          )}
+          ) : null}
         </div>
       </Layout>
     );
@@ -512,14 +503,10 @@ function SinglePageView({ params }) {
               </div>
             </div>
 
-            {/* Page Controls - Only show after content is fully rendered */}
+            {/* Related Pages - Only show after content is fully rendered */}
             {pageFullyRendered && (
-              <div className="mt-8 flex flex-col gap-4">
-                {user && user.uid === page.userId && !isEditing && (
-                  <div className="mt-8">
-                    {/* ActionRow removed - now using PageFooter with PageActions instead */}
-                  </div>
-                )}
+              <div className="container max-w-4xl mx-auto px-4">
+                <RelatedPages page={page} />
               </div>
             )}
           </>

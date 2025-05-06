@@ -9,7 +9,7 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { SupporterIcon } from '../../../components/SupporterIcon';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription, fixSubscription } from '../../../firebase/subscription';
+import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
 interface SubscriptionHistoryItem {
@@ -143,6 +143,8 @@ export default function ManageSubscriptionPage() {
     }
   };
 
+
+
   const getTierName = (tier: string | null) => {
     if (!tier) return 'No Subscription';
     return tier === 'tier1' ? 'Tier 1' :
@@ -206,6 +208,7 @@ export default function ManageSubscriptionPage() {
       <Tabs defaultValue="details" className="mb-8">
         <TabsList className="mb-4">
           <TabsTrigger value="details">Subscription Details</TabsTrigger>
+          <TabsTrigger value="payment-methods">Payment Methods</TabsTrigger>
           <TabsTrigger value="history">Payment History</TabsTrigger>
         </TabsList>
 
@@ -282,12 +285,9 @@ export default function ManageSubscriptionPage() {
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-2 w-full justify-center"
-                        asChild
                       >
-                        <Link href="/subscription">
-                          <CreditCard className="h-4 w-4" />
-                          <span>Manage Payment Methods</span>
-                        </Link>
+                        <CreditCard className="h-4 w-4" />
+                        <span>Manage Payment Methods</span>
                       </Button>
                     </div>
                   </div>
@@ -381,6 +381,87 @@ export default function ManageSubscriptionPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="payment-methods">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Methods</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subscription && subscription.status === 'active' ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* Primary Payment Method */}
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-primary/10 p-2 rounded-full">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">Primary Payment Method</h3>
+                            <p className="text-sm text-muted-foreground">Used for all subscription charges</p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Update
+                        </Button>
+                      </div>
+
+                      <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-card p-2 rounded-md">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+                              <path d="M2 10H22" stroke="currentColor" strokeWidth="2" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium">•••• •••• •••• {subscription.lastFourDigits || '4242'}</p>
+                            <p className="text-xs text-muted-foreground">Expires {subscription.expiryMonth || '12'}/{subscription.expiryYear || '25'}</p>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          Default
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Backup Payment Method */}
+                    <div className="border border-border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-muted p-2 rounded-full">
+                            <CreditCard className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium">Backup Payment Method</h3>
+                            <p className="text-sm text-muted-foreground">Used if primary payment fails</p>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Add
+                        </Button>
+                      </div>
+
+                      <div className="bg-muted/30 rounded-lg p-6 flex flex-col items-center justify-center text-center">
+                        <p className="text-muted-foreground mb-2">No backup payment method added</p>
+                        <p className="text-xs text-muted-foreground">Adding a backup payment method ensures your subscription continues if your primary payment method fails</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">You need an active subscription to manage payment methods.</p>
+                  <Button onClick={() => router.push('/subscription')}>
+                    Subscribe Now
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="history">
           <Card>
             <CardHeader>
@@ -434,12 +515,8 @@ export default function ManageSubscriptionPage() {
         </TabsContent>
       </Tabs>
 
-      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">About WeWrite Subscriptions</h3>
-        <p className="text-sm text-blue-700 dark:text-blue-400">
-          Currently, all subscription payments go directly to supporting WeWrite's development. In the future, we plan to enable subscriptions to support individual writers on the platform, allowing you to directly fund the creators you love.
-        </p>
-      </div>
+
+
 
 
     </div>

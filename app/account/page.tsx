@@ -10,7 +10,9 @@ import { db } from '../firebase/database';
 import { useRouter } from 'next/navigation';
 
 import { Button } from "../components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
 import SubscriptionManagement from '../components/SubscriptionManagement';
+import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -130,8 +132,8 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="px-5 py-4 max-w-3xl mx-auto">
-      <div className="flex items-center mb-6">
+    <div className="px-5 py-6 max-w-3xl mx-auto">
+      <div className="flex items-center mb-8">
         <Button
           variant="outline"
           size="icon"
@@ -144,76 +146,110 @@ export default function AccountPage() {
       </div>
 
       {user && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Profile Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Profile</h3>
-            <div className="space-y-4 bg-background rounded-lg border border-border p-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground/80 mb-1">Username</label>
-                <div className="flex justify-between items-center">
-                  <p className="text-foreground">{username || 'No username set'}</p>
-                  <button
-                    onClick={() => {
-                      const newUsername = prompt("Enter new username:", username);
-                      if (newUsername) handleUsernameChange(newUsername);
-                    }}
-                    className="text-sm text-foreground/60 hover:text-foreground"
-                  >
-                    Edit
-                  </button>
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile</CardTitle>
+                <CardDescription>Manage your personal information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-1">Username</label>
+                  <div className="flex justify-between items-center">
+                    <p className="text-foreground">{username || 'No username set'}</p>
+                    <button
+                      onClick={() => {
+                        const newUsername = prompt("Enter new username:", username);
+                        if (newUsername) handleUsernameChange(newUsername);
+                      }}
+                      className="text-sm text-foreground/60 hover:text-foreground"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
-                <div className="flex justify-between items-center">
-                  <p className="text-foreground">{email}</p>
-                  <button
-                    onClick={() => {
-                      const newEmail = prompt("Enter new email:", email);
-                      if (newEmail) handleEmailChange(newEmail);
-                    }}
-                    className="text-sm text-foreground/60 hover:text-foreground"
-                  >
-                    Edit
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
+                  <div className="flex justify-between items-center">
+                    <p className="text-foreground">{email}</p>
+                    <button
+                      onClick={() => {
+                        const newEmail = prompt("Enter new email:", email);
+                        if (newEmail) handleEmailChange(newEmail);
+                      }}
+                      className="text-sm text-foreground/60 hover:text-foreground"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  {emailError && (
+                    <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                  )}
                 </div>
-                {emailError && (
-                  <p className="text-sm text-red-500 mt-1">{emailError}</p>
-                )}
-              </div>
-            </div>
+              </CardContent>
+              <CardFooter className="flex justify-end pt-4 border-t">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm("Are you sure you want to log out?")) {
+                      // Import and call the logout function
+                      import('../firebase/auth').then(({ logoutUser }) => {
+                        logoutUser().then(() => {
+                          router.push('/');
+                        });
+                      });
+                    }
+                  }}
+                >
+                  Logout
+                </Button>
+              </CardFooter>
+            </Card>
           </section>
 
           {/* Subscription Management Section */}
           <section>
-            <h3 className="text-base font-medium mb-4">Subscription</h3>
             <SubscriptionManagement />
+
+            {/* Payment Methods Section */}
+            <div className="mt-6">
+              <PaymentMethodsManager />
+            </div>
 
             {/* Payment History */}
             {paymentHistory.length > 0 && (
-              <div className="mt-4 bg-card rounded-lg border border-border p-4 shadow-sm">
-                <h4 className="text-sm font-medium mb-2">Payment History</h4>
-                {isLoadingHistory ? (
-                  <div className="py-4 flex justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {paymentHistory.map((payment, index) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0">
-                        <div>
-                          <p className="text-sm font-medium">${payment.amount.toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(payment.created * 1000).toLocaleDateString()}</p>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100'}`}>
-                          {payment.status}
-                        </span>
+              <div className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payment History</CardTitle>
+                    <CardDescription>Your recent subscription payments</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingHistory ? (
+                      <div className="py-4 flex justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {paymentHistory.map((payment, index) => (
+                          <div key={index} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0">
+                            <div>
+                              <p className="text-sm font-medium">${payment.amount.toFixed(2)}</p>
+                              <p className="text-xs text-muted-foreground">{new Date(payment.created * 1000).toLocaleDateString()}</p>
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded-full ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100'}`}>
+                              {payment.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </section>

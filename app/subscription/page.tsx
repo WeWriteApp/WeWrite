@@ -691,7 +691,7 @@ export default function SubscriptionPage() {
             <Button
               variant="outline"
               size="icon"
-              className="hidden md:flex"
+              className="md:hidden"
               onClick={() => {
                 if (carouselRef.current) {
                   carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
@@ -703,7 +703,7 @@ export default function SubscriptionPage() {
             <Button
               variant="outline"
               size="icon"
-              className="hidden md:flex"
+              className="md:hidden"
               onClick={() => {
                 if (carouselRef.current) {
                   carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
@@ -717,7 +717,7 @@ export default function SubscriptionPage() {
 
         <div
           ref={carouselRef}
-          className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
+          className="flex gap-4 md:flex-wrap overflow-x-auto md:overflow-visible pb-4 scrollbar-hide snap-x snap-mandatory md:snap-none"
           {...useSwipeable({
             onSwipedLeft: () => {
               if (carouselRef.current) {
@@ -736,13 +736,18 @@ export default function SubscriptionPage() {
           {supporterTiers.map((tier) => (
             <Card
               key={tier.id}
-              className={`flex-none w-[280px] h-[320px] snap-center cursor-pointer transition-all duration-200 ${
+              className={`flex-none w-[280px] md:flex-1 h-[320px] snap-center cursor-pointer transition-all duration-200 relative ${
                 selectedTier === tier.id
                   ? 'border-2 border-primary bg-primary/5'
                   : 'border-2 border-border hover:border-border/80 bg-background hover:bg-background/80 hover:shadow-sm'
               }`}
               onClick={() => handleTierSelect(tier.id)}
             >
+              {/* Checkmark in top left */}
+              <div className={`absolute top-4 left-4 rounded-full p-1 z-10 ${selectedTier === tier.id ? 'bg-primary text-white' : 'bg-transparent'}`}>
+                <Check className={`h-4 w-4 ${selectedTier === tier.id ? 'opacity-100' : 'opacity-0'}`} />
+              </div>
+
               <CardHeader className="flex flex-col items-center text-center">
                 {/* Centered Icon at the top */}
                 <div className="flex justify-center items-center mb-4">
@@ -750,12 +755,8 @@ export default function SubscriptionPage() {
                     {tier.icon}
                   </div>
                 </div>
-                <div className="flex justify-between items-center w-full">
-                  <CardTitle className="text-foreground text-center mx-auto">{tier.name}</CardTitle>
-                  {/* Always render the check container to prevent layout shift, but only show it when selected */}
-                  <div className={`rounded-full p-1 absolute top-4 right-4 ${selectedTier === tier.id ? 'bg-primary text-white' : 'bg-transparent'}`}>
-                    <Check className={`h-4 w-4 ${selectedTier === tier.id ? 'opacity-100' : 'opacity-0'}`} />
-                  </div>
+                <div className="flex justify-center items-center w-full">
+                  <CardTitle className="text-foreground text-center">{tier.name}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="text-center flex flex-col items-center justify-center">
@@ -843,12 +844,7 @@ export default function SubscriptionPage() {
         )}
       </div>
 
-      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">About WeWrite Subscriptions</h3>
-        <p className="text-sm text-blue-700 dark:text-blue-400">
-          Currently, all subscription payments go directly to supporting WeWrite's development. In the future, we plan to enable subscriptions to support individual writers on the platform, allowing you to directly fund the creators you love.
-        </p>
-      </div>
+
 
       <div className="flex justify-end">
         <Button

@@ -1,6 +1,7 @@
 "use client";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { Button as ShadcnButton } from "../ui/button";
 
 const Button = ({
   text = "Get in touch",
@@ -8,14 +9,21 @@ const Button = ({
   type = "primary",
   href = "#",
 }) => {
+  // Map marketing button sizes to shadcn sizes
+  const buttonSize = size === "sm" ? "sm" : size === "lg" ? "lg" : "default";
+
   return (
-    <Link
-      href={href}
-      className="bg-white text-black px-6 py-3 rounded-full font-medium flex items-center gap-2 hover:bg-white/90 transition-colors"
+    <ShadcnButton
+      variant={type === "primary" ? "default" : "secondary"}
+      size={buttonSize}
+      className="rounded-full bg-white text-black hover:bg-white/90"
+      asChild
     >
-      {text}
-      <ArrowRight className="h-5 w-5" />
-    </Link>
+      <Link href={href} className="flex items-center gap-2">
+        {text}
+        <ArrowRight className="h-5 w-5" />
+      </Link>
+    </ShadcnButton>
   );
 };
 

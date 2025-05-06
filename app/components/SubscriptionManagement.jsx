@@ -1,137 +1,64 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { useAuth } from '../providers/AuthProvider';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription, fixSubscription, cleanupSubscriptionData } from '../firebase/subscription';
+import { getUserSubscription, cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { SupporterIcon } from './SupporterIcon';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/database';
+
 import { createPortalSession } from '../services/stripeService';
 
 export default function SubscriptionManagement() {
   const { user } = useAuth();
-  const router = useRouter();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Function to check both possible subscription locations
-  const checkAllSubscriptionLocations = async (userId) => {
+  // Helper function to clean up subscription data
+  const cleanupSubscriptionData = async (userId) => {
     try {
-      // Check the location used by getUserSubscription
-      const userSubPath = doc(db, "users", userId, "subscription", "current");
-      const userSubSnap = await getDoc(userSubPath);
-
-      // Check the location used in the API route
-      const apiSubPath = doc(db, "subscriptions", userId);
-      const apiSubSnap = await getDoc(apiSubPath);
-
-      const debug = {
-        userSubPathExists: userSubSnap.exists(),
-        apiSubPathExists: apiSubSnap.exists(),
-        userSubData: userSubSnap.exists() ? userSubSnap.data() : null,
-        apiSubData: apiSubSnap.exists() ? apiSubSnap.data() : null
+      // Create a clean canceled subscription state
+      const cleanData = {
+        status: 'canceled',
+        stripeSubscriptionId: null,
+        amount: 0,
+        tier: null,
+        renewalDate: null,
+        billingCycleEnd: null,
+        billingCycleStart: null,
+        pledgedAmount: 0,
+        updatedAt: new Date().toISOString(),
+        canceledAt: new Date().toISOString()
       };
 
-      console.log('Subscription debug info:', debug);
-
-      // Check if user subscription data is valid
-      let userSubData = null;
-      if (userSubSnap.exists()) {
-        userSubData = userSubSnap.data();
-        const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
-        const missingFields = requiredFields.filter(field => !userSubData[field]);
-
-        if (missingFields.length > 0) {
-          console.warn(`User subscription data is missing fields: ${missingFields.join(', ')}`);
-          // If status is missing, set it to canceled
-          if (missingFields.includes('status')) {
-            userSubData.status = 'canceled';
-          }
-          // If amount is missing, set it to 0
-          if (missingFields.includes('amount')) {
-            userSubData.amount = 0;
-          }
-          // If tier is missing, set it to null
-          if (missingFields.includes('tier')) {
-            userSubData.tier = null;
-          }
-          // If stripeSubscriptionId is missing, set it to null
-          if (missingFields.includes('stripeSubscriptionId')) {
-            userSubData.stripeSubscriptionId = null;
-          }
-
-          // Fix the subscription data
-          await fixSubscription(userId, userSubData);
-        }
-      }
-
-      // Check if API subscription data is valid
-      let apiSubData = null;
-      if (apiSubSnap.exists()) {
-        apiSubData = apiSubSnap.data();
-        const requiredFields = ['status', 'amount', 'tier', 'stripeSubscriptionId'];
-        const missingFields = requiredFields.filter(field => !apiSubData[field]);
-
-        if (missingFields.length > 0) {
-          console.warn(`API subscription data is missing fields: ${missingFields.join(', ')}`);
-          // If status is missing, set it to canceled
-          if (missingFields.includes('status')) {
-            apiSubData.status = 'canceled';
-          }
-          // If amount is missing, set it to 0
-          if (missingFields.includes('amount')) {
-            apiSubData.amount = 0;
-          }
-          // If tier is missing, set it to null
-          if (missingFields.includes('tier')) {
-            apiSubData.tier = null;
-          }
-          // If stripeSubscriptionId is missing, set it to null
-          if (missingFields.includes('stripeSubscriptionId')) {
-            apiSubData.stripeSubscriptionId = null;
-          }
-        }
-      }
-
-      // If we find a subscription in the API path but not in the user path, copy it over
-      if (!userSubSnap.exists() && apiSubSnap.exists()) {
-        console.log('Found subscription in API path but not in user path, fixing...');
-        await fixSubscription(userId, apiSubData);
-        return apiSubData;
-      }
-
-      // If we find a subscription in both locations, make sure they're in sync
-      if (userSubSnap.exists() && apiSubSnap.exists()) {
-        // If the status is different, sync them
-        if (userSubData.status !== apiSubData.status) {
-          console.log('Subscription status mismatch between user and API paths, fixing...');
-          // If either is canceled, use that status
-          if (userSubData.status === 'canceled' || apiSubData.status === 'canceled') {
-            const mergedData = {
-              ...userSubData,
-              ...apiSubData,
-              status: 'canceled',
-              tier: null,
-              amount: 0,
-              stripeSubscriptionId: null
-            };
-            await fixSubscription(userId, mergedData);
-            return mergedData;
-          }
-        }
-      }
-
-      return userSubSnap.exists() ? userSubData : null;
+      // Update the subscription in Firestore
+      await updateSubscription(userId, cleanData);
+      return true;
     } catch (error) {
-      console.error('Error checking subscription locations:', error);
+      console.error('Error cleaning up subscription data:', error);
+      throw error;
+    }
+  };
+
+  // Function to get subscription data
+  const getSubscriptionData = async (userId) => {
+    try {
+      // Get subscription data directly
+      const subscriptionData = await getUserSubscription(userId, { verbose: true });
+
+      if (subscriptionData) {
+        return subscriptionData;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting subscription data:', error);
       return null;
     }
   };
@@ -143,44 +70,35 @@ export default function SubscriptionManagement() {
     console.log('Setting up subscription listener for user:', user.uid);
 
     // First, directly fetch the subscription data
-    const fetchSubscriptionDirectly = async () => {
+    const fetchSubscriptionData = async () => {
       try {
-        console.log('Directly fetching subscription data for user:', user.uid);
-        const subscriptionData = await getUserSubscription(user.uid);
-        console.log('Direct subscription fetch result:', subscriptionData);
+        console.log('Fetching subscription data for user:', user.uid);
+        const subscriptionData = await getSubscriptionData(user.uid);
+        console.log('Subscription fetch result:', subscriptionData);
 
         if (subscriptionData) {
           setSubscription(subscriptionData);
-          setLoading(false);
-        } else {
-          // If no subscription found, check all possible locations
-          console.log('No subscription found in primary location, checking all locations...');
-          const allLocationsData = await checkAllSubscriptionLocations(user.uid);
-
-          if (allLocationsData) {
-            console.log('Found subscription in alternative location:', allLocationsData);
-            setSubscription(allLocationsData);
-            setLoading(false);
-          } else {
-            setLoading(false);
-          }
         }
+        setLoading(false);
       } catch (error) {
-        console.error('Error directly fetching subscription:', error);
+        console.error('Error fetching subscription:', error);
         setLoading(false);
       }
     };
 
-    fetchSubscriptionDirectly();
+    fetchSubscriptionData();
 
-    // Then set up the real-time listener as a backup
+    // Set up the real-time listener
     const unsubscribe = listenToUserSubscription(user.uid, (userSubscription) => {
       console.log('Subscription data received from listener:', userSubscription);
       if (userSubscription) {
         setSubscription(userSubscription);
         setLoading(false);
+      } else {
+        // If no subscription data, ensure loading is set to false
+        setLoading(false);
       }
-    });
+    }, { verbose: true });
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -390,7 +308,7 @@ export default function SubscriptionManagement() {
   const isPending = subscription && subscription.status === 'pending';
 
   return (
-    <Card className="mb-8">
+    <Card>
       <CardHeader>
         <CardTitle>Subscription</CardTitle>
         <CardDescription>Manage your WeWrite subscription</CardDescription>

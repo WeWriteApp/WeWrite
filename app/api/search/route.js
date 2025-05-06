@@ -43,12 +43,23 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     const searchTermLower = searchTerm.toLowerCase().trim();
     const isFilteringByUser = !!filterByUserId;
 
+    // For multi-word searches, split into individual words
+    const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+    const hasMultipleWords = searchWords.length > 1;
+
+    console.log('Firestore search parameters:', {
+      searchTermLower,
+      searchWords,
+      hasMultipleWords,
+      isFilteringByUser
+    });
+
     // Get user's own pages
     const userPagesQuery = query(
       collection(db, 'pages'),
       where('userId', '==', isFilteringByUser ? filterByUserId : userId),
       orderBy('lastModified', 'desc'),
-      limit(isFilteringByUser ? 20 : 10)
+      limit(isFilteringByUser ? 30 : 15)
     );
 
     const userPagesSnapshot = await getDocs(userPagesQuery);
@@ -56,7 +67,10 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     userPagesSnapshot.forEach(doc => {
       const data = doc.data();
-      if (!searchTermLower || data.title?.toLowerCase().includes(searchTermLower)) {
+      const title = (data.title || 'Untitled').toLowerCase();
+
+      // For empty search term, include all pages
+      if (!searchTermLower) {
         userPages.push({
           id: doc.id,
           title: data.title || 'Untitled',
@@ -66,6 +80,73 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           lastModified: data.lastModified,
           type: 'user'
         });
+        return;
+      }
+
+      // For multi-word searches, check if title contains all words
+      if (hasMultipleWords) {
+        const containsAllWords = searchWords.every(word => title.includes(word));
+        if (containsAllWords) {
+          userPages.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            isOwned: data.userId === userId,
+            isEditable: data.userId === userId,
+            userId: data.userId,
+            lastModified: data.lastModified,
+            type: 'user',
+            containsAllSearchWords: true
+          });
+        }
+      }
+      // For single-word searches, check if title includes the search term
+      else if (title.includes(searchTermLower)) {
+        // Calculate how well the title matches the search term
+        const exactMatch = title === searchTermLower;
+        const startsWithMatch = title.startsWith(searchTermLower);
+        const wordStartsWithMatch = title.split(/\s+/).some(word => word.startsWith(searchTermLower));
+
+        userPages.push({
+          id: doc.id,
+          title: data.title || 'Untitled',
+          isOwned: data.userId === userId,
+          isEditable: data.userId === userId,
+          userId: data.userId,
+          lastModified: data.lastModified,
+          type: 'user',
+          matchQuality: exactMatch ? 'exact' :
+                        startsWithMatch ? 'startsWith' :
+                        wordStartsWithMatch ? 'wordStartsWith' : 'contains'
+        });
+      }
+      // Also check if any word in the title starts with the search term
+      else {
+        const titleWords = title.split(/\s+/);
+
+        // Check if any word in the title starts with the search term
+        const anyWordStartsWith = titleWords.some(word => word.startsWith(searchTermLower));
+
+        // Check if search term is a substring of any word in the title (e.g., "road" in "roadmap")
+        const isSubstringOfWord = titleWords.some(word => word.includes(searchTermLower));
+
+        // Check if any word in the title is a substring of the search term (e.g., "map" in "roadmap")
+        const wordIsSubstring = titleWords.some(word =>
+          word.length > 2 && searchTermLower.includes(word)
+        );
+
+        if (anyWordStartsWith || isSubstringOfWord || wordIsSubstring) {
+          userPages.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            isOwned: data.userId === userId,
+            isEditable: data.userId === userId,
+            userId: data.userId,
+            lastModified: data.lastModified,
+            type: 'user',
+            matchQuality: anyWordStartsWith ? 'wordStartsWith' :
+                          isSubstringOfWord ? 'substringMatch' : 'partialMatch'
+          });
+        }
       }
     });
 
@@ -76,25 +157,99 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         collection(db, 'pages'),
         where('isPublic', '==', true),
         orderBy('lastModified', 'desc'),
-        limit(20)
+        limit(30)
       );
 
       const publicPagesSnapshot = await getDocs(publicPagesQuery);
 
       publicPagesSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.userId !== userId &&
-            (!searchTermLower || data.title?.toLowerCase().includes(searchTermLower))) {
-          publicPages.push({
-            id: doc.id,
-            title: data.title || 'Untitled',
-            isOwned: false,
-            isEditable: false,
-            userId: data.userId,
-            lastModified: data.lastModified,
-            isPublic: true,
-            type: 'public'
-          });
+        if (data.userId !== userId) {
+          const title = (data.title || 'Untitled').toLowerCase();
+
+          // For empty search term, include all pages
+          if (!searchTermLower) {
+            publicPages.push({
+              id: doc.id,
+              title: data.title || 'Untitled',
+              isOwned: false,
+              isEditable: false,
+              userId: data.userId,
+              lastModified: data.lastModified,
+              isPublic: true,
+              type: 'public'
+            });
+            return;
+          }
+
+          // For multi-word searches, check if title contains all words
+          if (hasMultipleWords) {
+            const containsAllWords = searchWords.every(word => title.includes(word));
+            if (containsAllWords) {
+              publicPages.push({
+                id: doc.id,
+                title: data.title || 'Untitled',
+                isOwned: false,
+                isEditable: false,
+                userId: data.userId,
+                lastModified: data.lastModified,
+                isPublic: true,
+                type: 'public',
+                containsAllSearchWords: true
+              });
+            }
+          }
+          // For single-word searches, check if title includes the search term
+          else if (title.includes(searchTermLower)) {
+            // Calculate how well the title matches the search term
+            const exactMatch = title === searchTermLower;
+            const startsWithMatch = title.startsWith(searchTermLower);
+            const wordStartsWithMatch = title.split(/\s+/).some(word => word.startsWith(searchTermLower));
+
+            publicPages.push({
+              id: doc.id,
+              title: data.title || 'Untitled',
+              isOwned: false,
+              isEditable: false,
+              userId: data.userId,
+              lastModified: data.lastModified,
+              isPublic: true,
+              type: 'public',
+              matchQuality: exactMatch ? 'exact' :
+                           startsWithMatch ? 'startsWith' :
+                           wordStartsWithMatch ? 'wordStartsWith' : 'contains'
+            });
+          }
+          // Also check if any word in the title starts with the search term
+          else {
+            const titleWords = title.split(/\s+/);
+
+            // Check if any word in the title starts with the search term
+            const anyWordStartsWith = titleWords.some(word => word.startsWith(searchTermLower));
+
+            // Check if search term is a substring of any word in the title (e.g., "road" in "roadmap")
+            const isSubstringOfWord = titleWords.some(word => word.includes(searchTermLower));
+
+            // Check if any word in the title is a substring of the search term (e.g., "map" in "roadmap")
+            const wordIsSubstring = titleWords.some(word =>
+              word.length > 2 && searchTermLower.includes(word)
+            );
+
+            if (anyWordStartsWith || isSubstringOfWord || wordIsSubstring) {
+              publicPages.push({
+                id: doc.id,
+                title: data.title || 'Untitled',
+                isOwned: false,
+                isEditable: false,
+                userId: data.userId,
+                lastModified: data.lastModified,
+                isPublic: true,
+                type: 'public',
+                matchQuality: anyWordStartsWith ? 'wordStartsWith' :
+                              isSubstringOfWord ? 'substringMatch' : 'partialMatch'
+              });
+            }
+          }
         }
       });
     }
@@ -161,10 +316,36 @@ export async function GET(request) {
       );
     }
 
-    // Format search term for BigQuery
+    // Format search term for BigQuery - use a more flexible pattern to catch more matches
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    // Use a more flexible pattern that will match anywhere in the title
+    // The double % makes it match anywhere in the string, improving results for partial matches
     const searchTermFormatted = searchTerm
-      ? `%${searchTerm.toLowerCase().trim()}%`
+      ? `%${searchTermLower}%`
       : "%";
+
+    // For better matching of terms like "road" in "roadmap", also create a pattern with just the first part
+    const partialSearchTerm = searchTermLower.length > 2
+      ? `%${searchTermLower.substring(0, Math.ceil(searchTermLower.length * 0.7))}%`
+      : searchTermFormatted;
+
+    // For multi-word search terms, create individual word patterns
+    const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+    const hasMultipleWords = searchWords.length > 1;
+
+    // Create more flexible patterns for each word to improve matching
+    const searchWordPatterns = searchWords.map(word => {
+      // Always use a flexible pattern to match anywhere in the title
+      return `%${word}%`;
+    });
+
+    console.log('Search parameters:', {
+      searchTerm,
+      searchTermLower,
+      searchTermFormatted,
+      searchWords,
+      hasMultipleWords
+    });
 
     // Check if we're filtering by a specific user
     const isFilteringByUser = !!filterByUserId;
@@ -178,6 +359,7 @@ export async function GET(request) {
         console.log('Attempting to search with BigQuery');
 
         // Use a query that includes the isPublic field for proper filtering
+        // For multi-word searches, we'll use a more complex query that checks for all words
         const simplifiedQuery = `
           WITH user_pages AS (
             SELECT
@@ -190,9 +372,15 @@ export async function GET(request) {
               isPublic
             FROM \`wewrite-ccd82.pages_indexes.pages\`
             WHERE userId = ${isFilteringByUser ? '@filterByUserId' : '@userId'}
-              AND LOWER(title) LIKE @searchTerm
+              ${hasMultipleWords ?
+                // For multi-word searches, check that title contains all words
+                searchWords.map((_, i) => `AND LOWER(title) LIKE @searchWord${i}`).join('\n              ')
+                :
+                // For single-word searches, use both the original pattern and partial pattern
+                'AND (LOWER(title) LIKE @searchTerm OR LOWER(title) LIKE @partialSearchTerm)'
+              }
             ORDER BY lastModified DESC
-            LIMIT ${isFilteringByUser ? '20' : '10'}
+            LIMIT ${isFilteringByUser ? '30' : '15'}
           ),
           ${groupIds.length > 0 ? `
           group_pages AS (
@@ -206,9 +394,15 @@ export async function GET(request) {
               isPublic
             FROM \`wewrite-ccd82.pages_indexes.pages\`
             WHERE groupId IN UNNEST(@groupIds)
-              AND LOWER(title) LIKE @searchTerm
+              ${hasMultipleWords ?
+                // For multi-word searches, check that title contains all words
+                searchWords.map((_, i) => `AND LOWER(title) LIKE @searchWord${i}`).join('\n              ')
+                :
+                // For single-word searches, use both the original pattern and partial pattern
+                'AND (LOWER(title) LIKE @searchTerm OR LOWER(title) LIKE @partialSearchTerm)'
+              }
             ORDER BY lastModified DESC
-            LIMIT 5
+            LIMIT 10
           ),` : ''}
           other_pages AS (
             SELECT
@@ -221,7 +415,13 @@ export async function GET(request) {
               isPublic
             FROM \`wewrite-ccd82.pages_indexes.pages\`
             WHERE userId != @userId
-              AND LOWER(title) LIKE @searchTerm
+              ${hasMultipleWords ?
+                // For multi-word searches, check that title contains all words
+                searchWords.map((_, i) => `AND LOWER(title) LIKE @searchWord${i}`).join('\n              ')
+                :
+                // For single-word searches, use both the original pattern and partial pattern
+                'AND (LOWER(title) LIKE @searchTerm OR LOWER(title) LIKE @partialSearchTerm)'
+              }
               AND isPublic = true
               ${groupIds.length > 0 ? `AND document_id NOT IN (
                 SELECT document_id
@@ -229,7 +429,7 @@ export async function GET(request) {
                 WHERE groupId IN UNNEST(@groupIds)
               )` : ''}
             ORDER BY lastModified DESC
-            LIMIT 20
+            LIMIT 30
           )
 
           SELECT * FROM user_pages
@@ -237,21 +437,51 @@ export async function GET(request) {
           ${!isFilteringByUser ? 'UNION ALL SELECT * FROM other_pages' : ''}
         `;
 
+        // Build query parameters
+        const queryParams = {
+          userId: userId,
+          ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
+          ...(groupIds.length > 0 ? { groupIds: groupIds } : {})
+        };
+
+        // Add search term parameters
+        if (hasMultipleWords) {
+          // Add individual word patterns for multi-word searches
+          searchWordPatterns.forEach((pattern, index) => {
+            queryParams[`searchWord${index}`] = pattern;
+          });
+        } else {
+          // Use both the original pattern and partial pattern for single-word searches
+          queryParams.searchTerm = searchTermFormatted;
+          queryParams.partialSearchTerm = partialSearchTerm;
+        }
+
+        // Build parameter types
+        const paramTypes = {
+          userId: "STRING",
+          ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
+          ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {})
+        };
+
+        // Add search term parameter types
+        if (hasMultipleWords) {
+          // Add types for individual word patterns
+          searchWordPatterns.forEach((_, index) => {
+            paramTypes[`searchWord${index}`] = "STRING";
+          });
+        } else {
+          // Use types for both the original and partial search terms
+          paramTypes.searchTerm = "STRING";
+          paramTypes.partialSearchTerm = "STRING";
+        }
+
+        console.log('BigQuery parameters:', queryParams);
+
         // Execute query
         const [results] = await bigquery.query({
           query: simplifiedQuery,
-          params: {
-            userId: userId,
-            ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
-            ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
-            searchTerm: searchTermFormatted
-          },
-          types: {
-            userId: "STRING",
-            ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
-            ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
-            searchTerm: "STRING"
-          },
+          params: queryParams,
+          types: paramTypes
         });
 
         console.log(`BigQuery returned ${results.length} results`);

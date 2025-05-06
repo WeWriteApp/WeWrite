@@ -14,6 +14,7 @@ interface PagePreviewCardProps {
   pageId: string;
   status?: 'done' | 'in-progress' | 'coming-soon';
   maxContentLength?: number;
+  hideStatus?: boolean;
 }
 
 export function PagePreviewCard({
@@ -21,7 +22,8 @@ export function PagePreviewCard({
   content,
   pageId,
   status = 'done',
-  maxContentLength = 150
+  maxContentLength = 150,
+  hideStatus = false
 }: PagePreviewCardProps) {
   // Truncate content if needed
   const truncatedContent = content.length > maxContentLength
@@ -52,7 +54,7 @@ export function PagePreviewCard({
                 {title}
               </span>
             </CardTitle>
-            {getStatusBadge(status)}
+            {!hideStatus && getStatusBadge(status)}
           </div>
         </CardHeader>
         <CardContent className="flex-grow relative pb-16">

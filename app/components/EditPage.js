@@ -22,6 +22,7 @@ const EditPage = ({
   const [groupId, setGroupId] = useState(null);
   const [localGroups, setLocalGroups] = useState([]);
   const [isPublic, setIsPublic] = useState(page?.isPublic === true);
+  const [location, setLocation] = useState(page?.location || null);
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
@@ -163,6 +164,7 @@ const EditPage = ({
           title: title,
           isPublic: isPublic,
           groupId: groupId,
+          location: location,
           lastModified: updateTime,
           // Also update content directly in the page document
           content: editorStateJSON
@@ -272,6 +274,8 @@ const EditPage = ({
       }}
       isPublic={isPublic}
       setIsPublic={setIsPublic}
+      location={location}
+      setLocation={setLocation}
       onSave={(content) => handleSave(content || editorContent || current)}
       onCancel={handleCancel}
       isSaving={isSaving}

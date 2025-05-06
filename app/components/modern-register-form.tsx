@@ -176,9 +176,6 @@ export function ModernRegisterForm({
     >
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl font-bold">Create your account</h1>
-        <p className="text-sm text-muted-foreground">
-          Pick a username, start writing anonymously
-        </p>
       </div>
 
       <div className="grid gap-4">

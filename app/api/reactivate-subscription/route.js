@@ -137,6 +137,10 @@ export async function POST(request) {
         },
       ],
       expand: ['latest_invoice.payment_intent'],
+      payment_settings: {
+        payment_method_types: ['card'],
+        save_default_payment_method: 'on_subscription'
+      },
       metadata: {
         firebaseUID: userId,
         amount: amountFloat.toString(),
@@ -159,8 +163,19 @@ export async function POST(request) {
       };
     }
 
+    // Log the subscription options for debugging
+    console.log('Creating subscription with options:', JSON.stringify({
+      ...subscriptionOptions,
+      customer: customer.id, // Just log the ID for privacy
+    }, null, 2));
+
     // Create the subscription in Stripe
     const subscription = await stripe.subscriptions.create(subscriptionOptions);
+
+    // Log subscription details for debugging
+    console.log('Subscription created:', subscription.id);
+    console.log('Subscription status:', subscription.status);
+    console.log('Payment intent status:', subscription.latest_invoice?.payment_intent?.status || 'N/A');
 
     // Get the client secret for the payment intent
     // Make sure the payment intent exists and has a client secret

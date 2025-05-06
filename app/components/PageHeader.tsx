@@ -280,17 +280,18 @@ export default function PageHeader({
                 }`}
                 style={{
                   transform: isScrolled ? "translateY(0)" : "translateY(0)",
-                  maxWidth: isScrolled ? "95vw" : "100%"
+                  maxWidth: isScrolled ? "calc(100% - 16px)" : "100%",
+                  margin: isScrolled ? "0 8px" : "0"
                 }}
               >
                 <h1
                   className={`font-semibold transition-all duration-200 ease-out will-change-transform ${
                     isScrolled
-                      ? "text-xs truncate opacity-90"
+                      ? "text-xs opacity-90"
                       : "text-2xl mb-0.5"
                   }`}
                   style={{
-                    maxWidth: isScrolled ? "60vw" : "100%"
+                    maxWidth: isScrolled ? "70vw" : "100%"
                   }}
                 >
                   {isLoading ? (
@@ -300,12 +301,33 @@ export default function PageHeader({
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <span className={isScrolled ? "truncate" : ""} style={isScrolled ? {maxWidth: '40vw', display: 'inline-block', verticalAlign: 'middle'} : {}}>{title || "Untitled"}</span>
+                      <span
+                        className={isScrolled ? "text-ellipsis overflow-hidden" : ""}
+                        style={isScrolled ? {
+                          maxWidth: '60vw',
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                          whiteSpace: 'nowrap',
+                          paddingRight: '4px'
+                        } : {}}
+                      >
+                        {title || "Untitled"}
+                      </span>
                       {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
                     </div>
                   )}
                 </h1>
-                <p className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${isScrolled ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block" : "text-sm mt-0.5"}`} style={{ maxWidth: isScrolled ? "30vw" : "100%" }}>
+                <p
+                  className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
+                    isScrolled
+                      ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block"
+                      : "text-sm mt-0.5"
+                  }`}
+                  style={{
+                    maxWidth: isScrolled ? "25vw" : "100%",
+                    minWidth: isScrolled ? "auto" : "auto"
+                  }}
+                >
                   {isLoading ? (
                     <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading author...</span>
                   ) : (
@@ -315,12 +337,12 @@ export default function PageHeader({
                       </Link>
                     ) : (
                       <span className="flex items-center gap-1 justify-center mx-auto">
-                        <span className="whitespace-nowrap">by</span>
-                        <Link href={`/user/${userId}`} className="hover:underline">
+                        <span className="whitespace-nowrap flex-shrink-0">by</span>
+                        <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
                           {isLoading || !displayUsername ? (
                             <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
                           ) : (
-                            <span data-component-name="PageHeader">{displayUsername}</span>
+                            <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
                           )}
                         </Link>
                         <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>

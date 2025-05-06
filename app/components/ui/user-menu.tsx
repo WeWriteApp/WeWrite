@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./dropdown-menu"
-import Button from "../Button"
+import { Button } from "./button"
 
 export function UserMenu() {
   const router = useRouter()

@@ -109,9 +109,6 @@ export function ModernLoginForm({
     >
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl font-bold">Sign in to WeWrite</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your details below to sign in to your account
-        </p>
       </div>
 
       <div className="grid gap-4">

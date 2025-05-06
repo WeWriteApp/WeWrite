@@ -31,12 +31,7 @@ export function ModernAuthLayout({
       {/* Left side - Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-white dark:bg-gray-950">
         <div className="w-full max-w-md mx-auto">
-          {/* Header with only 'Sign in' */}
-          <div className="flex items-center justify-center mb-8 gap-2">
-            <span className="text-2xl font-bold text-primary align-middle">Sign in</span>
-          </div>
-
-          {/* Remove title/description block for left side */}
+          {/* Header removed as requested */}
 
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8">
             {children}

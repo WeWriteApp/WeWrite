@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { PillLink } from './PillLink';
+
+import PillLink from './PillLink.js';
 import { Flame, Loader } from 'lucide-react';
-import SimpleSparkline from './SimpleSparkline';
+import SimpleSparkline from './SimpleSparkline.js';
+import Link from 'next/link';
 import { getPageViewsLast24Hours, getTrendingPages } from '../firebase/pageViews';
 
 interface TrendingPage {
@@ -61,12 +62,6 @@ export default function TrendingPages({ limit = 5 }) {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Trending Pages</h2>
-          </div>
-        </div>
         <div className="flex justify-center items-center py-8">
           <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -77,12 +72,6 @@ export default function TrendingPages({ limit = 5 }) {
   if (error) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Trending Pages</h2>
-          </div>
-        </div>
         <div className="border border-theme-medium rounded-lg overflow-hidden">
           <div className="text-destructive p-4 text-center">
             {error}
@@ -95,12 +84,6 @@ export default function TrendingPages({ limit = 5 }) {
   if (trendingPages.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Trending Pages</h2>
-          </div>
-        </div>
         <div className="border border-theme-medium rounded-lg overflow-hidden">
           <div className="text-muted-foreground p-4 text-center">
             No trending pages found
@@ -112,14 +95,10 @@ export default function TrendingPages({ limit = 5 }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Flame className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Trending Pages</h2>
-        </div>
-      </div>
-      <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full overflow-x-auto">
-        <table className="min-w-[500px] w-full">
+
+      {/* Desktop view (md and up): Table layout */}
+      <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+        <table className="w-full">
           <thead>
             <tr className="border-b border-border">
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
@@ -129,13 +108,15 @@ export default function TrendingPages({ limit = 5 }) {
           </thead>
           <tbody>
             {trendingPages.map((page) => (
-              <tr key={page.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+              <tr
+                key={page.id}
+                className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                onClick={() => window.location.href = `/${page.id}`}
+              >
                 <td className="py-3 px-4">
-                  <PillLink
-                    href={`/${page.id}`}
-                  >
+                  <div className="hover:text-primary transition-colors">
                     {page.title || 'Untitled'}
-                  </PillLink>
+                  </div>
                 </td>
                 <td className="py-3 px-4 text-right font-medium">
                   {page.views.toLocaleString()}
@@ -146,6 +127,7 @@ export default function TrendingPages({ limit = 5 }) {
                       data={page.hourlyViews}
                       height={40}
                       color="#1768FF"
+                      strokeWidth={1.5}
                     />
                   </div>
                 </td>
@@ -153,6 +135,45 @@ export default function TrendingPages({ limit = 5 }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile view (smaller than md): Card grid layout */}
+      <div className="md:hidden grid grid-cols-1 gap-4">
+        {trendingPages.map((page) => (
+          <Link
+            href={`/${page.id}`}
+            key={page.id}
+            className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+          >
+            <div className="p-4">
+              <div className="mb-4">
+                <h3 className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
+                  {page.title || 'Untitled'}
+                </h3>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <div className="font-medium text-lg">
+                    {page.views.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    views in 24h
+                  </div>
+                </div>
+
+                <div className="w-28 h-14 bg-background/50 rounded-md p-1">
+                  <SimpleSparkline
+                    data={page.hourlyViews}
+                    height={48}
+                    color="#1768FF"
+                    strokeWidth={2}
+                  />
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );

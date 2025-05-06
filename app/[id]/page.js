@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDatabase, ref, get } from 'firebase/database';
@@ -60,6 +61,7 @@ export default function GlobalIDPage({ params }) {
         }
 
         // If we get here, the ID doesn't match any content
+        // Use our wrapper component to trigger the not-found.tsx page
         setContentType('not-found');
         setIsLoading(false);
       } catch (error) {
@@ -81,12 +83,9 @@ export default function GlobalIDPage({ params }) {
   }
 
   if (contentType === 'not-found') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <h1 className="text-2xl font-bold mb-4">Content Not Found</h1>
-        <p className="text-muted-foreground">The content you're looking for doesn't exist.</p>
-      </div>
-    );
+    // Import the NotFoundWrapper component
+    const NotFoundWrapper = dynamic(() => import('../not-found-wrapper'), { ssr: false });
+    return <NotFoundWrapper />;
   }
 
   if (contentType === 'error') {

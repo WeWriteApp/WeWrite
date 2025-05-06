@@ -181,11 +181,16 @@ const Search = () => {
     fetchResults(searchTerm);
   }
 
-  // Handle Enter key press to navigate to search page
+  // Handle Enter key press or search icon click to navigate to search page
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && e.target.value.trim()) {
+    // Always navigate to search page when Enter is pressed or search icon is clicked
+    const searchTerm = e.target.value.trim();
+
+    // Only navigate if there's a search term
+    if (searchTerm) {
       e.preventDefault();
-      router.push(`/search?q=${encodeURIComponent(e.target.value.trim())}`);
+      console.log('Navigating to search page with query:', searchTerm);
+      router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     }
   }
 

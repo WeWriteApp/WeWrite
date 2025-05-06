@@ -149,6 +149,8 @@ export const createPage = async (data) => {
       username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
+      // Add location data if provided
+      location: data.location || null,
       // Add fundraising fields
       totalPledged: 0,
       pledgeCount: 0,

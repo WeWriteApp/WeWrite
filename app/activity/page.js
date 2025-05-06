@@ -4,32 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RecentActivity from "../components/RecentActivity";
 import { Button } from "../components/ui/button";
-import { ChevronLeft, Clock, Loader } from "lucide-react";
+import { ChevronLeft, Clock } from "lucide-react";
 
 export default function ActivityPage() {
   const router = useRouter();
   const [limit, setLimit] = useState(30);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const loadMore = () => {
-    setIsLoading(true);
-    // Increase the limit by 30 more items
-    setLimit(prevLimit => prevLimit + 30);
-    // The loading state will be handled by the RecentActivity component
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-  };
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => router.push('/')}
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
+          <ChevronLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
 
@@ -44,23 +33,7 @@ export default function ActivityPage() {
 
       <RecentActivity limit={limit} showViewAll={false} isActivityPage={true} />
 
-      <div className="flex justify-center mt-8">
-        <Button
-          variant="outline"
-          onClick={loadMore}
-          disabled={isLoading}
-          className="gap-2"
-        >
-          {isLoading ? (
-            <>
-              <div className="loader"></div>
-              Loading...
-            </>
-          ) : (
-            <>Load 30 more</>
-          )}
-        </Button>
-      </div>
+
     </div>
   );
 }

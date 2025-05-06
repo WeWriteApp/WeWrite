@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext, useRef } from 'react';
 import { PillLink } from './PillLink';
-import { db, rtdb } from '../firebase/firebase';
+import { db } from '../firebase/config';
+import { getDatabase } from 'firebase/database';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { ref, get, onValue } from 'firebase/database';
 import { Loader2, Check, Users, ChevronRight, ChevronDown, Heart } from "lucide-react";
@@ -9,9 +10,10 @@ import { pageStatsService } from '../services/PageStatsService';
 import { pledgeService } from '../services/PledgeService';
 import { AuthContext } from '../providers/AuthProvider';
 import User from './UserBadge';
-import Sparkline from './Sparkline';
+import { Sparkline } from './ui/sparkline';
 import FollowButton from './FollowButton';
 import { getPageFollowerCount } from '../firebase/follows';
+import PageMetadataMap from './PageMetadataMap';
 
 // MetadataItem component for the card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
@@ -117,6 +119,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
       }
 
       try {
+        const rtdb = getDatabase();
         const groupsRef = ref(rtdb, 'groups');
         const snapshot = await get(groupsRef);
         const groupsData = snapshot.val();
@@ -227,6 +230,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   useEffect(() => {
     if (page.id) {
       // Setup history listeners for each metric
+      const rtdb = getDatabase();
       const historyRef = ref(rtdb, `pageStats/${page.id}/history`);
       const unsubscribe = onValue(historyRef, (snapshot) => {
         const history = snapshot.val() || {};
@@ -253,7 +257,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   useEffect(() => {
     const fetchRelatedPages = async () => {
       setIsLoadingRelated(true);
-      const firestore = db();
+      const firestore = db;
       if (!firestore) {
         console.warn('Firestore not initialized');
         setIsLoadingRelated(false);
@@ -289,7 +293,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         className="flex items-center gap-2 cursor-pointer mb-6"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <h2 className="text-lg font-medium text-card-foreground">About page</h2>
+        <h2 className="text-lg font-medium text-card-foreground">Page Metadata</h2>
         {isCollapsed ? (
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         ) : (
@@ -400,6 +404,24 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
             value={recentChanges}
             sparklineData={recentChangesHistory}
           />
+          {/* Location as the third card */}
+          <div className="w-full max-w-md">
+            <div className="hidden md:block bg-card dark:bg-neutral-alpha-2 rounded-2xl p-4 border border-border/40 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-card-foreground text-base">Location</span>
+              </div>
+              <PageMetadataMap location={page.location} />
+            </div>
+            <div className="md:hidden flex flex-col">
+              <div className="flex items-center justify-between py-4">
+                <span className="text-card-foreground text-base">Location</span>
+              </div>
+              <div className="mb-4">
+                <PageMetadataMap location={page.location} />
+              </div>
+              <div className="h-[1px] bg-border"></div>
+            </div>
+          </div>
           <MetadataItem
             label="Total readers"
             value={totalReaders.toLocaleString()}
@@ -430,20 +452,6 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
             value={page.customDate || "None"}
             showChart={false}
           />
-        </div>
-
-        {/* Location */}
-        <div>
-          <h3 className="text-muted-foreground mb-2">Location</h3>
-          {page.location ? (
-            <div className="w-full h-48 rounded-2xl overflow-hidden bg-card dark:bg-card border border-border/40 shadow-sm">
-              {/* Map component will go here */}
-            </div>
-          ) : (
-            <div className="bg-card dark:bg-card rounded-2xl p-4 border border-border/40 shadow-sm">
-              <span className="text-muted-foreground">None</span>
-            </div>
-          )}
         </div>
       </div>
     </div>

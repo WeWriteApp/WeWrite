@@ -134,16 +134,33 @@ export default function SearchPage() {
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Search</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={copySearchUrl}
-          className="flex items-center gap-2"
-        >
-          <LinkIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Copy Link</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2"
+            aria-label="Go back"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+          <h1 className="text-2xl font-bold">Search</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copySearchUrl}
+            className="flex items-center gap-2"
+            aria-label="Share search results"
+          >
+            <LinkIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        </div>
       </div>
 
       <form onSubmit={handleSearch} className="mb-8">

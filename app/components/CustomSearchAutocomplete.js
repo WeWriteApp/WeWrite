@@ -13,21 +13,58 @@ const CustomSearchAutocomplete = (props) => {
     // Find the input element inside the ReactSearchAutocomplete component
     if (inputRef.current) {
       const inputElement = inputRef.current.querySelector('input');
+      const searchIcon = inputRef.current.querySelector('.search-icon');
+
+      // Create cleanup functions array
+      const cleanupFunctions = [];
+
       if (inputElement) {
         // Add keydown event listener
         const handleKeyDown = (e) => {
           if (e.key === 'Enter' && onKeyDown) {
+            e.preventDefault(); // Prevent default form submission
             onKeyDown(e);
           }
         };
 
         inputElement.addEventListener('keydown', handleKeyDown);
 
-        // Clean up
-        return () => {
+        // Add to cleanup functions
+        cleanupFunctions.push(() => {
           inputElement.removeEventListener('keydown', handleKeyDown);
-        };
+        });
       }
+
+      // Add click listener to search icon
+      if (searchIcon && onKeyDown) {
+        const handleSearchIconClick = (e) => {
+          e.preventDefault(); // Prevent default behavior
+          e.stopPropagation(); // Stop event propagation
+
+          // Create a synthetic event with the current input value
+          const inputValue = inputRef.current.querySelector('input')?.value || '';
+          const syntheticEvent = {
+            key: 'Enter',
+            target: { value: inputValue },
+            preventDefault: () => {}
+          };
+
+          // Always navigate to search page when clicking the search icon
+          onKeyDown(syntheticEvent);
+        };
+
+        searchIcon.addEventListener('click', handleSearchIconClick);
+
+        // Add to cleanup functions
+        cleanupFunctions.push(() => {
+          searchIcon.removeEventListener('click', handleSearchIconClick);
+        });
+      }
+
+      // Return a single cleanup function that calls all cleanup functions
+      return () => {
+        cleanupFunctions.forEach(cleanup => cleanup());
+      };
     }
   }, [onKeyDown, inputRef]);
 

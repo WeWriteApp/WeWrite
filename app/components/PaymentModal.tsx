@@ -10,7 +10,7 @@ import {
 } from '@stripe/react-stripe-js';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import Button from './Button';
+import { Button } from './ui/button';
 import Modal from './ui/modal';
 
 // Initialize Stripe
@@ -182,22 +182,21 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
       )}
 
       <div className="flex justify-between">
-        <button
+        <Button
           onClick={onCancel}
           disabled={processing}
-          className="bg-transparent border border-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.15)] text-white px-5 py-2 rounded"
+          variant="outline"
           type="button"
         >
           Cancel
-        </button>
+        </Button>
 
-        <button
+        <Button
           disabled={!stripe || processing || !isFormComplete}
-          className="bg-[#0057FF] hover:bg-[#0046CC] text-white font-medium px-5 py-2 rounded"
           type="submit"
         >
           {processing ? "Processing..." : `Pay $${amount.toFixed(2)}/mo`}
-        </button>
+        </Button>
       </div>
     </form>
   );

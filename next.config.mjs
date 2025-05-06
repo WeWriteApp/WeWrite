@@ -6,7 +6,8 @@ const {
     PID,
     BUCKET,
     MSNGR_ID,
-    APP_ID
+    APP_ID,
+    MAPBOX_TOKEN
 } = process.env;
 const nextConfig = {
     env: {
@@ -16,7 +17,8 @@ const nextConfig = {
         PID,
         BUCKET,
         MSNGR_ID,
-        APP_ID
+        APP_ID,
+        NEXT_PUBLIC_MAPBOX_TOKEN: MAPBOX_TOKEN
     },
     output: 'standalone',
     poweredByHeader: false,

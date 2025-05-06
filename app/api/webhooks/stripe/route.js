@@ -12,9 +12,11 @@ function determineTierFromAmount(amount) {
 
 // Initialize Stripe with the appropriate key based on environment
 const stripeSecretKey = getStripeSecretKey();
-const stripe = new Stripe(stripeSecretKey);
+const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2023-10-16',
+});
 const endpointSecret = getStripeWebhookSecret();
-console.log('Stripe initialized for webhook handler');
+console.log('Stripe initialized for webhook handler with API version 2023-10-16');
 
 export async function POST(request) {
   try {
@@ -25,7 +27,14 @@ export async function POST(request) {
 
     // Verify webhook signature
     try {
-      event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
+      // In development, we might not have a valid signature
+      if (process.env.NODE_ENV === 'development' && !signature) {
+        console.log('Development mode: Skipping signature verification');
+        // Parse the event from the body
+        event = JSON.parse(body);
+      } else {
+        event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
+      }
     } catch (err) {
       console.error(`⚠️ Webhook signature verification failed.`, err.message);
       return NextResponse.json(
@@ -33,6 +42,9 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    // Log the event type for debugging
+    console.log(`Received webhook event: ${event.type}`);
 
     // Handle the event
     switch (event.type) {
