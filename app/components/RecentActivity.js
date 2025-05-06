@@ -4,6 +4,7 @@ import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info } from "lucide-react";
 import useRecentActivity from "../hooks/useRecentActivity";
+import useHomeRecentActivity from "../hooks/useHomeRecentActivity";
 import ActivityCard from "./ActivityCard";
 import ActivityEmptyState from "./ActivityEmptyState";
 import { Button } from "./ui/button";
@@ -52,11 +53,13 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
       setViewMode('all');
     }
   }, [isInUserProfile, isActivityPage, setViewMode]);
-  const { activities, loading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
-    limit,
-    userId,
-    viewMode === 'following'
-  );
+
+  // Use different hooks based on whether we're on the homepage or not
+  // For homepage, use the static hook that only loads once
+  // For activity page or user profile, use the regular hook with pagination
+  const { activities, loading, error, hasMore, loadingMore, loadMore } = isHomepage
+    ? useHomeRecentActivity(limit, userId, viewMode === 'following')
+    : useRecentActivity(limit, userId, viewMode === 'following');
   const { user } = useContext(AuthContext);
   const carouselRef = useRef(null);
   const [followedPages, setFollowedPages] = useState([]);
