@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { admin } from '@/app/firebase/admin';
+import { admin } from '../../firebase/admin';
 import Stripe from 'stripe';
 
 // Initialize Firebase Admin
