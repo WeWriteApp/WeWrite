@@ -5,7 +5,6 @@ import React, {
   useContext,
   useCallback,
   useRef,
-  Children,
 } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import { MobileContext } from "../providers/MobileProvider";
@@ -18,9 +17,6 @@ import { useTheme } from "next-themes";
 import { Input } from "./ui/input";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { app } from "../firebase/config";
-import { getBasePageSearchRules, getUserPageSearchRules, buildSearchQueryUrl, applyPrivacyFiltering } from "../utils/searchRules";
-import { Switch } from "./ui/switch";
-import { performClientSideSearch } from "../utils/clientSideSearch";
 
 // Define a simple Loader component directly in this file
 const Loader = () => {
@@ -31,7 +27,6 @@ const Loader = () => {
   );
 };
 
-// Minimum characters required to trigger a search
 const characterCount = 1;
 
 const TypeaheadSearch = ({
@@ -43,8 +38,7 @@ const TypeaheadSearch = ({
   editableOnly = false, // New prop to filter for editable pages only
   initialSearch = "", // New prop to set initial search value
   displayText = "", // Display text for the link
-  setDisplayText = null, // Function to update display text
-  preventRedirect = false, // New prop to prevent redirection after page creation
+  setDisplayText = null // Function to update display text
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -153,17 +147,11 @@ const TypeaheadSearch = ({
         return;
       }
 
-      // Split search term into words for better debugging
-      const searchWords = search?.trim().toLowerCase().split(/\s+/).filter(word => word.length > 0) || [];
-      const hasMultipleWords = searchWords.length > 1;
-
       console.log('TypeaheadSearch - Fetching results for:', {
         search,
         searchLength: search?.length,
         searchTrimmed: search?.trim(),
         searchTrimmedLength: search?.trim()?.length,
-        searchWords,
-        hasMultipleWords,
         userId: userId || user?.uid,
         filterByUserId: userId, // Log if we're filtering by a specific user
         groups: user?.groups,
@@ -171,7 +159,6 @@ const TypeaheadSearch = ({
       });
 
       setIsSearching(true);
-
       try {
         let selectedUserId = userId ? userId : user.uid;
         let groupIds = [];
@@ -179,22 +166,18 @@ const TypeaheadSearch = ({
           groupIds = Object.keys(user.groups);
         }
 
-        // Get search rules based on whether we're filtering by a specific user
-        const searchRules = userId
-          ? getUserPageSearchRules(userId, selectedUserId)
-          : getBasePageSearchRules();
-
         // Determine if we should filter by a specific user ID
         const isFilteringByUser = !!userId;
 
-        // Build the search query URL using our centralized search rules
-        const queryUrl = buildSearchQueryUrl({
-          userId: selectedUserId,
-          searchTerm: search,
-          groupIds,
-          filterByUserId: isFilteringByUser ? userId : null,
-          useScoring: searchRules.useScoring
-        });
+        // Construct the API URL based on whether we're filtering by user
+        let queryUrl;
+        if (isFilteringByUser) {
+          // When filtering by user, we want to search only that user's pages
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&filterByUserId=${userId}&groupIds=${groupIds}`;
+        } else {
+          // Normal search across all accessible pages
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
+        }
 
         // Only search for users if we're not filtering by a specific user
         const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
@@ -211,147 +194,90 @@ const TypeaheadSearch = ({
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (increased from 10s)
 
         // Add more comprehensive error handling for fetch
-        let responses = [];
-
-        // Determine which requests to make based on filtering
-        const fetchPromises = [
-          fetch(queryUrl, {
-            signal: controller.signal,
-            cache: 'no-store' // Prevent caching of search results
-          }).catch(error => {
-            console.error('TypeaheadSearch - Error fetching pages:', error);
-            // Return a rejected promise to be caught by Promise.allSettled
-            return Promise.reject(error);
-          })
-        ];
-
-        // Only fetch users if we're not filtering by a specific user
-        if (!isFilteringByUser && userSearchUrl) {
-          fetchPromises.push(
-            fetch(userSearchUrl, {
+        try {
+          // Determine which requests to make based on filtering
+          const fetchPromises = [
+            fetch(queryUrl, {
               signal: controller.signal,
               cache: 'no-store' // Prevent caching of search results
-            }).catch(error => {
-              console.error('TypeaheadSearch - Error fetching users:', error);
-              // Return a rejected promise to be caught by Promise.allSettled
-              return Promise.reject(error);
             })
-          );
-        }
-
-        try {
-          // Fetch pages and optionally users in parallel using Promise.allSettled to handle partial failures
-          responses = await Promise.allSettled(fetchPromises);
-        } catch (connectionError) {
-          console.error('TypeaheadSearch - Connection error:', connectionError);
-          // Create rejected responses for both requests
-          responses = [
-            { status: 'rejected', reason: connectionError },
-            { status: 'rejected', reason: connectionError }
           ];
-        }
 
-        // Extract responses
-        const pagesResponse = responses[0];
-        const usersResponse = isFilteringByUser ? { status: 'fulfilled', value: { ok: true, json: () => Promise.resolve({ users: [] }) } } : responses[1];
+          // Only fetch users if we're not filtering by a specific user
+          if (!isFilteringByUser && userSearchUrl) {
+            fetchPromises.push(
+              fetch(userSearchUrl, {
+                signal: controller.signal,
+                cache: 'no-store' // Prevent caching of search results
+              })
+            );
+          }
 
-        clearTimeout(timeoutId);
+          // Fetch pages and optionally users in parallel using Promise.allSettled to handle partial failures
+          const responses = await Promise.allSettled(fetchPromises);
 
-        // Process page results
-        let processedPages = [];
-        let apiSuccess = false;
+          // Extract responses
+          const pagesResponse = responses[0];
+          const usersResponse = isFilteringByUser ? { status: 'fulfilled', value: { ok: true, json: () => Promise.resolve({ users: [] }) } } : responses[1];
 
-        if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
-          try {
+          clearTimeout(timeoutId);
+
+          // Process page results
+          let processedPages = [];
+          if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
             const pagesData = await pagesResponse.value.json();
             console.log('TypeaheadSearch - Pages API response:', pagesData);
 
             // Check if we received an error message
             if (pagesData.error) {
               console.error('TypeaheadSearch - Pages API returned error object:', pagesData.error);
-            } else {
-              // Process the results with usernames
-              if (pagesData && pagesData.pages) {
-                processedPages = await processPagesWithUsernames(pagesData.pages);
-                apiSuccess = true;
-              }
             }
-          } catch (jsonError) {
-            console.error('TypeaheadSearch - Error parsing pages API response:', jsonError);
+
+            // Process the results with usernames
+            if (pagesData && pagesData.pages) {
+              processedPages = await processPagesWithUsernames(pagesData.pages);
+            }
+          } else {
+            console.error('TypeaheadSearch - Pages API request failed:',
+              pagesResponse.status === 'rejected' ? pagesResponse.reason :
+              `HTTP ${pagesResponse.value?.status || 'unknown'}`);
           }
-        } else {
-          console.error('TypeaheadSearch - Pages API request failed:',
-            pagesResponse.status === 'rejected' ? pagesResponse.reason :
-            `HTTP ${pagesResponse.value?.status || 'unknown'}`);
-        }
 
-        // Process user results
-        let users = [];
-        let usersApiSuccess = false;
-
-        if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
-          try {
+          // Process user results
+          let users = [];
+          if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
             const usersData = await usersResponse.value.json();
             console.log('TypeaheadSearch - Users API response:', usersData);
 
             if (usersData && usersData.users) {
               users = usersData.users;
-              usersApiSuccess = true;
             }
-          } catch (jsonError) {
-            console.error('TypeaheadSearch - Error parsing users API response:', jsonError);
+          } else {
+            console.error('TypeaheadSearch - Users API request failed:',
+              usersResponse.status === 'rejected' ? usersResponse.reason :
+              `HTTP ${usersResponse.value?.status || 'unknown'}`);
           }
-        } else {
-          console.error('TypeaheadSearch - Users API request failed:',
-            usersResponse.status === 'rejected' ? usersResponse.reason :
-            `HTTP ${usersResponse.value?.status || 'unknown'}`);
+
+          // Log if no results were found
+          if (processedPages.length === 0 && users.length === 0 && search) {
+            console.log(`TypeaheadSearch - No results found for search term: ${search}`);
+          }
+
+          // Set the pages state with categorized results
+          setPages({
+            userPages: processedPages.filter(page => page.type === 'user' || page.isOwned),
+            groupPages: processedPages.filter(page => page.type === 'group' && !page.isOwned),
+            publicPages: processedPages.filter(page => page.type === 'public' && !page.isOwned),
+            users: users // Add the users to the state
+          });
+        } catch (fetchError) {
+          if (fetchError.name === 'AbortError') {
+            console.error('Search request timed out after 15 seconds');
+            throw new Error('Search request timed out');
+          }
+          console.error('Fetch error:', fetchError);
+          throw fetchError;
         }
-
-        // If both API calls failed, use client-side search as fallback
-        if (!apiSuccess || !usersApiSuccess) {
-          console.log('TypeaheadSearch - Using client-side search fallback');
-          const clientSideResults = performClientSideSearch(search, selectedUserId);
-
-          // Only use client-side results if API calls failed
-          if (!apiSuccess && clientSideResults.pages.length > 0) {
-            console.log('TypeaheadSearch - Using client-side page results:', clientSideResults.pages);
-            processedPages = clientSideResults.pages;
-          }
-
-          if (!usersApiSuccess && clientSideResults.users.length > 0) {
-            console.log('TypeaheadSearch - Using client-side user results:', clientSideResults.users);
-            users = clientSideResults.users;
-          }
-        }
-
-        // Log search results with detailed information
-        if (processedPages.length === 0 && users.length === 0 && search) {
-          console.warn(`TypeaheadSearch - No results found for search term: "${search}"`);
-        } else {
-          console.log(`TypeaheadSearch - Found ${processedPages.length} pages and ${users.length} users for search term: "${search}"`);
-
-          // Log page titles for debugging
-          if (processedPages.length > 0) {
-            console.log('Page results:', processedPages.map(page => ({
-              id: page.id,
-              title: page.title,
-              type: page.type,
-              containsAllSearchWords: page.containsAllSearchWords,
-              matchScore: page.matchScore
-            })));
-          }
-        }
-
-        // Apply privacy filtering to ensure we don't show private pages to users who shouldn't see them
-        const filteredPages = applyPrivacyFiltering(processedPages, selectedUserId);
-
-        // Set the pages state with categorized results
-        setPages({
-          userPages: filteredPages.filter(page => page.type === 'user' || page.isOwned),
-          groupPages: filteredPages.filter(page => page.type === 'group' && !page.isOwned),
-          publicPages: filteredPages.filter(page => page.type === 'public' && !page.isOwned),
-          users: users // Add the users to the state
-        });
       } catch (error) {
         console.error("TypeaheadSearch - Error fetching search results", error);
         console.error("Error details:", error.message, error.stack);
@@ -363,7 +289,7 @@ const TypeaheadSearch = ({
       } finally {
         setIsSearching(false);
       }
-    }, 300),
+    }, 500),
     [userId]
   );
 
@@ -415,15 +341,6 @@ const TypeaheadSearch = ({
     setSearch(e.target.value);
   };
 
-  // Handle Enter key press to navigate to search page
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && search.trim()) {
-      e.preventDefault();
-      console.log('TypeaheadSearch - Navigating to search page with query:', search);
-      router.push(`/search?q=${encodeURIComponent(search.trim())}`);
-    }
-  };
-
   // Helper function to deduplicate pages by ID
   const deduplicatePages = (allPages) => {
     const uniquePages = new Map();
@@ -442,47 +359,10 @@ const TypeaheadSearch = ({
   // Get all unique pages across all categories
   const getAllUniquePages = () => {
     const allPages = [...pages.userPages, ...pages.groupPages, ...pages.publicPages];
+    return deduplicatePages(allPages);
+  };
 
-    // First deduplicate the pages
-    const dedupedPages = deduplicatePages(allPages);
-
-    // Then sort them by priority:
-    // 1. Pages that contain all search words
-    // 2. Pages with higher match scores
-    // 3. Pages with better match quality (exact > startsWith > wordStartsWith > contains)
-    // 4. User's own pages
-    // 5. Recently modified pages
-    return dedupedPages.sort((a, b) => {
-      // First prioritize pages that contain all search words
-      if (a.containsAllSearchWords && !b.containsAllSearchWords) return -1;
-      if (!a.containsAllSearchWords && b.containsAllSearchWords) return 1;
-
-      // Then prioritize by match score if available
-      if (a.matchScore && b.matchScore && a.matchScore !== b.matchScore) {
-        return b.matchScore - a.matchScore;
-      }
-
-      // Then prioritize by match quality if available
-      if (a.matchQuality && b.matchQuality && a.matchQuality !== b.matchQuality) {
-        const qualityRank = {
-          'exact': 4,
-          'startsWith': 3,
-          'wordStartsWith': 2,
-          'contains': 1
-        };
-        return qualityRank[a.matchQuality] > qualityRank[b.matchQuality] ? -1 : 1;
-      }
-
-      // Then prioritize user's own pages
-      if (a.isOwned && !b.isOwned) return -1;
-      if (!a.isOwned && b.isOwned) return 1;
-
-      // Finally sort by last modified date
-      const dateA = new Date(a.lastModified || 0);
-      const dateB = new Date(b.lastModified || 0);
-      return dateB - dateA;
-    });
-  };  // Update display text when a page is selected
+  // Update display text when a page is selected
   useEffect(() => {
     if (selectedId && setDisplayText) {
       const selectedPage = getAllUniquePages().find(page => page.id === selectedId);
@@ -549,25 +429,16 @@ const TypeaheadSearch = ({
               placeholder={placeholder}
               value={search}
               onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
               onFocus={() => setShowResults && setShowResults(true)}
               className="w-full pr-10"
               autoComplete="off"
             />
           )}
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             {isSearching ? (
               <Loader />
             ) : (
-              <Search
-                className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-                onClick={() => {
-                  if (search.trim()) {
-                    console.log('TypeaheadSearch - Navigating to search page via icon click with query:', search);
-                    router.push(`/search?q=${encodeURIComponent(search.trim())}`);
-                  }
-                }}
-              />
+              <Search className="h-5 w-5 text-muted-foreground" />
             )}
           </div>
         </div>
@@ -581,12 +452,7 @@ const TypeaheadSearch = ({
         }`}
       >
         {isSearching && search.length >= characterCount ? (
-          <div className="flex justify-center items-center py-4">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-              <span className="text-sm text-muted-foreground">Searching...</span>
-            </div>
-          </div>
+          <Loader />
         ) : (
           <>
             {/* User accounts section */}
@@ -721,7 +587,7 @@ const TypeaheadSearch = ({
               </div>
             )}
 
-            {search.length >= 2 && !isSearching && getAllUniquePages().length === 0 && (
+            {search.length >= 2 && getAllUniquePages().length === 0 && (
               <div className="p-3">
                 <button
                   onClick={() => {
@@ -762,11 +628,8 @@ const TypeaheadSearch = ({
                             userId: user.uid,
                           });
 
-                          // Only redirect if preventRedirect is false
-                          if (!preventRedirect) {
-                            // Redirect to the edit view of the newly created page
-                            router.push(`/${newPageId}?edit=true`);
-                          }
+                          // Redirect to the edit view of the newly created page
+                          router.push(`/${newPageId}?edit=true`);
                         } else {
                           console.error("Failed to create new page");
                         }
@@ -824,18 +687,24 @@ const SingleItemLink = ({ page, search }) => {
         href={`/${page.id}`}
         key={page.id}
         isPublic={page.isPublic}
-        className="flex-shrink-0 whitespace-nowrap"
+        className="flex-shrink-0"
       >
         <span className="truncate">{highlightText(page.title, search)}</span>
       </PillLink>
+      {page.username && page.username !== 'NULL' && (
+        <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+          by {page.username}
+        </span>
+      )}
     </div>
   );
 };
 
-const SingleItemButton = ({ page, search, onSelect, isSelected = false, setSearch, setSelectedId }) => {
-  // Split search into words for highlighting
-  const searchWords = search?.trim().toLowerCase().split(/\s+/).filter(word => word.length > 0) || [];
-  const hasMultipleWords = searchWords.length > 1;
+const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId }) => {
+  // Ensure we have a valid username to display (handle NULL values properly)
+  const displayName = page.username && page.username !== 'NULL'
+    ? page.username
+    : 'Anonymous';
 
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
@@ -844,33 +713,57 @@ const SingleItemButton = ({ page, search, onSelect, isSelected = false, setSearc
           setSelectedId(page.id);
           // Don't call onSelect here, wait for Insert Link button
         }}
-        className={`inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] ${
-          isSelected
-            ? 'bg-primary text-white border-[1.5px] border-primary-foreground/20'
-            : page.containsAllSearchWords && hasMultipleWords
-              ? 'bg-green-600 text-white border-[1.5px] border-green-700 hover:bg-green-700 hover:border-green-800'
-              : 'bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700'
+        className={`inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] ${isSelected
+          ? 'bg-primary text-white border-[1.5px] border-primary-foreground/20'
+          : 'bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700'
         } transition-colors flex-shrink-0`}
         key={page.id}
       >
         <span className="truncate">
           {highlightText(page.title, search)}
         </span>
+        {isSelected && (
+          <X className="h-3.5 w-3.5 ml-1.5 flex-shrink-0" onClick={(e) => {
+            e.stopPropagation();
+            setSearch('');
+          }} />
+        )}
       </button>
+      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+        {page.groupId ? 'Group' : `by ${displayName}`}
+      </span>
     </div>
   );
 };
 
+const highlightText = (text, searchTerm) => {
+  if (!searchTerm) return text;
+  const parts = text.split(new RegExp(`(${searchTerm})`, "gi"));
+  return parts.map((part, index) =>
+    part.toLowerCase() === searchTerm.toLowerCase() ? (
+      <span key={index} className="text-primary">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+};
+
+// User item components
 const UserItemLink = ({ user, search }) => {
   return (
-    <div className="flex items-center w-full overflow-hidden my-1">
+    <div className="flex items-center w-full overflow-hidden my-1 px-3 py-1.5 hover:bg-accent/50 rounded-md">
       <PillLink
         href={`/user/${user.id}`}
         key={user.id}
-        className="flex-shrink-0 whitespace-nowrap bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+        className="flex-shrink-0"
       >
-        <span className="truncate">@{highlightText(user.username, search)}</span>
+        <span className="truncate">{highlightText(user.username, search)}</span>
       </PillLink>
+      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+        User
+      </span>
     </div>
   );
 };
@@ -879,107 +772,20 @@ const UserItemButton = ({ user, search, onSelect }) => {
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
-        onClick={() => {
-          if (onSelect) {
-            onSelect({
-              id: user.id,
-              username: user.username,
-              type: 'user'
-            });
-          }
-        }}
-        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-        key={user.id}
+        onClick={() => onSelect({
+          id: user.id,
+          title: user.username,
+          type: 'user',
+          url: `/user/${user.id}`
+        })}
+        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700 transition-colors flex-shrink-0"
       >
-        <span className="truncate">@{highlightText(user.username, search)}</span>
+        {highlightText(user.username, search)}
       </button>
+      <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+        User
+      </span>
     </div>
-  );
-};
-
-// Helper function to highlight search terms in text
-const highlightText = (text, searchTerm) => {
-  if (!searchTerm || !text) return text;
-
-  // Split search term into words for multi-word highlighting
-  const searchWords = searchTerm.trim().toLowerCase().split(/\s+/).filter(word => word.length > 0);
-
-  // For single-word searches, use a more flexible approach that highlights partial matches
-  if (searchWords.length <= 1) {
-    // First try to find exact matches of the search term
-    const exactRegex = new RegExp(`(${searchTerm})`, "gi");
-    if (text.toLowerCase().match(exactRegex)) {
-      const parts = text.split(exactRegex);
-      return parts.map((part, index) =>
-        part.toLowerCase() === searchTerm.toLowerCase() ? (
-          <span key={index} className="text-primary">
-            {part}
-          </span>
-        ) : (
-          part
-        )
-      );
-    }
-
-    // If no exact matches, look for words that start with the search term
-    const words = text.split(/\b/);
-    const searchTermLower = searchTerm.toLowerCase();
-
-    return words.map((word, index) => {
-      if (word.toLowerCase().startsWith(searchTermLower)) {
-        return (
-          <span key={index}>
-            <span className="text-primary">{word.substring(0, searchTerm.length)}</span>
-            {word.substring(searchTerm.length)}
-          </span>
-        );
-      }
-      return word;
-    });
-  }
-
-  // For multi-word searches, highlight each word
-  let highlightedText = text;
-  const textLower = text.toLowerCase();
-
-  // First check for exact phrase match
-  if (textLower.includes(searchTerm.toLowerCase())) {
-    const parts = text.split(new RegExp(`(${searchTerm})`, "gi"));
-    return parts.map((part, index) =>
-      part.toLowerCase() === searchTerm.toLowerCase() ? (
-        <span key={index} className="text-primary">
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    );
-  }
-
-  // Then check for individual word matches
-  return (
-    <span>
-      {searchWords.reduce((acc, word, wordIndex) => {
-        if (!word) return acc;
-
-        const regex = new RegExp(`(${word})`, "gi");
-        return acc.map((part, partIndex) => {
-          if (typeof part === 'string') {
-            const subParts = part.split(regex);
-            return subParts.map((subPart, subPartIndex) =>
-              subPart.toLowerCase() === word.toLowerCase() ? (
-                <span key={`${wordIndex}-${partIndex}-${subPartIndex}`} className="text-primary">
-                  {subPart}
-                </span>
-              ) : (
-                subPart
-              )
-            );
-          }
-          return part;
-        }).flat();
-      }, [text])}
-    </span>
   );
 };
 

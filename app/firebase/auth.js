@@ -171,22 +171,112 @@ export const updateEmail = async (user, newEmail) => {
 export const checkUsernameAvailability = async (username) => {
   try {
     if (!username || username.length < 3) {
-      return false;
+      return {
+        isAvailable: false,
+        message: "Username must be at least 3 characters",
+        error: "TOO_SHORT",
+        suggestions: []
+      };
     }
 
     // Check if username contains only alphanumeric characters and underscores
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      return false;
+      return {
+        isAvailable: false,
+        message: "Username can only contain letters, numbers, and underscores",
+        error: "INVALID_CHARACTERS",
+        suggestions: []
+      };
     }
 
     const userDoc = doc(db, 'usernames', username.toLowerCase());
     const docSnap = await getDoc(userDoc);
 
-    return !docSnap.exists();
+    const isAvailable = !docSnap.exists();
+
+    if (isAvailable) {
+      return {
+        isAvailable: true,
+        message: "Username is available",
+        error: null,
+        suggestions: []
+      };
+    } else {
+      // Generate username suggestions
+      const suggestions = generateUsernameSuggestions(username);
+
+      // Check if suggestions are available
+      const availableSuggestions = await checkSuggestionsAvailability(suggestions);
+
+      return {
+        isAvailable: false,
+        message: "Username already taken",
+        error: "USERNAME_TAKEN",
+        suggestions: availableSuggestions
+      };
+    }
   } catch (error) {
     console.error("Error checking username availability:", error);
-    return false;
+    return {
+      isAvailable: false,
+      message: "Error checking username availability",
+      error: "CHECK_ERROR",
+      suggestions: []
+    };
   }
+}
+
+/**
+ * Generate username suggestions based on the original username
+ * @param {string} username - The original username
+ * @returns {string[]} - Array of username suggestions
+ */
+const generateUsernameSuggestions = (username) => {
+  const suggestions = [];
+
+  // Add a random number (1-99) to the end
+  for (let i = 0; i < 3; i++) {
+    const randomNum = Math.floor(Math.random() * 99) + 1;
+    suggestions.push(`${username}${randomNum}`);
+  }
+
+  // Add an underscore and a random number
+  suggestions.push(`${username}_${Math.floor(Math.random() * 99) + 1}`);
+
+  // Add the current year
+  suggestions.push(`${username}${new Date().getFullYear()}`);
+
+  // Return unique suggestions only
+  return [...new Set(suggestions)].slice(0, 3);
+}
+
+/**
+ * Check which of the suggested usernames are available
+ * @param {string[]} suggestions - Array of username suggestions
+ * @returns {Promise<string[]>} - Array of available username suggestions
+ */
+const checkSuggestionsAvailability = async (suggestions) => {
+  const availableSuggestions = [];
+
+  for (const suggestion of suggestions) {
+    try {
+      const userDoc = doc(db, 'usernames', suggestion.toLowerCase());
+      const docSnap = await getDoc(userDoc);
+
+      if (!docSnap.exists()) {
+        availableSuggestions.push(suggestion);
+
+        // Stop once we have 3 available suggestions
+        if (availableSuggestions.length >= 3) {
+          break;
+        }
+      }
+    } catch (error) {
+      console.error(`Error checking suggestion availability for ${suggestion}:`, error);
+    }
+  }
+
+  return availableSuggestions;
 }
 
 /**

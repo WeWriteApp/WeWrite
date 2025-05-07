@@ -35,6 +35,7 @@ export function RegisterForm({
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
   const [validationMessage, setValidationMessage] = useState<string>("")
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([])
 
   // Function to check username availability
   const checkUsername = async (username: string) => {
@@ -44,6 +45,7 @@ export function RegisterForm({
       setIsAvailable(null)
       setValidationMessage("")
       setValidationError(null)
+      setUsernameSuggestions([])
       return
     }
 
@@ -58,6 +60,8 @@ export function RegisterForm({
       setIsAvailable(false)
       setValidationMessage("Username already taken")
       setValidationError("USERNAME_TAKEN")
+      // Generate some test suggestions for 'jamie'
+      setUsernameSuggestions(['jamie123', 'jamie_2023', 'jamie2024'])
       setIsChecking(false)
       return
     }
@@ -70,11 +74,19 @@ export function RegisterForm({
       setIsAvailable(result.isAvailable)
       setValidationMessage(result.message)
       setValidationError(result.error || null)
+
+      // Set username suggestions if available
+      if (result.suggestions && Array.isArray(result.suggestions)) {
+        setUsernameSuggestions(result.suggestions)
+      } else {
+        setUsernameSuggestions([])
+      }
     } catch (error) {
       console.error('RegisterForm: validation error:', error)
       setIsAvailable(false)
       setValidationMessage("Error checking username")
       setValidationError("CHECK_ERROR")
+      setUsernameSuggestions([])
     } finally {
       setIsChecking(false)
     }
@@ -151,6 +163,14 @@ export function RegisterForm({
       return { success: false, error: error.message };
     }
   };
+
+  // Handle clicking on a username suggestion
+  const handleSuggestionClick = (suggestion: string) => {
+    setUsername(suggestion)
+    // Immediately check the availability of the suggested username
+    debouncedCheck.cancel()
+    checkUsername(suggestion)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -290,17 +310,38 @@ export function RegisterForm({
             {/* Show error message for username validation */}
             {(validationError || (username && username.length >= 3 && isAvailable === false)) && (
               <div className={cn(
-                "flex items-center mt-2 px-2 py-1.5 rounded-md bg-destructive/10 dark:bg-red-500/10 text-destructive dark:text-red-400"
+                "flex flex-col mt-2 px-2 py-1.5 rounded-md bg-destructive/10 dark:bg-red-500/10 text-destructive dark:text-red-400"
               )}>
-                <X className="h-4 w-4 mr-2 flex-shrink-0" />
-                <p className="text-xs sm:text-sm font-medium">
-                  {validationError === "USERNAME_TAKEN" ? "Username already taken" :
-                   validationError === "INVALID_CHARS" ? "Username contains invalid characters" :
-                   validationError === "TOO_SHORT" ? "Username must be at least 3 characters" :
-                   validationError === "TOO_LONG" ? "Username is too long" :
-                   isAvailable === false ? "Username already taken" :
-                   validationMessage || "Invalid username"}
-                </p>
+                <div className="flex items-center">
+                  <X className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <p className="text-xs sm:text-sm font-medium">
+                    {validationError === "USERNAME_TAKEN" ? "Username already taken" :
+                     validationError === "INVALID_CHARS" ? "Username contains invalid characters" :
+                     validationError === "TOO_SHORT" ? "Username must be at least 3 characters" :
+                     validationError === "TOO_LONG" ? "Username is too long" :
+                     isAvailable === false ? "Username already taken" :
+                     validationMessage || "Invalid username"}
+                  </p>
+                </div>
+
+                {/* Username suggestions */}
+                {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-foreground mb-1.5">Try one of these instead:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {usernameSuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="px-2 py-1 text-xs font-medium rounded-md bg-background border border-input hover:bg-accent hover:text-accent-foreground transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

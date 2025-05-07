@@ -1,76 +1,128 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 import { searchUsers } from "../../firebase/database";
-import { sortSearchResultsByScore } from "../../utils/searchUtils";
-import { collection, query, where, orderBy, limit, getDocs, getDoc, doc } from 'firebase/firestore';
-import { db } from '../../firebase/database';
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-// Initialize BigQuery client
 let bigquery = null;
-try {
-  const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
-  if (credentialsEnvVar) {
-    console.log('Initializing BigQuery client');
 
-    // Handle potential Base64 encoding
-    let jsonString = credentialsEnvVar;
-    if (credentialsEnvVar.startsWith('eyJ') || process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true') {
+// Only try to initialize BigQuery if we have credentials
+const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
+if (credentialsEnvVar) {
+  try {
+    console.log('Attempting to initialize BigQuery with credentials');
+
+    // First try to handle it as regular JSON
+    let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
+
+    // Check if it might be HTML content (bad response)
+    if (jsonString.includes('<!DOCTYPE') || jsonString.includes('<html')) {
+      console.error('Credentials appear to contain HTML content instead of JSON. Check environment variable configuration.');
+      throw new Error('Invalid credentials format: Contains HTML content');
+    }
+
+    // Check if the string starts with eyJ - a common Base64 JSON start pattern
+    if (credentialsEnvVar.startsWith('eyJ') ||
+        process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true') {
+      console.log('Credentials appear to be Base64 encoded, attempting to decode');
+      // Try to decode as Base64
       try {
         const buffer = Buffer.from(credentialsEnvVar, 'base64');
         jsonString = buffer.toString('utf-8');
-      } catch (e) {
-        console.error('Failed to decode Base64 credentials:', e.message);
+        console.log('Successfully decoded Base64 credentials');
+      } catch (decodeError) {
+        console.error('Failed to decode Base64:', decodeError);
+        // Continue with the original string if decoding fails
       }
     }
 
     const credentials = JSON.parse(jsonString);
+    console.log('Successfully parsed credentials JSON with project_id:', credentials.project_id);
     bigquery = new BigQuery({
       projectId: credentials.project_id,
       credentials,
     });
+    console.log('BigQuery client initialized successfully');
+  } catch (error) {
+    console.error("Failed to initialize BigQuery:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      credentialsProvided: !!credentialsEnvVar,
+      credentialsLength: credentialsEnvVar?.length,
+      credentialsStart: credentialsEnvVar?.substring(0, 20) + '...',
+      containsHTML: credentialsEnvVar?.includes('<!DOCTYPE') || credentialsEnvVar?.includes('<html')
+    });
   }
-} catch (error) {
-  console.error('Failed to initialize BigQuery:', error.message);
+} else {
+  console.warn('No Google Cloud credentials found in environment variables');
 }
 
-// Search pages in Firestore (fallback method)
+// Test BigQuery connection
+async function testBigQueryConnection() {
+  if (!bigquery) {
+    console.error('BigQuery client not initialized');
+    return false;
+  }
+
+  try {
+    console.log('Testing BigQuery connection...');
+    const [datasets] = await bigquery.getDatasets();
+    console.log('BigQuery connection successful. Found datasets:', datasets.map(d => d.id));
+    return true;
+  } catch (error) {
+    console.error('BigQuery connection test failed:', error);
+    console.error('Connection error details:', {
+      message: error.message,
+      stack: error.stack,
+    });
+    return false;
+  }
+}
+
+// Fallback function to search pages in Firestore when BigQuery is not available
 async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterByUserId = null) {
   try {
-    console.log('Searching pages in Firestore');
+    console.log('Using Firestore fallback for page search');
+
+    // Import Firestore modules dynamically
+    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+    const { db } = await import('../../firebase/database');
+
+    // Format search term for case-insensitive search
     const searchTermLower = searchTerm.toLowerCase().trim();
+
+    // Determine if we should filter by a specific user ID
     const isFilteringByUser = !!filterByUserId;
 
-    // For multi-word searches, split into individual words
-    const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
-    const hasMultipleWords = searchWords.length > 1;
+    // Get pages based on filtering criteria
+    let pagesQuery;
+    if (isFilteringByUser) {
+      // If filtering by specific user, only get that user's pages
+      pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', filterByUserId),
+        orderBy('lastModified', 'desc'),
+        limit(20)
+      );
+    } else {
+      // Otherwise get the current user's pages
+      pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        orderBy('lastModified', 'desc'),
+        limit(10)
+      );
+    }
 
-    console.log('Firestore search parameters:', {
-      searchTermLower,
-      searchWords,
-      hasMultipleWords,
-      isFilteringByUser
-    });
+    const pagesSnapshot = await getDocs(pagesQuery);
 
-    // Get user's own pages
-    const userPagesQuery = query(
-      collection(db, 'pages'),
-      where('userId', '==', isFilteringByUser ? filterByUserId : userId),
-      orderBy('lastModified', 'desc'),
-      limit(isFilteringByUser ? 30 : 15)
-    );
-
-    const userPagesSnapshot = await getDocs(userPagesQuery);
+    // Filter pages by title client-side (Firestore doesn't support LIKE queries)
     const userPages = [];
-
-    userPagesSnapshot.forEach(doc => {
+    pagesSnapshot.forEach(doc => {
       const data = doc.data();
-      const title = (data.title || 'Untitled').toLowerCase();
-
-      // For empty search term, include all pages
-      if (!searchTermLower) {
+      if (!searchTermLower || data.title.toLowerCase().includes(searchTermLower)) {
         userPages.push({
           id: doc.id,
           title: data.title || 'Untitled',
@@ -80,517 +132,316 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           lastModified: data.lastModified,
           type: 'user'
         });
-        return;
-      }
-
-      // For multi-word searches, check if title contains all words
-      if (hasMultipleWords) {
-        const containsAllWords = searchWords.every(word => title.includes(word));
-        if (containsAllWords) {
-          userPages.push({
-            id: doc.id,
-            title: data.title || 'Untitled',
-            isOwned: data.userId === userId,
-            isEditable: data.userId === userId,
-            userId: data.userId,
-            lastModified: data.lastModified,
-            type: 'user',
-            containsAllSearchWords: true
-          });
-        }
-      }
-      // For single-word searches, check if title includes the search term
-      else if (title.includes(searchTermLower)) {
-        // Calculate how well the title matches the search term
-        const exactMatch = title === searchTermLower;
-        const startsWithMatch = title.startsWith(searchTermLower);
-        const wordStartsWithMatch = title.split(/\s+/).some(word => word.startsWith(searchTermLower));
-
-        userPages.push({
-          id: doc.id,
-          title: data.title || 'Untitled',
-          isOwned: data.userId === userId,
-          isEditable: data.userId === userId,
-          userId: data.userId,
-          lastModified: data.lastModified,
-          type: 'user',
-          matchQuality: exactMatch ? 'exact' :
-                        startsWithMatch ? 'startsWith' :
-                        wordStartsWithMatch ? 'wordStartsWith' : 'contains'
-        });
-      }
-      // Also check if any word in the title starts with the search term
-      else {
-        const titleWords = title.split(/\s+/);
-
-        // Check if any word in the title starts with the search term
-        const anyWordStartsWith = titleWords.some(word => word.startsWith(searchTermLower));
-
-        // Check if search term is a substring of any word in the title (e.g., "road" in "roadmap")
-        const isSubstringOfWord = titleWords.some(word => word.includes(searchTermLower));
-
-        // Check if any word in the title is a substring of the search term (e.g., "map" in "roadmap")
-        const wordIsSubstring = titleWords.some(word =>
-          word.length > 2 && searchTermLower.includes(word)
-        );
-
-        if (anyWordStartsWith || isSubstringOfWord || wordIsSubstring) {
-          userPages.push({
-            id: doc.id,
-            title: data.title || 'Untitled',
-            isOwned: data.userId === userId,
-            isEditable: data.userId === userId,
-            userId: data.userId,
-            lastModified: data.lastModified,
-            type: 'user',
-            matchQuality: anyWordStartsWith ? 'wordStartsWith' :
-                          isSubstringOfWord ? 'substringMatch' : 'partialMatch'
-          });
-        }
       }
     });
 
-    // Only get public pages if not filtering by user
+    // Only get public pages if we're not filtering by a specific user
     let publicPages = [];
     if (!isFilteringByUser) {
       const publicPagesQuery = query(
         collection(db, 'pages'),
         where('isPublic', '==', true),
         orderBy('lastModified', 'desc'),
-        limit(30)
+        limit(20)
       );
 
       const publicPagesSnapshot = await getDocs(publicPagesQuery);
 
+      // Filter public pages by title and exclude user's own pages
       publicPagesSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.userId !== userId) {
-          const title = (data.title || 'Untitled').toLowerCase();
-
-          // For empty search term, include all pages
-          if (!searchTermLower) {
-            publicPages.push({
-              id: doc.id,
-              title: data.title || 'Untitled',
-              isOwned: false,
-              isEditable: false,
-              userId: data.userId,
-              lastModified: data.lastModified,
-              isPublic: true,
-              type: 'public'
-            });
-            return;
-          }
-
-          // For multi-word searches, check if title contains all words
-          if (hasMultipleWords) {
-            const containsAllWords = searchWords.every(word => title.includes(word));
-            if (containsAllWords) {
-              publicPages.push({
-                id: doc.id,
-                title: data.title || 'Untitled',
-                isOwned: false,
-                isEditable: false,
-                userId: data.userId,
-                lastModified: data.lastModified,
-                isPublic: true,
-                type: 'public',
-                containsAllSearchWords: true
-              });
-            }
-          }
-          // For single-word searches, check if title includes the search term
-          else if (title.includes(searchTermLower)) {
-            // Calculate how well the title matches the search term
-            const exactMatch = title === searchTermLower;
-            const startsWithMatch = title.startsWith(searchTermLower);
-            const wordStartsWithMatch = title.split(/\s+/).some(word => word.startsWith(searchTermLower));
-
-            publicPages.push({
-              id: doc.id,
-              title: data.title || 'Untitled',
-              isOwned: false,
-              isEditable: false,
-              userId: data.userId,
-              lastModified: data.lastModified,
-              isPublic: true,
-              type: 'public',
-              matchQuality: exactMatch ? 'exact' :
-                           startsWithMatch ? 'startsWith' :
-                           wordStartsWithMatch ? 'wordStartsWith' : 'contains'
-            });
-          }
-          // Also check if any word in the title starts with the search term
-          else {
-            const titleWords = title.split(/\s+/);
-
-            // Check if any word in the title starts with the search term
-            const anyWordStartsWith = titleWords.some(word => word.startsWith(searchTermLower));
-
-            // Check if search term is a substring of any word in the title (e.g., "road" in "roadmap")
-            const isSubstringOfWord = titleWords.some(word => word.includes(searchTermLower));
-
-            // Check if any word in the title is a substring of the search term (e.g., "map" in "roadmap")
-            const wordIsSubstring = titleWords.some(word =>
-              word.length > 2 && searchTermLower.includes(word)
-            );
-
-            if (anyWordStartsWith || isSubstringOfWord || wordIsSubstring) {
-              publicPages.push({
-                id: doc.id,
-                title: data.title || 'Untitled',
-                isOwned: false,
-                isEditable: false,
-                userId: data.userId,
-                lastModified: data.lastModified,
-                isPublic: true,
-                type: 'public',
-                matchQuality: anyWordStartsWith ? 'wordStartsWith' :
-                              isSubstringOfWord ? 'substringMatch' : 'partialMatch'
-              });
-            }
-          }
+        if (data.userId !== userId &&
+            (!searchTermLower || data.title.toLowerCase().includes(searchTermLower))) {
+          publicPages.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            isOwned: false,
+            isEditable: false,
+            userId: data.userId,
+            lastModified: data.lastModified,
+            type: 'public'
+          });
         }
       });
     }
 
-    // Return combined results
+    // Combine and return results
     return isFilteringByUser ? userPages : [...userPages, ...publicPages.slice(0, 10)];
   } catch (error) {
-    console.error('Error searching in Firestore:', error);
+    console.error('Error in Firestore fallback search:', error);
     return [];
   }
 }
 
-// Check which pages are public in Firestore
-async function checkPublicPagesInFirestore(pageIds) {
-  try {
-    const publicPages = [];
-
-    // Process in batches of 10 (Firestore limit for 'in' queries)
-    const batchSize = 10;
-    for (let i = 0; i < pageIds.length; i += batchSize) {
-      const batchIds = pageIds.slice(i, i + batchSize);
-
-      try {
-        const publicPagesQuery = query(
-          collection(db, 'pages'),
-          where('isPublic', '==', true),
-          where('__name__', 'in', batchIds)
-        );
-
-        const snapshot = await getDocs(publicPagesQuery);
-        snapshot.forEach(doc => {
-          publicPages.push(doc.id);
-        });
-      } catch (error) {
-        console.error(`Error checking batch ${i/batchSize + 1}:`, error);
-      }
-    }
-
-    return publicPages;
-  } catch (error) {
-    console.error('Error checking public pages:', error);
-    return [];
-  }
-}
-
-// Main search function
 export async function GET(request) {
   try {
-    // Extract query parameters
+    // Extract query parameters from the URL
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const filterByUserId = searchParams.get("filterByUserId");
+    const filterByUserId = searchParams.get("filterByUserId"); // Add parameter to filter by specific user
     const groupIds = searchParams.get("groupIds")
       ? searchParams.get("groupIds").split(",").filter(id => id && id.trim().length > 0)
       : [];
     const searchTerm = searchParams.get("searchTerm") || "";
-    const useScoring = searchParams.get("useScoring") !== "false";
 
-    // Validate userId
     if (!userId) {
       return NextResponse.json(
-        { pages: [], users: [], message: "userId is required" },
+        {
+          pages: [],
+          users: [],
+          message: "userId is required"
+        },
         { status: 400 }
       );
     }
 
-    // Format search term for BigQuery - use a more flexible pattern to catch more matches
-    const searchTermLower = searchTerm.toLowerCase().trim();
-    // Use a more flexible pattern that will match anywhere in the title
-    // The double % makes it match anywhere in the string, improving results for partial matches
+    // If BigQuery is not initialized, use Firestore fallback
+    if (!bigquery) {
+      console.log('BigQuery client not initialized, using Firestore fallback');
+
+      // Search for pages in Firestore
+      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
+
+      // Search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          const { searchUsers } = await import('../../firebase/database');
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user'
+          }));
+        } catch (userError) {
+          console.error('Error searching for users:', userError);
+        }
+      }
+
+      return NextResponse.json({
+        pages,
+        users,
+        source: "firestore_fallback"
+      }, { status: 200 });
+    }
+
+    // Test BigQuery connection first
+    const isConnected = await testBigQueryConnection();
+    if (!isConnected) {
+      console.log('BigQuery connection failed, returning empty results');
+      return NextResponse.json({
+        pages: [],
+        users: [],
+        error: {
+          type: "bigquery_connection_failed",
+          details: "Failed to connect to BigQuery"
+        }
+      }, { status: 200 });
+    }
+
+    // Ensure searchTerm is properly handled if not provided
     const searchTermFormatted = searchTerm
-      ? `%${searchTermLower}%`
+      ? `%${searchTerm.toLowerCase().trim()}%`
       : "%";
 
-    // For better matching of terms like "road" in "roadmap", also create a pattern with just the first part
-    const partialSearchTerm = searchTermLower.length > 2
-      ? `%${searchTermLower.substring(0, Math.ceil(searchTermLower.length * 0.7))}%`
-      : searchTermFormatted;
+    if (!userId) {
+      return NextResponse.json(
+        {
+          pages: [],
+          users: [],
+          message: "userId is required"
+        },
+        { status: 400 }
+      );
+    }
 
-    // For multi-word search terms, create individual word patterns
-    const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
-    const hasMultipleWords = searchWords.length > 1;
+    // searchTermFormatted is already defined above
 
-    // Create more flexible patterns for each word to improve matching
-    const searchWordPatterns = searchWords.map(word => {
-      // Always use a flexible pattern to match anywhere in the title
-      return `%${word}%`;
-    });
+    // Skip verification query to reduce BigQuery costs
 
-    console.log('Search parameters:', {
-      searchTerm,
-      searchTermLower,
-      searchTermFormatted,
-      searchWords,
-      hasMultipleWords
-    });
-
-    // Check if we're filtering by a specific user
+    // Check if we're filtering by a specific user ID
     const isFilteringByUser = !!filterByUserId;
 
-    let pages = [];
-    let source = "";
-
-    // Try BigQuery first if available
-    if (bigquery) {
-      try {
-        console.log('Attempting to search with BigQuery');
-
-        // Use a query that includes the isPublic field for proper filtering
-        // For multi-word searches, we'll use a more complex query that checks for all words
-        const simplifiedQuery = `
-          WITH user_pages AS (
-            SELECT
-              document_id,
-              title,
-              userId,
-              lastModified,
-              'user' as page_type,
-              NULL as groupId,
-              isPublic
-            FROM \`wewrite-ccd82.pages_indexes.pages\`
-            WHERE userId = ${isFilteringByUser ? '@filterByUserId' : '@userId'}
-              ${hasMultipleWords ?
-                // For multi-word searches, check that title contains all words
-                searchWords.map((_, i) => `AND LOWER(title) LIKE @searchWord${i}`).join('\n              ')
-                :
-                // For single-word searches, use both the original pattern and partial pattern
-                'AND (LOWER(title) LIKE @searchTerm OR LOWER(title) LIKE @partialSearchTerm)'
-              }
-            ORDER BY lastModified DESC
-            LIMIT ${isFilteringByUser ? '30' : '15'}
-          ),
-          ${groupIds.length > 0 ? `
-          group_pages AS (
-            SELECT
-              document_id,
-              title,
-              userId,
-              lastModified,
-              'group' as page_type,
-              groupId,
-              isPublic
+    // Use a single combined query to reduce BigQuery costs
+    const combinedQuery = `
+      WITH user_pages AS (
+        SELECT
+          document_id,
+          title,
+          userId,
+          lastModified,
+          'user' as page_type,
+          NULL as groupId
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE userId = ${isFilteringByUser ? '@filterByUserId' : '@userId'}
+          AND LOWER(title) LIKE @searchTerm
+        ORDER BY lastModified DESC
+        LIMIT ${isFilteringByUser ? '20' : '10'}
+      ),
+      ${groupIds.length > 0 ? `
+      group_pages AS (
+        SELECT
+          document_id,
+          title,
+          userId,
+          lastModified,
+          'group' as page_type,
+          groupId
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE groupId IN UNNEST(@groupIds)
+          AND LOWER(title) LIKE @searchTerm
+        ORDER BY lastModified DESC
+        LIMIT 5
+      ),` : ''}
+      public_pages AS (
+        SELECT
+          document_id,
+          title,
+          userId,
+          lastModified,
+          'public' as page_type,
+          NULL as groupId
+        FROM \`wewrite-ccd82.pages_indexes.pages\`
+        WHERE userId != @userId
+          AND LOWER(title) LIKE @searchTerm
+          ${groupIds.length > 0 ? `AND document_id NOT IN (
+            SELECT document_id
             FROM \`wewrite-ccd82.pages_indexes.pages\`
             WHERE groupId IN UNNEST(@groupIds)
-              ${hasMultipleWords ?
-                // For multi-word searches, check that title contains all words
-                searchWords.map((_, i) => `AND LOWER(title) LIKE @searchWord${i}`).join('\n              ')
-                :
-                // For single-word searches, use both the original pattern and partial pattern
-                'AND (LOWER(title) LIKE @searchTerm OR LOWER(title) LIKE @partialSearchTerm)'
-              }
-            ORDER BY lastModified DESC
-            LIMIT 10
-          ),` : ''}
-          other_pages AS (
-            SELECT
-              document_id,
-              title,
-              userId,
-              lastModified,
-              'other' as page_type,
-              NULL as groupId,
-              isPublic
-            FROM \`wewrite-ccd82.pages_indexes.pages\`
-            WHERE userId != @userId
-              ${hasMultipleWords ?
-                // For multi-word searches, check that title contains all words
-                searchWords.map((_, i) => `AND LOWER(title) LIKE @searchWord${i}`).join('\n              ')
-                :
-                // For single-word searches, use both the original pattern and partial pattern
-                'AND (LOWER(title) LIKE @searchTerm OR LOWER(title) LIKE @partialSearchTerm)'
-              }
-              AND isPublic = true
-              ${groupIds.length > 0 ? `AND document_id NOT IN (
-                SELECT document_id
-                FROM \`wewrite-ccd82.pages_indexes.pages\`
-                WHERE groupId IN UNNEST(@groupIds)
-              )` : ''}
-            ORDER BY lastModified DESC
-            LIMIT 30
-          )
+          )` : ''}
+        ORDER BY lastModified DESC
+        LIMIT 10
+      )
 
-          SELECT * FROM user_pages
-          ${groupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
-          ${!isFilteringByUser ? 'UNION ALL SELECT * FROM other_pages' : ''}
-        `;
+      SELECT * FROM user_pages
+      ${groupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
+      ${!isFilteringByUser ? 'UNION ALL SELECT * FROM public_pages' : ''}
+    `;
 
-        // Build query parameters
-        const queryParams = {
-          userId: userId,
-          ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
-          ...(groupIds.length > 0 ? { groupIds: groupIds } : {})
-        };
+    // Execute combined query
+    const [combinedResults] = await bigquery.query({
+      query: combinedQuery,
+      params: {
+        userId: userId,
+        ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
+        ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
+        searchTerm: searchTermFormatted
+      },
+      types: {
+        userId: "STRING",
+        ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
+        ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
+        searchTerm: "STRING"
+      },
+    }).catch(error => {
+      console.error("Error executing combined query:", error);
+      throw error;
+    });
 
-        // Add search term parameters
-        if (hasMultipleWords) {
-          // Add individual word patterns for multi-word searches
-          searchWordPatterns.forEach((pattern, index) => {
-            queryParams[`searchWord${index}`] = pattern;
-          });
-        } else {
-          // Use both the original pattern and partial pattern for single-word searches
-          queryParams.searchTerm = searchTermFormatted;
-          queryParams.partialSearchTerm = partialSearchTerm;
-        }
+    console.log('Combined query results count:', combinedResults?.length || 0);
 
-        // Build parameter types
-        const paramTypes = {
-          userId: "STRING",
-          ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
-          ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {})
-        };
+    // Separate results by type
+    const userRows = combinedResults.filter(row => row.page_type === 'user') || [];
+    const groupRows = groupIds.length > 0 ? combinedResults.filter(row => row.page_type === 'group') || [] : [];
+    const publicRows = combinedResults.filter(row => row.page_type === 'public') || [];
 
-        // Add search term parameter types
-        if (hasMultipleWords) {
-          // Add types for individual word patterns
-          searchWordPatterns.forEach((_, index) => {
-            paramTypes[`searchWord${index}`] = "STRING";
-          });
-        } else {
-          // Use types for both the original and partial search terms
-          paramTypes.searchTerm = "STRING";
-          paramTypes.partialSearchTerm = "STRING";
-        }
+    try {
+      const pages = [];
 
-        console.log('BigQuery parameters:', queryParams);
-
-        // Execute query
-        const [results] = await bigquery.query({
-          query: simplifiedQuery,
-          params: queryParams,
-          types: paramTypes
-        });
-
-        console.log(`BigQuery returned ${results.length} results`);
-
-        // Process user pages
-        const userRows = results.filter(row => row.page_type === 'user') || [];
-        const groupRows = groupIds.length > 0 ? results.filter(row => row.page_type === 'group') || [] : [];
-        const otherRows = results.filter(row => row.page_type === 'other') || [];
-
-        // Add user pages to results
+      // Add user pages to results
+      if (userRows && userRows.length > 0) {
         userRows.forEach(row => {
           pages.push({
             id: row.document_id,
             title: row.title,
-            isOwned: true,
-            isEditable: true,
+            isOwned: true, // User owns this page
+            isEditable: true, // User can edit this page since they own it
             userId: row.userId,
             lastModified: row.lastModified,
-            type: 'user',
-            isPublic: row.isPublic === true
+            type: 'user'
           });
         });
+      }
 
-        // Add group pages to results
+      // Add group pages to results
+      if (groupRows && groupRows.length > 0) {
         groupRows.forEach(row => {
           pages.push({
             id: row.document_id,
             title: row.title,
             groupId: row.groupId,
-            isOwned: row.userId === userId,
-            isEditable: true,
+            isOwned: row.userId === userId, // If user is the creator of the page
+            isEditable: true, // User can edit this page since they're in the group
             userId: row.userId,
             lastModified: row.lastModified,
-            type: 'group',
-            isPublic: row.isPublic === true
+            type: 'group'
           });
         });
+      }
 
-        // Add other pages that are public directly from BigQuery results
-        if (otherRows.length > 0) {
-          console.log(`Processing ${otherRows.length} other pages from BigQuery`);
-
-          // Add all public pages from the results
-          otherRows.forEach(row => {
-            if (row.isPublic === true) {
-              pages.push({
-                id: row.document_id,
-                title: row.title,
-                isOwned: row.userId === userId,
-                isEditable: row.userId === userId,
-                userId: row.userId,
-                lastModified: row.lastModified,
-                type: 'public',
-                isPublic: true
-              });
-            }
+      // Add public pages to results
+      if (publicRows && publicRows.length > 0) {
+        publicRows.forEach(row => {
+          pages.push({
+            id: row.document_id,
+            title: row.title,
+            isOwned: row.userId === userId, // If user is the creator of the page
+            isEditable: row.userId === userId, // Only the creator can edit public pages
+            userId: row.userId,
+            lastModified: row.lastModified,
+            type: 'public'
           });
+        });
+      }
 
-          console.log(`Added ${pages.filter(p => p.type === 'public').length} public pages to results`);
+      // Also search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          // Search for users with the same search term
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user' // Add a type field to distinguish from pages
+          }));
+        } catch (userError) {
+          console.error('Error searching for users:', userError);
         }
-
-        source = "bigquery";
-      } catch (error) {
-        console.error('BigQuery search failed:', error);
-        // Fall back to Firestore
-        pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
-        source = "firestore_fallback";
       }
-    } else {
-      // BigQuery not available, use Firestore
-      pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
-      source = "firestore_only";
-    }
 
-    // Search for users if we have a search term
-    let users = [];
-    if (searchTerm && searchTerm.trim().length > 1) {
-      try {
-        users = await searchUsers(searchTerm, 5);
-        users = users.map(user => ({
-          id: user.id,
-          username: user.username || "Anonymous",
-          photoURL: user.photoURL || null,
-          type: 'user'
-        }));
-      } catch (error) {
-        console.error('Error searching for users:', error);
-      }
-    }
-
-    // Apply scoring if enabled
-    if (useScoring && searchTerm) {
-      const sortedPages = sortSearchResultsByScore(pages, searchTerm);
-      const sortedUsers = sortSearchResultsByScore(users, searchTerm);
-
-      return NextResponse.json({
-        pages: sortedPages,
-        users: sortedUsers,
-        source
-      }, { status: 200 });
-    } else {
-      return NextResponse.json({
+      console.log('Final processed results:', {
+        pagesCount: pages.length,
+        usersCount: users.length,
         pages,
         users,
-        source
+        searchTerm,
+        searchTermFormatted
+      });
+
+      // Return formatted results including users
+      return NextResponse.json({ pages, users }, { status: 200 });
+    } catch (error) {
+      console.error('Error processing query results:', error);
+      return NextResponse.json({
+        pages: [],
+        users: [],
+        error: {
+          message: error.message,
+          details: error.stack
+        }
       }, { status: 200 });
     }
   } catch (error) {
-    console.error('Search error:', error);
+    console.error('Error querying BigQuery:', error);
     return NextResponse.json({
       pages: [],
       users: [],
