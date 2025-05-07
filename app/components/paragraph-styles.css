@@ -2,8 +2,10 @@
 
 /* Paragraph number styling - less bright in dark mode */
 .paragraph-number {
-  @apply text-muted-foreground text-sm select-none leading-none;
+  @apply text-muted-foreground text-sm select-none leading-none inline-block;
   opacity: 0.7; /* Reduce opacity for all modes */
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
 
 /* Dark mode specific styling for paragraph numbers */

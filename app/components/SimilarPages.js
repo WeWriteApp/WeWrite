@@ -147,8 +147,10 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
           });
         });
 
-        // Convert to array, sort by relevance score, and limit
+        // Convert to array, filter out pages with low relevance, sort by relevance score, and limit
         const sortedPages = Array.from(pageMap.values())
+          // Only include pages with significant relevance (more than just partial matches)
+          .filter(page => page.relevanceScore >= 3)
           .sort((a, b) => b.relevanceScore - a.relevanceScore)
           .slice(0, maxPages);
 
@@ -179,7 +181,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
       <div className="mt-8 pt-6">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
-          No similar pages found. Be the first to create related content!
+          No similar pages found with matching words in the title.
         </div>
       </div>
     );

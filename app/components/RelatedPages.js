@@ -135,8 +135,10 @@ export default function RelatedPages({ page, maxPages = 5 }) {
           }
         }
 
-        // Convert to array, sort by relevance score, and limit
+        // Convert to array, filter out pages with no content relevance, sort by relevance score, and limit
         const sortedPages = Array.from(pageMap.values())
+          // Only include pages that have a relevance score from content matching (not just author-based)
+          .filter(page => page.relevanceScore > 1)
           .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
           .slice(0, maxPages);
 
@@ -163,7 +165,14 @@ export default function RelatedPages({ page, maxPages = 5 }) {
   }
 
   if (relatedPages.length === 0) {
-    return null; // Don't show the section if there are no related pages
+    return (
+      <div className="mt-8 pt-6 border-t">
+        <h3 className="text-lg font-medium mb-4">Related Pages</h3>
+        <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
+          No related pages found with matching words in the title.
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -78,7 +78,6 @@ export const PillLink = forwardRef(({
     text-sm font-medium
     rounded-lg
     transition-colors
-    whitespace-nowrap
     max-w-full
     ${classicPadding}
     ${getPillStyleClasses()}
@@ -101,7 +100,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className="pill-text">{displayTitle}</span>
+          <span className="pill-text break-words overflow-hidden">{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
         </a>
@@ -151,7 +150,7 @@ export const PillLink = forwardRef(({
       data-user-id={isUserLinkType ? pageId : undefined}
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-      <span className="pill-text">{displayTitle}</span>
+      <span className="pill-text break-words overflow-hidden">{displayTitle}</span>
       {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
     </Link>
   );
