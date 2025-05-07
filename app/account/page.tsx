@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 import AdminSettings from '../components/AdminSettings';
+import PWAInstallationCard from '../components/PWAInstallationCard';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -261,6 +262,11 @@ export default function AccountPage() {
               <AdminSettings userEmail={user.email} />
             </section>
           )}
+
+          {/* PWA Installation Status Card */}
+          <section>
+            <PWAInstallationCard />
+          </section>
         </div>
       )}
     </div>

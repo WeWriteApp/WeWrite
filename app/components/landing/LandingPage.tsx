@@ -360,51 +360,53 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="w-full bg-background/70 backdrop-blur-md border-b border-border/10 py-3">
-          <div className="flex flex-wrap items-center justify-around px-4 gap-y-2">
-            <a
-              href="#activity"
-              onClick={(e) => scrollToSection(e, '#activity')}
-              className="text-xs font-medium transition-colors hover:text-primary px-2"
-            >
-              Activity
-            </a>
-            <a
-              href="#trending"
-              onClick={(e) => scrollToSection(e, '#trending')}
-              className="text-xs font-medium transition-colors hover:text-primary px-2"
-            >
-              Trending
-            </a>
-            <a
-              href="#features"
-              onClick={(e) => scrollToSection(e, '#features')}
-              className="text-xs font-medium transition-colors hover:text-primary px-2"
-            >
-              Features
-            </a>
-            <a
-              href="#supporters"
-              onClick={(e) => scrollToSection(e, '#supporters')}
-              className="text-xs font-medium transition-colors hover:text-primary px-2"
-            >
-              Supporters
-            </a>
-            <a
-              href="#about"
-              onClick={(e) => scrollToSection(e, '#about')}
-              className="text-xs font-medium transition-colors hover:text-primary px-2"
-            >
-              About
-            </a>
-            <a
-              href="#get-started"
-              onClick={(e) => scrollToSection(e, '#get-started')}
-              className="text-xs font-medium transition-colors hover:text-primary px-2"
-            >
-              Get Started
-            </a>
+        {/* Mobile Navigation - Horizontally scrollable and sticky */}
+        <div className="w-full bg-background/80 backdrop-blur-md border-b border-border/10 py-3 sticky top-0 z-40 transition-all duration-200 shadow-sm">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6">
+              <a
+                href="#activity"
+                onClick={(e) => scrollToSection(e, '#activity')}
+                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+              >
+                Activity
+              </a>
+              <a
+                href="#trending"
+                onClick={(e) => scrollToSection(e, '#trending')}
+                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+              >
+                Trending
+              </a>
+              <a
+                href="#features"
+                onClick={(e) => scrollToSection(e, '#features')}
+                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+              >
+                Features
+              </a>
+              <a
+                href="#supporters"
+                onClick={(e) => scrollToSection(e, '#supporters')}
+                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+              >
+                Supporters
+              </a>
+              <a
+                href="#about"
+                onClick={(e) => scrollToSection(e, '#about')}
+                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+              >
+                About
+              </a>
+              <a
+                href="#get-started"
+                onClick={(e) => scrollToSection(e, '#get-started')}
+                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+              >
+                Get Started
+              </a>
+            </div>
           </div>
         </div>
       </div>

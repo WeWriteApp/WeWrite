@@ -89,6 +89,8 @@ const config: Config = {
         'gradient': 'gradient 3s ease infinite',
         'fadeIn': 'fadeIn 0.5s ease-in-out forwards',
         'fadeInSlow': 'fadeIn 0.8s ease-in-out forwards',
+        'collapsible-down': 'collapsible-down 0.2s ease-out',
+        'collapsible-up': 'collapsible-up 0.2s ease-out',
       },
       keyframes: {
         'gradient-x': {
@@ -109,6 +111,14 @@ const config: Config = {
         'fadeIn': {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'collapsible-down': {
+          '0%': { height: '0' },
+          '100%': { height: 'var(--radix-collapsible-content-height)' },
+        },
+        'collapsible-up': {
+          '0%': { height: 'var(--radix-collapsible-content-height)' },
+          '100%': { height: '0' },
         },
       },
     },
