@@ -520,8 +520,10 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
 
   // Consistent paragraph number style for both modes
   const renderParagraphNumber = (index) => (
-    <span className="paragraph-number">
-      {index + 1}
+    <span className="paragraph-number-wrapper">
+      <span className="paragraph-number">
+        {index + 1}
+      </span>
     </span>
   );
 
@@ -549,7 +551,6 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
         <p className={`paragraph-with-hanging-indent text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
           {/* Paragraph number inline with first line */}
           <motion.span
-            className="inline-block mr-1"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{
@@ -563,8 +564,10 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
           </motion.span>
 
           {/* Paragraph content */}
-          {node.children && node.children.map((child, i) => renderChild(child, i))}
-          {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
+          <span className="inline-block">
+            {node.children && node.children.map((child, i) => renderChild(child, i))}
+            {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
+          </span>
         </p>
       </div>
     </motion.div>

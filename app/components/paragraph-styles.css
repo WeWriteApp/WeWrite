@@ -2,10 +2,8 @@
 
 /* Paragraph number styling - less bright in dark mode */
 .paragraph-number {
-  @apply text-muted-foreground text-sm select-none leading-none inline-block;
+  @apply text-muted-foreground text-sm select-none leading-none;
   opacity: 0.7; /* Reduce opacity for all modes */
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
 }
 
 /* Dark mode specific styling for paragraph numbers */
@@ -18,18 +16,24 @@
 /* Paragraph container with hanging indent */
 .paragraph-container {
   @apply relative;
-  display: block;
-  width: 100%;
+  padding-left: 1.5rem; /* Add padding to the container */
+  margin-left: 0;
 }
 
 /* Paragraph with hanging indent - first line has indent, rest are full width */
 .paragraph-with-hanging-indent {
-  display: block;
   text-indent: -1.5rem; /* Negative indent for the first line */
-  padding-left: 1.5rem; /* Padding for all lines */
   margin-bottom: 1.25rem; /* Increased spacing between paragraphs in normal mode */
-  width: 100%;
-  box-sizing: border-box;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+/* First line wrapper for paragraph number */
+.paragraph-number-wrapper {
+  display: inline-block;
+  width: 1.5rem;
+  text-align: right;
+  margin-right: 0.5rem;
 }
 
 /* Dense mode has less spacing */
