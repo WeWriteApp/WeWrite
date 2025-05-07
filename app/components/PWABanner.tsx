@@ -80,24 +80,24 @@ export default function PWABanner() {
 
   return (
     <>
-      <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="bg-primary/10 border-b border-primary/20 px-4 py-3 flex flex-col">
+        <div className="flex items-center space-x-2 mb-2">
           <Info className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">Want to use WeWrite as an app?</span>
+          <span className="text-sm font-medium text-foreground">Want to use WeWrite as an app?</span>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="grid grid-cols-3 gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-9 text-xs text-foreground"
             onClick={handleDontRemind}
           >
             Don't remind me
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-9 text-xs text-foreground"
             onClick={handleMaybeLater}
           >
             Maybe later
@@ -105,7 +105,7 @@ export default function PWABanner() {
           <Button
             variant="default"
             size="sm"
-            className="h-7 px-2 text-xs"
+            className="h-9 text-xs"
             onClick={handleShowInstructions}
           >
             Show me how
@@ -131,7 +131,7 @@ export default function PWABanner() {
             </p>
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={handleCloseInstructions}>
+            <Button variant="outline" className="text-foreground" onClick={handleCloseInstructions}>
               Got it
             </Button>
           </DialogFooter>

@@ -131,6 +131,9 @@ export default function ActivityCarousel() {
   // For logged-out users, we show gradients with the section's background color
   const showGradients = !user;
 
+  // Get the background color based on the current theme
+  const bgColor = isDark ? '#0a0a0a' : '#f8f8f8';
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -163,7 +166,12 @@ export default function ActivityCarousel() {
     }}>
       {/* Left gradient fade - only shown for logged-out users */}
       {showGradients && (
-        <div className="absolute left-0 top-0 bottom-0 w-32 z-30 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none"></div>
+        <div
+          className="absolute left-0 top-0 bottom-0 w-32 z-30 pointer-events-none"
+          style={{
+            background: `linear-gradient(to right, ${bgColor}, ${bgColor}CC, transparent)`
+          }}
+        ></div>
       )}
 
       {/* Scrolling carousel */}
@@ -205,7 +213,12 @@ export default function ActivityCarousel() {
 
       {/* Right gradient fade - only shown for logged-out users */}
       {showGradients && (
-        <div className="absolute right-0 top-0 bottom-0 w-32 z-30 bg-gradient-to-l from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none"></div>
+        <div
+          className="absolute right-0 top-0 bottom-0 w-32 z-30 pointer-events-none"
+          style={{
+            background: `linear-gradient(to left, ${bgColor}, ${bgColor}CC, transparent)`
+          }}
+        ></div>
       )}
     </div>
   );
