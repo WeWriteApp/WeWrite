@@ -23,14 +23,20 @@ export default function ActivityCarousel() {
   const isDark = theme === 'dark';
   const { user } = useContext(AuthContext);
 
-  // Animation control
+  // Animation control - using a ref to track if animation is already running
+  const animationRunningRef = useRef(false);
+
   useEffect(() => {
-    if (!carouselRef.current || loading || activities.length === 0) return;
+    // If animation is already running or we don't have the necessary elements/data, skip
+    if (animationRunningRef.current || !carouselRef.current || loading || activities.length === 0) return;
+
+    // Mark that animation is now running
+    animationRunningRef.current = true;
 
     let animationId: number;
     let lastTimestamp = 0;
-    const normalSpeed = 0.12; // pixels per frame when not hovering (reduced for smoother movement)
-    const slowSpeed = 0.02;   // pixels per frame when hovering (reduced for smoother hover)
+    const normalSpeed = 0.04; // pixels per frame when not hovering (reduced for even slower movement)
+    const slowSpeed = 0.008;  // pixels per frame when hovering (reduced for smoother hover)
     const container = carouselRef.current;
 
     // Function to get the total width of all original items
@@ -109,6 +115,8 @@ export default function ActivityCarousel() {
     const cleanup = () => {
       cancelAnimationFrame(animationId);
       clones.forEach(clone => clone.remove());
+      // Reset the animation running flag so it can be restarted if needed
+      animationRunningRef.current = false;
     };
 
     // Start the animation
@@ -118,9 +126,10 @@ export default function ActivityCarousel() {
     return cleanup;
   }, [loading, activities.length, isHovering]);
 
-  // Generate gradient colors based on theme - using muted/30 to match the section background
-  const startGradient = isDark ? 'from-muted/30' : 'from-muted/30';
-  const endGradient = isDark ? 'to-muted/30' : 'to-muted/30';
+  // Determine if we should show gradients based on login state
+  // For logged-in users, we don't show gradients
+  // For logged-out users, we show gradients with the section's background color
+  const showGradients = !user;
 
   if (loading) {
     return (
@@ -152,8 +161,10 @@ export default function ActivityCarousel() {
       height: '200px', // Fixed height instead of minHeight
       boxSizing: 'content-box' // Ensure consistent sizing
     }}>
-      {/* Left gradient fade - full opacity fade from 100% to 0% */}
-      <div className={`absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-muted/30 to-transparent pointer-events-none`}></div>
+      {/* Left gradient fade - only shown for logged-out users */}
+      {showGradients && (
+        <div className="absolute left-0 top-0 bottom-0 w-32 z-30 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none"></div>
+      )}
 
       {/* Scrolling carousel */}
       <div
@@ -192,8 +203,10 @@ export default function ActivityCarousel() {
         ))}
       </div>
 
-      {/* Right gradient fade - full opacity fade from 100% to 0% */}
-      <div className={`absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-muted/30 to-transparent pointer-events-none`}></div>
+      {/* Right gradient fade - only shown for logged-out users */}
+      {showGradients && (
+        <div className="absolute right-0 top-0 bottom-0 w-32 z-30 bg-gradient-to-l from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none"></div>
+      )}
     </div>
   );
 }

@@ -210,18 +210,7 @@ const TopUsers = () => {
     <div className="space-y-4">
       {/* All-time leaderboard */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4" />
-            <h2 className="text-lg font-semibold">Top users</h2>
-          </div>
-          <Link href="/leaderboard">
-            <Button variant="outline" size="sm">
-              View all
-              <ChevronRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
+        {/* Header is now provided by SectionTitle in the parent component */}
 
         <div className="border border-theme-medium rounded-lg overflow-hidden">
           {loading && (

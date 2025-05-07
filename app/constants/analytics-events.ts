@@ -1,6 +1,6 @@
 /**
  * Analytics Events Constants
- * 
+ *
  * This file centralizes all analytics events used throughout the WeWrite application.
  * Using these constants ensures consistency in event naming across the application
  * and makes it easier to track what events are being monitored.
@@ -57,6 +57,14 @@ export const FEATURE_EVENTS = {
   PROFILE_UPDATED: 'profile_updated',
 };
 
+// PWA Events
+export const PWA_EVENTS = {
+  PWA_STATUS: 'pwa_status',
+  PWA_STATUS_CHANGED: 'pwa_status_changed',
+  PWA_BANNER_ACTION: 'pwa_banner_action',
+  PWA_BANNER_RESET: 'pwa_banner_reset',
+};
+
 // Session Events
 export const SESSION_EVENTS = {
   SESSION_START: 'session_start',
@@ -73,6 +81,7 @@ export const ANALYTICS_EVENTS = {
   ...GROUP_EVENTS,
   ...FEATURE_EVENTS,
   ...SESSION_EVENTS,
+  ...PWA_EVENTS,
 };
 
 // Event categories
@@ -86,4 +95,7 @@ export const EVENT_CATEGORIES = {
   FEATURE: 'Feature',
   SESSION: 'Session',
   SYSTEM: 'System',
+  PWA: 'PWA',
+  APP: 'App',
+  ADMIN: 'Admin',
 };

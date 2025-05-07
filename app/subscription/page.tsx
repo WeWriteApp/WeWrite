@@ -613,15 +613,15 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-8">
+    <div className="max-w-4xl mx-auto py-6 px-0 md:px-6">
+      <div className="mb-8 px-6">
         <Link href="/" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Home
         </Link>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 px-6">
         <h1 className="text-3xl font-bold mb-2">WeWrite Subscriptions</h1>
         <p className="text-muted-foreground">
           Subscribe to WeWrite to support development and get exclusive badges on your profile. In the future, your subscription will also help support other writers on the platform.
@@ -630,7 +630,7 @@ export default function SubscriptionPage() {
 
       {/* Current Subscription Status */}
       {subscription && (subscription.status === 'active' || subscription.status === 'trialing') && (
-        <div className="mb-8 p-4 bg-card rounded-lg border border-border shadow-sm">
+        <div className="mb-8 mx-6 p-4 bg-card rounded-lg border border-border shadow-sm">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
@@ -674,7 +674,7 @@ export default function SubscriptionPage() {
       )}
 
       {subscription && subscription.status === 'canceled' && (
-        <Alert className="mb-8 bg-card border-border">
+        <Alert className="mb-8 mx-6 bg-card border-border">
           <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           <AlertTitle>Subscription Canceled</AlertTitle>
           <AlertDescription className="text-muted-foreground">
@@ -685,7 +685,7 @@ export default function SubscriptionPage() {
 
       {/* Subscription Tiers - Horizontal Carousel */}
       <div className="relative mb-8">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 px-6">
           <h2 className="text-xl font-semibold">Subscription Tiers</h2>
           <div className="flex gap-2">
             <Button
@@ -715,28 +715,30 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        <div
-          ref={carouselRef}
-          className="flex gap-4 md:flex-wrap overflow-x-auto md:overflow-visible pb-4 scrollbar-hide snap-x snap-mandatory md:snap-none"
-          {...useSwipeable({
-            onSwipedLeft: () => {
-              if (carouselRef.current) {
-                carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-              }
-            },
-            onSwipedRight: () => {
-              if (carouselRef.current) {
-                carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-              }
-            },
-            trackMouse: true,
-            trackTouch: true
-          })}
+        {/* Carousel container with negative margin to extend to screen edges */}
+        <div className="md:overflow-visible overflow-hidden">
+          <div
+            ref={carouselRef}
+            className="flex gap-4 md:gap-4 md:flex-wrap overflow-x-auto md:overflow-visible pb-4 snap-x snap-mandatory md:snap-none px-6 md:px-6"
+            {...useSwipeable({
+              onSwipedLeft: () => {
+                if (carouselRef.current) {
+                  carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                }
+              },
+              onSwipedRight: () => {
+                if (carouselRef.current) {
+                  carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                }
+              },
+              trackMouse: true,
+              trackTouch: true
+            })}
         >
           {supporterTiers.map((tier) => (
             <Card
               key={tier.id}
-              className={`flex-none w-[280px] md:flex-1 h-[320px] snap-center cursor-pointer transition-all duration-200 relative ${
+              className={`flex-none w-[240px] md:flex-1 h-[320px] snap-center cursor-pointer transition-all duration-200 relative ${
                 selectedTier === tier.id
                   ? 'border-2 border-primary bg-primary/5'
                   : 'border-2 border-border hover:border-border/80 bg-background hover:bg-background/80 hover:shadow-sm'
@@ -774,6 +776,7 @@ export default function SubscriptionPage() {
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
       </div>
 
@@ -787,66 +790,14 @@ export default function SubscriptionPage() {
       />
 
       {error && (
-        <Alert variant="destructive" className="mb-6">
+        <Alert variant="destructive" className="mb-6 mx-6">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      {/* Subscription History Section */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Subscription History</h2>
-        {subscriptionHistory.length > 0 ? (
-          <div className="bg-card rounded-lg border border-border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subscriptionHistory.map((item, index) => (
-                    <tr key={item.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span title={(() => { const d = new Date(item.date); return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : 'Invalid date'; })()}>
-                            {getRelativeTimeString(new Date(item.date))}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">${item.amount.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          item.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          item.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}>
-                          {item.status === 'succeeded' ? 'Paid' :
-                           item.status === 'failed' ? 'Failed' : 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{item.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-card rounded-lg border border-border p-6 text-center text-muted-foreground">
-            No subscription history available.
-          </div>
-        )}
-      </div>
-
-
-
-      <div className="flex justify-end">
+      {/* Subscription Action Button */}
+      <div className="flex justify-end mb-8 px-6">
         <Button
           size="lg"
           onClick={subscription && subscription.status === 'canceled' ? handleReactivateSubscription : handleSubscribe}
@@ -858,6 +809,88 @@ export default function SubscriptionPage() {
             subscription && subscription.status === 'canceled' ? 'Reactivate Subscription' :
             'Subscribe Now'}
         </Button>
+      </div>
+
+      {/* Subscription History Section */}
+      <div className="mb-8 px-6">
+        <h2 className="text-xl font-semibold mb-4">Subscription History</h2>
+        {subscriptionHistory.length > 0 ? (
+          <>
+            {/* Desktop view - Table */}
+            <div className="hidden md:block bg-card rounded-lg border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscriptionHistory.map((item, index) => (
+                      <tr key={item.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span title={(() => { const d = new Date(item.date); return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : 'Invalid date'; })()}>
+                              {getRelativeTimeString(new Date(item.date))}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium">${item.amount.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            item.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            item.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {item.status === 'succeeded' ? 'Paid' :
+                             item.status === 'failed' ? 'Failed' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{item.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile view - Cards */}
+            <div className="md:hidden space-y-4">
+              {subscriptionHistory.map((item) => (
+                <div key={item.id} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm" title={(() => { const d = new Date(item.date); return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : 'Invalid date'; })()}>
+                        {getRelativeTimeString(new Date(item.date))}
+                      </span>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      item.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                      item.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    }`}>
+                      {item.status === 'succeeded' ? 'Paid' :
+                       item.status === 'failed' ? 'Failed' : 'Pending'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">${item.amount.toFixed(2)}</span>
+                    <span className="text-sm text-muted-foreground">{item.description}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="bg-card rounded-lg border border-border p-6 text-center text-muted-foreground">
+            No subscription history available.
+          </div>
+        )}
       </div>
     </div>
   );

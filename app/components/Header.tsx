@@ -51,7 +51,7 @@ export default function Header() {
 
   return (
     <>
-      <header ref={headerRef} className={`fixed top-0 left-0 right-0 z-50 ${isScrolled ? 'shadow-sm' : ''}`}>
+      <header ref={headerRef} className={`sticky top-0 left-0 right-0 z-50 ${isScrolled ? 'shadow-sm' : ''}`}>
         <div className={`relative header-border-transition border-visible bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`w-full flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
@@ -83,8 +83,7 @@ export default function Header() {
           />
         </div>
       </header>
-      {/* Spacer to prevent content from being hidden under the fixed header */}
-      <div className={`${isScrolled ? "h-14" : "h-20"} transition-all duration-200`}></div>
+      {/* No spacer needed with sticky positioning */}
     </>
   );
 }

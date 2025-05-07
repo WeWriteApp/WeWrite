@@ -123,9 +123,23 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, initialFoll
     }
   };
 
+  // Track if we've already fetched data to prevent any re-fetches
+  const hasFetchedRef = useRef(false);
+
   // Load data only once when the component mounts
+  // We use a separate ref to ensure we only run this effect once, regardless of any state changes
+  const hasRunEffectRef = useRef(false);
+
   useEffect(() => {
+    // Skip if we've already fetched data or if the effect has already run
+    if (hasFetchedRef.current || hasRunEffectRef.current) return;
+
+    // Mark that we've run this effect
+    hasRunEffectRef.current = true;
+
     const fetchRecentActivity = async () => {
+      // Mark that we've started fetching
+      hasFetchedRef.current = true;
       try {
         setLoading(true);
         setError(null);

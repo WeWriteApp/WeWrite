@@ -13,6 +13,7 @@ import { AnalyticsProvider } from "./providers/AnalyticsProvider"
 import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
+import { PWAProvider } from "./providers/PWAProvider"
 
 const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
@@ -21,6 +22,14 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata = {
   title: "WeWrite - Home",
   description: "Create, collaborate, and share your writing with others in real-time",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icons/favicon-16x16.png', sizes: '16x16' },
+      { url: '/icons/favicon-32x32.png', sizes: '32x32' },
+    ],
+    apple: { url: '/icons/apple-touch-icon.png', sizes: '180x180' },
+  },
 }
 
 export default function RootLayout({
@@ -47,11 +56,13 @@ export default function RootLayout({
                   <GAProvider>
                     <ToastProvider>
                       <PillStyleProvider>
-                        <ClientLayout>
-                          {children}
-                        </ClientLayout>
-                        <Analytics debug={process.env.NODE_ENV === 'development'} />
-                        <SpeedInsights />
+                        <PWAProvider>
+                          <ClientLayout>
+                            {children}
+                          </ClientLayout>
+                          <Analytics debug={process.env.NODE_ENV === 'development'} />
+                          <SpeedInsights />
+                        </PWAProvider>
                       </PillStyleProvider>
                     </ToastProvider>
                   </GAProvider>

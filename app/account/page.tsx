@@ -13,6 +13,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
+import AdminSettings from '../components/AdminSettings';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -254,7 +255,12 @@ export default function AccountPage() {
             )}
           </section>
 
-
+          {/* Admin Settings Section - Only visible for specific admin user */}
+          {user && user.email && (
+            <section>
+              <AdminSettings userEmail={user.email} />
+            </section>
+          )}
         </div>
       )}
     </div>

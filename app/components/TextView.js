@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useContext, useMemo } from "react";
 import { usePage } from "../contexts/PageContext";
-import SecureSyntaxHighlighter from "./SecureSyntaxHighlighter";
 import { useLineSettings } from "../contexts/LineSettingsContext";
-import { getLanguages } from "../utils/common";
 import { nodeTypes } from "../utils/constants";
 import { PillLink } from "./PillLink";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -148,12 +146,9 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   // Modified loading animation effect to prevent layout shifts
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
-      // Count the number of paragraph-like nodes
+      // Count the number of paragraph nodes (WeWrite only supports paragraphs)
       const paragraphNodes = parsedContents.filter(node =>
-        node.type === nodeTypes.PARAGRAPH ||
-        node.type === nodeTypes.HEADING ||
-        node.type === nodeTypes.CODE_BLOCK ||
-        node.type === nodeTypes.LIST
+        node.type === nodeTypes.PARAGRAPH
       );
 
       // Get total number of nodes
@@ -441,27 +436,19 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
 
   // Only use ParagraphNode for normal mode
   if (mode === LINE_MODES.NORMAL) {
-    switch (node.type) {
-      case nodeTypes.PARAGRAPH:
-        return (
-          <ParagraphNode
-            key={index}
-            node={node}
-            effectiveMode={mode}
-            index={index}
-            canEdit={canEdit}
-            isActive={activeLineIndex === index}
-            onActiveLine={onActiveLine}
-          />
-        );
-      case nodeTypes.CODE_BLOCK:
-        return <CodeBlockNode key={index} node={node} index={index} />;
-      case nodeTypes.HEADING:
-        return <HeadingNode key={index} node={node} index={index} />;
-      case nodeTypes.LIST:
-        return <ListNode key={index} node={node} index={index} />;
-      default:
-        return null;
+    // WeWrite only supports paragraph nodes
+    if (node.type === nodeTypes.PARAGRAPH) {
+      return (
+        <ParagraphNode
+          key={index}
+          node={node}
+          effectiveMode={mode}
+          index={index}
+          canEdit={canEdit}
+          isActive={activeLineIndex === index}
+          onActiveLine={onActiveLine}
+        />
+      );
     }
   }
 
@@ -584,142 +571,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
   );
 };
 
-const CodeBlockNode = ({ node, language, index = 0 }) => {
-  // If language is not provided, try to extract it from the node
-  const codeLanguage = language || node.language || 'javascript';
-
-  return (
-    <motion.div
-      className="relative my-4 group"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
-        mass: ANIMATION_CONSTANTS.SPRING_MASS
-      }}
-    >
-      <motion.span
-        className="absolute -left-6 top-[0.15rem] paragraph-number text-xs"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{
-          delay: 0.05,
-          type: "spring",
-          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-          damping: ANIMATION_CONSTANTS.SPRING_DAMPING
-        }}
-      >
-        {index + 1}
-      </motion.span>
-      <SecureSyntaxHighlighter
-        language={codeLanguage}
-        style={{
-          borderRadius: '0.5rem',
-          padding: '1rem',
-          fontSize: '0.875rem',
-          lineHeight: 1.7,
-        }}
-      >
-        {node.content || (node.children && node.children.map(child => child.text).join('\n')) || ''}
-      </SecureSyntaxHighlighter>
-    </motion.div>
-  );
-};
-
-const HeadingNode = ({ node, index = 0 }) => {
-  const level = node.level || 1;
-  const HeadingTag = `h${level}`;
-
-  const headingClasses = {
-    1: 'text-2xl font-bold mt-8 mb-4',
-    2: 'text-xl font-bold mt-6 mb-3',
-    3: 'text-lg font-bold mt-5 mb-2',
-    4: 'text-base font-bold mt-4 mb-2',
-    5: 'text-sm font-bold mt-3 mb-1',
-    6: 'text-xs font-bold mt-2 mb-1'
-  };
-
-  return (
-    <motion.div
-      className="relative"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
-        mass: ANIMATION_CONSTANTS.SPRING_MASS
-      }}
-    >
-      <motion.span
-        className="absolute -left-6 top-[0.15rem] paragraph-number text-xs"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{
-          delay: 0.05,
-          type: "spring",
-          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-          damping: ANIMATION_CONSTANTS.SPRING_DAMPING
-        }}
-      >
-        {index + 1}
-      </motion.span>
-      <HeadingTag className={headingClasses[level] || headingClasses[1]}>
-        {node.children && node.children.map((child, i) => (
-          <span key={i} className={child.bold ? 'font-bold' : child.italic ? 'italic' : ''}>
-            {child.text}
-          </span>
-        ))}
-      </HeadingTag>
-    </motion.div>
-  );
-};
-
-const ListNode = ({ node, index = 0 }) => {
-  const ListTag = node.listType === 'ordered' ? 'ol' : 'ul';
-  const listClasses = node.listType === 'ordered' ? 'list-decimal' : 'list-disc';
-
-  return (
-    <motion.div
-      className="relative my-4 pl-8"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
-        mass: ANIMATION_CONSTANTS.SPRING_MASS
-      }}
-    >
-      <motion.span
-        className="absolute -left-6 top-[0.15rem] paragraph-number text-xs"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{
-          delay: 0.05,
-          type: "spring",
-          stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-          damping: ANIMATION_CONSTANTS.SPRING_DAMPING
-        }}
-      >
-        {index + 1}
-      </motion.span>
-      <ListTag className={`ml-5 ${listClasses}`}>
-        {node.children && node.children.map((item, i) => (
-          <li key={i} className="my-1">
-            {item.children && item.children.map((child, j) => (
-              <span key={j} className={child.bold ? 'font-bold' : child.italic ? 'italic' : ''}>
-                {child.text}
-              </span>
-            ))}
-          </li>
-        ))}
-      </ListTag>
-    </motion.div>
-  );
-};
+// WeWrite only supports paragraph nodes, so we've removed CodeBlockNode, HeadingNode, and ListNode
 
 const LinkNode = ({ node, index }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);

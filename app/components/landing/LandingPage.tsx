@@ -15,45 +15,8 @@ import { useTheme } from "next-themes";
 import { PillLink } from "../PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
-
-// Import mock page content (in a real implementation, this would be fetched from Firebase)
-const pageContents = {
-  "RFsPq1tbcOMtljwHyIMT": {
-    "title": "Every Page is a Fundraiser",
-    "body": "On WeWrite, every page you create is a potential source of income. The Pledge bar at the bottom of each page allows readers to support your work directly.\n\nUnlike traditional platforms that rely on advertising or paywalls, WeWrite empowers creators to earn from their content through direct reader support. This creates a more sustainable ecosystem for quality content.\n\nWhen readers appreciate your work, they can contribute to your page through one-time or recurring donations. This direct connection between creators and supporters fosters a community of engaged readers who value your contributions.",
-    "isPublic": true
-  },
-  "aJFMqTEKuNEHvOrYE9c2": {
-    "title": "No Ads",
-    "body": "WeWrite is committed to providing a clean, distraction-free reading and writing experience. We don't show ads anywhere on the platform.\n\nInstead of relying on advertising revenue, we've built a sustainable model based on direct creator support. This means you can focus on what matters: creating and consuming great content.\n\nNo tracking pixels, no sponsored content, no intrusive banners—just pure content. This creates a better experience for everyone and aligns our incentives with what truly matters: quality writing and engaged readers.",
-    "isPublic": true
-  },
-  "ou1LPmpynpoirLrv99fq": {
-    "title": "Multiple View Modes",
-    "body": "WeWrite offers different reading experiences to suit your preferences. Choose between Wrapped, Default, and Spaced modes to customize how content appears.\n\nWrapped mode provides a more compact reading experience, ideal for longer articles or when you want to see more content at once.\n\nDefault mode balances readability with content density, offering a clean layout that works well for most content types.\n\nSpaced mode increases the whitespace around paragraphs, making it easier to focus on individual sections—perfect for deep reading or complex topics.",
-    "isPublic": true
-  },
-  "o71h6Lg1wjGSC1pYaKXz": {
-    "title": "Recurring Donations",
-    "body": "Support your favorite writers consistently with recurring monthly donations. This feature helps creators establish a predictable income stream while giving supporters a hassle-free way to contribute.\n\nAs a supporter, you can set up automatic monthly contributions to the writers you value most. This ongoing support helps creators focus on producing quality content rather than constantly seeking new funding sources.\n\nFor writers, recurring donations provide financial stability and a deeper connection with your most dedicated readers. You'll be able to see your monthly recurring revenue and plan your content strategy accordingly.",
-    "isPublic": true
-  },
-  "4jw8FdMJHGofMc4G2QTw": {
-    "title": "Collaborative Pages",
-    "body": "Work together with others on shared documents with WeWrite's collaborative features. Multiple contributors can edit and expand on ideas together, creating richer, more diverse content.\n\nCollaboration happens in real-time, allowing for immediate feedback and iteration. This makes WeWrite perfect for team projects, community knowledge bases, or any situation where multiple perspectives enhance the final result.\n\nPage owners can invite specific collaborators or open their pages to public contributions, with full control over edit permissions and content approval.",
-    "isPublic": true
-  },
-  "N7Pg3iJ0OQhkpw16MTZW": {
-    "title": "Map View",
-    "body": "Visualize your content and connections with WeWrite's interactive Map View. This feature transforms your collection of pages into a visual knowledge graph, helping you see relationships between ideas.\n\nMap View makes it easy to navigate complex topics by showing how different pages connect to each other. Discover unexpected relationships between your content or explore how others have linked to your work.\n\nThis visual approach to content organization helps both creators and readers gain new insights and discover content they might otherwise miss in a traditional linear format.",
-    "isPublic": true
-  },
-  "0krXqAU748w43YnWJwE2": {
-    "title": "Calendar View",
-    "body": "Organize and view your content chronologically with Calendar View. This feature helps you track your writing history and plan future content.\n\nFor writers, Calendar View provides insights into your productivity patterns and helps maintain consistent publishing schedules. See at a glance when you've been most active and identify gaps in your content timeline.\n\nReaders can use Calendar View to discover content based on when it was published, making it easier to follow a writer's journey or find the most recent updates on evolving topics.",
-    "isPublic": true
-  }
-};
+import { getPageById } from '../../firebase/database';
+import ActivityCarousel from './ActivityCarousel';
 
 // Carousel images for hero section
 const heroImages = [
@@ -75,6 +38,7 @@ const LandingPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const heroSectionRef = useRef<HTMLElement>(null);
   const { setTheme, theme } = useTheme();
+  const [pageContents, setPageContents] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const handleScroll = () => {
@@ -103,9 +67,68 @@ const LandingPage = () => {
     document.documentElement.style.setProperty('--accent-s', '91%');
     document.documentElement.style.setProperty('--accent-l', '60%');
     document.documentElement.style.setProperty('--accent', '#2563eb'); // Tailwind blue-600
-    // Optionally, set theme to light or system for landing page
-    if (setTheme) setTheme('light');
+    // Don't force theme - respect user's system preference
+    // if (setTheme) setTheme('light');
   }, [setTheme]);
+
+  // Fetch page content for feature roadmap cards
+  useEffect(() => {
+    const fetchPageContents = async () => {
+      // Page IDs to fetch
+      const pageIds = [
+        'RFsPq1tbcOMtljwHyIMT', // Every Page is a Fundraiser
+        'aJFMqTEKuNEHvOrYE9c2', // No ads
+        'ou1LPmpynpoirLrv99fq', // Multiple view modes
+        'o71h6Lg1wjGSC1pYaKXz', // Recurring donations
+        '4jw8FdMJHGofMc4G2QTw', // Collaborative pages
+        'N7Pg3iJ0OQhkpw16MTZW', // Map view
+        '0krXqAU748w43YnWJwE2'  // Calendar view
+      ];
+
+      const contents: Record<string, any> = {};
+
+      for (const pageId of pageIds) {
+        try {
+          const { pageData, versionData } = await getPageById(pageId);
+
+          if (pageData && versionData) {
+            // Parse content from version data
+            let body = '';
+            try {
+              const contentObj = JSON.parse(versionData.content);
+              // Extract text content from nodes
+              body = contentObj.map((node: any) => {
+                if (node.type === 'paragraph' && node.children) {
+                  return node.children.map((child: any) => child.text || '').join('');
+                }
+                return '';
+              }).join('\n\n');
+            } catch (err) {
+              console.error(`Error parsing content for page ${pageId}:`, err);
+            }
+
+            contents[pageId] = {
+              title: pageData.title || 'Untitled',
+              body: body || pageData.body || '',
+              isPublic: pageData.isPublic || false
+            };
+          }
+        } catch (err) {
+          console.error(`Error fetching page ${pageId}:`, err);
+          // Provide fallback content
+          contents[pageId] = {
+            title: 'Error loading page',
+            body: 'Content could not be loaded.',
+            isPublic: false
+          };
+        }
+      }
+
+      setPageContents(contents);
+    };
+
+    fetchPageContents();
+  }, []);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -238,7 +261,7 @@ const LandingPage = () => {
     <div className="min-h-screen bg-background">
       {/* Desktop Header */}
       <header
-        className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
+        className={`sticky top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
           isScrolled
             ? 'py-3 bg-background/80 backdrop-blur-xl shadow-md'
             : 'py-4 bg-background/70 backdrop-blur-lg border-b border-border/10'
@@ -311,7 +334,7 @@ const LandingPage = () => {
       </header>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex flex-col w-full">
+      <div className="md:hidden sticky top-0 left-0 right-0 z-50 flex flex-col w-full">
         <div className={`w-full transition-all duration-200 ${
           isScrolled
             ? 'py-2 bg-background/90 backdrop-blur-xl shadow-sm'
@@ -392,17 +415,24 @@ const LandingPage = () => {
           className="py-16 md:py-20 relative overflow-hidden"
           ref={heroSectionRef}
           onMouseMove={(e) => {
-            if (heroSectionRef.current) {
-              const rect = heroSectionRef.current.getBoundingClientRect();
-              const centerX = rect.left + rect.width / 2;
-              const centerY = rect.top + rect.height / 2;
+            // Throttle the mouse move handler to reduce re-renders
+            // Only update rotation every 50ms to prevent excessive re-renders
+            if (!heroSectionRef.current || (window as any).isThrottlingHeroMove) return;
 
-              // Calculate rotation (limited to ±5 degrees)
-              const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
-              const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
+            (window as any).isThrottlingHeroMove = true;
+            setTimeout(() => {
+              (window as any).isThrottlingHeroMove = false;
+            }, 50);
 
-              setRotation({ x: rotateX, y: rotateY });
-            }
+            const rect = heroSectionRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            // Calculate rotation (limited to ±5 degrees)
+            const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
+            const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
+
+            setRotation({ x: rotateX, y: rotateY });
           }}
           onMouseLeave={() => setRotation({ x: 0, y: 0 })}
         >
@@ -598,13 +628,8 @@ const LandingPage = () => {
               </p>
             </div>
             <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-              <Suspense fallback={<div className="flex justify-center py-8"><Loader className="h-8 w-8 animate-spin text-primary" /></div>}>
-                {/* Import the ActivityCarousel component */}
-                {React.createElement(
-                  lazy(() => import('./ActivityCarousel')),
-                  {}
-                )}
-              </Suspense>
+              {/* Use the directly imported ActivityCarousel component */}
+              <ActivityCarousel />
             </div>
           </div>
         </section>

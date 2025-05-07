@@ -50,9 +50,9 @@ export function PagePreviewCard({
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
             <CardTitle className="text-lg">
-              <span className="inline-block">
+              <PillLink href={`/${pageId}`}>
                 {title}
-              </span>
+              </PillLink>
             </CardTitle>
             {!hideStatus && getStatusBadge(status)}
           </div>

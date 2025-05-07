@@ -47,7 +47,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={interactiveCard(
-        "w-full md:max-w-[400px] h-full",
+        "w-full h-full",
         isCarousel && "h-full flex flex-col",
         compactLayout && "p-2" // Reduce padding for compact layout
       )}

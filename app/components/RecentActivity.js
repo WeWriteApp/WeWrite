@@ -54,6 +54,11 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     }
   }, [isInUserProfile, isActivityPage, setViewMode]);
 
+  // Use grid layout in activity page or user profile
+  const useGridLayout = isInActivityPage || isInUserProfile;
+  // Determine if we're on the homepage
+  const isHomepage = !isInActivityPage && !isInUserProfile;
+
   // Use different hooks based on whether we're on the homepage or not
   // For homepage, use the static hook that only loads once
   // For activity page or user profile, use the regular hook with pagination
@@ -95,22 +100,20 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
   // Scroll functions removed as the buttons have been removed
 
-  // Use grid layout in activity page or user profile
-  const useGridLayout = isInActivityPage || isInUserProfile;
-  // Determine if we're on the homepage
-  const isHomepage = !isInActivityPage && !isInUserProfile;
+  // Prevent any scroll-triggered re-renders from causing data refetches
+  const initialRenderRef = useRef(true);
+  useEffect(() => {
+    initialRenderRef.current = false;
+  }, []);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          <h2 className="text-lg font-semibold">Recent activity</h2>
-        </div>
+        {/* Title is now provided by SectionTitle in the parent component */}
 
         {/* View mode switch - only show when user is logged in */}
         {user && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm ml-auto">
             <button
               onClick={() => setViewMode('all')}
               className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'all'
@@ -132,8 +135,6 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
             </button>
           </div>
         )}
-
-        {/* Carousel controls removed as requested */}
       </div>
 
       {/* Mobile view: always vertical stack */}
@@ -171,7 +172,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
 
         {!loading && !error && activities.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
               <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
             ))}
@@ -218,17 +219,33 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
 
         {!loading && !error && activities.length > 0 && (
-          <div
-            ref={useGridLayout ? null : carouselRef}
-            className={`${
-              useGridLayout
-                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
-                : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar'
-            }`}
-          >
-            {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
-              <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
-            ))}
+          <div className="relative w-full">
+            {/* Left fade-out gradient - only for non-homepage */}
+            {!useGridLayout && !isHomepage && (
+              <div className="absolute left-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none"></div>
+            )}
+
+            <div
+              ref={useGridLayout ? null : carouselRef}
+              className={`${
+                useGridLayout
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
+                  : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full'
+              }`}
+            >
+              {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
+                <ActivityCard
+                  key={`${activity.pageId}-${index}`}
+                  activity={activity}
+                  isCarousel={!useGridLayout}
+                />
+              ))}
+            </div>
+
+            {/* Right fade-out gradient - only for non-homepage */}
+            {!useGridLayout && !isHomepage && (
+              <div className="absolute right-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none"></div>
+            )}
           </div>
         )}
       </div>

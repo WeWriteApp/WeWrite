@@ -243,7 +243,7 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
+        className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
@@ -397,18 +397,7 @@ export default function PageHeader({
           />
         </div>
       </header>
-      <div
-        ref={spacerRef}
-        style={{
-          height: `${headerHeight}px`,
-          minHeight: `${headerHeight}px`,
-          willChange: 'height',
-          transition: 'height 300ms ease-out',
-          transform: 'translateZ(0)' // Force GPU acceleration
-        }}
-        className="w-full flex-shrink-0 pointer-events-none"
-        aria-hidden="true"
-      /> {/* Dynamic spacer for fixed header with explicit min-height */}
+      {/* No spacer needed with sticky positioning */}
     </>
   );
 }

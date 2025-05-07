@@ -232,7 +232,7 @@ export const getTrendingPages = async (limitCount = 5) => {
       collection(db, "pageViews"),
       where("date", "==", todayStr),
       orderBy("totalViews", "desc"),
-      limit(limitCount * 2) // Get more than we need to account for filtering
+      limit(limitCount * 3) // Get more than we need to account for filtering
     );
 
     // Query for yesterday's page views
@@ -240,7 +240,7 @@ export const getTrendingPages = async (limitCount = 5) => {
       collection(db, "pageViews"),
       where("date", "==", yesterdayStr),
       orderBy("totalViews", "desc"),
-      limit(limitCount * 2) // Get more than we need to account for filtering
+      limit(limitCount * 3) // Get more than we need to account for filtering
     );
 
     // Execute both queries in parallel
@@ -307,9 +307,10 @@ export const getTrendingPages = async (limitCount = 5) => {
       try {
         console.log(`Not enough trending pages (${trendingPages.length}), fetching additional pages`);
 
-        // Query for pages with the most total views
+        // Query for pages with the most total views (only public pages)
         const pagesQuery = query(
           collection(db, "pages"),
+          where("isPublic", "==", true), // Only get public pages
           where("views", ">", 0), // Only get pages with views > 0
           orderBy("views", "desc"),
           limit(limitCount - trendingPages.length)
@@ -352,6 +353,13 @@ export const getTrendingPages = async (limitCount = 5) => {
           const pageDoc = await getDoc(doc(db, "pages", page.id));
           if (pageDoc.exists()) {
             const pageData = pageDoc.data();
+
+            // Only include public pages
+            if (pageData.isPublic === false) {
+              console.log(`Skipping private page ${page.id}`);
+              return null;
+            }
+
             return {
               ...page,
               title: pageData.title || 'Untitled',
@@ -366,7 +374,10 @@ export const getTrendingPages = async (limitCount = 5) => {
       })
     );
 
-    return pagesWithTitles;
+    // Filter out null entries (private pages)
+    const publicPages = pagesWithTitles.filter(page => page !== null);
+
+    return publicPages;
   } catch (error) {
     console.error("Error getting trending pages:", error);
     return [];

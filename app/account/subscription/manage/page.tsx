@@ -313,7 +313,7 @@ export default function ManageSubscriptionPage() {
 
                   <Button
                     variant="default"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 w-full sm:w-auto"
                     asChild
                   >
                     <Link href="/subscription">
@@ -469,42 +469,71 @@ export default function ManageSubscriptionPage() {
             </CardHeader>
             <CardContent>
               {subscriptionHistory.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subscriptionHistory.map((item, index) => (
-                        <tr key={item.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>{new Date(item.date).toLocaleDateString()}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm font-medium">${item.amount.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              item.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                              item.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            }`}>
-                              {item.status === 'succeeded' ? 'Paid' :
-                               item.status === 'failed' ? 'Failed' : 'Pending'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">{item.description}</td>
+                <>
+                  {/* Desktop view - Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Amount</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {subscriptionHistory.map((item, index) => (
+                          <tr key={item.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <span>{new Date(item.date).toLocaleDateString()}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium">${item.amount.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                item.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                item.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {item.status === 'succeeded' ? 'Paid' :
+                                 item.status === 'failed' ? 'Failed' : 'Pending'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{item.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile view - Cards */}
+                  <div className="md:hidden space-y-4">
+                    {subscriptionHistory.map((item) => (
+                      <div key={item.id} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{new Date(item.date).toLocaleDateString()}</span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            item.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            item.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {item.status === 'succeeded' ? 'Paid' :
+                             item.status === 'failed' ? 'Failed' : 'Pending'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">${item.amount.toFixed(2)}</span>
+                          <span className="text-sm text-muted-foreground">{item.description}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   No payment history available.

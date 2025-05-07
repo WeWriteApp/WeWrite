@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
@@ -8,7 +8,7 @@ import { getDatabase, ref, get } from "firebase/database";
 /**
  * useStaticRecentActivity - A hook that loads recent activity data only once when the component mounts
  * This is a simplified version of useRecentActivity that doesn't support pagination or reloading
- * 
+ *
  * @param {number} limitCount - Number of activities to fetch
  * @param {string|null} filterUserId - Optional user ID to filter activities by
  * @param {boolean} followedOnly - Whether to only show activities from followed pages
@@ -112,9 +112,32 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
     }
   };
 
+  // Track if we've already fetched data to prevent any re-fetches
+  const hasFetchedRef = useRef(false);
+  // Track if the effect has run to prevent multiple executions
+  const hasRunEffectRef = useRef(false);
+  // Store the activities in a ref to prevent re-renders
+  const activitiesRef = useRef([]);
+
+  // If we already have activities in the ref and we're not loading, use those
+  useEffect(() => {
+    if (activitiesRef.current.length > 0 && !loading) {
+      setActivities(activitiesRef.current);
+      setLoading(false);
+    }
+  }, [loading]);
+
   // Load data only once when the component mounts
   useEffect(() => {
+    // Skip if we've already fetched data or if the effect has already run
+    if (hasFetchedRef.current || hasRunEffectRef.current) return;
+
+    // Mark that we've run this effect
+    hasRunEffectRef.current = true;
+
     const fetchRecentActivity = async () => {
+      // Mark that we've started fetching
+      hasFetchedRef.current = true;
       try {
         setLoading(true);
         setError(null);
@@ -333,6 +356,8 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
             })
             .slice(0, limitCount);
 
+          // Store in ref first, then update state
+          activitiesRef.current = validActivities;
           setActivities(validActivities);
         } catch (err) {
           console.error("Error with Firestore query:", err);
@@ -361,7 +386,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
 
     // Only fetch once when the component mounts
     fetchRecentActivity();
-    
+
     // Empty dependency array ensures this only runs once
   }, []);
 

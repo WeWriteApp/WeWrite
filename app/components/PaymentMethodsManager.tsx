@@ -29,7 +29,7 @@ export function PaymentMethodsManager() {
   const [isSettingPrimary, setIsSettingPrimary] = useState<string | null>(null);
 
   // Fetch payment methods
-  const fetchPaymentMethods = async () => {
+  const fetchPaymentMethods = async (abortSignal?: AbortSignal) => {
     if (!user) {
       setLoading(false);
       return;
@@ -39,19 +39,13 @@ export function PaymentMethodsManager() {
       setLoading(true);
       setError(null);
 
-      // Add a timeout to prevent infinite loading
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
       const response = await fetch('/api/payment-methods', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        signal: controller.signal
+        signal: abortSignal
       });
-
-      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -63,7 +57,10 @@ export function PaymentMethodsManager() {
     } catch (err: any) {
       console.error('Error fetching payment methods:', err);
       if (err.name === 'AbortError') {
-        setError('Request timed out. Please try again later.');
+        // Don't set error for aborted requests during unmount
+        if (!abortSignal?.aborted) {
+          setError('Request timed out. Please try again later.');
+        }
       } else {
         setError(err.message || 'Failed to fetch payment methods');
       }
@@ -203,7 +200,13 @@ export function PaymentMethodsManager() {
   // Load payment methods on component mount
   useEffect(() => {
     if (user) {
-      fetchPaymentMethods();
+      const controller = new AbortController();
+      fetchPaymentMethods(controller.signal);
+
+      // Clean up function to abort any in-flight requests when component unmounts
+      return () => {
+        controller.abort();
+      };
     }
   }, [user]);
 

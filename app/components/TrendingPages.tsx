@@ -114,9 +114,9 @@ export default function TrendingPages({ limit = 5 }) {
                 onClick={() => window.location.href = `/${page.id}`}
               >
                 <td className="py-3 px-4">
-                  <div className="hover:text-primary transition-colors">
-                    {page.title || 'Untitled'}
-                  </div>
+                  <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap max-w-full px-2 py-0.5 bg-primary text-primary-foreground">
+                    <span className="pill-text">{page.title || 'Untitled'}</span>
+                  </span>
                 </td>
                 <td className="py-3 px-4 text-right font-medium">
                   {page.views.toLocaleString()}
@@ -147,8 +147,10 @@ export default function TrendingPages({ limit = 5 }) {
           >
             <div className="p-4">
               <div className="mb-4">
-                <h3 className="text-base font-medium text-foreground group-hover:text-primary transition-colors">
-                  {page.title || 'Untitled'}
+                <h3 className="text-base font-medium">
+                  <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap max-w-full px-2 py-0.5 bg-primary text-primary-foreground">
+                    <span className="pill-text">{page.title || 'Untitled'}</span>
+                  </span>
                 </h3>
               </div>
 
