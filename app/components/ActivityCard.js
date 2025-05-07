@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { PillLink } from "./PillLink";
@@ -10,6 +10,8 @@ import { cn, interactiveCard } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { SupporterIcon } from "./SupporterIcon";
 import { format } from "date-fns";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/database";
 
 /**
  * ActivityCard component displays a single activity card
@@ -21,6 +23,26 @@ import { format } from "date-fns";
 const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+
+  // Check if subscription feature is enabled
+  useEffect(() => {
+    const checkSubscriptionFeature = async () => {
+      try {
+        const featureFlagsRef = doc(db, 'config', 'featureFlags');
+        const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+        if (featureFlagsDoc.exists()) {
+          const flagsData = featureFlagsDoc.data();
+          setSubscriptionEnabled(flagsData.subscription_management === true);
+        }
+      } catch (error) {
+        console.error('Error checking subscription feature flag:', error);
+      }
+    };
+
+    checkSubscriptionFeature();
+  }, []);
 
   // Ensure we have valid content before generating diffs
   const hasValidContent = activity.currentContent &&
@@ -89,11 +111,13 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               onClick={(e) => e.stopPropagation()}
             >
               {activity.username || "anonymous"}
-              <SupporterIcon
-                tier={activity.tier}
-                status={activity.subscriptionStatus}
-                size="sm"
-              />
+              {subscriptionEnabled && (
+                <SupporterIcon
+                  tier={activity.tier}
+                  status={activity.subscriptionStatus}
+                  size="sm"
+                />
+              )}
             </Link>
           </div>
         </div>

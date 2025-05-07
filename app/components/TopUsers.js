@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { PillLink } from "./PillLink";
 import { SupporterIcon } from "./SupporterIcon";
+import { db as firestoreDb } from "../firebase/database";
 
 const UserListSkeleton = () => {
   return (
@@ -51,6 +52,26 @@ const TopUsers = () => {
   const [errorDetails, setErrorDetails] = useState("");
   const { user } = useContext(AuthContext);
   const [sortDirection, setSortDirection] = useState("desc"); // "desc" or "asc"
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+
+  // Check if subscription feature is enabled
+  useEffect(() => {
+    const checkSubscriptionFeature = async () => {
+      try {
+        const featureFlagsRef = doc(firestoreDb, 'config', 'featureFlags');
+        const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+        if (featureFlagsDoc.exists()) {
+          const flagsData = featureFlagsDoc.data();
+          setSubscriptionEnabled(flagsData.subscription_management === true);
+        }
+      } catch (error) {
+        console.error('Error checking subscription feature flag:', error);
+      }
+    };
+
+    checkSubscriptionFeature();
+  }, []);
 
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === "desc" ? "asc" : "desc");
@@ -277,11 +298,13 @@ const TopUsers = () => {
                             >
                               <span className="flex items-center gap-1">
                                 {user.username || "Unknown User"}
-                                <SupporterIcon
-                                  tier={user.tier}
-                                  status={user.subscriptionStatus}
-                                  size="sm"
-                                />
+                                {subscriptionEnabled && (
+                                  <SupporterIcon
+                                    tier={user.tier}
+                                    status={user.subscriptionStatus}
+                                    size="sm"
+                                  />
+                                )}
                               </span>
                             </PillLink>
                           </TooltipTrigger>

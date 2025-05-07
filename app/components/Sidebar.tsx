@@ -207,7 +207,27 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </button>
 
-              {/* Add more main menu items here */}
+              <button
+                onClick={() => router.push('/account')}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+              >
+                <div className="flex items-center">
+                  <Settings className="h-5 w-5 mr-2" />
+                  <span>Settings</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
+
+              <button
+                onClick={() => router.push(`/user/${user?.uid}`)}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+              >
+                <div className="flex items-center">
+                  <User className="h-5 w-5 mr-2" />
+                  <span>Profile</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
             </div>
           </div>
         );

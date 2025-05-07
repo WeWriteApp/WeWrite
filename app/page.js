@@ -86,7 +86,6 @@ export default function Home() {
   if (!user) {
     return (
       <>
-        <Header />
         <LandingPage />
         <SiteFooter />
       </>

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { Loader, ChevronLeft, Share2, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/database";
 
 import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
 import { SupporterIcon } from "./SupporterIcon";
@@ -45,6 +47,26 @@ export default function PageHeader({
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
   const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
+  const [subscriptionEnabled, setSubscriptionEnabled] = React.useState<boolean>(false);
+
+  // Check if subscription feature is enabled
+  React.useEffect(() => {
+    const checkSubscriptionFeature = async () => {
+      try {
+        const featureFlagsRef = doc(db, 'config', 'featureFlags');
+        const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+        if (featureFlagsDoc.exists()) {
+          const flagsData = featureFlagsDoc.data();
+          setSubscriptionEnabled(flagsData.subscription_management === true);
+        }
+      } catch (error) {
+        console.error('Error checking subscription feature flag:', error);
+      }
+    };
+
+    checkSubscriptionFeature();
+  }, []);
 
   // Fetch username if not provided but userId is available
   React.useEffect(() => {
@@ -345,11 +367,13 @@ export default function PageHeader({
                             <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
                           )}
                         </Link>
-                        <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
-                          <div className="cursor-pointer flex-shrink-0 flex items-center">
-                            <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
-                          </div>
-                        </SubscriptionInfoModal>
+                        {subscriptionEnabled && (
+                          <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
+                            <div className="cursor-pointer flex-shrink-0 flex items-center">
+                              <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
+                            </div>
+                          </SubscriptionInfoModal>
+                        )}
                       </span>
                     )
                   )}

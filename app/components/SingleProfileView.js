@@ -15,6 +15,8 @@ import SupporterBadge from "./SupporterBadge";
 import { SupporterIcon } from "./SupporterIcon";
 import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 import { Button } from "./ui/button";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/database";
 
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../firebase/counters";
@@ -31,6 +33,26 @@ const SingleProfileView = ({ profile }) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState(profile.subscriptionStatus || null);
   const [isLoadingTier, setIsLoadingTier] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+
+  // Check if subscription feature is enabled
+  useEffect(() => {
+    const checkSubscriptionFeature = async () => {
+      try {
+        const featureFlagsRef = doc(db, 'config', 'featureFlags');
+        const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+        if (featureFlagsDoc.exists()) {
+          const flagsData = featureFlagsDoc.data();
+          setSubscriptionEnabled(flagsData.subscription_management === true);
+        }
+      } catch (error) {
+        console.error('Error checking subscription feature flag:', error);
+      }
+    };
+
+    checkSubscriptionFeature();
+  }, []);
 
   // Check if this profile belongs to the current user
   const isCurrentUser = user && user.uid === profile.uid;
@@ -204,8 +226,8 @@ const SingleProfileView = ({ profile }) => {
             </Link>
           </div>
 
-          {/* Tier badge as a chip below username - always show */}
-          {(
+          {/* Tier badge as a chip below username - only show when subscription is enabled */}
+          {subscriptionEnabled && (
             <SubscriptionInfoModal
               currentTier={supporterTier}
               currentStatus={subscriptionStatus}

@@ -72,6 +72,8 @@ export const PillLink = forwardRef(({
 
   // Base styles for all pill links
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
+  // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
+  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
   const baseStyles = `
     inline-flex items-center
     my-0.5
@@ -79,6 +81,7 @@ export const PillLink = forwardRef(({
     rounded-lg
     transition-colors
     max-w-full
+    ${textWrapStyle}
     ${classicPadding}
     ${getPillStyleClasses()}
     ${groupId ? 'opacity-90' : ''}
@@ -100,7 +103,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className="pill-text break-words overflow-hidden">{displayTitle}</span>
+          <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
         </a>
@@ -150,7 +153,7 @@ export const PillLink = forwardRef(({
       data-user-id={isUserLinkType ? pageId : undefined}
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-      <span className="pill-text break-words overflow-hidden">{displayTitle}</span>
+      <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
       {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
     </Link>
   );

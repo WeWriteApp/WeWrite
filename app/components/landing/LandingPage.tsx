@@ -149,7 +149,8 @@ const LandingPage = () => {
     const targetElement = document.getElementById(targetId);
 
     if (targetElement) {
-      const headerHeight = 80; // Approximate header height in pixels
+      // Adjust header height based on screen size
+      const headerHeight = window.innerWidth >= 768 ? 60 : 100; // Desktop: 60px, Mobile: 100px (includes both header rows)
       const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
       window.scrollTo({ top: targetPosition, behavior: 'smooth' });
       window.history.pushState(null, '', href);
@@ -259,14 +260,8 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Header */}
-      <header
-        className={`sticky top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block ${
-          isScrolled
-            ? 'py-3 bg-background/80 backdrop-blur-xl shadow-md'
-            : 'py-4 bg-background/70 backdrop-blur-lg border-b border-border/10'
-        }`}
-      >
+      {/* Desktop Navigation - Always sticky at the top */}
+      <header className="sticky top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block bg-background/90 backdrop-blur-xl shadow-md py-3">
         <div className="container mx-auto flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
             <h1
@@ -333,14 +328,10 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Mobile Header */}
+      {/* Mobile Navigation - Always sticky at the top */}
       <div className="md:hidden sticky top-0 left-0 right-0 z-50 flex flex-col w-full">
-        <div className={`w-full transition-all duration-200 ${
-          isScrolled
-            ? 'py-2 bg-background/90 backdrop-blur-xl shadow-sm'
-            : 'py-3 bg-background/80 backdrop-blur-lg border-b border-border/10'
-          }`}
-        >
+        {/* Title and buttons */}
+        <div className="w-full bg-background/90 backdrop-blur-xl shadow-sm py-2">
           <div className="container mx-auto flex justify-between items-center px-4">
             <h1
               className="text-xl font-bold cursor-pointer dark:text-white text-primary"
@@ -361,7 +352,7 @@ const LandingPage = () => {
         </div>
 
         {/* Mobile Navigation - Horizontally scrollable and sticky */}
-        <div className="w-full bg-background/80 backdrop-blur-md border-b border-border/10 py-3 sticky top-0 z-40 transition-all duration-200 shadow-sm">
+        <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 py-3 shadow-sm">
           <div className="overflow-x-auto scrollbar-hide">
             <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6">
               <a
@@ -411,7 +402,7 @@ const LandingPage = () => {
         </div>
       </div>
 
-      <main className="pt-32 md:pt-28">
+      <main className="pt-8 md:pt-6">
         {/* Hero Section */}
         <section
           className="py-16 md:py-20 relative overflow-hidden"

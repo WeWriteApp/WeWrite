@@ -97,7 +97,23 @@ export default function RelatedPages({ page, maxPages = 5 }) {
                   .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
                 // Count matching significant words
-                const matchingWords = titleWords.filter(word => pageTitleWords.includes(word));
+                const matchingWords = titleWords.filter(word => {
+                  // Check for exact word matches
+                  if (pageTitleWords.includes(word)) {
+                    return true;
+                  }
+
+                  // Check if any word in pageTitleWords contains this word as a substring
+                  // This helps with cases like "ACP" matching "Woke ACP"
+                  for (const pageWord of pageTitleWords) {
+                    if (pageWord.includes(word) || word.includes(pageWord)) {
+                      return true;
+                    }
+                  }
+
+                  return false;
+                });
+
                 if (matchingWords.length > 0) {
                   // Higher score for more matching words
                   relevanceScore += matchingWords.length * 2;
@@ -113,7 +129,7 @@ export default function RelatedPages({ page, maxPages = 5 }) {
 
                 // Check for partial matches too
                 for (const word of titleWords) {
-                  if (pageTitle.includes(word) && !pageTitleWords.includes(word)) {
+                  if (pageTitle.includes(word) && !matchingWords.includes(word)) {
                     relevanceScore += 0.5; // Lower score for partial matches
                   }
                 }
@@ -138,7 +154,8 @@ export default function RelatedPages({ page, maxPages = 5 }) {
         // Convert to array, filter out pages with no content relevance, sort by relevance score, and limit
         const sortedPages = Array.from(pageMap.values())
           // Only include pages that have a relevance score from content matching (not just author-based)
-          .filter(page => page.relevanceScore > 1)
+          // Lower the threshold to 0.5 to include more partial matches
+          .filter(page => page.relevanceScore >= 0.5)
           .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
           .slice(0, maxPages);
 

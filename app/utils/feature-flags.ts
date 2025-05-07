@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 // Define feature flag types
-export type FeatureFlag = 
+export type FeatureFlag =
   | 'subscription_management'
   | 'username_management'
   | 'map_view'
@@ -11,7 +11,7 @@ export type FeatureFlag =
 
 // Define admin user IDs
 const ADMIN_USER_IDS = [
-  'jameigray2234@gmail.com',
+  'jamiegray2234@gmail.com',
 ];
 
 /**

@@ -26,11 +26,31 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   const [loadingMore, setLoadingMore] = useState(false);
   const [unfollowingId, setUnfollowingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const limit = 50;
+
+  // Check if subscription feature is enabled
+  useEffect(() => {
+    const checkSubscriptionFeature = async () => {
+      try {
+        const featureFlagsRef = doc(db, 'config', 'featureFlags');
+        const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+        if (featureFlagsDoc.exists()) {
+          const flagsData = featureFlagsDoc.data();
+          setSubscriptionEnabled(flagsData.subscription_management === true);
+        }
+      } catch (error) {
+        console.error('Error checking subscription feature flag:', error);
+      }
+    };
+
+    checkSubscriptionFeature();
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
-    
+
     loadFollowedUsers();
   }, [userId]);
 
@@ -42,12 +62,12 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
         setLoading(true);
         setPage(1);
       }
-      
+
       setError(null);
-      
+
       // Get the IDs of users the profile user follows
       const followedUserIds = await getFollowedUsers(userId);
-      
+
       if (followedUserIds.length === 0) {
         setFollowedUsers([]);
         setHasMore(false);
@@ -55,31 +75,31 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
         setLoadingMore(false);
         return;
       }
-      
+
       // Calculate pagination
       const currentPage = loadMore ? page + 1 : 1;
       const startIndex = 0;
       const endIndex = currentPage * limit;
       const paginatedIds = followedUserIds.slice(startIndex, endIndex);
-      
+
       // Check if there are more users to load
       setHasMore(followedUserIds.length > endIndex);
-      
+
       // Fetch user details for each followed user
       const userPromises = paginatedIds.map(async (followedId) => {
         try {
           const userRef = doc(db, 'users', followedId);
           const userDoc = await getDoc(userRef);
-          
+
           if (userDoc.exists()) {
             // Get subscription tier if available
             let tier = null;
             let subscriptionStatus = null;
-            
+
             try {
               const subscriptionRef = doc(db, 'users', followedId, 'subscription', 'current');
               const subscriptionDoc = await getDoc(subscriptionRef);
-              
+
               if (subscriptionDoc.exists()) {
                 const subscriptionData = subscriptionDoc.data();
                 tier = subscriptionData.tier || null;
@@ -88,7 +108,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
             } catch (err) {
               console.error(`Error fetching subscription for user ${followedId}:`, err);
             }
-            
+
             return {
               id: followedId,
               ...userDoc.data(),
@@ -102,10 +122,10 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
           return null;
         }
       });
-      
+
       const userResults = await Promise.all(userPromises);
       const validUsers = userResults.filter(user => user !== null);
-      
+
       if (loadMore) {
         setFollowedUsers(prev => [...prev, ...validUsers]);
         setPage(currentPage);
@@ -123,13 +143,13 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
 
   const handleUnfollow = async (followedId: string) => {
     if (!user || !isCurrentUser) return;
-    
+
     try {
       setUnfollowingId(followedId);
-      
+
       // Call the unfollow function
       await unfollowUser(user.uid, followedId);
-      
+
       // Update the local state
       setFollowedUsers(prev => prev.filter(u => u.id !== followedId));
     } catch (err) {
@@ -164,7 +184,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
         </div>
         <h3 className="text-lg font-medium mb-2">No followed users yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
-          {isCurrentUser 
+          {isCurrentUser
             ? "When you follow users, they'll appear here so you can easily find them later."
             : "This user isn't following anyone yet."}
         </p>
@@ -176,22 +196,22 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
     <div className="space-y-4">
       <div className="flex flex-col space-y-2">
         {followedUsers.map(followedUser => (
-          <div 
-            key={followedUser.id} 
+          <div
+            key={followedUser.id}
             className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
           >
-            <Link 
+            <Link
               href={`/user/${followedUser.id}`}
               className="flex items-center gap-2 flex-grow"
             >
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium">{followedUser.username || 'Anonymous User'}</span>
-                  {followedUser.tier && (
-                    <SupporterIcon 
-                      tier={followedUser.tier} 
-                      status={followedUser.subscriptionStatus} 
-                      size="sm" 
+                  {subscriptionEnabled && followedUser.tier && (
+                    <SupporterIcon
+                      tier={followedUser.tier}
+                      status={followedUser.subscriptionStatus}
+                      size="sm"
                     />
                   )}
                 </div>
@@ -200,7 +220,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
                 )}
               </div>
             </Link>
-            
+
             {isCurrentUser && (
               <Button
                 variant="ghost"
@@ -220,7 +240,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
           </div>
         ))}
       </div>
-      
+
       {hasMore && (
         <div className="flex justify-center mt-4">
           <Button

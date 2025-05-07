@@ -545,30 +545,36 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Normal mode - paragraph with hanging indent */}
-      <div className="paragraph-container">
-        {/* Paragraph content with hanging indent */}
-        <p className={`paragraph-with-hanging-indent text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
-          {/* Paragraph number inline with first line */}
-          <motion.span
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              delay: 0.05,
-              type: "spring",
-              stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-              damping: ANIMATION_CONSTANTS.SPRING_DAMPING
-            }}
-          >
-            {renderParagraphNumber(index)}
-          </motion.span>
+      {/* Normal mode - paragraph numbers create indentation */}
+      <div className="flex">
+        {/* Paragraph number - precisely aligned with centerline of first line of text */}
+        <motion.div
+          className="flex-shrink-0 w-6 text-right pr-1 flex items-center justify-end"
+          style={{
+            height: "1.5rem",
+            transform: "translateY(0.15rem)"
+          }}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            delay: 0.05,
+            type: "spring",
+            stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+            damping: ANIMATION_CONSTANTS.SPRING_DAMPING
+          }}
+        >
+          <span className="text-muted-foreground text-sm select-none leading-none">
+            {index + 1}
+          </span>
+        </motion.div>
 
-          {/* Paragraph content */}
-          <span className="inline-block">
+        {/* Paragraph content */}
+        <div className="flex-1">
+          <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
             {node.children && node.children.map((child, i) => renderChild(child, i))}
             {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
-          </span>
-        </p>
+          </p>
+        </div>
       </div>
     </motion.div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Users } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../providers/AuthProvider';
 import { getUserSubscription } from '../firebase/subscription';
 import { doc, getDoc } from 'firebase/firestore';
@@ -13,10 +13,9 @@ import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
-import AdminSettings from '../components/AdminSettings';
 import PWAInstallationCard from '../components/PWAInstallationCard';
 import { useFeatureFlag, isAdmin } from '../utils/feature-flags';
-import AdminUsernameManagement from '../components/AdminUsernameManagement';
+import AdminPanel from '../components/AdminPanel';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -215,7 +214,7 @@ export default function AccountPage() {
             </Card>
           </section>
 
-          {/* Subscription Management Section - Only visible for admins */}
+          {/* Subscription Management Section - Only visible when subscription feature flag is enabled */}
           {user && user.email && useFeatureFlag('subscription_management', user.email) && (
             <section>
               <SubscriptionManagement />
@@ -260,17 +259,10 @@ export default function AccountPage() {
             </section>
           )}
 
-          {/* Admin Settings Section - Only visible for specific admin user */}
-          {user && user.email && (
+          {/* Admin Panel Section - Only visible for admins */}
+          {user && user.email && isAdmin(user.email) && (
             <section>
-              <AdminSettings userEmail={user.email} />
-            </section>
-          )}
-
-          {/* Admin Username Management - Only visible for admins */}
-          {user && user.email && useFeatureFlag('username_management', user.email) && (
-            <section>
-              <AdminUsernameManagement userEmail={user.email} />
+              <AdminPanel userEmail={user.email} />
             </section>
           )}
 
