@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell } from "lucide-react"
+import { useState, useEffect, useContext } from "react"
+import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
@@ -13,6 +13,7 @@ import { SimpleAccountSwitcher } from "./SimpleAccountSwitcher"
 import { AccentColorSwitcher } from "./AccentColorSwitcher"
 import PillStyleToggle from "./PillStyleToggle"
 import NotificationBadge from "./NotificationBadge"
+import { AuthContext } from "../providers/AuthProvider"
 
 interface SidebarProps {
   isOpen: boolean
@@ -23,6 +24,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
+  const { user } = useContext(AuthContext)
 
   // Reset to main menu when sidebar closes
   useEffect(() => {

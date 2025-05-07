@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
 import SupporterBadge from "./SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Users } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ import RecentActivity from "./RecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import usePages from "../hooks/usePages";
 import UsernameHistory from "./UsernameHistory";
-// Removed unused imports
+import FollowingList from "./FollowingList";
 
 // Wrapper component for animated tabs content
 function AnimatedTabsContent({ children, activeTab }) {
@@ -97,10 +97,9 @@ export default function UserProfileTabs({ profile }) {
   } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
 
   // Determine which tabs to show
-  const visibleTabs = ["activity", "pages"];
+  const visibleTabs = ["activity", "pages", "following"];
   if (isCurrentUser) {
     visibleTabs.push("private");
-    // Removed following tab for own profile
   }
 
   // Handle tab changes
@@ -150,6 +149,14 @@ export default function UserProfileTabs({ profile }) {
               >
                 <FileText className="h-4 w-4" />
                 <span>Pages</span>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="following"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <Users className="h-4 w-4" />
+                <span>Following</span>
               </TabsTrigger>
 
               {isCurrentUser && (
@@ -249,9 +256,15 @@ export default function UserProfileTabs({ profile }) {
                 </AnimatedTabsContent>
               </TabsContent>
 
-              {/* Following tab removed */}
+              {/* Following tab is now available for all users */}
             </>
           )}
+
+          <TabsContent value="following" className="mt-0">
+            <AnimatedTabsContent activeTab={activeTab}>
+              <FollowingList userId={profile?.uid} isCurrentUser={isCurrentUser} />
+            </AnimatedTabsContent>
+          </TabsContent>
         </div>
       </Tabs>
     </div>

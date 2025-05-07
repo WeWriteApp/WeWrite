@@ -404,3 +404,252 @@ export const unfollowAllPagesByUser = async (userId) => {
     return { success: false, count: 0 };
   }
 };
+
+/**
+ * Follow a user
+ *
+ * @param {string} followerId - The ID of the user doing the following
+ * @param {string} followedId - The ID of the user being followed
+ * @returns {Promise<boolean>} - Whether the operation was successful
+ */
+export const followUser = async (followerId, followedId) => {
+  if (!followerId || !followedId) {
+    throw new Error('Follower ID and Followed ID are required');
+  }
+
+  if (followerId === followedId) {
+    throw new Error('Users cannot follow themselves');
+  }
+
+  try {
+    // Add the followed user to the follower's following list
+    const userFollowingRef = doc(db, 'userFollowing', followerId);
+    const userFollowingDoc = await getDoc(userFollowingRef);
+
+    if (userFollowingDoc.exists()) {
+      // Update existing document
+      await updateDoc(userFollowingRef, {
+        following: arrayUnion(followedId),
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      // Create new document
+      await setDoc(userFollowingRef, {
+        userId: followerId,
+        following: [followedId],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // Add the follower to the followed user's followers list
+    const userFollowersRef = doc(db, 'userFollowers', followedId);
+    const userFollowersDoc = await getDoc(userFollowersRef);
+
+    if (userFollowersDoc.exists()) {
+      // Update existing document
+      await updateDoc(userFollowersRef, {
+        followers: arrayUnion(followerId),
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      // Create new document
+      await setDoc(userFollowersRef, {
+        userId: followedId,
+        followers: [followerId],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // Increment follower count for the followed user
+    const followedUserRef = doc(db, 'users', followedId);
+    const followedUserDoc = await getDoc(followedUserRef);
+
+    if (followedUserDoc.exists()) {
+      const userData = followedUserDoc.data();
+
+      // Check if followerCount field exists
+      if (typeof userData.followerCount === 'undefined') {
+        // Initialize followerCount to 1 if it doesn't exist
+        await updateDoc(followedUserRef, {
+          followerCount: 1
+        });
+      } else {
+        // Increment existing followerCount
+        await updateDoc(followedUserRef, {
+          followerCount: increment(1)
+        });
+      }
+    }
+
+    // Create a follow record
+    const followRecordRef = doc(db, 'follows', `${followerId}_${followedId}`);
+    await setDoc(followRecordRef, {
+      followerId,
+      followedId,
+      followedAt: serverTimestamp()
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error following user:', error);
+    throw error;
+  }
+};
+
+/**
+ * Unfollow a user
+ *
+ * @param {string} followerId - The ID of the user doing the unfollowing
+ * @param {string} followedId - The ID of the user being unfollowed
+ * @returns {Promise<boolean>} - Whether the operation was successful
+ */
+export const unfollowUser = async (followerId, followedId) => {
+  if (!followerId || !followedId) {
+    throw new Error('Follower ID and Followed ID are required');
+  }
+
+  try {
+    // Remove the followed user from the follower's following list
+    const userFollowingRef = doc(db, 'userFollowing', followerId);
+    const userFollowingDoc = await getDoc(userFollowingRef);
+
+    if (userFollowingDoc.exists()) {
+      await updateDoc(userFollowingRef, {
+        following: arrayRemove(followedId),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // Remove the follower from the followed user's followers list
+    const userFollowersRef = doc(db, 'userFollowers', followedId);
+    const userFollowersDoc = await getDoc(userFollowersRef);
+
+    if (userFollowersDoc.exists()) {
+      await updateDoc(userFollowersRef, {
+        followers: arrayRemove(followerId),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // Decrement follower count for the followed user
+    const followedUserRef = doc(db, 'users', followedId);
+    const followedUserDoc = await getDoc(followedUserRef);
+
+    if (followedUserDoc.exists()) {
+      const userData = followedUserDoc.data();
+
+      // Check if followerCount field exists
+      if (typeof userData.followerCount === 'undefined' || userData.followerCount <= 0) {
+        // If followerCount doesn't exist or is already 0, set it to 0
+        await updateDoc(followedUserRef, {
+          followerCount: 0
+        });
+      } else {
+        // Decrement existing followerCount
+        await updateDoc(followedUserRef, {
+          followerCount: increment(-1)
+        });
+      }
+    }
+
+    // Mark follow record as deleted
+    const followRecordRef = doc(db, 'follows', `${followerId}_${followedId}`);
+    const followRecordDoc = await getDoc(followRecordRef);
+
+    if (followRecordDoc.exists()) {
+      await updateDoc(followRecordRef, {
+        deleted: true,
+        deletedAt: serverTimestamp()
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get users that a user follows
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<string[]>} - Array of user IDs that the user follows
+ */
+export const getFollowedUsers = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const userFollowingRef = doc(db, 'userFollowing', userId);
+    const userFollowingDoc = await getDoc(userFollowingRef);
+
+    if (userFollowingDoc.exists()) {
+      const data = userFollowingDoc.data();
+      return data.following || [];
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error getting followed users:', error);
+    return [];
+  }
+};
+
+/**
+ * Get users that follow a user
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<string[]>} - Array of user IDs that follow the user
+ */
+export const getFollowers = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const userFollowersRef = doc(db, 'userFollowers', userId);
+    const userFollowersDoc = await getDoc(userFollowersRef);
+
+    if (userFollowersDoc.exists()) {
+      const data = userFollowersDoc.data();
+      return data.followers || [];
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error getting followers:', error);
+    return [];
+  }
+};
+
+/**
+ * Check if a user follows another user
+ *
+ * @param {string} followerId - The ID of the potential follower
+ * @param {string} followedId - The ID of the potentially followed user
+ * @returns {Promise<boolean>} - Whether the follower follows the followed user
+ */
+export const checkIfFollowing = async (followerId, followedId) => {
+  if (!followerId || !followedId) {
+    return false;
+  }
+
+  try {
+    const userFollowingRef = doc(db, 'userFollowing', followerId);
+    const userFollowingDoc = await getDoc(userFollowingRef);
+
+    if (userFollowingDoc.exists()) {
+      const data = userFollowingDoc.data();
+      return data.following && data.following.includes(followedId);
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error checking if following:', error);
+    return false;
+  }
+};
