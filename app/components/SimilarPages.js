@@ -35,8 +35,8 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
         const individualWords = currentPage.title
           .toLowerCase()
           .split(/\s+/)
-          .filter(word => word.length >= 2)
-          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as'].includes(word));
+          .filter(word => word.length >= 3)
+          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
         // Use individual words for better search coverage
         titleWords = [...individualWords];
@@ -99,13 +99,30 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
             // Check if title contains any of the search words
             const pageTitle = pageData.title.toLowerCase();
+            const pageTitleWords = pageTitle
+              .split(/\s+/)
+              .filter(word => word.length >= 3)
+              .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+
+            // Count matching significant words
+            const matchingWords = titleWords.filter(word => pageTitleWords.includes(word));
+            if (matchingWords.length > 0) {
+              // Higher score for more matching words
+              relevanceScore += matchingWords.length * 3;
+
+              // Bonus for matching a higher percentage of words
+              const matchPercentage = matchingWords.length / titleWords.length;
+              if (matchPercentage >= 0.5) {
+                relevanceScore += 5;
+              } else if (matchPercentage >= 0.25) {
+                relevanceScore += 2;
+              }
+            }
+
+            // Check for partial matches too
             for (const word of titleWords) {
-              if (pageTitle.includes(word)) {
-                relevanceScore += 1;
-                // Exact word match gets higher score
-                if (pageTitle.split(/\s+/).includes(word)) {
-                  relevanceScore += 2;
-                }
+              if (pageTitle.includes(word) && !pageTitleWords.includes(word)) {
+                relevanceScore += 0.5; // Lower score for partial matches
               }
             }
 

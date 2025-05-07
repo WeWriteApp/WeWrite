@@ -16,15 +16,18 @@
 /* Paragraph container with hanging indent */
 .paragraph-container {
   @apply relative;
-  text-indent: 0;
-  padding-left: 0;
+  display: block;
+  width: 100%;
 }
 
 /* Paragraph with hanging indent - first line has indent, rest are full width */
 .paragraph-with-hanging-indent {
+  display: block;
   text-indent: -1.5rem; /* Negative indent for the first line */
   padding-left: 1.5rem; /* Padding for all lines */
   margin-bottom: 1.25rem; /* Increased spacing between paragraphs in normal mode */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Dense mode has less spacing */

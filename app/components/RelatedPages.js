@@ -22,7 +22,7 @@ export default function RelatedPages({ page, maxPages = 5 }) {
   useEffect(() => {
     const fetchRelatedPages = async () => {
       setIsLoading(true);
-      
+
       if (!page || !page.id || !page.userId) {
         setIsLoading(false);
         return;
@@ -32,32 +32,32 @@ export default function RelatedPages({ page, maxPages = 5 }) {
         // First, get pages by the same author (user-based relevance)
         const userPagesRef = collection(db, 'pages');
         const userQuery = query(
-          userPagesRef, 
+          userPagesRef,
           where('userId', '==', page.userId),
           where('isPublic', '==', true),
           orderBy('updatedAt', 'desc'),
           limit(maxPages * 2)
         );
-        
+
         const userQuerySnapshot = await getDocs(userQuery);
-        
+
         // Map of page IDs to page data with relevance score
         const pageMap = new Map();
-        
+
         // Add user's pages with a base relevance score
         userQuerySnapshot.docs.forEach(doc => {
           const pageData = { id: doc.id, ...doc.data() };
-          
+
           // Skip the current page
           if (pageData.id === page.id) return;
-          
+
           // Add to map with a base relevance score
-          pageMap.set(pageData.id, { 
-            ...pageData, 
+          pageMap.set(pageData.id, {
+            ...pageData,
             relevanceScore: 1 // Base score for being by the same author
           });
         });
-        
+
         // If we have a title, try to find content-based related pages
         if (page.title) {
           // Extract significant words from the title
@@ -65,8 +65,8 @@ export default function RelatedPages({ page, maxPages = 5 }) {
             .toLowerCase()
             .split(/\s+/)
             .filter(word => word.length >= 3)
-            .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as'].includes(word));
-          
+            .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+
           // If we have significant words, search for content-based related pages
           if (titleWords.length > 0) {
             // Create a query for public pages
@@ -75,35 +75,50 @@ export default function RelatedPages({ page, maxPages = 5 }) {
               where('isPublic', '==', true),
               limit(50)
             );
-            
+
             const contentQuerySnapshot = await getDocs(contentQuery);
-            
+
             // Process each page for content relevance
             contentQuerySnapshot.docs.forEach(doc => {
               const pageData = { id: doc.id, ...doc.data() };
-              
+
               // Skip the current page
               if (pageData.id === page.id) return;
-              
+
               // Calculate content relevance score
               let relevanceScore = 0;
-              
+
               // Check title for word matches
               if (pageData.title) {
                 const pageTitle = pageData.title.toLowerCase();
-                
-                for (const word of titleWords) {
-                  if (pageTitle.includes(word)) {
+                const pageTitleWords = pageTitle
+                  .split(/\s+/)
+                  .filter(word => word.length >= 3)
+                  .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+
+                // Count matching significant words
+                const matchingWords = titleWords.filter(word => pageTitleWords.includes(word));
+                if (matchingWords.length > 0) {
+                  // Higher score for more matching words
+                  relevanceScore += matchingWords.length * 2;
+
+                  // Bonus for matching a higher percentage of words
+                  const matchPercentage = matchingWords.length / titleWords.length;
+                  if (matchPercentage >= 0.5) {
+                    relevanceScore += 3;
+                  } else if (matchPercentage >= 0.25) {
                     relevanceScore += 1;
-                    
-                    // Exact word match gets higher score
-                    if (pageTitle.split(/\s+/).includes(word)) {
-                      relevanceScore += 1;
-                    }
+                  }
+                }
+
+                // Check for partial matches too
+                for (const word of titleWords) {
+                  if (pageTitle.includes(word) && !pageTitleWords.includes(word)) {
+                    relevanceScore += 0.5; // Lower score for partial matches
                   }
                 }
               }
-              
+
               // If we already have this page in the map, add to its relevance score
               if (pageMap.has(pageData.id)) {
                 const existing = pageMap.get(pageData.id);
@@ -111,7 +126,7 @@ export default function RelatedPages({ page, maxPages = 5 }) {
                   ...existing,
                   relevanceScore: existing.relevanceScore + relevanceScore
                 });
-              } 
+              }
               // Otherwise, if it has a relevance score, add it to the map
               else if (relevanceScore > 0) {
                 pageMap.set(pageData.id, { ...pageData, relevanceScore });
@@ -119,17 +134,17 @@ export default function RelatedPages({ page, maxPages = 5 }) {
             });
           }
         }
-        
+
         // Convert to array, sort by relevance score, and limit
         const sortedPages = Array.from(pageMap.values())
           .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
           .slice(0, maxPages);
-        
+
         setRelatedPages(sortedPages);
       } catch (error) {
         console.error('Error fetching related pages:', error);
       }
-      
+
       setIsLoading(false);
     };
 
