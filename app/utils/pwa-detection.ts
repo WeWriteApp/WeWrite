@@ -1,15 +1,18 @@
 /**
  * PWA Detection Utility
- * 
+ *
  * This utility provides functions to detect if the app is running as a PWA (Progressive Web App)
  * and to manage user preferences related to PWA installation prompts.
  */
 
-// Local storage keys
+// Local storage keys - using device-specific prefix to ensure per-device storage
+const DEVICE_ID = typeof window !== 'undefined' ?
+  window.navigator.userAgent.replace(/\D+/g, '') : '';
+
 const STORAGE_KEYS = {
-  PWA_BANNER_DISMISSED: 'pwa_banner_dismissed',
-  PWA_BANNER_DISMISSED_TIMESTAMP: 'pwa_banner_dismissed_timestamp',
-  PWA_DONT_REMIND: 'pwa_dont_remind',
+  PWA_BANNER_DISMISSED: `device_${DEVICE_ID}_pwa_banner_dismissed`,
+  PWA_BANNER_DISMISSED_TIMESTAMP: `device_${DEVICE_ID}_pwa_banner_dismissed_timestamp`,
+  PWA_DONT_REMIND: `device_${DEVICE_ID}_pwa_dont_remind`,
 };
 
 /**
@@ -17,16 +20,16 @@ const STORAGE_KEYS = {
  */
 export const isPWA = (): boolean => {
   if (typeof window === 'undefined') return false;
-  
+
   // Check for standalone mode (iOS and Android PWA)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  
+
   // Check for iOS "Add to Home Screen" mode
-  const isIOSPWA = 
-    window.navigator.standalone || 
+  const isIOSPWA =
+    window.navigator.standalone ||
     // @ts-ignore: This property exists on iOS Safari
     (window.navigator.standalone === true);
-  
+
   return isStandalone || isIOSPWA;
 };
 
@@ -35,7 +38,7 @@ export const isPWA = (): boolean => {
  */
 export const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined') return false;
-  
+
   // Check for mobile user agent
   const userAgent = window.navigator.userAgent.toLowerCase();
   return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
@@ -47,27 +50,27 @@ export const isMobileDevice = (): boolean => {
  */
 export const shouldShowPWABanner = (): boolean => {
   if (typeof window === 'undefined') return false;
-  
+
   // Don't show banner if already using as PWA
   if (isPWA()) return false;
-  
+
   // Check if user has chosen "Don't remind me"
   if (localStorage.getItem(STORAGE_KEYS.PWA_DONT_REMIND) === 'true') {
     return false;
   }
-  
+
   // Check if banner was recently dismissed with "Maybe later"
   const dismissedTimestamp = localStorage.getItem(STORAGE_KEYS.PWA_BANNER_DISMISSED_TIMESTAMP);
   if (dismissedTimestamp) {
     const dismissedTime = parseInt(dismissedTimestamp, 10);
     const currentTime = Date.now();
-    
+
     // If dismissed less than 7 days ago, don't show
     if (currentTime - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
       return false;
     }
   }
-  
+
   return true;
 };
 
@@ -76,7 +79,7 @@ export const shouldShowPWABanner = (): boolean => {
  */
 export const dismissPWABanner = (): void => {
   if (typeof window === 'undefined') return;
-  
+
   localStorage.setItem(STORAGE_KEYS.PWA_BANNER_DISMISSED, 'true');
   localStorage.setItem(STORAGE_KEYS.PWA_BANNER_DISMISSED_TIMESTAMP, Date.now().toString());
 };
@@ -86,7 +89,7 @@ export const dismissPWABanner = (): void => {
  */
 export const permanentlyDismissPWABanner = (): void => {
   if (typeof window === 'undefined') return;
-  
+
   localStorage.setItem(STORAGE_KEYS.PWA_DONT_REMIND, 'true');
 };
 
@@ -95,7 +98,7 @@ export const permanentlyDismissPWABanner = (): void => {
  */
 export const resetPWABannerState = (): void => {
   if (typeof window === 'undefined') return;
-  
+
   localStorage.removeItem(STORAGE_KEYS.PWA_BANNER_DISMISSED);
   localStorage.removeItem(STORAGE_KEYS.PWA_BANNER_DISMISSED_TIMESTAMP);
   localStorage.removeItem(STORAGE_KEYS.PWA_DONT_REMIND);
@@ -106,9 +109,9 @@ export const resetPWABannerState = (): void => {
  */
 export const getPWAInstallInstructions = (): string => {
   if (typeof window === 'undefined') return '';
-  
+
   const userAgent = window.navigator.userAgent.toLowerCase();
-  
+
   if (/iphone|ipad|ipod/.test(userAgent)) {
     return 'Tap the share icon in Safari, then select "Add to Home Screen"';
   } else if (/android/.test(userAgent)) {
@@ -124,6 +127,6 @@ export const getPWAInstallInstructions = (): string => {
   } else if (/edge/.test(userAgent)) {
     return 'Click the install icon in the address bar or open the menu and select "Apps > Install this site as an app"';
   }
-  
+
   return 'Use your browser\'s menu to add this site to your home screen';
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Users } from 'lucide-react';
 import { useAuth } from '../providers/AuthProvider';
 import { getUserSubscription } from '../firebase/subscription';
 import { doc, getDoc } from 'firebase/firestore';
@@ -15,6 +15,8 @@ import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 import AdminSettings from '../components/AdminSettings';
 import PWAInstallationCard from '../components/PWAInstallationCard';
+import { useFeatureFlag, isAdmin } from '../utils/feature-flags';
+import AdminUsernameManagement from '../components/AdminUsernameManagement';
 
 export default function AccountPage() {
   const { user } = useAuth();
@@ -213,53 +215,62 @@ export default function AccountPage() {
             </Card>
           </section>
 
-          {/* Subscription Management Section */}
-          <section>
-            <SubscriptionManagement />
+          {/* Subscription Management Section - Only visible for admins */}
+          {user && user.email && useFeatureFlag('subscription_management', user.email) && (
+            <section>
+              <SubscriptionManagement />
 
-            {/* Payment Methods Section */}
-            <div className="mt-6">
-              <PaymentMethodsManager />
-            </div>
-
-            {/* Payment History */}
-            {paymentHistory.length > 0 && (
+              {/* Payment Methods Section */}
               <div className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Payment History</CardTitle>
-                    <CardDescription>Your recent subscription payments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingHistory ? (
-                      <div className="py-4 flex justify-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {paymentHistory.map((payment, index) => (
-                          <div key={index} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0">
-                            <div>
-                              <p className="text-sm font-medium">${payment.amount.toFixed(2)}</p>
-                              <p className="text-xs text-muted-foreground">{new Date(payment.created * 1000).toLocaleDateString()}</p>
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded-full ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100'}`}>
-                              {payment.status}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <PaymentMethodsManager />
               </div>
-            )}
-          </section>
+
+              {/* Payment History */}
+              {paymentHistory.length > 0 && (
+                <div className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Payment History</CardTitle>
+                      <CardDescription>Your recent subscription payments</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingHistory ? (
+                        <div className="py-4 flex justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {paymentHistory.map((payment, index) => (
+                            <div key={index} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0">
+                              <div>
+                                <p className="text-sm font-medium">${payment.amount.toFixed(2)}</p>
+                                <p className="text-xs text-muted-foreground">{new Date(payment.created * 1000).toLocaleDateString()}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded-full ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100'}`}>
+                                {payment.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Admin Settings Section - Only visible for specific admin user */}
           {user && user.email && (
             <section>
               <AdminSettings userEmail={user.email} />
+            </section>
+          )}
+
+          {/* Admin Username Management - Only visible for admins */}
+          {user && user.email && useFeatureFlag('username_management', user.email) && (
+            <section>
+              <AdminUsernameManagement userEmail={user.email} />
             </section>
           )}
 
