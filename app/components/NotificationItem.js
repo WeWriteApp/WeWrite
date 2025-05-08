@@ -52,9 +52,9 @@ export default function NotificationItem({ notification }) {
               <div className="flex items-center mb-1">
                 <UserBadge uid={notification.sourceUserId} showUsername={true} />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-foreground">
                 followed your page{' '}
-                <span className="font-medium text-foreground">
+                <span className="font-medium">
                   {notification.targetPageTitle || 'Untitled Page'}
                 </span>
               </p>
@@ -74,15 +74,15 @@ export default function NotificationItem({ notification }) {
               <div className="flex items-center mb-1">
                 <UserBadge uid={notification.sourceUserId} showUsername={true} />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-foreground">
                 linked to your page{' '}
-                <span className="font-medium text-foreground">
+                <span className="font-medium">
                   {notification.targetPageTitle || 'Untitled Page'}
                 </span>
                 {notification.sourcePageTitle && (
                   <>
                     {' '}from{' '}
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium">
                       {notification.sourcePageTitle}
                     </span>
                   </>
@@ -104,13 +104,13 @@ export default function NotificationItem({ notification }) {
               <div className="flex items-center mb-1">
                 <UserBadge uid={notification.sourceUserId} showUsername={true} />
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-foreground">
                 added your page{' '}
-                <span className="font-medium text-foreground">
+                <span className="font-medium">
                   {notification.sourcePageTitle || 'Untitled Page'}
                 </span>
                 {' '}to{' '}
-                <span className="font-medium text-foreground">
+                <span className="font-medium">
                   {notification.targetPageTitle || 'their page'}
                 </span>
               </p>
@@ -119,6 +119,7 @@ export default function NotificationItem({ notification }) {
         );
 
       default:
+        // For unknown notification types, provide more context based on available data
         return (
           <div className="flex items-start">
             <div className="flex-shrink-0 mr-3 mt-1">
@@ -127,8 +128,21 @@ export default function NotificationItem({ notification }) {
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground">
-                You have a new notification
+              <div className="flex items-center mb-1">
+                {notification.sourceUserId && (
+                  <UserBadge uid={notification.sourceUserId} showUsername={true} />
+                )}
+              </div>
+              <p className="text-sm text-foreground">
+                {notification.sourceUserId ? 'interacted with your content' : 'Activity on your account'}
+                {notification.targetPageTitle && (
+                  <>
+                    {' '}related to{' '}
+                    <span className="font-medium">
+                      {notification.targetPageTitle}
+                    </span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -149,7 +163,7 @@ export default function NotificationItem({ notification }) {
         <div className="flex-1">
           {renderNotificationContent()}
         </div>
-        <div className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
+        <div className="text-xs text-foreground opacity-70 ml-2 whitespace-nowrap">
           {notification.createdAt && formatDistanceToNow(notification.createdAt, { addSuffix: true })}
         </div>
       </div>

@@ -180,8 +180,6 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   // Use initialContent as the priority content source if available
   useEffect(() => {
     if (initialContent) {
-      // Add debug log to see what initialContent is
-      console.log("SlateEditor initialContent:", JSON.stringify(initialContent, null, 2));
       try {
         // Check if initialContent has an attribution paragraph (for replies)
         const hasAttribution = initialContent.length > 0 && (
@@ -196,32 +194,31 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
            ))
         );
 
-        if (hasAttribution) {
-          console.log("Found attribution in initialContent, ensuring it's preserved");
-        }
-
         // Use initialContent as the priority source
-        console.log("Setting initialValue to:", JSON.stringify(initialContent, null, 2));
         setInitialValue(initialContent);
 
         // Also notify the parent component if the callback is provided
         if (typeof onContentChange === 'function') {
-          console.log("Notifying parent component about initialContent");
           onContentChange(initialContent);
         }
 
-        // Focus the editor after setting content
+        // Store the current selection before setting content
+        const previousSelection = editor.selection;
+
+        // Focus the editor after setting content, but preserve cursor position
         setTimeout(() => {
           try {
-            // Use our safe wrapper for ReactEditor.focus
-            const focused = safeReactEditor.focus(editor);
+            // Only focus if we need to
+            if (!safeReactEditor.isFocused(editor)) {
+              // Use our safe wrapper for ReactEditor.focus
+              const focused = safeReactEditor.focus(editor);
 
-            // If ReactEditor.focus failed, try DOM fallback
-            if (!focused) {
-              const editorElement = document.querySelector('[data-slate-editor=true]');
-              if (editorElement) {
-                editorElement.focus();
-                console.log('Editor focused via DOM fallback after initialization');
+              // If ReactEditor.focus failed, try DOM fallback
+              if (!focused) {
+                const editorElement = document.querySelector('[data-slate-editor=true]');
+                if (editorElement) {
+                  editorElement.focus();
+                }
               }
             }
 
@@ -231,9 +228,16 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
                 // Create a point at the start of the second paragraph (index 1)
                 const point = { path: [1, 0], offset: 0 };
                 Transforms.select(editor, point);
-                console.log('Cursor positioned at second paragraph for reply');
               } catch (selectError) {
                 console.error('Error selecting text in reply:', selectError);
+              }
+            }
+            // If we had a previous selection and this isn't a reply, restore it
+            else if (previousSelection && !hasAttribution) {
+              try {
+                Transforms.select(editor, previousSelection);
+              } catch (selectError) {
+                // If we can't restore the previous selection, don't worry about it
               }
             }
           } catch (error) {
@@ -676,17 +680,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   return (
     <LineSettingsProvider>
-      <motion.div
+      <div
         className="relative rounded-lg bg-background"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
+        style={{ minHeight: '300px' }} // Add minimum height to prevent layout shifts
       >
         <Slate
           editor={editor}
           initialValue={initialValue}
           onChange={onChange}
-          key={JSON.stringify(initialValue)} // Force re-creation when initialValue changes
         >
           <div className="flex-grow">
             <div className="relative">
@@ -699,7 +700,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             </div>
           </div>
         </Slate>
-      </motion.div>
+      </div>
 
       {showLinkEditor && (
         <LinkEditor
@@ -1231,12 +1232,9 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
   };
 
   return (
-    <motion.div
+    <div
       className={`p-2 ${getLineModeStyles()} w-full`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      layout
+      style={{ minHeight: '300px' }} // Ensure consistent height
     >
       <Editable
         ref={editableRef}
@@ -1254,7 +1252,7 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
         }}
         className="outline-none min-h-[300px]"
       />
-    </motion.div>
+    </div>
   );
 });
 

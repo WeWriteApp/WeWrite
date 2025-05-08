@@ -12,26 +12,26 @@ import { Loader, Bell, CheckCheck } from 'lucide-react';
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useContext(AuthContext);
-  const { 
-    notifications, 
-    loading, 
-    hasMore, 
-    loadMoreNotifications, 
-    markAllAsRead 
+  const {
+    notifications,
+    loading,
+    hasMore,
+    loadMoreNotifications,
+    markAllAsRead
   } = useContext(NotificationContext);
-  
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth/login?redirect=/notifications');
     }
   }, [user, authLoading, router]);
-  
+
   // Handle "Mark all as read" button click
   const handleMarkAllAsRead = () => {
     markAllAsRead();
   };
-  
+
   // Show loading state while checking authentication
   if (authLoading) {
     return (
@@ -40,17 +40,17 @@ export default function NotificationsPage() {
       </div>
     );
   }
-  
+
   // Show loading state while fetching notifications
   if (!user) {
     return null;
   }
-  
+
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6">
-      <NavHeader 
-        title="Notifications" 
-        backUrl="/" 
+      <NavHeader
+        title="Notifications"
+        backUrl="/"
         backLabel="Home"
         rightContent={
           <Button
@@ -65,24 +65,24 @@ export default function NotificationsPage() {
           </Button>
         }
       />
-      
+
       <div className="mt-6 bg-card rounded-lg border border-border overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader className="animate-spin h-6 w-6 text-primary mr-2" />
-            <span className="text-muted-foreground">Loading notifications...</span>
+            <span className="text-foreground opacity-80">Loading notifications...</span>
           </div>
         ) : notifications.length > 0 ? (
           <>
             <div className="divide-y divide-border">
               {notifications.map(notification => (
-                <NotificationItem 
-                  key={notification.id} 
-                  notification={notification} 
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
                 />
               ))}
             </div>
-            
+
             {hasMore && (
               <div className="p-4 flex justify-center">
                 <Button
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
               <Bell className="h-5 w-5 text-primary" />
             </div>
             <h3 className="text-lg font-medium mb-2">No notifications yet</h3>
-            <p className="text-sm text-muted-foreground max-w-md">
+            <p className="text-sm text-foreground opacity-80 max-w-md">
               When someone follows your pages or links to them, you'll see notifications here.
             </p>
           </div>

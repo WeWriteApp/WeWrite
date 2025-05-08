@@ -43,34 +43,45 @@ export default function NavHeader({
   };
 
   return (
-    <div className={`flex items-center justify-between mb-6 ${className}`}>
-      <div className="flex items-center">
-        {showSidebar && (
-          <Button
-            onClick={() => setSidebarOpen(true)}
-            variant="outline"
-            size="icon"
-            aria-label="Menu"
-            className="mr-3 transition-all duration-200"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+    <div className={`flex flex-col mb-6 ${className}`}>
+      {/* Top row with buttons on mobile, full header on desktop */}
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center">
+          {showSidebar && (
+            <Button
+              onClick={() => setSidebarOpen(true)}
+              variant="outline"
+              size="icon"
+              aria-label="Menu"
+              className="mr-3 transition-all duration-200"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          {backUrl !== undefined && (
+            <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
+              <ChevronLeft className="h-5 w-5 mr-2" />
+              {backLabel}
+            </Button>
+          )}
+          {/* Title only visible on desktop */}
+          <h1 className="text-2xl font-bold truncate hidden md:block">
+            {title}
+          </h1>
+        </div>
+
+        {rightContent && (
+          <div className="flex items-center">
+            {rightContent}
+          </div>
         )}
-        {backUrl !== undefined && (
-          <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
-            <ChevronLeft className="h-5 w-5 mr-2" />
-            {backLabel}
-          </Button>
-        )}
-        <h1 className="text-2xl font-bold truncate">
-          {title}
-        </h1>
       </div>
 
-      {rightContent && (
-        <div className="flex items-center">
-          {rightContent}
-        </div>
+      {/* Title row only visible on mobile */}
+      {title && (
+        <h1 className="text-2xl font-bold truncate mt-4 md:hidden">
+          {title}
+        </h1>
       )}
 
       {/* Render the sidebar outside the main layout */}

@@ -248,8 +248,6 @@ const PageEditor = ({
   useEffect(() => {
     // Only run this once when the component mounts and content is available
     if (isReply && !cursorPositioned.current && editorRef.current && currentEditorValue?.length > 0) {
-      console.log("Initial cursor positioning for reply content");
-
       // Set cursor positioned flag to prevent any future positioning attempts
       cursorPositioned.current = true;
 
@@ -270,7 +268,6 @@ const PageEditor = ({
                   { type: 'paragraph', children: [{ text: '' }] },
                   { at: [1] }
                 );
-                console.log('Added new paragraph for reply');
               } catch (insertError) {
                 console.error('Error inserting new paragraph:', insertError);
               }
@@ -288,7 +285,6 @@ const PageEditor = ({
 
                 // Try to select the point
                 Transforms.select(editor, point);
-                console.log('Cursor positioned at second paragraph for reply');
               }
             } catch (selectError) {
               console.error('Error selecting text:', selectError);
@@ -297,7 +293,7 @@ const PageEditor = ({
         } catch (error) {
           console.error('Error positioning cursor for reply:', error);
         }
-      }, 500);
+      }, 300); // Reduced timeout for better responsiveness
 
       return () => clearTimeout(timer);
     }
@@ -369,33 +365,56 @@ const PageEditor = ({
     }
   };
 
+  // Auto-resize textarea function
+  const autoResizeTextarea = (element) => {
+    if (!element) return;
+
+    // Reset height to auto to get the correct scrollHeight
+    element.style.height = 'auto';
+
+    // Set the height to match content (scrollHeight includes padding but not border)
+    element.style.height = `${element.scrollHeight}px`;
+  };
+
+  // Handle textarea input and resize
+  const handleTitleChange = (e) => {
+    setTitle(e.target.value);
+    if (e.target.value.trim().length > 0) {
+      setTitleError(false);
+    }
+    // Auto-resize the textarea
+    autoResizeTextarea(e.target);
+  };
+
+  // Auto-resize on initial render and when title changes
+  useEffect(() => {
+    if (titleInputRef.current) {
+      autoResizeTextarea(titleInputRef.current);
+    }
+  }, [title]);
+
   return (
     <div className="editor-container" style={{ paddingBottom: '60px' }}>
       <div className="mb-4">
-        <textarea
-          ref={titleInputRef}
-          value={title}
-          onChange={(e) => {
-            console.log("Title onChange event:", e.target.value);
-            setTitle(e.target.value);
-            if (e.target.value.trim().length > 0) {
-              setTitleError(false);
-            }
-          }}
-          rows={1}
-          className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
-            titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
-          } rounded-lg px-3 py-2 transition-all break-words overflow-wrap-normal whitespace-normal resize-none`}
-          placeholder={isReply ? "Title your reply..." : "Enter a title..."}
-          autoComplete="off"
-          style={{
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word',
-            position: 'relative',
-            zIndex: 10 // Ensure it's above other elements
-          }}
-          autoFocus={isNewPage}
-        />
+        <div className="relative">
+          <textarea
+            ref={titleInputRef}
+            value={title}
+            onChange={handleTitleChange}
+            rows={1}
+            className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
+              titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
+            } rounded-lg px-3 py-2 transition-colors break-words overflow-hidden whitespace-normal resize-none`}
+            placeholder={isReply ? "Title your reply..." : "Enter a title..."}
+            autoComplete="off"
+            style={{
+              minHeight: '50px', // Ensure minimum height
+              position: 'relative',
+              zIndex: 10 // Ensure it's above other elements
+            }}
+            autoFocus={isNewPage}
+          />
+        </div>
         {titleError && (
           <p className="text-destructive text-sm mt-1">Title is required</p>
         )}
