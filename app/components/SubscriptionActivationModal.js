@@ -38,8 +38,8 @@ const CustomAmountModal = ({ isOpen, onClose, value, setValue }) => {
 const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
   // Use customContent if provided, otherwise use default content based on sign-in status
   const content = customContent || (isSignedIn ? {
-    title: "This feature is coming soon!",
-    description: "You can help support development by activating your subscription.",
+    title: "Start your subscription",
+    description: "Support WeWrite development by activating your subscription. Choose a tier below to get started.",
     action: {
       href: "/subscription",
       label: "View Subscription Tiers",

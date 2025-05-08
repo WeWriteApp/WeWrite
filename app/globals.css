@@ -493,6 +493,36 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   color-scheme: light dark;
 }
 
+/* Sticky tabs styling */
+#profile-tabs-header {
+  position: relative;
+  z-index: 50;
+  transition: all 0.2s ease-in-out;
+}
+
+.sticky-tabs {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: hsl(var(--background));
+  animation: slideDown 0.2s ease-out;
+}
+
+.dark .sticky-tabs {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Disable native text selection menu on mobile devices */
 @media (pointer: coarse) {
   * {

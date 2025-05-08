@@ -327,12 +327,7 @@ const SingleProfileView = ({ profile }) => {
           </div>
         )}
 
-        <div className="my-4">
-          <TypeaheadSearch
-            userId={profile.uid}
-            placeholder={`Search ${username}'s pages...`}
-          />
-        </div>
+
         <UserProfileTabs profile={profile} />
       </div>
     </ProfilePagesProvider>

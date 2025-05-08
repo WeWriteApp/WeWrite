@@ -10,10 +10,10 @@ import { getUserSubscription } from "../firebase/subscription";
  * Gets the username for a given user ID
  * Handles all the logic to ensure consistent username display throughout the app
  * @param {string} userId - The user ID to get the username for
- * @returns {Promise<string>} - The username or "Anonymous" if not found
+ * @returns {Promise<string>} - The username or "Missing username" if not found
  */
 export const getUsernameById = async (userId) => {
-  if (!userId) return "Anonymous";
+  if (!userId) return "Missing username";
 
   try {
     // Try to get user from Firestore users collection
@@ -22,19 +22,19 @@ export const getUsernameById = async (userId) => {
 
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      return userData.username || "Anonymous";
+      return userData.username || "Missing username";
     }
 
-    return "Anonymous";
+    return "Missing username";
   } catch (error) {
     console.error("Error fetching username by ID:", error);
-    return "Anonymous";
+    return "Missing username";
   }
 };
 
 /**
  * Gets the current authenticated user's username
- * @returns {Promise<string>} - The current user's username or "Anonymous" if not logged in
+ * @returns {Promise<string>} - The current user's username or "Missing username" if not logged in
  */
 export const getCurrentUsername = async () => {
   // Import the utility here to ensure it's only used on the client
@@ -59,7 +59,7 @@ export const getCurrentUsername = async () => {
     return getUsernameById(firebaseUser.uid);
   }
 
-  return "Anonymous";
+  return "Missing username";
 };
 
 /**
@@ -72,7 +72,7 @@ export const ensurePageUsername = async (pageData) => {
   if (!pageData) return null;
 
   // If page already has a valid username, return as is
-  if (pageData.username && pageData.username !== "Anonymous") {
+  if (pageData.username && pageData.username !== "Anonymous" && pageData.username !== "Missing username") {
     return pageData;
   }
 
@@ -82,14 +82,14 @@ export const ensurePageUsername = async (pageData) => {
       const username = await getUsernameById(pageData.userId);
       return {
         ...pageData,
-        username: username || "Anonymous" // Ensure username is never undefined
+        username: username || "Missing username" // Ensure username is never undefined
       };
     } catch (error) {
       console.error("Error ensuring page username:", error);
       // Set a default username in case of error
       return {
         ...pageData,
-        username: "Anonymous"
+        username: "Missing username"
       };
     }
   }
@@ -97,7 +97,7 @@ export const ensurePageUsername = async (pageData) => {
   // If we get here, ensure the page has a username property
   return {
     ...pageData,
-    username: pageData.username || "Anonymous"
+    username: pageData.username || "Missing username"
   };
 };
 

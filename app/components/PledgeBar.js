@@ -9,8 +9,10 @@ import Link from "next/link";
 import CompositionBar from "./CompositionBar";
 import { Button } from './ui/button';
 import SubscriptionActivationModal from './SubscriptionActivationModal';
+import SubscriptionComingSoonModal from './SubscriptionComingSoonModal';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import '../styles/pledge-bar-animations.css';
+import { useSubscriptionFeature } from '../hooks/useSubscriptionFeature';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
@@ -24,6 +26,8 @@ const PledgeBar = () => {
   const [maxedOut, setMaxedOut] = useState(false);
   const [showActivationModal, setShowActivationModal] = useState(false);
   const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
+  const { isEnabled: isSubscriptionEnabled, showComingSoonModal, setShowComingSoonModal } =
+    useSubscriptionFeature(user?.email);
   const [customAmountValue, setCustomAmountValue] = useState('');
   const [isOwnPage, setIsOwnPage] = useState(false);
   const [showMaxedOutWarning, setShowMaxedOutWarning] = useState(false);
@@ -388,6 +392,12 @@ const PledgeBar = () => {
   };
 
   const handleActivateSubscription = () => {
+    // Check if subscription feature is enabled
+    if (!isSubscriptionEnabled) {
+      setShowComingSoonModal(true);
+      return;
+    }
+
     // Use router to navigate to account page with subscription amount
     if (selectedAmount > 0) {
       router.push(`/account?subscription=${selectedAmount}`);
@@ -398,7 +408,7 @@ const PledgeBar = () => {
 
   // Save pledge changes with debounce
   useEffect(() => {
-    if (!isConfirmed && user && pageId && !isOwnPage) {
+    if (!isConfirmed && user && pageId && !isOwnPage && isSubscriptionEnabled) {
       console.log("Scheduling pledge save with amount:", donateAmount);
       const saveTimeout = setTimeout(() => {
         savePledge();
@@ -406,10 +416,16 @@ const PledgeBar = () => {
 
       return () => clearTimeout(saveTimeout);
     }
-  }, [donateAmount, isConfirmed, user, pageId, isOwnPage]);
+  }, [donateAmount, isConfirmed, user, pageId, isOwnPage, isSubscriptionEnabled]);
 
   const savePledge = async () => {
     if (!user || !pageId) return;
+
+    // Don't save pledges if subscription feature is disabled
+    if (!isSubscriptionEnabled) {
+      setShowComingSoonModal(true);
+      return;
+    }
 
     try {
       console.log(`Attempting to save pledge for page ${pageId} with amount ${donateAmount}`);
@@ -465,7 +481,14 @@ const PledgeBar = () => {
       >
         <div
           className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-lg cursor-pointer"
-          onClick={() => setShowActivationModal(true)}
+          onClick={() => {
+            // Always show coming soon modal when feature flag is off
+            if (!isSubscriptionEnabled) {
+              setShowComingSoonModal(true);
+            } else {
+              setShowActivationModal(true);
+            }
+          }}
         >
           <div className="flex justify-around py-4 px-6">
             <div className="text-center">
@@ -479,12 +502,25 @@ const PledgeBar = () => {
           </div>
         </div>
 
-        {/* Pledge Modal for self view - rendered at document level */}
+        {/* Modals rendered at document level */}
+        {/* When subscription is enabled, show the activation modal */}
         {typeof document !== 'undefined' && createPortal(
           <SubscriptionActivationModal
-            isOpen={showActivationModal}
+            isOpen={showActivationModal && isSubscriptionEnabled}
             onClose={() => setShowActivationModal(false)}
             isSignedIn={!!user}
+          />,
+          document.body
+        )}
+
+        {/* When subscription is disabled, always show the coming soon modal */}
+        {typeof document !== 'undefined' && createPortal(
+          <SubscriptionComingSoonModal
+            isOpen={showComingSoonModal || (showActivationModal && !isSubscriptionEnabled)}
+            onClose={() => {
+              setShowComingSoonModal(false);
+              setShowActivationModal(false);
+            }}
           />,
           document.body
         )}
@@ -509,18 +545,45 @@ const PledgeBar = () => {
           disabled={false}
           pledges={[{ id: 'placeholder', amount: 0 }]}
           subscriptionAmount={100}
-          onPledgeChange={() => setShowActivationModal(true)}
-          onPledgeCustomAmount={() => setShowActivationModal(true)}
+          onPledgeChange={() => {
+            // Show different modal based on subscription feature flag
+            if (isSubscriptionEnabled) {
+              setShowActivationModal(true);
+            } else {
+              setShowComingSoonModal(true);
+            }
+          }}
+          onPledgeCustomAmount={() => {
+            // Show different modal based on subscription feature flag
+            if (isSubscriptionEnabled) {
+              setShowActivationModal(true);
+            } else {
+              setShowComingSoonModal(true);
+            }
+          }}
           onDeletePledge={() => {}}
           className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
         />
 
-        {/* Pledge Modal for logged-out users - rendered at document level */}
+        {/* Modals rendered at document level */}
+        {/* When subscription is enabled, show the activation modal */}
         {typeof document !== 'undefined' && createPortal(
           <SubscriptionActivationModal
-            isOpen={showActivationModal}
+            isOpen={showActivationModal && isSubscriptionEnabled}
             onClose={() => setShowActivationModal(false)}
-            isSignedIn={false}
+            isSignedIn={!!user}
+          />,
+          document.body
+        )}
+
+        {/* When subscription is disabled, always show the coming soon modal */}
+        {typeof document !== 'undefined' && createPortal(
+          <SubscriptionComingSoonModal
+            isOpen={showComingSoonModal || (showActivationModal && !isSubscriptionEnabled)}
+            onClose={() => {
+              setShowComingSoonModal(false);
+              setShowActivationModal(false);
+            }}
           />,
           document.body
         )}
@@ -534,8 +597,16 @@ const PledgeBar = () => {
   }
 
   const handlePledgeInteraction = (pledgeId, change) => {
-    console.log("handlePledgeInteraction called", { isOwnPage, user, pledgeId, change });
+    console.log("handlePledgeInteraction called", { isOwnPage, user, pledgeId, change, isSubscriptionEnabled });
 
+    // If subscription feature is disabled, show coming soon modal
+    if (!isSubscriptionEnabled) {
+      setShowComingSoonModal(true);
+      return;
+    }
+
+    // Only proceed with subscription-related logic if the feature is enabled
+    // At this point, we know isSubscriptionEnabled is true
     if (!user) {
       setShowActivationModal(true);
       return;
@@ -556,18 +627,30 @@ const PledgeBar = () => {
         className={`fixed bottom-12 left-8 right-8 z-50 flex flex-col items-center gap-2 transition-all duration-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'} ${animateEntry ? 'spring-and-pulse' : ''}`}
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0, background: 'none' }}
       >
-        <CompositionBar
-          value={pledges[0]?.amount || 0}
-          max={subscription?.amount || 100}
-          onChange={() => {}}
-          disabled={false}
-          pledges={pledges}
-          subscriptionAmount={subscription?.amount || 0}
-          onPledgeChange={handlePledgeInteraction}
-          onPledgeCustomAmount={handlePledgeCustomAmount}
-          onDeletePledge={() => {}}
-          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
-        />
+        <div
+          className="w-full max-w-md mx-auto cursor-pointer"
+          onClick={() => {
+            // Always show coming soon modal when feature flag is off
+            if (!isSubscriptionEnabled) {
+              setShowComingSoonModal(true);
+            } else {
+              setShowActivationModal(true);
+            }
+          }}
+        >
+          <CompositionBar
+            value={pledges[0]?.amount || 0}
+            max={subscription?.amount || 100}
+            onChange={() => {}}
+            disabled={false}
+            pledges={pledges}
+            subscriptionAmount={subscription?.amount || 0}
+            onPledgeChange={handlePledgeInteraction}
+            onPledgeCustomAmount={handlePledgeCustomAmount}
+            onDeletePledge={() => {}}
+            className="w-full bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow"
+          />
+        </div>
 
         {showMoreButton && (
           <Button
@@ -588,11 +671,25 @@ const PledgeBar = () => {
       </div>
 
       {/* Pledge Modal - rendered at document level to ensure proper positioning */}
+      {/* When subscription is enabled, show the activation modal */}
       {typeof document !== 'undefined' && createPortal(
         <SubscriptionActivationModal
-          isOpen={showActivationModal}
+          isOpen={showActivationModal && isSubscriptionEnabled}
           onClose={() => setShowActivationModal(false)}
           isSignedIn={!!user}
+        />,
+        document.body
+      )}
+
+      {/* Coming Soon Modal - rendered at document level */}
+      {/* When subscription is disabled, always show the coming soon modal */}
+      {typeof document !== 'undefined' && createPortal(
+        <SubscriptionComingSoonModal
+          isOpen={showComingSoonModal || (showActivationModal && !isSubscriptionEnabled)}
+          onClose={() => {
+            setShowComingSoonModal(false);
+            setShowActivationModal(false);
+          }}
         />,
         document.body
       )}

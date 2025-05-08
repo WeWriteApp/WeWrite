@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ArrowLeftRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AccountSwitcherModal } from './AccountSwitcherModal';
 import { useAuth } from '../providers/AuthProvider';
@@ -9,6 +9,7 @@ import { auth } from '../firebase/auth';
 import { signOut } from 'firebase/auth';
 import Cookies from 'js-cookie';
 import { useMultiAccount } from '../providers/MultiAccountProvider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface Account {
   uid: string;
@@ -172,21 +173,30 @@ export function SimpleAccountSwitcher() {
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-neutral-alpha-2 dark:hover:bg-accent transition-colors overflow-hidden"
-        disabled={isLoading}
-      >
-        <div className="flex flex-col items-start min-w-0 flex-1 mr-2 text-left">
-          <span className="font-medium truncate w-full text-left">
-            {isLoading ? 'Switching...' : (user?.username || user?.displayName || 'Anonymous')}
-          </span>
-          <span className="text-sm text-muted-foreground truncate w-full text-left">
-            {user?.email || 'Not signed in'}
-          </span>
-        </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-      </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-neutral-alpha-2 dark:hover:bg-accent transition-colors overflow-hidden"
+              disabled={isLoading}
+            >
+              <div className="flex flex-col items-start min-w-0 flex-1 mr-2 text-left">
+                <span className="font-medium truncate w-full text-left">
+                  {isLoading ? 'Switching...' : (user?.username || user?.displayName || 'Anonymous')}
+                </span>
+                <span className="text-sm text-muted-foreground truncate w-full text-left">
+                  {user?.email || 'Not signed in'}
+                </span>
+              </div>
+              <ArrowLeftRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Switch account</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <AccountSwitcherModal
         isOpen={isOpen}

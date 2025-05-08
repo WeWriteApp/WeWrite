@@ -2,7 +2,7 @@
 
 /**
  * Reply Manager
- * 
+ *
  * This module centralizes all reply-related functionality to ensure consistent behavior
  * across the application and make future maintenance easier.
  */
@@ -12,7 +12,7 @@ import { getUsernameById } from './userUtils';
 
 /**
  * Fetches the original page and creates the reply content with proper attribution
- * 
+ *
  * @param {string} pageId - ID of the page being replied to
  * @returns {Promise<Object>} - Object containing the reply content and original page data
  */
@@ -58,28 +58,28 @@ export const prepareReplyContent = async (pageId) => {
 
 /**
  * Fetches the username for a page using multiple sources
- * 
+ *
  * @param {Object} pageData - The page data object
- * @returns {Promise<string>} - The username or "Anonymous" if not found
+ * @returns {Promise<string>} - The username or "Missing username" if not found
  */
 export const fetchUsernameForPage = async (pageData) => {
-  if (!pageData) return "Anonymous";
+  if (!pageData) return "Missing username";
 
-  let displayUsername = "Anonymous";
+  let displayUsername = "Missing username";
 
   // First check if the page object already has a username
-  if (pageData.username && pageData.username !== "Anonymous") {
+  if (pageData.username && pageData.username !== "Anonymous" && pageData.username !== "Missing username") {
     displayUsername = pageData.username;
     console.log("Using username from page object:", displayUsername);
     return displayUsername;
   }
 
-  if (!pageData.userId) return "Anonymous";
+  if (!pageData.userId) return "Missing username";
 
   try {
     // Use the utility function to get the username
     const fetchedUsername = await getUsernameById(pageData.userId);
-    if (fetchedUsername && fetchedUsername !== "Anonymous") {
+    if (fetchedUsername && fetchedUsername !== "Anonymous" && fetchedUsername !== "Missing username") {
       displayUsername = fetchedUsername;
       console.log("Fetched username from utility:", displayUsername);
       return displayUsername;
@@ -114,10 +114,10 @@ export const fetchUsernameForPage = async (pageData) => {
     try {
       const { collection, getDocs, query, where } = await import('firebase/firestore');
       const { db } = await import('../firebase/database');
-      
+
       const usersQuery = query(collection(db, "users"), where("uid", "==", pageData.userId));
       const usersSnapshot = await getDocs(usersQuery);
-      
+
       if (!usersSnapshot.empty) {
         const userData = usersSnapshot.docs[0].data();
         if (userData.username) {
@@ -156,14 +156,14 @@ export const fetchUsernameForPage = async (pageData) => {
 
 /**
  * Validates and protects the reply content to ensure the attribution line is preserved
- * 
+ *
  * @param {Array} originalContent - The original content with attribution
  * @param {Array} newContent - The potentially modified content
  * @returns {Array} - The validated content with attribution preserved
  */
 export const validateReplyContent = (originalContent, newContent) => {
   if (!originalContent || !newContent) return newContent;
-  
+
   if (originalContent.length > 0 && newContent.length > 0) {
     // Always preserve the attribution line (first paragraph)
     if (JSON.stringify(newContent[0]) !== JSON.stringify(originalContent[0])) {
@@ -171,6 +171,6 @@ export const validateReplyContent = (originalContent, newContent) => {
       newContent[0] = originalContent[0];
     }
   }
-  
+
   return newContent;
 };

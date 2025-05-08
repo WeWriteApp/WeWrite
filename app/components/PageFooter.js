@@ -125,9 +125,19 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
                   pageOwnerId={page.userId}
                   className="w-full h-12 px-4 text-base font-semibold"
                 />
+                <a
+                  href={`/new?replyTo=${page.id}&page=${encodeURIComponent(page.title)}&username=${encodeURIComponent(page.username || '')}`}
+                  className="w-full"
+                >
+                  <Button variant="outline" className="w-full h-12 px-4 text-base font-semibold flex items-center gap-2 justify-center">
+                    <Reply className="h-5 w-5" />
+                    <span className="text-sm">Reply to page</span>
+                  </Button>
+                </a>
               </>
             )}
-            {/* Remove AddToPageButton from here, it will be in PageActions */}
+            {/* Always show Add to Page button */}
+            <AddToPageButton page={page} className="w-full h-12 px-4 text-base font-semibold" />
           </div>
         )}
 

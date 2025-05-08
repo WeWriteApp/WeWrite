@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { SupporterIcon } from './SupporterIcon';
+import { useSubscriptionFeature } from '../hooks/useSubscriptionFeature';
+import SubscriptionComingSoonModal from './SubscriptionComingSoonModal';
 
 import { createPortalSession } from '../services/stripeService';
 
@@ -19,6 +21,8 @@ export default function SubscriptionManagement() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const { isEnabled: isSubscriptionEnabled, showComingSoonModal, setShowComingSoonModal } =
+    useSubscriptionFeature(user?.email);
 
   // Helper function to clean up subscription data
   const cleanupSubscriptionData = async (userId) => {
@@ -286,6 +290,7 @@ export default function SubscriptionManagement() {
            tier === 'tier3' ? 'Tier 3' : 'Custom';
   };
 
+  // Show loading state
   if (loading) {
     return (
       <Card className="mb-8">
@@ -299,6 +304,56 @@ export default function SubscriptionManagement() {
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // If subscription feature is disabled, show a simplified card
+  if (!isSubscriptionEnabled) {
+    return (
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription</CardTitle>
+            <CardDescription>Support WeWrite development</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg">
+                <div className="flex-shrink-0">
+                  <SupporterIcon tier={null} status={null} size="lg" />
+                </div>
+                <div className="flex-grow">
+                  <h3 className="font-medium">Subscriptions Coming Soon</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Support WeWrite development through OpenCollective while we work on subscription functionality.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                variant="default"
+                size="sm"
+                className="flex items-center gap-2 w-full sm:w-auto"
+                onClick={() => setShowComingSoonModal(true)}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>Learn More</span>
+              </Button>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-center border-t pt-4 text-xs text-muted-foreground/70 dark:text-muted-foreground/30">
+            <p className="italic">
+              Subscriptions will be processed securely through Stripe.
+            </p>
+          </CardFooter>
+        </Card>
+
+        {/* Coming Soon Modal */}
+        <SubscriptionComingSoonModal
+          isOpen={showComingSoonModal}
+          onClose={() => setShowComingSoonModal(false)}
+        />
+      </>
     );
   }
 

@@ -94,15 +94,19 @@ export default function ReplyEditor({ initialContent, setEditorState }) {
     if (initialContent && value.length > 0 && initialContent.length > 0) {
       // If the first paragraph (attribution line) was changed, restore it
       if (JSON.stringify(value[0]) !== JSON.stringify(initialContent[0])) {
+        console.log('Preventing edit of attribution line');
         value[0] = initialContent[0];
       }
+
       // If the second paragraph (blank line) was changed, restore it
       if (initialContent.length > 1 && value.length > 1) {
         if (JSON.stringify(value[1]) !== JSON.stringify(initialContent[1])) {
+          console.log('Preventing edit of blank line');
           value[1] = initialContent[1];
         }
       }
     }
+
     // Pass the updated value to the parent component
     if (setEditorState) {
       setEditorState(value);

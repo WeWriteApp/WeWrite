@@ -3,8 +3,8 @@ import { db } from "../firebase/database";
 import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 
 // Default limits for page loading
-const DEFAULT_INITIAL_LIMIT = 10; // Default limit for home page
-const USER_PAGE_INITIAL_LIMIT = 200; // Higher limit for user pages
+const DEFAULT_INITIAL_LIMIT = 20; // Default limit for home page
+const USER_PAGE_INITIAL_LIMIT = 300; // Higher limit for user pages (increased from 200)
 const loadMoreLimitCount = 100;
 
 const usePages = (userId, includePrivate = true, currentUserId = null, isUserPage = false) => {

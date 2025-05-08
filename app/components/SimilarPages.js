@@ -104,18 +104,55 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
               .filter(word => word.length >= 3)
               .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
-            // Count matching significant words
-            const matchingWords = titleWords.filter(word => pageTitleWords.includes(word));
-            if (matchingWords.length > 0) {
-              // Higher score for more matching words
-              relevanceScore += matchingWords.length * 3;
+            // First, check for exact word matches
+            const exactMatches = titleWords.filter(word =>
+              pageTitleWords.includes(word)
+            );
 
-              // Bonus for matching a higher percentage of words
+            // Then check for partial matches
+            const partialMatches = titleWords.filter(word => {
+              // Skip words that are already exact matches
+              if (exactMatches.includes(word)) return false;
+
+              // Check if any word in pageTitleWords contains this word as a substring
+              for (const pageWord of pageTitleWords) {
+                if (pageWord.includes(word) || word.includes(pageWord)) {
+                  return true;
+                }
+              }
+
+              return false;
+            });
+
+            // Combine all matching words for total count
+            const matchingWords = [...exactMatches, ...partialMatches];
+
+            if (matchingWords.length > 0) {
+              // Give much higher score for exact matches
+              if (exactMatches.length > 0) {
+                // Higher score for more exact matching words
+                relevanceScore += exactMatches.length * 5;
+
+                // Bonus for matching a higher percentage of words exactly
+                const exactMatchPercentage = exactMatches.length / titleWords.length;
+                if (exactMatchPercentage >= 0.5) {
+                  relevanceScore += 10;
+                } else if (exactMatchPercentage >= 0.25) {
+                  relevanceScore += 5;
+                }
+              }
+
+              // Add smaller score for partial matches
+              if (partialMatches.length > 0) {
+                relevanceScore += partialMatches.length * 1;
+              }
+
+              // Bonus for matching a higher percentage of words (exact + partial)
               const matchPercentage = matchingWords.length / titleWords.length;
               if (matchPercentage >= 0.5) {
-                relevanceScore += 5;
+                relevanceScore += 3;
               } else if (matchPercentage >= 0.25) {
-                relevanceScore += 2;
+                relevanceScore += 1;
               }
             }
 
@@ -149,8 +186,8 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
         // Convert to array, filter out pages with low relevance, sort by relevance score, and limit
         const sortedPages = Array.from(pageMap.values())
-          // Only include pages with significant relevance (more than just partial matches)
-          .filter(page => page.relevanceScore >= 3)
+          // Only include pages with significant relevance (prioritizing exact matches)
+          .filter(page => page.relevanceScore >= 5)
           .sort((a, b) => b.relevanceScore - a.relevanceScore)
           .slice(0, maxPages);
 
@@ -167,7 +204,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
   if (loading) {
     return (
-      <div className="mt-8 pt-6">
+      <div className="mt-8 pt-6 border-t border-border dark:border-border">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="flex justify-center py-4">
           <Loader size="sm" />
@@ -178,7 +215,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
   if (similarPages.length === 0 && !loading) {
     return (
-      <div className="mt-8 pt-6">
+      <div className="mt-8 pt-6 border-t border-border dark:border-border">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
           No similar pages found with matching words in the title.
@@ -188,7 +225,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
   }
 
   return (
-    <div className="mt-8 pt-6">
+    <div className="mt-8 pt-6 border-t border-border dark:border-border">
       <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
       <div className="space-y-2">
         {similarPages.map(page => (

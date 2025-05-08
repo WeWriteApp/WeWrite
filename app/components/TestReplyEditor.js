@@ -55,10 +55,10 @@ export default function TestReplyEditor({ setEditorState }) {
             console.log("Found original page:", originalPage);
 
             // Get the actual username using the utility function
-            let displayUsername = "Anonymous";
+            let displayUsername = "Missing username";
 
             // First check if the page object already has a username
-            if (originalPage.username && originalPage.username !== "Anonymous") {
+            if (originalPage.username && originalPage.username !== "Anonymous" && originalPage.username !== "Missing username") {
               displayUsername = originalPage.username;
               console.log("Using username from page object:", displayUsername);
             }
@@ -82,11 +82,11 @@ export default function TestReplyEditor({ setEditorState }) {
                   }
                 }
 
-                // If still Anonymous, try the utility function
-                if (displayUsername === "Anonymous") {
+                // If still Missing username, try the utility function
+                if (displayUsername === "Missing username" || displayUsername === "Anonymous") {
                   try {
                     const utilityUsername = await getUsernameById(originalPage.userId);
-                    if (utilityUsername && utilityUsername !== "Anonymous") {
+                    if (utilityUsername && utilityUsername !== "Anonymous" && utilityUsername !== "Missing username") {
                       displayUsername = utilityUsername;
                       console.log("Fetched username from utility:", displayUsername);
                     }
@@ -97,12 +97,12 @@ export default function TestReplyEditor({ setEditorState }) {
               } catch (error) {
                 console.error("Error fetching username:", error);
                 // Fallback to page's stored username if available
-                displayUsername = originalPage.username || "Anonymous";
+                displayUsername = originalPage.username || "Missing username";
               }
             }
 
             // Ensure we have a valid username
-            if (displayUsername === "Anonymous" && originalPage.username) {
+            if ((displayUsername === "Anonymous" || displayUsername === "Missing username") && originalPage.username) {
               displayUsername = originalPage.username;
               console.log("Using username directly from page object:", displayUsername);
             }

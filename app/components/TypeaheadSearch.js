@@ -445,7 +445,7 @@ const TypeaheadSearch = ({
       </div>
 
       <div
-        className={`mt-2 space-y-1 transition-all max-h-[300px] overflow-y-auto ${
+        className={`mt-2 space-y-1 transition-all max-h-[40vh] overflow-y-auto ${
           search.length >= characterCount
             ? "opacity-100"
             : "opacity-0"
@@ -650,29 +650,10 @@ const TypeaheadSearch = ({
         )}
       </div>
 
-      {/* Insert Link button - only show when onSelect is provided */}
-      {onSelect && (
-        <div className="mt-4 flex justify-end sticky bottom-0 pt-2 pb-1 bg-background border-t border-border dark:border-border">
-          <button
-            onClick={() => {
-              if (selectedId) {
-                // Find the selected page from deduplicated list
-                const selectedPage = getAllUniquePages().find(page => page.id === selectedId);
-
-                if (selectedPage && onSelect) {
-                  // Include display text in the selected page object
-                  onSelect({
-                    ...selectedPage,
-                    displayText: displayText || selectedPage.title
-                  });
-                }
-              }
-            }}
-            disabled={!selectedId}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Insert Link
-          </button>
+      {/* We've moved the Insert Link button to the DialogFooter in AddToPageButton.js */}
+      {onSelect && selectedId && (
+        <div className="mt-4 text-center text-sm text-muted-foreground">
+          {getAllUniquePages().find(page => page.id === selectedId)?.title} selected
         </div>
       )}
     </div>
@@ -700,19 +681,27 @@ const SingleItemLink = ({ page, search }) => {
   );
 };
 
-const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId }) => {
+const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId, onSelect }) => {
   // Ensure we have a valid username to display (handle NULL values properly)
   const displayName = page.username && page.username !== 'NULL'
     ? page.username
     : 'Anonymous';
 
+  const handleClick = () => {
+    setSelectedId(page.id);
+    // Call onSelect with the page data
+    if (onSelect) {
+      onSelect({
+        ...page,
+        displayText: page.title
+      });
+    }
+  };
+
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
-        onClick={() => {
-          setSelectedId(page.id);
-          // Don't call onSelect here, wait for Insert Link button
-        }}
+        onClick={handleClick}
         className={`inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] ${isSelected
           ? 'bg-primary text-white border-[1.5px] border-primary-foreground/20'
           : 'bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700'
@@ -726,6 +715,11 @@ const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSele
           <X className="h-3.5 w-3.5 ml-1.5 flex-shrink-0" onClick={(e) => {
             e.stopPropagation();
             setSearch('');
+            setSelectedId(null);
+            // Clear selection
+            if (onSelect) {
+              onSelect(null);
+            }
           }} />
         )}
       </button>

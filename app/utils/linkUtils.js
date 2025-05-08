@@ -42,16 +42,17 @@ export const createPageLink = ({
  */
 export const createUserLink = ({
   userId,
-  username = "Anonymous",
+  username = "Missing username",
   url = null
 }) => {
   // Ensure we have a valid username to display
-  // Trim whitespace and ensure it's not empty or just "Anonymous"
+  // Trim whitespace and ensure it's not empty or just "Anonymous" or "Missing username"
   const displayUsername = username &&
     typeof username === 'string' &&
     username.trim() !== "" &&
-    username.trim() !== "Anonymous" ?
-    username.trim() : "Anonymous";
+    username.trim() !== "Anonymous" &&
+    username.trim() !== "Missing username" ?
+    username.trim() : "Missing username";
 
   // Log the username being used
   console.log(`Creating user link with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
@@ -81,14 +82,15 @@ export const createReplyAttribution = ({
   pageId,
   pageTitle = "Untitled",
   userId = "anonymous",
-  username = "Anonymous"
+  username = "Missing username"
 }) => {
   // Ensure we have a valid username
   const displayUsername = username &&
     typeof username === 'string' &&
     username.trim() !== "" &&
-    username.trim() !== "Anonymous" ?
-    username.trim() : "Anonymous";
+    username.trim() !== "Anonymous" &&
+    username.trim() !== "Missing username" ?
+    username.trim() : "Missing username";
 
   // Create the user link with explicit username
   const userLink = createUserLink({ userId, username: displayUsername });

@@ -263,6 +263,9 @@ export function PageActions({
             </>
           )}
 
+          {/* Add to Page button - available to all users */}
+          <AddToPageButton page={page} />
+
           {/* Reply button - available to all users */}
           <Button
             variant="outline"
@@ -273,9 +276,6 @@ export function PageActions({
             <Reply className="h-4 w-4" />
             <span className="text-sm">Reply</span>
           </Button>
-
-          {/* Add to Page button - styled and placed with other actions */}
-          <AddToPageButton page={page} className="gap-2 w-full h-10 md:h-8 md:w-auto" />
         </div>
 
         {/* Dense Mode switch - moved below other buttons */}

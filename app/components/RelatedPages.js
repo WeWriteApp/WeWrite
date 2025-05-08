@@ -96,12 +96,15 @@ export default function RelatedPages({ page, maxPages = 5 }) {
                   .filter(word => word.length >= 3)
                   .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
-                // Count matching significant words
-                const matchingWords = titleWords.filter(word => {
-                  // Check for exact word matches
-                  if (pageTitleWords.includes(word)) {
-                    return true;
-                  }
+                // First, check for exact word matches
+                const exactMatches = titleWords.filter(word =>
+                  pageTitleWords.includes(word)
+                );
+
+                // Then check for partial matches
+                const partialMatches = titleWords.filter(word => {
+                  // Skip words that are already exact matches
+                  if (exactMatches.includes(word)) return false;
 
                   // Check if any word in pageTitleWords contains this word as a substring
                   // This helps with cases like "ACP" matching "Woke ACP"
@@ -114,11 +117,30 @@ export default function RelatedPages({ page, maxPages = 5 }) {
                   return false;
                 });
 
-                if (matchingWords.length > 0) {
-                  // Higher score for more matching words
-                  relevanceScore += matchingWords.length * 2;
+                // Combine all matching words for total count
+                const matchingWords = [...exactMatches, ...partialMatches];
 
-                  // Bonus for matching a higher percentage of words
+                if (matchingWords.length > 0) {
+                  // Give much higher score for exact matches
+                  if (exactMatches.length > 0) {
+                    // Higher score for more exact matching words
+                    relevanceScore += exactMatches.length * 5;
+
+                    // Bonus for matching a higher percentage of words exactly
+                    const exactMatchPercentage = exactMatches.length / titleWords.length;
+                    if (exactMatchPercentage >= 0.5) {
+                      relevanceScore += 10;
+                    } else if (exactMatchPercentage >= 0.25) {
+                      relevanceScore += 5;
+                    }
+                  }
+
+                  // Add smaller score for partial matches
+                  if (partialMatches.length > 0) {
+                    relevanceScore += partialMatches.length * 1;
+                  }
+
+                  // Bonus for matching a higher percentage of words (exact + partial)
                   const matchPercentage = matchingWords.length / titleWords.length;
                   if (matchPercentage >= 0.5) {
                     relevanceScore += 3;
@@ -154,8 +176,8 @@ export default function RelatedPages({ page, maxPages = 5 }) {
         // Convert to array, filter out pages with no content relevance, sort by relevance score, and limit
         const sortedPages = Array.from(pageMap.values())
           // Only include pages that have a relevance score from content matching (not just author-based)
-          // Lower the threshold to 0.5 to include more partial matches
-          .filter(page => page.relevanceScore >= 0.5)
+          // Increase the threshold to 2.0 to prioritize pages with at least some exact word matches
+          .filter(page => page.relevanceScore >= 2.0)
           .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
           .slice(0, maxPages);
 
@@ -172,7 +194,7 @@ export default function RelatedPages({ page, maxPages = 5 }) {
 
   if (isLoading) {
     return (
-      <div className="mt-8 pt-6 border-t">
+      <div className="mt-8 pt-6">
         <h3 className="text-lg font-medium mb-4">Related Pages</h3>
         <div className="flex justify-center py-4">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
@@ -183,7 +205,7 @@ export default function RelatedPages({ page, maxPages = 5 }) {
 
   if (relatedPages.length === 0) {
     return (
-      <div className="mt-8 pt-6 border-t">
+      <div className="mt-8 pt-6">
         <h3 className="text-lg font-medium mb-4">Related Pages</h3>
         <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
           No related pages found with matching words in the title.
@@ -193,14 +215,14 @@ export default function RelatedPages({ page, maxPages = 5 }) {
   }
 
   return (
-    <div className="mt-8 pt-6 border-t">
+    <div className="mt-8 pt-6">
       <h3 className="text-lg font-medium mb-4">Related Pages</h3>
       <div className="flex flex-wrap gap-2">
         {relatedPages.map(page => (
           <div key={page.id} className="flex-none max-w-full">
             <PillLink
               key={page.id}
-              href={`/pages/${page.id}`}
+              href={`/${page.id}`}
               className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
             >
               {page.title || "Untitled"}
