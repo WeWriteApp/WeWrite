@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthNav from "./AuthNav";
 import { Button } from "./ui/button";
-import { Plus } from "lucide-react";
+import { Heart } from "lucide-react";
+import SupportUsModal from "./SupportUsModal";
 
 export default function Header() {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [showSupportModal, setShowSupportModal] = React.useState(false);
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   // Calculate and update header height
@@ -66,13 +68,16 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* New Page button (right side) */}
+            {/* Support Us button (right side) */}
             <div className="flex-1 flex justify-end">
-              <Button variant="outline" size="sm" asChild className="gap-1">
-                <Link href="/new">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">New Page</span>
-                </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white border-0 animate-gradient-x"
+                onClick={() => setShowSupportModal(true)}
+              >
+                <Heart className="h-4 w-4 text-white fill-white" />
+                <span className="hidden sm:inline">Support Us</span>
               </Button>
             </div>
           </div>
@@ -84,6 +89,12 @@ export default function Header() {
         </div>
       </header>
       {/* No spacer needed with sticky positioning */}
+
+      {/* Support Us Modal */}
+      <SupportUsModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </>
   );
 }
