@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { PillLink } from '../PillLink';
-import { Flame, Loader, User } from 'lucide-react';
+import { Flame, Loader } from 'lucide-react';
 import { Sparkline } from '../ui/sparkline';
 import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
 import { motion } from 'framer-motion';
@@ -152,19 +152,25 @@ export default function TrendingPagesSection({ limit = 3 }) {
               transition={{ delay: index * 0.1 }}
             >
               <Link href={`/${page.id}`} className="block h-full">
-                <Card className="h-full hover:shadow-md transition-shadow duration-200 cursor-pointer flex flex-col justify-between">
-                  <CardHeader className="pb-2">
+                <Card className="h-full cursor-pointer flex flex-col justify-between border-0 shadow-none hover:shadow-none" style={{ transform: 'none' }}>
+                  <CardHeader className="p-4">
                     <CardTitle className="text-lg mb-2 break-words">
                       <PillLink href={`/${page.id}`}>
                         {page.title || 'Untitled'}
                       </PillLink>
                     </CardTitle>
-                    <CardDescription className="flex items-center gap-1 text-xs mt-1">
-                      <User className="h-3 w-3" />
-                      {page.username || 'Anonymous'}
+                    <CardDescription className="text-xs mt-1">
+                      <span className="text-foreground">by{" "}</span>
+                      <Link
+                        href={`/user/${page.userId}`}
+                        className="hover:underline text-primary"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {page.username || 'Anonymous'}
+                      </Link>
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0 pb-3">
+                  <div className="px-4 pb-4 pt-0 mt-auto">
                     <div className="flex justify-between items-center">
                       <div className="font-medium text-muted-foreground">
                         {page.views.toLocaleString()} views in 24h

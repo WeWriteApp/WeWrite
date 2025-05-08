@@ -10,13 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Separator } from "../../components/ui/separator";
 import Header from '../Header';
 import { PagePreviewCard } from './PagePreviewCard';
-import TrendingPages from '../TrendingPages';
 import { useTheme } from "next-themes";
 import { PillLink } from "../PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getPageById } from '../../firebase/database';
 import ActivityCarousel from './ActivityCarousel';
+import TrendingCarousel from './TrendingCarousel';
 
 // Carousel images for hero section
 const heroImages = [
@@ -628,7 +628,7 @@ const LandingPage = () => {
         </section>
 
         {/* Trending Pages Section */}
-        <section id="trending" className="py-16 md:py-20 bg-background">
+        <section id="trending" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-8 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
@@ -637,7 +637,8 @@ const LandingPage = () => {
               </p>
             </div>
             <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-              <TrendingPages limit={6} />
+              {/* Use our new TrendingCarousel component with more items for better looping */}
+              <TrendingCarousel limit={20} />
             </div>
           </div>
         </section>

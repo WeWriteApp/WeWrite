@@ -25,19 +25,20 @@ const ActivityCard = ({ activity }) => {
   );
 
   return (
-    <Link 
+    <Link
       href={`/page/${activity.pageId}`}
-      className="block border border-border/40 rounded-lg transition-all duration-200 p-3 hover:bg-accent/5 hover:shadow-md dark:hover:bg-accent/10 dark:bg-slate-800/50 max-w-md"
+      className="block rounded-lg p-4 bg-card border-0 shadow-none max-w-md"
+      style={{ transform: 'none' }}
     >
       <div className="flex justify-between items-center gap-1.5 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <PillLink href={`/page/${activity.pageId}`} variant="primary">
             {activity.pageName || "Untitled page"}
           </PillLink>
-          <span className="text-xs text-muted-foreground">
-            edited by {" "}
-            <Link 
-              href={`/user/${activity.userId}`} 
+          <span className="text-xs">
+            <span className="text-foreground">edited by{" "}</span>
+            <Link
+              href={`/user/${activity.userId}`}
               className="hover:underline text-primary"
               onClick={(e) => e.stopPropagation()}
             >
@@ -49,7 +50,7 @@ const ActivityCard = ({ activity }) => {
           {formatRelativeTime(activity.timestamp)}
         </span>
       </div>
-      
+
       <div className="mt-2 flex items-center justify-between gap-3">
         <div className="relative flex-grow min-w-0">
           {textDiff && textDiff.preview && (

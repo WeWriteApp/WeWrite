@@ -68,11 +68,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
   return (
     <div
-      className={interactiveCard(
-        "w-full h-full",
+      className={cn(
+        "w-full h-full bg-card rounded-lg border-0 shadow-none",
         isCarousel && "h-full flex flex-col",
-        compactLayout && "p-2" // Reduce padding for compact layout
+        compactLayout ? "p-4" : "p-4" // Consistent padding
       )}
+      style={{ transform: 'none' }}
     >
       <div className={cn(
         "flex flex-col gap-1.5 w-full overflow-hidden",
@@ -101,13 +102,13 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
             </TooltipProvider>
           </div>
           <div className={cn(
-            "text-xs text-muted-foreground truncate",
+            "text-xs truncate",
             compactLayout ? "mt-1" : "mt-1.5" // Reduce margin for compact layout
           )}>
-            {isNewPage ? "created by" : "edited by"} {" "}
+            <span className="text-foreground">{isNewPage ? "created by" : "edited by"}{" "}</span>
             <Link
               href={`/user/${activity.userId}`}
-              className="hover:underline text-primary inline-flex items-center gap-1"
+              className="hover:underline text-primary"
               onClick={(e) => e.stopPropagation()}
             >
               {activity.username || "anonymous"}
