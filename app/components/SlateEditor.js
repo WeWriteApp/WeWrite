@@ -240,41 +240,40 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           onContentChange(initialContent);
         }
 
-        // Store the current selection before setting content
-        const previousSelection = editor.selection;
+        // IMPORTANT: Only handle cursor positioning for replies, not for regular editing
+        // This prevents cursor jumps during normal typing
+        if (hasAttribution && initialContent.length >= 2) {
+          // Check if we're currently editing the title
+          const isTitleFocused = document.activeElement &&
+            (document.activeElement.tagName.toLowerCase() === 'textarea' ||
+             document.activeElement.tagName.toLowerCase() === 'input');
 
-        // Check if we're currently editing the title
-        const isTitleFocused = document.activeElement &&
-          (document.activeElement.tagName.toLowerCase() === 'textarea' ||
-           document.activeElement.tagName.toLowerCase() === 'input');
+          // Only focus the editor for replies and only if we're not currently editing the title
+          if (!isTitleFocused) {
+            // For replies, we need to position the cursor at the second paragraph
+            // Use a longer timeout to ensure the editor is fully initialized
+            setTimeout(() => {
+              try {
+                // Only focus if the title is not focused
+                if (document.activeElement &&
+                    (document.activeElement.tagName.toLowerCase() === 'textarea' ||
+                     document.activeElement.tagName.toLowerCase() === 'input')) {
+                  return; // Don't steal focus from title
+                }
 
-        // Only focus the editor if we're not currently editing the title
-        if (!isTitleFocused && hasAttribution && initialContent.length >= 2) {
-          // For replies, we need to position the cursor at the second paragraph
-          setTimeout(() => {
-            try {
-              // Use our safe wrapper for ReactEditor.focus
-              safeReactEditor.focus(editor);
+                // Use our safe wrapper for ReactEditor.focus
+                safeReactEditor.focus(editor);
 
-              // Create a point at the start of the second paragraph (index 1)
-              const point = { path: [1, 0], offset: 0 };
-              Transforms.select(editor, point);
-            } catch (error) {
-              console.error("Error positioning cursor for reply:", error);
-            }
-          }, 100);
-        } else if (!isTitleFocused && previousSelection) {
-          // For regular edits, restore the previous selection if we had one
-          setTimeout(() => {
-            try {
-              safeReactEditor.focus(editor);
-              Transforms.select(editor, previousSelection);
-            } catch (error) {
-              // If we can't restore the previous selection, don't worry about it
-            }
-          }, 100);
+                // Create a point at the start of the second paragraph (index 1)
+                const point = { path: [1, 0], offset: 0 };
+                Transforms.select(editor, point);
+              } catch (error) {
+                console.error("Error positioning cursor for reply:", error);
+              }
+            }, 300);
+          }
         }
-        // Otherwise, don't focus the editor at all
+        // Otherwise, don't focus the editor at all - this is crucial for preventing cursor jumps
       } catch (error) {
         console.error("Error setting editor content from initialContent:", error);
       }
@@ -289,7 +288,30 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     }
   }, [initialContent, initialValue]);
 
-  // onchange handler with error handling
+  // Debounce function to prevent too many updates
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  // Create a debounced version of the content change callback
+  const debouncedContentChange = React.useCallback(
+    debounce((value) => {
+      if (typeof onContentChange === 'function') {
+        onContentChange(value);
+      }
+    }, 100),
+    [onContentChange]
+  );
+
+  // onchange handler with error handling and debouncing
   const onChange = (newValue) => {
     try {
       // Make sure newValue is valid before updating state
@@ -297,13 +319,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         // Update local state
         setLineCount(newValue.length);
 
-        // Call the parent component's onContentChange callback
-        if (typeof onContentChange === 'function') {
-          console.log('SlateEditor onChange: Updating parent component with new content');
-          onContentChange(newValue);
-        } else {
-          console.warn('SlateEditor onChange: No onContentChange callback provided');
-        }
+        // Use debounced callback to prevent cursor jumps during rapid typing
+        debouncedContentChange(newValue);
       } else {
         console.error('Invalid editor value:', newValue);
       }

@@ -386,17 +386,26 @@ const PageEditor = ({
     autoResizeTextarea(e.target);
   };
 
+  // Track if the title field has been focused by user
+  const [titleHasBeenFocused, setTitleHasBeenFocused] = useState(false);
+
+  // Handle focus on title field
+  const handleTitleFocus = () => {
+    setTitleHasBeenFocused(true);
+  };
+
   // Auto-resize on initial render and when title changes
   useEffect(() => {
     if (titleInputRef.current) {
       autoResizeTextarea(titleInputRef.current);
 
-      // If this is a new page, ensure the title input is focused
-      if (isNewPage && document.activeElement !== titleInputRef.current) {
+      // If this is a new page and title hasn't been focused yet, focus the title input
+      if (isNewPage && !titleHasBeenFocused) {
         titleInputRef.current.focus();
+        setTitleHasBeenFocused(true);
       }
     }
-  }, [title, isNewPage]);
+  }, [title, isNewPage, titleHasBeenFocused]);
 
   return (
     <div className="editor-container" style={{ paddingBottom: '60px' }}>
@@ -406,6 +415,7 @@ const PageEditor = ({
             ref={titleInputRef}
             value={title}
             onChange={handleTitleChange}
+            onFocus={handleTitleFocus}
             rows={1}
             className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
               titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
@@ -417,7 +427,6 @@ const PageEditor = ({
               position: 'relative',
               zIndex: 10 // Ensure it's above other elements
             }}
-            autoFocus={isNewPage}
           />
         </div>
         {titleError && (
