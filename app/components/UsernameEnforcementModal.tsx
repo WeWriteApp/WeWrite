@@ -110,14 +110,15 @@ export default function UsernameEnforcementModal() {
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto rounded-lg animate-in fade-in-0 zoom-in-95 duration-300">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
         <DialogHeader>
           <DialogTitle>Set Your Username</DialogTitle>
           <DialogDescription>
             You must set a username to continue using WeWrite.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+
+        <div className="flex-1 overflow-y-auto py-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <Input
@@ -176,22 +177,24 @@ export default function UsernameEnforcementModal() {
                 <p className="text-sm text-red-500">{error}</p>
               )}
             </div>
-
-            <Button
-              onClick={handleSave}
-              disabled={!isAvailable || isSaving || !isValidFormat}
-              className="w-full"
-            >
-              {isSaving ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin mr-2" />
-                  Saving...
-                </>
-              ) : (
-                'Save Username'
-              )}
-            </Button>
           </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+          <Button
+            onClick={handleSave}
+            disabled={!isAvailable || isSaving || !isValidFormat}
+            className="w-full"
+          >
+            {isSaving ? (
+              <>
+                <Loader className="h-4 w-4 animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              'Save Username'
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

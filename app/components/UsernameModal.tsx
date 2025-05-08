@@ -7,6 +7,9 @@ import { db } from '@/firebase/config'
 import { debounce } from 'lodash'
 import { checkUsernameAvailability } from '../firebase/auth'
 import { cn } from '../lib/utils'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
 
 interface UsernameModalProps {
   isOpen: boolean
@@ -106,82 +109,95 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4 sm:p-6" onClick={onClose} />
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
+        <DialogClose asChild>
+          <Button variant="outline" size="icon" className="absolute right-4 top-4">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Button>
+        </DialogClose>
 
-      {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-4 sm:p-5 rounded-lg shadow-lg z-50 w-[calc(100%-2rem)] max-w-md mx-auto my-4 sm:my-6">
-        <h2 className="text-xl font-semibold mb-4">Choose your username</h2>
-        <div className="relative">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter username"
-            className="w-full p-2 border rounded-md pr-10"
-            minLength={3}
-            maxLength={30}
-            pattern="[a-zA-Z0-9_]+"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            {isChecking ? (
-              <div className="h-5 w-5 border-2 border-t-transparent border-blue-500 rounded-full animate-spin" />
-            ) : username && username.length >= 3 ? (
-              isAvailable ? (
-                <Check className="h-5 w-5 text-green-500" />
-              ) : (
-                <X className="h-5 w-5 text-red-500" />
-              )
-            ) : null}
+        <DialogHeader>
+          <DialogTitle>Choose your username</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto py-4">
+          <div className="relative mb-4">
+            <Input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+              className={cn(
+                "pr-10",
+                !isAvailable && username.length >= 3 && !isChecking && "border-red-500",
+                isAvailable && username.length >= 3 && !isChecking && "border-green-500"
+              )}
+              minLength={3}
+              maxLength={30}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {isChecking ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : username && username.length >= 3 ? (
+                isAvailable ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <X className="h-4 w-4 text-red-500" />
+                )
+              ) : null}
+            </div>
           </div>
-        </div>
-        {username && username.length < 3 && (
-          <p className="text-sm text-muted-foreground mt-2">Username must be at least 3 characters</p>
-        )}
-        {username && !isAvailable && !isChecking && (
-          <div className="mt-2">
-            <p className="text-sm text-red-500">{validationMessage || "This username is not available"}</p>
 
-            {/* Username suggestions */}
-            {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm text-foreground mb-2">Try one of these instead:</p>
-                <div className="flex flex-wrap gap-2">
-                  {usernameSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-3 py-1.5 text-sm font-medium rounded-md bg-background border border-input hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+          {username && username.length < 3 && (
+            <p className="text-sm text-muted-foreground mt-2">Username must be at least 3 characters</p>
+          )}
+
+          {username && !isAvailable && !isChecking && (
+            <div className="mt-2">
+              <p className="text-sm text-red-500">{validationMessage || "This username is not available"}</p>
+
+              {/* Username suggestions */}
+              {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm text-foreground mb-2">Try one of these instead:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {usernameSuggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-md bg-background border border-input hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-        <div className="flex justify-end gap-2 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm rounded-md hover:bg-accent"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!isAvailable || !username || username.length < 3}
-            className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Save
-          </button>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-    </>
+
+        <DialogFooter className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+          <div className="flex gap-2 w-full sm:w-auto sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!isAvailable || !username || username.length < 3}
+            >
+              Save
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
