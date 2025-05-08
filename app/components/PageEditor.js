@@ -390,8 +390,13 @@ const PageEditor = ({
   useEffect(() => {
     if (titleInputRef.current) {
       autoResizeTextarea(titleInputRef.current);
+
+      // If this is a new page, ensure the title input is focused
+      if (isNewPage && document.activeElement !== titleInputRef.current) {
+        titleInputRef.current.focus();
+      }
     }
-  }, [title]);
+  }, [title, isNewPage]);
 
   return (
     <div className="editor-container" style={{ paddingBottom: '60px' }}>

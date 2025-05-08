@@ -138,41 +138,79 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   useImperativeHandle(ref, () => ({
     focus: () => {
       try {
-        // Use our safe wrapper for ReactEditor.focus
-        const focused = safeReactEditor.focus(editor);
+        // Check if we're currently editing the title or another input
+        const isTitleFocused = document.activeElement &&
+          (document.activeElement.tagName.toLowerCase() === 'textarea' ||
+           document.activeElement.tagName.toLowerCase() === 'input');
 
-        // If there's no content, add an empty paragraph
-        if (editor.children.length === 0) {
-          Transforms.insertNodes(editor, {
-            type: 'paragraph',
-            children: [{ text: '' }],
-          });
-        }
+        // Only focus the editor if we're not currently editing the title
+        if (!isTitleFocused) {
+          // Use our safe wrapper for ReactEditor.focus
+          const focused = safeReactEditor.focus(editor);
 
-        // Find the last text node
-        const lastNode = Editor.last(editor, []);
-        if (lastNode) {
-          const [node, path] = lastNode;
-
-          // Create a new selection at the end of the last text node
-          const point = { path, offset: node.text.length };
-          try {
-            Transforms.select(editor, point);
-          } catch (selectError) {
-            console.error('Error selecting text:', selectError);
+          // If there's no content, add an empty paragraph
+          if (editor.children.length === 0) {
+            Transforms.insertNodes(editor, {
+              type: 'paragraph',
+              children: [{ text: '' }],
+            });
           }
-        }
 
-        // If ReactEditor.focus failed, try DOM fallback
-        if (!focused) {
-          const editorElement = document.querySelector('[data-slate-editor=true]');
-          if (editorElement) {
-            editorElement.focus();
-            console.log('Editor focused via DOM fallback');
+          // Find the last text node
+          const lastNode = Editor.last(editor, []);
+          if (lastNode) {
+            const [node, path] = lastNode;
+
+            // Create a new selection at the end of the last text node
+            const point = { path, offset: node.text.length };
+            try {
+              Transforms.select(editor, point);
+            } catch (selectError) {
+              console.error('Error selecting text:', selectError);
+            }
+          }
+
+          // If ReactEditor.focus failed, try DOM fallback
+          if (!focused) {
+            const editorElement = document.querySelector('[data-slate-editor=true]');
+            if (editorElement) {
+              editorElement.focus();
+            }
           }
         }
       } catch (error) {
         console.error('Error focusing editor:', error);
+      }
+    },
+
+    // Add the openLinkEditor method to the ref
+    openLinkEditor: () => {
+      try {
+        // Check if we're currently editing the title
+        const isTitleFocused = document.activeElement &&
+          (document.activeElement.tagName.toLowerCase() === 'textarea' ||
+           document.activeElement.tagName.toLowerCase() === 'input');
+
+        // Only proceed if we're not editing the title
+        if (!isTitleFocused) {
+          // Focus the editor first
+          safeReactEditor.focus(editor);
+
+          // Get the current selection
+          const { selection } = editor;
+
+          // Show the link editor menu
+          if (selection) {
+            showLinkEditorMenu(editor, selection);
+          } else {
+            // If no selection, position at the end
+            const end = Editor.end(editor, []);
+            Transforms.select(editor, end);
+            showLinkEditorMenu(editor, editor.selection);
+          }
+        }
+      } catch (error) {
+        console.error('Error opening link editor:', error);
       }
     }
   }));
@@ -205,45 +243,38 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         // Store the current selection before setting content
         const previousSelection = editor.selection;
 
-        // Focus the editor after setting content, but preserve cursor position
-        setTimeout(() => {
-          try {
-            // Only focus if we need to
-            if (!safeReactEditor.isFocused(editor)) {
+        // Check if we're currently editing the title
+        const isTitleFocused = document.activeElement &&
+          (document.activeElement.tagName.toLowerCase() === 'textarea' ||
+           document.activeElement.tagName.toLowerCase() === 'input');
+
+        // Only focus the editor if we're not currently editing the title
+        if (!isTitleFocused && hasAttribution && initialContent.length >= 2) {
+          // For replies, we need to position the cursor at the second paragraph
+          setTimeout(() => {
+            try {
               // Use our safe wrapper for ReactEditor.focus
-              const focused = safeReactEditor.focus(editor);
+              safeReactEditor.focus(editor);
 
-              // If ReactEditor.focus failed, try DOM fallback
-              if (!focused) {
-                const editorElement = document.querySelector('[data-slate-editor=true]');
-                if (editorElement) {
-                  editorElement.focus();
-                }
-              }
+              // Create a point at the start of the second paragraph (index 1)
+              const point = { path: [1, 0], offset: 0 };
+              Transforms.select(editor, point);
+            } catch (error) {
+              console.error("Error positioning cursor for reply:", error);
             }
-
-            // If this is a reply with attribution, position cursor at the second paragraph
-            if (hasAttribution && initialContent.length >= 2) {
-              try {
-                // Create a point at the start of the second paragraph (index 1)
-                const point = { path: [1, 0], offset: 0 };
-                Transforms.select(editor, point);
-              } catch (selectError) {
-                console.error('Error selecting text in reply:', selectError);
-              }
+          }, 100);
+        } else if (!isTitleFocused && previousSelection) {
+          // For regular edits, restore the previous selection if we had one
+          setTimeout(() => {
+            try {
+              safeReactEditor.focus(editor);
+              Transforms.select(editor, previousSelection);
+            } catch (error) {
+              // If we can't restore the previous selection, don't worry about it
             }
-            // If we had a previous selection and this isn't a reply, restore it
-            else if (previousSelection && !hasAttribution) {
-              try {
-                Transforms.select(editor, previousSelection);
-              } catch (selectError) {
-                // If we can't restore the previous selection, don't worry about it
-              }
-            }
-          } catch (error) {
-            console.error("Error focusing editor after content initialization:", error);
-          }
-        }, 100);
+          }, 100);
+        }
+        // Otherwise, don't focus the editor at all
       } catch (error) {
         console.error("Error setting editor content from initialContent:", error);
       }
