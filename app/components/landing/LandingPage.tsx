@@ -647,9 +647,14 @@ const LandingPage = () => {
           <div className="container mx-auto px-6 max-w-6xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Feature Roadmap</h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Discover what makes WeWrite special and what's coming next
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
+                Discover what makes WeWrite special and what's coming next.
               </p>
+              <Button variant="outline" size="lg" className="gap-2 mx-auto" asChild>
+                <Link href="/zRNwhNgIEfLFo050nyAT">
+                  Read our detailed Roadmap <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
 
             {/* Kanban layout with horizontal scrolling */}
@@ -737,7 +742,7 @@ const LandingPage = () => {
             <div className={`text-center mb-12 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Special thanks to those who have supported WeWrite while we're still in beta. <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">Read our Roadmap here</Link>.
+                Special thanks to those who have supported WeWrite while we're still in beta.
               </p>
             </div>
 
