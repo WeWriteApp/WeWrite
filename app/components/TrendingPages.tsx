@@ -6,6 +6,7 @@ import PillLink from './PillLink.js';
 import { Flame, Loader } from 'lucide-react';
 import SimpleSparkline from './SimpleSparkline.js';
 import Link from 'next/link';
+import { Button } from './ui/button';
 import { getPageViewsLast24Hours, getTrendingPages } from '../firebase/pageViews';
 
 interface TrendingPage {
@@ -173,17 +174,19 @@ export default function TrendingPages({ limit = 5 }) {
       {/* Mobile view (smaller than md): Card grid layout */}
       <div className="md:hidden grid grid-cols-1 gap-4">
         {trendingPages.map((page) => (
-          <Link
-            href={`/${page.id}`}
+          <div
             key={page.id}
             className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+            onClick={() => window.location.href = `/${page.id}`}
+            style={{ cursor: 'pointer' }}
           >
             <div className="p-4">
               <div className="mb-4">
                 <h3 className="text-base font-medium">
-                  <PillLink href={`/${page.id}`}>
-                    {page.title || 'Untitled'}
-                  </PillLink>
+                  {/* Render the title directly instead of using PillLink */}
+                  <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                    <span className="truncate">{page.title || 'Untitled'}</span>
+                  </span>
                 </h3>
               </div>
 
@@ -207,17 +210,17 @@ export default function TrendingPages({ limit = 5 }) {
                 </div>
               </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 
       {/* View All button */}
       <div className="flex justify-center mt-4">
-        <Link href="/trending">
-          <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+        <Button variant="outline" asChild>
+          <Link href="/trending">
             View all trending pages
-          </button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </div>
   );
