@@ -22,33 +22,8 @@ interface TrendingPage {
  * Simple client-side component that fetches and renders trending pages
  */
 export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number }) {
-  // Sample fallback data for trending pages
-  const fallbackPages: TrendingPage[] = [
-    {
-      id: 'zRNwhNgIEfLFo050nyAT',
-      title: 'WeWrite Roadmap',
-      views: 120,
-      hourlyViews: Array(24).fill(5),
-      userId: 'roadmap',
-      username: 'WeWrite'
-    },
-    {
-      id: 'sample1',
-      title: 'Getting Started with WeWrite',
-      views: 85,
-      hourlyViews: Array(24).fill(3).map((v, i) => i % 3 === 0 ? v + 2 : v),
-      userId: 'guide',
-      username: 'WeWrite'
-    },
-    {
-      id: 'sample2',
-      title: 'How to Create Your First Page',
-      views: 65,
-      hourlyViews: Array(24).fill(2).map((v, i) => i % 4 === 0 ? v + 1 : v),
-      userId: 'tutorial',
-      username: 'WeWrite'
-    }
-  ];
+  // Empty array for trending pages - we'll fetch real data
+  const fallbackPages: TrendingPage[] = [];
 
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,34 +35,35 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
         setLoading(true);
         console.log('SimpleTrendingCarousel: Fetching trending pages with limit', limit);
 
-        // Fetch trending pages with limit
-        const result = await getTrendingPages(limit);
-        console.log('SimpleTrendingCarousel: Got result', result);
+        // Use the same function as the logged-in home page to get REAL trending pages
+        const response = await getTrendingPages(limit);
 
-        if (result.error) {
-          console.error('SimpleTrendingCarousel: Error fetching trending pages:', result.error);
-          console.log('SimpleTrendingCarousel: Using fallback data due to error');
-          setError(null); // Don't show error to user, use fallback data instead
-          setTrendingPages(fallbackPages);
-        } else if (!result.trendingPages || !Array.isArray(result.trendingPages)) {
-          console.error('SimpleTrendingCarousel: Invalid trending pages data received', result);
-          console.log('SimpleTrendingCarousel: Using fallback data due to invalid data');
-          setError(null); // Don't show error to user, use fallback data instead
-          setTrendingPages(fallbackPages);
-        } else if (result.trendingPages.length === 0) {
-          console.log('SimpleTrendingCarousel: No trending pages found, using fallback data');
-          setTrendingPages(fallbackPages);
+        // Handle different response formats
+        let pages = [];
+        if (Array.isArray(response)) {
+          pages = response;
+        } else if (response && typeof response === 'object' && Array.isArray(response.trendingPages)) {
+          pages = response.trendingPages;
+        }
+
+        console.log('SimpleTrendingCarousel: Raw response:', response);
+        console.log('SimpleTrendingCarousel: Processed pages:', pages);
+
+        if (!pages || !Array.isArray(pages) || pages.length === 0) {
+          console.log('SimpleTrendingCarousel: No trending pages found or invalid format');
+          setError(pages.length === 0 ? null : 'No trending pages available');
+          setTrendingPages([]);
         } else {
-          // Limit the number of pages to reduce memory usage
-          const limitedPages = result.trendingPages.slice(0, Math.min(10, result.trendingPages.length));
+          // Use all available pages, up to a reasonable limit
+          const limitedPages = pages.slice(0, Math.min(20, pages.length));
           console.log(`SimpleTrendingCarousel: Setting ${limitedPages.length} trending pages`);
+          console.log('Page sample:', limitedPages[0]);
           setTrendingPages(limitedPages);
         }
       } catch (err) {
         console.error('SimpleTrendingCarousel: Exception fetching trending pages:', err);
-        console.log('SimpleTrendingCarousel: Using fallback data due to error');
-        setError(null); // Don't show error to user, use fallback data instead
-        setTrendingPages(fallbackPages);
+        setError('Failed to load trending pages');
+        setTrendingPages([]);
       } finally {
         setLoading(false);
       }
@@ -112,8 +88,9 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
             key={page.id}
             className="trending-page-item flex-shrink-0"
             style={{
-              width: '300px',
-              height: '220px'
+              width: '280px',
+              height: '220px',
+              marginRight: '8px'
             }}
           >
             <Link href={`/${page.id}`} className="block h-full">
