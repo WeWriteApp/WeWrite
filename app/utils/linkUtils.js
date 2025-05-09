@@ -87,7 +87,7 @@ export const createReplyAttribution = ({
   userId = "anonymous",
   username = "Missing username"
 }) => {
-  // Ensure we have a valid username - never use "Anonymous"
+  // Ensure we have a valid username - never use "Anonymous" as fallback
   let displayUsername = "Missing username";
 
   if (username &&

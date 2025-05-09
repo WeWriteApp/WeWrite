@@ -179,6 +179,7 @@ export const fetchUsernameForPage = async (pageData) => {
   }
 
   // If we still don't have a valid username, use "Missing username" instead of "Anonymous"
+  // This ensures consistent display across the application
   return displayUsername;
 };
 

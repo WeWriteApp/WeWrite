@@ -158,7 +158,7 @@ export default function NotificationItem({ notification }) {
         "hover:bg-muted"
       )}
       onClick={(e) => {
-        // Only handle click if it's not on the username link
+        // Only handle click if it's not on the username link (prevents double navigation)
         if (!e.defaultPrevented) {
           handleClick();
         }
