@@ -16,8 +16,18 @@ const User = ({ uid }) => {
     });
   }, [uid]);
   return (
-    <Link href={`/user/${uid}`} className="text-text underline">
-      {profile.username}
+    <Link
+      href={`/user/${uid}`}
+      className="text-primary hover:underline font-medium"
+      onClick={(e) => {
+        // Prevent the event from bubbling up to parent elements
+        e.stopPropagation();
+        e.preventDefault();
+        // Navigate programmatically
+        window.location.href = `/user/${uid}`;
+      }}
+    >
+      {profile.username || "Missing username"}
     </Link>
   );
 }

@@ -157,14 +157,19 @@ export default function NotificationItem({ notification }) {
         notification.read ? "bg-background" : "bg-primary/5",
         "hover:bg-muted"
       )}
-      onClick={handleClick}
+      onClick={(e) => {
+        // Only handle click if it's not on the username link
+        if (!e.defaultPrevented) {
+          handleClick();
+        }
+      }}
     >
       <div className="flex justify-between items-start">
         <div className="flex-1">
           {renderNotificationContent()}
         </div>
         <div className="text-xs text-foreground opacity-70 ml-2 whitespace-nowrap">
-          {notification.createdAt && formatDistanceToNow(notification.createdAt, { addSuffix: true })}
+          {notification.createdAt && formatDistanceToNow(notification.createdAt, { addSuffix: true }).replace('about ', '')}
         </div>
       </div>
     </div>

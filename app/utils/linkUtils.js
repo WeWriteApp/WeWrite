@@ -46,13 +46,16 @@ export const createUserLink = ({
   url = null
 }) => {
   // Ensure we have a valid username to display
-  // Trim whitespace and ensure it's not empty or just "Anonymous" or "Missing username"
-  const displayUsername = username &&
-    typeof username === 'string' &&
-    username.trim() !== "" &&
-    username.trim() !== "Anonymous" &&
-    username.trim() !== "Missing username" ?
-    username.trim() : "Missing username";
+  // Never use "Anonymous" - use "Missing username" instead
+  let displayUsername = "Missing username";
+
+  if (username &&
+      typeof username === 'string' &&
+      username.trim() !== "" &&
+      username.trim().toLowerCase() !== "anonymous" &&
+      username.trim() !== "Missing username") {
+    displayUsername = username.trim();
+  }
 
   // Log the username being used
   console.log(`Creating user link with username: ${displayUsername} (original: ${username}), userId: ${userId}`);
@@ -84,13 +87,18 @@ export const createReplyAttribution = ({
   userId = "anonymous",
   username = "Missing username"
 }) => {
-  // Ensure we have a valid username
-  const displayUsername = username &&
-    typeof username === 'string' &&
-    username.trim() !== "" &&
-    username.trim() !== "Anonymous" &&
-    username.trim() !== "Missing username" ?
-    username.trim() : "Missing username";
+  // Ensure we have a valid username - never use "Anonymous"
+  let displayUsername = "Missing username";
+
+  if (username &&
+      typeof username === 'string' &&
+      username.trim() !== "" &&
+      username.trim().toLowerCase() !== "anonymous" &&
+      username.trim() !== "Missing username") {
+    displayUsername = username.trim();
+  }
+
+  console.log(`Creating reply attribution with username: ${displayUsername} (original: ${username})`);
 
   // Create the user link with explicit username
   const userLink = createUserLink({ userId, username: displayUsername });

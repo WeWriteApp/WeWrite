@@ -85,7 +85,7 @@ export const fetchUsernameForPage = async (pageData) => {
       return displayUsername;
     }
 
-    // If still Anonymous, try to get username from RTDB directly
+    // If still not found, try to get username from RTDB directly
     try {
       const { getDatabase, ref, get } = await import('firebase/database');
       const { app } = await import('../firebase/config');
@@ -95,12 +95,12 @@ export const fetchUsernameForPage = async (pageData) => {
 
       if (rtdbSnapshot.exists()) {
         const rtdbUserData = rtdbSnapshot.val();
-        if (rtdbUserData.username) {
+        if (rtdbUserData.username && rtdbUserData.username !== "Anonymous") {
           displayUsername = rtdbUserData.username;
           console.log("Using username from RTDB:", displayUsername);
           return displayUsername;
         }
-        if (rtdbUserData.displayName) {
+        if (rtdbUserData.displayName && rtdbUserData.displayName !== "Anonymous") {
           displayUsername = rtdbUserData.displayName;
           console.log("Using displayName from RTDB:", displayUsername);
           return displayUsername;
@@ -120,11 +120,11 @@ export const fetchUsernameForPage = async (pageData) => {
 
       if (!usersSnapshot.empty) {
         const userData = usersSnapshot.docs[0].data();
-        if (userData.username) {
+        if (userData.username && userData.username !== "Anonymous") {
           displayUsername = userData.username;
           console.log("Found username in users collection:", displayUsername);
           return displayUsername;
-        } else if (userData.displayName) {
+        } else if (userData.displayName && userData.displayName !== "Anonymous") {
           displayUsername = userData.displayName;
           console.log("Found displayName in users collection:", displayUsername);
           return displayUsername;
@@ -138,7 +138,7 @@ export const fetchUsernameForPage = async (pageData) => {
     try {
       const { auth } = await import('../firebase/auth');
       if (auth.currentUser && auth.currentUser.uid === pageData.userId) {
-        if (auth.currentUser.displayName) {
+        if (auth.currentUser.displayName && auth.currentUser.displayName !== "Anonymous") {
           displayUsername = auth.currentUser.displayName;
           console.log("Using displayName from auth:", displayUsername);
           return displayUsername;
@@ -147,10 +147,38 @@ export const fetchUsernameForPage = async (pageData) => {
     } catch (authError) {
       console.error("Error fetching username from auth:", authError);
     }
+
+    // If we still don't have a username, try one more approach with the users collection
+    try {
+      const { collection, getDocs, query, where, limit } = await import('firebase/firestore');
+      const { db } = await import('../firebase/database');
+
+      // Try to find any document in the users collection with this userId
+      const usersQuery = query(
+        collection(db, "users"),
+        where("uid", "==", pageData.userId),
+        limit(1)
+      );
+
+      const usersSnapshot = await getDocs(usersQuery);
+
+      if (!usersSnapshot.empty) {
+        // Get the document ID as a fallback username
+        const docId = usersSnapshot.docs[0].id;
+        if (docId && docId !== "Anonymous") {
+          displayUsername = docId;
+          console.log("Using document ID as username:", displayUsername);
+          return displayUsername;
+        }
+      }
+    } catch (error) {
+      console.error("Error in final username fallback attempt:", error);
+    }
   } catch (error) {
     console.error("Error in fetchUsernameForPage:", error);
   }
 
+  // If we still don't have a valid username, use "Missing username" instead of "Anonymous"
   return displayUsername;
 };
 
