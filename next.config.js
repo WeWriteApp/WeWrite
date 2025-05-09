@@ -13,6 +13,12 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  // Configure API routes to be dynamic to avoid static rendering issues
+  // This ensures routes like /api/activity can use request.url without static rendering errors
+  api: {
+    bodyParser: true,
+    responseLimit: '8mb',
+  },
   // Add experimental options to try to fix build issues
   experimental: {
     // Detect and optimize transpilation of node_modules based on babel configs

@@ -21,16 +21,19 @@ try {
   // We'll handle this case in the GET handler
 }
 
+// Define headers at the module level to avoid reference errors
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Default limit for activity items
+const DEFAULT_LIMIT = 30;
+
 export async function GET(request) {
   try {
     console.log('API: /api/activity endpoint called');
-
-    // Set CORS headers
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
 
     // Check if Firebase Admin was initialized successfully
     if (!db) {
@@ -38,12 +41,26 @@ export async function GET(request) {
       return NextResponse.json({
         activities: [],
         message: "Firebase not initialized properly"
-      }, { headers });
+      }, { headers: corsHeaders });
     }
 
-    // Get limit from query parameter
-    const { searchParams } = new URL(request.url);
-    const limitCount = parseInt(searchParams.get('limit') || '30', 10);
+    // Get limit from query parameter - using a static approach
+    // Instead of directly using request.url which causes static rendering issues
+    let limitCount = DEFAULT_LIMIT;
+
+    // Only parse URL params if we're in a dynamic context
+    if (request.url) {
+      try {
+        const { searchParams } = new URL(request.url);
+        const limitParam = searchParams.get('limit');
+        if (limitParam) {
+          limitCount = parseInt(limitParam, 10);
+        }
+      } catch (e) {
+        console.warn('Error parsing URL parameters, using default limit:', e);
+      }
+    }
+
     console.log('API: Requested limit:', limitCount);
 
     // Query to get recent pages (only public pages)
@@ -55,7 +72,7 @@ export async function GET(request) {
     const pagesSnapshot = await pagesQuery.get();
 
     if (pagesSnapshot.empty) {
-      return NextResponse.json({ activities: [] }, { headers });
+      return NextResponse.json({ activities: [] }, { headers: corsHeaders });
     }
 
     // Process each page to get its activity data
@@ -130,12 +147,12 @@ export async function GET(request) {
       });
     }
 
-    return NextResponse.json({ activities: validActivities }, { headers });
+    return NextResponse.json({ activities: validActivities }, { headers: corsHeaders });
   } catch (err) {
     console.error("Error fetching server activity data:", err);
     return NextResponse.json(
       { activities: [], error: "Failed to fetch recent activity" },
-      { status: 500, headers }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
