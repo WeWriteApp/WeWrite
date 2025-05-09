@@ -196,7 +196,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
     }
 
     if (sections[0] === 'user' && sections.length > 1) {
-      return `User Profile: ${sections[1]}`;
+      return `User: ${sections[1]}`;
     }
 
     if (sections[0] === 'g' && sections.length > 1) {

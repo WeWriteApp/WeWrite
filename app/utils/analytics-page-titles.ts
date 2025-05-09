@@ -10,6 +10,7 @@
  */
 
 import { getPageMetadata, getCachedPageTitle } from '../firebase/database';
+import { auth } from '../firebase/auth';
 
 // Cache for page titles to avoid excessive database queries
 const pageTitleCache = new Map<string, string>();
@@ -37,7 +38,7 @@ export function extractPageIdFromPath(path: string): string | null {
 // Map of static page routes to descriptive titles
 export const PAGE_TITLE_MAP: Record<string, string> = {
   // Main navigation
-  '/': 'Home Page',
+  // Note: Home page ('/') is handled dynamically based on auth state
   '/new': 'New Page',
   '/activity': 'Activity Feed',
   '/search': 'Search Page',
@@ -81,7 +82,24 @@ export function getAnalyticsPageTitle(
   searchParams?: URLSearchParams | null,
   documentTitle?: string
 ): string {
-  // 1. Check if we have a predefined title for this path
+  // Special case for home page - differentiate between logged-in and logged-out states
+  if (pathname === '/') {
+    // Check Firebase auth
+    const currentUser = auth.currentUser;
+
+    // Also check localStorage as a fallback in case Firebase auth isn't fully initialized
+    const hasLocalStorageAuth = typeof window !== 'undefined' &&
+      (localStorage.getItem('authState') === 'authenticated' ||
+       document.cookie.includes('authenticated=true'));
+
+    if (!currentUser && !hasLocalStorageAuth) {
+      return "Landing Page (Logged-out Home)";
+    } else {
+      return "Home Page (Logged-in Dashboard)";
+    }
+  }
+
+  // For other paths, check if we have a predefined title
   if (PAGE_TITLE_MAP[pathname]) {
     return PAGE_TITLE_MAP[pathname];
   }
@@ -92,12 +110,12 @@ export function getAnalyticsPageTitle(
   if (pathname.startsWith('/user/')) {
     const username = document.querySelector('h1')?.textContent;
     if (username) {
-      return `User Profile: ${username}`;
+      return `User: ${username}`;
     }
 
     // Extract username from URL as fallback
     const usernameFromPath = pathname.split('/').pop();
-    return `User Profile: ${usernameFromPath}`;
+    return `User: ${usernameFromPath}`;
   }
 
   // Group pages
@@ -133,13 +151,13 @@ export function getAnalyticsPageTitle(
 
     // If we're in a browser environment, try to fetch the title asynchronously
     if (typeof window !== 'undefined') {
-      // Return the ID temporarily but trigger an async fetch
+      // Trigger an async fetch but return a generic title instead of the ID
       fetchAndCachePageTitle(pageId);
-      return `Page: ${pageId}`;
+      return `Page: Content Page`;
     }
 
-    // Fallback to just the ID
-    return `Page: ${pageId}`;
+    // Fallback to a generic title instead of showing the ID
+    return `Page: Content Page`;
   }
 
   // 3. Use document title if available and meaningful
@@ -214,6 +232,21 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
 
         console.log('Updated analytics with fetched page title:', pageTitle);
       }
+    } else {
+      // Even if we couldn't get a good title, update GA with a generic title
+      // to avoid showing page IDs in analytics
+      if (typeof window !== 'undefined' && window.gtag) {
+        const pathname = window.location.pathname;
+        const pageTitle = `Page: Content Page`;
+
+        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+          page_path: pathname,
+          page_title: pageTitle,
+          page_location: window.location.href
+        });
+
+        console.log('Updated analytics with generic page title to avoid showing ID');
+      }
     }
   } catch (error) {
     console.error('Error fetching page title for analytics:', error);
@@ -245,5 +278,6 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
     console.error('Error fetching page title for analytics:', error);
   }
 
-  return `Page: ${pageId}`;
+  // Return a generic title instead of showing the ID
+  return `Page: Content Page`;
 }
