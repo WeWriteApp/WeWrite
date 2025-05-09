@@ -1,22 +1,45 @@
 import { NextResponse } from 'next/server';
 import { initAdmin, admin } from '../../firebase/admin';
 
+// Add export for dynamic route handling to prevent static build errors
+export const dynamic = 'force-dynamic';
+
 // Initialize Firebase Admin and get Firestore instance
-const app = initAdmin();
-const db = admin.firestore();
+let app;
+let db;
+
+try {
+  app = initAdmin();
+  db = admin.firestore();
+} catch (error) {
+  console.warn('Failed to initialize Firebase Admin for trending API:', error.message);
+}
 
 export async function GET(request) {
-  try {
-    // Set CORS headers
-    const headers = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
+  // Set CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
 
-    // Get limit from query parameter
-    const { searchParams } = new URL(request.url);
-    const limitCount = parseInt(searchParams.get('limit') || '10', 10);
+  // Get limit from query parameter
+  const { searchParams } = new URL(request.url);
+  const limitCount = parseInt(searchParams.get('limit') || '10', 10);
+
+  // Check if Firebase credentials are missing
+  const useFirebase = db && app;
+
+  // If Firebase credentials are missing, return empty array instead of mock data
+  if (!useFirebase) {
+    console.log('Firebase credentials missing - returning empty trending pages array');
+    return NextResponse.json({
+      trendingPages: [],
+      error: "Firebase credentials not available"
+    }, { headers });
+  }
+
+  try {
 
     // Get current date and time
     const now = new Date();
@@ -194,6 +217,9 @@ export async function GET(request) {
     const errorMessage = process.env.NODE_ENV === 'development'
       ? `Failed to load trending pages: ${error.message}`
       : "Failed to load trending pages";
+
+    // Return empty array with error message, never use mock data
+    console.log('Returning empty array for trending pages due to error:', error.message);
 
     // Return empty array with error message
     return NextResponse.json(
