@@ -50,37 +50,58 @@ export const initAdmin = () => {
           });
 
           // Create service account with fallbacks for different environment variable names
-          const serviceAccount = {
+          const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82';
+
+          // Check if we have the required service account credentials
+          const hasServiceAccountCreds = process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL;
+
+          // Only attempt to use service account if we have the required credentials
+          const serviceAccount = hasServiceAccountCreds ? {
             type: 'service_account',
-            project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
+            project_id: projectId,
             private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'key-id',
-            private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n') || 'dummy-key',
-            client_email: process.env.FIREBASE_CLIENT_EMAIL || 'dummy@example.com',
+            private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
             client_id: process.env.FIREBASE_CLIENT_ID || 'client-id',
             auth_uri: 'https://accounts.google.com/o/oauth2/auth',
             token_uri: 'https://oauth2.googleapis.com/token',
             auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
             client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/dummy'
-          };
+          } : null;
 
           // Get database URL with fallback
           const databaseURL = process.env.FIREBASE_DATABASE_URL ||
                              process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
-                             `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`;
+                             `https://${projectId}-default-rtdb.firebaseio.com`;
 
-          app = admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            databaseURL: databaseURL
-          });
+          // Initialize with service account if available, otherwise use application default credentials
+          if (hasServiceAccountCreds) {
+            app = admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount),
+              databaseURL: databaseURL
+            });
+          } else {
+            // Fallback to application default credentials or just project ID
+            app = admin.initializeApp({
+              projectId: projectId,
+              databaseURL: databaseURL
+            });
+          }
 
-          console.log(`Firebase Admin initialized successfully with project: ${serviceAccount.project_id}`);
+          console.log(`Firebase Admin initialized successfully with project: ${projectId}`);
         } catch (error) {
           console.error('Error initializing Firebase Admin with service account:', error);
 
           // Fallback initialization for Vercel preview environments
           console.warn('Attempting fallback initialization for Vercel preview...');
+          const fallbackProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'wewrite-ccd82';
+          const fallbackDbUrl = process.env.FIREBASE_DATABASE_URL ||
+                               process.env.NEXT_PUBLIC_FIREBASE_DB_URL ||
+                               `https://${fallbackProjectId}-default-rtdb.firebaseio.com`;
+
           app = admin.initializeApp({
-            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'wewrite-ccd82'
+            projectId: fallbackProjectId,
+            databaseURL: fallbackDbUrl
           });
         }
       }

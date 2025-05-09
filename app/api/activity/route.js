@@ -2,11 +2,24 @@ import { NextResponse } from 'next/server';
 import { initAdmin, admin } from '../../firebase/admin';
 
 // Initialize Firebase Admin
-initAdmin();
+let db, rtdb;
+try {
+  initAdmin();
 
-// Get Firestore and RTDB instances
-const db = admin.firestore();
-const rtdb = admin.database();
+  // Get Firestore and RTDB instances
+  db = admin.firestore();
+
+  // Try to get RTDB instance, but handle case where it might not be available
+  try {
+    rtdb = admin.database();
+  } catch (dbError) {
+    console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
+    rtdb = null;
+  }
+} catch (error) {
+  console.error('Error initializing Firebase Admin in activity API route:', error);
+  // We'll handle this case in the GET handler
+}
 
 export async function GET(request) {
   try {
@@ -18,6 +31,15 @@ export async function GET(request) {
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     };
+
+    // Check if Firebase Admin was initialized successfully
+    if (!db) {
+      console.warn('API: Firebase Firestore not available, returning empty activity list');
+      return NextResponse.json({
+        activities: [],
+        message: "Firebase not initialized properly"
+      }, { headers });
+    }
 
     // Get limit from query parameter
     const { searchParams } = new URL(request.url);
@@ -132,14 +154,18 @@ async function getUsernameById(userId) {
       username = userData.username || userData.displayName;
     }
 
-    // Fallback to RTDB if Firestore doesn't have the username
-    if (!username) {
-      const userRef = rtdb.ref(`users/${userId}`);
-      const snapshot = await userRef.once('value');
+    // Fallback to RTDB if Firestore doesn't have the username and RTDB is available
+    if (!username && rtdb) {
+      try {
+        const userRef = rtdb.ref(`users/${userId}`);
+        const snapshot = await userRef.once('value');
 
-      if (snapshot.exists()) {
-        const userData = snapshot.val();
-        username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
+        }
+      } catch (rtdbError) {
+        console.warn(`Warning: Could not fetch user data from RTDB for user ${userId}:`, rtdbError.message);
       }
     }
 
