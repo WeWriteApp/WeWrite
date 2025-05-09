@@ -23,7 +23,7 @@ const User = ({ uid }) => {
         // Prevent the event from bubbling up to parent elements
         e.stopPropagation();
         e.preventDefault();
-        // Navigate programmatically
+        // Navigate programmatically to user profile
         window.location.href = `/user/${uid}`;
       }}
     >
