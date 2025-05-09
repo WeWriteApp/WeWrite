@@ -10,7 +10,7 @@ import {
   ProfilePagesContext,
 } from "../providers/ProfilePageProvider";
 import { useAuth } from "../providers/AuthProvider";
-import { Loader, Settings, ChevronLeft, Heart, Users, Eye } from "lucide-react";
+import { Loader, Settings, ChevronLeft, Heart, Users, Eye, Share2 } from "lucide-react";
 import SupporterBadge from "./SupporterBadge";
 import { SupporterIcon } from "./SupporterIcon";
 import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
@@ -201,8 +201,53 @@ const SingleProfileView = ({ profile }) => {
             </Link>
           </div>
 
-          {/* Settings button - only visible for current user */}
-          <div className="flex-1 flex justify-end">
+          {/* Right side buttons */}
+          <div className="flex-1 flex justify-end gap-2">
+            {/* Share button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => {
+                // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
+                const profileUrl = window.location.href;
+                const shareText = `${username}'s profile on @WeWriteApp ${profileUrl}`;
+
+                // Check if the Web Share API is available
+                if (navigator.share) {
+                  navigator.share({
+                    title: `${username} on WeWrite`,
+                    text: shareText,
+                    url: profileUrl,
+                  }).catch((error) => {
+                    // Silent error handling - no toast
+                    console.error('Error sharing:', error);
+                  });
+                } else {
+                  // Create a Twitter share URL as fallback
+                  try {
+                    // First try to open Twitter share dialog
+                    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                    window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
+                  } catch (error) {
+                    console.error('Error opening Twitter share:', error);
+
+                    // If that fails, copy the URL to clipboard
+                    try {
+                      navigator.clipboard.writeText(profileUrl);
+                    } catch (clipboardError) {
+                      console.error('Error copying link:', clipboardError);
+                    }
+                  }
+                }
+              }}
+              title="Share"
+            >
+              <Share2 className="h-4 w-4" />
+              <span>Share</span>
+            </Button>
+
+            {/* Settings button - only visible for current user */}
             {isCurrentUser && (
               <Button
                 variant="outline"
@@ -214,7 +259,6 @@ const SingleProfileView = ({ profile }) => {
                 <span>Settings</span>
               </Button>
             )}
-            {!isCurrentUser && <div className="w-8" />}
           </div>
         </div>
 

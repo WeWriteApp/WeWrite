@@ -153,13 +153,13 @@ export default function TrendingPagesSection({ limit = 3 }) {
             >
               <Link href={`/${page.id}`} className="block h-full">
                 <Card className="h-full cursor-pointer flex flex-col justify-between border-0 shadow-none hover:shadow-none" style={{ transform: 'none' }}>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg mb-2 break-words">
+                  <CardHeader className="p-3">
+                    <CardTitle className="text-lg mb-1 break-words">
                       <PillLink href={`/${page.id}`}>
                         {page.title || 'Untitled'}
                       </PillLink>
                     </CardTitle>
-                    <CardDescription className="text-xs mt-1">
+                    <CardDescription className="text-xs">
                       <span className="text-foreground">by{" "}</span>
                       <Link
                         href={`/user/${page.userId}`}
@@ -170,7 +170,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
                       </Link>
                     </CardDescription>
                   </CardHeader>
-                  <div className="px-4 pb-4 pt-0 mt-auto">
+                  <div className="px-3 pb-3 pt-0 mt-auto">
                     <div className="flex justify-between items-center">
                       <div className="font-medium text-muted-foreground">
                         {page.views.toLocaleString()} views in 24h
@@ -185,7 +185,7 @@ export default function TrendingPagesSection({ limit = 3 }) {
                         />
                       </div>
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
               </Link>
             </motion.div>

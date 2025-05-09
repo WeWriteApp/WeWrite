@@ -1,17 +1,21 @@
 import * as admin from 'firebase-admin';
-import { getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getDatabase } from 'firebase-admin/database';
+import { getAuth } from 'firebase-admin/auth';
 
 // Singleton pattern to avoid re-initialization
 let app;
+let firestoreInstance;
+let rtdbInstance;
+let authInstance;
 
-export const initAdmin = () => {
+function initAdminServer() {
   // Check if any Firebase apps have been initialized
   if (admin.apps.length === 0) {
     try {
       // For development environment, use a service account or default credentials
       if (process.env.NODE_ENV === 'development') {
         // For local development, we'll use a simple implementation
-        // that allows API routes to work without throwing errors
         try {
           const serviceAccount = {
             type: 'service_account',
@@ -92,10 +96,40 @@ export const initAdmin = () => {
     app = admin.app();
   }
 
-  return app;
-};
+  // Initialize services if they don't exist
+  if (!firestoreInstance) firestoreInstance = getFirestore();
 
-// Export admin for convenience
-export { admin };
+  // Only initialize RTDB if we have a valid app with databaseURL
+  if (!rtdbInstance) {
+    try {
+      // Check if the app has a databaseURL configured
+      const options = app?.options;
+      if (options && options.databaseURL) {
+        rtdbInstance = getDatabase();
+      } else {
+        // Create a dummy RTDB instance or set to null
+        console.warn('Firebase Admin: No databaseURL provided, RTDB will not be available');
+        rtdbInstance = null;
+      }
+    } catch (error) {
+      console.error('Error initializing RTDB:', error);
+      rtdbInstance = null;
+    }
+  }
 
-export default { initAdmin };
+  if (!authInstance) authInstance = getAuth();
+
+  return {
+    app,
+    db: firestoreInstance,
+    rtdb: rtdbInstance,
+    auth: authInstance
+  };
+}
+
+// Initialize and export the services
+const adminServices = initAdminServer();
+
+export const db = adminServices.db;
+export const rtdb = adminServices.rtdb;
+export const auth = adminServices.auth;

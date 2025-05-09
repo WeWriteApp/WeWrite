@@ -470,8 +470,16 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       event.preventDefault();
       const { selection } = editor;
 
+      console.log("@ key pressed, showing link editor menu");
+
+      // Always show the link editor menu, even if there's no selection
       if (selection) {
         showLinkEditorMenu(editor, selection);
+      } else {
+        // If no selection, position at the end
+        const end = Editor.end(editor, []);
+        Transforms.select(editor, end);
+        showLinkEditorMenu(editor, editor.selection);
       }
     }
 
@@ -544,14 +552,22 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const openLinkEditor = (element, path) => {
+    // Make sure we have a valid element
+    if (!element) {
+      console.warn("No element provided to openLinkEditor");
+      return;
+    }
+
     setSelectedLinkElement(element);
-    setSelectedLinkPath(path);
-    // Pass initial values to the LinkEditor
+    setSelectedLinkPath(path); // path can be null, that's okay
+
+    // Pass initial values to the LinkEditor with safe access to properties
     setInitialLinkValues({
-      text: element.children[0]?.text || "",
+      text: element.children && element.children[0] ? element.children[0].text || "" : "",
       pageId: element.pageId || null,
       pageTitle: element.pageTitle || ""
     });
+
     setShowLinkEditor(true);
   };
 
@@ -561,17 +577,22 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       const displayText = item.displayText || item.url;
 
       if (selectedLinkElement && selectedLinkPath) {
-        // Edit existing link
-        Transforms.setNodes(
-          editor,
-          {
-            type: "link",
-            url: item.url,
-            children: [{ text: displayText }],
-            isExternal: true
-          },
-          { at: selectedLinkPath }
-        );
+        try {
+          // Edit existing link
+          Transforms.setNodes(
+            editor,
+            {
+              type: "link",
+              url: item.url,
+              children: [{ text: displayText }],
+              isExternal: true
+            },
+            { at: selectedLinkPath }
+          );
+        } catch (error) {
+          console.error("Error updating existing link:", error);
+          // Fall through to insert a new link as fallback
+        }
       } else {
         // Insert new external link
         const link = {
@@ -603,17 +624,22 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       const formattedTitle = formatPageTitle(item.displayText || item.title);
 
       if (selectedLinkElement && selectedLinkPath) {
-        // Edit existing link
-    ansforms.setNodes(
-          editor,
-          {
-            url: `/pages/${item.id}`,
-            children: [{ text: formattedTitle }],
-            pageId: item.id,
-            pageTitle: item.title // Store the original page title for reference
-          },
-          { at: selectedLinkPath }
-        );
+        try {
+          // Edit existing link
+          Transforms.setNodes(
+            editor,
+            {
+              url: `/pages/${item.id}`,
+              children: [{ text: formattedTitle }],
+              pageId: item.id,
+              pageTitle: item.title // Store the original page title for reference
+            },
+            { at: selectedLinkPath }
+          );
+        } catch (error) {
+          console.error("Error updating existing page link:", error);
+          // Fall through to insert a new link as fallback
+        }
       } else {
         // Insertink
         const link = {
@@ -647,8 +673,16 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     setSelectedLinkPath(null);
     setInitialLinkValues({});
 
-    // Focus the editor
-    ReactEditor.focus(editor);
+    // Focus the editor with error handling
+    try {
+      if (ReactEditor && typeof ReactEditor.focus === 'function') {
+        ReactEditor.focus(editor);
+      } else {
+        console.warn("ReactEditor.focus is not available");
+      }
+    } catch (error) {
+      console.error("Error focusing editor:", error);
+    }
 
     // Hide the dropdown
     setShowLinkEditor(false);
@@ -716,32 +750,51 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   // Force editor to use the initialValue
   useEffect(() => {
     try {
-      // Reset the editor's children to match initialValue
-      editor.children = initialValue;
-      // Force a re-render
-      editor.onChange();
-      console.log("Forced editor to use initialValue:", JSON.stringify(initialValue, null, 2));
+      // Only proceed if editor is available
+      if (editor && editor.children) {
+        // Reset the editor's children to match initialValue
+        editor.children = Array.isArray(initialValue) && initialValue.length > 0
+          ? initialValue
+          : [{ type: "paragraph", children: [{ text: "" }] }];
+
+        // Force a re-render if onChange is available
+        if (typeof editor.onChange === 'function') {
+          editor.onChange();
+        }
+        console.log("Forced editor to use initialValue:", JSON.stringify(initialValue, null, 2));
+      }
     } catch (error) {
       console.error("Error forcing editor to use initialValue:", error);
     }
   }, [editor, initialValue]);
 
+  // Make sure we have a valid editor and initialValue
+  const validEditor = editor || createEditor();
+  const validInitialValue = Array.isArray(initialValue) && initialValue.length > 0
+    ? initialValue
+    : [{ type: "paragraph", children: [{ text: "" }] }];
+
   return (
     <LineSettingsProvider>
       <div
         className="relative rounded-lg bg-background"
-        style={{ minHeight: '300px' }} // Add minimum height to prevent layout shifts
+        style={{
+          height: '300px',  // Fixed height to prevent layout shifts
+          overflow: 'auto', // Add scrolling for content that exceeds the height
+          display: 'flex',  // Use flexbox for better content distribution
+          flexDirection: 'column'
+        }}
       >
         <Slate
-          editor={editor}
-          initialValue={initialValue}
+          editor={validEditor}
+          initialValue={validInitialValue}
           onChange={onChange}
         >
-          <div className="flex-grow">
-            <div className="relative">
+          <div className="flex-grow flex flex-col">
+            <div className="relative flex-grow">
               <EditorContent
                 ref={editableRef}
-                editor={editor}
+                editor={validEditor}
                 handleKeyDown={handleKeyDown}
                 renderElement={renderElement}
               />
@@ -983,10 +1036,23 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
   const handleClick = (e) => {
     e.preventDefault();
     try {
-      const path = ReactEditor.findPath(editor, element);
-      openLinkEditor(element, path);
+      // Check if ReactEditor and findPath are available
+      if (ReactEditor && typeof ReactEditor.findPath === 'function') {
+        const path = ReactEditor.findPath(editor, element);
+        openLinkEditor(element, path);
+      } else {
+        console.warn("ReactEditor.findPath is not available");
+        // Still try to open the link editor with just the element
+        openLinkEditor(element, null);
+      }
     } catch (error) {
       console.error("Error handling link click:", error);
+      // Fallback: still try to open the link editor with just the element
+      try {
+        openLinkEditor(element, null);
+      } catch (fallbackError) {
+        console.error("Error in fallback link handling:", fallbackError);
+      }
     }
   };
 
@@ -1033,6 +1099,8 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
   const [externalUrl, setExternalUrl] = useState("");
   const [showAuthor, setShowAuthor] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
+  // Determine if we're editing an existing link or creating a new one
+  const isEditing = !!initialPageId || !!initialText;
 
   // Track initial state for change detection
   const initialState = React.useRef({
@@ -1087,6 +1155,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
             <button
               onClick={handleClose}
               className="p-1 rounded-full hover:bg-muted transition-colors"
+              aria-label="Close"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1204,21 +1273,44 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
   const { lineMode } = useLineSettings();
   const [selectedParagraph, setSelectedParagraph] = useState(null);
 
+  // Get the current Slate editor from context instead of props
+  // This ensures we're using the editor from the Slate context
+  let slateEditor;
+  try {
+    slateEditor = useSlate();
+  } catch (error) {
+    console.warn("Could not get editor from Slate context:", error);
+    slateEditor = null;
+  }
+
+  // Use the editor from context if available, otherwise fall back to props
+  const activeEditor = slateEditor || editor;
+
+  // If we don't have an editor at all, render a fallback
+  if (!activeEditor) {
+    console.warn("No editor available in EditorContent");
+    return (
+      <div className="p-4 border border-dashed border-muted-foreground rounded-md">
+        <p className="text-muted-foreground">Editor not available</p>
+      </div>
+    );
+  }
+
   // Simplified selection tracking
   useEffect(() => {
     // Only track selection when editor is available
-    if (!editor) return;
+    if (!activeEditor) return;
 
     const handleSelectionChange = () => {
       try {
         // If no selection, clear the selected paragraph
-        if (!editor.selection) {
+        if (!activeEditor.selection) {
           setSelectedParagraph(null);
           return;
         }
 
         // Get the path of the current node
-        const nodeEntry = Editor.above(editor, {
+        const nodeEntry = Editor.above(activeEditor, {
           match: n => !Editor.isEditor(n) && SlateElement.isElement(n),
         });
 
@@ -1244,7 +1336,7 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
     };
-  }, [editor]);
+  }, [activeEditor]);
 
   // Get styles based on line mode
   const getLineModeStyles = () => {
@@ -1282,7 +1374,11 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
   return (
     <div
       className={`p-2 ${getLineModeStyles()} w-full`}
-      style={{ minHeight: '300px' }} // Ensure consistent height
+      style={{
+        height: '100%', // Fill the parent container
+        position: 'relative',
+        overflow: 'auto' // Enable scrolling for content
+      }}
     >
       <Editable
         ref={editableRef}
@@ -1295,14 +1391,25 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
           // Only handle key events if this element or its children have focus
           if (document.activeElement === editableRef.current ||
               editableRef.current?.contains(document.activeElement)) {
-            handleKeyDown(event, editor);
+            handleKeyDown(event, activeEditor);
           }
         }}
-        className="outline-none min-h-[300px]"
+        className="outline-none h-full"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          padding: '8px'
+        }}
       />
     </div>
   );
 });
+
+// Add display name for debugging
+EditorContent.displayName = 'EditorContent';
 
 const Leaf = ({ attributes, children, leaf }) => {
   return (

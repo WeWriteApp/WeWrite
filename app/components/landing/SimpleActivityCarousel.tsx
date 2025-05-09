@@ -1,36 +1,29 @@
 "use client";
 
 import React, { useContext } from 'react';
-import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
-import ActivityCard from '../ActivityCard';
+import { Info } from 'lucide-react';
 import { AuthContext } from '../../providers/AuthProvider';
 import ContentCarousel from './ContentCarousel';
-import { Info } from 'lucide-react';
+import ActivityCard from '../ActivityCard';
+import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
 
 /**
- * ActivityCarousel component
- *
- * A scrolling ticker/carousel that displays recent activity cards
- * using the reusable ContentCarousel component.
+ * Simple client-side component that fetches and renders recent activity
+ * Uses the same hook as the logged-in state
  */
-export default function ActivityCarousel() {
-  const { activities, loading, error } = useStaticRecentActivity(30, null, false);
+export default function SimpleActivityCarousel({ limit = 30 }: { limit?: number }) {
+  const { activities, loading, error } = useStaticRecentActivity(limit);
   const { user } = useContext(AuthContext);
 
-  // Add console logs for debugging
-  console.log('ActivityCarousel:', {
-    activitiesCount: activities?.length || 0,
-    loading,
-    error: error ? (typeof error === 'string' ? error : JSON.stringify(error)) : null
-  });
+  // Removed console logs for better performance
 
-  // Error message for non-authenticated users
-  const errorMessage = !user && error ? (
-    <div className="flex items-center gap-2">
-      <Info className="h-4 w-4" />
-      <p>Sign in to see recent activity from all pages</p>
-    </div>
-  ) : error;
+  // Error message for non-authenticated users or fallback error
+  let errorMessage = null;
+
+  // Only show error if it's not related to authentication
+  if (error && error !== "Failed to fetch recent activity") {
+    errorMessage = error;
+  }
 
   return (
     <ContentCarousel

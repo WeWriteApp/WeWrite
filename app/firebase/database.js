@@ -1050,7 +1050,7 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
 // Add a new function to fetch only page metadata (title, lastModified, etc.)
 export async function getPageMetadata(pageId) {
   try {
-    const { doc, getDoc } = await import('firebase/firestore');
+    const { doc, getDoc, collection } = await import('firebase/firestore');
     const pageRef = doc(db, 'pages', pageId);
     const pageSnapshot = await getDoc(pageRef);
 
@@ -1063,7 +1063,7 @@ export async function getPageMetadata(pageId) {
       ...pageSnapshot.data()
     };
 
-    // If we have a currentVersion, fetch it to get the content for OG image
+    // If we have a currentVersion, fetch it to get the content for OG image and description
     if (pageData.currentVersion) {
       try {
         const versionsRef = collection(db, 'pages', pageId, 'versions');
@@ -1072,6 +1072,36 @@ export async function getPageMetadata(pageId) {
 
         if (versionSnapshot.exists()) {
           pageData.content = versionSnapshot.data().content;
+
+          // Extract the first paragraph of content for description
+          try {
+            const contentNodes = JSON.parse(versionSnapshot.data().content);
+            if (Array.isArray(contentNodes) && contentNodes.length > 0) {
+              // Find the first paragraph with actual text content
+              const firstTextParagraph = contentNodes.find(node =>
+                node.type === 'paragraph' &&
+                node.children &&
+                node.children.some(child => child.text && child.text.trim().length > 0)
+              );
+
+              if (firstTextParagraph) {
+                // Extract text from all children
+                const paragraphText = firstTextParagraph.children
+                  .map(child => child.text || '')
+                  .join('')
+                  .trim();
+
+                if (paragraphText.length > 0) {
+                  // Limit description to ~160 characters for SEO best practices
+                  pageData.description = paragraphText.length > 160
+                    ? paragraphText.substring(0, 157) + '...'
+                    : paragraphText;
+                }
+              }
+            }
+          } catch (parseError) {
+            console.error('Error parsing content for description:', parseError);
+          }
         }
       } catch (versionError) {
         console.error('Error fetching page content for OG image:', versionError);

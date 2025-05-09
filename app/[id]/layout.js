@@ -5,22 +5,31 @@ export async function generateMetadata({ params }) {
   try {
     const id = params.id;
     const metadata = await getPageMetadata(id);
-    
+
     if (metadata) {
+      // Format: "[pagename] by [username] on WeWrite - The social wiki where every page is a fundraiser"
+      const pageTitle = metadata.title || 'Untitled';
+      const username = metadata.username || 'Anonymous';
+      const formattedTitle = `${pageTitle} by ${username} on WeWrite - The social wiki where every page is a fundraiser`;
+
+      // Use the extracted description from the first paragraph, or a default
+      const description = metadata.description ||
+        'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.';
+
       return {
-        title: metadata.title || 'WeWrite',
-        description: metadata.description || 'A collaborative writing platform',
+        title: formattedTitle,
+        description: description,
         openGraph: {
-          title: metadata.title || 'WeWrite',
-          description: metadata.description || 'A collaborative writing platform',
+          title: formattedTitle,
+          description: description,
           url: `${process.env.NEXT_PUBLIC_BASE_URL}/${id}`,
           siteName: 'WeWrite',
           type: 'article',
         },
         twitter: {
           card: 'summary_large_image',
-          title: metadata.title || 'WeWrite',
-          description: metadata.description || 'A collaborative writing platform',
+          title: formattedTitle,
+          description: description,
         }
       };
     }
@@ -29,8 +38,8 @@ export async function generateMetadata({ params }) {
   }
 
   return {
-    title: 'WeWrite',
-    description: 'A collaborative writing platform',
+    title: 'WeWrite - The social wiki where every page is a fundraiser',
+    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.',
   };
 }
 

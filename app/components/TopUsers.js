@@ -233,7 +233,7 @@ const TopUsers = () => {
       <div className="space-y-4">
         {/* Header is now provided by SectionTitle in the parent component */}
 
-        <div className="border border-theme-medium rounded-lg overflow-hidden">
+        <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
           {loading && (
             <UserListSkeleton />
           )}
@@ -264,11 +264,11 @@ const TopUsers = () => {
           )}
 
           {!loading && !error && allTimeUsers.length > 0 && (
-            <Table className="table-compact">
+            <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead className="text-right cursor-pointer" onClick={toggleSortDirection}>
+                  <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
+                  <TableHead className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap cursor-pointer" onClick={toggleSortDirection}>
                     <div className="flex items-center justify-end gap-1">
                       Pages
                       {sortDirection === "desc" ? (
@@ -284,10 +284,10 @@ const TopUsers = () => {
                 {sortedUsers.map((user) => (
                   <TableRow
                     key={user.id}
-                    className="cursor-pointer hover:bg-accent/5 transition-colors"
+                    className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={() => window.location.href = `/user/${user.id}`}
                   >
-                    <TableCell>
+                    <TableCell className="py-3 px-4">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -314,13 +314,24 @@ const TopUsers = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </TableCell>
-                    <TableCell className="text-right font-medium">{user.pageCount}</TableCell>
+                    <TableCell className="py-3 px-4 text-right font-medium">{user.pageCount}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           )}
         </div>
+
+        {/* View All button */}
+        {!loading && !error && allTimeUsers.length > 0 && (
+          <div className="flex justify-center mt-4">
+            <Link href="/users">
+              <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                View all users
+              </button>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

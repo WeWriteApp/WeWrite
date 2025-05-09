@@ -86,10 +86,21 @@ export default function UserPage({ params }) {
     if (profile && profile.username) {
       // Send pageview/event to Google Analytics with username
       if (typeof window !== 'undefined' && window.gtag) {
+        // Track the profile view event with username
         window.gtag('event', 'view_user_profile', {
-          username: profile.username,
+          username: profile.username || 'Missing username',
           user_id: profile.uid,
           page_path: window.location.pathname,
+          page_title: `User Profile: ${profile.username || profile.uid}`,
+          profile_owner: profile.uid
+        });
+
+        // Update the page title in Google Analytics to include the username
+        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID, {
+          page_path: window.location.pathname,
+          page_title: `User Profile: ${profile.username || 'Missing username'}`,
+          page_location: window.location.href,
+          username: profile.username || 'Missing username'
         });
       }
     }

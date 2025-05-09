@@ -5,6 +5,9 @@
  * and to manage user preferences related to PWA installation prompts.
  */
 
+import { getAnalyticsService } from './analytics-service';
+import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+
 // Local storage keys - using device-specific prefix to ensure per-device storage
 const DEVICE_ID = typeof window !== 'undefined' ?
   window.navigator.userAgent.replace(/\D+/g, '') : '';
@@ -129,4 +132,51 @@ export const getPWAInstallInstructions = (): string => {
   }
 
   return 'Use your browser\'s menu to add this site to your home screen';
+};
+
+/**
+ * Open an external link properly in PWA mode or browser
+ *
+ * In PWA mode on iOS, we need to use window.location.href to open links in the default browser
+ * In regular browser mode, we use window.open with _blank target
+ *
+ * @param url The URL to open
+ * @param analyticsLabel Optional analytics label for tracking
+ */
+export const openExternalLink = (url: string, analyticsLabel?: string): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Track the event if analytics label is provided
+    if (analyticsLabel && typeof getAnalyticsService === 'function') {
+      try {
+        const analyticsService = getAnalyticsService();
+        analyticsService.trackEvent({
+          category: EVENT_CATEGORIES.EXTERNAL_LINK,
+          action: 'click',
+          label: analyticsLabel,
+        });
+      } catch (error) {
+        console.error('Error tracking external link click:', error);
+      }
+    }
+
+    // Check if we're in PWA mode on iOS
+    if (window.navigator.standalone ||
+        // @ts-ignore: This property exists on iOS Safari
+        window.navigator.standalone === true) {
+      // In iOS PWA mode, use location.href to open in default browser
+      window.location.href = url;
+    } else if (isPWA()) {
+      // In other PWA modes, also use location.href for consistent behavior
+      window.location.href = url;
+    } else {
+      // In regular browser mode, use window.open with _blank target
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  } catch (error) {
+    console.error('Error opening external link:', error);
+    // Fallback to changing location directly if window.open fails
+    window.location.href = url;
+  }
 };

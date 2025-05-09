@@ -7,10 +7,16 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
  */
 export function formatRelativeTime(dateString) {
   if (!dateString) return '';
-  
+
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return formatDistanceToNow(date, { addSuffix: true });
+    // Get the formatted time string
+    let timeString = formatDistanceToNow(date, { addSuffix: true });
+
+    // Remove "about" from the string
+    timeString = timeString.replace('about ', '');
+
+    return timeString;
   } catch (error) {
     console.error('Error formatting relative time:', error);
     return '';

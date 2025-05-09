@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Button } from "./components/ui/button";
-import { Home } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -10,9 +9,8 @@ export default function NotFound() {
         <p className="text-lg text-muted-foreground mb-8">
           Sorry, we couldn't find the page you're looking for.
         </p>
-        <Button asChild size="lg" className="gap-2">
+        <Button asChild size="lg">
           <Link href="/">
-            <Home className="h-5 w-5" />
             Back to Home
           </Link>
         </Button>

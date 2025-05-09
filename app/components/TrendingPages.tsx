@@ -24,33 +24,66 @@ export default function TrendingPages({ limit = 5 }) {
     const fetchTrendingPages = async () => {
       try {
         setLoading(true);
+        console.log('TrendingPages: Fetching trending pages with limit:', limit);
 
         // Get trending pages for the last 24 hours
-        const pages = await getTrendingPages(limit);
+        const response = await getTrendingPages(limit);
 
-        // For each page, get the hourly view data for sparklines
-        const pagesWithSparklines = await Promise.all(
-          pages.map(async (page) => {
-            try {
-              const viewData = await getPageViewsLast24Hours(page.id);
-              return {
-                ...page,
-                hourlyViews: viewData.hourly || Array(24).fill(0)
-              };
-            } catch (err) {
-              console.error(`Error fetching view data for page ${page.id}:`, err);
-              return {
-                ...page,
-                hourlyViews: Array(24).fill(0)
-              };
-            }
-          })
-        );
+        // Check if we got the expected response format
+        if (!response || typeof response !== 'object') {
+          console.error('TrendingPages: Unexpected response format:', response);
+          setError('Failed to load trending pages: Invalid response format');
+          setLoading(false);
+          return;
+        }
 
-        setTrendingPages(pagesWithSparklines);
+        // Handle both old and new response formats
+        const pages = Array.isArray(response)
+          ? response
+          : (response.trendingPages || []);
+
+        console.log('TrendingPages: Received pages:', pages.length);
+
+        if (pages.length === 0) {
+          console.log('TrendingPages: No trending pages found');
+          setTrendingPages([]);
+          setLoading(false);
+          return;
+        }
+
+        // Check if pages already have hourlyViews data
+        const needsHourlyData = !pages[0].hourlyViews;
+
+        if (needsHourlyData) {
+          console.log('TrendingPages: Fetching hourly view data for pages');
+          // For each page, get the hourly view data for sparklines
+          const pagesWithSparklines = await Promise.all(
+            pages.map(async (page) => {
+              try {
+                const viewData = await getPageViewsLast24Hours(page.id);
+                return {
+                  ...page,
+                  hourlyViews: viewData.hourly || Array(24).fill(0)
+                };
+              } catch (err) {
+                console.error(`Error fetching view data for page ${page.id}:`, err);
+                return {
+                  ...page,
+                  hourlyViews: Array(24).fill(0)
+                };
+              }
+            })
+          );
+
+          console.log('TrendingPages: Setting trending pages with sparklines');
+          setTrendingPages(pagesWithSparklines);
+        } else {
+          console.log('TrendingPages: Pages already have hourly data');
+          setTrendingPages(pages);
+        }
       } catch (err) {
         console.error('Error fetching trending pages:', err);
-        setError('Failed to load trending pages');
+        setError(`Failed to load trending pages: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -176,6 +209,15 @@ export default function TrendingPages({ limit = 5 }) {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* View All button */}
+      <div className="flex justify-center mt-4">
+        <Link href="/trending">
+          <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+            View all trending pages
+          </button>
+        </Link>
       </div>
     </div>
   );

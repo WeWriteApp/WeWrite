@@ -165,7 +165,23 @@ export const PortfolioProvider = ({ children }) => {
     if (!lastSubscriptionCheck || (now - parseInt(lastSubscriptionCheck)) > checkInterval) {
       async function fetchSubscription() {
         try {
-          const res = await fetch("/api/account-subscription");
+          // Check if the user is authenticated before making the API call
+          const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+          if (!isAuthenticated) {
+            console.log('User not authenticated, skipping subscription check');
+            return;
+          }
+
+          const res = await fetch("/api/account-subscription", {
+            // Add error handling options
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            // Don't follow redirects to avoid issues with auth
+            redirect: 'error',
+          });
+
           if (res.ok) {
             const data = await res.json();
             if (data && data.status) {
@@ -175,14 +191,27 @@ export const PortfolioProvider = ({ children }) => {
             }
             // Update the last check timestamp
             localStorage.setItem('lastSubscriptionCheck', now.toString());
+          } else if (res.status === 401) {
+            // Handle unauthorized error gracefully
+            console.log('User not authorized for subscription check');
+            setSubscriptions([]);
           } else {
+            console.error('Error fetching subscription data:', res.status);
             setSubscriptions([]);
           }
         } catch (e) {
+          console.error('Exception in subscription check:', e);
           setSubscriptions([]);
+          // Don't update the timestamp on error so we can retry later
         }
       }
-      fetchSubscription();
+
+      // Wrap in try/catch to prevent any errors from breaking the app
+      try {
+        fetchSubscription();
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
+      }
     }
   }, []);
 

@@ -345,35 +345,96 @@ const PageEditor = ({
 
   // Handle link insertion
   const handleInsertLink = () => {
+    console.log("Insert link button clicked");
+
     // Use the openLinkEditor method directly instead of simulating @ key press
     if (editorRef.current) {
+      console.log("Editor ref exists, attempting to open link editor");
+
       // Call the openLinkEditor method we added to the SlateEditor ref
       if (editorRef.current.openLinkEditor) {
-        editorRef.current.openLinkEditor();
+        console.log("Using openLinkEditor method");
+        try {
+          editorRef.current.openLinkEditor();
+        } catch (error) {
+          console.error("Error calling openLinkEditor:", error);
+          // Fall back to @ key simulation if the method fails
+          simulateAtKeyPress();
+        }
       } else {
-        // Fallback to the old method if openLinkEditor is not available
-        editorRef.current.focus();
-        const atEvent = new KeyboardEvent('keydown', {
-          key: '@',
-          code: 'KeyAT',
-          keyCode: 50,
-          which: 50,
-          bubbles: true
-        });
-        document.activeElement.dispatchEvent(atEvent);
+        console.log("openLinkEditor method not available, using @ key simulation");
+        simulateAtKeyPress();
       }
+    } else {
+      console.error("Editor ref is not available");
     }
   };
 
-  // Auto-resize textarea function
+  // Helper function to simulate @ key press
+  const simulateAtKeyPress = () => {
+    try {
+      // First focus the editor
+      if (editorRef.current) {
+        editorRef.current.focus();
+      }
+
+      // Create and dispatch the @ key event
+      const atEvent = new KeyboardEvent('keydown', {
+        key: '@',
+        code: 'KeyAT',
+        keyCode: 50,
+        which: 50,
+        bubbles: true
+      });
+
+      // Make sure we have an active element to dispatch to
+      if (document.activeElement) {
+        console.log("Dispatching @ key event to:", document.activeElement);
+        document.activeElement.dispatchEvent(atEvent);
+      } else {
+        console.error("No active element to dispatch @ key event to");
+      }
+    } catch (error) {
+      console.error("Error simulating @ key press:", error);
+    }
+  };
+
+  // Auto-resize textarea function with improved stability
   const autoResizeTextarea = (element) => {
     if (!element) return;
 
-    // Reset height to auto to get the correct scrollHeight
-    element.style.height = 'auto';
+    // Store the current scroll position
+    const scrollPos = window.scrollY;
 
-    // Set the height to match content (scrollHeight includes padding but not border)
-    element.style.height = `${element.scrollHeight}px`;
+    // Get the current computed style to account for padding and borders
+    const computedStyle = window.getComputedStyle(element);
+    const paddingTop = parseFloat(computedStyle.paddingTop);
+    const paddingBottom = parseFloat(computedStyle.paddingBottom);
+
+    // Calculate minimum height based on line height for stability
+    const lineHeight = parseFloat(computedStyle.lineHeight);
+    const minHeight = Math.max(50, lineHeight + paddingTop + paddingBottom);
+
+    // Set a fixed height temporarily to get accurate scrollHeight
+    const previousHeight = element.style.height;
+    element.style.height = minHeight + 'px';
+
+    // Get the scroll height (this is the height needed for the content)
+    const scrollHeight = element.scrollHeight;
+
+    // Only update if the height actually needs to change by more than 2px
+    // This prevents tiny fluctuations that cause layout shifts
+    if (Math.abs(parseFloat(previousHeight) - scrollHeight) > 2) {
+      element.style.height = scrollHeight + 'px';
+    } else if (!previousHeight || previousHeight === 'auto') {
+      element.style.height = scrollHeight + 'px';
+    } else {
+      // Restore previous height if the difference is minimal
+      element.style.height = previousHeight;
+    }
+
+    // Restore the scroll position to prevent page jumping
+    window.scrollTo(window.scrollX, scrollPos);
   };
 
   // Handle textarea input and resize
@@ -425,7 +486,9 @@ const PageEditor = ({
             style={{
               minHeight: '50px', // Ensure minimum height
               position: 'relative',
-              zIndex: 10 // Ensure it's above other elements
+              zIndex: 10, // Ensure it's above other elements
+              transition: 'height 0.1s ease', // Smooth height transition
+              height: '50px' // Initial fixed height to prevent layout shift
             }}
           />
         </div>

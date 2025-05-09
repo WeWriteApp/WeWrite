@@ -216,6 +216,7 @@ export const getPageTotalViews = async (pageId) => {
  */
 export const getTrendingPages = async (limitCount = 5) => {
   try {
+    console.log('getTrendingPages: Starting with limit', limitCount);
     // Get current date and time
     const now = new Date();
 
@@ -360,10 +361,24 @@ export const getTrendingPages = async (limitCount = 5) => {
               return null;
             }
 
+            // Get username from userId
+            let username = "Missing username";
+            try {
+              if (pageData.userId) {
+                const userDoc = await getDoc(doc(db, "users", pageData.userId));
+                if (userDoc.exists()) {
+                  username = userDoc.data().username || userDoc.data().displayName || "Missing username";
+                }
+              }
+            } catch (userErr) {
+              console.error(`Error fetching username for user ${pageData.userId}:`, userErr);
+            }
+
             return {
               ...page,
               title: pageData.title || 'Untitled',
-              userId: pageData.userId
+              userId: pageData.userId,
+              username: username
             };
           }
           return { ...page, title: 'Untitled' };
@@ -377,9 +392,32 @@ export const getTrendingPages = async (limitCount = 5) => {
     // Filter out null entries (private pages)
     const publicPages = pagesWithTitles.filter(page => page !== null);
 
-    return publicPages;
+    // Add hourly views data for each page
+    const pagesWithHourlyData = await Promise.all(
+      publicPages.map(async (page) => {
+        try {
+          const { hourly } = await getPageViewsLast24Hours(page.id);
+          return {
+            ...page,
+            hourlyViews: hourly
+          };
+        } catch (err) {
+          console.error(`Error fetching hourly data for ${page.id}:`, err);
+          return {
+            ...page,
+            hourlyViews: Array(24).fill(Math.floor(page.views / 24)) // Distribute views evenly
+          };
+        }
+      })
+    );
+
+    console.log(`getTrendingPages: Returning ${pagesWithHourlyData.length} trending pages`);
+    // For backward compatibility, return the array directly
+    return pagesWithHourlyData;
   } catch (error) {
     console.error("Error getting trending pages:", error);
+    console.error("Error stack:", error.stack);
+    // Return empty array for backward compatibility
     return [];
   }
 };

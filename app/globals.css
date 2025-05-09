@@ -189,7 +189,8 @@
     --background: 0 0% 0%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 5%;
+    /* Brighter card background in dark mode */
+    --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
 
     --popover: 222 47% 5%;
@@ -233,6 +234,22 @@
 
 .glass-panel:hover {
   border-color: hsl(var(--border) / 0.6);
+}
+
+/* Standard card styling for consistent appearance across the app */
+.wewrite-card {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border) / 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Dark mode adjustments for cards */
+.dark .wewrite-card {
+  border-color: hsl(var(--border) / 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -520,6 +537,18 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   }
   to {
     transform: translateY(0);
+  }
+}
+
+/* Mobile navigation links alignment */
+.mobile-nav-links {
+  justify-content: center;
+}
+
+/* When the links overflow and require scrolling, align them to the left */
+@media (max-width: 640px) {
+  .overflow-x-auto:not([style*="overflow: hidden"]) .mobile-nav-links {
+    justify-content: flex-start;
   }
 }
 

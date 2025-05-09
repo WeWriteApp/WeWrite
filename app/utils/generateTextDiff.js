@@ -64,8 +64,8 @@ export function generateTextDiff(currentContent, previousContent) {
       return { added: 0, removed: 0, preview: null };
     }
 
-    // Get context - start 20 chars before diff if possible
-    const contextStart = Math.max(0, diffIndex - 20);
+    // Get more context - start 40 chars before diff if possible
+    const contextStart = Math.max(0, diffIndex - 40);
 
     // Determine if it's an addition or removal
     const isAddition = currentText.length > previousText.length;
@@ -82,13 +82,13 @@ export function generateTextDiff(currentContent, previousContent) {
         return { added: currentText.length - previousText.length, removed: 0, preview: null };
       }
 
-      // Get context before and after
+      // Get more context before and after
       const beforeContext = currentText.substring(contextStart, diffIndex);
-      const afterContext = currentText.substring(commonAfterIndex, commonAfterIndex + 20);
+      const afterContext = currentText.substring(commonAfterIndex, commonAfterIndex + 40);
 
       preview = {
         beforeContext,
-        highlightedText: addedText.length > 50 ? addedText.substring(0, 50) + '...' : addedText,
+        highlightedText: addedText.length > 80 ? addedText.substring(0, 80) + '...' : addedText,
         afterContext,
         isNew: true,
         isRemoved: false
@@ -102,21 +102,21 @@ export function generateTextDiff(currentContent, previousContent) {
         return { added: 0, removed: previousText.length - currentText.length, preview: null };
       }
 
-      // Get context before and after
+      // Get more context before and after
       const beforeContext = currentText.substring(contextStart, diffIndex);
-      const afterContext = currentText.substring(diffIndex, diffIndex + 20);
+      const afterContext = currentText.substring(diffIndex, diffIndex + 40);
 
       preview = {
         beforeContext,
-        highlightedText: removedText.length > 50 ? removedText.substring(0, 50) + '...' : removedText,
+        highlightedText: removedText.length > 80 ? removedText.substring(0, 80) + '...' : removedText,
         afterContext,
         isNew: false,
         isRemoved: true
       };
     } else {
       // Changed text (same length but different content)
-      // For simplicity, just show some context around the change
-      const changedText = currentText.substring(diffIndex, diffIndex + 20);
+      // Show more context around the change
+      const changedText = currentText.substring(diffIndex, diffIndex + 30);
 
       if (!changedText || changedText.trim() === '') {
         return { added: 0, removed: 0, preview: null };
@@ -125,7 +125,7 @@ export function generateTextDiff(currentContent, previousContent) {
       preview = {
         beforeContext: currentText.substring(contextStart, diffIndex),
         highlightedText: changedText,
-        afterContext: currentText.substring(diffIndex + 20, diffIndex + 40),
+        afterContext: currentText.substring(diffIndex + 30, diffIndex + 70),
         isNew: true,
         isRemoved: false
       };

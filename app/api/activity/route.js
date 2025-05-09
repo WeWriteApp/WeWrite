@@ -1,0 +1,151 @@
+import { NextResponse } from 'next/server';
+import { initAdmin, admin } from '../../firebase/admin';
+
+// Initialize Firebase Admin
+initAdmin();
+
+// Get Firestore and RTDB instances
+const db = admin.firestore();
+const rtdb = admin.database();
+
+export async function GET(request) {
+  try {
+    console.log('API: /api/activity endpoint called');
+
+    // Set CORS headers
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
+
+    // Get limit from query parameter
+    const { searchParams } = new URL(request.url);
+    const limitCount = parseInt(searchParams.get('limit') || '30', 10);
+    console.log('API: Requested limit:', limitCount);
+
+    // Query to get recent pages (only public pages)
+    const pagesQuery = db.collection("pages")
+      .where("isPublic", "==", true)
+      .orderBy("lastModified", "desc")
+      .limit(limitCount * 2);
+
+    const pagesSnapshot = await pagesQuery.get();
+
+    if (pagesSnapshot.empty) {
+      return NextResponse.json({ activities: [] }, { headers });
+    }
+
+    // Process each page to get its activity data
+    const activitiesPromises = pagesSnapshot.docs.map(async (pageDoc) => {
+      const pageData = pageDoc.data();
+      const pageId = pageDoc.id;
+
+      // Skip pages without content
+      if (!pageData.content) return null;
+
+      // Get the page's history
+      const historyQuery = db.collection("pages").doc(pageId).collection("history")
+        .orderBy("timestamp", "desc")
+        .limit(1);
+
+      try {
+        const historySnapshot = await historyQuery.get();
+
+        if (historySnapshot.empty) {
+          // No history, use current content as the only version
+          return {
+            pageId,
+            pageName: pageData.title || "Untitled",
+            userId: pageData.userId,
+            username: await getUsernameById(pageData.userId),
+            timestamp: pageData.lastModified?.toDate() || new Date(),
+            currentContent: pageData.content,
+            previousContent: "",
+            isPublic: pageData.isPublic
+          };
+        }
+
+        // Get the most recent history entry
+        const historyData = historySnapshot.docs[0].data();
+
+        return {
+          pageId,
+          pageName: pageData.title || "Untitled",
+          userId: pageData.userId,
+          username: await getUsernameById(pageData.userId),
+          timestamp: historyData.timestamp?.toDate() || new Date(),
+          currentContent: pageData.content,
+          previousContent: historyData.content || "",
+          isPublic: pageData.isPublic
+        };
+      } catch (err) {
+        console.error(`Error fetching history for page ${pageId}:`, err);
+        return null;
+      }
+    });
+
+    // Wait for all promises to resolve
+    const activityResults = await Promise.all(activitiesPromises);
+
+    // Filter out null results and private pages
+    const validActivities = activityResults
+      .filter(activity => {
+        // Skip null activities
+        if (activity === null) return false;
+        // Only show public pages
+        return activity.isPublic === true;
+      })
+      .slice(0, limitCount);
+
+    console.log(`API: Returning ${validActivities.length} activities`);
+    if (validActivities.length > 0) {
+      console.log('API: First activity sample:', {
+        pageId: validActivities[0].pageId,
+        pageName: validActivities[0].pageName,
+        userId: validActivities[0].userId,
+        username: validActivities[0].username
+      });
+    }
+
+    return NextResponse.json({ activities: validActivities }, { headers });
+  } catch (err) {
+    console.error("Error fetching server activity data:", err);
+    return NextResponse.json(
+      { activities: [], error: "Failed to fetch recent activity" },
+      { status: 500, headers }
+    );
+  }
+}
+
+// Helper function to get username from Firestore or RTDB
+async function getUsernameById(userId) {
+  try {
+    if (!userId) return null;
+
+    let username = null;
+
+    // Try to get from Firestore first
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      username = userData.username || userData.displayName;
+    }
+
+    // Fallback to RTDB if Firestore doesn't have the username
+    if (!username) {
+      const userRef = rtdb.ref(`users/${userId}`);
+      const snapshot = await userRef.once('value');
+
+      if (snapshot.exists()) {
+        const userData = snapshot.val();
+        username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
+      }
+    }
+
+    return username || "Missing username";
+  } catch (err) {
+    console.error("Error fetching user data:", err);
+    return "Missing username";
+  }
+}

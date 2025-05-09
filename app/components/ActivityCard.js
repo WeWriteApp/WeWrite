@@ -25,6 +25,22 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const isDarkMode = theme === "dark";
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
 
+  // Debug activity data
+  useEffect(() => {
+    if (!activity) {
+      console.error('ActivityCard: No activity data provided');
+      return;
+    }
+
+    console.log('ActivityCard: Rendering activity', {
+      pageId: activity.pageId,
+      pageName: activity.pageName,
+      userId: activity.userId,
+      username: activity.username,
+      timestamp: activity.timestamp
+    });
+  }, [activity]);
+
   // Check if subscription feature is enabled
   useEffect(() => {
     const checkSubscriptionFeature = async () => {
@@ -69,73 +85,73 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full h-full bg-card rounded-lg border-0 shadow-none",
-        isCarousel && "h-full flex flex-col",
+        "w-full wewrite-card border-0 shadow-none",
+        isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
+        "flex flex-col",
         compactLayout ? "p-4" : "p-4" // Consistent padding
       )}
       style={{ transform: 'none' }}
     >
-      <div className={cn(
-        "flex flex-col gap-1.5 w-full overflow-hidden",
-        compactLayout ? "mb-1" : "mb-2" // Reduce margin for compact layout
-      )}>
-        <div className="flex flex-col w-full">
-          <div className="flex justify-between items-center w-full">
-            <div className="flex-shrink min-w-0 max-w-[70%] overflow-hidden">
-              <PillLink href={`/${activity.pageId}`} className="max-w-full">
-                {activity.pageName || "Untitled page"}
-              </PillLink>
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto cursor-pointer">
-                    {formatRelativeTime(activity.timestamp)}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <span>
-                    {activity.timestamp ? format(new Date(activity.timestamp), "yyyy MM/dd hh:mm:ss a") : ""}
-                  </span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className={cn(
-            "text-xs truncate",
-            compactLayout ? "mt-1" : "mt-1.5" // Reduce margin for compact layout
-          )}>
+      {/* Header section with fixed height */}
+      <div className="flex flex-col w-full flex-shrink-0">
+        {/* Page title with fixed height and ellipsis */}
+        <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
+          <PillLink href={`/${activity.pageId}`} className="max-w-full line-clamp-2">
+            {activity.pageName || "Untitled page"}
+          </PillLink>
+        </div>
+
+        {/* User and timestamp info */}
+        <div className="flex justify-between items-center w-full mt-1 flex-shrink-0">
+          <div className="text-xs">
             <span className="text-foreground">{isNewPage ? "created by" : "edited by"}{" "}</span>
-            <Link
-              href={`/user/${activity.userId}`}
-              className="hover:underline text-primary"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {activity.username || "anonymous"}
-              {subscriptionEnabled && (
-                <SupporterIcon
-                  tier={activity.tier}
-                  status={activity.subscriptionStatus}
-                  size="sm"
-                />
-              )}
-            </Link>
+            {/* Don't make user links clickable for sample data */}
+            {activity.isSample ? (
+              <span className="text-primary">
+                {activity.username || "anonymous"}
+              </span>
+            ) : (
+              <Link
+                href={`/user/${activity.userId}`}
+                className="hover:underline text-primary"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {activity.username || "anonymous"}
+                {subscriptionEnabled && (
+                  <SupporterIcon
+                    tier={activity.tier}
+                    status={activity.subscriptionStatus}
+                    size="sm"
+                  />
+                )}
+              </Link>
+            )}
           </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto cursor-pointer">
+                  {formatRelativeTime(activity.timestamp)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <span>
+                  {activity.timestamp ? format(new Date(activity.timestamp), "yyyy MM/dd hh:mm:ss a") : ""}
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
-      <div className={cn(
-        "flex items-center justify-between gap-3",
-        isCarousel && "flex-grow",
-        compactLayout ? "mt-1" : "mt-2" // Reduce margin for compact layout
-      )}>
-        <div className="relative flex-grow min-w-0">
-          {textDiff && textDiff.preview && (
-            <div className="text-xs overflow-hidden relative">
+
+      {/* Content section with flex-grow to fill remaining space */}
+      <div className="flex flex-col flex-grow mt-3 justify-between">
+        {/* Text diff preview with fixed height */}
+        <div className="relative flex-grow min-w-0 h-[60px] overflow-hidden">
+          {textDiff && textDiff.preview ? (
+            <div className="text-xs overflow-hidden h-full">
               {/* Text content */}
-              <div className={cn(
-                "overflow-x-hidden text-ellipsis",
-                compactLayout ? "max-h-12" : "max-h-16" // Reduce height for compact layout
-              )}>
+              <div className="overflow-x-hidden text-ellipsis line-clamp-3">
                 <span className="text-muted-foreground dark:text-slate-300">...</span>
                 <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.beforeContext}</span>
                 {textDiff.preview.isNew ? (
@@ -153,9 +169,15 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 <span className="text-muted-foreground dark:text-slate-300">...</span>
               </div>
             </div>
+          ) : (
+            <div className="text-xs text-muted-foreground h-full flex items-center">
+              {isNewPage ? "New page created" : "Page edited"}
+            </div>
           )}
         </div>
-        <div className="flex-shrink-0 text-xs font-medium flex items-center ml-1">
+
+        {/* Footer with character count stats */}
+        <div className="flex-shrink-0 text-xs font-medium flex items-center justify-end mt-2">
           {added > 0 ? (
             <TooltipProvider>
               <Tooltip>
@@ -181,6 +203,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </Tooltip>
             </TooltipProvider>
           ) : null}
+          {added === 0 && removed === 0 && (
+            <span className="text-muted-foreground">No changes</span>
+          )}
         </div>
       </div>
     </div>

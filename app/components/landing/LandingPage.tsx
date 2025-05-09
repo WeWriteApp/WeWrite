@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
@@ -15,44 +15,109 @@ import { PillLink } from "../PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getPageById } from '../../firebase/database';
-import ActivityCarousel from './ActivityCarousel';
-import TrendingCarousel from './TrendingCarousel';
+// Import server components for activity and trending data
+import dynamic from 'next/dynamic';
+// Import analytics hooks and constants
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
+import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
+import { openExternalLink } from '../../utils/pwa-detection';
 
-// Carousel images for hero section
-const heroImages = [
-  '/images/landing/LP-01.png',
-  '/images/landing/LP-02.png',
-  '/images/landing/LP-03.png',
-  '/images/landing/LP-04.png',
-  '/images/landing/LP-05.png',
-];
-
-// Simple fade-in animation using CSS
-const fadeInClass = "animate-fadeIn";
+// Import simple client-side components instead of server components
+import SimpleActivityCarousel from './SimpleActivityCarousel';
+import SimpleTrendingCarousel from './SimpleTrendingCarousel';
+import HeroSection from './HeroSection';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const heroSectionRef = useRef<HTMLElement>(null);
+  const [activeSection, setActiveSection] = useState('');
+  const [isMobileView, setIsMobileView] = useState(false);
   const { setTheme, theme } = useTheme();
   const [pageContents, setPageContents] = useState<Record<string, any>>({});
+
+  // Analytics hook for tracking
+  const analytics = useWeWriteAnalytics();
+
+  // Lazy loading for carousels
+  const [activityVisible, setActivityVisible] = useState(false);
+  const [trendingVisible, setTrendingVisible] = useState(false);
+  const activityRef = useRef<HTMLDivElement>(null);
+  const trendingRef = useRef<HTMLDivElement>(null);
+
+  // Interactive fundraiser platform text
+  const [platformIndex, setPlatformIndex] = useState(0);
+  const [isAnimatingPlatform, setIsAnimatingPlatform] = useState(false);
+  const platformRef = useRef<HTMLSpanElement>(null);
+  const platformOptions = ["Kickstarters", "GoFundMes", "Patreons", "OpenCollectives", "Memberfuls"];
+
+  // Animation classes
+  const fadeInClass = "animate-fadeIn";
+
+  // Set up intersection observer for lazy loading
+  useEffect(() => {
+    // Create an observer for lazy loading
+    const observerOptions = {
+      root: null, // Use viewport as root
+      rootMargin: '100px', // Load when within 100px of viewport
+      threshold: 0.1 // Trigger when 10% visible
+    };
+
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach(entry => {
+        if (entry.target.id === 'activity' && entry.isIntersecting) {
+          setActivityVisible(true);
+        } else if (entry.target.id === 'trending' && entry.isIntersecting) {
+          setTrendingVisible(true);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, observerOptions);
+
+    // Observe sections for lazy loading
+    if (activityRef.current) observer.observe(activityRef.current);
+    if (trendingRef.current) observer.observe(trendingRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
+
+      // Determine which section is currently in view
+      const sections = ['activity', 'trending', 'features', 'supporters', 'about'];
+      const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px, Desktop: 60px
+
+      // Find the section that is currently in view
+      for (const sectionId of sections) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+          const rect = section.getBoundingClientRect();
+          // Check if the section is in view (accounting for header height)
+          if (rect.top <= headerHeight + 100 && rect.bottom >= headerHeight) {
+            setActiveSection(sectionId);
+            break;
+          }
+        }
+      }
+
+      // If we're at the top of the page, clear the active section
+      if (window.scrollY < 100) {
+        setActiveSection('');
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
 
-    // We'll use a simpler approach for the 3D effect using React state instead of DOM manipulation
+    // Initial check
+    handleScroll();
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [isMobileView]);
 
   // Always set accent color to blue on landing page mount
   useEffect(() => {
@@ -130,17 +195,57 @@ const LandingPage = () => {
     fetchPageContents();
   }, []);
 
-  // Keyboard navigation for lightbox
+  // Removed lightbox keyboard navigation - not needed in this component
+
+  // Handle screen resize to detect when to switch to mobile view
   useEffect(() => {
-    if (!lightboxOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightboxOpen(false);
-      if (e.key === 'ArrowRight') setCarouselIndex((i) => (i + 1) % heroImages.length);
-      if (e.key === 'ArrowLeft') setCarouselIndex((i) => (i - 1 + heroImages.length) % heroImages.length);
+    // Function to check if we need to switch to mobile view
+    const checkMobileView = () => {
+      // Switch to mobile view at 1024px (before links start wrapping)
+      // This is wider than the standard md breakpoint (768px)
+      setIsMobileView(window.innerWidth < 1024);
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [lightboxOpen]);
+
+    // Initial checks
+    checkMobileView();
+
+    // Wait for DOM to be fully rendered before checking overflow
+    setTimeout(checkNavOverflow, 100);
+
+    // Combined resize handler for proper cleanup
+    const handleResize = () => {
+      checkMobileView();
+      checkNavOverflow();
+    };
+
+    // Add event listener with the combined handler
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Function to check if mobile nav links are overflowing
+  const checkNavOverflow = () => {
+    const navContainer = document.querySelector('.overflow-x-auto');
+    const navLinks = document.querySelector('.mobile-nav-links');
+
+    if (navContainer && navLinks) {
+      // Check if the links are wider than the container
+      const isOverflowing = navLinks.scrollWidth > navContainer.clientWidth;
+
+      // Apply appropriate class based on overflow state
+      if (isOverflowing) {
+        navLinks.classList.remove('justify-center');
+        navLinks.classList.add('justify-start');
+      } else {
+        navLinks.classList.remove('justify-start');
+        navLinks.classList.add('justify-center');
+      }
+    }
+  };
 
   // Smooth scroll function for anchor links
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -148,12 +253,50 @@ const LandingPage = () => {
     const targetId = href.replace('#', '');
     const targetElement = document.getElementById(targetId);
 
+    // Track the anchor link click in Google Analytics
+    analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+      label: `Anchor link: ${targetId}`,
+      section_name: targetId,
+      link_type: 'anchor',
+      link_text: e.currentTarget.textContent || targetId,
+      link_url: href
+    });
+
     if (targetElement) {
-      // Adjust header height based on screen size
-      const headerHeight = window.innerWidth >= 768 ? 60 : 100; // Desktop: 60px, Mobile: 100px (includes both header rows)
+      // Adjust header height based on mobile view state
+      const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px (includes both header rows), Desktop: 60px
       const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
+
+      // Scroll to the section
       window.scrollTo({ top: targetPosition, behavior: 'smooth' });
       window.history.pushState(null, '', href);
+
+      // Center the tab in mobile view
+      if (isMobileView) {
+        // Find the clicked anchor element
+        const clickedTab = e.currentTarget;
+        const tabsContainer = document.querySelector('.overflow-x-auto');
+
+        if (clickedTab && tabsContainer) {
+          // Calculate the center position
+          const containerWidth = tabsContainer.clientWidth;
+          const tabPosition = clickedTab.offsetLeft;
+          const tabWidth = clickedTab.offsetWidth;
+          const centerPosition = tabPosition - (containerWidth / 2) + (tabWidth / 2);
+
+          // Scroll the tabs container horizontally with animation
+          tabsContainer.scrollTo({
+            left: centerPosition,
+            behavior: 'smooth'
+          });
+
+          // Check for overflow after scrolling
+          setTimeout(checkNavOverflow, 300);
+        }
+      }
+
+      // Update active section
+      setActiveSection(targetId);
     }
   };
 
@@ -243,82 +386,151 @@ const LandingPage = () => {
     }
   };
 
-  // Helper for changing index with direction
-  const goToIndex = (newIdx: number) => {
-    setSlideDirection(newIdx > carouselIndex || (newIdx === 0 && carouselIndex === heroImages.length - 1) ? 'right' : 'left');
-    setCarouselIndex(newIdx);
+
+
+  // Animation function for text cycling
+  const animateTextChange = (element: HTMLElement | null, newText: string, callback: () => void) => {
+    if (!element) return;
+
+    const originalText = element.innerText;
+    const frames = 10; // Number of animation frames
+    let frame = 0;
+
+    const animate = () => {
+      if (frame < frames) {
+        // During first half, scramble the text
+        if (frame < frames / 2) {
+          const progress = frame / (frames / 2);
+          const scrambleLength = Math.floor(originalText.length * progress);
+          const keepLength = originalText.length - scrambleLength;
+
+          let scrambledText = originalText.substring(0, keepLength);
+          for (let i = 0; i < scrambleLength; i++) {
+            scrambledText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
+          }
+
+          element.innerText = scrambledText;
+        }
+        // During second half, reveal the new text
+        else {
+          const progress = (frame - frames / 2) / (frames / 2);
+          const revealLength = Math.floor(newText.length * progress);
+
+          let revealedText = newText.substring(0, revealLength);
+          for (let i = 0; i < newText.length - revealLength; i++) {
+            revealedText += String.fromCharCode(33 + Math.floor(Math.random() * 94)); // Random ASCII
+          }
+
+          element.innerText = revealedText;
+        }
+
+        frame++;
+        requestAnimationFrame(animate);
+      } else {
+        // Animation complete
+        element.innerText = newText;
+        callback();
+      }
+    };
+
+    animate();
   };
 
-  // Swipe handlers for carousel
-  const handlers = useSwipeable({
-    onSwipedLeft: () => goToIndex((carouselIndex + 1) % heroImages.length),
-    onSwipedRight: () => goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length),
-    trackMouse: true,
-    trackTouch: true,
-    preventDefaultTouchmoveEvent: true,
-  });
+  // Handle platform text click
+  const handlePlatformClick = () => {
+    if (isAnimatingPlatform) return;
+
+    // Track platform text click in Google Analytics
+    analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+      label: `Platform text click: ${platformOptions[platformIndex]} → ${platformOptions[(platformIndex + 1) % platformOptions.length]}`,
+      link_type: 'interactive_text',
+      link_text: platformOptions[platformIndex],
+      next_text: platformOptions[(platformIndex + 1) % platformOptions.length]
+    });
+
+    setIsAnimatingPlatform(true);
+    const nextIndex = (platformIndex + 1) % platformOptions.length;
+
+    animateTextChange(
+      platformRef.current,
+      platformOptions[nextIndex],
+      () => {
+        setPlatformIndex(nextIndex);
+        setIsAnimatingPlatform(false);
+      }
+    );
+  };
+
+
 
   return (
     <div className="min-h-screen bg-background">
       {/* Desktop Navigation - Always sticky at the top */}
-      <header className="sticky top-0 left-0 right-0 w-full z-50 transition-all duration-200 hidden md:block bg-background/90 backdrop-blur-xl shadow-md py-3">
+      <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md py-3`}>
         <div className="container mx-auto flex justify-between items-center px-6">
           <div className="flex items-center space-x-6">
             <h1
               className="text-2xl font-bold cursor-pointer dark:text-white text-primary"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={() => {
+                // Track logo click in Google Analytics
+                analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                  label: 'Logo click: scroll to top',
+                  link_type: 'logo',
+                  link_text: 'WeWrite',
+                  link_url: '#top'
+                });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
             >
               WeWrite
             </h1>
 
-            <nav className="hidden md:flex space-x-6">
+            <nav className="flex space-x-6">
               <a
                 href="#activity"
                 onClick={(e) => scrollToSection(e, '#activity')}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 Recent Activity
               </a>
               <a
                 href="#trending"
                 onClick={(e) => scrollToSection(e, '#trending')}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 Trending
               </a>
               <a
                 href="#features"
                 onClick={(e) => scrollToSection(e, '#features')}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
-                Features
+                Roadmap
               </a>
               <a
                 href="#supporters"
                 onClick={(e) => scrollToSection(e, '#supporters')}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
               >
-                Supporters
+                Support us
               </a>
               <a
                 href="#about"
                 onClick={(e) => scrollToSection(e, '#about')}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 About
               </a>
-              <a
-                href="#get-started"
-                onClick={(e) => scrollToSection(e, '#get-started')}
-                className="text-sm font-medium hover:text-primary transition-colors"
-              >
-                Get Started
-              </a>
+
             </nav>
           </div>
 
           <div className="flex items-center space-x-4">
-            <Button variant="secondary" asChild>
+            <Button
+              variant="secondary"
+              className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+              asChild
+            >
               <Link href="/auth/login">Sign In</Link>
             </Button>
             <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
@@ -329,19 +541,34 @@ const LandingPage = () => {
       </header>
 
       {/* Mobile Navigation - Always sticky at the top */}
-      <div className="md:hidden sticky top-0 left-0 right-0 z-50 flex flex-col w-full">
+      <div className={`${isMobileView ? 'block' : 'hidden'} fixed top-0 left-0 right-0 z-50 flex flex-col w-full`}>
         {/* Title and buttons */}
         <div className="w-full bg-background/90 backdrop-blur-xl shadow-sm py-2">
           <div className="container mx-auto flex justify-between items-center px-4">
             <h1
               className="text-xl font-bold cursor-pointer dark:text-white text-primary"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={() => {
+                // Track mobile logo click in Google Analytics
+                analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                  label: 'Mobile logo click: scroll to top',
+                  link_type: 'logo',
+                  link_text: 'WeWrite',
+                  link_url: '#top',
+                  device: 'mobile'
+                });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
             >
               WeWrite
             </h1>
 
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                asChild
+              >
                 <Link href="/auth/login">Sign In</Link>
               </Button>
               <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
@@ -351,268 +578,64 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation - Horizontally scrollable and sticky */}
+        {/* Mobile Navigation - Horizontally scrollable */}
         <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 py-3 shadow-sm">
           <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6">
+            <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6 justify-center mobile-nav-links">
               <a
                 href="#activity"
                 onClick={(e) => scrollToSection(e, '#activity')}
-                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 Activity
               </a>
               <a
                 href="#trending"
                 onClick={(e) => scrollToSection(e, '#trending')}
-                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 Trending
               </a>
               <a
                 href="#features"
                 onClick={(e) => scrollToSection(e, '#features')}
-                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
-                Features
+                Roadmap
               </a>
               <a
                 href="#supporters"
                 onClick={(e) => scrollToSection(e, '#supporters')}
-                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
               >
-                Supporters
+                Support us
               </a>
               <a
                 href="#about"
                 onClick={(e) => scrollToSection(e, '#about')}
-                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 About
               </a>
-              <a
-                href="#get-started"
-                onClick={(e) => scrollToSection(e, '#get-started')}
-                className="text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0"
-              >
-                Get Started
-              </a>
+
             </div>
           </div>
         </div>
       </div>
 
-      <main className="pt-8 md:pt-6">
-        {/* Hero Section */}
-        <section
-          className="py-16 md:py-20 relative overflow-hidden"
-          ref={heroSectionRef}
-          onMouseMove={(e) => {
-            // Throttle the mouse move handler to reduce re-renders
-            // Only update rotation every 50ms to prevent excessive re-renders
-            if (!heroSectionRef.current || (window as any).isThrottlingHeroMove) return;
+      <main className={`${isMobileView ? 'pt-24' : 'pt-20'}`}>
+        {/* Hero Section - Isolated to prevent re-renders affecting other components */}
+        <HeroSection
+          fadeInClass={fadeInClass}
+          platformOptions={platformOptions}
+          platformIndex={platformIndex}
+          isAnimatingPlatform={isAnimatingPlatform}
+          handlePlatformClick={handlePlatformClick}
+          platformRef={platformRef}
+        />
 
-            (window as any).isThrottlingHeroMove = true;
-            setTimeout(() => {
-              (window as any).isThrottlingHeroMove = false;
-            }, 50);
-
-            const rect = heroSectionRef.current.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-
-            // Calculate rotation (limited to ±5 degrees)
-            const rotateY = ((e.clientX - centerX) / (rect.width / 2)) * 5;
-            const rotateX = -((e.clientY - centerY) / (rect.height / 2)) * 5;
-
-            setRotation({ x: rotateX, y: rotateY });
-          }}
-          onMouseLeave={() => setRotation({ x: 0, y: 0 })}
-        >
-          <div className="container mx-auto px-6 relative z-10">
-            <div className="flex flex-col lg:flex-row items-center gap-12">
-              <div
-                className={`flex-1 text-center lg:text-left ${fadeInClass}`}
-              >
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-                  Write, share, earn.
-                </h1>
-                <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-                  WeWrite is a free speech platform and social wiki where every page is a fundraiser. Write a hundred pages, you've just written a hundred Kickstarters.
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-                  <Button size="lg" variant="outline" asChild>
-                    <Link href="/auth/login">Sign In</Link>
-                  </Button>
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                    <Link href="/auth/register">Create Account</Link>
-                  </Button>
-                </div>
-              </div>
-
-              <div className={`flex-1 perspective-[1000px] ${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
-                <div className="relative w-full max-w-lg mx-auto transform-gpu transition-transform duration-300">
-                  <div {...handlers} className="relative w-full h-full">
-                    <div className="relative w-full h-full min-h-[420px] flex items-center justify-center">
-                      <AnimatePresence initial={false} custom={slideDirection} mode="wait">
-                        <motion.button
-                          key={carouselIndex}
-                          initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          exit={{ x: slideDirection === 'right' ? -300 : 300, opacity: 0 }}
-                          transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                          className="group relative block focus:outline-none w-full bg-none border-none p-0"
-                          onClick={() => setLightboxOpen(true)}
-                          aria-label="Open image lightbox"
-                          style={{ position: 'relative', width: '100%', height: '420px' }}
-                        >
-                          <div className="relative w-full h-full">
-                            <Image
-                              key={carouselIndex}
-                              src={heroImages[carouselIndex]}
-                              alt={`WeWrite App Interface ${carouselIndex + 1}`}
-                              fill
-                              className={`rounded-lg shadow-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105 object-cover`}
-                              priority
-                              loading="eager"
-                              sizes="(max-width: 768px) 100vw, 700px"
-                            />
-                          </div>
-                          {/* Left arrow */}
-                          <button
-                            type="button"
-                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
-                            onClick={e => { e.stopPropagation(); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
-                            aria-label="Previous image"
-                          >
-                            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
-                          </button>
-                          {/* Right arrow */}
-                          <button
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
-                            onClick={e => { e.stopPropagation(); goToIndex((carouselIndex + 1) % heroImages.length); }}
-                            aria-label="Next image"
-                          >
-                            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
-                          </button>
-                        </motion.button>
-                      </AnimatePresence>
-                    </div>
-                    {/* Filmstrip */}
-                    <div className="flex justify-center gap-2 mt-4">
-                      {heroImages.map((img, idx) => (
-                        <button
-                          key={img}
-                          className={`rounded-md ${carouselIndex === idx ? 'ring-2 ring-primary' : 'ring-1 ring-border/30'} focus:outline-none transition-transform duration-200 overflow-hidden`}
-                          style={{ width: 56, height: 40, background: 'none', padding: 0, transform: carouselIndex === idx ? 'scale(1.08)' : undefined }}
-                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
-                          onMouseLeave={e => e.currentTarget.style.transform = carouselIndex === idx ? 'scale(1.08)' : 'scale(1)'}
-                          onClick={() => goToIndex(idx)}
-                          aria-label={`Show image ${idx + 1}`}
-                        >
-                          <Image src={img} alt={`Thumbnail ${idx + 1}`} width={56} height={40} className="object-cover w-full h-full transition-transform duration-200" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Lightbox overlay */}
-          {lightboxOpen && (
-            <div
-              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 animate-fadeInFast"
-              style={{ animation: 'fadeIn 0.2s' }}
-              onClick={() => setLightboxOpen(false)} // Close lightbox when clicking the overlay
-            >
-              <button
-                className="absolute top-6 right-8 text-white text-3xl z-20 hover:text-primary focus:outline-none"
-                onClick={() => setLightboxOpen(false)}
-                aria-label="Close lightbox"
-              >
-                &times;
-              </button>
-              {/* Left arrow */}
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-3 shadow hover:bg-background/90 z-20"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent closing lightbox when clicking arrow
-                  setSlideDirection('left');
-                  goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length);
-                }}
-                aria-label="Previous image"
-              >
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              {/* Main image with animation and fixed container */}
-              <div
-                className="flex flex-col items-center justify-center"
-                style={{ width: 1000, height: 800, maxWidth: '95vw', maxHeight: '85vh', minWidth: 320, minHeight: 320 }}
-                onClick={(e) => e.stopPropagation()} // Prevent closing lightbox when clicking content
-              >
-                {/* Fixed size container to prevent layout shift */}
-                <div className="relative w-full h-full" style={{ overflow: 'hidden' }}>
-                  <AnimatePresence initial={false} custom={slideDirection} mode="wait">
-                    <motion.div
-                      key={carouselIndex}
-                      initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: slideDirection === 'right' ? -300 : 300, opacity: 0 }}
-                      transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                      className="absolute inset-0 flex items-center justify-center"
-                    >
-                      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                        <Image
-                          src={heroImages[carouselIndex]}
-                          alt={`Lightbox image ${carouselIndex + 1}`}
-                          fill
-                          className="rounded-lg shadow-2xl object-cover"
-                          sizes="(max-width: 1000px) 95vw, 1000px"
-                          priority
-                        />
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-                {/* Filmstrip in lightbox */}
-                <div className="flex justify-center gap-2 mt-6">
-                  {heroImages.map((img, idx) => (
-                    <button
-                      key={img}
-                      className={`rounded-md ${carouselIndex === idx ? 'ring-2 ring-primary' : 'ring-1 ring-border/30'} focus:outline-none overflow-hidden`}
-                      style={{ width: 72, height: 48, background: 'none', padding: 0 }}
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent closing lightbox when clicking thumbnail
-                        setSlideDirection(idx > carouselIndex ? 'right' : 'left');
-                        goToIndex(idx);
-                      }}
-                      aria-label={`Show image ${idx + 1}`}
-                    >
-                      <Image src={img} alt={`Lightbox thumbnail ${idx + 1}`} width={72} height={48} className="object-cover w-full h-full" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Right arrow */}
-              <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-3 shadow hover:bg-background/90 z-20"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent closing lightbox when clicking arrow
-                  setSlideDirection('right');
-                  goToIndex((carouselIndex + 1) % heroImages.length);
-                }}
-                aria-label="Next image"
-              >
-                <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* Recent Activity Carousel */}
-        <section id="activity" className="py-8 bg-muted/30">
+        {/* Recent Activity Carousel - Lazy loaded */}
+        <section id="activity" ref={activityRef} className="py-8 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-8 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent Activity</h2>
@@ -621,14 +644,20 @@ const LandingPage = () => {
               </p>
             </div>
             <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-              {/* Use the directly imported ActivityCarousel component */}
-              <ActivityCarousel />
+              {/* Only render carousel when section is visible */}
+              {activityVisible ? (
+                <SimpleActivityCarousel />
+              ) : (
+                <div style={{ height: '200px' }} className="flex items-center justify-center">
+                  <p className="text-muted-foreground">Loading activity...</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* Trending Pages Section */}
-        <section id="trending" className="py-16 md:py-20 bg-muted/30">
+        {/* Trending Pages Section - Lazy loaded */}
+        <section id="trending" ref={trendingRef} className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-8 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
@@ -637,8 +666,14 @@ const LandingPage = () => {
               </p>
             </div>
             <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-              {/* Use our new TrendingCarousel component with more items for better looping */}
-              <TrendingCarousel limit={20} />
+              {/* Only render carousel when section is visible */}
+              {trendingVisible ? (
+                <SimpleTrendingCarousel limit={20} />
+              ) : (
+                <div style={{ height: '240px' }} className="flex items-center justify-center">
+                  <p className="text-muted-foreground">Loading trending pages...</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -647,7 +682,7 @@ const LandingPage = () => {
         <section id="features" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6 max-w-6xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Feature Roadmap</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Roadmap</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
                 Discover what makes WeWrite special and what's coming next.
               </p>
@@ -740,23 +775,25 @@ const LandingPage = () => {
         {/* Supporters Section */}
         <section id="supporters" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-12 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Supporters</h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <div className={`text-center mb-6 ${fadeInClass}`}>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Support us</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
                 Special thanks to those who have supported WeWrite while we're still in beta.
               </p>
+              <Button
+                variant="default"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Landing Page Support Button')}
+              >
+                Support on OpenCollective <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
 
             <div className={`${fadeInClass} max-w-4xl mx-auto`} style={{ animationDelay: '0.1s' }}>
-              <Link
-                href="https://opencollective.com/wewrite-app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 bg-card"
+              <div
+                onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Landing Page OpenCollective Image')}
+                className="block border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 bg-card cursor-pointer"
               >
-                <div className="p-4 text-center text-lg font-medium border-b border-border">
-                  Our Financial Contributors on Open Collective
-                </div>
                 <div className="p-6">
                   <Image
                     src="/images/landing/OpenCollective.png"
@@ -766,12 +803,7 @@ const LandingPage = () => {
                     className="w-full h-auto rounded-md"
                   />
                 </div>
-                <div className="p-4 text-center border-t border-border">
-                  <Button variant="outline" className="gap-2">
-                    View on Open Collective <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -809,25 +841,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* Ready to Get Started Section */}
-        <section id="get-started" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-8 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Get Started?</h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Join WeWrite today and start creating, sharing, and earning from your content.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Button size="lg" variant="outline" asChild>
-                  <Link href="/auth/login">Sign In</Link>
-                </Button>
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                  <Link href="/auth/register">Create Account</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+
       </main>
     </div>
   );

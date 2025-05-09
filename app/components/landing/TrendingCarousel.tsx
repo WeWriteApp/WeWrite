@@ -32,14 +32,30 @@ export default function TrendingCarousel({ limit = 10 }) {
     const fetchTrendingPages = async () => {
       try {
         setLoading(true);
+        setError(null); // Clear any previous errors
 
         // Get trending pages for the last 24 hours
+        console.log('Fetching trending pages with limit:', limit);
         const pages = await getTrendingPages(limit);
+
+        if (!pages || pages.length === 0) {
+          console.log('No trending pages returned');
+          setTrendingPages([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log(`Fetched ${pages.length} trending pages`);
 
         // For each page, get the hourly view data for sparklines and username
         const pagesWithSparklines = await Promise.all(
           pages.map(async (page) => {
             try {
+              if (!page || !page.id) {
+                console.error('Invalid page object:', page);
+                return null;
+              }
+
               const viewData = await getPageViewsLast24Hours(page.id);
 
               // Get username if userId exists
@@ -68,10 +84,16 @@ export default function TrendingCarousel({ limit = 10 }) {
           })
         );
 
-        setTrendingPages(pagesWithSparklines);
+        // Filter out any null values
+        const validPages = pagesWithSparklines.filter(page => page !== null);
+        console.log(`Processed ${validPages.length} valid trending pages`);
+
+        setTrendingPages(validPages);
       } catch (err) {
         console.error('Error fetching trending pages:', err);
-        setError('Failed to load trending pages');
+        setError(`Failed to load trending pages: ${err.message || 'Unknown error'}`);
+        // Set empty array to prevent rendering issues
+        setTrendingPages([]);
       } finally {
         setLoading(false);
       }
@@ -85,8 +107,8 @@ export default function TrendingCarousel({ limit = 10 }) {
       loading={loading}
       error={error}
       emptyMessage="No trending pages available yet. Check back soon!"
-      height={240}
-      scrollSpeed={0.03}
+      height={220}
+      scrollSpeed={0.10}
       reverseDirection={true}
       fullWidth={true}
     >
@@ -96,44 +118,51 @@ export default function TrendingCarousel({ limit = 10 }) {
           className="trending-page-item flex-shrink-0"
           style={{
             width: '300px',
-            height: '220px'
+            height: '200px'
           }}
         >
           <Link href={`/${page.id}`} className="block h-full">
-            <Card className="h-full cursor-pointer flex flex-col justify-between border-0 shadow-none hover:shadow-none" style={{ transform: 'none' }}>
-              <CardHeader className="p-4">
-                <CardTitle className="text-lg mb-2 break-words">
+            <div className="wewrite-card h-full cursor-pointer flex flex-col justify-between border-0 shadow-none" style={{ transform: 'none' }}>
+              <CardHeader className="p-3">
+                <CardTitle className="text-lg mb-1 break-words h-[50px] overflow-hidden">
                   <PillLink href={`/${page.id}`}>
                     {page.title || 'Untitled'}
                   </PillLink>
                 </CardTitle>
-                <CardDescription className="text-xs mt-1">
+                <CardDescription className="text-xs">
                   <span className="text-foreground">by{" "}</span>
-                  <Link
-                    href={`/user/${page.userId}`}
-                    className="hover:underline text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {page.username || 'Anonymous'}
-                  </Link>
+                  {/* Only make the user link clickable if we have a valid userId */}
+                  {page.userId ? (
+                    <Link
+                      href={`/user/${page.userId}`}
+                      className="hover:underline text-primary"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {page.username || 'Anonymous'}
+                    </Link>
+                  ) : (
+                    <span className="text-primary">
+                      {page.username || 'Anonymous'}
+                    </span>
+                  )}
                 </CardDescription>
               </CardHeader>
-              <div className="px-4 pb-4 pt-0 mt-auto">
-                <div className="flex items-center justify-between mb-1">
+              <div className="px-3 pb-3 pt-0 mt-auto">
+                <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">{page.views} views</span>
-                  <span className="text-sm text-muted-foreground">last 24h</span>
+                  <span className="text-xs text-muted-foreground">last 24h</span>
                 </div>
-                <div className="h-12 w-full pb-1">
+                <div className="h-10 w-full">
                   <Sparkline
                     data={page.hourlyViews}
-                    height={44}
+                    height={40}
                     color="#1768FF"
                     strokeWidth={0.8}
                     fillOpacity={0.08}
                   />
                 </div>
               </div>
-            </Card>
+            </div>
           </Link>
         </div>
       ))}

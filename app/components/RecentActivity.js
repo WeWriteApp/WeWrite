@@ -174,7 +174,9 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         {!loading && !error && activities.length > 0 && (
           <div className="space-y-3 w-full">
             {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
-              <ActivityCard key={`${activity.pageId}-${index}`} activity={activity} />
+              <div key={`${activity.pageId}-${index}`} className="h-[180px]">
+                <ActivityCard activity={activity} />
+              </div>
             ))}
           </div>
         )}
@@ -234,11 +236,12 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
               }`}
             >
               {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
-                <ActivityCard
-                  key={`${activity.pageId}-${index}`}
-                  activity={activity}
-                  isCarousel={!useGridLayout}
-                />
+                <div key={`${activity.pageId}-${index}`} className={useGridLayout ? "h-[180px]" : "min-w-[300px] w-[300px] h-[180px]"}>
+                  <ActivityCard
+                    activity={activity}
+                    isCarousel={!useGridLayout}
+                  />
+                </div>
               ))}
             </div>
 

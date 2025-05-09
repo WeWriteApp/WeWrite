@@ -19,6 +19,40 @@ const nextConfig = {
     optimizePackageImports: ['react-icons'],
     // Try to improve performance
     forceSwcTransforms: true,
+    // Server components - packages that should only be loaded on the server
+    serverComponentsExternalPackages: [
+      'firebase-admin',
+      '@fastify/busboy',
+      '@grpc/grpc-js',
+    ],
+  },
+  // Handle Node.js modules in Firebase Admin
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Don't resolve 'fs', 'net', etc. on the client to prevent this error
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        http2: false,
+        http: false,
+        https: false,
+        zlib: false,
+        child_process: false,
+        perf_hooks: false,
+        util: require.resolve('util/'),
+        stream: require.resolve('stream-browserify'),
+        crypto: require.resolve('crypto-browserify'),
+        url: false,
+        os: require.resolve('os-browserify/browser'),
+        path: require.resolve('path-browserify'),
+        events: require.resolve('events/'),
+        dns: false,
+      };
+    }
+
+    return config;
   },
   // Add security headers
   async headers() {

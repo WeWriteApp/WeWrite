@@ -8,6 +8,7 @@ import { getDatabase, ref, get } from "firebase/database";
 /**
  * useStaticRecentActivity - A hook that loads recent activity data only once when the component mounts
  * This is a simplified version of useRecentActivity that doesn't support pagination or reloading
+ * Optimized for memory usage and performance
  *
  * @param {number} limitCount - Number of activities to fetch
  * @param {string|null} filterUserId - Optional user ID to filter activities by
@@ -15,6 +16,8 @@ import { getDatabase, ref, get } from "firebase/database";
  * @returns {Object} - Object containing activities, loading state, and error
  */
 const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
+  // Limit the number of activities to reduce memory usage
+  const actualLimit = Math.min(limitCount, 10);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -130,7 +133,9 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
   // Load data only once when the component mounts
   useEffect(() => {
     // Skip if we've already fetched data or if the effect has already run
-    if (hasFetchedRef.current || hasRunEffectRef.current) return;
+    if (hasFetchedRef.current || hasRunEffectRef.current) {
+      return;
+    }
 
     // Mark that we've run this effect
     hasRunEffectRef.current = true;
@@ -354,22 +359,26 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
               // Otherwise only show public pages
               return activity.isPublic === true;
             })
-            .slice(0, limitCount);
+            .slice(0, actualLimit);
+
+
 
           // Store in ref first, then update state
           activitiesRef.current = validActivities;
           setActivities(validActivities);
         } catch (err) {
           console.error("Error with Firestore query:", err);
-          setError({
-            message: "Failed to fetch recent activity",
-            details: err.message || "Unknown database error",
-            code: err.code || "unknown"
-          });
 
           // For logged-out users, provide empty array instead of showing error
           if (!user) {
             setActivities([]);
+            setError(null); // Don't show error for logged-out users
+          } else {
+            setError({
+              message: "Failed to fetch recent activity",
+              details: err.message || "Unknown database error",
+              code: err.code || "unknown"
+            });
           }
         }
       } catch (err) {

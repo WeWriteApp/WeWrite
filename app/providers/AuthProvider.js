@@ -9,6 +9,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
 import Cookies from 'js-cookie';
+import { setAnalyticsUserInfo } from "../utils/analytics-user-tracking";
 
 export const AuthContext = createContext();
 
@@ -164,6 +165,7 @@ export const AuthProvider = ({ children }) => {
       if (user) {
         // User is signed in
         localStorage.setItem('authState', 'authenticated');
+        localStorage.setItem('isAuthenticated', 'true');
         // Clear any previous user session since we have a new login
         localStorage.removeItem('previousUserSession');
 
@@ -184,6 +186,13 @@ export const AuthProvider = ({ children }) => {
 
             // Log the user data for debugging
             console.log("User data from Firestore:", userData);
+
+            // Set user info in Google Analytics
+            setAnalyticsUserInfo({
+              uid: user.uid,
+              email: user.email,
+              username: userData.username || user.displayName || 'Missing username'
+            });
           } else {
             // No user document, create default data
             setUser({
@@ -221,6 +230,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         // User is signed out
         localStorage.removeItem('authState');
+        localStorage.removeItem('isAuthenticated');
 
         // Check if we're in the middle of an account switch
         const accountSwitchInProgress = localStorage.getItem('accountSwitchInProgress') === 'true';

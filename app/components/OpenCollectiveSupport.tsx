@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowRight, Heart } from 'lucide-react';
+import { openExternalLink } from '../utils/pwa-detection';
 
 interface OpenCollectiveSupportProps {
   className?: string;
@@ -25,7 +26,7 @@ export default function OpenCollectiveSupport({
   description = 'Please support continued development on WeWrite'
 }: OpenCollectiveSupportProps) {
   const handleOpenCollective = () => {
-    window.open('https://opencollective.com/wewrite-app', '_blank');
+    openExternalLink('https://opencollective.com/wewrite-app', 'OpenCollective Support');
   };
 
   if (variant === 'modal') {

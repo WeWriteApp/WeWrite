@@ -1,18 +1,32 @@
 import * as admin from 'firebase-admin';
-import { getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getDatabase } from 'firebase-admin/database';
+import { getAuth } from 'firebase-admin/auth';
 
 // Singleton pattern to avoid re-initialization
 let app;
+let firestoreInstance;
+let rtdbInstance;
+let authInstance;
 
-export const initAdmin = () => {
+/**
+ * Initialize Firebase Admin for server components
+ * This is a specialized version for server components that ensures proper initialization
+ */
+export function initServerAdmin() {
+  console.log('initServerAdmin: Starting initialization');
+  
   // Check if any Firebase apps have been initialized
   if (admin.apps.length === 0) {
     try {
+      console.log('initServerAdmin: No existing Firebase apps, initializing new app');
+      
       // For development environment, use a service account or default credentials
       if (process.env.NODE_ENV === 'development') {
         // For local development, we'll use a simple implementation
-        // that allows API routes to work without throwing errors
         try {
+          console.log('initServerAdmin: Development environment detected');
+          
           const serviceAccount = {
             type: 'service_account',
             project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
@@ -32,8 +46,10 @@ export const initAdmin = () => {
             credential: admin.credential.cert(serviceAccount),
             databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
           });
+          
+          console.log('initServerAdmin: Development app initialized successfully');
         } catch (e) {
-          console.warn('Using fallback Firebase Admin initialization for development:', e.message);
+          console.warn('initServerAdmin: Using fallback Firebase Admin initialization for development:', e.message);
           app = admin.initializeApp({
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82'
           });
@@ -42,7 +58,8 @@ export const initAdmin = () => {
         // Production initialization with proper credentials
         try {
           // Log environment variables (without sensitive data)
-          console.log('Firebase Admin initialization - Environment check:', {
+          console.log('initServerAdmin: Production environment detected');
+          console.log('initServerAdmin: Environment check:', {
             hasProjectId: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !!process.env.FIREBASE_PROJECT_ID,
             hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
             hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
@@ -73,29 +90,66 @@ export const initAdmin = () => {
             databaseURL: databaseURL
           });
 
-          console.log(`Firebase Admin initialized successfully with project: ${serviceAccount.project_id}`);
+          console.log(`initServerAdmin: Production app initialized successfully with project: ${serviceAccount.project_id}`);
         } catch (error) {
-          console.error('Error initializing Firebase Admin with service account:', error);
+          console.error('initServerAdmin: Error initializing Firebase Admin with service account:', error);
 
           // Fallback initialization for Vercel preview environments
-          console.warn('Attempting fallback initialization for Vercel preview...');
+          console.warn('initServerAdmin: Attempting fallback initialization for Vercel preview...');
           app = admin.initializeApp({
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'wewrite-ccd82'
           });
         }
       }
     } catch (error) {
-      console.error('Error initializing Firebase Admin:', error);
+      console.error('initServerAdmin: Error initializing Firebase Admin:', error);
+      throw new Error('Failed to initialize Firebase Admin for server components');
     }
   } else {
     // If already initialized, get the default app
+    console.log('initServerAdmin: Using existing Firebase app');
     app = admin.app();
   }
 
-  return app;
-};
+  // Initialize services if they don't exist
+  if (!firestoreInstance) {
+    console.log('initServerAdmin: Initializing Firestore instance');
+    firestoreInstance = getFirestore(app);
+  }
+
+  // Only initialize RTDB if we have a valid app with databaseURL
+  if (!rtdbInstance) {
+    try {
+      // Check if the app has a databaseURL configured
+      const options = app?.options;
+      if (options && options.databaseURL) {
+        console.log('initServerAdmin: Initializing RTDB instance with URL:', options.databaseURL);
+        rtdbInstance = getDatabase(app);
+      } else {
+        // Create a dummy RTDB instance or set to null
+        console.warn('initServerAdmin: No databaseURL provided, RTDB will not be available');
+        rtdbInstance = null;
+      }
+    } catch (error) {
+      console.error('initServerAdmin: Error initializing RTDB:', error);
+      rtdbInstance = null;
+    }
+  }
+
+  if (!authInstance) {
+    console.log('initServerAdmin: Initializing Auth instance');
+    authInstance = getAuth(app);
+  }
+
+  return {
+    app,
+    db: firestoreInstance,
+    rtdb: rtdbInstance,
+    auth: authInstance
+  };
+}
 
 // Export admin for convenience
 export { admin };
 
-export default { initAdmin };
+export default { initServerAdmin };

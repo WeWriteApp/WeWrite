@@ -390,21 +390,36 @@ export default function PageHeader({
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 onClick={() => {
+                  // Create Twitter share text in the format: "[title]" by [username] on @WeWriteApp [URL]
+                  const pageTitle = title || 'WeWrite Page';
+                  const pageUrl = window.location.href;
+                  const twitterText = `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
+
+                  // Check if the Web Share API is available
                   if (navigator.share) {
                     navigator.share({
-                      title: title || 'WeWrite Page',
-                      url: window.location.href,
+                      title: pageTitle,
+                      text: twitterText,
+                      url: pageUrl,
                     }).catch((error) => {
                       // Silent error handling - no toast
                       console.error('Error sharing:', error);
                     });
                   } else {
-                    // Fallback for browsers that don't support the Web Share API
+                    // Create a Twitter share URL as fallback
                     try {
-                      navigator.clipboard.writeText(window.location.href);
-                      // No toast notification
+                      // First try to open Twitter share dialog
+                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
+                      window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
                     } catch (error) {
-                      console.error('Error copying link:', error);
+                      console.error('Error opening Twitter share:', error);
+
+                      // If that fails, copy the URL to clipboard
+                      try {
+                        navigator.clipboard.writeText(pageUrl);
+                      } catch (clipboardError) {
+                        console.error('Error copying link:', clipboardError);
+                      }
                     }
                   }
                 }}

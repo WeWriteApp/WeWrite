@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { X, Heart, ArrowRight } from "lucide-react";
+import { openExternalLink } from "../utils/pwa-detection";
 import Link from "next/link";
 
 const SupportUsModal = ({ isOpen, onClose }) => {
@@ -39,18 +40,12 @@ const SupportUsModal = ({ isOpen, onClose }) => {
               variant="default"
               size="lg"
               className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 border-0 text-white"
-              asChild
+              onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Support Us Modal')}
             >
-              <Link
-                href="https://opencollective.com/wewrite-app"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className="relative z-10 flex items-center justify-center">
-                  Support Us
-                  <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
+              <span className="relative z-10 flex items-center justify-center">
+                Support Us
+                <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+              </span>
             </Button>
           </div>
         </div>
