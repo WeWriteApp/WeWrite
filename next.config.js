@@ -43,7 +43,7 @@ const nextConfig = {
         zlib: false,
         child_process: false,
         perf_hooks: false,
-        util: require.resolve('util/'),
+        util: require.resolve('util'),
         stream: require.resolve('stream-browserify'),
         crypto: require.resolve('crypto-browserify'),
         url: false,
