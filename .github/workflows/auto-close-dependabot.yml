@@ -1,0 +1,32 @@
+name: Auto-close Dependabot PRs
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+jobs:
+  auto-close:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Close Pull Request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            console.log(`Auto-closing Dependabot PR #${pr.number}: ${pr.title}`);
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: 'This Dependabot PR is being automatically closed to prevent unnecessary Vercel preview deployments. Security updates will be applied manually by the team.'
+            });
+            
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              state: 'closed'
+            });

@@ -4,21 +4,13 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 3
+    # Disable automatic pull requests completely
+    open-pull-requests-limit: 0
     versioning-strategy: auto
     labels:
       - "dependencies"
       - "security"
-    # Only allow security updates to create PRs automatically
-    # This will dramatically reduce the number of PRs
+    # Ignore all updates to prevent any PRs
     ignore:
       - dependency-name: "*"
-        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
-    # Group all non-major updates into a single PR
-    groups:
-      minor-patch-dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]

@@ -6,7 +6,13 @@
     },
     "github": {
         "silent": true,
-        "autoJobCancelation": true
+        "autoJobCancelation": true,
+        "enabled": false
     },
-    "ignoreCommand": "if [[ $VERCEL_GIT_COMMIT_REF == dependabot/* ]]; then exit 0; else exit 1; fi"
+    "git": {
+        "deploymentEnabled": {
+            "dependabot": false
+        }
+    },
+    "ignoreCommand": "if [[ $VERCEL_GIT_COMMIT_REF == *\"dependabot\"* ]]; then exit 0; else exit 1; fi"
 }
