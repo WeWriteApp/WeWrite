@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User, Search } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
@@ -194,6 +194,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <NotificationBadge className="mr-2" />
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
+              </button>
+
+              <button
+                onClick={() => router.push('/search')}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+              >
+                <div className="flex items-center">
+                  <Search className="h-5 w-5 mr-2" />
+                  <span>Search</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </button>
 
               <button
