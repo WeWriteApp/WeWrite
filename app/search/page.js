@@ -215,9 +215,9 @@ export default function SearchPage() {
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => window.history.back()}
             className="flex items-center gap-2"
@@ -228,9 +228,11 @@ export default function SearchPage() {
             </svg>
             <span className="hidden sm:inline">Back</span>
           </Button>
+        </div>
+        <div className="flex-1 flex justify-center">
           <h1 className="text-2xl font-bold">Search</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Button
             variant="outline"
             size="sm"

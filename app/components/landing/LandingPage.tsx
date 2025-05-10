@@ -161,10 +161,17 @@ const LandingPage = () => {
             let body = '';
             try {
               const contentObj = JSON.parse(versionData.content);
-              // Extract text content from nodes
+              // Extract text content from nodes, properly handling links
               body = contentObj.map((node: any) => {
                 if (node.type === 'paragraph' && node.children) {
-                  return node.children.map((child: any) => child.text || '').join('');
+                  return node.children.map((child: any) => {
+                    // Handle link nodes by extracting their text content
+                    if (child.type === 'link' && child.children) {
+                      return child.children.map((linkChild: any) => linkChild.text || '').join('');
+                    }
+                    // Handle regular text nodes
+                    return child.text || '';
+                  }).join('');
                 }
                 return '';
               }).join('\n\n');

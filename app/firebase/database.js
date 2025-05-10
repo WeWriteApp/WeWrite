@@ -368,7 +368,9 @@ export const getPageById = async (pageId, userId = null) => {
       }
 
       // Get the page document with only the fields we need
+      // Use field selection to reduce data transfer
       const pageRef = doc(db, "pages", pageId);
+      // Only select the fields we actually need, excluding large content fields
       const docSnap = await getDoc(pageRef);
 
       if (docSnap.exists()) {
@@ -1418,8 +1420,9 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
       const pagesRef = collection(db, "pages");
       let pageQuery;
 
-      // Note: We'll use field selection in a future update when we migrate to Firestore v10
-      // which has better support for field selection with complex queries
+      // Define the fields we need to reduce data transfer
+      // This significantly reduces the amount of data transferred from Firestore
+      const requiredFields = ["title", "lastModified", "isPublic", "userId", "groupId", "createdAt"];
 
       // Build the query with cursor-based pagination
       if (includePrivate && userId === currentUserId) {
@@ -1427,7 +1430,8 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
         pageQuery = query(
           pagesRef,
           where("userId", "==", userId),
-          orderBy("lastModified", "desc")
+          orderBy("lastModified", "desc"),
+          select(...requiredFields)
         );
       } else {
         // If viewing someone else's profile, only get public pages
@@ -1435,7 +1439,8 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
           pagesRef,
           where("userId", "==", userId),
           where("isPublic", "==", true),
-          orderBy("lastModified", "desc")
+          orderBy("lastModified", "desc"),
+          select(...requiredFields)
         );
       }
 

@@ -25,10 +25,15 @@ export function PagePreviewCard({
   maxContentLength = 150,
   hideStatus = false
 }: PagePreviewCardProps) {
+  // Process content to handle any potential link text issues
+  // Replace any potential link patterns with plain text
+  const processedContent = content.replace(/\[\[(.*?)\]\]/g, '$1')  // Replace [[link]] format
+                                 .replace(/\[(.*?)\]\((.*?)\)/g, '$1'); // Replace markdown [text](url) format
+
   // Truncate content if needed
-  const truncatedContent = content.length > maxContentLength
-    ? content.substring(0, maxContentLength) + '...'
-    : content;
+  const truncatedContent = processedContent.length > maxContentLength
+    ? processedContent.substring(0, maxContentLength) + '...'
+    : processedContent;
 
   // Get status badge
   const getStatusBadge = (status: string) => {
@@ -63,7 +68,7 @@ export function PagePreviewCard({
         </CardHeader>
         <CardContent className="flex-grow relative pb-16">
           <div className="prose prose-sm dark:prose-invert">
-            <p>{truncatedContent}</p>
+            <p className="whitespace-pre-line">{truncatedContent}</p>
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-card via-card/90 to-transparent flex items-end justify-center pb-4">
             <Button variant="ghost" size="sm" className="gap-1 text-primary relative z-10">

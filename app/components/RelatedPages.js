@@ -11,11 +11,13 @@ import { Loader2 } from 'lucide-react';
  *
  * Displays a list of pages related to the current page.
  * Uses a combination of user-based and content-based relevance.
+ * Filters out pages that are already linked in the body of the page.
  *
  * @param {Object} page - The current page object
+ * @param {Array} linkedPageIds - Array of page IDs that are already linked in the page content
  * @param {number} maxPages - Maximum number of related pages to display (default: 5)
  */
-export default function RelatedPages({ page, maxPages = 5 }) {
+export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 }) {
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -173,11 +175,13 @@ export default function RelatedPages({ page, maxPages = 5 }) {
           }
         }
 
-        // Convert to array, filter out pages with no content relevance, sort by relevance score, and limit
+        // Convert to array, filter out pages with no content relevance and pages already linked in the content
         const sortedPages = Array.from(pageMap.values())
           // Only include pages that have a relevance score from content matching (not just author-based)
           // Increase the threshold to 2.0 to prioritize pages with at least some exact word matches
           .filter(page => page.relevanceScore >= 2.0)
+          // Filter out pages that are already linked in the content
+          .filter(page => !linkedPageIds.includes(page.id))
           .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
           .slice(0, maxPages);
 
@@ -190,7 +194,7 @@ export default function RelatedPages({ page, maxPages = 5 }) {
     };
 
     fetchRelatedPages();
-  }, [page, maxPages]);
+  }, [page, maxPages, linkedPageIds]);
 
   if (isLoading) {
     return (
@@ -203,15 +207,9 @@ export default function RelatedPages({ page, maxPages = 5 }) {
     );
   }
 
+  // If there are no related pages after filtering out linked pages, don't show the section at all
   if (relatedPages.length === 0) {
-    return (
-      <div className="mt-8 pt-6">
-        <h3 className="text-lg font-medium mb-4">Related Pages</h3>
-        <div className="text-muted-foreground text-sm py-4 text-center border border-border dark:border-border rounded-md p-6 bg-muted/20">
-          No related pages found with matching words in the title.
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

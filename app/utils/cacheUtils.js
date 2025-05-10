@@ -3,8 +3,9 @@
  * These functions help reduce Firestore reads by caching frequently accessed data
  */
 
-// Default TTL (time-to-live) in milliseconds (5 minutes)
-const DEFAULT_TTL = 5 * 60 * 1000;
+// Default TTL (time-to-live) in milliseconds (15 minutes)
+// Increased from 5 minutes to reduce Firestore reads and improve cost efficiency
+const DEFAULT_TTL = 15 * 60 * 1000;
 
 /**
  * Set an item in localStorage with expiration

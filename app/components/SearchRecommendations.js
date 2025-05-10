@@ -68,7 +68,7 @@ export default function SearchRecommendations({ onSelect }) {
           <button
             key={recommendation.id}
             onClick={() => handleClick(recommendation)}
-            className="flex-none bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-sm transition-all hover:scale-105 hover:shadow-sm whitespace-nowrap"
+            className="flex-none bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full text-sm transition-all hover:scale-105 hover:shadow-sm whitespace-nowrap"
           >
             {recommendation.label}
           </button>

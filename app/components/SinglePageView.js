@@ -287,6 +287,38 @@ function SinglePageView({ params }) {
     }
   }, [page, user]);
 
+  // Function to extract linked page IDs from content
+  const extractLinkedPageIds = (content) => {
+    if (!content || !Array.isArray(content)) return [];
+
+    const linkedIds = new Set();
+
+    // Recursive function to traverse nodes and find links
+    const traverseNodes = (node) => {
+      // Check if the node is a link
+      if (node.type === 'link' && node.url) {
+        // Check if it's an internal page link
+        if (node.url.startsWith('/') || node.url.startsWith('/pages/')) {
+          // Extract the page ID from the URL
+          const pageId = node.url.replace('/pages/', '').replace('/', '');
+          if (pageId && pageId !== params.id) { // Don't include self-links
+            linkedIds.add(pageId);
+          }
+        }
+      }
+
+      // Recursively check children if they exist
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(traverseNodes);
+      }
+    };
+
+    // Start traversal on each top-level node
+    content.forEach(traverseNodes);
+
+    return Array.from(linkedIds);
+  };
+
   // Function to handle when page content is fully rendered
   const handlePageFullyRendered = () => {
     setPageFullyRendered(true);
@@ -506,7 +538,10 @@ function SinglePageView({ params }) {
             {/* Related Pages - Only show after content is fully rendered */}
             {pageFullyRendered && (
               <div className="container max-w-4xl mx-auto px-4">
-                <RelatedPages page={page} />
+                <RelatedPages
+                  page={page}
+                  linkedPageIds={extractLinkedPageIds(editorState)}
+                />
               </div>
             )}
           </>

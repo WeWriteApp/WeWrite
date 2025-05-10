@@ -33,8 +33,8 @@ exports.createPage = functions.firestore
     const pageId = context.params.pageId;
     const page = change.after.exists ? change.after.data() : null;
 
-    const resourcePath = context.resource.name; 
-    
+    const resourcePath = context.resource.name;
+
     // Check if the update was made to a subcollection (e.g., /pages/{pageId}/versions/{version})
     if (resourcePath.includes('/versions/')) {
       console.log(`Ignoring subcollection update at: ${resourcePath}`);
@@ -130,7 +130,7 @@ async function deleteFromRTDB(existingData, pageId) {
     promises.push(
       rtdb.ref(`/groups/${existingGroupId}/pages/${pageId}`).remove(),
     );
-  } 
+  }
 
   await Promise.all(promises);
   logger.info(`Deleted page ${pageId} from RTDB`);
@@ -192,46 +192,112 @@ async function deleteFromBigQuery(pageId) {
   logger.info(`Deleted entry with document_id ${pageId} from BigQuery`);
 }
 
-// Function to upsert an entry into BigQuery
+// Batch for BigQuery operations
+let bigQueryBatch = [];
+const BATCH_SIZE = 20; // Process in batches of 20 for better efficiency
+let batchTimer = null;
+
+// Function to upsert an entry into BigQuery with batching for cost efficiency
 async function upsertToBigQuery(pageId, newValue) {
-  logger.info(`Upserting entry with document_id ${pageId} into BigQuery`);
-const query = `
-    MERGE \`${DATASET_ID}.${TABLE_ID}\` T
-    USING (SELECT @document_id AS document_id, @userId AS userId, @groupId AS groupId, @title AS title, @lastModified AS lastModified) S
-    ON T.document_id = S.document_id
-    WHEN MATCHED THEN
-      UPDATE SET T.userId = S.userId, T.groupId = S.groupId, T.title = S.title, T.lastModified = S.lastModified
-    WHEN NOT MATCHED THEN
-      INSERT (document_id, userId, groupId, title, lastModified)
-      VALUES (S.document_id, S.userId, S.groupId, S.title, S.lastModified)
-  `;
-  
-  // Define the parameter values
-  const params = {
-    document_id: pageId,
-    userId: newValue.userId || null,
-    groupId: newValue.groupId || null,
-    title: newValue.title || null,
-    lastModified: newValue.lastModified ? new Date(newValue.lastModified) : null,
-  };
+  // Add to batch instead of immediate processing
+  bigQueryBatch.push({
+    pageId,
+    data: {
+      document_id: pageId,
+      userId: newValue.userId || null,
+      groupId: newValue.groupId || null,
+      title: newValue.title || null,
+      lastModified: newValue.lastModified ? new Date(newValue.lastModified) : null,
+    }
+  });
 
-  // Define the parameter types explicitly
-  const types = {
-    document_id: 'STRING',
-    userId: 'STRING',
-    groupId: 'STRING',
-    title: 'STRING',
-    lastModified: 'TIMESTAMP',
-  };
+  // If this is the first item in the batch, set a timer to process the batch
+  if (bigQueryBatch.length === 1) {
+    clearTimeout(batchTimer);
+    batchTimer = setTimeout(processBigQueryBatch, 2000); // Wait 2 seconds to collect more operations
+  }
 
-  const options = {
-    query: query,
-    params: params,
-    types: types, // Specify the types here
-  };
+  // If we've reached the batch size, process immediately
+  if (bigQueryBatch.length >= BATCH_SIZE) {
+    clearTimeout(batchTimer);
+    await processBigQueryBatch();
+  }
+}
 
-  await bigquery.query(options);
-  logger.info(`Upserted entry with document_id ${pageId} into BigQuery`);
+// Process the batch of BigQuery operations
+async function processBigQueryBatch() {
+  if (bigQueryBatch.length === 0) return;
+
+  const batchToProcess = [...bigQueryBatch];
+  bigQueryBatch = []; // Clear the batch
+
+  logger.info(`Processing batch of ${batchToProcess.length} BigQuery operations`);
+
+  try {
+    // Create a single MERGE statement for all items in the batch
+    const rows = batchToProcess.map(item => {
+      return `(
+        '${item.data.document_id}',
+        ${item.data.userId ? `'${item.data.userId}'` : 'NULL'},
+        ${item.data.groupId ? `'${item.data.groupId}'` : 'NULL'},
+        ${item.data.title ? `'${item.data.title.replace(/'/g, "''")}'` : 'NULL'},
+        ${item.data.lastModified ? `TIMESTAMP('${item.data.lastModified.toISOString()}')` : 'NULL'}
+      )`;
+    }).join(',\n');
+
+    const query = `
+      MERGE \`${DATASET_ID}.${TABLE_ID}\` T
+      USING (
+        SELECT * FROM UNNEST([
+          ${rows}
+        ]) AS row(document_id, userId, groupId, title, lastModified)
+      ) S
+      ON T.document_id = S.document_id
+      WHEN MATCHED THEN
+        UPDATE SET T.userId = S.userId, T.groupId = S.groupId, T.title = S.title, T.lastModified = S.lastModified
+      WHEN NOT MATCHED THEN
+        INSERT (document_id, userId, groupId, title, lastModified)
+        VALUES (S.document_id, S.userId, S.groupId, S.title, S.lastModified)
+    `;
+
+    const options = { query };
+    await bigquery.query(options);
+    logger.info(`Successfully processed batch of ${batchToProcess.length} BigQuery operations`);
+  } catch (error) {
+    logger.error(`Error processing BigQuery batch: ${error}`);
+    // If batch processing fails, fall back to individual processing
+    for (const item of batchToProcess) {
+      try {
+        const query = `
+          MERGE \`${DATASET_ID}.${TABLE_ID}\` T
+          USING (SELECT @document_id AS document_id, @userId AS userId, @groupId AS groupId, @title AS title, @lastModified AS lastModified) S
+          ON T.document_id = S.document_id
+          WHEN MATCHED THEN
+            UPDATE SET T.userId = S.userId, T.groupId = S.groupId, T.title = S.title, T.lastModified = S.lastModified
+          WHEN NOT MATCHED THEN
+            INSERT (document_id, userId, groupId, title, lastModified)
+            VALUES (S.document_id, S.userId, S.groupId, S.title, S.lastModified)
+        `;
+
+        const options = {
+          query: query,
+          params: item.data,
+          types: {
+            document_id: 'STRING',
+            userId: 'STRING',
+            groupId: 'STRING',
+            title: 'STRING',
+            lastModified: 'TIMESTAMP',
+          }
+        };
+
+        await bigquery.query(options);
+        logger.info(`Individually processed BigQuery operation for ${item.pageId}`);
+      } catch (individualError) {
+        logger.error(`Error processing individual BigQuery operation: ${individualError}`);
+      }
+    }
+  }
 }
 
 // Function to upsert entries into Realtime Database

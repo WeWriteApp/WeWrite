@@ -23,11 +23,15 @@ export const getRecentActivity = async (limitCount = 30) => {
   try {
     console.log('getRecentActivity: Starting with limit', limitCount);
 
+    // Define only the fields we need to reduce data transfer
+    const requiredFields = ["title", "lastModified", "userId", "username"];
+
     // Query to get recent pages (only public pages)
     const pagesQuery = query(
       collection(db, "pages"),
       where("isPublic", "==", true),
       orderBy("lastModified", "desc"),
+      select(...requiredFields),
       limit(limitCount * 2)
     );
 
