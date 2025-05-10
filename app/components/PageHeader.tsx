@@ -176,15 +176,11 @@ export default function PageHeader({
           const progress = (lastScrollY / maxScroll) * 100;
           setScrollProgress(Math.min(progress, 100));
 
-          // Don't update the spacer height during scroll - only after scrolling stops
-          // This prevents layout shifts during scrolling
-          clearTimeout(spacerUpdateTimeout);
-          spacerUpdateTimeout = setTimeout(() => {
-            if (headerRef.current && spacerRef.current) {
-              const height = headerRef.current.offsetHeight;
-              spacerRef.current.style.height = `${height}px`;
-            }
-          }, 200);
+          // Update the spacer height immediately to ensure proper spacing
+          if (headerRef.current && spacerRef.current) {
+            const height = headerRef.current.offsetHeight;
+            spacerRef.current.style.height = `${height}px`;
+          }
 
           ticking = false;
         });
@@ -192,6 +188,12 @@ export default function PageHeader({
         ticking = true;
       }
     };
+
+    // Initial call to set up the spacer height
+    if (headerRef.current && spacerRef.current) {
+      const height = headerRef.current.offsetHeight;
+      spacerRef.current.style.height = `${height}px`;
+    }
 
     // Use passive event listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -265,13 +267,14 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
         }`}
         style={{
-          transform: 'translateZ(0)' // Force GPU acceleration
+          transform: 'translateZ(0)', // Force GPU acceleration
+          width: '100%'
         }}
       >
         <div className="relative mx-auto px-2 md:px-4">
@@ -436,7 +439,8 @@ export default function PageHeader({
           />
         </div>
       </header>
-      {/* No spacer needed with sticky positioning */}
+      {/* Add spacer to prevent content from being hidden under the fixed header */}
+      <div ref={spacerRef} style={{ height: headerHeight + 'px' }} />
     </>
   );
 }
