@@ -476,6 +476,21 @@ body {
   max-width: 100%;
 }
 
+/* Truncate links in the editor to prevent layout shifts */
+.truncate-link {
+  max-width: 100%;
+  display: inline-flex !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.truncate-link > div {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Ensure proper text contrast in pill links */
 .bg-primary {
   color: #ffffff !important; /* Force white text for all primary backgrounds */

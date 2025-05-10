@@ -1067,6 +1067,7 @@ InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
 const LinkComponent = forwardRef(({ attributes, children, element, openLinkEditor }, ref) => {
   // const selected = useSelected();
   const editor = useSlate();
+  const { lineMode } = useLineSettings();
 
   // Use our utility functions to determine link type
   const isUserLinkType = isUserLink(element.url) || element.isUser || element.className === 'user-link';
@@ -1075,6 +1076,10 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
 
   // Determine the appropriate class based on link type
   const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
+
+  // Determine if we should truncate the link based on the line mode
+  // Only allow wrapping in classic mode, truncate in filled and outline modes
+  const shouldTruncate = lineMode === LINE_MODES.NORMAL;
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -1107,13 +1112,14 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       ref={ref}
       onClick={handleClick}
       contentEditable={false} // Make the link non-editable
-      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-primary text-primary-foreground border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-primary/90 hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass}`}
+      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-primary text-primary-foreground border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-primary/90 hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass} ${shouldTruncate ? 'truncate-link' : ''}`}
       data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
       data-user-id={isUserLinkType ? (element.userId || '') : undefined}
       data-link-type={linkTypeClass}
+      title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
       <InlineChromiumBugfix />
-      <div className="flex items-center gap-0.5 min-w-0">
+      <div className={`flex items-center gap-0.5 min-w-0 ${shouldTruncate ? 'max-w-[200px] truncate' : ''}`}>
         {children}
         {isExternalLinkType || isExternalLink(element.url) ? (
           <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
