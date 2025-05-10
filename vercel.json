@@ -3,5 +3,10 @@
     "env": {
         "SKIP_TYPE_CHECK": "1",
         "NODE_OPTIONS": "--max_old_space_size=4096"
-    }
+    },
+    "github": {
+        "silent": true,
+        "autoJobCancelation": true
+    },
+    "ignoreCommand": "if [[ $VERCEL_GIT_COMMIT_REF == dependabot/* ]]; then exit 0; else exit 1; fi"
 }
