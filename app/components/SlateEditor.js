@@ -302,13 +302,29 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   // Create a debounced version of the content change callback
+  // Use a longer debounce time to prevent cursor jumps
   const debouncedContentChange = React.useCallback(
     debounce((value) => {
       if (typeof onContentChange === 'function') {
+        // Store the current selection before calling onContentChange
+        const currentSelection = editor.selection;
+
+        // Call the parent's onContentChange
         onContentChange(value);
+
+        // Restore the selection after a short delay to ensure React has updated
+        if (currentSelection) {
+          setTimeout(() => {
+            try {
+              Transforms.select(editor, currentSelection);
+            } catch (error) {
+              console.error('Error restoring selection:', error);
+            }
+          }, 0);
+        }
       }
-    }, 100),
-    [onContentChange]
+    }, 300), // Increased debounce time for better stability
+    [onContentChange, editor]
   );
 
   // onchange handler with error handling and debouncing
@@ -319,8 +335,20 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         // Update local state
         setLineCount(newValue.length);
 
-        // Use debounced callback to prevent cursor jumps during rapid typing
+        // Store the current selection
+        const currentSelection = editor.selection;
+
+        // Use debounced callback with selection preservation
         debouncedContentChange(newValue);
+
+        // Immediately restore selection to prevent cursor jumps
+        if (currentSelection) {
+          try {
+            Transforms.select(editor, currentSelection);
+          } catch (error) {
+            console.error('Error immediately restoring selection:', error);
+          }
+        }
       } else {
         console.error('Invalid editor value:', newValue);
       }
@@ -789,6 +817,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           editor={validEditor}
           initialValue={validInitialValue}
           onChange={onChange}
+          // Add key to prevent re-creation of the Slate component
+          key="slate-editor-instance"
         >
           <div className="flex-grow flex flex-col">
             <div className="relative flex-grow">
@@ -839,10 +869,23 @@ const withInlines = (editor) => {
   // Override insertText to handle URL pasting
   editor.insertText = text => {
     try {
+      // Store the current selection before inserting text
+      const currentSelection = editor.selection;
+
       if (text && isUrl(text)) {
-        wrapLink(editor, text)
+        wrapLink(editor, text);
       } else {
-        insertText(text)
+        insertText(text);
+      }
+
+      // If we had a selection, ensure it's properly updated after text insertion
+      if (currentSelection) {
+        // For normal text insertion, the cursor position is automatically updated
+        // We only need to handle special cases like URL wrapping
+        if (text && isUrl(text)) {
+          // Move cursor to the end of the inserted link
+          Transforms.collapse(editor, { edge: 'end' });
+        }
       }
     } catch (error) {
       console.error('Error in insertText:', error);
@@ -1427,6 +1470,24 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
           if (document.activeElement === editableRef.current ||
               editableRef.current?.contains(document.activeElement)) {
             handleKeyDown(event, activeEditor);
+          }
+        }}
+        // Add onFocus handler to preserve selection
+        onFocus={() => {
+          // If there's no selection, try to restore the last known selection
+          if (!activeEditor.selection && activeEditor.lastSelection) {
+            try {
+              Transforms.select(activeEditor, activeEditor.lastSelection);
+            } catch (error) {
+              console.error('Error restoring last selection on focus:', error);
+            }
+          }
+        }}
+        // Add onBlur handler to save the current selection
+        onBlur={() => {
+          // Save the current selection when the editor loses focus
+          if (activeEditor.selection) {
+            activeEditor.lastSelection = activeEditor.selection;
           }
         }}
         className="outline-none h-full"
