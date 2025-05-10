@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { admin } from '../../firebase/admin';
+import { admin, initAdmin } from '../../firebase/admin';
 import Stripe from 'stripe';
 
+// Add export for dynamic route handling to prevent static build errors
+export const dynamic = 'force-dynamic';
+
 // Initialize Firebase Admin
-const auth = admin.auth();
-const db = admin.firestore();
+let auth;
+let db;
+
+try {
+  initAdmin();
+  auth = admin.auth();
+  db = admin.firestore();
+  console.log('Firebase Admin initialized successfully in subscription-success route');
+} catch (error) {
+  console.error('Error initializing Firebase Admin in subscription-success route:', error);
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -13,6 +25,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // POST /api/subscription-success - Handle subscription success and cleanup
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase Admin was initialized properly
+    if (!auth || !db) {
+      console.error('Firebase Admin not initialized properly in subscription-success route');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
     // Get the session cookie
     const sessionCookie = request.cookies.get('session')?.value;
 
