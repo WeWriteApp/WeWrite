@@ -20,6 +20,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState({ pages: [], users: [], groups: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const inputRef = React.useRef(null);
 
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
@@ -39,6 +40,19 @@ export default function SearchPage() {
       window.history.pushState({}, '', url);
     }
   }, [searchParams]);
+
+  // Auto-focus the input field when the component mounts
+  useEffect(() => {
+    // Short delay to ensure the input is rendered and accessible
+    const timer = setTimeout(() => {
+      if (inputRef.current) {
+        // Focus the input element
+        inputRef.current.focus();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Perform search when query changes
   const performSearch = async (searchTerm) => {
@@ -254,6 +268,8 @@ export default function SearchPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1"
+            ref={inputRef}
+            autoFocus
           />
           <Button type="submit">Search</Button>
         </div>
