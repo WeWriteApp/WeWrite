@@ -96,7 +96,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       <div className="flex flex-col w-full flex-shrink-0">
         {/* Page title with fixed height and ellipsis */}
         <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
-          <PillLink href={`/${activity.pageId}`} className="max-w-full line-clamp-2">
+          <PillLink
+            href={activity.versionId ? `/${activity.pageId}/version/${activity.versionId}` : `/${activity.pageId}`}
+            className="max-w-full line-clamp-2"
+          >
             {activity.pageName || "Untitled page"}
           </PillLink>
         </div>

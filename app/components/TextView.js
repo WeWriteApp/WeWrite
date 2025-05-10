@@ -13,6 +13,7 @@ import { Button } from "./ui/button";
 import { ExternalLink } from "lucide-react";
 import Modal from "./ui/modal";
 import "./paragraph-styles.css";
+import "./diff-styles.css";
 
 /**
  * TextView Component - Renders text content with different paragraph modes
@@ -83,7 +84,7 @@ const getPageTitle = async (pageId) => {
   return null;
 };
 
-const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete, setIsEditing }) => {
+const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete, setIsEditing, showDiff = false }) => {
   const [parsedContents, setParsedContents] = useState(null);
   const [language, setLanguage] = useState(null);
   const { lineMode } = useLineSettings();
@@ -317,13 +318,14 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
           canEdit={canEdit}
           activeLineIndex={activeLineIndex}
           onActiveLine={handleActiveLine}
+          showDiff={showDiff}
         />
       )}
     </motion.div>
   );
 };
 
-export const RenderContent = ({ contents, language, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null }) => {
+export const RenderContent = ({ contents, language, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false }) => {
   // Try to use the page context, but provide a fallback if it's not available
   const pageContext = usePage();
   const { lineMode } = useLineSettings();
@@ -419,7 +421,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
       <div className="w-full text-left min-h-screen">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
-            {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine)}
+            {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine, showDiff)}
           </React.Fragment>
         ))}
       </div>
@@ -427,11 +429,11 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
   }
 
   // If it's a single node, render it directly
-  return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine);
+  return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine, showDiff);
 };
 
 // Render content based on node type
-const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null) => {
+const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false) => {
   if (!node) return null;
 
   // Only use ParagraphNode for normal mode
@@ -447,6 +449,7 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
           canEdit={canEdit}
           isActive={activeLineIndex === index}
           onActiveLine={onActiveLine}
+          showDiff={showDiff}
         />
       );
     }
@@ -466,7 +469,7 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  * - Standard text size (1rem/16px)
  * - Proper spacing between paragraphs
  */
-const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = false, isActive = false, onActiveLine = null }) => {
+const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false }) => {
   const { lineMode } = useLineSettings();
   // Always use the latest lineMode from context to ensure immediate updates
   // Fall back to effectiveMode only if lineMode is not available
@@ -498,11 +501,17 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
       if (child.italic) className += ' italic';
       if (child.underline) className += ' underline';
 
+      // Add diff highlighting classes if showDiff is true
+      if (showDiff) {
+        if (child.added) className += ' bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300';
+        if (child.removed) className += ' bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 line-through';
+      }
+
       if (child.code) {
         return (
           <code
             key={i}
-            className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono"
+            className={`px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono ${className}`}
           >
             {child.text}
           </code>

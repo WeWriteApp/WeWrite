@@ -94,7 +94,8 @@ export default function PageHistoryPage({ params }) {
             timestamp: version.timestamp,
             currentContent: version.content || '',
             previousContent: prevVersion?.content || '',
-            isNewPage: index === sortedVersions.length - 1 // Last item is the oldest/first version
+            isNewPage: index === sortedVersions.length - 1, // Last item is the oldest/first version
+            versionId: version.id // Include the version ID for linking to version view
           };
         });
 

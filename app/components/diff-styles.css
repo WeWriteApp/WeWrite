@@ -1,0 +1,27 @@
+/* Diff highlighting styles */
+.diff-added {
+  background-color: rgba(74, 222, 128, 0.2);
+  color: rgb(22, 101, 52);
+  text-decoration: none;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.diff-removed {
+  background-color: rgba(248, 113, 113, 0.2);
+  color: rgb(153, 27, 27);
+  text-decoration: line-through;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Dark mode styles */
+.dark .diff-added {
+  background-color: rgba(74, 222, 128, 0.1);
+  color: rgb(134, 239, 172);
+}
+
+.dark .diff-removed {
+  background-color: rgba(248, 113, 113, 0.1);
+  color: rgb(252, 165, 165);
+}

@@ -470,6 +470,33 @@ export const getVersionsByPageId = async (pageId) => {
   }
 }
 
+export const getPageVersionById = async (pageId, versionId) => {
+  try {
+    if (!pageId || !versionId) {
+      console.error("getPageVersionById called with invalid parameters:", { pageId, versionId });
+      return null;
+    }
+
+    const pageRef = doc(db, "pages", pageId);
+    const versionRef = doc(collection(pageRef, "versions"), versionId);
+    const versionSnap = await getDoc(versionRef);
+
+    if (!versionSnap.exists()) {
+      console.error(`Version ${versionId} not found for page ${pageId}`);
+      return null;
+    }
+
+    // Return version data with ID
+    return {
+      id: versionSnap.id,
+      ...versionSnap.data()
+    };
+  } catch (error) {
+    console.error("Error fetching page version:", error);
+    return null;
+  }
+}
+
 export const getPageVersions = async (pageId, versionCount = 10) => {
   try {
     if (!pageId) {
@@ -1229,25 +1256,52 @@ export const appendPageReference = async (targetPageId, sourcePageData, userId =
       }
     }
 
-    // Create a reference paragraph to append
-    const referenceNode = {
+    // Get the source page content
+    let sourceContent = [];
+    if (sourcePageData.content) {
+      try {
+        if (typeof sourcePageData.content === 'string') {
+          sourceContent = JSON.parse(sourcePageData.content);
+        } else if (Array.isArray(sourcePageData.content)) {
+          sourceContent = sourcePageData.content;
+        }
+      } catch (e) {
+        console.error("Error parsing source page content:", e);
+        // Create a fallback content if parsing fails
+        sourceContent = [{
+          type: "paragraph",
+          children: [{ text: "Content from source page could not be loaded properly." }]
+        }];
+      }
+    }
+
+    // Create a reference header to append
+    const referenceHeader = {
       type: "paragraph",
       children: [
-        { text: "Referenced page: " },
+        { text: "Content from ", bold: true },
         {
           type: "link",
           href: `/pages/${sourcePageData.id}`,
           displayText: sourcePageData.title,
-          children: [{ text: sourcePageData.title }]
+          children: [{ text: sourcePageData.title, bold: true }]
         }
       ]
     };
 
-    // Append the reference to the content
+    // Create a separator line
+    const separatorLine = {
+      type: "paragraph",
+      children: [{ text: "---" }]
+    };
+
+    // Append the reference header, separator, and source content to the target content
     const newContent = [
       ...currentContent,
       { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
-      referenceNode
+      referenceHeader,
+      separatorLine,
+      ...sourceContent
     ];
 
     // Update the page with the new content
