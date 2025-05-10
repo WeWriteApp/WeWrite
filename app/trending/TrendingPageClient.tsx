@@ -42,12 +42,12 @@ export default function TrendingPageClient() {
         }
 
         // Handle both old and new response formats
-        const pages = Array.isArray(response) 
-          ? response 
+        const pages = Array.isArray(response)
+          ? response
           : (response.trendingPages || []);
-          
+
         console.log('TrendingPageClient: Received pages:', pages.length);
-        
+
         if (pages.length === 0) {
           console.log('TrendingPageClient: No trending pages found');
           setTrendingPages([]);
@@ -57,7 +57,7 @@ export default function TrendingPageClient() {
 
         // Check if pages already have hourlyViews data
         const needsHourlyData = !pages[0].hourlyViews;
-        
+
         if (needsHourlyData) {
           console.log('TrendingPageClient: Fetching hourly view data for pages');
           // For each page, get the hourly view data for sparklines
@@ -78,7 +78,7 @@ export default function TrendingPageClient() {
               }
             })
           );
-          
+
           console.log('TrendingPageClient: Setting trending pages with sparklines');
           setTrendingPages(pagesWithSparklines);
         } else {
@@ -140,8 +140,8 @@ export default function TrendingPageClient() {
       ) : error ? (
         <div className="flex flex-col items-center justify-center gap-4 p-6 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
           <p>{error}</p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => window.location.reload()}
           >
@@ -153,59 +153,118 @@ export default function TrendingPageClient() {
           <p className="text-muted-foreground">No trending pages to display</p>
         </div>
       ) : (
-        <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
-                <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
-                <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
-                <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Trend</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trendingPages.map((page) => (
-                <tr
-                  key={page.id}
-                  className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
-                  onClick={() => window.location.href = `/${page.id}`}
-                >
-                  <td className="py-3 px-4">
-                    <PillLink href={`/${page.id}`}>
-                      {page.title || 'Untitled'}
-                    </PillLink>
-                  </td>
-                  <td className="py-3 px-4">
-                    {page.userId && page.username ? (
-                      <Link 
-                        href={`/user/${page.userId}`}
-                        className="text-primary hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {page.username}
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground">Anonymous</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-right font-medium">
-                    {page.views.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="w-24 h-12 ml-auto">
+        <>
+          {/* Desktop view: Table layout (hidden on mobile) */}
+          <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
+                  <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
+                  <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Trend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trendingPages.map((page) => (
+                  <tr
+                    key={page.id}
+                    className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = `/${page.id}`}
+                  >
+                    <td className="py-3 px-4">
+                      <PillLink href={`/${page.id}`}>
+                        {page.title || 'Untitled'}
+                      </PillLink>
+                    </td>
+                    <td className="py-3 px-4">
+                      {page.userId && page.username ? (
+                        <Link
+                          href={`/user/${page.userId}`}
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {page.username}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">Anonymous</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right font-medium">
+                      {page.views.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="w-24 h-12 ml-auto">
+                        <SimpleSparkline
+                          data={page.hourlyViews}
+                          height={40}
+                          color="#1768FF"
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile view: Card grid layout */}
+          <div className="md:hidden grid grid-cols-1 gap-4">
+            {trendingPages.map((page) => (
+              <div
+                key={page.id}
+                className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+                onClick={() => window.location.href = `/${page.id}`}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="p-4">
+                  <div className="mb-3">
+                    <h3 className="text-base font-medium mb-1">
+                      <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                        <span className="truncate">{page.title || 'Untitled'}</span>
+                      </span>
+                    </h3>
+                    <div className="text-sm text-muted-foreground">
+                      by{' '}
+                      {page.userId && page.username ? (
+                        <Link
+                          href={`/user/${page.userId}`}
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {page.username}
+                        </Link>
+                      ) : (
+                        <span>Anonymous</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <div className="font-medium text-lg">
+                        {page.views.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        views in 24h
+                      </div>
+                    </div>
+
+                    <div className="w-28 h-14 bg-background/50 rounded-md p-1">
                       <SimpleSparkline
                         data={page.hourlyViews}
-                        height={40}
+                        height={48}
                         color="#1768FF"
-                        strokeWidth={1.5}
+                        strokeWidth={2}
                       />
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

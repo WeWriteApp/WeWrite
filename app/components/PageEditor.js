@@ -3,7 +3,7 @@ import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import SlateEditor from "./SlateEditor";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { Globe, Lock, Link, MapPin } from "lucide-react";
+import { Globe, Lock, Link, MapPin, Save } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -13,6 +13,8 @@ import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 import MapEditor from "./MapEditor";
+import { useEditorAutoSave } from "../hooks/useAutoSave";
+import { toast } from "sonner";
 import { useFeatureFlag } from "../utils/feature-flags";
 
 // Safely check if ReactEditor methods exist before using them
@@ -70,9 +72,36 @@ const PageEditor = ({
   isReply = false,
   replyToId = null
 }) => {
-  const [currentEditorValue, setCurrentEditorValue] = useState(() =>
+  // Use auto-save hook for editor content
+  const [savedContent, setSavedContent, clearSavedContent, isAutoSaving] = useEditorAutoSave(
+    isNewPage ? 'new' : (replyToId ? `reply_${replyToId}` : window.location.pathname.split('/').pop()),
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
+
+  // Initialize editor with saved content if available, otherwise use initialContent
+  const [currentEditorValue, setCurrentEditorValue] = useState(() => {
+    // If we have saved content and it's not empty, use it
+    if (savedContent && Array.isArray(savedContent) && savedContent.length > 0) {
+      // Check if the first item is not just an empty paragraph
+      const isEmpty = savedContent.length === 1 &&
+                     savedContent[0].type === 'paragraph' &&
+                     savedContent[0].children.length === 1 &&
+                     (!savedContent[0].children[0].text || savedContent[0].children[0].text === '');
+
+      if (!isEmpty) {
+        console.log('Using auto-saved content');
+        toast.info('Restored unsaved content', {
+          description: 'Your previous unsaved work has been restored.',
+          duration: 3000
+        });
+        return savedContent;
+      }
+    }
+
+    // Otherwise use initialContent
+    return initialContent || [{ type: 'paragraph', children: [{ text: '' }] }];
+  });
+
   const [titleError, setTitleError] = useState(false);
   const { user } = useContext(AuthContext);
   const editorRef = useRef(null);
@@ -308,6 +337,10 @@ const PageEditor = ({
   // Handle content changes
   const handleContentChange = (value) => {
     setCurrentEditorValue(value);
+
+    // Update auto-save with the new content
+    setSavedContent(value);
+
     if (onContentChange) {
       onContentChange(value);
     }
@@ -343,7 +376,18 @@ const PageEditor = ({
 
     // Call the provided onSave function with the current editor value
     if (onSave) {
-      onSave(currentEditorValue);
+      // Clear saved content when saving successfully
+      try {
+        onSave(currentEditorValue);
+        // Clear the auto-saved content after successful save
+        // We'll do this in a timeout to ensure it happens after the save is processed
+        setTimeout(() => {
+          clearSavedContent();
+        }, 1000);
+      } catch (error) {
+        console.error("Error during save:", error);
+        // Keep auto-saved content if there's an error
+      }
     }
   }
 
@@ -498,6 +542,21 @@ const PageEditor = ({
         </div>
         {titleError && (
           <p className="text-destructive text-sm mt-1">Title is required</p>
+        )}
+      </div>
+
+      {/* Auto-save indicator */}
+      <div className="flex items-center justify-end mb-2">
+        {isAutoSaving ? (
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Save className="h-3 w-3 mr-1 animate-pulse" />
+            <span>Auto-saving...</span>
+          </div>
+        ) : (
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Save className="h-3 w-3 mr-1" />
+            <span>Auto-save enabled</span>
+          </div>
         )}
       </div>
 
