@@ -5,35 +5,51 @@ import { useSearchParams } from 'next/navigation';
 import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Copy, Link as LinkIcon, Search } from 'lucide-react';
+import { ClearableInput } from '../components/ui/clearable-input';
+import { Link as LinkIcon, Search } from 'lucide-react';
 // import { useToast } from '../components/ui/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';
+import { useFeatureFlag } from '../utils/feature-flags';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const { user } = useContext(AuthContext);
   // const { toast } = useToast();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState({ pages: [], users: [] });
+  const [results, setResults] = useState({ pages: [], users: [], groups: [] });
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
+
+  // Check if Groups feature is enabled
+  const groupsEnabled = useFeatureFlag('groups', user?.email);
 
   // Initialize query from URL parameters
   useEffect(() => {
     const q = searchParams.get('q');
-    if (q) {
+
+    // Only set query and perform search if q parameter exists and is not empty after trimming
+    if (q && q.trim()) {
       setQuery(q);
-      performSearch(q);
+      performSearch(q.trim());
+    } else if (q === '') {
+      // If q parameter exists but is empty, remove it from URL
+      const url = new URL(window.location);
+      url.searchParams.delete('q');
+      window.history.pushState({}, '', url);
     }
   }, [searchParams]);
 
   // Perform search when query changes
   const performSearch = async (searchTerm) => {
-    if (!searchTerm || !user) return;
+    if (!user) return;
+
+    // Don't search if the search term is empty or just whitespace
+    if (!searchTerm || !searchTerm.trim()) {
+      setResults({ pages: [], users: [] });
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -55,9 +71,45 @@ export default function SearchPage() {
       const data = await response.json();
       console.log('Search results:', data);
 
+      // Process the results to ensure usernames are properly set
+      const processedPages = await Promise.all((data.pages || []).map(async (page) => {
+        // If page doesn't have a username or has "Anonymous", try to fetch it
+        if (!page.username || page.username === "Anonymous" || page.username === "NULL") {
+          try {
+            // Import the getUsernameById function
+            const { getUsernameById } = await import('../utils/userUtils');
+
+            // Get the username for this page's userId
+            if (page.userId) {
+              const username = await getUsernameById(page.userId);
+              return {
+                ...page,
+                username: username || "Missing username"
+              };
+            }
+          } catch (error) {
+            console.error('Error fetching username:', error);
+          }
+        }
+        return page;
+      }));
+
+      // Deduplicate pages by ID
+      const uniquePages = Array.from(
+        new Map(processedPages.map(page => [page.id, page])).values()
+      );
+
+      // Deduplicate users by ID
+      const uniqueUsers = Array.from(
+        new Map((data.users || []).map(user => [user.id, user])).values()
+      );
+
+      console.log(`Deduplication: ${processedPages.length} pages → ${uniquePages.length} unique pages`);
+      console.log(`Deduplication: ${(data.users || []).length} users → ${uniqueUsers.length} unique users`);
+
       setResults({
-        pages: data.pages || [],
-        users: data.users || []
+        pages: uniquePages,
+        users: uniqueUsers
       });
     } catch (error) {
       console.error('Error searching:', error);
@@ -75,13 +127,26 @@ export default function SearchPage() {
   // Handle search form submission
   const handleSearch = (e) => {
     e.preventDefault();
-    if (query.trim()) {
-      // Update URL with search query
+
+    // Trim the query to handle whitespace
+    const trimmedQuery = query.trim();
+
+    if (trimmedQuery) {
+      // Update URL with search query (trimmed)
       const url = new URL(window.location);
-      url.searchParams.set('q', query);
+      url.searchParams.set('q', trimmedQuery);
       window.history.pushState({}, '', url);
 
-      performSearch(query);
+      // Use the trimmed query for search
+      performSearch(trimmedQuery);
+    } else {
+      // If query is empty or just whitespace, clear results and URL parameter
+      setResults({ pages: [], users: [] });
+
+      // Remove the q parameter from URL
+      const url = new URL(window.location);
+      url.searchParams.delete('q');
+      window.history.pushState({}, '', url);
     }
   };
 
@@ -107,29 +172,45 @@ export default function SearchPage() {
       });
   };
 
-  // Filter results based on active tab
-  const filteredResults = () => {
-    if (activeTab === 'all') {
-      return {
-        pages: results.pages,
-        users: results.users
-      };
-    } else if (activeTab === 'pages') {
-      return {
-        pages: results.pages,
-        users: []
-      };
-    } else if (activeTab === 'users') {
-      return {
-        pages: [],
-        users: results.users
-      };
+  // Combine all results into a single array for display
+  const combineResults = () => {
+    // Create a combined array of all results
+    let combined = [
+      ...results.users.map(user => ({
+        ...user,
+        type: 'user',
+        displayName: user.username,
+        url: `/user/${user.id}`
+      })),
+      ...results.pages.map(page => ({
+        ...page,
+        type: 'page',
+        displayName: page.title,
+        url: `/${page.id}`
+      }))
+    ];
+
+    // Add groups if the feature flag is enabled
+    if (groupsEnabled && results.groups && results.groups.length > 0) {
+      combined = [
+        ...combined,
+        ...results.groups.map(group => ({
+          ...group,
+          type: 'group',
+          displayName: group.name,
+          url: `/group/${group.id}`
+        }))
+      ];
     }
-    return { pages: [], users: [] };
+
+    // Sort by relevance (could be enhanced with actual relevance scoring)
+    // For now, we'll just sort alphabetically by display name
+    return combined.sort((a, b) => a.displayName.localeCompare(b.displayName));
   };
 
-  const filtered = filteredResults();
-  const totalResults = filtered.pages.length + filtered.users.length;
+  const combinedResults = combineResults();
+  const totalResults = results.pages.length + results.users.length +
+    (groupsEnabled && results.groups ? results.groups.length : 0);
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -165,7 +246,7 @@ export default function SearchPage() {
 
       <form onSubmit={handleSearch} className="mb-8">
         <div className="flex gap-2">
-          <Input
+          <ClearableInput
             type="text"
             placeholder="Search for pages, users..."
             value={query}
@@ -200,161 +281,63 @@ export default function SearchPage() {
         </div>
       )}
 
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="all">
-            All ({results.pages.length + results.users.length})
-          </TabsTrigger>
-          <TabsTrigger value="pages">
-            Pages ({results.pages.length})
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            Users ({results.users.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-6">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {filtered.users.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-3">Users</h2>
-                  <div className="space-y-2">
-                    {filtered.users.map(user => (
-                      <div key={user.id} className="flex items-center">
-                        <div className="flex-none max-w-[60%]">
-                          <PillLink href={`/user/${user.id}`} className="max-w-full">
-                            {user.username}
-                          </PillLink>
-                        </div>
-                        <span className="text-xs text-muted-foreground ml-2 truncate">
-                          User
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {filtered.pages.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold mb-3">Pages</h2>
-                  <div className="space-y-2">
-                    {filtered.pages.map(page => (
-                      <div key={page.id} className="flex items-center">
-                        <div className="flex-none max-w-[60%]">
-                          <PillLink href={`/${page.id}`} className="max-w-full">
-                            {page.title}
-                          </PillLink>
-                        </div>
-                        <span className="text-xs text-muted-foreground ml-2 truncate">
-                          by {page.username || "Anonymous"}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {totalResults === 0 && query && !isLoading && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
-                  <Button asChild>
-                    <Link href={`/new?title=${encodeURIComponent(query)}`}>
-                      Create "{query}" page
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="pages">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-4 w-[300px]" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {filtered.pages.length > 0 ? (
+      <div className="space-y-6">
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="flex items-center space-x-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
                 <div className="space-y-2">
-                  {filtered.pages.map(page => (
-                    <div key={page.id} className="flex items-center">
-                      <div className="flex-none max-w-[60%]">
-                        <PillLink href={`/${page.id}`} className="max-w-full">
-                          {page.title}
-                        </PillLink>
-                      </div>
-                      <span className="text-xs text-muted-foreground ml-2 truncate">
-                        by {page.username || "Anonymous"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No pages found for "{query}"</p>
-                  <Button asChild>
-                    <Link href={`/new?title=${encodeURIComponent(query)}`}>
-                      Create "{query}" page
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="users">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center space-x-4">
+                  <Skeleton className="h-4 w-[250px]" />
                   <Skeleton className="h-4 w-[200px]" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {filtered.users.length > 0 ? (
-                <div className="space-y-2">
-                  {filtered.users.map(user => (
-                    <div key={user.id} className="flex items-center">
-                      <PillLink href={`/user/${user.id}`}>
-                        {user.username}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {combinedResults.length > 0 ? (
+              <div className="space-y-2">
+                {combinedResults.map(result => (
+                  <div key={`${result.type}-${result.id}`} className="flex items-center">
+                    <div className="flex-none max-w-[60%]">
+                      <PillLink href={result.url} className="max-w-full">
+                        {result.displayName}
                       </PillLink>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        User
-                      </span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No users found for "{query}"</p>
-                </div>
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+                    <span className="text-xs text-muted-foreground ml-2 truncate">
+                      {result.type === 'user' ? (
+                        `${result.username} - User`
+                      ) : result.type === 'group' && groupsEnabled ? (
+                        `${result.displayName} - Group`
+                      ) : (
+                        `by ${result.username || "Missing username"}`
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                {query && query.trim() ? (
+                  <>
+                    <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
+                    <Button asChild>
+                      <Link href={`/new?title=${encodeURIComponent(query.trim())}`}>
+                        Create "{query.trim()}" page
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Enter a search term to find pages and users
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

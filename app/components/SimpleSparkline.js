@@ -14,9 +14,11 @@ import React from 'react';
 export default function SimpleSparkline({
   data = [],
   height = 60,
-  color = "#1768FF",
+  color,
   strokeWidth = 1.5
 }) {
+  // Use the accent color from CSS variables if no color is provided
+  const effectiveColor = color || "hsl(var(--primary))";
   if (!data || data.length === 0) {
     return <div style={{ height: `${height}px` }} className="w-full"></div>;
   }
@@ -50,7 +52,7 @@ export default function SimpleSparkline({
         {/* Area under the line with very slight opacity */}
         <polygon
           points={areaPoints}
-          fill={color}
+          fill={effectiveColor}
           fillOpacity="0.1"
         />
 
@@ -58,7 +60,7 @@ export default function SimpleSparkline({
         <polyline
           points={points}
           fill="none"
-          stroke={color}
+          stroke={effectiveColor}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"

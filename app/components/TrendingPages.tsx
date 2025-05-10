@@ -38,6 +38,16 @@ export default function TrendingPages({ limit = 5 }) {
           return;
         }
 
+        // Check for error in response
+        if (response.error) {
+          console.error('TrendingPages: API returned error:', response.error);
+          setError(response.error);
+          setLoading(false);
+          // Return empty array instead of failing completely
+          setTrendingPages([]);
+          return;
+        }
+
         // Handle both old and new response formats
         const pages = Array.isArray(response)
           ? response
@@ -160,7 +170,6 @@ export default function TrendingPages({ limit = 5 }) {
                     <SimpleSparkline
                       data={page.hourlyViews}
                       height={40}
-                      color="#1768FF"
                       strokeWidth={1.5}
                     />
                   </div>
@@ -204,7 +213,6 @@ export default function TrendingPages({ limit = 5 }) {
                   <SimpleSparkline
                     data={page.hourlyViews}
                     height={48}
-                    color="#1768FF"
                     strokeWidth={2}
                   />
                 </div>

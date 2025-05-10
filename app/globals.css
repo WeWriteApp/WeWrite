@@ -327,6 +327,23 @@ body {
   border: 1px solid hsl(var(--border));
 }
 
+/* High contrast mode border styles - only apply higher contrast in high contrast mode */
+:root[data-accent-color="high-contrast"] .border-theme-light {
+  border: 1px solid hsl(var(--border) / 0.4);
+}
+
+:root[data-accent-color="high-contrast"] .border-theme-medium {
+  border: 1px solid hsl(var(--border) / 0.7);
+}
+
+:root[data-accent-color="high-contrast"] .border-theme-strong {
+  border: 1px solid hsl(var(--border) / 0.9);
+}
+
+:root[data-accent-color="high-contrast"] .border-theme-solid {
+  border: 2px solid hsl(var(--border));
+}
+
 /* Border direction utilities */
 .border-t-only {
   border-top: 1px solid hsl(var(--border) / 0.4);
@@ -354,6 +371,23 @@ body {
   border-right: none;
   border-bottom: none;
   border-left: 1px solid hsl(var(--border) / 0.4);
+}
+
+/* High contrast mode border direction utilities */
+:root[data-accent-color="high-contrast"] .border-t-only {
+  border-top: 1px solid hsl(var(--border) / 0.8);
+}
+
+:root[data-accent-color="high-contrast"] .border-b-only {
+  border-bottom: 1px solid hsl(var(--border) / 0.8);
+}
+
+:root[data-accent-color="high-contrast"] .border-r-only {
+  border-right: 1px solid hsl(var(--border) / 0.8);
+}
+
+:root[data-accent-color="high-contrast"] .border-l-only {
+  border-left: 1px solid hsl(var(--border) / 0.8);
 }
 
 /* Header border transition */
@@ -538,6 +572,20 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   to {
     transform: translateY(0);
   }
+}
+
+/* Animation for lightbox fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeInFast {
+  animation: fadeIn 0.2s ease-out;
 }
 
 /* Mobile navigation links alignment */
