@@ -109,7 +109,7 @@ export default function NotificationsPage() {
             </div>
             <h3 className="text-lg font-medium mb-2">No notifications yet</h3>
             <p className="text-sm text-foreground opacity-80 max-w-md">
-              When someone follows your pages or links to them, you'll see notifications here.
+              When someone follows your pages, links to them, or adds them to their own pages, you'll see notifications here.
             </p>
           </div>
         )}

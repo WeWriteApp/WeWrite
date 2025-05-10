@@ -126,6 +126,24 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
         autoFocus
         className="searchbar"
         placeholder="Search for a user"
+        styling={{
+          height: "44px",
+          border: "1px solid var(--input)",
+          borderRadius: "0.5rem",
+          backgroundColor: "var(--background)",
+          boxShadow: "none",
+          hoverBackgroundColor: "var(--muted)",
+          color: "var(--foreground)",
+          fontSize: "1rem",
+          iconColor: "var(--muted-foreground)",
+          lineColor: "var(--border)",
+          placeholderColor: "var(--muted-foreground)",
+          clearIconMargin: "3px 14px 0 0",
+          searchIconMargin: "0 0 0 12px",
+          // Add focus styles to use accent color
+          focusBorderColor: "hsl(var(--primary))",
+          focusBoxShadow: "0 0 0 2px hsl(var(--primary) / 0.2)"
+        }}
         fuseOptions={{
           minMatchCharLength: 2,
         }}

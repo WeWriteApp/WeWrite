@@ -28,6 +28,7 @@ export const ACCENT_COLORS = {
   INDIGO: 'indigo',
   TOMATO: 'tomato',
   GRASS: 'grass',
+  HIGH_CONTRAST: 'high-contrast', // Color that changes between black/white based on theme
   CUSTOM1: 'custom1',
   CUSTOM2: 'custom2',
   CUSTOM3: 'custom3'
@@ -44,6 +45,7 @@ export const ACCENT_COLOR_VALUES = {
   [ACCENT_COLORS.INDIGO]: indigo.indigo9,
   [ACCENT_COLORS.TOMATO]: tomato.tomato9,
   [ACCENT_COLORS.GRASS]: grass.grass9,
+  [ACCENT_COLORS.HIGH_CONTRAST]: '#000000', // Default to black, will be updated based on theme
   [ACCENT_COLORS.CUSTOM1]: '#FF5733', // Default to a coral/orange
   [ACCENT_COLORS.CUSTOM2]: '#9B59B6', // Default to a purple
   [ACCENT_COLORS.CUSTOM3]: '#3498DB'  // Default to a light blue
@@ -267,6 +269,17 @@ export function AccentColorProvider({ children }) {
   // Update CSS variables when accent color changes
   const updateCSSVariables = (color, colorValue) => {
     console.log('Updating CSS variables with:', { color, colorValue });
+
+    // Special handling for high contrast color that changes based on theme
+    if (color === ACCENT_COLORS.HIGH_CONTRAST) {
+      // Check if we're in dark mode by looking at the document class
+      const isDarkMode = document.documentElement.classList.contains('dark');
+
+      // Set the color value based on the current theme
+      colorValue = isDarkMode ? '#FFFFFF' : '#000000';
+
+      console.log('High contrast color mode detected, using:', { isDarkMode, colorValue });
+    }
 
     let h, s, l;
 
@@ -500,6 +513,28 @@ export function AccentColorProvider({ children }) {
       updateCSSVariables(colorToUse, valueToUse);
     }
   }, []);
+
+  // Listen for theme changes to update high contrast color if it's selected
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Create a mutation observer to watch for theme changes
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class' && accentColor === ACCENT_COLORS.HIGH_CONTRAST) {
+            // If the high contrast color is selected, update it when theme changes
+            console.log('Theme changed, updating high contrast color');
+            updateCSSVariables(ACCENT_COLORS.HIGH_CONTRAST, ACCENT_COLOR_VALUES[ACCENT_COLORS.HIGH_CONTRAST]);
+          }
+        });
+      });
+
+      // Start observing the document element for class changes
+      observer.observe(document.documentElement, { attributes: true });
+
+      // Clean up the observer when the component unmounts
+      return () => observer.disconnect();
+    }
+  }, [accentColor]);
 
   // Change accent color and save to localStorage
   const changeAccentColor = (color, customColorValue = null) => {

@@ -134,14 +134,18 @@ export default function NotificationItem({ notification }) {
                 )}
               </div>
               <p className="text-sm text-foreground">
-                {notification.sourceUserId ? 'interacted with your content' : 'Activity on your account'}
+                {notification.sourceUserId ? 'took an action on your page' : 'Activity on your account'}
                 {notification.targetPageTitle && (
                   <>
-                    {' '}related to{' '}
-                    <span className="font-medium">
+                    {' '}<span className="font-medium">
                       {notification.targetPageTitle}
                     </span>
                   </>
+                )}
+                {notification.type && (
+                  <span className="text-xs ml-1 text-muted-foreground">
+                    (Unknown notification type: {notification.type})
+                  </span>
                 )}
               </p>
             </div>

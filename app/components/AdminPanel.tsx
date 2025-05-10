@@ -45,48 +45,55 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const { resetBannerState } = usePWA();
   const [activeTab, setActiveTab] = useState('features');
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // User management state
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Feature flags state
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
-    { 
-      id: 'subscription_management', 
-      name: 'Subscription Management', 
-      description: 'Enable subscription functionality and UI', 
+    {
+      id: 'subscription_management',
+      name: 'Subscription Management',
+      description: 'Enable subscription functionality and UI',
       enabled: false,
       adminOnly: true
     },
-    { 
-      id: 'username_management', 
-      name: 'Username Management', 
-      description: 'Allow admins to manage user usernames', 
+    {
+      id: 'username_management',
+      name: 'Username Management',
+      description: 'Allow admins to manage user usernames',
       enabled: false,
       adminOnly: true
     },
-    { 
-      id: 'map_view', 
-      name: 'Map View', 
-      description: 'Enable map view for pages with location data', 
+    {
+      id: 'map_view',
+      name: 'Map View',
+      description: 'Enable map view for pages with location data',
       enabled: false,
       adminOnly: false
     },
-    { 
-      id: 'calendar_view', 
-      name: 'Calendar View', 
-      description: 'Enable calendar view for activity tracking', 
+    {
+      id: 'calendar_view',
+      name: 'Calendar View',
+      description: 'Enable calendar view for activity tracking',
       enabled: false,
       adminOnly: false
     },
-    { 
-      id: 'admin_features', 
-      name: 'Admin Features', 
-      description: 'Enable admin-only features', 
+    {
+      id: 'groups',
+      name: 'Groups',
+      description: 'Enable groups functionality and UI',
+      enabled: false,
+      adminOnly: false
+    },
+    {
+      id: 'admin_features',
+      name: 'Admin Features',
+      description: 'Enable admin-only features',
       enabled: true,
       adminOnly: true
     }
@@ -104,19 +111,19 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const loadAdminUsers = async () => {
     try {
       setIsLoading(true);
-      
+
       // Get admin users from Firestore
       const adminUsersRef = doc(db, 'config', 'adminUsers');
       const adminUsersDoc = await getDoc(adminUsersRef);
-      
+
       if (adminUsersDoc.exists()) {
         const adminUserIds = adminUsersDoc.data().userIds || [];
-        
+
         // Get user details for each admin user
         const adminUserPromises = adminUserIds.map(async (userId: string) => {
           const userRef = doc(db, 'users', userId);
           const userDoc = await getDoc(userRef);
-          
+
           if (userDoc.exists()) {
             return {
               id: userId,
@@ -126,7 +133,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
           }
           return null;
         });
-        
+
         const adminUserResults = await Promise.all(adminUserPromises);
         setAdminUsers(adminUserResults.filter(Boolean) as User[]);
       }
@@ -146,16 +153,16 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const loadFeatureFlags = async () => {
     try {
       setIsLoading(true);
-      
+
       // Get feature flags from Firestore
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
-      
+
       if (featureFlagsDoc.exists()) {
         const flagsData = featureFlagsDoc.data();
-        
+
         // Update local state with data from Firestore
-        setFeatureFlags(prev => 
+        setFeatureFlags(prev =>
           prev.map(flag => ({
             ...flag,
             enabled: flagsData[flag.id] !== undefined ? flagsData[flag.id] : flag.enabled
@@ -177,32 +184,32 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   // Search for users
   const handleSearch = async () => {
     if (!searchTerm) return;
-    
+
     try {
       setIsSearching(true);
-      
+
       // Search by email
       const emailQuery = query(collection(db, 'users'), where('email', '==', searchTerm));
       const emailSnapshot = await getDocs(emailQuery);
-      
+
       // Search by username
       const usernameQuery = query(collection(db, 'users'), where('username', '==', searchTerm));
       const usernameSnapshot = await getDocs(usernameQuery);
-      
+
       // Combine results
       const results: User[] = [];
-      
+
       emailSnapshot.forEach(doc => {
         results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
       });
-      
+
       usernameSnapshot.forEach(doc => {
         // Avoid duplicates
         if (!results.some(user => user.id === doc.id)) {
           results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
         }
       });
-      
+
       setSearchResults(results);
     } catch (error) {
       console.error('Error searching users:', error);
@@ -220,17 +227,17 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const toggleAdminStatus = async (user: User) => {
     try {
       setIsLoading(true);
-      
+
       // Get current admin users
       const adminUsersRef = doc(db, 'config', 'adminUsers');
       const adminUsersDoc = await getDoc(adminUsersRef);
-      
+
       let adminUserIds: string[] = [];
-      
+
       if (adminUsersDoc.exists()) {
         adminUserIds = adminUsersDoc.data().userIds || [];
       }
-      
+
       // Toggle admin status
       if (user.isAdmin) {
         // Remove from admin users
@@ -239,27 +246,27 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
         // Add to admin users
         adminUserIds.push(user.id);
       }
-      
+
       // Update Firestore
       await setDoc(adminUsersRef, { userIds: adminUserIds });
-      
+
       // Update local state
       if (user.isAdmin) {
         setAdminUsers(prev => prev.filter(admin => admin.id !== user.id));
-        setSearchResults(prev => 
-          prev.map(result => 
+        setSearchResults(prev =>
+          prev.map(result =>
             result.id === user.id ? { ...result, isAdmin: false } : result
           )
         );
       } else {
         setAdminUsers(prev => [...prev, { ...user, isAdmin: true }]);
-        setSearchResults(prev => 
-          prev.map(result => 
+        setSearchResults(prev =>
+          prev.map(result =>
             result.id === user.id ? { ...result, isAdmin: true } : result
           )
         );
       }
-      
+
       toast({
         title: 'Success',
         description: `${user.username || user.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
@@ -281,24 +288,24 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const toggleFeatureFlag = async (flagId: FeatureFlag) => {
     try {
       setIsLoading(true);
-      
+
       // Update local state first for immediate feedback
-      setFeatureFlags(prev => 
-        prev.map(flag => 
+      setFeatureFlags(prev =>
+        prev.map(flag =>
           flag.id === flagId ? { ...flag, enabled: !flag.enabled } : flag
         )
       );
-      
+
       // Get current feature flags
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
-      
+
       let flagsData = {};
-      
+
       if (featureFlagsDoc.exists()) {
         flagsData = featureFlagsDoc.data();
       }
-      
+
       // Update feature flag
       const updatedFlag = featureFlags.find(flag => flag.id === flagId);
       if (updatedFlag) {
@@ -307,10 +314,10 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
           [flagId]: !updatedFlag.enabled
         };
       }
-      
+
       // Update Firestore
       await setDoc(featureFlagsRef, flagsData);
-      
+
       toast({
         title: 'Success',
         description: `${flagId} is now ${updatedFlag?.enabled ? 'disabled' : 'enabled'}`,
@@ -323,7 +330,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
         description: 'Failed to update feature flag',
         variant: 'destructive'
       });
-      
+
       // Revert local state on error
       loadFeatureFlags();
     } finally {
@@ -346,7 +353,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     }
 
     resetBannerState();
-    
+
     toast({
       title: 'Success',
       description: 'PWA installation banner has been reset',
@@ -368,7 +375,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       <CardContent>
         <Collapsible open={isOpen} onOpenChange={setIsOpen} className="space-y-4">
           <CollapsibleTrigger asChild>
-            <Button 
+            <Button
               variant={isOpen ? "secondary" : "default"}
               className="w-full"
             >
@@ -376,7 +383,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
               {isOpen ? "Close Admin Panel" : "Open Admin Panel"}
             </Button>
           </CollapsibleTrigger>
-          
+
           <CollapsibleContent className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-4">
@@ -393,7 +400,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                   Admin Tools
                 </TabsTrigger>
               </TabsList>
-              
+
               {/* Feature Flags Tab */}
               <TabsContent value="features" className="space-y-4">
                 {isLoading ? (
@@ -403,8 +410,8 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                 ) : (
                   <div className="space-y-3">
                     {featureFlags.map(flag => (
-                      <div 
-                        key={flag.id} 
+                      <div
+                        key={flag.id}
                         className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex flex-col">
@@ -443,7 +450,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                   </div>
                 )}
               </TabsContent>
-              
+
               {/* Admin Users Tab */}
               <TabsContent value="users" className="space-y-4">
                 {/* Search */}
@@ -456,23 +463,23 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                       onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     />
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleSearch}
                     disabled={isSearching || !searchTerm}
                   >
                     {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                   </Button>
                 </div>
-                
+
                 {/* Search Results */}
                 {searchResults.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Search Results</h3>
                     <div className="space-y-2">
                       {searchResults.map(user => (
-                        <div 
-                          key={user.id} 
+                        <div
+                          key={user.id}
                           className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex flex-col">
@@ -498,7 +505,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Current Admin Users */}
                 <div className="space-y-2 mt-4">
                   <h3 className="text-sm font-medium">Current Admin Users</h3>
@@ -509,8 +516,8 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                   ) : adminUsers.length > 0 ? (
                     <div className="space-y-2">
                       {adminUsers.map(admin => (
-                        <div 
-                          key={admin.id} 
+                        <div
+                          key={admin.id}
                           className="flex items-center justify-between p-3 rounded-md border border-border/40 bg-primary/5 hover:bg-primary/10 transition-colors"
                         >
                           <div className="flex flex-col">
@@ -537,7 +544,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                   )}
                 </div>
               </TabsContent>
-              
+
               {/* Admin Tools Tab */}
               <TabsContent value="tools" className="space-y-4">
                 <div className="space-y-4">

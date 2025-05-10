@@ -56,8 +56,11 @@ export default function TrendingCarouselClient({
             height: '200px'
           }}
         >
-          <Link href={`/${page.id}`} className="block h-full">
-            <div className="wewrite-card h-full cursor-pointer flex flex-col justify-between border-0 shadow-none" style={{ transform: 'none' }}>
+          <div
+            className="block h-full cursor-pointer"
+            onClick={() => window.location.href = `/${page.id}`}
+          >
+            <div className="wewrite-card h-full flex flex-col justify-between border-0 shadow-none" style={{ transform: 'none' }}>
               <CardHeader className="p-3">
                 <CardTitle className="text-lg mb-1 break-words h-[50px] overflow-hidden">
                   <PillLink href={`/${page.id}`}>
@@ -68,13 +71,15 @@ export default function TrendingCarouselClient({
                   <span className="text-foreground">by{" "}</span>
                   {/* Only make the user link clickable if we have a valid userId */}
                   {page.userId ? (
-                    <Link
-                      href={`/user/${page.userId}`}
-                      className="hover:underline text-primary"
-                      onClick={(e) => e.stopPropagation()}
+                    <span
+                      className="hover:underline text-primary cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/user/${page.userId}`;
+                      }}
                     >
                       {page.username || 'Anonymous'}
-                    </Link>
+                    </span>
                   ) : (
                     <span className="text-primary">
                       {page.username || 'Anonymous'}
@@ -98,7 +103,7 @@ export default function TrendingCarouselClient({
                 </div>
               </div>
             </div>
-          </Link>
+          </div>
         </div>
         )
       ))}

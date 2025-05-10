@@ -341,13 +341,13 @@ export default function ContentCarousel({
     >
       <div
         ref={carouselRef}
-        className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full h-full px-6 md:px-8 lg:px-12"
+        className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full h-full"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-          paddingLeft: 'max(1.5rem, calc((100vw - 1280px) / 2))',
-          paddingRight: 'max(1.5rem, calc((100vw - 1280px) / 2))',
+          paddingLeft: '1.5rem',
+          paddingRight: '0',
           cursor: 'grab',
           willChange: 'scroll-position', // Optimize for scroll animations
           overscrollBehavior: 'none' // Prevent overscroll effects

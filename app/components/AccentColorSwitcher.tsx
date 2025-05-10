@@ -18,7 +18,13 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
     { value: ACCENT_COLORS.BLUE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.BLUE], label: "Blue" },
     { value: ACCENT_COLORS.PURPLE, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.PURPLE], label: "Purple" },
     { value: ACCENT_COLORS.RED, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.RED], label: "Red" },
-    { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN], label: "Green" }
+    { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN], label: "Green" },
+    {
+      value: ACCENT_COLORS.HIGH_CONTRAST,
+      // For the high contrast color, we'll use a gradient to show it changes between black and white
+      color: 'linear-gradient(to right, #000000 50%, #FFFFFF 50%)',
+      label: "High Contrast"
+    }
   ];
 
   return (

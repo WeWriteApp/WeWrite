@@ -172,32 +172,53 @@ export const PortfolioProvider = ({ children }) => {
             return;
           }
 
-          const res = await fetch("/api/account-subscription", {
-            // Add error handling options
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            // Don't follow redirects to avoid issues with auth
-            redirect: 'error',
-          });
+          // First check if subscription feature is enabled
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('../firebase/database');
 
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.status) {
-              setSubscriptions([{ ...data }]);
+          const featureFlagsRef = doc(db, 'config', 'featureFlags');
+          const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+          let subscriptionEnabled = false;
+          if (featureFlagsDoc.exists()) {
+            const flagsData = featureFlagsDoc.data();
+            subscriptionEnabled = flagsData.subscription_management === true;
+          }
+
+          // Only fetch subscription data if the feature is enabled
+          if (subscriptionEnabled) {
+            const res = await fetch("/api/account-subscription", {
+              // Add error handling options
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              // Don't follow redirects to avoid issues with auth
+              redirect: 'error',
+            });
+
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.status) {
+                setSubscriptions([{ ...data }]);
+              } else {
+                setSubscriptions([]);
+              }
+              // Update the last check timestamp
+              localStorage.setItem('lastSubscriptionCheck', now.toString());
+            } else if (res.status === 401) {
+              // Handle unauthorized error gracefully
+              console.log('User not authorized for subscription check');
+              setSubscriptions([]);
             } else {
+              console.error('Error fetching subscription data:', res.status);
               setSubscriptions([]);
             }
-            // Update the last check timestamp
-            localStorage.setItem('lastSubscriptionCheck', now.toString());
-          } else if (res.status === 401) {
-            // Handle unauthorized error gracefully
-            console.log('User not authorized for subscription check');
-            setSubscriptions([]);
           } else {
-            console.error('Error fetching subscription data:', res.status);
+            console.log('Subscription feature is disabled, skipping subscription check');
             setSubscriptions([]);
+            // Still update the timestamp to prevent repeated checks
+            localStorage.setItem('lastSubscriptionCheck', now.toString());
           }
         } catch (e) {
           console.error('Exception in subscription check:', e);

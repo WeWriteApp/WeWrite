@@ -76,6 +76,13 @@ export default function AdminPage() {
       adminOnly: false
     },
     {
+      id: 'groups',
+      name: 'Groups',
+      description: 'Enable groups functionality and UI',
+      enabled: false,
+      adminOnly: false
+    },
+    {
       id: 'admin_features',
       name: 'Admin Features',
       description: 'Enable admin-only features',

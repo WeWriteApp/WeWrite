@@ -50,11 +50,25 @@ export default function AccentColorSelector() {
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        {ACCENT_COLORS.map((color) => {
+        {Object.values(ACCENT_COLORS).map((color) => {
           const isSelected = accentColor === color;
           const colorValue = ACCENT_COLOR_VALUES[color];
-          const textColor = getTextColorForBackground(colorValue);
-          const name = getColorName(color);
+
+          // Special handling for high contrast color to show gradient
+          const style = color === ACCENT_COLORS.HIGH_CONTRAST
+            ? {
+                background: 'linear-gradient(to right, #000000 50%, #FFFFFF 50%)',
+                color: '#888888', // Neutral color for text
+              }
+            : {
+                backgroundColor: colorValue,
+                color: getTextColorForBackground(colorValue),
+              };
+
+          // Get name for the color
+          const name = color === ACCENT_COLORS.HIGH_CONTRAST
+            ? 'High Contrast'
+            : getColorName(color);
 
           return (
             <button
@@ -63,10 +77,7 @@ export default function AccentColorSelector() {
                 "h-10 rounded-md transition-all duration-200 flex items-center justify-center",
                 isSelected ? "ring-2 ring-offset-2 ring-offset-background ring-primary" : "hover:scale-105"
               )}
-              style={{
-                backgroundColor: colorValue,
-                color: textColor,
-              }}
+              style={style}
               onClick={() => handleColorSelect(color)}
               title={name}
             >

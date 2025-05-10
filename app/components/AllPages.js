@@ -13,13 +13,40 @@ const AllPages = () => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
 
+  // Add enhanced debugging
+  useEffect(() => {
+    console.log("AllPages component state:", {
+      dataLoading: loading,
+      isAuthenticated,
+      hasUser: !!user,
+      userId: user?.uid,
+      pagesCount: pages?.length || 0,
+      pagesData: pages?.slice(0, 2) || [] // Show first 2 pages for debugging
+    });
+
+    // If we have a user but no pages and we're not loading, try to force a refresh
+    if (user?.uid && !pages?.length && !loading) {
+      console.log("AllPages: User authenticated but no pages loaded, triggering manual refresh");
+
+      // Manually trigger a refresh after a delay
+      const timer = setTimeout(() => {
+        const refreshEvent = new CustomEvent('force-refresh-pages');
+        window.dispatchEvent(refreshEvent);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isAuthenticated, user, pages]);
+
   useEffect(() => {
     if (!loading && !isAuthenticated) {
+      console.log("User not authenticated, redirecting to login");
       router.push('/auth/login');
     }
   }, [isAuthenticated, loading, router]);
 
   if (loading || !isAuthenticated) {
+    console.log("Rendering loading state for PageList");
     return <PageList loading={true} pages={[]} />;
   }
 

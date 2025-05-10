@@ -643,16 +643,16 @@ const LandingPage = () => {
                 See what's happening on WeWrite right now
               </p>
             </div>
-            <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-              {/* Only render carousel when section is visible */}
-              {activityVisible ? (
-                <SimpleActivityCarousel />
-              ) : (
-                <div style={{ height: '200px' }} className="flex items-center justify-center">
-                  <p className="text-muted-foreground">Loading activity...</p>
-                </div>
-              )}
-            </div>
+          </div>
+          <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
+            {/* Only render carousel when section is visible */}
+            {activityVisible ? (
+              <SimpleActivityCarousel />
+            ) : (
+              <div style={{ height: '200px' }} className="flex items-center justify-center">
+                <p className="text-muted-foreground">Loading activity...</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -665,16 +665,16 @@ const LandingPage = () => {
                 Discover the most popular content on WeWrite
               </p>
             </div>
-            <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
-              {/* Only render carousel when section is visible */}
-              {trendingVisible ? (
-                <SimpleTrendingCarousel limit={20} />
-              ) : (
-                <div style={{ height: '240px' }} className="flex items-center justify-center">
-                  <p className="text-muted-foreground">Loading trending pages...</p>
-                </div>
-              )}
-            </div>
+          </div>
+          <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
+            {/* Only render carousel when section is visible */}
+            {trendingVisible ? (
+              <SimpleTrendingCarousel limit={20} />
+            ) : (
+              <div style={{ height: '240px' }} className="flex items-center justify-center">
+                <p className="text-muted-foreground">Loading trending pages...</p>
+              </div>
+            )}
           </div>
         </section>
 

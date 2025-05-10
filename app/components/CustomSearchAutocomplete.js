@@ -23,6 +23,7 @@ const CustomSearchAutocomplete = (props) => {
         const handleKeyDown = (e) => {
           if (e.key === 'Enter' && onKeyDown) {
             e.preventDefault(); // Prevent default form submission
+            // Always call onKeyDown for Enter key, even with empty search
             onKeyDown(e);
           }
         };
@@ -41,6 +42,8 @@ const CustomSearchAutocomplete = (props) => {
           e.preventDefault(); // Prevent default behavior
           e.stopPropagation(); // Stop event propagation
 
+          console.log('Search icon clicked, navigating to search page');
+
           // Create a synthetic event with the current input value
           const inputValue = inputRef.current.querySelector('input')?.value || '';
           const syntheticEvent = {
@@ -50,15 +53,23 @@ const CustomSearchAutocomplete = (props) => {
           };
 
           // Always navigate to search page when clicking the search icon
+          // This will work even with an empty search query
           onKeyDown(syntheticEvent);
         };
 
+        // Remove any existing click listeners first to avoid duplicates
+        searchIcon.removeEventListener('click', handleSearchIconClick);
+
+        // Add the click listener
         searchIcon.addEventListener('click', handleSearchIconClick);
 
         // Add to cleanup functions
         cleanupFunctions.push(() => {
           searchIcon.removeEventListener('click', handleSearchIconClick);
         });
+
+        // Also add a direct click handler to ensure it works
+        searchIcon.onclick = handleSearchIconClick;
       }
 
       // Return a single cleanup function that calls all cleanup functions

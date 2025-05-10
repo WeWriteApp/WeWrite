@@ -93,9 +93,9 @@ export function getAnalyticsPageTitle(
        document.cookie.includes('authenticated=true'));
 
     if (!currentUser && !hasLocalStorageAuth) {
-      return "Landing Page (Logged-out Home)";
+      return "Landing";
     } else {
-      return "Home Page (Logged-in Dashboard)";
+      return "Home";
     }
   }
 
@@ -151,13 +151,27 @@ export function getAnalyticsPageTitle(
 
     // If we're in a browser environment, try to fetch the title asynchronously
     if (typeof window !== 'undefined') {
-      // Trigger an async fetch but return a generic title instead of the ID
+      // Trigger an async fetch but return a better fallback title
       fetchAndCachePageTitle(pageId);
-      return `Page: Content Page`;
+
+      // Try to get a better fallback from the URL path
+      const pathSegments = pathname.split('/').filter(Boolean);
+      if (pathSegments.length > 0) {
+        const lastSegment = pathSegments[pathSegments.length - 1];
+        if (lastSegment === pageId && pathSegments.length > 1) {
+          // Use the previous path segment as a category
+          const category = pathSegments[pathSegments.length - 2]
+            .charAt(0).toUpperCase() +
+            pathSegments[pathSegments.length - 2].slice(1);
+          return `Page: ${category} Content`;
+        }
+      }
+
+      return `Page: Content`;
     }
 
-    // Fallback to a generic title instead of showing the ID
-    return `Page: Content Page`;
+    // Fallback to a better generic title instead of showing the ID
+    return `Page: Content`;
   }
 
   // 3. Use document title if available and meaningful
@@ -233,11 +247,24 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         console.log('Updated analytics with fetched page title:', pageTitle);
       }
     } else {
-      // Even if we couldn't get a good title, update GA with a generic title
+      // Even if we couldn't get a good title, update GA with a better generic title
       // to avoid showing page IDs in analytics
       if (typeof window !== 'undefined' && window.gtag) {
         const pathname = window.location.pathname;
-        const pageTitle = `Page: Content Page`;
+
+        // Try to get a better fallback from the URL path
+        let pageTitle = `Page: Content`;
+        const pathSegments = pathname.split('/').filter(Boolean);
+        if (pathSegments.length > 0) {
+          const lastSegment = pathSegments[pathSegments.length - 1];
+          if (lastSegment === pageId && pathSegments.length > 1) {
+            // Use the previous path segment as a category
+            const category = pathSegments[pathSegments.length - 2]
+              .charAt(0).toUpperCase() +
+              pathSegments[pathSegments.length - 2].slice(1);
+            pageTitle = `Page: ${category} Content`;
+          }
+        }
 
         window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
           page_path: pathname,
@@ -245,7 +272,7 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
           page_location: window.location.href
         });
 
-        console.log('Updated analytics with generic page title to avoid showing ID');
+        console.log('Updated analytics with improved generic page title:', pageTitle);
       }
     }
   } catch (error) {
@@ -278,6 +305,6 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
     console.error('Error fetching page title for analytics:', error);
   }
 
-  // Return a generic title instead of showing the ID
-  return `Page: Content Page`;
+  // Return a better generic title instead of showing the ID
+  return `Page: Content`;
 }

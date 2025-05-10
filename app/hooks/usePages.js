@@ -230,14 +230,46 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
 
   // Fetch initial pages when the component mounts
   useEffect(() => {
-    if (userId) {
-      const unsubscribe = fetchInitialPages();
+    let unsubscribe = () => {};
 
-      // Cleanup function
-      return () => {
-        unsubscribe();
-      };
+    if (userId) {
+      try {
+        console.log("usePages: Fetching pages for user", userId);
+        unsubscribe = fetchInitialPages();
+      } catch (err) {
+        console.error("usePages: Error setting up page listener:", err);
+        setError("Failed to set up page listener. Please try refreshing the page.");
+        setLoading(false);
+      }
+    } else {
+      console.log("usePages: No userId provided, skipping page fetch");
+      setLoading(false);
     }
+
+    // Add listener for force-refresh event
+    const handleForceRefresh = () => {
+      console.log("usePages: Received force-refresh event, re-fetching pages");
+      try {
+        // Clean up existing subscription
+        unsubscribe();
+        // Re-fetch pages
+        unsubscribe = fetchInitialPages();
+      } catch (err) {
+        console.error("usePages: Error during forced refresh:", err);
+      }
+    };
+
+    window.addEventListener('force-refresh-pages', handleForceRefresh);
+
+    // Cleanup function
+    return () => {
+      try {
+        unsubscribe();
+        window.removeEventListener('force-refresh-pages', handleForceRefresh);
+      } catch (err) {
+        console.error("usePages: Error unsubscribing from page listener:", err);
+      }
+    };
   }, [userId]);
 
   return {

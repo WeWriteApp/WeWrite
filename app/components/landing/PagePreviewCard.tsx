@@ -44,8 +44,12 @@ export function PagePreviewCard({
     }
   };
 
+  const handleCardClick = () => {
+    window.location.href = `/${pageId}`;
+  };
+
   return (
-    <Link href={`/${pageId}`} className="block h-full">
+    <div className="block h-full" onClick={handleCardClick}>
       <Card className="h-full border border-border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
@@ -68,6 +72,6 @@ export function PagePreviewCard({
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 }

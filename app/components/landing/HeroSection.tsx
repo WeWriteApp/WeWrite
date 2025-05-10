@@ -41,7 +41,7 @@ export default function HeroSection({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const heroSectionRef = useRef<HTMLElement>(null);
   const analytics = useWeWriteAnalytics();
-  
+
   // Memoize the rotation handler to prevent unnecessary re-renders
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     // Throttle the mouse move handler to reduce re-renders
@@ -143,7 +143,7 @@ export default function HeroSection({
           </div>
 
           <div className={`flex-1 perspective-[1000px] ${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
-            <div 
+            <div
               className="relative w-full max-w-lg mx-auto transform-gpu transition-transform duration-300"
               style={{
                 transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
@@ -153,7 +153,7 @@ export default function HeroSection({
               <div {...handlers} className="relative w-full h-full">
                 <div className="relative w-full h-full min-h-[420px] flex items-center justify-center">
                   <AnimatePresence initial={false} custom={slideDirection} mode="wait">
-                    <motion.button
+                    <motion.div
                       key={carouselIndex}
                       initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0 }}
                       animate={{ x: 0, opacity: 1 }}
@@ -162,6 +162,8 @@ export default function HeroSection({
                       className="group relative block focus:outline-none w-full bg-none border-none p-0"
                       onClick={() => setLightboxOpen(true)}
                       aria-label="Open image lightbox"
+                      role="button"
+                      tabIndex={0}
                       style={{ position: 'relative', width: '100%', height: '420px' }}
                     >
                       <div className="relative w-full h-full">
@@ -194,7 +196,7 @@ export default function HeroSection({
                       >
                         <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
                       </button>
-                    </motion.button>
+                    </motion.div>
                   </AnimatePresence>
                 </div>
                 {/* Filmstrip */}
@@ -218,16 +220,96 @@ export default function HeroSection({
           </div>
         </div>
       </div>
-      
+
       {/* Lightbox overlay */}
       {lightboxOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 animate-fadeInFast"
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 animate-fadeInFast"
           style={{ animation: 'fadeIn 0.2s' }}
           onClick={() => setLightboxOpen(false)} // Close lightbox when clicking the overlay
         >
-          {/* Lightbox content */}
-          {/* ... (lightbox content) */}
+          {/* Close button */}
+          <button
+            className="absolute top-6 right-8 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxOpen(false);
+            }}
+            aria-label="Close lightbox"
+            type="button"
+          >
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {/* Navigation buttons */}
+          <button
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length);
+            }}
+            aria-label="Previous image"
+            type="button"
+          >
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <button
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToIndex((carouselIndex + 1) % heroImages.length);
+            }}
+            aria-label="Next image"
+            type="button"
+          >
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {/* Main image */}
+          <div
+            className="flex-1 flex items-center justify-center w-full max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={heroImages[carouselIndex]}
+              alt={`WeWrite App Interface ${carouselIndex + 1}`}
+              width={900}
+              height={900}
+              className="rounded-lg shadow-2xl max-h-[80vh] object-contain"
+              priority
+            />
+          </div>
+
+          {/* Filmstrip in lightbox */}
+          <div className="flex justify-center gap-3 mt-8 mb-8">
+            {heroImages.map((img, idx) => (
+              <button
+                key={img}
+                className={`rounded-md ${carouselIndex === idx ? 'ring-2 ring-primary' : 'ring-1 ring-border/30'} focus:outline-none transition-transform duration-200 overflow-hidden`}
+                style={{ width: 80, height: 60, background: 'none', padding: 0, transform: carouselIndex === idx ? 'scale(1.08)' : undefined }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToIndex(idx);
+                }}
+                aria-label={`Show image ${idx + 1}`}
+              >
+                <Image
+                  src={img}
+                  alt={`Thumbnail ${idx + 1}`}
+                  width={80}
+                  height={60}
+                  className="object-cover w-full h-full transition-transform duration-200"
+                />
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </section>

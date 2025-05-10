@@ -13,6 +13,7 @@ import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 import MapEditor from "./MapEditor";
+import { useFeatureFlag } from "../utils/feature-flags";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -78,6 +79,9 @@ const PageEditor = ({
   const titleInputRef = useRef(null);
   const cursorPositioned = useRef(false);
   const searchParams = useSearchParams();
+
+  // Check if map feature is enabled
+  const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
 
   // Use keyboard shortcuts
   useKeyboardShortcuts({
@@ -552,22 +556,24 @@ const PageEditor = ({
               </Tooltip>
             </TooltipProvider>
 
-            {/* Location button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <MapEditor
-                      location={location}
-                      onChange={setLocation}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{location ? 'Edit the location for this page' : 'Add a location to this page'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {/* Location button - only show if map feature is enabled */}
+            {mapFeatureEnabled && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <MapEditor
+                        location={location}
+                        onChange={setLocation}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{location ? 'Edit the location for this page' : 'Add a location to this page'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
 
           {/* Save/Cancel buttons - right aligned */}

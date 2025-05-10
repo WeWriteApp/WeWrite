@@ -1281,7 +1281,7 @@ export const appendPageReference = async (targetPageId, sourcePageData, userId =
 };
 
 // Search for users by username or email
-export const searchUsers = async (searchQuery, limit = 10) => {
+export const searchUsers = async (searchQuery, limitCount = 10) => {
   if (!searchQuery || searchQuery.trim().length < 2) {
     return [];
   }
@@ -1289,12 +1289,15 @@ export const searchUsers = async (searchQuery, limit = 10) => {
   try {
     const usersRef = collection(db, "users");
 
+    // Import limit function from Firestore
+    const { limit } = await import('firebase/firestore');
+
     // Search by username (case insensitive)
     const usernameQuery = query(
       usersRef,
       where("usernameLower", ">=", searchQuery.toLowerCase()),
       where("usernameLower", "<=", searchQuery.toLowerCase() + "\uf8ff"),
-      limit(limit)
+      limit(limitCount)
     );
 
     // Search by email (case insensitive)
@@ -1302,7 +1305,7 @@ export const searchUsers = async (searchQuery, limit = 10) => {
       usersRef,
       where("email", ">=", searchQuery.toLowerCase()),
       where("email", "<=", searchQuery.toLowerCase() + "\uf8ff"),
-      limit(limit)
+      limit(limitCount)
     );
 
     // Execute both queries

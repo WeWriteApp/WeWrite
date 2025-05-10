@@ -1133,6 +1133,39 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
     setShowLinkEditor(false);
   };
 
+  // Handle external URL changes
+  const handleExternalUrlChange = (e) => {
+    setExternalUrl(e.target.value);
+    setHasChanged(true);
+  };
+
+  // Handle display text changes
+  const handleDisplayTextChange = (e) => {
+    setDisplayText(e.target.value);
+    setHasChanged(true);
+  };
+
+  // Handle save for external links
+  const handleExternalSubmit = () => {
+    if (isExternalValid) {
+      onSelect({
+        url: externalUrl,
+        displayText: displayText,
+        isExternal: true
+      });
+    }
+  };
+
+  // Handle save for page links
+  const handleSave = (item) => {
+    if (canSave) {
+      onSelect({
+        ...item,
+        showAuthor
+      });
+    }
+  };
+
   return (
     <>
       {/* Backdrop overlay */}
@@ -1142,24 +1175,23 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
       />
       {/* Modal */}
       <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] bg-background rounded-xl shadow-xl z-[1000] overflow-hidden border border-border"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] bg-background rounded-xl shadow-xl z-[1000] border border-border flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col">
-          {/* Header */}
-          <div className="p-4 flex items-center justify-between">
-            <h2 className="text-base font-medium flex items-center gap-2">
-              <LinkIcon className="h-4 w-4" />
-              {isEditing ? 'Edit link' : 'Create link'}
-            </h2>
-            <button
-              onClick={handleClose}
-              className="p-1 rounded-full hover:bg-muted transition-colors"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Header - fixed at top */}
+        <div className="p-4 flex items-center justify-between border-b border-border">
+          <h2 className="text-base font-medium flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" />
+            {isEditing ? 'Edit link' : 'Create link'}
+          </h2>
+          <button
+            onClick={handleClose}
+            className="p-1 rounded-full hover:bg-muted transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
           {/* Tabs */}
           <div className="px-4 border-b border-border">
@@ -1185,11 +1217,11 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
             </div>
           </div>
 
-          {activeTab === 'page' ? (
-            <>
-              {/* Display text section */}
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto">
+            {activeTab === 'page' ? (
               <div className="p-4">
-                <div className="overflow-y-auto max-h-[40vh]">
+                <div>
                   <TypeaheadSearch
                     onSelect={(page) => {
                       setSelectedPageId(page.id);
@@ -1208,24 +1240,14 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                       }
                     }}
                   />
-                  {/* Show Author Switch - now above the button */}
+                  {/* Show Author Switch */}
                   <div className="flex items-center gap-2 mt-4 mb-4">
                     <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch" />
                     <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>
                   </div>
-                  <button
-                    onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
-                    disabled={!canSave}
-                    className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isEditing ? 'Save changes' : 'Insert link'}
-                  </button>
                 </div>
               </div>
-            </>
-          ) : (
-            <>
-              {/* External link section */}
+            ) : (
               <div className="p-4 space-y-4">
                 <div className="space-y-2">
                   <h2 className="text-sm font-medium">Text</h2>
@@ -1252,18 +1274,31 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
                   <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch-ext" />
                   <label htmlFor="show-author-switch-ext" className="text-sm font-medium select-none">Show author</label>
                 </div>
-                <button
-                  onClick={handleExternalSubmit}
-                  disabled={!canSave}
-                  className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isEditing ? 'Save changes' : 'Add External Link'}
-                </button>
               </div>
-            </>
-          )}
+            )}
+          </div>
+
+          {/* Sticky footer with button */}
+          <div className="p-4 border-t border-border">
+            {activeTab === 'page' ? (
+              <button
+                onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
+                disabled={!canSave}
+                className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isEditing ? 'Save changes' : 'Insert link'}
+              </button>
+            ) : (
+              <button
+                onClick={handleExternalSubmit}
+                disabled={!canSave}
+                className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isEditing ? 'Save changes' : 'Add External Link'}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
     </>
   );
 };

@@ -5,7 +5,7 @@ import Header from "./components/Header";
 import AllPages from "./components/AllPages";
 import TopUsers from "./components/TopUsers";
 import AddUsername from "./components/AddUsername";
-import TypeaheadSearch from "./components/TypeaheadSearch";
+import SearchButton from "./components/SearchButton";
 import LoginBanner from "./components/LoginBanner";
 import RecentActivity from "./components/RecentActivity";
 import TrendingPages from "./components/TrendingPages";
@@ -101,7 +101,7 @@ export default function Home() {
         <AddUsername />
 
         <div className="w-full mb-6">
-          <TypeaheadSearch placeholder="Search all pages..." />
+          <SearchButton placeholder="Search all pages..." />
         </div>
 
         {/* 1. Recent Activity (moved to top) */}
@@ -132,18 +132,18 @@ export default function Home() {
               </div>
             </Placeholder>
           ) : (
-            <SectionTitle
-              icon={FileText}
-              title="Your Pages"
-              rightContent={
-                <Button variant="outline" asChild>
-                  <Link href="/new" className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    New page
-                  </Link>
-                </Button>
-              }
-            />
+            <div className="flex items-center justify-between mb-4">
+              <SectionTitle
+                icon={FileText}
+                title="Your Pages"
+              />
+              <Button variant="outline" asChild>
+                <Link href="/new" className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  New page
+                </Link>
+              </Button>
+            </div>
           )}
           <AllPages />
         </div>
