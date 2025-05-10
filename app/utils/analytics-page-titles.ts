@@ -138,15 +138,46 @@ export function getAnalyticsPageTitle(
       return 'Page Editor';
     }
 
-    // Try to get the page title from the DOM
+    // Try to get the page title from the DOM first (most accurate)
     const contentTitle = document.querySelector('h1')?.textContent;
     if (contentTitle && contentTitle !== 'Untitled') {
+      // Cache this title for future use
+      pageTitleCache.set(pageId, contentTitle);
       return `Page: ${contentTitle}`;
     }
 
     // Check if we have this page title in our cache
     if (pageTitleCache.has(pageId)) {
       return `Page: ${pageTitleCache.get(pageId)}`;
+    }
+
+    // Check document title for page name
+    if (documentTitle &&
+        documentTitle !== 'WeWrite' &&
+        documentTitle !== 'Untitled' &&
+        !documentTitle.includes('undefined')) {
+      // Clean up the document title
+      let cleanTitle = documentTitle;
+
+      // Remove "WeWrite - " prefix if present
+      if (cleanTitle.startsWith('WeWrite - ')) {
+        cleanTitle = cleanTitle.substring('WeWrite - '.length);
+      }
+
+      // Remove " by username on WeWrite" suffix if present
+      const bySuffix = " by ";
+      const onWeWriteSuffix = " on WeWrite";
+      if (cleanTitle.includes(bySuffix)) {
+        cleanTitle = cleanTitle.substring(0, cleanTitle.indexOf(bySuffix));
+      } else if (cleanTitle.includes(onWeWriteSuffix)) {
+        cleanTitle = cleanTitle.substring(0, cleanTitle.indexOf(onWeWriteSuffix));
+      }
+
+      if (cleanTitle && cleanTitle !== 'Untitled') {
+        // Cache this title for future use
+        pageTitleCache.set(pageId, cleanTitle);
+        return `Page: ${cleanTitle}`;
+      }
     }
 
     // If we're in a browser environment, try to fetch the title asynchronously
@@ -167,6 +198,13 @@ export function getAnalyticsPageTitle(
         }
       }
 
+      // Look for any heading element as a last resort
+      const anyHeading = document.querySelector('h1, h2, h3')?.textContent;
+      if (anyHeading && anyHeading !== 'Untitled') {
+        return `Page: ${anyHeading}`;
+      }
+
+      // If all else fails, use a generic title but trigger async fetch
       return `Page: Content`;
     }
 
@@ -225,7 +263,33 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
     // Skip if we already have this in cache
     if (pageTitleCache.has(pageId)) return;
 
-    // Fetch the page metadata
+    // Try to get the page metadata directly
+    try {
+      const metadata = await getPageMetadata(pageId);
+      if (metadata && metadata.title && metadata.title !== 'Untitled') {
+        // We have a valid title from metadata
+        pageTitleCache.set(pageId, metadata.title);
+
+        // Update analytics with the actual page title
+        if (typeof window !== 'undefined' && window.gtag) {
+          const pathname = window.location.pathname;
+          const pageTitle = `Page: ${metadata.title}`;
+
+          window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+            page_path: pathname,
+            page_title: pageTitle,
+            page_location: window.location.href
+          });
+
+          console.log('Updated analytics with actual page title:', pageTitle);
+        }
+        return;
+      }
+    } catch (metadataError) {
+      console.error('Error fetching page metadata:', metadataError);
+    }
+
+    // If direct metadata fetch failed, try the cached title approach
     const title = await getCachedPageTitle(pageId);
 
     // Cache the title for future use
@@ -264,6 +328,12 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
               pathSegments[pathSegments.length - 2].slice(1);
             pageTitle = `Page: ${category} Content`;
           }
+        }
+
+        // Try to get the title from the DOM as a last resort
+        const h1Element = document.querySelector('h1');
+        if (h1Element && h1Element.textContent && h1Element.textContent !== 'Untitled') {
+          pageTitle = `Page: ${h1Element.textContent}`;
         }
 
         window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
