@@ -96,7 +96,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full wewrite-card border-0 shadow-none cursor-pointer hover:bg-accent/50 transition-colors",
+        "w-full wewrite-card border-0 shadow-sm cursor-pointer hover:bg-accent/50 transition-all duration-200",
+        "hover:shadow-lg", // Bigger shadow on hover
         isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
         "flex flex-col",
         compactLayout ? "p-4" : "p-4" // Consistent padding
