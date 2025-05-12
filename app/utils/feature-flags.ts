@@ -5,10 +5,12 @@ import { useEffect, useState } from 'react';
 // Define feature flag types
 export type FeatureFlag =
   | 'subscription_management'
-  | 'username_management'
+  | 'stripe_sandbox_mode'
   | 'map_view'
   | 'calendar_view'
-  | 'groups';
+  | 'groups'
+  | 'admin_features'
+  | 'username_management';
 
 // Define admin user IDs
 const ADMIN_USER_IDS = [
@@ -56,7 +58,6 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
       // Admin-only features - disabled by default, even for admins
       const adminOnlyFeatures: FeatureFlag[] = [
         'subscription_management',
-        'username_management',
       ];
 
       if (adminOnlyFeatures.includes(flag)) {
@@ -85,7 +86,6 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
     // On error, default to disabled for admin-only features
     const adminOnlyFeatures: FeatureFlag[] = [
       'subscription_management',
-      'username_management',
     ];
 
     if (adminOnlyFeatures.includes(flag)) {
@@ -115,7 +115,7 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
       } catch (error) {
         console.error(`Error in useFeatureFlag for ${flag}:`, error);
         // Default admin features to OFF on error
-        if (flag === 'subscription_management' || flag === 'username_management') {
+        if (flag === 'subscription_management') {
           setIsEnabled(false);
         } else {
           setIsEnabled(true);

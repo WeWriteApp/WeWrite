@@ -49,8 +49,9 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
   );
 }
 
-export default function UserProfileTabs({ profile }) {
-  const [activeTab, setActiveTab] = useState("activity");
+export default function UserProfileTabs({ profile, defaultTab = "pages" }) {
+  // Use the defaultTab prop with a fallback to "pages"
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [direction, setDirection] = useState(0); // -1 for right, 1 for left
   const { user } = useContext(AuthContext);
   const isCurrentUser = user && profile && user.uid === profile.uid;
@@ -75,7 +76,7 @@ export default function UserProfileTabs({ profile }) {
   } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
 
   // Determine which tabs to show
-  const visibleTabs = ["activity", "pages", "following"];
+  const visibleTabs = ["pages", "activity", "following"];
   if (isCurrentUser) {
     visibleTabs.push("private");
   }
@@ -294,7 +295,7 @@ export default function UserProfileTabs({ profile }) {
   return (
     <div className="mt-6">
       <Tabs
-        defaultValue="activity"
+        defaultValue="pages"
         value={activeTab}
         onValueChange={handleTabChange}
         className="w-full"
@@ -303,21 +304,21 @@ export default function UserProfileTabs({ profile }) {
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
               <TabsTrigger
-                value="activity"
-                data-value="activity"
-                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-              >
-                <Clock className="h-4 w-4" />
-                <span>Activity</span>
-              </TabsTrigger>
-
-              <TabsTrigger
                 value="pages"
                 data-value="pages"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
                 <FileText className="h-4 w-4" />
                 <span>Pages</span>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="activity"
+                data-value="activity"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <Clock className="h-4 w-4" />
+                <span>Activity</span>
               </TabsTrigger>
 
               <TabsTrigger
@@ -351,17 +352,6 @@ export default function UserProfileTabs({ profile }) {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <TabsContent
-            value="activity"
-            className={`mt-0 transition-all duration-300 ${
-              activeTab === "activity"
-                ? "block"
-                : "hidden"
-            }`}
-          >
-            <RecentActivity limit={10} showViewAll={false} userId={profile?.uid} />
-          </TabsContent>
-
           <TabsContent
             value="pages"
             className={`mt-0 transition-all duration-300 ${
@@ -408,6 +398,17 @@ export default function UserProfileTabs({ profile }) {
                 )}
               </>
             )}
+          </TabsContent>
+
+          <TabsContent
+            value="activity"
+            className={`mt-0 transition-all duration-300 ${
+              activeTab === "activity"
+                ? "block"
+                : "hidden"
+            }`}
+          >
+            <RecentActivity limit={10} showViewAll={false} userId={profile?.uid} />
           </TabsContent>
 
           <TabsContent

@@ -6,6 +6,7 @@ import { Label } from "./ui/label";
 import { PillLink } from "./PillLink";
 import { cn } from "../lib/utils";
 import { Check } from "lucide-react";
+import { Button } from "./ui/button";
 
 export default function PillStyleToggle() {
   const { pillStyle, changePillStyle } = usePillStyle();
@@ -16,11 +17,11 @@ export default function PillStyleToggle() {
         <Label className="text-sm font-medium text-muted-foreground mb-3 px-2">Pill Style</Label>
         <div className="space-y-2">
           {/* Radio button for Filled style */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => changePillStyle(PILL_STYLES.FILLED)}
             className={cn(
-              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
-              "hover:bg-muted",
+              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md",
               pillStyle === PILL_STYLES.FILLED && "bg-muted"
             )}
           >
@@ -28,14 +29,14 @@ export default function PillStyleToggle() {
             {pillStyle === PILL_STYLES.FILLED && (
               <Check className="h-4 w-4 text-primary" />
             )}
-          </button>
+          </Button>
 
           {/* Radio button for Outline style */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => changePillStyle(PILL_STYLES.OUTLINE)}
             className={cn(
-              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
-              "hover:bg-muted",
+              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md",
               pillStyle === PILL_STYLES.OUTLINE && "bg-muted"
             )}
           >
@@ -43,14 +44,14 @@ export default function PillStyleToggle() {
             {pillStyle === PILL_STYLES.OUTLINE && (
               <Check className="h-4 w-4 text-primary" />
             )}
-          </button>
+          </Button>
 
           {/* Radio button for Classic style */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => changePillStyle(PILL_STYLES.CLASSIC)}
             className={cn(
-              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
-              "hover:bg-muted",
+              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md",
               pillStyle === PILL_STYLES.CLASSIC && "bg-muted"
             )}
           >
@@ -58,7 +59,7 @@ export default function PillStyleToggle() {
             {pillStyle === PILL_STYLES.CLASSIC && (
               <Check className="h-4 w-4 text-primary" />
             )}
-          </button>
+          </Button>
         </div>
       </div>
 

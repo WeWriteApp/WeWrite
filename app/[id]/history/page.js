@@ -11,9 +11,12 @@ import { Loader } from '../../components/Loader';
 import ActivityCard from '../../components/ActivityCard';
 import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDiff';
 import PageHeader from '../../components/PageHeader.tsx';
+import { use } from 'react';
 
 export default function PageHistoryPage({ params }) {
-  const { id } = params;
+  // Use React.use() to unwrap params
+  const resolvedParams = use(params);
+  const { id } = resolvedParams;
   const [page, setPage] = useState(null);
   const [versions, setVersions] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -172,10 +175,6 @@ export default function PageHistoryPage({ params }) {
         {/* Back button removed - using PageHeader back button instead */}
 
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-6">
-            <Clock className="h-8 w-8 text-muted-foreground" />
-            <h2 className="text-2xl font-semibold">Change History</h2>
-          </div>
 
           {activities.length === 0 ? (
             <div className="text-center p-8 border rounded-md">

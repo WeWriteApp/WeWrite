@@ -13,9 +13,9 @@ import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 import MapEditor from "./MapEditor";
-import { useEditorAutoSave } from "../hooks/useAutoSave";
 import { toast } from "sonner";
 import { useFeatureFlag } from "../utils/feature-flags";
+import UnsavedChangesDialog from "./UnsavedChangesDialog";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -72,35 +72,17 @@ const PageEditor = ({
   isReply = false,
   replyToId = null
 }) => {
-  // Use auto-save hook for editor content
-  const [savedContent, setSavedContent, clearSavedContent, isAutoSaving] = useEditorAutoSave(
-    isNewPage ? 'new' : (replyToId ? `reply_${replyToId}` : window.location.pathname.split('/').pop()),
+  // Initialize editor with initialContent
+  const [currentEditorValue, setCurrentEditorValue] = useState(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 
-  // Initialize editor with saved content if available, otherwise use initialContent
-  const [currentEditorValue, setCurrentEditorValue] = useState(() => {
-    // If we have saved content and it's not empty, use it
-    if (savedContent && Array.isArray(savedContent) && savedContent.length > 0) {
-      // Check if the first item is not just an empty paragraph
-      const isEmpty = savedContent.length === 1 &&
-                     savedContent[0].type === 'paragraph' &&
-                     savedContent[0].children.length === 1 &&
-                     (!savedContent[0].children[0].text || savedContent[0].children[0].text === '');
+  // Track if content has been modified
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-      if (!isEmpty) {
-        console.log('Using auto-saved content');
-        toast.info('Restored unsaved content', {
-          description: 'Your previous unsaved work has been restored.',
-          duration: 3000
-        });
-        return savedContent;
-      }
-    }
-
-    // Otherwise use initialContent
-    return initialContent || [{ type: 'paragraph', children: [{ text: '' }] }];
-  });
+  // State for unsaved changes dialog
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const pendingActionRef = useRef(null);
 
   const [titleError, setTitleError] = useState(false);
   const { user } = useContext(AuthContext);
@@ -277,6 +259,22 @@ const PageEditor = ({
     }
   }, [initialContent, isReply]);
 
+  // Add beforeunload event handler to catch browser navigation attempts
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        // Standard way to show a confirmation dialog before leaving the page
+        e.preventDefault();
+        // Chrome requires returnValue to be set
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   // Position cursor for reply content - only on initial load
   useEffect(() => {
     // Only run this once when the component mounts and content is available
@@ -337,9 +335,7 @@ const PageEditor = ({
   // Handle content changes
   const handleContentChange = (value) => {
     setCurrentEditorValue(value);
-
-    // Update auto-save with the new content
-    setSavedContent(value);
+    setHasUnsavedChanges(true);
 
     if (onContentChange) {
       onContentChange(value);
@@ -376,20 +372,52 @@ const PageEditor = ({
 
     // Call the provided onSave function with the current editor value
     if (onSave) {
-      // Clear saved content when saving successfully
       try {
         onSave(currentEditorValue);
-        // Clear the auto-saved content after successful save
-        // We'll do this in a timeout to ensure it happens after the save is processed
-        setTimeout(() => {
-          clearSavedContent();
-        }, 1000);
+        // Reset unsaved changes flag after successful save
+        setHasUnsavedChanges(false);
+
+        // If this was triggered from the unsaved changes dialog, close it
+        if (showUnsavedDialog) {
+          setShowUnsavedDialog(false);
+
+          // If there was a pending action, execute it
+          if (pendingActionRef.current) {
+            setTimeout(() => {
+              pendingActionRef.current();
+              pendingActionRef.current = null;
+            }, 100);
+          }
+        }
       } catch (error) {
         console.error("Error during save:", error);
-        // Keep auto-saved content if there's an error
       }
     }
   }
+
+  // Handle cancel with confirmation if there are unsaved changes
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      // Store the cancel action to execute after user decision
+      pendingActionRef.current = onCancel;
+      setShowUnsavedDialog(true);
+    } else {
+      // No unsaved changes, just cancel
+      onCancel();
+    }
+  };
+
+  // Handle discard changes
+  const handleDiscard = () => {
+    setShowUnsavedDialog(false);
+    setHasUnsavedChanges(false);
+
+    // Execute the pending action (cancel)
+    if (pendingActionRef.current) {
+      pendingActionRef.current();
+      pendingActionRef.current = null;
+    }
+  };
 
   // Handle link insertion
   const handleInsertLink = () => {
@@ -491,6 +519,8 @@ const PageEditor = ({
     if (e.target.value.trim().length > 0) {
       setTitleError(false);
     }
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true);
     // Auto-resize the textarea
     autoResizeTextarea(e.target);
   };
@@ -545,20 +575,15 @@ const PageEditor = ({
         )}
       </div>
 
-      {/* Auto-save indicator */}
-      <div className="flex items-center justify-end mb-2">
-        {isAutoSaving ? (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Save className="h-3 w-3 mr-1 animate-pulse" />
-            <span>Auto-saving...</span>
-          </div>
-        ) : (
-          <div className="flex items-center text-xs text-muted-foreground">
+      {/* Unsaved changes indicator */}
+      {hasUnsavedChanges && (
+        <div className="flex items-center justify-end mb-2">
+          <div className="flex items-center text-xs text-amber-500 dark:text-amber-400">
             <Save className="h-3 w-3 mr-1" />
-            <span>Auto-save enabled</span>
+            <span>Unsaved changes</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Add separator line between actions and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
@@ -591,7 +616,10 @@ const PageEditor = ({
               </span>
               <Switch
                 checked={isPublic}
-                onCheckedChange={setIsPublic}
+                onCheckedChange={(value) => {
+                  setIsPublic(value);
+                  setHasUnsavedChanges(true);
+                }}
                 aria-label="Toggle page visibility"
               />
             </div>
@@ -623,7 +651,10 @@ const PageEditor = ({
                     <div>
                       <MapEditor
                         location={location}
-                        onChange={setLocation}
+                        onChange={(newLocation) => {
+                          setLocation(newLocation);
+                          setHasUnsavedChanges(true);
+                        }}
                       />
                     </div>
                   </TooltipTrigger>
@@ -638,7 +669,7 @@ const PageEditor = ({
           {/* Save/Cancel buttons - right aligned */}
           <div className="flex items-center gap-2">
             <Button
-              onClick={onCancel}
+              onClick={handleCancel}
               variant="outline"
               className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
             >
@@ -680,6 +711,15 @@ const PageEditor = ({
           <p className="text-destructive font-medium">{error}</p>
         </div>
       )}
+
+      {/* Unsaved changes confirmation dialog */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedDialog}
+        onClose={() => setShowUnsavedDialog(false)}
+        onDiscard={handleDiscard}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
     </div>
   );
 };

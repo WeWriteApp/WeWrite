@@ -18,6 +18,7 @@ import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import CommandKSearch from "./components/CommandKSearch";
+import Navigation from "./components/Navigation";
 
 // Dynamically import components with no SSR
 const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
@@ -29,6 +30,10 @@ const UsernameWarningBanner = dynamic(() => import('./components/UsernameWarning
 });
 
 const UsernameEnforcementBanner = dynamic(() => import('./components/UsernameEnforcementBanner'), {
+  ssr: false
+});
+
+const FirestoreBlockedWarning = dynamic(() => import('./components/FirestoreBlockedWarning'), {
   ssr: false
 });
 
@@ -56,15 +61,19 @@ export default function ClientLayout({ children }) {
                           <DrawerProvider>
                             <LineSettingsProvider>
                       <Drawer />
-                      <div className="flex flex-col min-h-screen bg-background pb-8">
+                      {!isAuthPage && <Navigation />}
+                      <div className="flex flex-col min-h-screen bg-background">
                         {!isAuthPage && <UsernameWarningBanner />}
                         {!isAuthPage && <UsernameEnforcementBanner />}
+                        {!isAuthPage && <FirestoreBlockedWarning />}
                         <main className="flex-grow">
                           {children}
                         </main>
                         {/* Command+K search dialog */}
                         <CommandKSearch />
                       </div>
+
+                      {/* Toolbar is now handled at the root layout level */}
                       {process.env.NODE_ENV === 'development' && (
                         <>
                           {/* <GADebugger /> */}

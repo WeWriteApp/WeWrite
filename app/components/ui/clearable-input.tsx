@@ -3,6 +3,7 @@
 import * as React from "react"
 import { X } from "lucide-react"
 import { Input, InputProps } from "./input"
+import { Button } from "./button"
 import { cn } from "../../lib/utils"
 
 export interface ClearableInputProps extends InputProps {
@@ -19,7 +20,7 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
         } as React.ChangeEvent<HTMLInputElement>
         onChange(event)
       }
-      
+
       // Call the onClear callback if provided
       if (onClear) {
         onClear()
@@ -36,14 +37,16 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
           {...props}
         />
         {value && String(value).length > 0 && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
             aria-label="Clear input"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         )}
       </div>
     )

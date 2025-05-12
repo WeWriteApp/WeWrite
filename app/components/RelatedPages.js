@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { PillLink } from './PillLink';
@@ -17,11 +17,27 @@ import { Loader2 } from 'lucide-react';
  * @param {Array} linkedPageIds - Array of page IDs that are already linked in the page content
  * @param {number} maxPages - Maximum number of related pages to display (default: 5)
  */
-export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 }) {
+function RelatedPages({ page, linkedPageIds = [], maxPages = 5 }) {
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use a ref to track if we've already fetched related pages
+  const fetchedRef = React.useRef(false);
+  // Use a ref to store the related pages data to prevent loss during re-renders
+  const relatedPagesRef = React.useRef([]);
+
+  // If we already have data in the ref, use it immediately
   useEffect(() => {
+    if (fetchedRef.current && relatedPagesRef.current.length > 0) {
+      setRelatedPages(relatedPagesRef.current);
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Only fetch related pages once per component instance
+    if (fetchedRef.current) return;
+
     const fetchRelatedPages = async () => {
       setIsLoading(true);
 
@@ -29,6 +45,9 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
         setIsLoading(false);
         return;
       }
+
+      // Mark that we've started fetching
+      fetchedRef.current = true;
 
       try {
         // First, get pages by the same author (user-based relevance)
@@ -185,7 +204,9 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
           .slice(0, maxPages);
 
+        // Store the results in both state and ref
         setRelatedPages(sortedPages);
+        relatedPagesRef.current = sortedPages;
       } catch (error) {
         console.error('Error fetching related pages:', error);
       }
@@ -196,38 +217,40 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
     fetchRelatedPages();
   }, [page, maxPages, linkedPageIds]);
 
-  if (isLoading) {
-    return (
-      <div className="mt-8 pt-6">
-        <h3 className="text-lg font-medium mb-4">Related Pages</h3>
+  // Always render the container with the same structure to prevent layout shifts
+  return (
+    <div className="mt-8 pt-6 min-h-[100px]">
+      <h3 className="text-lg font-medium mb-4">Related Pages</h3>
+
+      {isLoading ? (
+        // Loading state
         <div className="flex justify-center py-4">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
-      </div>
-    );
-  }
-
-  // If there are no related pages after filtering out linked pages, don't show the section at all
-  if (relatedPages.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="mt-8 pt-6">
-      <h3 className="text-lg font-medium mb-4">Related Pages</h3>
-      <div className="flex flex-wrap gap-2">
-        {relatedPages.map(page => (
-          <div key={page.id} className="flex-none max-w-full">
-            <PillLink
-              key={page.id}
-              href={`/${page.id}`}
-              className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
-            >
-              {page.title || "Untitled"}
-            </PillLink>
-          </div>
-        ))}
-      </div>
+      ) : relatedPages.length === 0 ? (
+        // Empty state - hidden but preserves space
+        <div className="text-muted-foreground text-sm py-2 opacity-0">
+          No related pages found
+        </div>
+      ) : (
+        // Content state - show related pages
+        <div className="flex flex-wrap gap-2">
+          {relatedPages.map(page => (
+            <div key={page.id} className="flex-none max-w-full">
+              <PillLink
+                key={page.id}
+                href={`/${page.id}`}
+                className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+              >
+                {page.title || "Untitled"}
+              </PillLink>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+// Export a memoized version of the component to prevent unnecessary re-renders
+export default memo(RelatedPages);

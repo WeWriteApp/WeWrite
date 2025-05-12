@@ -96,22 +96,24 @@ export const Hero = () => {
           >
             <div className="relative w-full max-w-md mx-auto h-auto group">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 rounded-lg z-10 pointer-events-none"></div>
-              <button
+              <Button
+                variant="outline"
+                size="icon"
                 className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white rounded-full p-1 shadow transition hidden group-hover:block"
                 onClick={prev}
                 aria-label="Previous image"
-                type="button"
               >
                 <ChevronLeft className="h-6 w-6 text-gray-700" />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 className="absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white rounded-full p-1 shadow transition hidden group-hover:block"
                 onClick={next}
                 aria-label="Next image"
-                type="button"
               >
                 <ChevronRight className="h-6 w-6 text-gray-700" />
-              </button>
+              </Button>
               <Image
                 src={HERO_IMAGES[current]}
                 alt={`WeWrite App Preview ${current + 1}`}
@@ -124,10 +126,10 @@ export const Hero = () => {
               {/* Filmstrip */}
               <div className="flex justify-center gap-2 mt-4">
                 {HERO_IMAGES.map((img, idx) => (
-                  <button
+                  <Button
                     key={img}
-                    className={`rounded border-2 ${idx === current ? 'border-blue-500' : 'border-transparent'} focus:outline-none`}
-                    style={{ padding: 0 }}
+                    variant="ghost"
+                    className={`rounded border-2 p-0 ${idx === current ? 'border-blue-500' : 'border-transparent'} focus:outline-none`}
                     onClick={() => setCurrent(idx)}
                     aria-label={`Show image ${idx + 1}`}
                   >
@@ -138,7 +140,7 @@ export const Hero = () => {
                       height={60}
                       className={`rounded object-cover ${idx === current ? 'ring-2 ring-blue-500' : ''}`}
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -157,30 +159,33 @@ export const Hero = () => {
           transition={{ duration: 0.25 }}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in"
         >
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             className="absolute top-6 right-8 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
             onClick={closeLightbox}
             aria-label="Close lightbox"
-            type="button"
           >
             <X className="h-7 w-7 text-gray-700" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
             className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
             onClick={prev}
             aria-label="Previous image"
-            type="button"
           >
             <ChevronLeft className="h-8 w-8 text-gray-700" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
             className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
             onClick={next}
             aria-label="Next image"
-            type="button"
           >
             <ChevronRight className="h-8 w-8 text-gray-700" />
-          </button>
+          </Button>
           <div className="flex-1 flex items-center justify-center w-full max-h-[80vh]">
             <Image
               src={HERO_IMAGES[current]}
@@ -194,10 +199,10 @@ export const Hero = () => {
           {/* Filmstrip in lightbox */}
           <div className="flex justify-center gap-3 mt-8 mb-8">
             {HERO_IMAGES.map((img, idx) => (
-              <button
+              <Button
                 key={img}
-                className={`rounded border-2 ${idx === current ? 'border-blue-500' : 'border-transparent'} focus:outline-none`}
-                style={{ padding: 0 }}
+                variant="ghost"
+                className={`rounded border-2 p-0 ${idx === current ? 'border-blue-500' : 'border-transparent'} focus:outline-none`}
                 onClick={() => setCurrent(idx)}
                 aria-label={`Show image ${idx + 1}`}
               >
@@ -208,7 +213,7 @@ export const Hero = () => {
                   height={80}
                   className={`rounded object-cover ${idx === current ? 'ring-2 ring-blue-500' : ''}`}
                 />
-              </button>
+              </Button>
             ))}
           </div>
         </motion.div>

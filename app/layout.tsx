@@ -1,6 +1,7 @@
 import "./globals.css"
 import "./styles/scrollbar-hide.css"
 import "./styles/loader.css"
+import "./styles/toolbar.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
@@ -14,6 +15,8 @@ import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
+import NotificationPermissionProvider from "./providers/NotificationPermissionProvider"
+import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration"
 
 const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
@@ -57,11 +60,14 @@ export default function RootLayout({
                     <ToastProvider>
                       <PillStyleProvider>
                         <PWAProvider>
-                          <ClientLayout>
-                            {children}
-                          </ClientLayout>
-                          <Analytics debug={process.env.NODE_ENV === 'development'} />
-                          <SpeedInsights />
+                          <NotificationPermissionProvider>
+                            <ClientLayout>
+                              {children}
+                            </ClientLayout>
+                            <ServiceWorkerRegistration />
+                            <Analytics debug={process.env.NODE_ENV === 'development'} />
+                            <SpeedInsights />
+                          </NotificationPermissionProvider>
                         </PWAProvider>
                       </PillStyleProvider>
                     </ToastProvider>

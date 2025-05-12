@@ -69,21 +69,13 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
     setLoading(true);
     setError(null);
     const amount = selectedTier === 1 ? 10 : selectedTier === 2 ? 20 : customAmount;
+
     try {
-      const res = await fetch('/api/activate-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, userId: user.uid }),
-      });
-      if (res.ok) {
-        router.push(`/account/subscription/payment?amount=${amount}`);
-      } else {
-        const data = await res.json();
-        setError(data.error || 'Failed to start subscription.');
-      }
+      // Redirect directly to subscription page with amount parameter
+      router.push(`/subscription?amount=${amount}`);
+      onClose(); // Close the modal
     } catch (e) {
-      setError('Network error. Please try again.');
-    } finally {
+      setError('Navigation error. Please try again.');
       setLoading(false);
     }
   };
@@ -103,7 +95,7 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
           </p>
 
           {/* Subscription Tiers - Horizontally Scrollable */}
-          {isSignedIn && (
+          {isSignedIn && content.title === "Start your subscription" && (
             <div className="mt-4 mb-6">
               <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
                 <div className="flex space-x-3 w-max min-w-full">
@@ -150,9 +142,17 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
               size="lg"
               variant={isSignedIn ? "default" : "outline"}
               disabled={isSignedIn && (!selectedTier || loading)}
-              onClick={handleActivate}
+              onClick={content.action.href === "/account" ? () => {
+                router.push(content.action.href);
+                onClose();
+              } : handleActivate}
             >
-              {loading ? 'Processing...' : (<>{isSignedIn && <DollarSign className="h-4 w-4 text-white" />}Activate subscription</>)}
+              {loading ? 'Processing...' : (
+                <>
+                  {isSignedIn && <DollarSign className="h-4 w-4 text-white" />}
+                  {content.action.label || "Activate subscription"}
+                </>
+              )}
             </Button>
             {error && <div className="text-destructive text-sm mt-2 text-center">{error}</div>}
           </div>

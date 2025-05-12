@@ -10,16 +10,18 @@ function determineTierFromAmount(amount) {
   return amount >= 50 ? 'tier3' : amount >= 20 ? 'tier2' : amount >= 10 ? 'tier1' : 'tier0';
 }
 
-// Initialize Stripe with the appropriate key based on environment
-const stripeSecretKey = getStripeSecretKey();
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2023-10-16',
-});
-const endpointSecret = getStripeWebhookSecret();
-console.log('Stripe initialized for webhook handler with API version 2023-10-16');
+// We'll initialize Stripe inside the POST handler to handle async config
 
 export async function POST(request) {
   try {
+    // Initialize Stripe with the appropriate key based on environment
+    const stripeSecretKey = await getStripeSecretKey();
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+    });
+    const endpointSecret = await getStripeWebhookSecret();
+    console.log('Stripe initialized for webhook handler with API version 2023-10-16');
+
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 

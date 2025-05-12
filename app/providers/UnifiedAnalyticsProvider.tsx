@@ -141,14 +141,33 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
         // First track with what we have
         analytics.pageView(url, pageTitle, pageId);
 
-        // Then try to get a better title asynchronously
-        if (pageTitle === `Page: ${pageId}`) {
+        // Then try to get a better title asynchronously if we have a generic or loading title
+        if (pageTitle === `Page: ${pageId}` ||
+            pageTitle === 'Page: Content' ||
+            pageTitle === 'Page: Loading...') {
           try {
+            if (isDev) console.log('Getting better title for page:', pageId);
             getAnalyticsPageTitleForId(pageId).then(betterTitle => {
-              if (betterTitle !== `Page: ${pageId}`) {
+              if (betterTitle !== `Page: ${pageId}` &&
+                  betterTitle !== 'Page: Content' &&
+                  betterTitle !== 'Page: Loading...') {
                 // Re-track with the better title
                 analytics.pageView(url, betterTitle, pageId);
                 if (isDev) console.log('Re-tracked page view with better title:', betterTitle);
+              } else {
+                // If we still don't have a good title, try again after a delay
+                // This helps with slow-loading pages
+                setTimeout(() => {
+                  getAnalyticsPageTitleForId(pageId).then(delayedTitle => {
+                    if (delayedTitle !== `Page: ${pageId}` &&
+                        delayedTitle !== 'Page: Content' &&
+                        delayedTitle !== 'Page: Loading...') {
+                      // Re-track with the better title
+                      analytics.pageView(url, delayedTitle, pageId);
+                      if (isDev) console.log('Re-tracked page view with delayed title:', delayedTitle);
+                    }
+                  });
+                }, 2000); // Wait 2 seconds before trying again
               }
             });
           } catch (titleErr) {

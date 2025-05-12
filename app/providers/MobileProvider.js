@@ -9,7 +9,25 @@ export const MobileProvider = ({ children }) => {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      // Check for mobile user agent
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+
+      // Check for screen width
+      const isMobileWidth = window.innerWidth < 768;
+
+      // Set as mobile if either condition is true
+      const newIsMobile = isMobileDevice || isMobileWidth;
+      setIsMobile(newIsMobile);
+
+      // Debug log
+      console.log("Mobile detection:", {
+        isMobileDevice,
+        isMobileWidth,
+        userAgent,
+        width: window.innerWidth,
+        isMobile: newIsMobile
+      });
     };
 
     // Initial check

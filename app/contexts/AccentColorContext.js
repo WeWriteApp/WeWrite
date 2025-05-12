@@ -276,7 +276,11 @@ export function AccentColorProvider({ children }) {
       const isDarkMode = document.documentElement.classList.contains('dark');
 
       // Set the color value based on the current theme
+      // BLACK in light mode, WHITE in dark mode
       colorValue = isDarkMode ? '#FFFFFF' : '#000000';
+
+      // Also update the CSS variable for the dot color
+      document.documentElement.style.setProperty('--high-contrast-dot-color', colorValue);
 
       console.log('High contrast color mode detected, using:', { isDarkMode, colorValue });
     }
@@ -453,6 +457,11 @@ export function AccentColorProvider({ children }) {
   // Load saved accent color from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Initialize high contrast dot color based on current theme
+      const isDarkMode = document.documentElement.classList.contains('dark');
+      const highContrastDotColor = isDarkMode ? '#FFFFFF' : '#000000';
+      document.documentElement.style.setProperty('--high-contrast-dot-color', highContrastDotColor);
+
       const savedAccentColor = localStorage.getItem('accentColor');
       const savedCustomColors = JSON.parse(localStorage.getItem('customAccentColors') || '{}');
 
@@ -520,10 +529,20 @@ export function AccentColorProvider({ children }) {
       // Create a mutation observer to watch for theme changes
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-          if (mutation.attributeName === 'class' && accentColor === ACCENT_COLORS.HIGH_CONTRAST) {
-            // If the high contrast color is selected, update it when theme changes
-            console.log('Theme changed, updating high contrast color');
-            updateCSSVariables(ACCENT_COLORS.HIGH_CONTRAST, ACCENT_COLOR_VALUES[ACCENT_COLORS.HIGH_CONTRAST]);
+          if (mutation.attributeName === 'class') {
+            // Check if the theme has changed (dark/light mode)
+            const isDarkMode = document.documentElement.classList.contains('dark');
+
+            // Update the high contrast dot color CSS variable regardless of selected color
+            // This ensures the dot color is always correct in the UI
+            const highContrastDotColor = isDarkMode ? '#FFFFFF' : '#000000';
+            document.documentElement.style.setProperty('--high-contrast-dot-color', highContrastDotColor);
+
+            // If high contrast is the selected color, update all accent color variables
+            if (accentColor === ACCENT_COLORS.HIGH_CONTRAST) {
+              console.log('Theme changed, updating high contrast color');
+              updateCSSVariables(ACCENT_COLORS.HIGH_CONTRAST, ACCENT_COLOR_VALUES[ACCENT_COLORS.HIGH_CONTRAST]);
+            }
           }
         });
       });

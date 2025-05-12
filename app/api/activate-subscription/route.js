@@ -126,6 +126,23 @@ export async function POST(request) {
       }
     });
 
+    // First, create a payment intent directly
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: 'usd',
+      customer: stripeCustomerId,
+      setup_future_usage: 'off_session',
+      metadata: {
+        userId: userId,
+        tier: amount >= 50 ? 'tier3' : amount >= 20 ? 'tier2' : amount >= 10 ? 'tier1' : 'tier0'
+      }
+    });
+
+    console.log('Payment intent created:', JSON.stringify(paymentIntent, null, 2));
+
+    // Extract the client secret from the payment intent
+    const clientSecret = paymentIntent.client_secret;
+
     // Create a subscription in Stripe
     const subscription = await stripe.subscriptions.create({
       customer: stripeCustomerId,
@@ -138,25 +155,14 @@ export async function POST(request) {
       payment_settings: {
         save_default_payment_method: 'on_subscription'
       },
-      expand: ['latest_invoice.payment_intent']
+      default_payment_method: paymentIntent.payment_method,
+      metadata: {
+        userId: userId,
+        paymentIntentId: paymentIntent.id
+      }
     });
 
-    // Extract the client secret from the latest invoice with proper error handling
-    let clientSecret = '';
-    if (subscription &&
-        subscription.latest_invoice &&
-        subscription.latest_invoice.payment_intent &&
-        subscription.latest_invoice.payment_intent.client_secret) {
-      clientSecret = subscription.latest_invoice.payment_intent.client_secret;
-    } else {
-      console.error('Missing client secret in subscription response:', subscription);
-      return new Response(JSON.stringify({
-        error: 'Failed to create payment intent. Missing client secret.'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    console.log('Subscription created:', JSON.stringify(subscription, null, 2));
 
     // Store subscription data in Firestore
     const currentDate = new Date();

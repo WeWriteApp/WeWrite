@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { getUserSubscription } from '../../firebase/subscription';
@@ -12,7 +12,9 @@ import { db } from '../../firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 
 export default function UserPage({ params }) {
-  const { id } = params;
+  // Use React.use() to unwrap params
+  const resolvedParams = use(params);
+  const { id } = resolvedParams;
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -18,7 +18,7 @@ import { Button } from "./ui/button";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/database";
 
-import UserProfileTabs from "./UserProfileTabs";
+import UserProfileTabsWrapper from "./UserProfileTabsWrapper";
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../firebase/counters";
 import { getUserSubscription } from "../firebase/subscription";
 
@@ -372,7 +372,7 @@ const SingleProfileView = ({ profile }) => {
         )}
 
 
-        <UserProfileTabs profile={profile} />
+        <UserProfileTabsWrapper profile={profile} />
       </div>
     </ProfilePagesProvider>
   );

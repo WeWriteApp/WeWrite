@@ -182,8 +182,8 @@ export default function SiteFooter({ className = "" }) {
           </span>
         </div>
 
-        {/* Add extra padding to ensure content isn't covered by pledge bar */}
-        <div className="h-24"></div>
+        {/* Add extra padding to ensure content isn't covered by pledge bar or mobile toolbar */}
+        <div className="h-24 md:h-20"></div>
       </div>
     </footer>
   );

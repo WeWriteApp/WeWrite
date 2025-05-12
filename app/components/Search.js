@@ -312,14 +312,14 @@ const Search = () => {
               href={`/pages/${item.id}`}
               isPublic={item.isPublic}
               key={item.id}
-              isOwned={item.section === "Your Pages"}
+              isOwned={item.isOwned}
               className="max-w-full"
             >
               <div className="flex items-center justify-between gap-2 w-full">
                 <span className="truncate text-foreground">{item.name}</span>
-                {item.section !== "Your Pages" && (
+                {!item.isOwned && (
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    by {item.username || "NULL"}
+                    by {item.username || "Anonymous"}
                   </span>
                 )}
               </div>

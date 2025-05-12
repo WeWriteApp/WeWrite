@@ -4,16 +4,50 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import { 
-  CommandDialog, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList 
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
 } from "./ui/command";
+import { DialogTitle } from "./ui/dialog";
 import { searchPages, searchUsers } from "../firebase/search";
 import { useAuth } from "../providers/AuthProvider";
+import { cn } from "../lib/utils";
+
+// Helper function to highlight matching text in search results
+const highlightMatch = (text: string, query: string) => {
+  if (!query || !text) return text;
+
+  try {
+    const normalizedText = text.toLowerCase();
+    const normalizedQuery = query.toLowerCase();
+
+    // If the query isn't found in the text, just return the text
+    if (!normalizedText.includes(normalizedQuery)) {
+      return text;
+    }
+
+    const startIndex = normalizedText.indexOf(normalizedQuery);
+    const endIndex = startIndex + normalizedQuery.length;
+
+    return (
+      <>
+        {text.substring(0, startIndex)}
+        <span className="bg-primary/20 text-primary-foreground font-medium">
+          {text.substring(startIndex, endIndex)}
+        </span>
+        {text.substring(endIndex)}
+      </>
+    );
+  } catch (error) {
+    // If there's any error in highlighting, just return the original text
+    console.error("Error highlighting match:", error);
+    return text;
+  }
+};
 
 export function CommandKSearch() {
   const [open, setOpen] = useState(false);
@@ -42,22 +76,32 @@ export function CommandKSearch() {
     setSelectedIndex(0);
   }, [results]);
 
-  // Handle search
+  // Handle search with type-ahead
   useEffect(() => {
     const fetchResults = async () => {
-      if (!query.trim() || !user) {
+      // Show empty results if query is empty or user is not logged in
+      if (!user) {
+        setResults([]);
+        return;
+      }
+
+      // For type-ahead, we'll show results even with a single character
+      // But we'll still trim the query to remove whitespace
+      const trimmedQuery = query.trim();
+
+      if (!trimmedQuery) {
         setResults([]);
         return;
       }
 
       setLoading(true);
       try {
-        // Search for pages
-        const pageResults = await searchPages(query.trim(), user.uid);
-        
-        // Search for users
-        const userResults = await searchUsers(query.trim());
-        
+        // Search for pages - pass minimum length of 1 for type-ahead
+        const pageResults = await searchPages(trimmedQuery, user.uid, 5, 1);
+
+        // Search for users - pass minimum length of 1 for type-ahead
+        const userResults = await searchUsers(trimmedQuery, 5, 1);
+
         // Combine results
         const combinedResults = [
           ...pageResults.map((page: any) => ({
@@ -71,7 +115,7 @@ export function CommandKSearch() {
             url: `/user/${user.username || user.id}`
           }))
         ];
-        
+
         setResults(combinedResults);
       } catch (error) {
         console.error("Error searching:", error);
@@ -80,7 +124,8 @@ export function CommandKSearch() {
       }
     };
 
-    const timeoutId = setTimeout(fetchResults, 300);
+    // Reduce debounce time to 150ms for faster type-ahead response
+    const timeoutId = setTimeout(fetchResults, 150);
     return () => clearTimeout(timeoutId);
   }, [query, user]);
 
@@ -88,12 +133,12 @@ export function CommandKSearch() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((prevIndex) => 
+      setSelectedIndex((prevIndex) =>
         prevIndex < results.length - 1 ? prevIndex + 1 : prevIndex
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((prevIndex) => 
+      setSelectedIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : 0
       );
     } else if (e.key === "Enter") {
@@ -115,6 +160,8 @@ export function CommandKSearch() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
+      {/* Add DialogTitle for accessibility */}
+      <DialogTitle className="sr-only">Search</DialogTitle>
       <div onKeyDown={handleKeyDown}>
         <CommandInput
           placeholder="Search pages, users..."
@@ -125,9 +172,13 @@ export function CommandKSearch() {
           <CommandEmpty>
             {loading ? (
               <div className="py-6 text-center text-sm">Loading...</div>
-            ) : (
+            ) : query.trim() ? (
               <div className="py-6 text-center text-sm">
-                No results found. Press Enter to search all content.
+                No exact matches found. Press Enter to search all content.
+              </div>
+            ) : (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Start typing to search...
               </div>
             )}
           </CommandEmpty>
@@ -141,7 +192,10 @@ export function CommandKSearch() {
                 >
                   <Search className="mr-2 h-4 w-4" />
                   <div className="flex flex-col">
-                    <span>{item.title || item.name || item.username}</span>
+                    <span>
+                      {/* Highlight the matching part of the title/name */}
+                      {highlightMatch(item.title || item.name || item.username, query.trim())}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {item.type === 'user' ? 'User' : 'Page'}
                       {item.type === 'page' && item.username && ` by ${item.username}`}

@@ -12,6 +12,7 @@ import { recordPageView } from "../firebase/pageViews";
 import PageViewCounter from "./PageViewCounter";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
+import { updateAnalyticsWithTitle } from "../utils/analytics-page-titles";
 import { createEditor } from "slate";
 import { withHistory } from "slate-history";
 import { Slate, Editable, withReact } from "slate-react";
@@ -21,7 +22,7 @@ import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import PledgeBar from "./PledgeBar";
-import RelatedPages from "./RelatedPages";
+import RelatedPagesSection from "./RelatedPagesSection";
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "./ui/button";
@@ -80,6 +81,7 @@ import EditPage from "./EditPage";
  * PageInteractionButtons and ActionRow components.
  */
 function SinglePageView({ params }) {
+  // Note: params should already be resolved by the parent component
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState([]);
@@ -104,7 +106,11 @@ function SinglePageView({ params }) {
   const router = useRouter();
   const contentRef = useRef(null);
 
+  // Use a ref for the scroll handler to prevent re-renders
+  const scrollHandlerRef = useRef(null);
+
   useEffect(() => {
+    // Define the scroll handler function
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
@@ -122,12 +128,22 @@ function SinglePageView({ params }) {
       setIsScrolled(currentScrollY > 0);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Store the handler in a ref to prevent recreating it on re-renders
+    scrollHandlerRef.current = handleScroll;
+
+    // Create a wrapper function that uses the current ref value
+    const scrollListener = () => {
+      if (scrollHandlerRef.current) {
+        scrollHandlerRef.current();
+      }
+    };
+
+    window.addEventListener('scroll', scrollListener, { passive: true });
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', scrollListener);
     };
-  }, [lastScrollY]);
+  }, []); // Empty dependency array to only run once
 
   // Use keyboard shortcuts - moved back to top level
   useKeyboardShortcuts({
@@ -148,8 +164,9 @@ function SinglePageView({ params }) {
     )
   });
 
-  // Use a ref to track if we've already recorded a view for this page
+  // Use refs to track if we've already recorded a view for this page and loaded related pages
   const viewRecorded = useRef(false);
+  const relatedPagesLoaded = useRef(false);
 
   // Record page view once when the page has loaded
   useEffect(() => {
@@ -190,13 +207,28 @@ function SinglePageView({ params }) {
         setGroupId(pageData.groupId || null);
         setGroupName(pageData.groupName || null);
 
-        // Set page title for document title
+        // Set page title for document title and update analytics
         if (pageData.title) {
           // If the page has a title of "Untitled", add a more descriptive suffix
+          let displayTitle;
           if (pageData.title === "Untitled") {
-            setTitle(`Untitled (${pageData.id.substring(0, 6)})`);
+            displayTitle = `Untitled (${pageData.id.substring(0, 6)})`;
           } else {
-            setTitle(pageData.title);
+            displayTitle = pageData.title;
+          }
+
+          setTitle(displayTitle);
+
+          // Update analytics with the correct title
+          // This ensures Google Analytics shows the proper page title
+          if (typeof window !== 'undefined') {
+            // Always update analytics, even for "Untitled" pages
+            // For untitled pages, use a more descriptive title with page ID
+            const analyticsTitle = pageData.title === "Untitled"
+              ? `Untitled (${pageData.id.substring(0, 6)})`
+              : pageData.title;
+            console.log(`Updating analytics with title from page data: ${analyticsTitle}`);
+            updateAnalyticsWithTitle(pageData.id, analyticsTitle);
           }
         }
 
@@ -322,6 +354,8 @@ function SinglePageView({ params }) {
   // Function to handle when page content is fully rendered
   const handlePageFullyRendered = () => {
     setPageFullyRendered(true);
+    // Mark that related pages should be loaded
+    relatedPagesLoaded.current = true;
   };
 
   const Layout = user ? DashboardLayout : PublicLayout;
@@ -535,15 +569,14 @@ function SinglePageView({ params }) {
               </div>
             </div>
 
-            {/* Related Pages - Only show after content is fully rendered */}
-            {pageFullyRendered && (
-              <div className="container max-w-4xl mx-auto px-4">
-                <RelatedPages
-                  page={page}
-                  linkedPageIds={extractLinkedPageIds(editorState)}
-                />
-              </div>
-            )}
+            {/* Related Pages - Using memoized component to prevent re-renders during scrolling */}
+            <div className="container max-w-4xl mx-auto px-4">
+              {/* The RelatedPagesSection component handles its own state and prevents re-renders */}
+              <RelatedPagesSection
+                page={page}
+                linkedPageIds={extractLinkedPageIds(editorState)}
+              />
+            </div>
           </>
         )}
       </div>

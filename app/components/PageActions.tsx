@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
-import { Link2, Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
+import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { Switch } from "./ui/switch";
 import { useRouter } from "next/navigation";
@@ -127,35 +127,7 @@ export function PageActions({
       }
     }
   }, [content]);
-  /**
-   * Handles sharing the page, with Twitter/X sharing as the primary option
-   * Falls back to clipboard copy if sharing fails
-   */
-  const handleCopyLink = () => {
-    // Create Twitter share text in the format: "[title]" by [username] on @WeWriteApp [URL]
-    const pageTitle = page.title || 'WeWrite Page';
-    const pageUrl = window.location.href;
-    const pageUsername = page.username || 'Anonymous';
-    const twitterText = `"${pageTitle}" by ${pageUsername} on @WeWriteApp ${pageUrl}`;
 
-    // Try to open Twitter share dialog
-    try {
-      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
-      window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
-    } catch (error) {
-      console.error('Error opening Twitter share:', error);
-
-      // If that fails, copy the URL to clipboard
-      try {
-        navigator.clipboard.writeText(pageUrl).then(() => {
-          toast.success("Link copied to clipboard");
-        });
-      } catch (clipboardError) {
-        console.error('Error copying link:', clipboardError);
-        toast.error("Failed to copy link");
-      }
-    }
-  };
 
   /**
    * Handles page deletion with confirmation
@@ -283,17 +255,6 @@ export function PageActions({
             </>
           )}
 
-          {/* Share button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-full h-10 md:h-8 md:w-auto"
-            onClick={handleCopyLink}
-          >
-            <Link2 className="h-4 w-4" />
-            <span className="text-sm">Share</span>
-          </Button>
-
           {/* Add to Page button - available to all users */}
           <AddToPageButton page={page} />
 
@@ -309,26 +270,36 @@ export function PageActions({
           </Button>
 
           {/* Dense Mode toggle - integrated with other buttons */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-full h-10 md:h-8 md:w-auto"
-            onClick={() => {
-              const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
-              setCurrentLineMode(newMode); // Update local state immediately
-              setLineMode(newMode); // Update the mode without page reload
-            }}
-          >
-            <Switch
-              checked={currentLineMode === LINE_MODES.DENSE}
-              onCheckedChange={(checked) => {
-                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
-                setCurrentLineMode(newMode); // Update local state immediately
-                setLineMode(newMode); // Update the mode without page reload
-              }}
-            />
-            <span className="text-sm">Dense mode</span>
-          </Button>
+          <div className="flex items-center gap-2 border border-theme-medium bg-background text-foreground shadow-sm rounded-md px-3 h-10 md:h-8 w-full md:w-auto">
+            <div className="flex items-center gap-2">
+              <div className="flex-shrink-0">
+                {/* Use a div wrapper instead of Switch directly to avoid nested button issues */}
+                <div className="flex items-center">
+                  <Switch
+                    id="dense-mode-switch"
+                    checked={currentLineMode === LINE_MODES.DENSE}
+                    onCheckedChange={(checked) => {
+                      const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+                      setCurrentLineMode(newMode); // Update local state immediately
+                      setLineMode(newMode); // Update the mode without page reload
+                    }}
+                  />
+                </div>
+              </div>
+              {/* Label for the switch */}
+              <label
+                htmlFor="dense-mode-switch"
+                className="text-sm cursor-pointer"
+                onClick={() => {
+                  const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
+                  setCurrentLineMode(newMode); // Update local state immediately
+                  setLineMode(newMode); // Update the mode without page reload
+                }}
+              >
+                Dense mode
+              </label>
+            </div>
+          </div>
         </div>
       </div>
     </div>

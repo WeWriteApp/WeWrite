@@ -1,6 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 
 interface SectionTitleProps {
   icon?: LucideIcon;
@@ -15,9 +15,9 @@ interface SectionTitleProps {
 
 /**
  * SectionTitle component
- * 
+ *
  * A standardized section title component with an optional icon and description
- * 
+ *
  * @param icon - Optional Lucide icon component
  * @param title - The section title text
  * @param description - Optional description text

@@ -2,12 +2,89 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // This rule allows anyone to view, edit, and delete all data in your Firestore database.
-    // WARNING: This makes your database completely public and accessible to anyone.
-    // Use with caution and ensure that you have proper security measures in place.
+    // Default deny all
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Users can update their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Admin users can read all user profiles
+      allow read: if request.auth != null &&
+                   exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Pages
+    match /pages/{pageId} {
+      // Public pages can be read by anyone
+      allow read: if resource.data.isPublic == true;
+
+      // Private pages can only be read by their owner
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Group pages can be read by group members
+      allow read: if request.auth != null &&
+                   resource.data.groupId != null &&
+                   exists(/databases/$(database)/documents/groups/$(resource.data.groupId)/members/$(request.auth.uid));
+
+      // Pages can only be created by authenticated users
+      allow create: if request.auth != null;
+
+      // Pages can only be updated by their owner
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Pages can only be deleted by their owner
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Admin users can read, update, and delete all pages
+      allow read, update, delete: if request.auth != null &&
+                                   exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+
+      // Page versions subcollection
+      match /versions/{versionId} {
+        // Same access rules as the parent page
+        allow read: if get(/databases/$(database)/documents/pages/$(pageId)).data.isPublic == true;
+        allow read: if request.auth != null && get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid;
+        allow read: if request.auth != null &&
+                     get(/databases/$(database)/documents/pages/$(pageId)).data.groupId != null &&
+                     exists(/databases/$(database)/documents/groups/$(get(/databases/$(database)/documents/pages/$(pageId)).data.groupId)/members/$(request.auth.uid));
+
+        // Only page owners can create versions
+        allow create: if request.auth != null && get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid;
+
+        // Admin users can read and create all versions
+        allow read, create: if request.auth != null &&
+                             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      }
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Users can only create notifications for others (not themselves)
+      allow create: if request.auth != null && request.resource.data.userId != request.auth.uid;
+
+      // Users can only update or delete their own notifications
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Public data that anyone can read
+    match /publicData/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }

@@ -147,6 +147,9 @@
     --accent-s: 91%;
     --accent-l: 60%;
 
+    /* High contrast dot color - black in light mode */
+    --high-contrast-dot-color: #000000;
+
     /* Radix Colors - Light Mode */
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
@@ -188,6 +191,9 @@
     /* Radix Colors - Dark Mode */
     --background: 0 0% 0%;
     --foreground: 210 40% 98%;
+
+    /* High contrast dot color - white in dark mode */
+    --high-contrast-dot-color: #FFFFFF;
 
     /* Brighter card background in dark mode */
     --card: 222 47% 8%;

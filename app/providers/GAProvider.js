@@ -4,7 +4,7 @@ import ReactGA from 'react-ga4';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { getAnalyticsService } from '../utils/analytics-service';
 import { ANALYTICS_EVENTS } from '../constants/analytics-events';
-import { getAnalyticsPageTitle } from '../utils/analytics-page-titles';
+import { getAnalyticsPageTitle, getAnalyticsPageTitleForId } from '../utils/analytics-page-titles';
 
 export default function GAProvider({ children }) {
   const pathname = usePathname();
@@ -81,6 +81,65 @@ export default function GAProvider({ children }) {
           page_title: pageTitle,
         });
         window.sessionStartTracked = true;
+      }
+
+      // For page routes with generic titles, try to get a better title asynchronously
+      const pageId = pathname ? pathname.match(/\/([a-zA-Z0-9]{20})(?:\/|$)/)?.at(1) : null;
+
+      if (pageId && (
+          pageTitle === `Page: ${pageId}` ||
+          pageTitle === 'Page: Content' ||
+          pageTitle === 'Page: Loading...'
+      )) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Getting better title for ReactGA:', pageId);
+        }
+
+        // Try to get a better title asynchronously
+        getAnalyticsPageTitleForId(pageId).then(betterTitle => {
+          if (betterTitle !== `Page: ${pageId}` &&
+              betterTitle !== 'Page: Content' &&
+              betterTitle !== 'Page: Loading...') {
+            // Re-track with the better title
+            ReactGA.send({
+              hitType: "pageview",
+              page: url,
+              title: betterTitle
+            });
+
+            // Also update the analytics service
+            analyticsService.trackPageView(url, betterTitle);
+
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Re-tracked with better title:', betterTitle);
+            }
+          } else {
+            // If we still don't have a good title, try again after a delay
+            setTimeout(() => {
+              getAnalyticsPageTitleForId(pageId).then(delayedTitle => {
+                if (delayedTitle !== `Page: ${pageId}` &&
+                    delayedTitle !== 'Page: Content' &&
+                    delayedTitle !== 'Page: Loading...') {
+                  // Re-track with the better title
+                  ReactGA.send({
+                    hitType: "pageview",
+                    page: url,
+                    title: delayedTitle
+                  });
+
+                  // Also update the analytics service
+                  analyticsService.trackPageView(url, delayedTitle);
+
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('Re-tracked with delayed title:', delayedTitle);
+                  }
+                }
+              });
+            }, 2000); // Wait 2 seconds before trying again
+          }
+        }).catch(err => {
+          console.error('Error getting better page title:', err);
+        });
       }
     } catch (error) {
       console.error('Error tracking page view with analytics service:', error);

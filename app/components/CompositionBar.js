@@ -55,8 +55,14 @@ const CompositionBar = ({
   });
 
   return (
-    <div className={cn("w-full relative cursor-pointer", className)} onClick={() => onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0)}>
-      <div className="w-full flex flex-col gap-4">
+    <div className={cn("w-full relative cursor-pointer", className)} onClick={(e) => {
+      // Only trigger the container click if it's directly on the container
+      // This prevents the click from triggering when clicking on the controls
+      if (e.target === e.currentTarget || e.target.classList.contains('composition-bar-container')) {
+        onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0);
+      }
+    }}>
+      <div className="w-full flex flex-col gap-4 composition-bar-container">
         {pledges.map((pledge) => {
           const pledgeAmount = Number(pledge.amount || 0);
           const isZero = pledgeAmount === 0;
@@ -87,7 +93,7 @@ const CompositionBar = ({
               >
                 {/* Other pledges background - always show regardless of percentage */}
                 <div
-                  className="h-full absolute left-0 bg-muted"
+                  className="h-full absolute left-0 bg-muted composition-bar-container"
                   style={{
                     width: `${otherPledgesPercentage}%`,
                     transition: 'width 0.5s ease-in-out',
@@ -99,7 +105,7 @@ const CompositionBar = ({
                 <div
                   key={`pledge-bar-${pledgeAmount}`}
                   className={cn(
-                    "h-full absolute",
+                    "h-full absolute composition-bar-container",
                     isExceeded ? "bg-destructive" : "bg-primary"
                   )}
                   style={{
@@ -115,9 +121,9 @@ const CompositionBar = ({
                 {/* Removed the inner border animation */}
 
                 {/* Controls */}
-                <div className="flex justify-between items-center h-full relative z-10 p-0 pointer-events-none">
+                <div className="flex justify-between items-center h-full relative z-10 p-0">
                   <div
-                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 text-foreground dark:text-white cursor-pointer rounded-l-lg"
+                    className="h-full w-[56px] flex items-center justify-center transition-all hover:bg-muted/80 dark:hover:bg-gray-900 text-foreground dark:text-white cursor-pointer rounded-l-lg pointer-events-auto active:scale-95 active:bg-muted"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onPledgeChange) {
@@ -131,7 +137,7 @@ const CompositionBar = ({
                   </div>
 
                   <div
-                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground dark:text-white group transition-all hover:bg-muted/50 dark:hover:bg-gray-900"
+                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground dark:text-white group transition-all hover:bg-muted/50 dark:hover:bg-gray-900 pointer-events-auto"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onPledgeCustomAmount) {
@@ -140,10 +146,13 @@ const CompositionBar = ({
                     }}
                   >
                     <span className="text-sm text-foreground dark:text-white mr-1">$</span>
-                    <span className={cn(
-                      "text-3xl font-normal transition-all group-hover:scale-105 text-foreground dark:text-white",
-                      isExceeded ? "text-orange-600 dark:text-orange-400" : ""
-                    )}>
+                    <span
+                      key={`amount-${pledgeAmount}`}
+                      className={cn(
+                        "text-3xl font-normal transition-all group-hover:scale-105 text-foreground dark:text-white animate-amount-change",
+                        isExceeded ? "text-orange-600 dark:text-orange-400" : ""
+                      )}
+                    >
                       {isNaN(pledgeAmount) ? '0.00' : Number(pledgeAmount).toFixed(2)}
                     </span>
                     <span className="text-sm text-foreground dark:text-white ml-1">/mo</span>
@@ -151,7 +160,7 @@ const CompositionBar = ({
 
                   <div
                     className={cn(
-                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 cursor-pointer rounded-r-lg",
+                      "h-full w-[56px] flex items-center justify-center transition-all hover:bg-muted/80 dark:hover:bg-gray-900 cursor-pointer rounded-r-lg pointer-events-auto active:scale-95 active:bg-muted",
                       wouldExceedLimit ? "text-orange-600/70 dark:text-orange-500/70" : "text-foreground dark:text-white"
                     )}
                     onClick={(e) => {

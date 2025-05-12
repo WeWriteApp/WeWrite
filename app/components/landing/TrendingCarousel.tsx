@@ -136,15 +136,12 @@ export default function TrendingCarousel({ limit = 10 }) {
                   <span className="text-foreground">by{" "}</span>
                   {/* Only make the user link clickable if we have a valid userId */}
                   {page.userId ? (
-                    <span
-                      className="hover:underline text-primary cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = `/user/${page.userId}`;
-                      }}
+                    <PillLink
+                      href={`/user/${page.userId}`}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {page.username || 'Anonymous'}
-                    </span>
+                    </PillLink>
                   ) : (
                     <span className="text-primary">
                       {page.username || 'Anonymous'}

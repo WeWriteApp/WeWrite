@@ -7,12 +7,15 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../firebase/config';
-import ClientPage from '../pages/[id]/client-page';
+import SinglePageView from '../components/SinglePageView';
 import { Loader } from '../components/Loader';
+import { use } from 'react';
 
 export default function GlobalIDPage({ params }) {
-  // Extract the ID from params and handle potential slashes
-  let { id } = params;
+  // Extract the ID from params and handle potential slashes using React.use()
+  // Always use React.use() to unwrap params before accessing properties
+  const resolvedParams = use(params);
+  let id = resolvedParams.id;
 
   // If the ID contains encoded slashes, decode them
   if (id.includes('%2F')) {
@@ -79,7 +82,10 @@ export default function GlobalIDPage({ params }) {
   }
 
   if (contentType === 'page') {
-    return <ClientPage params={{ id }} />;
+    // Directly render SinglePageView instead of using ClientPage
+    // Ensure we're passing a valid params object to SinglePageView
+    const validParams = { id };
+    return <SinglePageView params={validParams} />;
   }
 
   if (contentType === 'not-found') {

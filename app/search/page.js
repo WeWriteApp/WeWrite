@@ -6,7 +6,7 @@ import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { ClearableInput } from '../components/ui/clearable-input';
-import { Link as LinkIcon, Search } from 'lucide-react';
+import { Share2, Search } from 'lucide-react';
 // import { useToast } from '../components/ui/use-toast';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
@@ -164,26 +164,35 @@ export default function SearchPage() {
     }
   };
 
-  // Copy search URL to clipboard
-  const copySearchUrl = () => {
+  // Share search URL using the default browser share dialog
+  const shareSearchUrl = () => {
     const url = new URL(window.location);
-    navigator.clipboard.writeText(url.toString())
-      .then(() => {
-        console.log("Link copied to clipboard");
-        // toast({
-        //   title: "Link Copied",
-        //   description: "Search URL copied to clipboard",
-        // });
-      })
-      .catch(err => {
-        console.error('Failed to copy URL:', err);
-        console.error("Could not copy the URL to clipboard");
-        // toast({
-        //   title: "Copy Failed",
-        //   description: "Could not copy the URL to clipboard",
-        //   variant: "destructive"
-        // });
+    const searchTerm = query.trim();
+    const shareTitle = searchTerm ? `WeWrite search: ${searchTerm}` : 'WeWrite search';
+    const shareText = searchTerm ? `Check out these search results for "${searchTerm}" on WeWrite` : 'Check out WeWrite search';
+
+    // Use the Web Share API to trigger the browser's native share dialog
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: url.toString(),
+      }).catch((error) => {
+        // Only log errors to console - the browser handles UI feedback
+        console.error('Error sharing:', error);
       });
+    } else {
+      // If Web Share API is not available, show a message in the console
+      console.log('Web Share API not supported in this browser');
+
+      // Try to copy to clipboard as a silent fallback
+      try {
+        navigator.clipboard.writeText(url.toString());
+        console.log("Link copied to clipboard (Web Share API not available)");
+      } catch (err) {
+        console.error('Share not available and clipboard copy failed:', err);
+      }
+    }
   };
 
   // Combine all results into a single array for display
@@ -250,11 +259,11 @@ export default function SearchPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={copySearchUrl}
+            onClick={shareSearchUrl}
             className="flex items-center gap-2"
             aria-label="Share search results"
           >
-            <LinkIcon className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
             <span className="hidden sm:inline">Share</span>
           </Button>
         </div>

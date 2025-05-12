@@ -2,7 +2,12 @@ import { fetchGroupFromFirebase } from "../../firebase/rtdb";
 import GroupDetails from "../../components/GroupDetails";
 
 export async function generateMetadata({ params }) {
-  const group = await fetchGroupFromFirebase(params.id);
+  // Explicitly await the params object before destructuring
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+
+  // Fetch group data
+  const group = await fetchGroupFromFirebase(id);
 
   if (!group) {
     return {
@@ -18,7 +23,12 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function Page({ params }) {
-  const group = await fetchGroupFromFirebase(params.id);
+  // Explicitly await the params object before destructuring
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+
+  // Fetch group data
+  const group = await fetchGroupFromFirebase(id);
 
   if (!group) return <div className="flex items-center justify-center h-screen"><div className="loader loader-lg"></div></div>;
 

@@ -29,6 +29,7 @@ interface FeatureFlagState {
   description: string;
   enabled: boolean;
   adminOnly: boolean;
+  parentFlag?: FeatureFlag; // Optional parent flag that must be enabled for this flag to be shown
 }
 
 export default function AdminPage() {
@@ -53,6 +54,14 @@ export default function AdminPage() {
       description: 'Enable subscription functionality and UI',
       enabled: false,
       adminOnly: true
+    },
+    {
+      id: 'stripe_sandbox_mode',
+      name: 'Stripe Sandbox Mode',
+      description: 'Use Stripe test keys instead of production keys',
+      enabled: true,
+      adminOnly: true,
+      parentFlag: 'subscription_management' // Only show when subscription_management is enabled
     },
     {
       id: 'username_management',
@@ -186,29 +195,72 @@ export default function AdminPage() {
     try {
       setIsSearching(true);
 
-      // Search by email
-      const emailQuery = query(collection(db, 'users'), where('email', '==', searchTerm));
-      const emailSnapshot = await getDocs(emailQuery);
+      // Determine if search is by email (contains @) or username
+      const isEmailSearch = searchTerm.includes('@');
 
-      // Search by username
-      const usernameQuery = query(collection(db, 'users'), where('username', '==', searchTerm));
-      const usernameSnapshot = await getDocs(usernameQuery);
+      let results: User[] = [];
 
-      // Combine results
-      const results: User[] = [];
+      if (isEmailSearch) {
+        // Search by exact email match
+        const emailQuery = query(collection(db, 'users'), where('email', '==', searchTerm));
+        const emailSnapshot = await getDocs(emailQuery);
 
-      emailSnapshot.forEach(doc => {
-        results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
-      });
-
-      usernameSnapshot.forEach(doc => {
-        // Avoid duplicates
-        if (!results.some(user => user.id === doc.id)) {
+        emailSnapshot.forEach(doc => {
           results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
+        });
+
+        // If no exact match, try case-insensitive search (if email contains uppercase)
+        if (results.length === 0 && searchTerm !== searchTerm.toLowerCase()) {
+          const lowerEmailQuery = query(collection(db, 'users'), where('email', '==', searchTerm.toLowerCase()));
+          const lowerEmailSnapshot = await getDocs(lowerEmailQuery);
+
+          lowerEmailSnapshot.forEach(doc => {
+            results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
+          });
         }
-      });
+      } else {
+        // Search by username
+        const usernameQuery = query(collection(db, 'users'), where('username', '==', searchTerm));
+        const usernameSnapshot = await getDocs(usernameQuery);
+
+        usernameSnapshot.forEach(doc => {
+          results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
+        });
+
+        // If no results, try searching by email that contains the search term
+        if (results.length === 0) {
+          // We can't do a 'contains' query directly in Firestore, so we'll get all admin users
+          // and filter them client-side (this is OK for admin panel with limited users)
+          const usersQuery = query(collection(db, 'users'), limit(100));
+          const usersSnapshot = await getDocs(usersQuery);
+
+          usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            // Check if email contains search term (case insensitive)
+            if (userData.email && userData.email.toLowerCase().includes(searchTerm.toLowerCase())) {
+              if (!results.some(user => user.id === doc.id)) {
+                results.push({ id: doc.id, ...userData, isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
+              }
+            }
+            // Check if username contains search term (case insensitive)
+            else if (userData.username && userData.username.toLowerCase().includes(searchTerm.toLowerCase())) {
+              if (!results.some(user => user.id === doc.id)) {
+                results.push({ id: doc.id, ...userData, isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
+              }
+            }
+          });
+        }
+      }
 
       setSearchResults(results);
+
+      if (results.length === 0) {
+        toast({
+          title: 'No users found',
+          description: `No users found matching "${searchTerm}"`,
+          variant: 'default'
+        });
+      }
     } catch (error) {
       console.error('Error searching users:', error);
       toast({
@@ -224,6 +276,16 @@ export default function AdminPage() {
   // Toggle admin status for a user
   const toggleAdminStatus = async (user: User) => {
     try {
+      // Prevent removing jamiegray2234@gmail.com as admin
+      if (user.isAdmin && user.email === 'jamiegray2234@gmail.com') {
+        toast({
+          title: 'Cannot Remove Primary Admin',
+          description: 'This is the primary admin account and cannot be removed',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       setIsLoading(true);
 
       // Get current admin users
@@ -418,10 +480,25 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {featureFlags.map(flag => (
+              {featureFlags
+                .filter(flag => {
+                  // If the flag has a parent flag, only show it if the parent flag is enabled
+                  if (flag.parentFlag) {
+                    const parentFlag = featureFlags.find(f => f.id === flag.parentFlag);
+                    return parentFlag?.enabled;
+                  }
+                  return true; // Show all flags without a parent flag
+                })
+                .map(flag => (
                 <div
                   key={flag.id}
-                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    // Don't toggle admin_features flag
+                    if (flag.id !== 'admin_features' && !isLoading) {
+                      toggleFeatureFlag(flag.id as FeatureFlag);
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -436,6 +513,7 @@ export default function AdminPage() {
                       checked={flag.enabled}
                       onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
                       disabled={isLoading || flag.id === 'admin_features'} // Prevent disabling admin features
+                      onClick={(e) => e.stopPropagation()} // Prevent the card click from triggering when clicking the switch
                     />
                   </div>
                   <span className="text-sm text-muted-foreground">{flag.description}</span>
@@ -468,97 +546,138 @@ export default function AdminPage() {
           </div>
 
           {/* Search */}
-          <div className="flex gap-2 mb-6">
-            <div className="flex-1">
-              <Input
-                placeholder="Search by email or username"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleSearch}
-              disabled={isSearching || !searchTerm}
-            >
-              {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Add Admin User</CardTitle>
+              <CardDescription>Search for a user by email or username to add them as an admin</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search by email or username"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleSearch}
+                  disabled={isSearching || !searchTerm}
+                >
+                  {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <div className="space-y-2 mb-6">
-              <h3 className="text-sm font-medium">Search Results</h3>
-              <div className="space-y-2">
-                {searchResults.map(user => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{user.username || 'No username'}</span>
-                      <span className="text-xs text-muted-foreground">{user.email}</span>
-                    </div>
-                    <Button
-                      variant={user.isAdmin ? "destructive" : "outline"}
-                      size="sm"
-                      onClick={() => toggleAdminStatus(user)}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : user.isAdmin ? (
-                        "Remove Admin"
-                      ) : (
-                        "Make Admin"
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Search Results</CardTitle>
+                <CardDescription>Users matching your search query</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-md">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3 font-medium text-sm">Username</th>
+                        <th className="text-left p-3 font-medium text-sm">Email</th>
+                        <th className="text-right p-3 font-medium text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchResults.map(user => (
+                        <tr key={user.id} className="border-b last:border-b-0 hover:bg-muted/50 transition-colors">
+                          <td className="p-3 font-medium">{user.username || 'No username'}</td>
+                          <td className="p-3 text-muted-foreground">{user.email}</td>
+                          <td className="p-3 text-right">
+                            <Button
+                              variant={user.isAdmin ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => toggleAdminStatus(user)}
+                              disabled={isLoading || user.email === 'jamiegray2234@gmail.com'}
+                            >
+                              {isLoading ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                              ) : user.isAdmin ? (
+                                "Remove Admin"
+                              ) : (
+                                "Make Admin"
+                              )}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Current Admin Users */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Current Admin Users</h3>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : adminUsers.length > 0 ? (
-              <div className="space-y-2">
-                {adminUsers.map(admin => (
-                  <div
-                    key={admin.id}
-                    className="flex items-center justify-between p-3 rounded-md border border-border bg-primary/5 hover:bg-primary/10 transition-colors"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{admin.username || 'No username'}</span>
-                      <span className="text-xs text-muted-foreground">{admin.email}</span>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => toggleAdminStatus(admin)}
-                      disabled={isLoading || admin.email === 'jamiegray2234@gmail.com'} // Prevent removing the main admin
-                    >
-                      {isLoading ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Remove Admin"
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                No admin users found
-              </div>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Current Admin Users</CardTitle>
+              <CardDescription>Users with administrative privileges</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : adminUsers.length > 0 ? (
+                <div className="border rounded-md">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3 font-medium text-sm">Username</th>
+                        <th className="text-left p-3 font-medium text-sm">Email</th>
+                        <th className="text-right p-3 font-medium text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminUsers.map(admin => (
+                        <tr key={admin.id} className="border-b last:border-b-0 hover:bg-muted/50 transition-colors">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{admin.username || 'No username'}</span>
+                              {admin.email === 'jamiegray2234@gmail.com' && (
+                                <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Primary Admin</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3 text-muted-foreground">{admin.email}</td>
+                          <td className="p-3 text-right">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => toggleAdminStatus(admin)}
+                              disabled={isLoading || admin.email === 'jamiegray2234@gmail.com'} // Prevent removing the main admin
+                            >
+                              {isLoading ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Remove Admin"
+                              )}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  No admin users found
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </SwipeableTabsContent>
 
         {/* Admin Tools Tab */}

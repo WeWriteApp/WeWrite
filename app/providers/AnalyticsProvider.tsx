@@ -72,11 +72,21 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
         page_path: url
       });
 
-      // For page routes with ID-based titles, try to get a better title asynchronously
-      if (pageId && pageTitle === `Page: ${pageId}`) {
+      // For page routes with generic titles, try to get a better title asynchronously
+      if (pageId && (
+          pageTitle === `Page: ${pageId}` ||
+          pageTitle === 'Page: Content' ||
+          pageTitle === 'Page: Loading...'
+      )) {
         try {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Getting better title for Firebase Analytics:', pageId);
+          }
+
           getAnalyticsPageTitleForId(pageId).then(betterTitle => {
-            if (betterTitle !== `Page: ${pageId}`) {
+            if (betterTitle !== `Page: ${pageId}` &&
+                betterTitle !== 'Page: Content' &&
+                betterTitle !== 'Page: Loading...') {
               // Re-track with the better title
               logEvent(analyticsInstance, 'page_view', {
                 page_title: betterTitle,
@@ -87,6 +97,26 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
               if (process.env.NODE_ENV === 'development') {
                 console.log('Firebase Analytics re-tracked with better title:', betterTitle);
               }
+            } else {
+              // If we still don't have a good title, try again after a delay
+              setTimeout(() => {
+                getAnalyticsPageTitleForId(pageId).then(delayedTitle => {
+                  if (delayedTitle !== `Page: ${pageId}` &&
+                      delayedTitle !== 'Page: Content' &&
+                      delayedTitle !== 'Page: Loading...') {
+                    // Re-track with the better title
+                    logEvent(analyticsInstance, 'page_view', {
+                      page_title: delayedTitle,
+                      page_location: window.location.href,
+                      page_path: url
+                    });
+
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('Firebase Analytics re-tracked with delayed title:', delayedTitle);
+                    }
+                  }
+                });
+              }, 2000); // Wait 2 seconds before trying again
             }
           });
         } catch (titleErr) {

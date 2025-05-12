@@ -1,12 +1,49 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Default deny all
     match /{allPaths=**} {
       allow read, write: if false;
+    }
+
+    // User uploads
+    match /users/{userId}/{allPaths=**} {
+      // Users can read and write their own files
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Admin users can read all user files
+      allow read: if request.auth != null &&
+                   firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Public files
+    match /public/{allPaths=**} {
+      // Anyone can read public files
+      allow read: if true;
+
+      // Only authenticated users can upload to public folder
+      allow write: if request.auth != null;
+
+      // Validate file size (max 10MB) and content type
+      allow write: if request.resource.size < 10 * 1024 * 1024
+                    && (request.resource.contentType.matches('image/.*')
+                        || request.resource.contentType.matches('application/pdf'));
+    }
+
+    // Page attachments
+    match /pages/{pageId}/{allPaths=**} {
+      // Anyone can read attachments for public pages
+      allow read: if firestore.get(/databases/(default)/documents/pages/$(pageId)).data.isPublic == true;
+
+      // Page owners can read and write attachments
+      allow read, write: if request.auth != null &&
+                          firestore.get(/databases/(default)/documents/pages/$(pageId)).data.userId == request.auth.uid;
+
+      // Group members can read attachments for group pages
+      allow read: if request.auth != null &&
+                   firestore.get(/databases/(default)/documents/pages/$(pageId)).data.groupId != null &&
+                   firestore.exists(/databases/(default)/documents/groups/$(firestore.get(/databases/(default)/documents/pages/$(pageId)).data.groupId)/members/$(request.auth.uid));
     }
   }
 }

@@ -65,6 +65,21 @@ export const PWA_EVENTS = {
   PWA_BANNER_RESET: 'pwa_banner_reset',
 };
 
+// Notification Events
+export const NOTIFICATION_EVENTS = {
+  NOTIFICATION_PERMISSION_STATUS: 'notification_permission_status',
+  NOTIFICATION_PERMISSION_REQUESTED: 'notification_permission_requested',
+  NOTIFICATION_SHOWN: 'notification_shown',
+  NOTIFICATION_CLICKED: 'notification_clicked',
+};
+
+// Service Worker Events
+export const SERVICE_WORKER_EVENTS = {
+  SERVICE_WORKER_REGISTERED: 'service_worker_registered',
+  SERVICE_WORKER_UNREGISTERED: 'service_worker_unregistered',
+  SERVICE_WORKER_UPDATED: 'service_worker_updated',
+};
+
 // Session Events
 export const SESSION_EVENTS = {
   SESSION_START: 'session_start',
@@ -82,6 +97,8 @@ export const ANALYTICS_EVENTS = {
   ...FEATURE_EVENTS,
   ...SESSION_EVENTS,
   ...PWA_EVENTS,
+  ...NOTIFICATION_EVENTS,
+  ...SERVICE_WORKER_EVENTS,
 };
 
 // Event categories

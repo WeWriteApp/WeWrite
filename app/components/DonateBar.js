@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, use } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Tooltip } from "react-tooltip";
@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { DrawerContext } from "../providers/DrawerProvider";
 import SubscriptionsTable from "./SubscriptionsTable";
 import { X, Pencil, Eye, Check, Minus, Plus, DollarSign } from "lucide-react";
+import { Button } from "./ui/button";
 
 const DonateBar = () => {
   const [donate, setDonate] = useState(0);
@@ -21,7 +22,9 @@ const DonateBar = () => {
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const params = useParams();
-  const id = params.id;
+  // Unwrap params using React.use()
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
   const { setSelected } = useContext(DrawerContext);
 
   useEffect(() => {
@@ -52,8 +55,9 @@ const DonateBar = () => {
       <>
         <div className="flex flex-col mt-8 fixed bottom-0 left-0 p-4 w-full align-items justify-center z-1">
           <div className="flex gap-4 mx-auto bg-background p-4 rounded">
-            <button
-              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+            <Button
+              variant="outline"
+              size="icon"
               data-tooltip-id="Unsubscribe"
               data-tooltip-place="top"
               data-tooltip-content={`Unsubscribe`}
@@ -63,11 +67,12 @@ const DonateBar = () => {
             >
               <X className="h-6 w-6" />
               <Tooltip id="Unsubscribe" place="top" />
-            </button>
+            </Button>
 
             {/* Edit button to view all subscriptions */}
-            <button
-              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+            <Button
+              variant="outline"
+              size="icon"
               data-tooltip-id="Edit"
               data-tooltip-place="top"
               data-tooltip-content={"Edit Pledge Amount"}
@@ -75,10 +80,11 @@ const DonateBar = () => {
             >
               <Pencil className="h-6 w-6" />
               <Tooltip id="Edit" place="top" />
-            </button>
+            </Button>
             {/* eye button to view pledge history */}
-            <button
-              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+            <Button
+              variant="outline"
+              size="icon"
               data-tooltip-id="View"
               data-tooltip-place="top"
               data-tooltip-content={"View Pledge History"}
@@ -86,7 +92,7 @@ const DonateBar = () => {
             >
               <Eye className="h-6 w-6" />
               <Tooltip id="View" place="top" />
-            </button>
+            </Button>
 
           </div>
         </div>
@@ -111,8 +117,9 @@ const DonateBar = () => {
         <div className="w-full bg-white/80 dark:bg-zinc-900/80 rounded-2xl shadow-2xl flex flex-col items-center justify-center py-3 px-4 backdrop-blur-lg border border-black/20 dark:border-white/20">
           {isConfirmed ? (
             <div className="flex gap-4 mx-auto">
-              <button
-                className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+              <Button
+                variant="outline"
+                size="icon"
                 data-tooltip-id="Confirm"
                 data-tooltip-place="top"
                 data-tooltip-content={`Confirm ${donate}`}
@@ -122,9 +129,10 @@ const DonateBar = () => {
               >
                 <Check className="h-6 w-6" />
                 <Tooltip id="Confirm" place="top" />
-              </button>
-              <button
-                className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 data-tooltip-id="Cancel"
                 data-tooltip-place="top"
                 data-tooltip-content={"Cancel"}
@@ -132,12 +140,13 @@ const DonateBar = () => {
               >
                 <X className="h-6 w-6" />
                 <Tooltip id="Cancel" place="top" />
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="flex gap-4 mx-auto">
-              <button
-                className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+              <Button
+                variant="outline"
+                size="icon"
                 data-tooltip-id="Donate"
                 data-tooltip-place="top"
                 data-tooltip-content={"Donate"}
@@ -145,12 +154,13 @@ const DonateBar = () => {
               >
                 <DollarSign className="h-6 w-6" />
                 <Tooltip id="Donate" place="top" />
-              </button>
+              </Button>
             </div>
           )}
           <div className="flex gap-4 mx-auto mt-2">
-            <button
-              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+            <Button
+              variant="outline"
+              size="icon"
               data-tooltip-id="Decrease"
               data-tooltip-place="top"
               data-tooltip-content={"Decrease"}
@@ -158,13 +168,14 @@ const DonateBar = () => {
             >
               <Minus className="h-6 w-6" />
               <Tooltip id="Decrease" place="top" />
-            </button>
+            </Button>
             <div className="flex items-center gap-2">
               <span className="text-lg font-semibold">{donate}</span>
               {/* <span className="text-gray-500">/mo</span> */}
             </div>
-            <button
-              className="bg-background text-foreground px-4 py-2 rounded hover:bg-accent"
+            <Button
+              variant="outline"
+              size="icon"
               data-tooltip-id="Increase"
               data-tooltip-place="top"
               data-tooltip-content={"Increase"}
@@ -172,7 +183,7 @@ const DonateBar = () => {
             >
               <Plus className="h-6 w-6" />
               <Tooltip id="Increase" place="top" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

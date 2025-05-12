@@ -169,24 +169,37 @@ export async function POST(request) {
       customer: customer.id, // Just log the ID for privacy
     }, null, 2));
 
+    // First, create a payment intent directly
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amountFloat * 100), // Convert to cents
+      currency: 'usd',
+      customer: customer.id,
+      setup_future_usage: 'off_session',
+      metadata: {
+        userId: userId,
+        tier: tier
+      }
+    });
+
+    console.log('Payment intent created:', JSON.stringify(paymentIntent, null, 2));
+
+    // Extract the client secret from the payment intent
+    const clientSecret = paymentIntent.client_secret;
+
+    // Add payment intent to subscription options
+    subscriptionOptions.default_payment_method = paymentIntent.payment_method;
+    subscriptionOptions.metadata = {
+      ...subscriptionOptions.metadata,
+      paymentIntentId: paymentIntent.id
+    };
+
     // Create the subscription in Stripe
     const subscription = await stripe.subscriptions.create(subscriptionOptions);
 
     // Log subscription details for debugging
     console.log('Subscription created:', subscription.id);
     console.log('Subscription status:', subscription.status);
-    console.log('Payment intent status:', subscription.latest_invoice?.payment_intent?.status || 'N/A');
-
-    // Get the client secret for the payment intent
-    // Make sure the payment intent exists and has a client secret
-    if (!subscription.latest_invoice ||
-        !subscription.latest_invoice.payment_intent ||
-        !subscription.latest_invoice.payment_intent.client_secret) {
-      console.error('Missing payment intent or client secret in subscription response');
-      throw new Error('Unable to process payment. Please try again later.');
-    }
-
-    const clientSecret = subscription.latest_invoice.payment_intent.client_secret;
+    console.log('Subscription details:', JSON.stringify(subscription, null, 2));
 
     // Update the subscription in Firestore
     await updateSubscription(userId, {

@@ -15,6 +15,7 @@ import { PillLink } from "./PillLink";
 import debounce from "lodash.debounce";
 import { useTheme } from "next-themes";
 import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 import { getDatabase, ref, onValue } from "firebase/database";
 import { app } from "../firebase/config";
 
@@ -496,7 +497,7 @@ const TypeaheadSearch = ({
                       {userOwnedPages.length > 0 && (
                         <div className="mb-2">
                           {userOwnedPages.length > 0 && groupPages.length + publicPages.length > 0 && (
-                            <div className="text-xs font-medium text-muted-foreground px-3 py-1 uppercase">Your Pages</div>
+                            <div className="text-xs font-medium text-muted-foreground px-3 py-1 uppercase">My Pages</div>
                           )}
                           {userOwnedPages
                             .filter((page) => !editableOnly || page.isOwned || page.isEditable)
@@ -765,17 +766,19 @@ const UserItemLink = ({ user, search }) => {
 const UserItemButton = ({ user, search, onSelect }) => {
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
-      <button
+      <Button
         onClick={() => onSelect({
           id: user.id,
           title: user.username,
           type: 'user',
           url: `/user/${user.id}`
         })}
-        className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700 transition-colors flex-shrink-0"
+        variant="default"
+        size="sm"
+        className="rounded-[12px] bg-blue-500 text-white hover:bg-blue-600 flex-shrink-0"
       >
         {highlightText(user.username, search)}
-      </button>
+      </Button>
       <span className="text-xs text-muted-foreground ml-2 whitespace-nowrap">
         User
       </span>

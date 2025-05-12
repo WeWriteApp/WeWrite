@@ -91,6 +91,7 @@ const config: Config = {
         'fadeInSlow': 'fadeIn 0.8s ease-in-out forwards',
         'collapsible-down': 'collapsible-down 0.2s ease-out',
         'collapsible-up': 'collapsible-up 0.2s ease-out',
+        'amount-change': 'amount-change 0.3s ease-out',
       },
       keyframes: {
         'gradient-x': {
@@ -111,6 +112,10 @@ const config: Config = {
         'fadeIn': {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'amount-change': {
+          '0%': { transform: 'scale(1.1)', color: 'hsl(var(--primary))' },
+          '100%': { transform: 'scale(1)', color: 'inherit' },
         },
         'collapsible-down': {
           '0%': { height: '0' },

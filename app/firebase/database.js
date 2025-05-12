@@ -14,7 +14,6 @@ import {
   limit,
   startAfter,
   writeBatch,
-  select,
   Timestamp
 } from "firebase/firestore";
 

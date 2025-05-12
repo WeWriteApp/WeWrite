@@ -21,8 +21,8 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
     { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN], label: "Green" },
     {
       value: ACCENT_COLORS.HIGH_CONTRAST,
-      // For the high contrast color, we'll use a gradient to show it changes between black and white
-      color: 'linear-gradient(to right, #000000 50%, #FFFFFF 50%)',
+      // For the high contrast color, we'll use a dynamic color based on theme
+      color: 'var(--high-contrast-dot-color, #000000)', // Default to black, will be set by CSS
       label: "High Contrast"
     }
   ];

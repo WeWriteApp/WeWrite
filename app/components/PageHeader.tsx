@@ -342,7 +342,7 @@ export default function PageHeader({
                     </div>
                   )}
                 </h1>
-                <p
+                <div
                   className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
                     isScrolled
                       ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block"
@@ -371,16 +371,18 @@ export default function PageHeader({
                           )}
                         </Link>
                         {subscriptionEnabled && (
-                          <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
-                            <div className="cursor-pointer flex-shrink-0 flex items-center">
-                              <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
-                            </div>
-                          </SubscriptionInfoModal>
+                          <span className="flex-shrink-0">
+                            <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
+                              <span className="cursor-pointer flex-shrink-0 flex items-center">
+                                <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
+                              </span>
+                            </SubscriptionInfoModal>
+                          </span>
                         )}
                       </span>
                     )
                   )}
-                </p>
+                </div>
               </div>
             </div>
 
@@ -393,16 +395,18 @@ export default function PageHeader({
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 onClick={() => {
-                  // Create Twitter share text in the format: "[title]" by [username] on @WeWriteApp [URL]
+                  // Prepare sharing information
                   const pageTitle = title || 'WeWrite Page';
                   const pageUrl = window.location.href;
-                  const twitterText = `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
+
+                  // Create text without the URL (the URL will be added automatically)
+                  const shareText = `"${pageTitle}" by ${displayUsername} on @WeWriteApp`;
 
                   // Check if the Web Share API is available
                   if (navigator.share) {
                     navigator.share({
                       title: pageTitle,
-                      text: twitterText,
+                      text: shareText,
                       url: pageUrl,
                     }).catch((error) => {
                       // Silent error handling - no toast
@@ -411,8 +415,8 @@ export default function PageHeader({
                   } else {
                     // Create a Twitter share URL as fallback
                     try {
-                      // First try to open Twitter share dialog
-                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
+                      // First try to open Twitter share dialog - Twitter will add the URL automatically
+                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(pageUrl)}`;
                       window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
                     } catch (error) {
                       console.error('Error opening Twitter share:', error);

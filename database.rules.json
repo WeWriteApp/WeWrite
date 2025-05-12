@@ -1,6 +1,98 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    // Default deny all
+    ".read": false,
+    ".write": false,
+
+    // User data
+    "users": {
+      "$userId": {
+        // Users can read and write their own data
+        ".read": "auth !== null && auth.uid === $userId",
+        ".write": "auth !== null && auth.uid === $userId",
+
+        // Group memberships
+        "groups": {
+          ".read": "auth !== null && auth.uid === $userId",
+          ".write": "auth !== null && (auth.uid === $userId || root.child('groups').child(newData.key).child('members').child(auth.uid).exists())"
+        }
+      }
+    },
+
+    // Groups
+    "groups": {
+      "$groupId": {
+        // Group members can read group data
+        ".read": "auth !== null && (data.child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+
+        // Only group members can write to the group
+        ".write": "auth !== null && (data.child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+
+        // Group members
+        "members": {
+          "$memberId": {
+            // Group members can read the member list
+            ".read": "auth !== null && (root.child('groups').child($groupId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+
+            // Only group admins or the user themselves can modify membership
+            ".write": "auth !== null && (root.child('groups').child($groupId).child('admins').child(auth.uid).exists() || auth.uid === $memberId || root.child('users').child(auth.uid).child('isAdmin').val() === true)"
+          }
+        },
+
+        // Group pages
+        "pages": {
+          "$pageId": {
+            // Group members can read pages
+            ".read": "auth !== null && (root.child('groups').child($groupId).child('members').child(auth.uid).exists() || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+
+            // Only page owners or group admins can write
+            ".write": "auth !== null && (root.child('pages').child($pageId).child('userId').val() === auth.uid || root.child('groups').child($groupId).child('admins').child(auth.uid).exists() || root.child('users').child(auth.uid).child('isAdmin').val() === true)"
+          }
+        }
+      }
+    },
+
+    // Live readers tracking
+    "liveReaders": {
+      "$pageId": {
+        // Anyone can read the reader count for a page
+        ".read": true,
+
+        // Count can be updated by authenticated users
+        "count": {
+          ".write": "auth !== null"
+        },
+
+        // Readers can be updated by authenticated users
+        "readers": {
+          "$userId": {
+            // Users can only write their own reader status
+            ".write": "auth !== null && auth.uid === $userId"
+          }
+        }
+      }
+    },
+
+    // Page statistics
+    "pageStats": {
+      "$pageId": {
+        // Anyone can read page stats
+        ".read": true,
+
+        // Only authenticated users can update stats
+        ".write": "auth !== null",
+
+        // Validate data structure
+        ".validate": "newData.hasChildren(['totalReaders', 'editors'])",
+
+        "totalReaders": {
+          ".validate": "newData.isNumber()"
+        },
+
+        "editors": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    }
   }
 }

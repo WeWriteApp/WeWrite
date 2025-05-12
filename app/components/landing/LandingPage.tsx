@@ -21,6 +21,7 @@ import dynamic from 'next/dynamic';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 import { openExternalLink } from '../../utils/pwa-detection';
+import { useAuth } from '../../hooks/useAuth';
 
 // Import simple client-side components instead of server components
 import SimpleActivityCarousel from './SimpleActivityCarousel';
@@ -135,6 +136,8 @@ const LandingPage = () => {
     // Don't force theme - respect user's system preference
     // if (setTheme) setTheme('light');
   }, [setTheme]);
+
+
 
   // Fetch page content for feature roadmap cards
   useEffect(() => {

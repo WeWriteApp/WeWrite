@@ -192,10 +192,9 @@ export default function TrendingPages({ limit = 5 }) {
             <div className="p-4">
               <div className="mb-4">
                 <h3 className="text-base font-medium">
-                  {/* Render the title directly instead of using PillLink */}
-                  <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                    <span className="truncate">{page.title || 'Untitled'}</span>
-                  </span>
+                  <PillLink href={`/${page.id}`}>
+                    {page.title || 'Untitled'}
+                  </PillLink>
                 </h3>
               </div>
 

@@ -3,7 +3,9 @@ import { app } from '../../firebase/config';
 
 export async function generateMetadata({ params }) {
   try {
-    const { id } = params;
+    // Explicitly await the params object before destructuring
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const rtdb = getDatabase(app);
 
     // First, try to get user by ID directly

@@ -189,6 +189,27 @@ export default function SubscriptionPage() {
     }
   }, [subscription]);
 
+  // Check for amount parameter in URL
+  useEffect(() => {
+    // Get the amount from the URL query parameter
+    const searchParams = new URLSearchParams(window.location.search);
+    const amountParam = searchParams.get('amount');
+
+    if (amountParam) {
+      const amount = parseFloat(amountParam);
+
+      // Set the appropriate tier based on the amount
+      if (amount >= 50) {
+        setSelectedTier('tier3');
+        setCustomAmount(amount.toString());
+      } else if (amount >= 20) {
+        setSelectedTier('tier2');
+      } else if (amount >= 10) {
+        setSelectedTier('tier1');
+      }
+    }
+  }, []);
+
   // Main effect for user authentication and subscription setup
   useEffect(() => {
     if (!user) {

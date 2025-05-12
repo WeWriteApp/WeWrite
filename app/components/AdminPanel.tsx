@@ -63,13 +63,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       adminOnly: true
     },
     {
-      id: 'username_management',
-      name: 'Username Management',
-      description: 'Allow admins to manage user usernames',
-      enabled: false,
-      adminOnly: true
-    },
-    {
       id: 'map_view',
       name: 'Map View',
       description: 'Enable map view for pages with location data',
@@ -89,13 +82,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       description: 'Enable groups functionality and UI',
       enabled: false,
       adminOnly: false
-    },
-    {
-      id: 'admin_features',
-      name: 'Admin Features',
-      description: 'Enable admin-only features',
-      enabled: true,
-      adminOnly: true
     }
   ]);
 
@@ -338,6 +324,58 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     }
   };
 
+  // Toggle all feature flags
+  const toggleAllFeatureFlags = async (enable: boolean) => {
+    try {
+      setIsLoading(true);
+
+      // Update local state first for immediate feedback
+      setFeatureFlags(prev =>
+        prev.map(flag => ({
+          ...flag,
+          enabled: enable
+        }))
+      );
+
+      // Get current feature flags
+      const featureFlagsRef = doc(db, 'config', 'featureFlags');
+      const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+      let flagsData = {};
+
+      if (featureFlagsDoc.exists()) {
+        flagsData = featureFlagsDoc.data();
+      }
+
+      // Update all feature flags
+      const updatedFlagsData = { ...flagsData };
+      featureFlags.forEach(flag => {
+        updatedFlagsData[flag.id] = enable;
+      });
+
+      // Update Firestore
+      await setDoc(featureFlagsRef, updatedFlagsData);
+
+      toast({
+        title: 'Success',
+        description: `All feature flags are now ${enable ? 'enabled' : 'disabled'}`,
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Error toggling all feature flags:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update feature flags',
+        variant: 'destructive'
+      });
+
+      // Revert local state on error
+      loadFeatureFlags();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Handle PWA alert trigger
   const handleTriggerPWAAlert = () => {
     // Track in analytics
@@ -409,6 +447,36 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    {/* Toggle All Buttons */}
+                    <div className="flex items-center justify-between p-3 rounded-md border border-border/40 bg-muted/30">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Toggle All Feature Flags</span>
+                        <span className="text-xs text-muted-foreground">Enable or disable all feature flags at once</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleAllFeatureFlags(true)}
+                          disabled={isLoading}
+                          className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-400 dark:border-green-800/30"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Enable All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleAllFeatureFlags(false)}
+                          disabled={isLoading}
+                          className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400 dark:border-red-800/30"
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Disable All
+                        </Button>
+                      </div>
+                    </div>
+
                     {featureFlags.map(flag => (
                       <div
                         key={flag.id}
@@ -442,7 +510,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                           <Switch
                             checked={flag.enabled}
                             onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
-                            disabled={isLoading || flag.id === 'admin_features'} // Prevent disabling admin features
+                            disabled={isLoading}
                           />
                         </div>
                       </div>

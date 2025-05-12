@@ -164,15 +164,16 @@ export default function TrendingPagesSection({ limit = 3 }) {
                     </CardTitle>
                     <CardDescription className="text-xs">
                       <span className="text-foreground">by{" "}</span>
-                      <span
-                        className="hover:underline text-primary cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `/user/${page.userId}`;
-                        }}
-                      >
-                        {page.username || 'Anonymous'}
-                      </span>
+                      {page.userId ? (
+                        <PillLink
+                          href={`/user/${page.userId}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {page.username || 'Anonymous'}
+                        </PillLink>
+                      ) : (
+                        <span>{page.username || 'Anonymous'}</span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <div className="px-3 pb-3 pt-0 mt-auto">

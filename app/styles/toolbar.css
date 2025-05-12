@@ -1,0 +1,27 @@
+/* Ensure the toolbar is visible */
+/* Only apply these styles to the main toolbar */
+#toolbar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 2147483647 !important; /* Maximum z-index value */
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 64px !important;
+  width: 100% !important;
+  pointer-events: auto !important;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Add padding to the bottom of the page */
+body {
+  padding-bottom: 64px !important;
+}
+
+/* Ensure the footer doesn't overlap with the toolbar */
+footer {
+  margin-bottom: 64px !important;
+}

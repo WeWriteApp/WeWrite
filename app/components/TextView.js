@@ -352,7 +352,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
       return (
         <div className="relative min-h-screen">
           <div className="prose max-w-full">
-            <p className="text-foreground leading-normal text-base">
+            <div className="text-foreground leading-normal text-base">
               {contents.map((node, index) => {
                 if (!loadedParagraphs.includes(index)) return null;
 
@@ -398,7 +398,7 @@ export const RenderContent = ({ contents, language, loadedParagraphs, effectiveM
                   </React.Fragment>
                 );
               })}
-            </p>
+            </div>
           </div>
         </div>
       );

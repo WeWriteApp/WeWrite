@@ -13,11 +13,13 @@ import SubscriptionComingSoonModal from './SubscriptionComingSoonModal';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import '../styles/pledge-bar-animations.css';
 import { useSubscriptionFeature } from '../hooks/useSubscriptionFeature';
+import { useToast } from './ui/use-toast';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
   const [subscription, setSubscription] = useState(null);
   const [donateAmount, setDonateAmount] = useState(0);
   const [globalIncrement, setGlobalIncrement] = useState(1);
@@ -619,6 +621,24 @@ const PledgeBar = () => {
 
     // If we have an active subscription, handle the pledge change
     handlePledgeAmountChange(pledgeId, change);
+
+    // Provide visual feedback that the change was successful
+    // This is handled by the animation in the CompositionBar component
+
+    // Show a toast notification for significant changes
+    if (change > 0 && donateAmount >= 5) {
+      toast({
+        title: "Pledge increased",
+        description: `Your monthly pledge is now $${(donateAmount + 1).toFixed(2)}/month`,
+        duration: 3000,
+      });
+    } else if (change < 0 && donateAmount > 0) {
+      toast({
+        title: "Pledge decreased",
+        description: `Your monthly pledge is now $${(donateAmount - 1).toFixed(2)}/month`,
+        duration: 3000,
+      });
+    }
   };
 
   return (
@@ -633,9 +653,15 @@ const PledgeBar = () => {
             // Always show coming soon modal when feature flag is off
             if (!isSubscriptionEnabled) {
               setShowComingSoonModal(true);
-            } else {
+              return;
+            }
+
+            // Only show activation modal if user doesn't have an active subscription
+            if (!subscription || subscription.status !== 'active') {
               setShowActivationModal(true);
             }
+            // If user has an active subscription, do nothing on container click
+            // This allows the plus/minus buttons to work without showing the modal
           }}
         >
           <CompositionBar
@@ -677,6 +703,19 @@ const PledgeBar = () => {
           isOpen={showActivationModal && isSubscriptionEnabled}
           onClose={() => setShowActivationModal(false)}
           isSignedIn={!!user}
+          customContent={
+            subscription && subscription.status === 'active'
+              ? {
+                  title: "Manage your subscription",
+                  description: `You have an active subscription of $${subscription.amount}/month. You can allocate these funds to writers using the plus and minus buttons.`,
+                  action: {
+                    href: "/account",
+                    label: "Manage Subscription",
+                    external: false
+                  }
+                }
+              : null
+          }
         />,
         document.body
       )}

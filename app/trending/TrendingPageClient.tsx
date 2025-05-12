@@ -179,13 +179,12 @@ export default function TrendingPageClient() {
                     </td>
                     <td className="py-3 px-4">
                       {page.userId && page.username ? (
-                        <Link
+                        <PillLink
                           href={`/user/${page.userId}`}
-                          className="text-primary hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {page.username}
-                        </Link>
+                        </PillLink>
                       ) : (
                         <span className="text-muted-foreground">Anonymous</span>
                       )}
@@ -221,20 +220,19 @@ export default function TrendingPageClient() {
                 <div className="p-4">
                   <div className="mb-3">
                     <h3 className="text-base font-medium mb-1">
-                      <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                        <span className="truncate">{page.title || 'Untitled'}</span>
-                      </span>
+                      <PillLink href={`/${page.id}`}>
+                        {page.title || 'Untitled'}
+                      </PillLink>
                     </h3>
                     <div className="text-sm text-muted-foreground">
                       by{' '}
                       {page.userId && page.username ? (
-                        <Link
+                        <PillLink
                           href={`/user/${page.userId}`}
-                          className="text-primary hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {page.username}
-                        </Link>
+                        </PillLink>
                       ) : (
                         <span>Anonymous</span>
                       )}

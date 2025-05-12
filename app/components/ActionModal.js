@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef } from 'react';
+import { Button } from './ui/button';
+import Link from 'next/link';
 
 const ActionModal = ({
   isOpen,
@@ -73,19 +75,22 @@ const ActionModal = ({
               </div>
 
               <div className="flex border-t border-blue-400">
-                <button
+                <Button
                   onClick={onClose}
-                  className="flex-1 py-3 px-4 text-center bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="flex-1 rounded-none bg-blue-600 text-white hover:bg-blue-700"
                 >
                   {secondaryActionLabel}
-                </button>
+                </Button>
 
-                <a
-                  href={primaryActionHref}
-                  className="flex-1 py-3 px-4 text-center bg-white !text-black hover:bg-gray-100 transition-colors text-sm font-medium border-l border-blue-400"
+                <Button
+                  asChild
+                  variant="outline"
+                  className="flex-1 rounded-none bg-white text-black hover:bg-gray-100 border-l border-blue-400"
                 >
-                  {primaryActionLabel}
-                </a>
+                  <Link href={primaryActionHref}>
+                    {primaryActionLabel}
+                  </Link>
+                </Button>
               </div>
             </div>
           </motion.div>

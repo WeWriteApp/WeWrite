@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 import PWAInstallationCard from '../components/PWAInstallationCard';
+import NotificationPermissionCard from '../components/NotificationPermissionCard';
 import { useFeatureFlag, isAdmin } from '../utils/feature-flags';
 
 
@@ -287,6 +288,11 @@ export default function AccountPage() {
           {/* PWA Installation Status Card */}
           <section>
             <PWAInstallationCard />
+          </section>
+
+          {/* Notification Permission Card */}
+          <section>
+            <NotificationPermissionCard />
           </section>
         </div>
       )}

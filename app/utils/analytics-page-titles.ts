@@ -182,7 +182,7 @@ export function getAnalyticsPageTitle(
 
     // If we're in a browser environment, try to fetch the title asynchronously
     if (typeof window !== 'undefined') {
-      // Trigger an async fetch but return a better fallback title
+      // Trigger an async fetch to get the actual title
       fetchAndCachePageTitle(pageId);
 
       // Try to get a better fallback from the URL path
@@ -194,22 +194,52 @@ export function getAnalyticsPageTitle(
           const category = pathSegments[pathSegments.length - 2]
             .charAt(0).toUpperCase() +
             pathSegments[pathSegments.length - 2].slice(1);
-          return `Page: ${category} Content`;
+          return `Page: ${pageId.substring(0, 6)}...`;
         }
       }
 
-      // Look for any heading element as a last resort
-      const anyHeading = document.querySelector('h1, h2, h3')?.textContent;
-      if (anyHeading && anyHeading !== 'Untitled') {
-        return `Page: ${anyHeading}`;
+      // Look for any heading element as a last resort - expanded search
+      // Try multiple selectors to find any possible title in the DOM
+      const selectors = [
+        'h1', 'h2', 'h3',
+        '[data-page-title]',
+        '.page-title',
+        'title',
+        'meta[property="og:title"]'
+      ];
+
+      for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        let text = null;
+
+        if (element) {
+          // Handle different element types
+          if (selector === 'meta[property="og:title"]') {
+            text = element.getAttribute('content');
+          } else if (selector === 'title') {
+            text = element.textContent;
+            // Clean up title text
+            if (text && text.includes(' - WeWrite')) {
+              text = text.split(' - WeWrite')[0];
+            }
+          } else {
+            text = element.textContent;
+          }
+
+          if (text && text.trim() !== '' && text !== 'Untitled') {
+            console.log(`Found page title using selector ${selector}: ${text}`);
+            return `Page: ${text}`;
+          }
+        }
       }
 
-      // If all else fails, use a generic title but trigger async fetch
-      return `Page: Content`;
+      // If we still don't have a title, use a more descriptive fallback
+      // This indicates it's loading rather than being generic "Content"
+      return `Page: Loading...`;
     }
 
     // Fallback to a better generic title instead of showing the ID
-    return `Page: Content`;
+    return `Page: Loading...`;
   }
 
   // 3. Use document title if available and meaningful
@@ -258,66 +288,109 @@ export function getAnalyticsPageTitle(
  *
  * @param pageId - The page ID to fetch the title for
  */
-async function fetchAndCachePageTitle(pageId: string): Promise<void> {
+/**
+ * Fetch a page title from the database and cache it for future use
+ * This is called asynchronously when we encounter a page without a title in the DOM
+ *
+ * The function will update Google Analytics with the correct title once it's fetched
+ *
+ * @param pageId - The page ID to fetch the title for
+ * @param maxRetries - Maximum number of retries for DOM checks (default: 3)
+ */
+async function fetchAndCachePageTitle(pageId: string, maxRetries: number = 3): Promise<void> {
   try {
     // Skip if we already have this in cache
-    if (pageTitleCache.has(pageId)) return;
+    if (pageTitleCache.has(pageId)) {
+      const cachedTitle = pageTitleCache.get(pageId);
+      console.log(`Using cached title for page ${pageId}: ${cachedTitle}`);
+      updateAnalyticsWithTitle(pageId, cachedTitle);
+      return;
+    }
 
-    // Try to get the page metadata directly
+    // First, try to get the title from the DOM again
+    // This helps in cases where the DOM wasn't fully loaded during the initial check
+    if (typeof window !== 'undefined' && maxRetries > 0) {
+      // Try multiple selectors to find any possible title in the DOM
+      const selectors = [
+        'h1', 'h2', 'h3',
+        '[data-page-title]',
+        '.page-title',
+        'title',
+        'meta[property="og:title"]'
+      ];
+
+      for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        let text = null;
+
+        if (element) {
+          // Handle different element types
+          if (selector === 'meta[property="og:title"]') {
+            text = element.getAttribute('content');
+          } else if (selector === 'title') {
+            text = element.textContent;
+            // Clean up title text
+            if (text && text.includes(' - WeWrite')) {
+              text = text.split(' - WeWrite')[0];
+            }
+          } else {
+            text = element.textContent;
+          }
+
+          if (text && text.trim() !== '' && text !== 'Untitled') {
+            console.log(`Found page title in DOM retry using selector ${selector}: ${text}`);
+            pageTitleCache.set(pageId, text);
+            updateAnalyticsWithTitle(pageId, text);
+            return;
+          }
+        }
+      }
+
+      // If we still don't have a title from DOM, wait a bit and retry
+      // This helps with slow-loading pages
+      if (maxRetries > 1) {
+        console.log(`No title found in DOM yet for ${pageId}, will retry in 500ms (${maxRetries-1} retries left)`);
+        setTimeout(() => {
+          fetchAndCachePageTitle(pageId, maxRetries - 1);
+        }, 500);
+        return;
+      }
+    }
+
+    // Try to get the page metadata directly from the database
     try {
+      console.log(`Fetching metadata from database for page ${pageId}`);
       const metadata = await getPageMetadata(pageId);
       if (metadata && metadata.title && metadata.title !== 'Untitled') {
         // We have a valid title from metadata
+        console.log(`Got title from metadata for page ${pageId}: ${metadata.title}`);
         pageTitleCache.set(pageId, metadata.title);
-
-        // Update analytics with the actual page title
-        if (typeof window !== 'undefined' && window.gtag) {
-          const pathname = window.location.pathname;
-          const pageTitle = `Page: ${metadata.title}`;
-
-          window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
-            page_path: pathname,
-            page_title: pageTitle,
-            page_location: window.location.href
-          });
-
-          console.log('Updated analytics with actual page title:', pageTitle);
-        }
+        updateAnalyticsWithTitle(pageId, metadata.title);
         return;
+      } else {
+        console.log(`No valid title found in metadata for page ${pageId}`);
       }
     } catch (metadataError) {
       console.error('Error fetching page metadata:', metadataError);
     }
 
     // If direct metadata fetch failed, try the cached title approach
+    console.log(`Trying getCachedPageTitle for page ${pageId}`);
     const title = await getCachedPageTitle(pageId);
 
     // Cache the title for future use
     if (title && title !== 'Untitled') {
+      console.log(`Got title from getCachedPageTitle for page ${pageId}: ${title}`);
       pageTitleCache.set(pageId, title);
-
-      // If we have Google Analytics available, send an updated page view
-      // This helps correct the page title in GA after we've fetched it
-      if (typeof window !== 'undefined' && window.gtag) {
-        const pathname = window.location.pathname;
-        const pageTitle = `Page: ${title}`;
-
-        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
-          page_path: pathname,
-          page_title: pageTitle,
-          page_location: window.location.href
-        });
-
-        console.log('Updated analytics with fetched page title:', pageTitle);
-      }
+      updateAnalyticsWithTitle(pageId, title);
     } else {
       // Even if we couldn't get a good title, update GA with a better generic title
-      // to avoid showing page IDs in analytics
-      if (typeof window !== 'undefined' && window.gtag) {
-        const pathname = window.location.pathname;
+      console.log(`No valid title found for page ${pageId}, using fallback`);
 
-        // Try to get a better fallback from the URL path
-        let pageTitle = `Page: Content`;
+      // Try to get a better fallback from the URL path
+      let fallbackTitle = 'Page';
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
         const pathSegments = pathname.split('/').filter(Boolean);
         if (pathSegments.length > 0) {
           const lastSegment = pathSegments[pathSegments.length - 1];
@@ -326,27 +399,57 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
             const category = pathSegments[pathSegments.length - 2]
               .charAt(0).toUpperCase() +
               pathSegments[pathSegments.length - 2].slice(1);
-            pageTitle = `Page: ${category} Content`;
+            fallbackTitle = category;
           }
         }
-
-        // Try to get the title from the DOM as a last resort
-        const h1Element = document.querySelector('h1');
-        if (h1Element && h1Element.textContent && h1Element.textContent !== 'Untitled') {
-          pageTitle = `Page: ${h1Element.textContent}`;
-        }
-
-        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
-          page_path: pathname,
-          page_title: pageTitle,
-          page_location: window.location.href
-        });
-
-        console.log('Updated analytics with improved generic page title:', pageTitle);
       }
+
+      updateAnalyticsWithTitle(pageId, `${pageId.substring(0, 6)}...`);
     }
   } catch (error) {
     console.error('Error fetching page title for analytics:', error);
+  }
+}
+
+/**
+ * Helper function to update Google Analytics with the correct page title
+ * Exported so it can be called from other components when page titles are loaded
+ *
+ * @param pageId - The page ID
+ * @param title - The page title to use
+ */
+export function updateAnalyticsWithTitle(pageId: string, title: string): void {
+  if (typeof window === 'undefined' || !window.gtag) return;
+
+  const pathname = window.location.pathname;
+  const pageTitle = `Page: ${title}`;
+
+  // Update Google Analytics with the correct title
+  window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+    page_path: pathname,
+    page_title: pageTitle,
+    page_location: window.location.href
+  });
+
+  console.log(`Updated analytics for page ${pageId} with title: ${pageTitle}`);
+
+  // If we have other analytics providers, update them too
+  try {
+    if (window.analytics && typeof window.analytics.pageView === 'function') {
+      window.analytics.pageView(pathname, pageTitle);
+      console.log(`Updated unified analytics with title: ${pageTitle}`);
+    }
+
+    if (window.ReactGA && typeof window.ReactGA.send === 'function') {
+      window.ReactGA.send({
+        hitType: "pageview",
+        page: pathname,
+        title: pageTitle
+      });
+      console.log(`Updated ReactGA with title: ${pageTitle}`);
+    }
+  } catch (analyticsError) {
+    console.error('Error updating additional analytics providers:', analyticsError);
   }
 }
 
@@ -359,22 +462,59 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
  */
 export async function getAnalyticsPageTitleForId(pageId: string): Promise<string> {
   try {
+    console.log(`Getting analytics page title for ID: ${pageId}`);
+
     // Check cache first
     if (pageTitleCache.has(pageId)) {
-      return `Page: ${pageTitleCache.get(pageId)}`;
+      const cachedTitle = pageTitleCache.get(pageId);
+      console.log(`Using cached title for page ${pageId}: ${cachedTitle}`);
+      return `Page: ${cachedTitle}`;
     }
 
     // Fetch from database
+    console.log(`Fetching metadata for page ${pageId}`);
     const metadata = await getPageMetadata(pageId);
-    if (metadata?.title) {
+    if (metadata?.title && metadata.title !== 'Untitled') {
       // Cache for future use
+      console.log(`Got title from metadata for page ${pageId}: ${metadata.title}`);
       pageTitleCache.set(pageId, metadata.title);
+
+      // If we're in the browser, update analytics with the correct title
+      if (typeof window !== 'undefined') {
+        updateAnalyticsWithTitle(pageId, metadata.title);
+      }
+
       return `Page: ${metadata.title}`;
+    } else {
+      console.log(`No valid title found in metadata for page ${pageId}`);
+    }
+
+    // Try the cached title approach as a fallback
+    console.log(`Trying getCachedPageTitle for page ${pageId}`);
+    const title = await getCachedPageTitle(pageId);
+    if (title && title !== 'Untitled') {
+      console.log(`Got title from getCachedPageTitle for page ${pageId}: ${title}`);
+      pageTitleCache.set(pageId, title);
+
+      // If we're in the browser, update analytics with the correct title
+      if (typeof window !== 'undefined') {
+        updateAnalyticsWithTitle(pageId, title);
+      }
+
+      return `Page: ${title}`;
     }
   } catch (error) {
     console.error('Error fetching page title for analytics:', error);
   }
 
+  // If we're in the browser, trigger an async fetch to get the title later
+  if (typeof window !== 'undefined') {
+    console.log(`Triggering async fetch for page ${pageId}`);
+    setTimeout(() => {
+      fetchAndCachePageTitle(pageId);
+    }, 100);
+  }
+
   // Return a better generic title instead of showing the ID
-  return `Page: Content`;
+  return `Page: Loading...`;
 }

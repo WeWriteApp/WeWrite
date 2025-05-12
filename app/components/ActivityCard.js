@@ -82,15 +82,27 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;
 
+  // Function to handle card click
+  const handleCardClick = () => {
+    if (activity.versionId) {
+      // Navigate to the version view
+      window.location.href = `/${activity.pageId}/version/${activity.versionId}`;
+    } else {
+      // If no version ID, navigate to the page
+      window.location.href = `/${activity.pageId}`;
+    }
+  };
+
   return (
     <div
       className={cn(
-        "w-full wewrite-card border-0 shadow-none",
+        "w-full wewrite-card border-0 shadow-none cursor-pointer hover:bg-accent/50 transition-colors",
         isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
         "flex flex-col",
         compactLayout ? "p-4" : "p-4" // Consistent padding
       )}
       style={{ transform: 'none' }}
+      onClick={handleCardClick}
     >
       {/* Header section with fixed height */}
       <div className="flex flex-col w-full flex-shrink-0">

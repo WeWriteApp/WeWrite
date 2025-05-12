@@ -2,8 +2,11 @@ import { Metadata } from 'next';
 import { getPageMetadata } from '../firebase/database';
 
 export async function generateMetadata({ params }) {
+  // Explicitly await the params object before destructuring
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+
   try {
-    const id = params.id;
     const metadata = await getPageMetadata(id);
 
     if (metadata) {

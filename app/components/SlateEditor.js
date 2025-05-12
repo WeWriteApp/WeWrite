@@ -11,6 +11,7 @@ import {
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
+import { Button } from "./ui/button";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -1233,36 +1234,40 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
             <LinkIcon className="h-4 w-4" />
             {isEditing ? 'Edit link' : 'Create link'}
           </h2>
-          <button
+          <Button
             onClick={handleClose}
-            className="p-1 rounded-full hover:bg-muted transition-colors"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
           {/* Tabs */}
           <div className="px-4 border-b border-border">
             <div className="flex">
-              <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'page'
+              <Button
+                variant="ghost"
+                className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none flex items-center gap-1.5 ${activeTab === 'page'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('page')}
               >
                 <FileText className="h-4 w-4" />
                 WeWrite Page
-              </button>
-              <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'external'
+              </Button>
+              <Button
+                variant="ghost"
+                className={`px-4 py-2 text-sm font-medium border-b-2 rounded-none flex items-center gap-1.5 ${activeTab === 'external'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 onClick={() => setActiveTab('external')}
               >
                 <Globe className="h-4 w-4" />
                 External link
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -1330,21 +1335,21 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
           {/* Sticky footer with button */}
           <div className="p-4 border-t border-border">
             {activeTab === 'page' ? (
-              <button
+              <Button
                 onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
                 disabled={!canSave}
-                className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 {isEditing ? 'Save changes' : 'Insert link'}
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={handleExternalSubmit}
                 disabled={!canSave}
-                className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 {isEditing ? 'Save changes' : 'Add External Link'}
-              </button>
+              </Button>
             )}
           </div>
         </div>
