@@ -4,8 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { ChevronLeft, Menu } from "lucide-react";
-import { Sidebar } from "./Sidebar";
-import { useState, useEffect } from "react";
+import { useContext } from "react";
+import { DrawerContext } from "../providers/DrawerProvider";
 import { useAuth } from "../providers/AuthProvider";
 
 export interface NavHeaderProps {
@@ -31,7 +31,7 @@ export default function NavHeader({
   showSidebar = true
 }: NavHeaderProps) {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { setIsOpen: setDrawerOpen } = useContext(DrawerContext);
   const { user } = useAuth();
 
   const handleBack = () => {
@@ -49,7 +49,7 @@ export default function NavHeader({
         <div className="flex items-center">
           {showSidebar && (
             <Button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setDrawerOpen(true)}
               variant="outline"
               size="icon"
               aria-label="Menu"
@@ -84,8 +84,7 @@ export default function NavHeader({
         </h1>
       )}
 
-      {/* Render the sidebar outside the main layout */}
-      {showSidebar && user && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+      {/* No longer rendering a separate Sidebar instance - using the global one */}
     </div>
   );
 }

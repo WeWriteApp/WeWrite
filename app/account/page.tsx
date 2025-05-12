@@ -19,7 +19,7 @@ import { useFeatureFlag, isAdmin } from '../utils/feature-flags';
 
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -28,14 +28,18 @@ export default function AccountPage() {
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login');
+    if (!authLoading && !isAuthenticated) {
+      console.log("User not authenticated, redirecting to login");
+      router.push('/auth/login?redirect=/account');
       return;
     }
 
-    loadUserData();
-  }, [user, router]);
+    if (user) {
+      loadUserData();
+    }
+  }, [user, authLoading, isAuthenticated, router]);
 
   const loadUserData = async () => {
     if (!user) return;

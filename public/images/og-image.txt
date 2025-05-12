@@ -1,0 +1,7 @@
+This is a placeholder for the OG image.
+
+To create a proper OG image:
+1. Install the 'canvas' npm package: npm install canvas
+2. Run the generate-og-image.js script: node scripts/generate-og-image.js
+
+Or create your own image with dimensions 1200x630 pixels and save it as public/images/og-image.png

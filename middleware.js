@@ -18,7 +18,11 @@ export function middleware(request) {
                       path === "/groups/new" ||
                       path.startsWith("/dashboard") ||
                       path === "/subscription" ||
-                      path === "/subscription/";
+                      path === "/subscription/" ||
+                      path === "/account" ||
+                      path.startsWith("/account/") ||
+                      path === "/notifications" ||
+                      path.startsWith("/notifications/");
 
   // Get the token from the cookies
   const token = request.cookies.get("session")?.value;

@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useAuth } from "../providers/AuthProvider";
 import { Button } from "./ui/button";
 import { Menu } from "lucide-react";
-import { Sidebar } from "./Sidebar";
-import { useState } from "react";
+import { useContext } from "react";
+import { DrawerContext } from "../providers/DrawerProvider";
 import NotificationDot from "./NotificationDot";
 
 export default function AuthNav() {
   const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { setIsOpen: setDrawerOpen } = useContext(DrawerContext);
 
   return (
     <>
@@ -19,7 +19,7 @@ export default function AuthNav() {
         <div className="flex items-center">
           <div className="relative">
             <Button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setDrawerOpen(true)}
               variant="outline"
               size="icon"
               aria-label="Menu"
@@ -30,7 +30,7 @@ export default function AuthNav() {
             </Button>
           </div>
 
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          {/* No longer rendering a separate Sidebar instance - using the global one */}
         </div>
       )}
     </>

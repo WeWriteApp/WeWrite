@@ -1,24 +1,31 @@
 "use client";
-// an auth provider that watches onAuthState change for firebase with a context provider
-import { useEffect, useState, createContext } from 'react';
+import React, { useState, createContext, useCallback } from 'react';
+
+// Create the context with default values
 export const DrawerContext = createContext({
   isOpen: false,
-  setIsOpen: () => {},
-  selected: null,
-  setSelected: () => {},
-  childDrawerSelection: null,
-  setChildDrawerSelection: () => {}
+  setIsOpen: () => {}
 });
 
 export const DrawerProvider = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const [childDrawerSelection, setChildDrawerSelection] = useState(null);
+  const [isOpen, setIsOpenState] = useState(false);
 
-  console.log("DrawerProvider initialized");
+  // Use useCallback to ensure the function reference is stable
+  const setIsOpen = useCallback((value) => {
+    console.log("DrawerProvider: setIsOpen called with value:", value);
+    setIsOpenState(value);
+  }, []);
 
-    return (
-    <DrawerContext.Provider value={{ isOpen, setIsOpen, selected, setSelected, childDrawerSelection, setChildDrawerSelection }}>
+  console.log("DrawerProvider initialized, isOpen:", isOpen);
+
+  // Create a stable value object with memoization to prevent unnecessary re-renders
+  const contextValue = React.useMemo(() => ({
+    isOpen,
+    setIsOpen
+  }), [isOpen, setIsOpen]);
+
+  return (
+    <DrawerContext.Provider value={contextValue}>
       {children}
     </DrawerContext.Provider>
   );

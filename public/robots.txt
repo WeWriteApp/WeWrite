@@ -1,0 +1,15 @@
+# WeWrite Robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin and auth pages
+Disallow: /admin/
+Disallow: /auth/login
+Disallow: /auth/register
+Disallow: /auth/forgot-password
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://wewrite.app/sitemap.xml

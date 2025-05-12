@@ -1,12 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { PillLink } from "./PillLink";
 import { formatRelativeTime } from "../utils/formatRelativeTime";
 import { generateSimpleDiff, generateTextDiff } from "../utils/generateTextDiff";
-import { useTheme } from "next-themes";
-import { cn, interactiveCard } from "../lib/utils";
+import { cn } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { SupporterIcon } from "./SupporterIcon";
 import { format } from "date-fns";
@@ -21,8 +19,6 @@ import { db } from "../firebase/database";
  * @param {boolean} compactLayout - Whether to use a more compact layout with less padding
  */
 const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
-  const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
 
   // Debug activity data
@@ -65,9 +61,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     activity.currentContent !== '[]' &&
     activity.currentContent !== '{}';
 
-  const hasValidPrevContent = activity.previousContent &&
-    activity.previousContent !== '[]' &&
-    activity.previousContent !== '{}';
+  // Check if previous content is valid (used in generateSimpleDiff and generateTextDiff)
 
   const { added, removed } = hasValidContent ? generateSimpleDiff(
     activity.currentContent,
@@ -96,8 +90,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full wewrite-card border-0 shadow-sm cursor-pointer hover:bg-accent/50 transition-all duration-200",
-        "hover:shadow-lg", // Bigger shadow on hover
+        "w-full wewrite-card border border-border shadow-sm cursor-pointer hover:shadow-lg transition-all duration-200",
         isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
         "flex flex-col",
         compactLayout ? "p-4" : "p-4" // Consistent padding

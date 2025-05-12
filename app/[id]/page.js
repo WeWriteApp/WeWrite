@@ -18,12 +18,12 @@ export default function GlobalIDPage({ params }) {
   let id = resolvedParams.id;
 
   // If the ID contains encoded slashes, decode them
-  if (id.includes('%2F')) {
+  if (id && id.includes('%2F')) {
     id = decodeURIComponent(id);
   }
 
   // If the ID contains slashes, extract the first part
-  if (id.includes('/')) {
+  if (id && id.includes('/')) {
     id = id.split('/')[0];
   }
 

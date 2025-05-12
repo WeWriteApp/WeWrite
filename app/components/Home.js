@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import Header from "./Header";
 import RecentActivity from "./RecentActivity";
 import TrendingPages from "./TrendingPages";
-import Toolbar from "./Toolbar";
 import { Clock, Flame, Users } from "lucide-react";
 
 const Home = () => {
@@ -81,10 +80,6 @@ const Home = () => {
           <TopUsers />
         </div>
       </div>
-
-      {/* Bottom Toolbar */}
-      {console.log("About to render Toolbar in Home component")}
-      <Toolbar />
     </DashboardLayout>
   );
 };

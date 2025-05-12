@@ -3,13 +3,14 @@
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { AuthProvider } from "./providers/AuthProvider";
 import { LoggingProvider } from "./providers/LoggingProvider";
-import { Drawer } from "./components/Drawer";
+import { SidebarFromDrawerContext } from "./components/SidebarFromDrawerContext";
 import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { RecentPagesProvider } from "./contexts/RecentPagesContext";
 import { LineSettingsProvider } from "./contexts/LineSettingsContext";
+
 import { ActivityFilterProvider } from "./contexts/ActivityFilterContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
@@ -18,7 +19,8 @@ import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import CommandKSearch from "./components/CommandKSearch";
-import Navigation from "./components/Navigation";
+import Toolbar from "./components/Toolbar";
+// Navigation component removed - using only Toolbar
 
 // Dynamically import components with no SSR
 const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
@@ -59,30 +61,34 @@ export default function ClientLayout({ children }) {
                       <ActivityFilterProvider>
                         <MobileProvider>
                           <DrawerProvider>
-                            <LineSettingsProvider>
-                      <Drawer />
-                      {!isAuthPage && <Navigation />}
-                      <div className="flex flex-col min-h-screen bg-background">
-                        {!isAuthPage && <UsernameWarningBanner />}
-                        {!isAuthPage && <UsernameEnforcementBanner />}
-                        {!isAuthPage && <FirestoreBlockedWarning />}
-                        <main className="flex-grow">
-                          {children}
-                        </main>
-                        {/* Command+K search dialog */}
-                        <CommandKSearch />
-                      </div>
+                              <LineSettingsProvider>
+                                {/* Make sure SidebarFromDrawerContext is rendered first */}
+                                <SidebarFromDrawerContext />
 
-                      {/* Toolbar is now handled at the root layout level */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <>
-                          {/* <GADebugger /> */}
-                          <WindsurfOverlay />
-                        </>
-                      )}
-                          </LineSettingsProvider>
-                        </DrawerProvider>
-                      </MobileProvider>
+                                {/* Navigation component removed - using only Toolbar */}
+                                <div className="flex flex-col min-h-screen bg-background">
+                                  {!isAuthPage && <UsernameWarningBanner />}
+                                  {!isAuthPage && <UsernameEnforcementBanner />}
+                                  {!isAuthPage && <FirestoreBlockedWarning />}
+                                  <main className="flex-grow">
+                                    {children}
+                                  </main>
+                                  {/* Command+K search dialog */}
+                                  <CommandKSearch />
+                                </div>
+
+                                {/* Add Toolbar to all pages */}
+                                <Toolbar />
+
+                                {process.env.NODE_ENV === 'development' && (
+                                  <>
+                                    {/* <GADebugger /> */}
+                                    <WindsurfOverlay />
+                                  </>
+                                )}
+                              </LineSettingsProvider>
+                          </DrawerProvider>
+                        </MobileProvider>
                     </ActivityFilterProvider>
                   </RecentPagesProvider>
                 </PortfolioProvider>

@@ -25,7 +25,7 @@ const DonateBar = () => {
   // Unwrap params using React.use()
   const resolvedParams = use(params);
   const id = resolvedParams.id;
-  const { setSelected } = useContext(DrawerContext);
+  const { setIsOpen } = useContext(DrawerContext);
 
   useEffect(() => {
     if (id) {
@@ -76,7 +76,7 @@ const DonateBar = () => {
               data-tooltip-id="Edit"
               data-tooltip-place="top"
               data-tooltip-content={"Edit Pledge Amount"}
-              onClick={() => setSelected(<SubscriptionsTable />)}
+              onClick={() => setIsOpen(true)}
             >
               <Pencil className="h-6 w-6" />
               <Tooltip id="Edit" place="top" />
@@ -88,7 +88,7 @@ const DonateBar = () => {
               data-tooltip-id="View"
               data-tooltip-place="top"
               data-tooltip-content={"View Pledge History"}
-              onClick={() => setSelected(<SubscriptionsTable />)}
+              onClick={() => setIsOpen(true)}
             >
               <Eye className="h-6 w-6" />
               <Tooltip id="View" place="top" />

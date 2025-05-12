@@ -21,6 +21,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  console.log("Sidebar rendered with isOpen:", isOpen);
+
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
