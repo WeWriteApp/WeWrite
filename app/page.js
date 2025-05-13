@@ -103,7 +103,19 @@ export default function Home() {
         <AddUsername />
 
         {/* Feature Flag Debugger Modal - Visible to admin users and in development */}
-        {(user?.email === 'jamiegray2234@gmail.com' || process.env.NODE_ENV === 'development') && <FeatureFlagDebuggerModal />}
+        {(() => {
+          // Debug logging
+          console.log('Debug - Feature Flag Debugger Conditions:', {
+            userEmail: user?.email,
+            isAdminEmail: user?.email === 'jamiegray2234@gmail.com',
+            nodeEnv: process.env.NODE_ENV,
+            isDevelopment: process.env.NODE_ENV === 'development',
+            shouldShow: user?.email === 'jamiegray2234@gmail.com' || process.env.NODE_ENV === 'development'
+          });
+
+          // Always show in development or for admin
+          return true && <FeatureFlagDebuggerModal />;
+        })()}
 
         <div className="w-full mb-6">
           <SearchButton placeholder="Search all pages..." />
