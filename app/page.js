@@ -102,8 +102,8 @@ export default function Home() {
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />
 
-        {/* Feature Flag Debugger Modal - Only visible to admin users */}
-        {user?.email === 'jamiegray2234@gmail.com' && <FeatureFlagDebuggerModal />}
+        {/* Feature Flag Debugger Modal - Visible to admin users and in development */}
+        {(user?.email === 'jamiegray2234@gmail.com' || process.env.NODE_ENV === 'development') && <FeatureFlagDebuggerModal />}
 
         <div className="w-full mb-6">
           <SearchButton placeholder="Search all pages..." />
