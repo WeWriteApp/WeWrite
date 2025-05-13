@@ -12,6 +12,7 @@ import TrendingPages from "./components/TrendingPages";
 import MyGroups from "./components/MyGroups";
 import HomeGroupsSection from "./components/HomeGroupsSection";
 import FeatureFlagDebuggerModal from "./components/FeatureFlagDebuggerModal";
+import AlwaysVisibleDebugger from "./components/AlwaysVisibleDebugger";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
@@ -207,6 +208,7 @@ export default function Home() {
         <FloatingActionButton href="/new" />
       </main>
       <SiteFooter />
+      <AlwaysVisibleDebugger />
     </>
   );
 }
