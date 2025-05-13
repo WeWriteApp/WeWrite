@@ -12,7 +12,6 @@ import TrendingPages from "./components/TrendingPages";
 import MyGroups from "./components/MyGroups";
 import HomeGroupsSection from "./components/HomeGroupsSection";
 import FeatureFlagDebuggerModal from "./components/FeatureFlagDebuggerModal";
-import AlwaysVisibleDebugger from "./components/AlwaysVisibleDebugger";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
@@ -103,20 +102,8 @@ export default function Home() {
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />
 
-        {/* Feature Flag Debugger Modal - Visible to admin users and in development */}
-        {(() => {
-          // Debug logging
-          console.log('Debug - Feature Flag Debugger Conditions:', {
-            userEmail: user?.email,
-            isAdminEmail: user?.email === 'jamiegray2234@gmail.com',
-            nodeEnv: process.env.NODE_ENV,
-            isDevelopment: process.env.NODE_ENV === 'development',
-            shouldShow: user?.email === 'jamiegray2234@gmail.com' || process.env.NODE_ENV === 'development'
-          });
-
-          // Always show in development or for admin
-          return true && <FeatureFlagDebuggerModal />;
-        })()}
+        {/* Feature Flag Debugger Modal - Force visible in all environments */}
+        <FeatureFlagDebuggerModal />
 
         <div className="w-full mb-6">
           <SearchButton placeholder="Search all pages..." />
@@ -208,7 +195,6 @@ export default function Home() {
         <FloatingActionButton href="/new" />
       </main>
       <SiteFooter />
-      <AlwaysVisibleDebugger />
     </>
   );
 }
