@@ -10,6 +10,8 @@ import LoginBanner from "./components/LoginBanner";
 import RecentActivity from "./components/RecentActivity";
 import TrendingPages from "./components/TrendingPages";
 import MyGroups from "./components/MyGroups";
+import HomeGroupsSection from "./components/HomeGroupsSection";
+import FeatureFlagDebugger from "./components/FeatureFlagDebugger";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
@@ -100,6 +102,9 @@ export default function Home() {
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />
 
+        {/* Feature Flag Debugger - Only visible to admin users */}
+        {user?.email === 'jamiegray2234@gmail.com' && <FeatureFlagDebugger />}
+
         <div className="w-full mb-6">
           <SearchButton placeholder="Search all pages..." />
         </div>
@@ -148,7 +153,10 @@ export default function Home() {
           <AllPages />
         </div>
 
-        {/* 3. Trending Pages */}
+        {/* 3. Groups Section - Only visible when feature flag is enabled */}
+        {!isLoading && <HomeGroupsSection />}
+
+        {/* 4. Trending Pages */}
         <div style={{ minHeight: isLoading ? '300px' : 'auto' }}>
           {isLoading ? (
             <Placeholder className="w-full h-8 mb-4" animate={true}>
@@ -166,7 +174,7 @@ export default function Home() {
           <TrendingPages limit={5} />
         </div>
 
-        {/* 4. Top Users */}
+        {/* 5. Top Users */}
         <div style={{ minHeight: isLoading ? '300px' : 'auto' }}>
           {isLoading ? (
             <Placeholder className="w-full h-8 mb-4" animate={true}>

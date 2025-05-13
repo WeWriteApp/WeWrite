@@ -166,6 +166,27 @@ export default function AdminPage() {
             enabled: flagsData[flag.id] !== undefined ? flagsData[flag.id] : flag.enabled
           }))
         );
+
+        // Check if the 'groups' flag exists in the database
+        if (flagsData['groups'] === undefined) {
+          console.log("'groups' feature flag not found in database, initializing it");
+
+          // Add the 'groups' flag to the database
+          await setDoc(featureFlagsRef, {
+            ...flagsData,
+            groups: false // Initialize as disabled
+          });
+        }
+      } else {
+        // If the document doesn't exist, create it with all feature flags
+        console.log("Feature flags document not found, creating it");
+
+        const initialFlags = {};
+        featureFlags.forEach(flag => {
+          initialFlags[flag.id] = flag.enabled;
+        });
+
+        await setDoc(featureFlagsRef, initialFlags);
       }
     } catch (error) {
       console.error('Error loading feature flags:', error);
@@ -286,11 +307,17 @@ export default function AdminPage() {
   const toggleFeatureFlag = async (flagId: FeatureFlag) => {
     try {
       setIsLoading(true);
+      console.log(`Toggling feature flag ${flagId}`);
+
+      // Find the current flag state before updating
+      const currentFlag = featureFlags.find(flag => flag.id === flagId);
+      const newEnabledState = currentFlag ? !currentFlag.enabled : false;
+      console.log(`Current state: ${currentFlag?.enabled}, New state: ${newEnabledState}`);
 
       // Update local state first for immediate feedback
       setFeatureFlags(prev =>
         prev.map(flag =>
-          flag.id === flagId ? { ...flag, enabled: !flag.enabled } : flag
+          flag.id === flagId ? { ...flag, enabled: newEnabledState } : flag
         )
       );
 
@@ -302,23 +329,24 @@ export default function AdminPage() {
 
       if (featureFlagsDoc.exists()) {
         flagsData = featureFlagsDoc.data();
+        console.log('Current flags in database:', flagsData);
       }
 
       // Update feature flag
-      const updatedFlag = featureFlags.find(flag => flag.id === flagId);
-      if (updatedFlag) {
-        flagsData = {
-          ...flagsData,
-          [flagId]: !updatedFlag.enabled
-        };
-      }
+      flagsData = {
+        ...flagsData,
+        [flagId]: newEnabledState
+      };
+
+      console.log('Updated flags to save:', flagsData);
 
       // Update Firestore
       await setDoc(featureFlagsRef, flagsData);
+      console.log(`Feature flag ${flagId} updated in database to ${newEnabledState}`);
 
       toast({
         title: 'Success',
-        description: `${flagId} is now ${updatedFlag?.enabled ? 'disabled' : 'enabled'}`,
+        description: `${flagId} is now ${newEnabledState ? 'enabled' : 'disabled'}`,
         variant: 'default'
       });
     } catch (error) {

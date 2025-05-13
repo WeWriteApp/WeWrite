@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
@@ -14,6 +14,7 @@ import { AccentColorSwitcher } from "./AccentColorSwitcher"
 import PillStyleToggle from "./PillStyleToggle"
 import NotificationBadge from "./NotificationBadge"
 import { AuthContext } from "../providers/AuthProvider"
+import { useFeatureFlag } from "../utils/feature-flags"
 
 interface SidebarProps {
   isOpen: boolean
@@ -25,6 +26,48 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { theme, setTheme } = useTheme()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const { user } = useContext(AuthContext)
+  const [debugInfo, setDebugInfo] = useState<{flag: boolean, error?: string}>({ flag: false })
+
+  // Use the improved useFeatureFlag hook to check if groups feature is enabled
+  const groupsEnabled = useFeatureFlag('groups', user?.email)
+
+  // Add direct check for feature flag for debugging
+  useEffect(() => {
+    if (isOpen && user?.email) {
+      const checkFeatureFlag = async () => {
+        try {
+          const { doc, getDoc } = await import('firebase/firestore')
+          const { db } = await import('../firebase/database')
+
+          const featureFlagsRef = doc(db, 'config', 'featureFlags')
+          const featureFlagsDoc = await getDoc(featureFlagsRef)
+
+          if (featureFlagsDoc.exists()) {
+            const flagsData = featureFlagsDoc.data()
+            const isEnabled = flagsData['groups'] === true
+            console.log('Sidebar - Direct check - Groups feature flag:', isEnabled)
+            setDebugInfo({ flag: isEnabled })
+          } else {
+            console.log('Sidebar - No feature flags document found')
+            setDebugInfo({ flag: false, error: 'No feature flags document found' })
+          }
+        } catch (error) {
+          console.error('Sidebar - Error checking groups feature flag:', error)
+          setDebugInfo({ flag: false, error: String(error) })
+        }
+      }
+
+      checkFeatureFlag()
+    }
+  }, [isOpen, user?.email])
+
+  // Log the feature flag status for debugging
+  useEffect(() => {
+    if (isOpen) {
+      console.log('Sidebar - useFeatureFlag hook value:', groupsEnabled)
+      console.log('Sidebar - Direct check value:', debugInfo.flag)
+    }
+  }, [isOpen, groupsEnabled, debugInfo.flag])
 
   // Reset to main menu when sidebar closes
   useEffect(() => {
@@ -195,6 +238,34 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </button>
+
+              {/* Groups navigation item - only visible when feature flag is enabled */}
+              {groupsEnabled ? (
+                <button
+                  onClick={() => router.push('/groups')}
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                >
+                  <div className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    <span>Groups</span>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </button>
+              ) : user?.email === 'jamiegray2234@gmail.com' && (
+                <div className="px-3 py-2.5 text-sm border border-dashed border-amber-500 rounded-md mb-2">
+                  <div className="flex items-center text-amber-600 dark:text-amber-400 mb-1">
+                    <Users className="h-5 w-5 mr-2" />
+                    <span>Groups (Disabled)</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <p>Hook: {groupsEnabled ? 'Enabled' : 'Disabled'}</p>
+                    <p>Direct: {debugInfo.flag ? 'Enabled' : 'Disabled'}</p>
+                    {debugInfo.error && (
+                      <p className="text-red-500 truncate">{debugInfo.error}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={() => navigateToSection('appearance')}

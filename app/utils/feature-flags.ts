@@ -107,6 +107,7 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
 
   useEffect(() => {
+    // Initial check
     const checkFeatureFlag = async () => {
       try {
         const enabled = await isFeatureEnabled(flag, userEmail);
@@ -124,6 +125,58 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
     };
 
     checkFeatureFlag();
+
+    // Set up a real-time listener for feature flag changes
+    const setupListener = async () => {
+      try {
+        const { doc, onSnapshot } = await import('firebase/firestore');
+        const { db } = await import('../firebase/database');
+
+        const featureFlagsRef = doc(db, 'config', 'featureFlags');
+
+        // Return the unsubscribe function
+        return onSnapshot(featureFlagsRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const flagsData = snapshot.data();
+            const isEnabledInDb = flagsData[flag] === true;
+            console.log(`Feature flag ${flag} changed in database: ${isEnabledInDb}`);
+            setIsEnabled(isEnabledInDb);
+          } else {
+            // If document doesn't exist, use default behavior
+            const adminOnlyFeatures: FeatureFlag[] = [
+              'subscription_management',
+              'username_management',
+            ];
+
+            const disabledFeatures: FeatureFlag[] = [
+              'map_view',
+              'calendar_view',
+            ];
+
+            if (adminOnlyFeatures.includes(flag)) {
+              setIsEnabled(false);
+            } else if (disabledFeatures.includes(flag)) {
+              setIsEnabled(false);
+            } else {
+              setIsEnabled(true);
+            }
+          }
+        });
+      } catch (error) {
+        console.error(`Error setting up listener for feature flag ${flag}:`, error);
+        return null;
+      }
+    };
+
+    // Set up the listener and store the unsubscribe function
+    const unsubscribePromise = setupListener();
+
+    // Clean up the listener when the component unmounts
+    return () => {
+      unsubscribePromise.then(unsubscribe => {
+        if (unsubscribe) unsubscribe();
+      });
+    };
   }, [flag, userEmail]);
 
   return isEnabled;
