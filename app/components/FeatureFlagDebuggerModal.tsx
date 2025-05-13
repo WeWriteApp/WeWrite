@@ -1,39 +1,48 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/database';
 import { FeatureFlag } from '../utils/feature-flags';
-import { Check, X } from 'lucide-react';
+import { Check, X, Code } from 'lucide-react';
+import { Modal } from './ui/modal';
+import { motion, useDragControls } from 'framer-motion';
 
-export default function FeatureFlagDebugger() {
+export default function FeatureFlagDebuggerModal() {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 100 });
+  const dragControls = useDragControls();
+  const constraintsRef = useRef(null);
 
   useEffect(() => {
-    // Set up a real-time listener for feature flag changes
-    const featureFlagsRef = doc(db, 'config', 'featureFlags');
+    // Set up a real-time listener for feature flag changes when modal is open
+    if (isOpen) {
+      const featureFlagsRef = doc(db, 'config', 'featureFlags');
 
-    const unsubscribe = onSnapshot(featureFlagsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const flagsData = snapshot.data();
-        console.log('Feature flags from database:', flagsData);
-        setFeatureFlags(flagsData);
-      } else {
-        console.log('No feature flags document found');
-        setFeatureFlags({});
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error('Error listening to feature flags:', error);
-      setLoading(false);
-    });
+      const unsubscribe = onSnapshot(featureFlagsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const flagsData = snapshot.data();
+          console.log('Feature flags from database:', flagsData);
+          setFeatureFlags(flagsData);
+        } else {
+          console.log('No feature flags document found');
+          setFeatureFlags({});
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error('Error listening to feature flags:', error);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
-  }, []);
+      return () => unsubscribe();
+    }
+  }, [isOpen]);
 
   const toggleFlag = async (flag: string, newValue?: boolean) => {
     try {
@@ -87,23 +96,75 @@ export default function FeatureFlagDebugger() {
     }
   };
 
-  if (loading) {
-    return <div>Loading feature flags...</div>;
-  }
-
   // Calculate if all flags are enabled
   const allFlagsEnabled = Object.values(featureFlags).every(value => value === true);
 
+  // Handle hiding the button until next refresh
+  const handleHideUntilRefresh = () => {
+    setIsHidden(true);
+    setIsOpen(false);
+  };
+
+  // Set up constraints for dragging
+  useEffect(() => {
+    const updateConstraints = () => {
+      // This will run on mount and window resize
+      setPosition(prev => ({
+        x: Math.min(Math.max(prev.x, 0), window.innerWidth - 60),
+        y: Math.min(Math.max(prev.y, 0), window.innerHeight - 60)
+      }));
+    };
+
+    window.addEventListener('resize', updateConstraints);
+    updateConstraints();
+
+    return () => window.removeEventListener('resize', updateConstraints);
+  }, []);
+
+  if (isHidden) {
+    return null;
+  }
+
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Feature Flag Debugger</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-50">
+      {/* Floating Action Button */}
+      <motion.div
+        drag
+        dragControls={dragControls}
+        dragMomentum={false}
+        dragConstraints={constraintsRef}
+        initial={position}
+        animate={position}
+        onDragEnd={(e, info) => {
+          // Update position state after drag
+          setPosition({
+            x: Math.min(Math.max(info.point.x - 30, 0), window.innerWidth - 60),
+            y: Math.min(Math.max(info.point.y - 30, 0), window.innerHeight - 60)
+          });
+        }}
+        className="absolute pointer-events-auto"
+        style={{ touchAction: 'none' }}
+      >
+        <Button
+          size="icon"
+          className="h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+          onClick={() => setIsOpen(true)}
+        >
+          <Code className="h-6 w-6" />
+        </Button>
+      </motion.div>
+
+      {/* Feature Flag Debugger Modal */}
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Feature Flag Debugger"
+        className="max-w-lg"
+      >
         <div className="space-y-4">
           <div>
             <h3 className="font-medium mb-2">Current Feature Flags:</h3>
-            <pre className="bg-muted p-2 rounded text-xs overflow-auto">
+            <pre className="bg-muted p-2 rounded text-xs overflow-auto max-h-40">
               {JSON.stringify(featureFlags, null, 2)}
             </pre>
           </div>
@@ -171,8 +232,19 @@ export default function FeatureFlagDebugger() {
               ))}
             </div>
           </div>
+
+          {/* Hide until refresh button */}
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleHideUntilRefresh}
+            >
+              Hide until next refresh
+            </Button>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </Modal>
+    </div>
   );
 }

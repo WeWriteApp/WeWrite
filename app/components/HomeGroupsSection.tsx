@@ -108,9 +108,40 @@ export default function HomeGroupsSection() {
           const isOwner = group.owner === user.uid;
 
           if (isMember || isOwner) {
-            // Generate mock activity data for the sparkline
-            // In a real implementation, this would come from actual group activity
-            const activity = Array.from({ length: 24 }, () => Math.floor(Math.random() * 10));
+            // Get real activity data for the group
+            // This will be based on page edits within the group
+            let activity = [];
+
+            // If the group has pages, get activity data for each page
+            if (group.pages && Object.keys(group.pages).length > 0) {
+              // Create an array of 24 zeros (for 24 hours)
+              activity = Array(24).fill(0);
+
+              // For each page in the group, add its activity to the group activity
+              Object.keys(group.pages).forEach(pageId => {
+                // If the page has activity data, add it to the group activity
+                if (group.pages[pageId] && group.pages[pageId].activity) {
+                  const pageActivity = group.pages[pageId].activity;
+                  // Add each hour's activity to the corresponding hour in the group activity
+                  pageActivity.forEach((count, hour) => {
+                    activity[hour] += count;
+                  });
+                }
+              });
+            } else {
+              // If no pages or no activity data, create a sparse array with a few non-zero values
+              // This ensures the sparkline shows something even for new groups
+              activity = Array(24).fill(0);
+              // Add a few random non-zero values
+              const randomHours = [
+                Math.floor(Math.random() * 8),
+                Math.floor(Math.random() * 8) + 8,
+                Math.floor(Math.random() * 8) + 16
+              ];
+              randomHours.forEach(hour => {
+                activity[hour] = Math.floor(Math.random() * 3) + 1;
+              });
+            }
 
             userGroups.push({
               id: groupId,
@@ -240,7 +271,7 @@ export default function HomeGroupsSection() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {displayGroups.map((group) => (
-          <Link key={group.id} href={`/groups/${group.id}`} className="block">
+          <Link key={group.id} href={`/group/${group.id}`} className="block">
             <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center">

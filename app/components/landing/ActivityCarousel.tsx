@@ -52,7 +52,12 @@ export default function ActivityCarousel() {
               position: 'relative'
             }}
           >
-            <ActivityCard activity={activity} isCarousel={true} compactLayout={true} />
+            <ActivityCard
+              activity={activity}
+              isCarousel={true}
+              compactLayout={true}
+              key={`activity-carousel-main-${activity.pageId || 'unknown'}-${index}`}
+            />
           </div>
         )
       ))}

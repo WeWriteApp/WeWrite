@@ -20,6 +20,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState({ pages: [], users: [], groups: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const searchInputRef = useRef(null);
 
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
@@ -39,6 +40,23 @@ export default function SearchPage() {
       window.history.pushState({}, '', url);
     }
   }, [searchParams]);
+
+  // Focus the search input when the page loads
+  useEffect(() => {
+    // Short delay to ensure the input is rendered and DOM is ready
+    const focusTimer = setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+
+        // For mobile devices, try to open the keyboard
+        if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+          searchInputRef.current.click();
+        }
+      }
+    }, 100);
+
+    return () => clearTimeout(focusTimer);
+  }, []);
 
   // Perform search when query changes
   const performSearch = async (searchTerm) => {
@@ -254,6 +272,8 @@ export default function SearchPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1"
+            ref={searchInputRef}
+            autoFocus={true}
           />
           <Button type="submit">Search</Button>
         </div>

@@ -5,11 +5,12 @@ import { getFollowedPages, unfollowPage } from '../firebase/follows';
 import { db } from '../firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
 import { PillLink } from './PillLink';
-import { Loader, Heart, X, Plus } from 'lucide-react';
+import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { AuthContext } from '../providers/AuthProvider';
 import { toast } from 'sonner';
 import UnfollowConfirmationDialog from './UnfollowConfirmationDialog';
+import { ErrorDisplay } from './ui/error-display';
 
 interface Page {
   id: string;
@@ -33,9 +34,9 @@ interface FollowedPagesProps {
  *
  * Displays a list of pages that a user follows with unfollow functionality
  */
-export default function FollowedPages({ 
-  userId, 
-  limit = 50, 
+export default function FollowedPages({
+  userId,
+  limit = 50,
   isCurrentUser = false,
   showHeader = true,
   className = "",
@@ -57,7 +58,7 @@ export default function FollowedPages({
       setLoading(false);
       return;
     }
-    
+
     loadFollowedPages();
   }, [userId]);
 
@@ -69,12 +70,12 @@ export default function FollowedPages({
         setLoading(true);
         setPage(1);
       }
-      
+
       setError(null);
-      
+
       // Get the IDs of pages the user follows
       const followedPageIds = await getFollowedPages(userId);
-      
+
       if (followedPageIds.length === 0) {
         setPages([]);
         setHasMore(false);
@@ -82,22 +83,22 @@ export default function FollowedPages({
         setLoadingMore(false);
         return;
       }
-      
+
       // Calculate pagination
       const currentPage = loadMore ? page + 1 : 1;
       const startIndex = 0;
       const endIndex = currentPage * limit;
       const paginatedIds = followedPageIds.slice(startIndex, endIndex);
-      
+
       // Check if there are more pages to load
       setHasMore(followedPageIds.length > endIndex);
-      
+
       // Fetch details for each page
       const pagePromises = paginatedIds.map(async (pageId) => {
         try {
           const pageRef = doc(db, 'pages', pageId);
           const pageDoc = await getDoc(pageRef);
-          
+
           if (pageDoc.exists()) {
             return {
               id: pageId,
@@ -110,10 +111,10 @@ export default function FollowedPages({
           return null;
         }
       });
-      
+
       const pageResults = await Promise.all(pagePromises);
       const validPages = pageResults.filter(page => page !== null) as Page[];
-      
+
       if (loadMore) {
         setPages(prev => [...prev, ...validPages]);
         setPage(currentPage);
@@ -136,22 +137,22 @@ export default function FollowedPages({
 
   const handleUnfollow = async () => {
     if (!user || !pageToUnfollow) return;
-    
+
     try {
       setUnfollowingId(pageToUnfollow.id);
-      
+
       // Call the unfollow function
       await unfollowPage(user.uid, pageToUnfollow.id);
-      
+
       // Update the local state
       setPages(prev => prev.filter(p => p.id !== pageToUnfollow.id));
-      
+
       // Close the dialog
       setShowUnfollowDialog(false);
-      
+
       // Show success toast
       toast.info(`You are no longer following "${pageToUnfollow.title || 'Untitled Page'}"`);
-      
+
       // Call the callback if provided
       if (onPageUnfollowed) {
         onPageUnfollowed();
@@ -175,8 +176,14 @@ export default function FollowedPages({
 
   if (error) {
     return (
-      <div className="p-4 text-sm text-destructive bg-destructive/10 rounded-lg">
-        {error}
+      <div className="p-2">
+        <ErrorDisplay
+          message={error}
+          severity="warning"
+          showDetails={false}
+          showRetry={true}
+          onRetry={() => loadFollowedPages()}
+        />
       </div>
     );
   }
@@ -206,8 +213,8 @@ export default function FollowedPages({
 
       <div className="flex flex-col space-y-2">
         {pages.map(page => (
-          <div 
-            key={page.id} 
+          <div
+            key={page.id}
             className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
           >
             <PillLink
@@ -218,7 +225,7 @@ export default function FollowedPages({
             >
               {page.title || 'Untitled Page'}
             </PillLink>
-            
+
             {isCurrentUser && (
               <Button
                 variant="ghost"
@@ -238,7 +245,7 @@ export default function FollowedPages({
           </div>
         ))}
       </div>
-      
+
       {hasMore && (
         <div className="flex justify-center mt-4">
           <Button
@@ -261,7 +268,7 @@ export default function FollowedPages({
           </Button>
         </div>
       )}
-      
+
       {/* Unfollow Confirmation Dialog */}
       <UnfollowConfirmationDialog
         isOpen={showUnfollowDialog}

@@ -172,6 +172,11 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Focus indicator variables */
+    --focus-ring-color: var(--accent-h) var(--accent-s) var(--accent-l);
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: var(--accent-h) var(--accent-s) var(--accent-l);
@@ -216,8 +221,103 @@
     --ring: var(--accent-h) 76% 48%;
     --radius: 0.5rem;
 
+    /* Focus indicator variables - higher contrast in dark mode */
+    --focus-ring-color: var(--accent-h) 100% 70%;
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+
     /* Active line highlight in editor - darker in dark mode */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
+  }
+
+  /* High Contrast Mode - Light */
+  html[data-high-contrast="true"]:not(.dark) {
+    /* Maximum contrast for text */
+    --foreground: 0 0% 0%;
+    --background: 0 0% 100%;
+
+    /* Card with visible borders */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    /* Popover with visible borders */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* Primary color with high contrast */
+    --primary: 220 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary with higher contrast */
+    --secondary: 220 13% 80%;
+    --secondary-foreground: 0 0% 0%;
+
+    /* Muted with higher contrast */
+    --muted: 220 13% 90%;
+    --muted-foreground: 0 0% 0%;
+
+    /* Accent with higher contrast */
+    --accent: 220 13% 90%;
+    --accent-foreground: 0 0% 0%;
+
+    /* Destructive with higher contrast */
+    --destructive: 0 100% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs with higher contrast */
+    --border: 0 0% 0%;
+    --input: 0 0% 90%;
+    --ring: 220 100% 50%;
+
+    /* Enhanced focus indicators */
+    --focus-ring-color: 220 100% 50%;
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 2px;
+  }
+
+  /* High Contrast Mode - Dark */
+  html[data-high-contrast="true"].dark {
+    /* Maximum contrast for text */
+    --foreground: 0 0% 100%;
+    --background: 0 0% 0%;
+
+    /* Card with visible borders */
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+
+    /* Popover with visible borders */
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+
+    /* Primary color with high contrast */
+    --primary: 220 100% 60%;
+    --primary-foreground: 0 0% 0%;
+
+    /* Secondary with higher contrast */
+    --secondary: 220 13% 20%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted with higher contrast */
+    --muted: 220 13% 20%;
+    --muted-foreground: 0 0% 100%;
+
+    /* Accent with higher contrast */
+    --accent: 220 13% 20%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive with higher contrast */
+    --destructive: 0 100% 60%;
+    --destructive-foreground: 0 0% 0%;
+
+    /* Borders and inputs with higher contrast */
+    --border: 0 0% 100%;
+    --input: 0 0% 20%;
+    --ring: 220 100% 70%;
+
+    /* Enhanced focus indicators */
+    --focus-ring-color: 220 100% 70%;
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 2px;
   }
 }
 

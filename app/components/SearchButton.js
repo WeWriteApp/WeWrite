@@ -12,7 +12,8 @@ const SearchButton = ({ placeholder = "Search all pages..." }) => {
 
   const navigateToSearchPage = () => {
     console.log('Navigating to search page');
-    router.push('/search');
+    // Use router.push with a callback to ensure navigation completes
+    router.push('/search', undefined, { scroll: true });
   };
 
   return (

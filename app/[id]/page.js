@@ -9,6 +9,8 @@ import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../firebase/config';
 import ClientPage from '../pages/[id]/client-page';
 import { Loader } from '../components/Loader';
+import { ErrorDisplay } from '../components/ui/error-display';
+import { Button } from '../components/ui/button';
 
 export default function GlobalIDPage({ params }) {
   // Extract the ID from params and handle potential slashes
@@ -45,8 +47,8 @@ export default function GlobalIDPage({ params }) {
         const userSnapshot = await get(userRef);
 
         if (userSnapshot.exists()) {
-          // Redirect to the user page
-          router.replace(`/user/${id}`);
+          // Redirect to the user page using direct navigation
+          window.location.href = `/user/${id}`;
           return;
         }
 
@@ -55,8 +57,8 @@ export default function GlobalIDPage({ params }) {
         const groupSnapshot = await get(groupRef);
 
         if (groupSnapshot.exists()) {
-          // Redirect to the group page
-          router.replace(`/group/${id}`);
+          // Redirect to the group page using direct navigation
+          window.location.href = `/group/${id}`;
           return;
         }
 
@@ -90,9 +92,33 @@ export default function GlobalIDPage({ params }) {
 
   if (contentType === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <h1 className="text-2xl font-bold mb-4">Error</h1>
-        <p className="text-muted-foreground">There was an error loading this content. Please try again later.</p>
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
+        <div className="max-w-md w-full">
+          <ErrorDisplay
+            message="There was an error loading this content."
+            severity="error"
+            title="Content Error"
+            showDetails={false}
+            showRetry={true}
+            onRetry={() => {
+              // Use the error recovery utility to reset application state
+              import('../utils/error-recovery').then(({ resetApplicationState }) => {
+                resetApplicationState({
+                  forceReload: true
+                });
+              }).catch(() => {
+                // Fallback if import fails
+                window.location.reload();
+              });
+            }}
+            className="mb-6"
+          />
+          <div className="flex justify-center">
+            <Button onClick={() => window.history.back()}>
+              Go Back
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

@@ -34,8 +34,10 @@ import {
   AlertTriangle,
   ChevronUp,
   ChevronDown,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
+import { ErrorDisplay } from "./ui/error-display";
 // toast import removed (unused)
 import { RecentPagesContext } from "../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -367,9 +369,13 @@ function SinglePageView({ params }) {
             <Loader />
           ) : error ? (
             <div className="flex flex-col items-center justify-center p-8 text-center">
-              <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 p-4 rounded-lg max-w-md">
-                <h2 className="text-xl font-medium mb-2">Access Error</h2>
-                <p>{error}</p>
+              <div className="max-w-md w-full">
+                <ErrorDisplay
+                  message={error}
+                  severity="warning"
+                  title="Access Error"
+                  onRetry={() => window.location.reload()}
+                />
               </div>
             </div>
           ) : null}
@@ -399,35 +405,28 @@ function SinglePageView({ params }) {
           <title>Error - WeWrite</title>
         </Head>
         <PageHeader />
-        <div className="p-4">
-          <h1 className="text-2xl font-semibold text-text">
-            Error
+        <div className="p-4 max-w-4xl mx-auto">
+          <h1 className="text-2xl font-semibold mb-4">
+            Error Loading Page
           </h1>
-          <div className="flex items-center gap-2 mt-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 text-red-500"
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-            <span className="text-lg text-text">
-              {error}
-            </span>
-            <Link href="/">
-              <button className="bg-background text-button-text px-4 py-2 rounded-full">
-                Go back
-              </button>
-            </Link>
+          <ErrorDisplay
+            message={error}
+            severity="error"
+            title="Page Error"
+            showDetails={true}
+            showRetry={true}
+            onRetry={() => window.location.reload()}
+            className="mb-6"
+          />
+          <div className="flex gap-4">
+            <Button asChild>
+              <Link href="/">
+                Go Home
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => window.history.back()}>
+              Go Back
+            </Button>
           </div>
         </div>
       </Layout>

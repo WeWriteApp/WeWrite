@@ -175,7 +175,10 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
           <div className="space-y-3 w-full">
             {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
               <div key={`${activity.pageId}-${index}`} className="h-[180px]">
-                <ActivityCard activity={activity} />
+                <ActivityCard
+                  activity={activity}
+                  key={`activity-card-${activity.pageId}-${index}`}
+                />
               </div>
             ))}
           </div>
@@ -240,6 +243,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
                   <ActivityCard
                     activity={activity}
                     isCarousel={!useGridLayout}
+                    key={`activity-card-desktop-${activity.pageId}-${index}`}
                   />
                 </div>
               ))}
@@ -255,11 +259,18 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
 
       {showViewAll && !loading && !error && activities.length > 0 && !isInActivityPage && (
         <div className="flex justify-center">
-          <Link href="/activity">
-            <Button variant="outline" size="sm">
-              View all activity
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault();
+              console.log("View all activity button clicked, navigating to /activity");
+              // Use direct navigation instead of Link component
+              window.location.href = "/activity";
+            }}
+          >
+            View all activity
+          </Button>
         </div>
       )}
 

@@ -126,7 +126,9 @@ export default function RecentPageChanges({ pageId }) {
   const mostRecentVersion = validVersions.length > 0 ? validVersions[0] : null;
 
   const handleViewAllHistory = () => {
-    router.push(`/${pageId}/history`);
+    console.log("RecentPageChanges: Navigating to page history:", `/${pageId}/history`);
+    // Use window.location for more reliable navigation
+    window.location.href = `/${pageId}/history`;
   };
 
   if (loading) {
@@ -163,7 +165,17 @@ export default function RecentPageChanges({ pageId }) {
 
       {/* Most recent activity card */}
       {mostRecentVersion && (
-        <div className="mb-4 p-3 border rounded-md">
+        <div
+          className="mb-4 p-3 border rounded-md cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={() => {
+            console.log("RecentPageChanges: Navigating to most recent version:", mostRecentVersion);
+            // Navigate to the version page if we have a version ID, otherwise to the page itself
+            const url = mostRecentVersion.id
+              ? `/${pageId}/version/${mostRecentVersion.id}`
+              : `/${pageId}`;
+            window.location.href = url;
+          }}
+        >
           <div className="flex justify-between items-start">
             <div>
               <div className="font-medium">

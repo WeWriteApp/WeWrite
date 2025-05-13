@@ -26,13 +26,13 @@ const ActivityCard = ({ activity }) => {
 
   return (
     <Link
-      href={`/page/${activity.pageId}`}
+      href={`/${activity.pageId}`}
       className="block rounded-lg p-4 bg-card border-0 shadow-none max-w-md"
       style={{ transform: 'none' }}
     >
       <div className="flex justify-between items-center gap-1.5 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <PillLink href={`/page/${activity.pageId}`} variant="primary">
+          <PillLink href={`/${activity.pageId}`} variant="primary">
             {activity.pageName || "Untitled page"}
           </PillLink>
           <span className="text-xs">

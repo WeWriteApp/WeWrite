@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useContext } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock } from "lucide-react";
 import ActivityCard from "../components/ActivityCard";
+import { AuthContext } from "../providers/AuthProvider";
 
 /**
  * Client component for the activity page that renders pre-fetched data
@@ -61,16 +62,16 @@ export default function ActivityPageClient({
           size="sm"
           onClick={() => {
             try {
-              // Use router.back() with a fallback to home page
+              // Use direct navigation with fallback to home page
               if (window.history.length > 1) {
-                router.back();
+                window.history.back();
               } else {
-                router.push('/');
+                window.location.href = '/';
               }
             } catch (error) {
               console.error("Navigation error:", error);
               // Fallback to home page if there's any error
-              router.push('/');
+              window.location.href = '/';
             }
           }}
         >

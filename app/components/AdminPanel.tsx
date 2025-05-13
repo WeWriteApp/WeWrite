@@ -401,54 +401,21 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Feature Flags Tab */}
+              {/* Feature Flags Tab - Removed */}
               <TabsContent value="features" className="space-y-4">
-                {isLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {featureFlags.map(flag => (
-                      <div
-                        key={flag.id}
-                        className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{flag.name}</span>
-                            {flag.adminOnly && (
-                              <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                                Admin Only
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">{flag.description}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium">
-                            {flag.enabled ? (
-                              <span className="text-green-600 dark:text-green-400 flex items-center">
-                                <Check className="h-3 w-3 mr-1" />
-                                Enabled
-                              </span>
-                            ) : (
-                              <span className="text-red-600 dark:text-red-400 flex items-center">
-                                <X className="h-3 w-3 mr-1" />
-                                Disabled
-                              </span>
-                            )}
-                          </span>
-                          <Switch
-                            checked={flag.enabled}
-                            onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
-                            disabled={isLoading || flag.id === 'admin_features'} // Prevent disabling admin features
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="flex flex-col items-center justify-center p-6 text-center">
+                  <Settings className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Feature Flags Moved</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Feature flag management has been moved to the home page debugger.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.href = '/'}
+                  >
+                    Go to Home Page
+                  </Button>
+                </div>
               </TabsContent>
 
               {/* Admin Users Tab */}

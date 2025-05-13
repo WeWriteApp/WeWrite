@@ -261,17 +261,18 @@ const Search = () => {
 
     // If there's a search term, include it in the URL
     if (searchTerm) {
-      router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
+      router.push(`/search?q=${encodeURIComponent(searchTerm)}`, undefined, { scroll: true });
     } else {
       // Navigate to search page without a query
-      router.push('/search');
+      router.push('/search', undefined, { scroll: true });
     }
   }
 
   // Function to directly navigate to search page
   const navigateToSearchPage = () => {
     console.log('Directly navigating to search page');
-    router.push('/search');
+    // Use router.push with options to ensure proper navigation
+    router.push('/search', undefined, { scroll: true });
   };
 
   return (

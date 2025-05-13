@@ -144,18 +144,32 @@ export const PillLink = forwardRef(({
 
   // Internal link (user or page)
   return (
-    <Link
+    <a
       ref={ref}
       href={href}
       className={baseStyles}
       tabIndex={0}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
+      onClick={(e) => {
+        e.preventDefault(); // Prevent default to handle navigation manually
+
+        console.log('PillLink clicked:', {
+          href,
+          isPageLink: isPageLinkType,
+          isUserLink: isUserLinkType,
+          pageId: isPageLinkType ? pageId : undefined
+        });
+
+        // Force a hard navigation using window.location.href
+        // This bypasses any router issues and ensures the navigation works
+        window.location.href = href;
+      }}
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
       {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
-    </Link>
+    </a>
   );
 });
 

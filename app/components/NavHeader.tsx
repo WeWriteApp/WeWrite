@@ -36,9 +36,18 @@ export default function NavHeader({
 
   const handleBack = () => {
     if (backUrl) {
-      router.push(backUrl);
+      console.log("NavHeader: Navigating to backUrl:", backUrl);
+      // Use window.location for more reliable navigation
+      window.location.href = backUrl;
     } else {
-      router.back();
+      console.log("NavHeader: Going back in history");
+      // Try router.back() first, but fall back to window.history if needed
+      try {
+        router.back();
+      } catch (error) {
+        console.error("Navigation error:", error);
+        window.history.back();
+      }
     }
   };
 

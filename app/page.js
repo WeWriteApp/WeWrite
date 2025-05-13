@@ -11,7 +11,7 @@ import RecentActivity from "./components/RecentActivity";
 import TrendingPages from "./components/TrendingPages";
 import MyGroups from "./components/MyGroups";
 import HomeGroupsSection from "./components/HomeGroupsSection";
-import FeatureFlagDebugger from "./components/FeatureFlagDebugger";
+import FeatureFlagDebuggerModal from "./components/FeatureFlagDebuggerModal";
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
@@ -102,8 +102,8 @@ export default function Home() {
       <main className="p-6 space-y-6 bg-background" data-component-name="Home">
         <AddUsername />
 
-        {/* Feature Flag Debugger - Only visible to admin users */}
-        {user?.email === 'jamiegray2234@gmail.com' && <FeatureFlagDebugger />}
+        {/* Feature Flag Debugger Modal - Only visible to admin users */}
+        {user?.email === 'jamiegray2234@gmail.com' && <FeatureFlagDebuggerModal />}
 
         <div className="w-full mb-6">
           <SearchButton placeholder="Search all pages..." />

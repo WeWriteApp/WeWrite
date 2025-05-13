@@ -32,12 +32,17 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       return;
     }
 
+    // More detailed logging to debug the issue with newer items not being clickable
     console.log('ActivityCard: Rendering activity', {
       pageId: activity.pageId,
       pageName: activity.pageName,
       userId: activity.userId,
       username: activity.username,
-      timestamp: activity.timestamp
+      timestamp: activity.timestamp,
+      versionId: activity.versionId,
+      href: activity.versionId ? `/${activity.pageId}/version/${activity.versionId}` : `/${activity.pageId}`,
+      isNewPage: activity.isNewPage,
+      fullActivity: { ...activity }
     });
   }, [activity]);
 
@@ -82,26 +87,50 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;
 
+  // Handle card click to navigate to the page
+  const handleCardClick = (e) => {
+    e.preventDefault(); // Prevent default link behavior
+
+    // Ensure we have a valid pageId before navigating
+    if (!activity.pageId) {
+      console.error('ActivityCard: Cannot navigate - missing pageId', activity);
+      return;
+    }
+
+    // Construct the URL based on whether we have a versionId
+    const url = activity.versionId ? `/${activity.pageId}/version/${activity.versionId}` : `/${activity.pageId}`;
+
+    console.log('ActivityCard clicked, navigating to:', url);
+
+    // Force a hard navigation using window.location.href
+    // This bypasses any router issues and ensures the navigation works
+    window.location.href = url;
+  };
+
+  // Create the URL for this activity
+  const activityUrl = activity.versionId
+    ? `/${activity.pageId}/version/${activity.versionId}`
+    : `/${activity.pageId}`;
+
   return (
-    <div
+    <a
+      href={activityUrl}
       className={cn(
-        "w-full wewrite-card border-0 shadow-none",
+        "w-full wewrite-card border-0 shadow-none cursor-pointer no-underline",
         isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
         "flex flex-col",
         compactLayout ? "p-4" : "p-4" // Consistent padding
       )}
       style={{ transform: 'none' }}
+      onClick={handleCardClick}
     >
       {/* Header section with fixed height */}
       <div className="flex flex-col w-full flex-shrink-0">
         {/* Page title with fixed height and ellipsis */}
         <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
-          <PillLink
-            href={activity.versionId ? `/${activity.pageId}/version/${activity.versionId}` : `/${activity.pageId}`}
-            className="max-w-full line-clamp-2"
-          >
+          <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors max-w-full px-2 py-0.5 bg-primary/10 text-primary hover:bg-primary/20">
             {activity.pageName || "Untitled page"}
-          </PillLink>
+          </span>
         </div>
 
         {/* User and timestamp info */}
@@ -114,11 +143,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 {activity.username || "anonymous"}
               </span>
             ) : (
-              <Link
-                href={`/user/${activity.userId}`}
-                className="hover:underline text-primary"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <span className="text-primary">
                 {activity.username || "anonymous"}
                 {subscriptionEnabled && (
                   <SupporterIcon
@@ -127,7 +152,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                     size="sm"
                   />
                 )}
-              </Link>
+              </span>
             )}
           </div>
           <TooltipProvider>
@@ -211,7 +236,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           )}
         </div>
       </div>
-    </div>
+    </a>
   );
 };
 

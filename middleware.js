@@ -35,6 +35,13 @@ export function middleware(request) {
     }
   }
 
+  // Redirect /page/[id] to /[id] (singular form)
+  if (path.startsWith('/page/')) {
+    const id = path.replace('/page/', '');
+    url.pathname = `/${id}`;
+    return NextResponse.redirect(url);
+  }
+
   // Redirect /u/[slug] to /user/[id]
   if (path.startsWith('/u/')) {
     const id = path.replace('/u/', '');
@@ -46,14 +53,21 @@ export function middleware(request) {
   // Instead, we'll let the /[id] route handle the logic of determining
   // whether it's a page, user, or group
 
-  // Redirect /groups/[id] to /g/[id]
+  // Redirect /groups/[id] to /group/[id]
   if (path.startsWith('/groups/')) {
     const id = path.replace('/groups/', '');
     // Don't redirect /groups/new
     if (id !== 'new') {
-      url.pathname = `/g/${id}`;
+      url.pathname = `/group/${id}`;
       return NextResponse.redirect(url);
     }
+  }
+
+  // Redirect /g/[id] to /group/[id]
+  if (path.startsWith('/g/')) {
+    const id = path.replace('/g/', '');
+    url.pathname = `/group/${id}`;
+    return NextResponse.redirect(url);
   }
 
   // We're not going to handle URLs with slashes in them in the middleware
