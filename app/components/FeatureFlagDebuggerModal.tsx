@@ -16,7 +16,8 @@ export default function FeatureFlagDebuggerModal() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false); // Always initialize to false
-  const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 100 });
+  // Always position in the bottom right corner of the viewport
+  const [position, setPosition] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
   const dragControls = useDragControls();
   const constraintsRef = useRef(null);
 
@@ -112,18 +113,24 @@ export default function FeatureFlagDebuggerModal() {
     setIsHidden(false);
 
     const updateConstraints = () => {
-      // This will run on mount and window resize
-      setPosition(prev => ({
-        x: Math.min(Math.max(prev.x, 0), window.innerWidth - 60),
-        y: Math.min(Math.max(prev.y, 0), window.innerHeight - 60)
-      }));
+      // Always ensure the button is within the viewport
+      // Use fixed values for bottom-right corner to ensure visibility
+      setPosition({
+        x: window.innerWidth - 80,
+        y: window.innerHeight - 80
+      });
+
+      console.log("Window resized, button repositioned to bottom-right corner");
     };
 
+    // Add resize listener
     window.addEventListener('resize', updateConstraints);
+
+    // Initial positioning
     updateConstraints();
 
     // Log that the component has mounted
-    console.log("FeatureFlagDebuggerModal mounted and visible");
+    console.log("FeatureFlagDebuggerModal mounted and visible in bottom-right corner");
 
     return () => window.removeEventListener('resize', updateConstraints);
   }, []);
@@ -142,27 +149,40 @@ export default function FeatureFlagDebuggerModal() {
         drag
         dragControls={dragControls}
         dragMomentum={false}
-        dragConstraints={constraintsRef}
+        dragConstraints={{
+          top: 0,
+          left: 0,
+          right: window.innerWidth - 60,
+          bottom: window.innerHeight - 60
+        }}
         initial={position}
         animate={position}
         onDragEnd={(e, info) => {
-          // Update position state after drag
+          // Ensure the button stays within viewport bounds
+          const safeX = Math.min(Math.max(info.point.x - 30, 20), window.innerWidth - 80);
+          const safeY = Math.min(Math.max(info.point.y - 30, 20), window.innerHeight - 80);
+
+          console.log("Button dragged to:", { x: safeX, y: safeY });
+
+          // Update position state after drag with safe values
           setPosition({
-            x: Math.min(Math.max(info.point.x - 30, 0), window.innerWidth - 60),
-            y: Math.min(Math.max(info.point.y - 30, 0), window.innerHeight - 60)
+            x: safeX,
+            y: safeY
           });
         }}
         className="absolute pointer-events-auto"
         style={{
           touchAction: 'none',
+          zIndex: 9999,
+          // Ensure the button is always visible by using fixed positioning
+          position: 'fixed',
           bottom: '20px',
-          right: '20px',
-          zIndex: 9999
+          right: '20px'
         }}
       >
         <Button
           size="icon"
-          className="h-12 w-12 rounded-full shadow-lg bg-red-500 hover:bg-red-600 text-white"
+          className="h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90 text-white"
           onClick={() => {
             console.log("Feature flag button clicked");
             setIsOpen(true);
