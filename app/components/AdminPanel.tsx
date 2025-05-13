@@ -43,7 +43,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
   const { toast } = useToast();
   const { resetBannerState } = usePWA();
-  const [activeTab, setActiveTab] = useState('features');
+  const [activeTab, setActiveTab] = useState('users');
   const [isOpen, setIsOpen] = useState(false);
 
   // User management state
@@ -369,7 +369,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
           Admin Panel
         </CardTitle>
         <CardDescription>
-          Manage feature flags and admin settings
+          Manage admin users and system settings
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -386,11 +386,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
           <CollapsibleContent className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="features">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Feature Flags
-                </TabsTrigger>
+              <TabsList className="mb-4 grid w-full grid-cols-2">
                 <TabsTrigger value="users">
                   <Users className="h-4 w-4 mr-2" />
                   Admin Users
@@ -400,23 +396,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                   Admin Tools
                 </TabsTrigger>
               </TabsList>
-
-              {/* Feature Flags Tab - Removed */}
-              <TabsContent value="features" className="space-y-4">
-                <div className="flex flex-col items-center justify-center p-6 text-center">
-                  <Settings className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Feature Flags Moved</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Feature flag management has been moved to the home page debugger.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => window.location.href = '/'}
-                  >
-                    Go to Home Page
-                  </Button>
-                </div>
-              </TabsContent>
 
               {/* Admin Users Tab */}
               <TabsContent value="users" className="space-y-4">
