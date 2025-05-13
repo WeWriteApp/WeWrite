@@ -15,7 +15,7 @@ export default function FeatureFlagDebuggerModal() {
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [isHidden, setIsHidden] = useState(false);
+  const [isHidden, setIsHidden] = useState(false); // Always initialize to false
   const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 100 });
   const dragControls = useDragControls();
   const constraintsRef = useRef(null);
@@ -101,12 +101,16 @@ export default function FeatureFlagDebuggerModal() {
 
   // Handle hiding the button until next refresh
   const handleHideUntilRefresh = () => {
-    setIsHidden(true);
+    // Just close the modal but don't hide the button
+    console.log("Close modal but keep button visible");
     setIsOpen(false);
   };
 
-  // Set up constraints for dragging
+  // Set up constraints for dragging and ensure visibility
   useEffect(() => {
+    // Force the component to be visible on mount
+    setIsHidden(false);
+
     const updateConstraints = () => {
       // This will run on mount and window resize
       setPosition(prev => ({
@@ -118,6 +122,9 @@ export default function FeatureFlagDebuggerModal() {
     window.addEventListener('resize', updateConstraints);
     updateConstraints();
 
+    // Log that the component has mounted
+    console.log("FeatureFlagDebuggerModal mounted and visible");
+
     return () => window.removeEventListener('resize', updateConstraints);
   }, []);
 
@@ -125,8 +132,11 @@ export default function FeatureFlagDebuggerModal() {
     return null;
   }
 
+  // Add debug logging
+  console.log("FeatureFlagDebuggerModal rendering", { isHidden, position });
+
   return (
-    <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-50">
+    <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-[9999]">
       {/* Floating Action Button */}
       <motion.div
         drag
@@ -143,12 +153,20 @@ export default function FeatureFlagDebuggerModal() {
           });
         }}
         className="absolute pointer-events-auto"
-        style={{ touchAction: 'none' }}
+        style={{
+          touchAction: 'none',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 9999
+        }}
       >
         <Button
           size="icon"
-          className="h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90"
-          onClick={() => setIsOpen(true)}
+          className="h-12 w-12 rounded-full shadow-lg bg-red-500 hover:bg-red-600 text-white"
+          onClick={() => {
+            console.log("Feature flag button clicked");
+            setIsOpen(true);
+          }}
         >
           <Code className="h-6 w-6" />
         </Button>
