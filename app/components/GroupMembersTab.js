@@ -57,21 +57,21 @@ export default function GroupMembersTab({ group, isOwner }) {
     const fetchMembers = async () => {
       try {
         setIsLoading(true);
-        
+
         if (!group.members) {
           setMembers([]);
           setFilteredMembers([]);
           setIsLoading(false);
           return;
         }
-        
+
         // Transform members object into array with user details
         const membersArray = await Promise.all(
           Object.entries(group.members).map(async ([userId, memberData]) => {
             try {
               const userRef = ref(rtdb, `users/${userId}`);
               const snapshot = await get(userRef);
-              
+
               if (snapshot.exists()) {
                 return {
                   id: userId,
@@ -97,7 +97,7 @@ export default function GroupMembersTab({ group, isOwner }) {
             }
           })
         );
-        
+
         setMembers(membersArray);
         setFilteredMembers(membersArray);
       } catch (err) {
@@ -114,10 +114,10 @@ export default function GroupMembersTab({ group, isOwner }) {
   // Filter members when search term changes
   useEffect(() => {
     if (!members.length) return;
-    
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      const filtered = members.filter(member => 
+      const filtered = members.filter(member =>
         (member.username && member.username.toLowerCase().includes(term)) ||
         (member.email && member.email.toLowerCase().includes(term)) ||
         (member.role && member.role.toLowerCase().includes(term))
@@ -131,26 +131,26 @@ export default function GroupMembersTab({ group, isOwner }) {
   // Search for users to add to the group
   const handleUserSearch = async () => {
     if (!userSearchTerm) return;
-    
+
     try {
       setIsSearching(true);
       setSearchResults([]);
-      
+
       // Search by email
       const usersRef = ref(rtdb, 'users');
       const snapshot = await get(usersRef);
-      
+
       if (snapshot.exists()) {
         const users = [];
         const term = userSearchTerm.toLowerCase();
-        
+
         snapshot.forEach(childSnapshot => {
           const userData = childSnapshot.val();
           const userId = childSnapshot.key;
-          
+
           // Skip users who are already members
           if (group.members && group.members[userId]) return;
-          
+
           // Match by email or username
           if (
             (userData.email && userData.email.toLowerCase().includes(term)) ||
@@ -162,7 +162,7 @@ export default function GroupMembersTab({ group, isOwner }) {
             });
           }
         });
-        
+
         setSearchResults(users);
       }
     } catch (err) {
@@ -180,22 +180,22 @@ export default function GroupMembersTab({ group, isOwner }) {
   // Add a member to the group
   const handleAddMember = async () => {
     if (!selectedUser) return;
-    
+
     try {
       setIsAddingMember(true);
-      
+
       // Update the group members
       const groupRef = ref(rtdb, `groups/${group.id}/members/${selectedUser.id}`);
       await set(groupRef, {
         role: "member",
         joinedAt: new Date().toISOString()
       });
-      
+
       toast({
         title: "Success",
-        description: `${selectedUser.username || selectedUser.email} has been added to the group.`
+        description: `${selectedUser.username || "User"} has been added to the group.`
       });
-      
+
       // Reset state
       setSelectedUser(null);
       setUserSearchTerm("");
@@ -218,18 +218,18 @@ export default function GroupMembersTab({ group, isOwner }) {
   const handleRoleChange = async (memberId, newRole) => {
     try {
       setIsLoading(true);
-      
+
       // Update the member's role
       const memberRef = ref(rtdb, `groups/${group.id}/members/${memberId}`);
       await update(memberRef, {
         role: newRole
       });
-      
+
       toast({
         title: "Success",
         description: `Member role updated to ${newRole}.`
       });
-      
+
       setRefreshKey(prev => prev + 1);
     } catch (err) {
       console.error("Error updating member role:", err);
@@ -247,16 +247,16 @@ export default function GroupMembersTab({ group, isOwner }) {
   const handleRemoveMember = async (memberId) => {
     try {
       setIsLoading(true);
-      
+
       // Remove the member
       const memberRef = ref(rtdb, `groups/${group.id}/members/${memberId}`);
       await set(memberRef, null);
-      
+
       toast({
         title: "Success",
         description: "Member removed from the group."
       });
-      
+
       setRefreshKey(prev => prev + 1);
     } catch (err) {
       console.error("Error removing member:", err);
@@ -294,10 +294,10 @@ export default function GroupMembersTab({ group, isOwner }) {
       {/* Header with controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-xl font-semibold">Group Members</h2>
-        
+
         {isOwner && (
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setIsAddMemberDialogOpen(true)}
             className="gap-1"
           >
@@ -306,7 +306,7 @@ export default function GroupMembersTab({ group, isOwner }) {
           </Button>
         )}
       </div>
-      
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -317,7 +317,7 @@ export default function GroupMembersTab({ group, isOwner }) {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      
+
       {/* Members list */}
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -361,9 +361,6 @@ export default function GroupMembersTab({ group, isOwner }) {
                         <PillLink href={`/user/${member.id}`}>
                           {member.username || "Unknown User"}
                         </PillLink>
-                        {member.email && (
-                          <p className="text-xs text-muted-foreground">{member.email}</p>
-                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -402,7 +399,7 @@ export default function GroupMembersTab({ group, isOwner }) {
                                 Remove Admin
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleRemoveMember(member.id)}
                               className="text-destructive focus:text-destructive"
                             >
@@ -420,7 +417,7 @@ export default function GroupMembersTab({ group, isOwner }) {
           </Table>
         </div>
       )}
-      
+
       {/* Add Member Dialog */}
       <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
         <DialogContent>
@@ -430,7 +427,7 @@ export default function GroupMembersTab({ group, isOwner }) {
               Search for users by email or username to add them to this group.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="flex gap-2">
               <Input
@@ -439,22 +436,22 @@ export default function GroupMembersTab({ group, isOwner }) {
                 onChange={(e) => setUserSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUserSearch()}
               />
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleUserSearch}
                 disabled={isSearching || !userSearchTerm}
               >
                 {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
-            
+
             {searchResults.length > 0 ? (
               <div className="border rounded-md max-h-[200px] overflow-y-auto">
                 <Table>
                   <TableBody>
                     {searchResults.map(user => (
-                      <TableRow 
-                        key={user.id} 
+                      <TableRow
+                        key={user.id}
                         className={`cursor-pointer ${selectedUser?.id === user.id ? 'bg-muted' : ''}`}
                         onClick={() => setSelectedUser(user)}
                       >
@@ -468,9 +465,6 @@ export default function GroupMembersTab({ group, isOwner }) {
                             </Avatar>
                             <div>
                               <p className="font-medium">{user.username || "Unknown User"}</p>
-                              {user.email && (
-                                <p className="text-xs text-muted-foreground">{user.email}</p>
-                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -490,13 +484,13 @@ export default function GroupMembersTab({ group, isOwner }) {
               </div>
             ) : null}
           </div>
-          
+
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
-              onClick={handleAddMember} 
+            <Button
+              onClick={handleAddMember}
               disabled={!selectedUser || isAddingMember}
             >
               {isAddingMember ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}

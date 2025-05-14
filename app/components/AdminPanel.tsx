@@ -89,13 +89,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       description: 'Enable groups functionality and UI',
       enabled: false,
       adminOnly: false
-    },
-    {
-      id: 'admin_features',
-      name: 'Admin Features',
-      description: 'Enable admin-only features',
-      enabled: true,
-      adminOnly: true
     }
   ]);
 
@@ -160,14 +153,32 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
       if (featureFlagsDoc.exists()) {
         const flagsData = featureFlagsDoc.data();
+        console.log('Feature flags from database:', flagsData);
+
+        // Filter out any flags that aren't defined in our FeatureFlag type
+        const validFlags = {};
+        Object.keys(flagsData).forEach(key => {
+          // Only include keys that match our defined feature flags
+          if (featureFlags.some(flag => flag.id === key)) {
+            validFlags[key] = flagsData[key];
+          } else {
+            console.log(`Removing undefined feature flag from database: ${key}`);
+          }
+        });
 
         // Update local state with data from Firestore
         setFeatureFlags(prev =>
           prev.map(flag => ({
             ...flag,
-            enabled: flagsData[flag.id] !== undefined ? flagsData[flag.id] : flag.enabled
+            enabled: validFlags[flag.id] !== undefined ? validFlags[flag.id] : flag.enabled
           }))
         );
+
+        // If we found invalid flags, update the database to remove them
+        if (Object.keys(validFlags).length !== Object.keys(flagsData).length) {
+          console.log('Updating database to remove invalid feature flags');
+          await setDoc(featureFlagsRef, validFlags);
+        }
       }
     } catch (error) {
       console.error('Error loading feature flags:', error);

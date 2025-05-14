@@ -18,6 +18,8 @@ import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 
+
+
 // Dynamically import components with no SSR
 const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
   ssr: false
@@ -68,6 +70,7 @@ export default function ClientLayout({ children }) {
                           <WindsurfOverlay />
                         </>
                       )}
+
                           </LineSettingsProvider>
                         </DrawerProvider>
                       </MobileProvider>

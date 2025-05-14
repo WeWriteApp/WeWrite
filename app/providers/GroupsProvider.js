@@ -16,25 +16,35 @@ export const GroupsProvider = ({ children }) => {
   // Function to fetch groups once
   const fetchGroups = useCallback(async () => {
     try {
+      console.log('[DEBUG] GroupsProvider - Starting to fetch groups');
       setLoading(true);
       setError(null);
 
       // If user is not logged in, we don't need to fetch groups
       if (!user) {
+        console.log('[DEBUG] GroupsProvider - No user, skipping groups fetch');
         setGroups([]);
         setLoading(false);
         return;
       }
+
+      console.log('[DEBUG] GroupsProvider - Fetching groups for user:', user.uid);
 
       // Only fetch groups the user is a member of
       const userGroupsRef = ref(rtdb, `users/${user.uid}/groups`);
+      console.log('[DEBUG] GroupsProvider - User groups reference:', userGroupsRef.toString());
+
       const userGroupsSnapshot = await get(userGroupsRef);
+      console.log('[DEBUG] GroupsProvider - User groups snapshot exists:', userGroupsSnapshot.exists());
 
       if (!userGroupsSnapshot.exists()) {
+        console.log('[DEBUG] GroupsProvider - No groups found for user');
         setGroups([]);
         setLoading(false);
         return;
       }
+
+      console.log('[DEBUG] GroupsProvider - User groups data:', userGroupsSnapshot.val());
 
       const userGroups = userGroupsSnapshot.val();
       const groupIds = Object.keys(userGroups);

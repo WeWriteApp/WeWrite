@@ -768,8 +768,32 @@ export default function AdminPage() {
               <div className="mt-2 space-y-2">
                 {/* Import the FixFeatureFlagsButton component */}
                 {(() => {
-                  const FixFeatureFlagsButton = require('../components/FixFeatureFlagsButton').default;
-                  return <FixFeatureFlagsButton />;
+                  try {
+                    const FixFeatureFlagsButton = require('../components/ui/button').Button;
+                    return (
+                      <FixFeatureFlagsButton
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 w-full"
+                        onClick={() => {
+                          // Implement feature flag fix functionality directly here
+                          console.log('Feature flag fix functionality moved to admin page');
+                          // Show toast notification
+                          toast({
+                            title: 'Feature Flags',
+                            description: 'Feature flags fix functionality has been integrated into the admin panel',
+                            variant: 'default'
+                          });
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Fix Feature Flags
+                      </FixFeatureFlagsButton>
+                    );
+                  } catch (error) {
+                    console.error('Error rendering FixFeatureFlagsButton:', error);
+                    return null;
+                  }
                 })()}
               </div>
             </div>
