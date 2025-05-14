@@ -17,6 +17,7 @@ import { NotificationProvider } from "./providers/NotificationProvider";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import AdminFeaturesWrapper from "./components/AdminFeaturesWrapper";
 
 
 
@@ -61,7 +62,9 @@ export default function ClientLayout({ children }) {
                         {!isAuthPage && <UsernameWarningBanner />}
                         {!isAuthPage && <UsernameEnforcementBanner />}
                         <main className="flex-grow">
-                          {children}
+                          <AdminFeaturesWrapper>
+                            {children}
+                          </AdminFeaturesWrapper>
                         </main>
                       </div>
                       {process.env.NODE_ENV === 'development' && (

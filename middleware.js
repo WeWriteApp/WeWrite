@@ -15,10 +15,17 @@ export function middleware(request) {
 
   // Define paths that always require authentication
   const requiresAuth = path === "/new" ||
-                      path === "/groups/new" ||
                       path.startsWith("/dashboard") ||
                       path === "/subscription" ||
                       path === "/subscription/";
+
+  // Define paths that require admin access (only accessible to admin users)
+  const requiresAdmin = path === "/groups" ||
+                      path === "/groups/" ||
+                      path.startsWith("/groups/") ||
+                      path === "/group" ||
+                      path === "/group/" ||
+                      path.startsWith("/group/");
 
   // Get the token from the cookies
   const token = request.cookies.get("session")?.value;
@@ -85,6 +92,19 @@ export function middleware(request) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("from", path);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // For admin-only paths, check if the user is an admin
+  if (requiresAdmin) {
+    // Get the admin status from cookies
+    const userEmail = request.cookies.get("user_email")?.value;
+    const isAdmin = userEmail === "jamiegray2234@gmail.com";
+
+    // If not an admin, redirect to home page
+    if (!isAdmin) {
+      console.log(`[DEBUG] Non-admin user (${userEmail || 'unknown'}) attempted to access admin-only path: ${path}`);
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return NextResponse.next();

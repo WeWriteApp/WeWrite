@@ -35,7 +35,22 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
   console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
 
   try {
-    // Always check the database first, regardless of admin status
+    // For the 'groups' flag, only allow admin users regardless of database setting
+    if (flag === 'groups') {
+      const isUserAdmin = isAdmin(userEmail);
+      console.log(`[DEBUG] GROUPS FLAG CHECK - User is admin: ${isUserAdmin}`);
+
+      // If user is not an admin, always return false for groups feature
+      if (!isUserAdmin) {
+        console.log(`[DEBUG] GROUPS FLAG CHECK - Non-admin user, disabling groups feature`);
+        return false;
+      }
+
+      // For admin users, continue to check the database setting
+      console.log(`[DEBUG] GROUPS FLAG CHECK - Admin user, checking database setting`);
+    }
+
+    // Check the database for the feature flag setting
     const { doc, getDoc } = await import('firebase/firestore');
     const { db } = await import('../firebase/database');
 
@@ -61,7 +76,6 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
       const isEnabledInDb = flagsData[flag] === true;
       console.log(`[DEBUG] Feature flag ${flag} in database: ${isEnabledInDb}`);
 
-      // Return the database value regardless of admin status
       return isEnabledInDb;
     } else {
       console.log(`[DEBUG] No feature flags document found in database, checking defaults`);
