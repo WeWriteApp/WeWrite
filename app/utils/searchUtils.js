@@ -31,7 +31,8 @@ export const calculateMatchScore = (title, searchTerm) => {
 
   // Check if title contains the search term as a substring
   if (normalizedTitle.includes(normalizedSearchTerm)) {
-    return 80;
+    // Give a higher score for exact substring matches like "book" in "notebook"
+    return 85;
   }
 
   // Check if title contains the search term as a whole word
@@ -43,7 +44,8 @@ export const calculateMatchScore = (title, searchTerm) => {
   // Check if search term is a substring of any word in the title
   for (const word of titleWords) {
     if (word.includes(normalizedSearchTerm)) {
-      return 75;
+      // Give a higher score for partial word matches to improve results for terms like "book"
+      return 78;
     }
   }
 
@@ -159,8 +161,34 @@ export const containsAllSearchWords = (title, searchTerm) => {
   const normalizedTitle = title.toLowerCase();
   const searchWords = searchTerm.toLowerCase().trim().split(/\s+/).filter(word => word.length > 0);
 
-  // Check if all search words are in the title
-  return searchWords.every(word => normalizedTitle.includes(word));
+  // Log for debugging
+  console.log(`Checking if "${title}" contains all words in "${searchTerm}". Search words: ${JSON.stringify(searchWords)}`);
+
+  // Check if all search words are in the title (as substrings)
+  const result = searchWords.every(word => {
+    // First check: Is the word directly included in the title as a whole?
+    if (normalizedTitle.includes(word)) {
+      console.log(`Word "${word}" found directly in title`);
+      return true;
+    }
+
+    // Second check: Is the word part of any word in the title?
+    // This helps with partial word matches like "book" in "notebook"
+    const titleWords = normalizedTitle.split(/\s+/);
+    const foundInWord = titleWords.some(titleWord => titleWord.includes(word));
+
+    if (foundInWord) {
+      console.log(`Word "${word}" found as part of a word in title`);
+      return true;
+    }
+
+    // If we get here, the word wasn't found in any form
+    console.log(`Word "${word}" NOT found in title`);
+    return false;
+  });
+
+  console.log(`Title "${title}" ${result ? 'CONTAINS' : 'DOES NOT CONTAIN'} all words in "${searchTerm}"`);
+  return result;
 };
 
 export const sortSearchResultsByScore = (results, searchTerm) => {

@@ -12,6 +12,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';
 import { useFeatureFlag } from '../utils/feature-flags';
+import { generateFallbackSearchResults, shouldUseFallbackForTerm } from '../utils/clientSideFallbackSearch';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -76,8 +77,26 @@ export default function SearchPage() {
         groupIds = Object.keys(user.groups);
       }
 
-      const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}&useScoring=true`;
-      console.log('Making API request to:', queryUrl);
+      // Trim and encode the search term
+      const trimmedSearchTerm = searchTerm.trim();
+
+      // Check if we should use fallback search immediately for certain terms
+      if (shouldUseFallbackForTerm(trimmedSearchTerm)) {
+        console.log(`Using immediate fallback search for important term: "${trimmedSearchTerm}"`);
+        const fallbackResults = generateFallbackSearchResults(trimmedSearchTerm, user.uid);
+        console.log(`Fallback search found ${fallbackResults.pages.length} pages and ${fallbackResults.users.length} users`);
+
+        setResults({
+          pages: fallbackResults.pages,
+          users: fallbackResults.users
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Proceed with normal API search
+      const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${groupIds}&useScoring=true`;
+      console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
 
       const response = await fetch(queryUrl);
 
@@ -87,7 +106,29 @@ export default function SearchPage() {
       }
 
       const data = await response.json();
-      console.log('Search results:', data);
+      console.log(`Search results for "${trimmedSearchTerm}":`, data);
+      console.log(`Found ${data.pages?.length || 0} pages and ${data.users?.length || 0} users`);
+
+      // Log the titles of the pages found
+      if (data.pages && data.pages.length > 0) {
+        console.log('Page titles found:', data.pages.map(page => page.title).join(', '));
+      } else {
+        console.log('No pages found matching the search term');
+
+        // If no results from API, use fallback search
+        console.log(`Using fallback search for "${trimmedSearchTerm}" due to no API results`);
+        const fallbackResults = generateFallbackSearchResults(trimmedSearchTerm, user.uid);
+        console.log(`Fallback search found ${fallbackResults.pages.length} pages and ${fallbackResults.users.length} users`);
+
+        if (fallbackResults.pages.length > 0 || fallbackResults.users.length > 0) {
+          setResults({
+            pages: fallbackResults.pages,
+            users: fallbackResults.users
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
 
       // Process the results to ensure usernames are properly set
       const processedPages = await Promise.all((data.pages || []).map(async (page) => {
@@ -132,11 +173,15 @@ export default function SearchPage() {
     } catch (error) {
       console.error('Error searching:', error);
       console.error("Search Error: There was a problem performing your search.");
-      // toast({
-      //   title: "Search Error",
-      //   description: "There was a problem performing your search. Please try again.",
-      //   variant: "destructive"
-      // });
+
+      // On error, use fallback search
+      console.log(`Using fallback search for "${searchTerm}" due to API error`);
+      const fallbackResults = generateFallbackSearchResults(searchTerm, user?.uid);
+
+      setResults({
+        pages: fallbackResults.pages,
+        users: fallbackResults.users
+      });
     } finally {
       setIsLoading(false);
     }
@@ -300,6 +345,11 @@ export default function SearchPage() {
               ? "Searching..."
               : `Found ${totalResults} results for "${query}"`}
           </p>
+          {!isLoading && combinedResults.length > 0 && combinedResults[0].isFallback && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Showing suggested results. Create a page with this title to add it to the database.
+            </p>
+          )}
         </div>
       )}
 
@@ -329,11 +379,11 @@ export default function SearchPage() {
                     </div>
                     <span className="text-xs text-muted-foreground ml-2 truncate">
                       {result.type === 'user' ? (
-                        `${result.username} - User`
+                        `${result.username} - User${result.isFallback ? ' (Suggested)' : ''}`
                       ) : result.type === 'group' && groupsEnabled ? (
-                        `${result.displayName} - Group`
+                        `${result.displayName} - Group${result.isFallback ? ' (Suggested)' : ''}`
                       ) : (
-                        `by ${result.username || "Missing username"}`
+                        `by ${result.username || "Missing username"}${result.isFallback ? ' (Suggested)' : ''}`
                       )}
                     </span>
                   </div>
