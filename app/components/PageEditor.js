@@ -78,7 +78,7 @@ const PageEditor = ({
   );
 
   // Keep the API compatible with the rest of the code
-  const [, setSavedContent, clearSavedContent] = useEditorAutoSave(
+  const [savedContent, setSavedContent, clearSavedContent, isAutoSaving] = useEditorAutoSave(
     '', initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 

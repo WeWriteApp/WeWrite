@@ -7,7 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../firebase/config';
-import ClientPage from '../pages/[id]/client-page';
+import ClientPage from '../pages/[id]/client-page.tsx';
 import { Loader } from '../components/Loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
