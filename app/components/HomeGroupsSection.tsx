@@ -30,54 +30,18 @@ export default function HomeGroupsSection() {
   const { user } = useContext(AuthContext);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<{flag: boolean, error?: string}>({ flag: false });
 
   // Check if the groups feature flag is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
 
-  // Add direct check for feature flag for debugging
   useEffect(() => {
-    const checkFeatureFlag = async () => {
-      try {
-        const { doc, getDoc } = await import('firebase/firestore');
-        const { db } = await import('../firebase/database');
-
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          const isEnabled = flagsData['groups'] === true;
-          console.log('HomeGroupsSection - Direct check - Groups feature flag:', isEnabled);
-          setDebugInfo({ flag: isEnabled });
-        } else {
-          console.log('HomeGroupsSection - No feature flags document found');
-          setDebugInfo({ flag: false, error: 'No feature flags document found' });
-        }
-      } catch (error) {
-        console.error('HomeGroupsSection - Error checking groups feature flag:', error);
-        setDebugInfo({ flag: false, error: String(error) });
-      }
-    };
-
-    checkFeatureFlag();
-  }, []);
-
-  useEffect(() => {
-    console.log('HomeGroupsSection - useFeatureFlag hook value:', groupsEnabled);
-    console.log('HomeGroupsSection - User:', user?.uid, user?.email);
-
     if (!user?.uid) {
-      console.log('HomeGroupsSection - No user ID, not fetching groups');
       return;
     }
 
     if (!groupsEnabled) {
-      console.log('HomeGroupsSection - Groups feature disabled, not fetching groups');
       return;
     }
-
-    console.log('HomeGroupsSection - Fetching groups for user:', user.uid);
 
     // Function to fetch groups where user is a member or owner
     const fetchGroups = () => {
@@ -178,35 +142,8 @@ export default function HomeGroupsSection() {
     return pages ? Object.keys(pages).length : 0;
   };
 
-  // If the groups feature is not enabled, show debug info for admin
+  // If the groups feature is not enabled, don't render anything
   if (!groupsEnabled) {
-    if (user?.email === 'jamiegray2234@gmail.com') {
-      return (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Groups Feature Debug</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Feature Flag Status:</h3>
-                <p>useFeatureFlag hook: {groupsEnabled ? 'Enabled' : 'Disabled'}</p>
-                <p>Direct check: {debugInfo.flag ? 'Enabled' : 'Disabled'}</p>
-                {debugInfo.error && (
-                  <p className="text-red-500">Error: {debugInfo.error}</p>
-                )}
-              </div>
-              <Button
-                onClick={() => window.location.reload()}
-                variant="outline"
-              >
-                Refresh Page
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
     return null;
   }
 

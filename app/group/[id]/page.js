@@ -1,5 +1,6 @@
 import { fetchGroupFromFirebase } from "../../firebase/rtdb";
-import GroupDetails from "../../components/GroupDetails";
+import GroupProfileView from "../../components/GroupProfileView";
+import { Loader } from "lucide-react";
 
 export async function generateMetadata({ params }) {
   const group = await fetchGroupFromFirebase(params.id);
@@ -12,7 +13,7 @@ export async function generateMetadata({ params }) {
   } else {
     return {
       title: group.name,
-      description: group.description,
+      description: group.description || `${group.name} - A collaborative group on WeWrite`,
     };
   }
 }
@@ -20,9 +21,17 @@ export async function generateMetadata({ params }) {
 export default async function Page({ params }) {
   const group = await fetchGroupFromFirebase(params.id);
 
-  if (!group) return <div className="flex items-center justify-center h-screen"><div className="loader loader-lg"></div></div>;
+  if (!group) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <GroupDetails group={group} />
+    <div className="container mx-auto max-w-5xl">
+      <GroupProfileView group={group} />
+    </div>
   );
 }

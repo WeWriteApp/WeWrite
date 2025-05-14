@@ -72,35 +72,15 @@ const PageEditor = ({
   isReply = false,
   replyToId = null
 }) => {
-  // Use auto-save hook for editor content
-  const [savedContent, setSavedContent, clearSavedContent, isAutoSaving] = useEditorAutoSave(
-    isNewPage ? 'new' : (replyToId ? `reply_${replyToId}` : window.location.pathname.split('/').pop()),
+  // Initialize editor with initialContent
+  const [currentEditorValue, setCurrentEditorValue] = useState(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 
-  // Initialize editor with saved content if available, otherwise use initialContent
-  const [currentEditorValue, setCurrentEditorValue] = useState(() => {
-    // If we have saved content and it's not empty, use it
-    if (savedContent && Array.isArray(savedContent) && savedContent.length > 0) {
-      // Check if the first item is not just an empty paragraph
-      const isEmpty = savedContent.length === 1 &&
-                     savedContent[0].type === 'paragraph' &&
-                     savedContent[0].children.length === 1 &&
-                     (!savedContent[0].children[0].text || savedContent[0].children[0].text === '');
-
-      if (!isEmpty) {
-        console.log('Using auto-saved content');
-        toast.info('Restored unsaved content', {
-          description: 'Your previous unsaved work has been restored.',
-          duration: 3000
-        });
-        return savedContent;
-      }
-    }
-
-    // Otherwise use initialContent
-    return initialContent || [{ type: 'paragraph', children: [{ text: '' }] }];
-  });
+  // Keep the API compatible with the rest of the code
+  const [, setSavedContent, clearSavedContent] = useEditorAutoSave(
+    '', initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
+  );
 
   const [titleError, setTitleError] = useState(false);
   const { user } = useContext(AuthContext);
@@ -338,9 +318,6 @@ const PageEditor = ({
   const handleContentChange = (value) => {
     setCurrentEditorValue(value);
 
-    // Update auto-save with the new content
-    setSavedContent(value);
-
     if (onContentChange) {
       onContentChange(value);
     }
@@ -376,17 +353,10 @@ const PageEditor = ({
 
     // Call the provided onSave function with the current editor value
     if (onSave) {
-      // Clear saved content when saving successfully
       try {
         onSave(currentEditorValue);
-        // Clear the auto-saved content after successful save
-        // We'll do this in a timeout to ensure it happens after the save is processed
-        setTimeout(() => {
-          clearSavedContent();
-        }, 1000);
       } catch (error) {
         console.error("Error during save:", error);
-        // Keep auto-saved content if there's an error
       }
     }
   }

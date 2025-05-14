@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import { saveNewVersion, updateDoc } from "../firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import { GroupsContext } from "../providers/GroupsProvider";
@@ -8,6 +8,8 @@ import { useLogging } from "../providers/LoggingProvider";
 import { X, Loader2 } from "lucide-react";
 import { usePage } from "../contexts/PageContext";
 import PageEditor from "./PageEditor";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import UnsavedChangesDialog from "./UnsavedChangesDialog";
 
 const EditPage = ({
   isEditing,
@@ -261,27 +263,105 @@ const EditPage = ({
 
   // State to track the current editor content
   const [editorContent, setEditorContent] = useState(current);
+  const [hasContentChanged, setHasContentChanged] = useState(false);
+  const [hasTitleChanged, setHasTitleChanged] = useState(false);
+  const [hasVisibilityChanged, setHasVisibilityChanged] = useState(false);
+  const [hasLocationChanged, setHasLocationChanged] = useState(false);
+
+  // Track if there are any unsaved changes
+  const hasUnsavedChanges = hasContentChanged || hasTitleChanged || hasVisibilityChanged || hasLocationChanged;
+
+  // Memoized save function for the useUnsavedChanges hook
+  const saveChanges = useCallback(() => {
+    return handleSave(editorContent || current);
+  }, [editorContent, current]);
+
+  // Use the unsaved changes hook
+  const {
+    showUnsavedChangesDialog,
+    handleNavigation,
+    handleStayAndSave,
+    handleLeaveWithoutSaving,
+    handleCloseDialog,
+    isHandlingNavigation
+  } = useUnsavedChanges(hasUnsavedChanges, saveChanges);
+
+  // Handle content changes
+  const handleContentChange = (content) => {
+    setEditorContent(content);
+
+    // Check if content has changed from the original
+    try {
+      const originalContent = typeof page.content === 'string'
+        ? page.content
+        : JSON.stringify(page.content);
+      const newContent = JSON.stringify(content);
+
+      setHasContentChanged(originalContent !== newContent);
+    } catch (e) {
+      console.error('Error comparing content:', e);
+      setHasContentChanged(true);
+    }
+  };
+
+  // Handle title changes
+  const handleTitleChange = (newTitle) => {
+    setTitle(newTitle);
+    setHasTitleChanged(newTitle !== page.title);
+  };
+
+  // Handle visibility changes
+  const handleVisibilityChange = (newIsPublic) => {
+    setIsPublic(newIsPublic);
+    setHasVisibilityChanged(newIsPublic !== page.isPublic);
+  };
+
+  // Handle location changes
+  const handleLocationChange = (newLocation) => {
+    setLocation(newLocation);
+
+    // Compare locations
+    const originalLocation = page.location || null;
+    const locationChanged = JSON.stringify(originalLocation) !== JSON.stringify(newLocation);
+    setHasLocationChanged(locationChanged);
+  };
+
+  // Override the cancel handler to check for unsaved changes
+  const handleCancelWithCheck = () => {
+    if (hasUnsavedChanges) {
+      handleNavigation('/');
+    } else {
+      handleCancel();
+    }
+  };
 
   return (
-    <PageEditor
-      title={title}
-      setTitle={setTitle}
-      initialContent={current}
-      onContentChange={(content) => {
-        // Store the updated content in state
-        console.log('Content updated in EditPage');
-        setEditorContent(content);
-      }}
-      isPublic={isPublic}
-      setIsPublic={setIsPublic}
-      location={location}
-      setLocation={setLocation}
-      onSave={(content) => handleSave(content || editorContent || current)}
-      onCancel={handleCancel}
-      isSaving={isSaving}
-      error={error}
-      isNewPage={false}
-    />
+    <>
+      <PageEditor
+        title={title}
+        setTitle={handleTitleChange}
+        initialContent={current}
+        onContentChange={handleContentChange}
+        isPublic={isPublic}
+        setIsPublic={handleVisibilityChange}
+        location={location}
+        setLocation={handleLocationChange}
+        onSave={(content) => handleSave(content || editorContent || current)}
+        onCancel={handleCancelWithCheck}
+        isSaving={isSaving}
+        error={error}
+        isNewPage={false}
+      />
+
+      {/* Unsaved Changes Dialog */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedChangesDialog}
+        onClose={handleCloseDialog}
+        onStayAndSave={handleStayAndSave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        isSaving={isSaving || isHandlingNavigation}
+      />
+    </>
   );
 };
 

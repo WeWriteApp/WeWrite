@@ -102,6 +102,9 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
  * @param flag - The feature flag to check
  * @param userEmail - The current user's email (for admin-only features)
  * @returns boolean indicating if the feature is enabled
+ *
+ * Note: When a feature is disabled, all related UI elements should be completely hidden,
+ * not just shown in a disabled state. No explanatory text should be shown.
  */
 export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): boolean => {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
@@ -115,12 +118,8 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
         setIsEnabled(enabled);
       } catch (error) {
         console.error(`Error in useFeatureFlag for ${flag}:`, error);
-        // Default admin features to OFF on error
-        if (flag === 'subscription_management' || flag === 'username_management') {
-          setIsEnabled(false);
-        } else {
-          setIsEnabled(true);
-        }
+        // Default all features to OFF on error for consistency
+        setIsEnabled(false);
       }
     };
 

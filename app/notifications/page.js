@@ -7,7 +7,7 @@ import { NotificationContext } from '../providers/NotificationProvider';
 import NavHeader from '../components/NavHeader';
 import NotificationItem from '../components/NotificationItem';
 import { Button } from '../components/ui/button';
-import { Loader, Bell, CheckCheck } from 'lucide-react';
+import { Loader, Bell, CheckCheck, ChevronLeft } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -48,23 +48,34 @@ export default function NotificationsPage() {
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6">
-      <NavHeader
-        title="Notifications"
-        backUrl="/"
-        backLabel="Home"
-        rightContent={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllAsRead}
-            disabled={loading || notifications.length === 0}
-            className="flex items-center gap-1"
-          >
-            <CheckCheck className="h-4 w-4" />
-            <span>Mark all as read</span>
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between mb-6">
+        {/* Direct implementation of back button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            console.log("Direct navigation to home");
+            window.location.href = "/";
+          }}
+          className="flex items-center gap-1"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>Home</span>
+        </Button>
+
+        <h1 className="text-2xl font-bold">Notifications</h1>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleMarkAllAsRead}
+          disabled={loading || notifications.length === 0}
+          className="flex items-center gap-1"
+        >
+          <CheckCheck className="h-4 w-4" />
+          <span>Mark all as read</span>
+        </Button>
+      </div>
 
       <div className="mt-6 bg-card rounded-lg border border-border overflow-hidden">
         {loading ? (
