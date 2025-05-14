@@ -81,13 +81,6 @@ export default function AdminPage() {
       description: 'Enable groups functionality and UI',
       enabled: false,
       adminOnly: false
-    },
-    {
-      id: 'admin_features',
-      name: 'Admin Features',
-      description: 'Enable admin-only features',
-      enabled: true,
-      adminOnly: true
     }
   ]);
 
@@ -158,28 +151,54 @@ export default function AdminPage() {
 
       if (featureFlagsDoc.exists()) {
         const flagsData = featureFlagsDoc.data();
+        console.log('[DEBUG] Feature flags from database:', flagsData);
+
+        // Filter out any flags that aren't defined in our FeatureFlag type
+        const validFlags = {};
+        Object.keys(flagsData).forEach(key => {
+          // Only include keys that match our defined feature flags
+          if (featureFlags.some(flag => flag.id === key)) {
+            validFlags[key] = flagsData[key];
+          } else {
+            console.log(`[DEBUG] Removing undefined feature flag from database: ${key}`);
+          }
+        });
+
+        // Specifically check for admin_features flag
+        if ('admin_features' in flagsData) {
+          console.log('[DEBUG] Found admin_features flag in database, removing it');
+          // No need to add it to validFlags since it's not in our FeatureFlag type
+        }
 
         // Update local state with data from Firestore
-        setFeatureFlags(prev =>
-          prev.map(flag => ({
+        setFeatureFlags(prev => {
+          const updatedFlags = prev.map(flag => ({
             ...flag,
-            enabled: flagsData[flag.id] !== undefined ? flagsData[flag.id] : flag.enabled
-          }))
-        );
+            enabled: validFlags[flag.id] !== undefined ? validFlags[flag.id] : flag.enabled
+          }));
+          console.log('[DEBUG] Updated local feature flags state:', updatedFlags);
+          return updatedFlags;
+        });
 
         // Check if the 'groups' flag exists in the database
-        if (flagsData['groups'] === undefined) {
-          console.log("'groups' feature flag not found in database, initializing it");
+        if (validFlags['groups'] === undefined) {
+          console.log("[DEBUG] 'groups' feature flag not found in database, initializing it");
 
           // Add the 'groups' flag to the database
           await setDoc(featureFlagsRef, {
-            ...flagsData,
+            ...validFlags,
             groups: false // Initialize as disabled
           });
         }
+
+        // If we found invalid flags, update the database to remove them
+        if (Object.keys(validFlags).length !== Object.keys(flagsData).length) {
+          console.log('[DEBUG] Updating database to remove invalid feature flags');
+          await setDoc(featureFlagsRef, validFlags);
+        }
       } else {
         // If the document doesn't exist, create it with all feature flags
-        console.log("Feature flags document not found, creating it");
+        console.log("[DEBUG] Feature flags document not found, creating it");
 
         const initialFlags = {};
         featureFlags.forEach(flag => {
@@ -189,7 +208,7 @@ export default function AdminPage() {
         await setDoc(featureFlagsRef, initialFlags);
       }
     } catch (error) {
-      console.error('Error loading feature flags:', error);
+      console.error('[DEBUG] Error loading feature flags:', error);
       toast({
         title: 'Error',
         description: 'Failed to load feature flags',
@@ -304,22 +323,24 @@ export default function AdminPage() {
   };
 
   // Toggle feature flag
-  const toggleFeatureFlag = async (flagId: FeatureFlag) => {
+  const toggleFeatureFlag = async (flagId: FeatureFlag, newState?: boolean) => {
     try {
       setIsLoading(true);
-      console.log(`Toggling feature flag ${flagId}`);
+      console.log(`[DEBUG] Toggling feature flag ${flagId}`);
 
       // Find the current flag state before updating
       const currentFlag = featureFlags.find(flag => flag.id === flagId);
-      const newEnabledState = currentFlag ? !currentFlag.enabled : false;
-      console.log(`Current state: ${currentFlag?.enabled}, New state: ${newEnabledState}`);
+      const newEnabledState = newState !== undefined ? newState : (currentFlag ? !currentFlag.enabled : false);
+      console.log(`[DEBUG] Current state: ${currentFlag?.enabled}, New state: ${newEnabledState}`);
 
       // Update local state first for immediate feedback
-      setFeatureFlags(prev =>
-        prev.map(flag =>
+      setFeatureFlags(prev => {
+        const updatedFlags = prev.map(flag =>
           flag.id === flagId ? { ...flag, enabled: newEnabledState } : flag
-        )
-      );
+        );
+        console.log(`[DEBUG] Updated local state for ${flagId} to ${newEnabledState}`);
+        return updatedFlags;
+      });
 
       // Get current feature flags
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
@@ -329,7 +350,13 @@ export default function AdminPage() {
 
       if (featureFlagsDoc.exists()) {
         flagsData = featureFlagsDoc.data();
-        console.log('Current flags in database:', flagsData);
+        console.log('[DEBUG] Current flags in database:', flagsData);
+
+        // Check if admin_features flag exists and remove it
+        if ('admin_features' in flagsData) {
+          console.log('[DEBUG] Found admin_features flag in database, removing it');
+          delete flagsData['admin_features'];
+        }
       }
 
       // Update feature flag
@@ -338,11 +365,11 @@ export default function AdminPage() {
         [flagId]: newEnabledState
       };
 
-      console.log('Updated flags to save:', flagsData);
+      console.log('[DEBUG] Updated flags to save:', flagsData);
 
       // Update Firestore
       await setDoc(featureFlagsRef, flagsData);
-      console.log(`Feature flag ${flagId} updated in database to ${newEnabledState}`);
+      console.log(`[DEBUG] Feature flag ${flagId} updated in database to ${newEnabledState}`);
 
       toast({
         title: 'Success',
@@ -350,7 +377,7 @@ export default function AdminPage() {
         variant: 'default'
       });
     } catch (error) {
-      console.error('Error toggling feature flag:', error);
+      console.error('[DEBUG] Error toggling feature flag:', error);
       toast({
         title: 'Error',
         description: 'Failed to update feature flag',
@@ -435,9 +462,51 @@ export default function AdminPage() {
 
         {/* Feature Flags Tab */}
         <SwipeableTabsContent value="features" className="space-y-4 pt-4">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Feature Flags</h2>
-            <p className="text-muted-foreground">Enable or disable features across the platform</p>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Feature Flags</h2>
+              <p className="text-muted-foreground">Enable or disable features across the platform</p>
+            </div>
+
+            {/* Prominent Toggle All button */}
+            {!isLoading && (
+              <Button
+                variant={featureFlags.every(flag => flag.enabled) ? "destructive" : "default"}
+                size="lg"
+                onClick={() => {
+                  const newState = !featureFlags.every(flag => flag.enabled);
+                  console.log(`Toggle All button clicked. New state: ${newState}`);
+
+                  // Update all feature flags
+                  setFeatureFlags(prev =>
+                    prev.map(flag => ({
+                      ...flag,
+                      enabled: newState
+                    }))
+                  );
+
+                  // Update each flag in the database
+                  featureFlags.forEach(flag => {
+                    console.log(`Toggling flag ${flag.id} to ${newState}`);
+                    toggleFeatureFlag(flag.id as FeatureFlag, newState);
+                  });
+                }}
+                disabled={isLoading}
+                className="gap-2 shadow-md hover:shadow-lg transition-all"
+              >
+                {featureFlags.every(flag => flag.enabled) ? (
+                  <>
+                    <X className="h-4 w-4" />
+                    Disable All Features
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Enable All Features
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
           {isLoading ? (
@@ -445,18 +514,53 @@ export default function AdminPage() {
               <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <>
+              {/* Status indicator */}
+              <div className="mb-6 p-4 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">Feature Status</h3>
+                    <p className="text-sm text-muted-foreground">Current status of all feature flags</p>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium">
+                      {featureFlags.every(flag => flag.enabled) ? (
+                        <span className="text-green-600 dark:text-green-400 flex items-center">
+                          <Check className="h-4 w-4 mr-1" />
+                          All Enabled
+                        </span>
+                      ) : featureFlags.every(flag => !flag.enabled) ? (
+                        <span className="text-red-600 dark:text-red-400 flex items-center">
+                          <X className="h-4 w-4 mr-1" />
+                          All Disabled
+                        </span>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400 flex items-center">
+                          <X className="h-4 w-4 mr-1" />
+                          Mixed Status
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {featureFlags.map(flag => (
                 <div
                   key={flag.id}
-                  className={`flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors ${flag.id !== 'admin_features' ? 'cursor-pointer' : ''}`}
+                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer relative"
                   onClick={(e) => {
-                    // Only toggle if not clicking on the switch itself and not admin_features
-                    if (flag.id !== 'admin_features' && !isLoading && !e.target.closest('.switch-container')) {
+                    // Only toggle if not clicking on the switch itself and not loading
+                    if (!isLoading && !(e.target as HTMLElement).closest('.switch-container')) {
+                      console.log(`Clicked on feature flag card: ${flag.id}`);
                       toggleFeatureFlag(flag.id as FeatureFlag);
                     }
                   }}
                 >
+                  {/* Add a highlight effect when hovering */}
+                  <div className="absolute inset-0 border-2 border-primary opacity-0 rounded-lg pointer-events-none transition-opacity hover:opacity-30 group-hover:opacity-100"></div>
+
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{flag.name}</span>
@@ -466,11 +570,17 @@ export default function AdminPage() {
                         </span>
                       )}
                     </div>
-                    <div className="switch-container">
+                    <div
+                      className="switch-container"
+                      onClick={(e) => {
+                        // Prevent double toggling when clicking directly on the switch
+                        e.stopPropagation();
+                      }}
+                    >
                       <Switch
                         checked={flag.enabled}
                         onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
-                        disabled={isLoading || flag.id === 'admin_features'} // Prevent disabling admin features
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -492,7 +602,8 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </SwipeableTabsContent>
 
@@ -607,6 +718,27 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Feature Flags Management</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Feature flags can be managed in the Feature Flags tab. Use the tools below for advanced operations like fixing database issues
+                or checking the raw state of feature flags.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => setActiveTab('features')}
+                >
+                  <Settings className="h-4 w-4" />
+                  Go to Feature Flags Tab
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">PWA Testing</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
@@ -621,6 +753,189 @@ export default function AdminPage() {
                 >
                   <RefreshCw className="h-4 w-4" />
                   Trigger PWA Alert
+                </Button>
+              </div>
+            </div>
+
+            {/* Feature Flags Fix Tool */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Feature Flags Fix</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Fix feature flags in the database by removing invalid flags and ensuring all valid flags are present.
+              </span>
+              <div className="mt-2 space-y-2">
+                {/* Import the FixFeatureFlagsButton component */}
+                {(() => {
+                  const FixFeatureFlagsButton = require('../components/FixFeatureFlagsButton').default;
+                  return <FixFeatureFlagsButton />;
+                })()}
+              </div>
+            </div>
+
+            {/* Groups Debug Tool */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Groups Feature Debug</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Debug tools for the Groups feature.
+              </span>
+              <div className="mt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={async () => {
+                    try {
+                      // Import RTDB
+                      const { rtdb } = await import('../firebase/rtdb');
+                      const { ref, get } = await import('firebase/database');
+
+                      // Check if RTDB is initialized
+                      console.log('[DEBUG] RTDB Debug - RTDB instance:', rtdb);
+
+                      // Check if groups node exists
+                      const groupsRef = ref(rtdb, 'groups');
+                      const groupsSnapshot = await get(groupsRef);
+
+                      console.log('[DEBUG] RTDB Debug - Groups node exists:', groupsSnapshot.exists());
+                      console.log('[DEBUG] RTDB Debug - Groups data:', groupsSnapshot.val());
+
+                      toast({
+                        title: 'Groups Debug',
+                        description: `Groups node exists: ${groupsSnapshot.exists()}. Check console for details.`,
+                        variant: 'default'
+                      });
+                    } catch (error) {
+                      console.error('[DEBUG] RTDB Debug - Error:', error);
+
+                      toast({
+                        title: 'Error',
+                        description: `Error debugging groups: ${error.message}`,
+                        variant: 'destructive'
+                      });
+                    }
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Check RTDB Groups
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={async () => {
+                    try {
+                      // Check feature flag in Firestore
+                      const { doc, getDoc } = await import('firebase/firestore');
+                      const { db } = await import('../firebase/database');
+
+                      const featureFlagsRef = doc(db, 'config', 'featureFlags');
+                      const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+                      if (featureFlagsDoc.exists()) {
+                        const flagsData = featureFlagsDoc.data();
+                        console.log('[DEBUG] Feature Flags Debug - Flags data:', flagsData);
+                        console.log('[DEBUG] Feature Flags Debug - Groups flag:', flagsData['groups']);
+
+                        toast({
+                          title: 'Feature Flags Debug',
+                          description: `Groups flag: ${flagsData['groups'] ? 'Enabled' : 'Disabled'}. Check console for details.`,
+                          variant: 'default'
+                        });
+                      } else {
+                        console.log('[DEBUG] Feature Flags Debug - No feature flags document found');
+
+                        toast({
+                          title: 'Feature Flags Debug',
+                          description: 'No feature flags document found in Firestore.',
+                          variant: 'destructive'
+                        });
+                      }
+                    } catch (error) {
+                      console.error('[DEBUG] Feature Flags Debug - Error:', error);
+
+                      toast({
+                        title: 'Error',
+                        description: `Error debugging feature flags: ${error.message}`,
+                        variant: 'destructive'
+                      });
+                    }
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Check Feature Flags
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={async () => {
+                    try {
+                      if (!user?.uid) {
+                        toast({
+                          title: 'Error',
+                          description: 'User not logged in',
+                          variant: 'destructive'
+                        });
+                        return;
+                      }
+
+                      // Import RTDB functions
+                      const { rtdb } = await import('../firebase/rtdb');
+                      const { ref, push, set } = await import('firebase/database');
+
+                      // Create a test group
+                      const groupsRef = ref(rtdb, 'groups');
+                      const newGroupRef = push(groupsRef);
+
+                      // Group data
+                      const groupData = {
+                        name: 'Test Group',
+                        description: 'A test group created for debugging',
+                        owner: user.uid,
+                        createdAt: new Date().toISOString(),
+                        members: {
+                          [user.uid]: {
+                            role: 'owner',
+                            joinedAt: new Date().toISOString()
+                          }
+                        }
+                      };
+
+                      // Save the group
+                      await set(newGroupRef, groupData);
+
+                      // Add the group to the user's groups
+                      const userGroupsRef = ref(rtdb, `users/${user.uid}/groups`);
+                      await set(userGroupsRef, {
+                        [newGroupRef.key]: true
+                      });
+
+                      console.log('[DEBUG] Created test group:', newGroupRef.key);
+
+                      toast({
+                        title: 'Success',
+                        description: `Created test group with ID: ${newGroupRef.key}`,
+                        variant: 'default'
+                      });
+                    } catch (error) {
+                      console.error('[DEBUG] Error creating test group:', error);
+
+                      toast({
+                        title: 'Error',
+                        description: `Error creating test group: ${error.message}`,
+                        variant: 'destructive'
+                      });
+                    }
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Create Test Group
                 </Button>
               </div>
             </div>

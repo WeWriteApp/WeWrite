@@ -30,6 +30,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Use the improved useFeatureFlag hook to check if groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email)
 
+  // Debug logging for groups feature flag in sidebar
+  useEffect(() => {
+    console.log('[DEBUG] Sidebar - Groups feature flag:', groupsEnabled);
+    console.log('[DEBUG] Sidebar - User:', user?.email);
+    console.log('[DEBUG] Sidebar - Groups navigation item will be visible:', groupsEnabled ? 'YES' : 'NO');
+  }, [groupsEnabled, user?.email])
+
   // Reset to main menu when sidebar closes
   useEffect(() => {
     if (!isOpen) {
@@ -212,6 +219,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </button>
+              )}
+              {/* Debug element to show when groups feature is disabled */}
+              {!groupsEnabled && process.env.NODE_ENV === 'development' && (
+                <div className="hidden">
+                  <span className="text-xs text-red-500">Groups feature is disabled</span>
+                </div>
               )}
 
               <button

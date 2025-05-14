@@ -32,68 +32,51 @@ export const isAdmin = (userEmail?: string | null): boolean => {
  * @returns boolean indicating if the feature is enabled
  */
 export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | null): Promise<boolean> => {
-  console.log(`Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
+  console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
 
   try {
     // Always check the database first, regardless of admin status
     const { doc, getDoc } = await import('firebase/firestore');
     const { db } = await import('../firebase/database');
 
+    console.log(`[DEBUG] Database reference created for feature flag ${flag}`);
     const featureFlagsRef = doc(db, 'config', 'featureFlags');
+
+    console.log(`[DEBUG] Fetching feature flags document from Firestore`);
     const featureFlagsDoc = await getDoc(featureFlagsRef);
 
     if (featureFlagsDoc.exists()) {
       const flagsData = featureFlagsDoc.data();
+      console.log(`[DEBUG] Feature flags data:`, flagsData);
+
+      // Enhanced debugging for groups flag
+      if (flag === 'groups') {
+        console.log(`[DEBUG] GROUPS FLAG CHECK - Raw value in database:`, flagsData[flag]);
+        console.log(`[DEBUG] GROUPS FLAG CHECK - Type of value:`, typeof flagsData[flag]);
+        console.log(`[DEBUG] GROUPS FLAG CHECK - Strict equality check (=== true):`, flagsData[flag] === true);
+        console.log(`[DEBUG] GROUPS FLAG CHECK - Loose equality check (== true):`, flagsData[flag] == true);
+        console.log(`[DEBUG] GROUPS FLAG CHECK - Boolean conversion:`, Boolean(flagsData[flag]));
+      }
+
       const isEnabledInDb = flagsData[flag] === true;
-      console.log(`Feature flag ${flag} in database: ${isEnabledInDb}`);
+      console.log(`[DEBUG] Feature flag ${flag} in database: ${isEnabledInDb}`);
 
       // Return the database value regardless of admin status
       return isEnabledInDb;
     } else {
-      console.log(`No feature flags document found in database, checking defaults`);
+      console.log(`[DEBUG] No feature flags document found in database, checking defaults`);
 
       // If no document exists, fall back to defaults
-      // Admin-only features - disabled by default, even for admins
-      const adminOnlyFeatures: FeatureFlag[] = [
-        'subscription_management',
-        'username_management',
-      ];
-
-      if (adminOnlyFeatures.includes(flag)) {
-        console.log(`Feature flag ${flag}: Admin-only feature, defaulting to OFF`);
-        return false;
-      }
-
-      // Features that are disabled for everyone
-      const disabledFeatures: FeatureFlag[] = [
-        'map_view',
-        'calendar_view',
-      ];
-
-      if (disabledFeatures.includes(flag)) {
-        console.log(`Feature flag ${flag}: Globally disabled feature`);
-        return false;
-      }
-
-      // Default to enabled for all other features
-      console.log(`Feature flag ${flag}: Default enabled feature`);
-      return true;
-    }
-  } catch (error) {
-    console.error(`Error checking feature flag ${flag}:`, error);
-
-    // On error, default to disabled for admin-only features
-    const adminOnlyFeatures: FeatureFlag[] = [
-      'subscription_management',
-      'username_management',
-    ];
-
-    if (adminOnlyFeatures.includes(flag)) {
+      // All features are disabled by default for consistency
+      console.log(`[DEBUG] Feature flag ${flag}: No document exists, defaulting to OFF`);
       return false;
     }
+  } catch (error) {
+    console.error(`[DEBUG] Error checking feature flag ${flag}:`, error);
+    console.error(`[DEBUG] Error details:`, error);
 
-    // Default to enabled for all other features
-    return true;
+    // On error, default to disabled for consistency
+    return false;
   }
 };
 
@@ -113,11 +96,18 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
     // Initial check
     const checkFeatureFlag = async () => {
       try {
+        console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
         const enabled = await isFeatureEnabled(flag, userEmail);
-        console.log(`useFeatureFlag hook for ${flag}, user ${userEmail || 'unknown'}: ${enabled}`);
+        console.log(`[DEBUG] useFeatureFlag hook for ${flag}, user ${userEmail || 'unknown'}: ${enabled}`);
+
+        // Enhanced debugging for groups flag
+        if (flag === 'groups') {
+          console.log(`[DEBUG] GROUPS FLAG HOOK - Setting state to:`, enabled);
+        }
+
         setIsEnabled(enabled);
       } catch (error) {
-        console.error(`Error in useFeatureFlag for ${flag}:`, error);
+        console.error(`[DEBUG] Error in useFeatureFlag for ${flag}:`, error);
         // Default all features to OFF on error for consistency
         setIsEnabled(false);
       }
@@ -138,27 +128,18 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
           if (snapshot.exists()) {
             const flagsData = snapshot.data();
             const isEnabledInDb = flagsData[flag] === true;
+
+            // Enhanced debugging for groups flag
+            if (flag === 'groups') {
+              console.log(`[DEBUG] GROUPS FLAG LISTENER - Raw value in database:`, flagsData[flag]);
+              console.log(`[DEBUG] GROUPS FLAG LISTENER - Evaluated to:`, isEnabledInDb);
+            }
+
             console.log(`Feature flag ${flag} changed in database: ${isEnabledInDb}`);
             setIsEnabled(isEnabledInDb);
           } else {
-            // If document doesn't exist, use default behavior
-            const adminOnlyFeatures: FeatureFlag[] = [
-              'subscription_management',
-              'username_management',
-            ];
-
-            const disabledFeatures: FeatureFlag[] = [
-              'map_view',
-              'calendar_view',
-            ];
-
-            if (adminOnlyFeatures.includes(flag)) {
-              setIsEnabled(false);
-            } else if (disabledFeatures.includes(flag)) {
-              setIsEnabled(false);
-            } else {
-              setIsEnabled(true);
-            }
+            // If document doesn't exist, default all features to disabled for consistency
+            setIsEnabled(false);
           }
         });
       } catch (error) {
