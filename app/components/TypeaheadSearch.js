@@ -235,7 +235,21 @@ const TypeaheadSearch = ({
 
             // Process the results with usernames
             if (pagesData && pagesData.pages) {
-              processedPages = await processPagesWithUsernames(pagesData.pages);
+              // Log search term and matching titles for debugging
+              console.log(`TypeaheadSearch - Found ${pagesData.pages.length} pages for "${search}"`);
+
+              if (pagesData.pages.length > 0) {
+                console.log('TypeaheadSearch - Matching page titles:',
+                  pagesData.pages.map(page => page.title).join(', '));
+
+                // Filter out any fallback/suggested results
+                const realPages = pagesData.pages.filter(page => !page.isFallback);
+                console.log(`TypeaheadSearch - Filtered out ${pagesData.pages.length - realPages.length} fallback results`);
+
+                processedPages = await processPagesWithUsernames(realPages);
+              } else {
+                console.log('TypeaheadSearch - No matching pages found');
+              }
             }
           } else {
             console.error('TypeaheadSearch - Pages API request failed:',
@@ -250,7 +264,9 @@ const TypeaheadSearch = ({
             console.log('TypeaheadSearch - Users API response:', usersData);
 
             if (usersData && usersData.users) {
-              users = usersData.users;
+              // Filter out any fallback/suggested user results
+              users = usersData.users.filter(user => !user.isFallback);
+              console.log(`TypeaheadSearch - Filtered out ${usersData.users.length - users.length} fallback user results`);
             }
           } else {
             console.error('TypeaheadSearch - Users API request failed:',
