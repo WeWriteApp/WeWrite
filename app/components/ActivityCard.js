@@ -128,9 +128,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       <div className="flex flex-col w-full flex-shrink-0">
         {/* Page title with fixed height and ellipsis */}
         <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
-          <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors max-w-full px-2 py-0.5 bg-primary/10 text-primary hover:bg-primary/20">
+          <PillLink href={`/${activity.pageId}`}>
             {activity.pageName || "Untitled page"}
-          </span>
+          </PillLink>
         </div>
 
         {/* User and timestamp info */}
