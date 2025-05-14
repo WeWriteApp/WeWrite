@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect, useContext } from "react";
-import Link from "next/link";
+import { useState, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock } from "lucide-react";
 import ActivityCard from "../components/ActivityCard";
 import { AuthContext } from "../providers/AuthProvider";
+import useStaticRecentActivity from "../hooks/useStaticRecentActivity";
 
 /**
- * Client component for the activity page that renders pre-fetched data
- * This eliminates loading states by having the data ready on initial render
+ * Client component for the activity page that uses the same hook as the home page
+ * This ensures consistent behavior between the home page and activity page
  */
 export default function ActivityPageClient({
   initialActivities = [],
@@ -20,39 +20,24 @@ export default function ActivityPageClient({
   initialError: string | null
 }) {
   const router = useRouter();
-  const [limit, setLimit] = useState(30);
+  const [limit] = useState(30);
 
-  // Use client-side data fetching as a fallback when server-side fails
-  const [clientActivities, setClientActivities] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(initialError !== null);
+  // Use the same hook that works on the home page
+  // This is more reliable than server-side fetching or API calls
+  const { activities, loading: isLoading, error } = useStaticRecentActivity(limit);
 
-  // If server-side fetching failed, try client-side fetching
-  useEffect(() => {
-    if (initialError) {
-      const fetchClientSideData = async () => {
-        try {
-          setIsLoading(true);
-          // Fetch from the API endpoint instead
-          const response = await fetch('/api/activity?limit=30');
-          const data = await response.json();
-
-          if (data && data.activities) {
-            setClientActivities(data.activities);
-          }
-        } catch (err) {
-          console.error('Error fetching client-side activity data:', err);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      fetchClientSideData();
-    }
-  }, [initialError]);
-
-  // Determine which activities to display
-  const activitiesToDisplay = initialError ? clientActivities : initialActivities;
+  // Determine which activities to display - prefer client-side data
+  // but fall back to server-side data if available
+  const activitiesToDisplay = activities.length > 0 ? activities : initialActivities;
   const hasActivities = activitiesToDisplay.length > 0;
+
+  // For debugging
+  console.log('ActivityPageClient: Rendering with', {
+    clientActivities: activities.length,
+    initialActivities: initialActivities.length,
+    isLoading,
+    hasError: !!error || !!initialError
+  });
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6">
@@ -102,7 +87,7 @@ export default function ActivityPageClient({
       {!isLoading && hasActivities && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {activitiesToDisplay.map((activity, index) => (
-            <div key={`${activity.pageId}-${index}`} className="h-[180px]">
+            <div key={`${activity.pageId || 'unknown'}-${index}`} className="h-[180px]">
               <ActivityCard
                 activity={activity}
                 isCarousel={false}
@@ -113,23 +98,35 @@ export default function ActivityPageClient({
       )}
 
       {/* Empty state */}
-      {!isLoading && !hasActivities && !initialError && (
+      {!isLoading && !hasActivities && (
         <div className="text-center py-8">
           <p className="text-muted-foreground">No recent activity to display</p>
         </div>
       )}
 
-      {/* Error state - only show if both server and client fetching failed */}
-      {!isLoading && initialError && clientActivities.length === 0 && (
+      {/* Error state - only show if client-side fetching failed */}
+      {!isLoading && !hasActivities && error && (
         <div className="flex flex-col items-center justify-center gap-4 p-6 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
           <p>We couldn't load the activity feed right now.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.location.reload()}
-          >
-            Try Again
-          </Button>
+          <p className="text-xs text-muted-foreground">
+            {typeof error === 'string' ? error : error?.message || 'There was a problem connecting to the server.'}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+            >
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/'}
+            >
+              Go Home
+            </Button>
+          </div>
         </div>
       )}
     </div>

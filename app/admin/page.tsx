@@ -473,23 +473,68 @@ export default function AdminPage() {
               <Button
                 variant={featureFlags.every(flag => flag.enabled) ? "destructive" : "default"}
                 size="lg"
-                onClick={() => {
+                onClick={async () => {
                   const newState = !featureFlags.every(flag => flag.enabled);
                   console.log(`Toggle All button clicked. New state: ${newState}`);
 
-                  // Update all feature flags
-                  setFeatureFlags(prev =>
-                    prev.map(flag => ({
-                      ...flag,
-                      enabled: newState
-                    }))
-                  );
+                  try {
+                    setIsLoading(true);
 
-                  // Update each flag in the database
-                  featureFlags.forEach(flag => {
-                    console.log(`Toggling flag ${flag.id} to ${newState}`);
-                    toggleFeatureFlag(flag.id as FeatureFlag, newState);
-                  });
+                    // Update local state for immediate feedback
+                    setFeatureFlags(prev =>
+                      prev.map(flag => ({
+                        ...flag,
+                        enabled: newState
+                      }))
+                    );
+
+                    // Get current feature flags from database
+                    const featureFlagsRef = doc(db, 'config', 'featureFlags');
+                    const featureFlagsDoc = await getDoc(featureFlagsRef);
+
+                    // Prepare the updated flags data
+                    let flagsData = featureFlagsDoc.exists() ? featureFlagsDoc.data() : {};
+
+                    // Remove admin_features flag if it exists
+                    if ('admin_features' in flagsData) {
+                      delete flagsData['admin_features'];
+                    }
+
+                    // Update all feature flags at once in the database
+                    const updatedFlagsData = {};
+                    featureFlags.forEach(flag => {
+                      updatedFlagsData[flag.id] = newState;
+                    });
+
+                    // Merge with existing data to preserve any flags not in our local state
+                    const mergedFlagsData = {
+                      ...flagsData,
+                      ...updatedFlagsData
+                    };
+
+                    // Update the database with all flags at once
+                    await setDoc(featureFlagsRef, mergedFlagsData);
+
+                    console.log(`[DEBUG] All feature flags updated to ${newState}`);
+
+                    toast({
+                      title: 'Success',
+                      description: `All features are now ${newState ? 'enabled' : 'disabled'}`,
+                      variant: 'default'
+                    });
+                  } catch (error) {
+                    console.error('[DEBUG] Error toggling all feature flags:', error);
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to update all feature flags',
+                      variant: 'destructive'
+                    });
+
+                    // Revert local state on error
+                    loadFeatureFlags();
+                  } finally {
+                    setIsLoading(false);
+                  }
                 }}
                 disabled={isLoading}
                 className="gap-2 shadow-md hover:shadow-lg transition-all"

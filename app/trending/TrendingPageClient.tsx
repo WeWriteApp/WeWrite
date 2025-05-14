@@ -162,7 +162,7 @@ export default function TrendingPageClient() {
                   <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
                   <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
                   <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
-                  <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Trend</th>
+                  <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</th>
                 </tr>
               </thead>
               <tbody>
@@ -194,11 +194,10 @@ export default function TrendingPageClient() {
                       {page.views.toLocaleString()}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="w-24 h-12 ml-auto">
+                      <div className="w-24 h-8 ml-auto">
                         <SimpleSparkline
                           data={page.hourlyViews}
-                          height={40}
-                          color="#1768FF"
+                          height={32}
                           strokeWidth={1.5}
                         />
                       </div>

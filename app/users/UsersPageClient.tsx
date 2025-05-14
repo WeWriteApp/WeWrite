@@ -10,7 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { SupporterIcon } from "../components/SupporterIcon";
 import { collection, getDocs, query, orderBy, limit as firestoreLimit, getDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/database";
+import { db } from "../firebase/config";
+import SimpleSparkline from "../components/SimpleSparkline";
+import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
 
 interface User {
   id: string;
@@ -29,6 +31,7 @@ export default function UsersPageClient() {
   const [errorDetails, setErrorDetails] = useState("");
   const [sortDirection, setSortDirection] = useState("desc"); // "desc" or "asc"
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+  const [userActivityData, setUserActivityData] = useState<Record<string, { total: number, hourly: number[] }>>({});
 
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === "desc" ? "asc" : "desc");
@@ -64,53 +67,104 @@ export default function UsersPageClient() {
 
   // Fetch users data
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUsersAndPages = async () => {
       try {
+        console.log("UsersPage: Starting to fetch user and page data");
         setLoading(true);
         setError(null);
         setErrorDetails("");
 
         // Get all users from Firestore
         const usersRef = collection(db, 'users');
-        const usersQuery = query(usersRef, orderBy('pageCount', 'desc'), firestoreLimit(50));
-        const usersSnapshot = await getDocs(usersQuery);
+        const usersSnapshot = await getDocs(usersRef);
 
         if (usersSnapshot.empty) {
+          console.log("UsersPage: No users found");
           setUsers([]);
           setLoading(false);
           return;
         }
 
+        console.log(`UsersPage: Retrieved ${usersSnapshot.size} users from Firestore`);
+
+        // Create a lookup object to store page counts per user
+        const pageCountsByUser = {};
+
+        // Get pages from Firestore to count pages per user
+        const pagesRef = collection(db, 'pages');
+        const pagesSnapshot = await getDocs(pagesRef);
+
+        console.log(`UsersPage: Retrieved ${pagesSnapshot.size} pages from Firestore`);
+
+        // Count pages by user
+        pagesSnapshot.forEach((doc) => {
+          const pageData = doc.data();
+          const userId = pageData.userId;
+
+          if (userId) {
+            // Increment page count for this user
+            pageCountsByUser[userId] = (pageCountsByUser[userId] || 0) + 1;
+          }
+        });
+
+        console.log("UsersPage: Processing user data");
+
         // Process users data
         const usersData: User[] = [];
+
         for (const userDoc of usersSnapshot.docs) {
           const userData = userDoc.data();
-          
+          const userId = userDoc.id;
+
+          // Get the username and remove @ symbol if present
+          let username = userData.username || userData.displayName || "Unknown User";
+          if (username.startsWith('@')) {
+            username = username.substring(1);
+          }
+
           // Fetch subscription information if available
           let tier = null;
           let subscriptionStatus = null;
           try {
-            const subscriptionDoc = await getDoc(doc(db, 'subscriptions', userDoc.id));
+            const subscriptionDoc = await getDoc(doc(db, 'subscriptions', userId));
             if (subscriptionDoc.exists()) {
               const subscriptionData = subscriptionDoc.data();
               tier = subscriptionData.tier;
               subscriptionStatus = subscriptionData.status;
             }
           } catch (err) {
-            console.error(`Error fetching subscription for user ${userDoc.id}:`, err);
+            console.error(`Error fetching subscription for user ${userId}:`, err);
           }
 
           usersData.push({
-            id: userDoc.id,
-            username: userData.username || "Missing username",
+            id: userId,
+            username,
             photoURL: userData.photoURL,
-            pageCount: userData.pageCount || 0,
+            pageCount: pageCountsByUser[userId] || 0,
             tier,
             subscriptionStatus
           });
         }
 
-        setUsers(usersData);
+        // Sort users by page count
+        const sortedUsersData = usersData.sort((a, b) => b.pageCount - a.pageCount);
+
+        console.log(`UsersPage: Processed ${sortedUsersData.length} users with page counts`);
+
+        // Fetch activity data for all users
+        try {
+          const userIds = sortedUsersData.map(user => user.id);
+          console.log('UsersPage: Fetching activity data for users:', userIds);
+          const activityData = await getBatchUserActivityLast24Hours(userIds);
+          console.log('UsersPage: Received activity data:', activityData);
+          setUserActivityData(activityData);
+        } catch (activityError) {
+          console.error('UsersPage: Error fetching user activity data:', activityError);
+          // Continue with empty activity data rather than failing
+          setUserActivityData({});
+        }
+
+        setUsers(sortedUsersData);
       } catch (err) {
         console.error('Error fetching users:', err);
         setError('Failed to load users');
@@ -120,7 +174,7 @@ export default function UsersPageClient() {
       }
     };
 
-    fetchUsers();
+    fetchUsersAndPages();
   }, []);
 
   return (
@@ -194,6 +248,7 @@ export default function UsersPageClient() {
                     )}
                   </div>
                 </TableHead>
+                <TableHead>Activity (24h)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -232,6 +287,15 @@ export default function UsersPageClient() {
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {user.pageCount}
+                  </TableCell>
+                  <TableCell>
+                    <div className="w-24 h-8 ml-auto">
+                      <SimpleSparkline
+                        data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
+                        height={32}
+                        strokeWidth={1.5}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { PillLink } from "./PillLink";
 import { SupporterIcon } from "./SupporterIcon";
 import { db as firestoreDb } from "../firebase/database";
+import SimpleSparkline from "./SimpleSparkline";
+import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
 
 const UserListSkeleton = () => {
   return (
@@ -27,6 +29,7 @@ const UserListSkeleton = () => {
               <ChevronDown className="h-4 w-4 text-muted-foreground/50" />
             </div>
           </TableHead>
+          <TableHead>Activity (24h)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -37,6 +40,9 @@ const UserListSkeleton = () => {
             </TableCell>
             <TableCell className="text-right">
               <div className="h-4 w-8 bg-muted animate-pulse rounded ml-auto"></div>
+            </TableCell>
+            <TableCell>
+              <div className="w-24 h-8 bg-muted animate-pulse rounded ml-auto"></div>
             </TableCell>
           </TableRow>
         ))}
@@ -53,6 +59,7 @@ const TopUsers = () => {
   const { user } = useContext(AuthContext);
   const [sortDirection, setSortDirection] = useState("desc"); // "desc" or "asc"
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+  const [userActivityData, setUserActivityData] = useState({});
 
   // Check if subscription feature is enabled
   useEffect(() => {
@@ -184,6 +191,19 @@ const TopUsers = () => {
                     allTimeUserCount: sortedAllTimeUsers.length,
                   });
 
+                  // Fetch activity data for all users
+                  try {
+                    const userIds = sortedAllTimeUsers.map(user => user.id);
+                    console.log('TopUsers: Fetching activity data for users:', userIds);
+                    const activityData = await getBatchUserActivityLast24Hours(userIds);
+                    console.log('TopUsers: Received activity data:', activityData);
+                    setUserActivityData(activityData);
+                  } catch (activityError) {
+                    console.error('TopUsers: Error fetching user activity data:', activityError);
+                    // Continue with empty activity data rather than failing
+                    setUserActivityData({});
+                  }
+
                   setAllTimeUsers(sortedAllTimeUsers);
                   setLoading(false);
                   setError(null);
@@ -278,6 +298,7 @@ const TopUsers = () => {
                       )}
                     </div>
                   </TableHead>
+                  <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -315,6 +336,15 @@ const TopUsers = () => {
                       </TooltipProvider>
                     </TableCell>
                     <TableCell className="py-3 px-4 text-right font-medium">{user.pageCount}</TableCell>
+                    <TableCell className="py-3 px-4">
+                      <div className="w-24 h-8 ml-auto">
+                        <SimpleSparkline
+                          data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
+                          height={32}
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

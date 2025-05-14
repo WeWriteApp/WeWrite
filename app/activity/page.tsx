@@ -1,14 +1,11 @@
-import { getServerActivityData } from '../components/server/ActivityData';
 import ActivityPageClient from './ActivityPageClient';
 
 /**
  * Server component for the activity page
- * This pre-fetches the activity data on the server to eliminate loading states
+ * This now uses client-side data fetching for better reliability
  */
-export default async function ActivityPage() {
-  // Fetch activity data on the server
-  const { activities, error } = await getServerActivityData(30);
-  
-  // Pass the pre-fetched data to the client component
-  return <ActivityPageClient initialActivities={activities} initialError={error} />;
+export default function ActivityPage() {
+  // We're now using client-side data fetching with useStaticRecentActivity
+  // This is more reliable than server-side fetching with Firebase Admin
+  return <ActivityPageClient initialActivities={[]} initialError={null} />;
 }

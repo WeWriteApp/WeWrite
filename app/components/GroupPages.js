@@ -14,7 +14,7 @@ const GroupPages = ({ pages }) => {
   return (
     <div className="space-y-3">
       {Object.entries(pages).map(([pageId, page]) => (
-        <Link key={pageId} href={`/pages/${pageId}`}>
+        <Link key={pageId} href={`/${pageId}`}>
           <Card className="hover:shadow-md transition-all duration-200 cursor-pointer">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">

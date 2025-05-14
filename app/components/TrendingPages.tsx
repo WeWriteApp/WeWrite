@@ -14,6 +14,8 @@ interface TrendingPage {
   title: string;
   views: number;
   hourlyViews: number[];
+  userId?: string;
+  username?: string;
 }
 
 export default function TrendingPages({ limit = 5 }) {
@@ -146,8 +148,9 @@ export default function TrendingPages({ limit = 5 }) {
           <thead>
             <tr className="border-b border-border">
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
+              <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Trend</th>
+              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</th>
             </tr>
           </thead>
           <tbody>
@@ -162,14 +165,29 @@ export default function TrendingPages({ limit = 5 }) {
                     {page.title || 'Untitled'}
                   </PillLink>
                 </td>
+                <td className="py-3 px-4">
+                  {page.userId ? (
+                    <span
+                      className="text-primary hover:underline cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/user/${page.userId}`;
+                      }}
+                    >
+                      {page.username || 'Anonymous'}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Anonymous</span>
+                  )}
+                </td>
                 <td className="py-3 px-4 text-right font-medium">
                   {page.views.toLocaleString()}
                 </td>
                 <td className="py-3 px-4">
-                  <div className="w-24 h-12 ml-auto">
+                  <div className="w-24 h-8 ml-auto">
                     <SimpleSparkline
                       data={page.hourlyViews}
-                      height={40}
+                      height={32}
                       strokeWidth={1.5}
                     />
                   </div>
@@ -190,13 +208,29 @@ export default function TrendingPages({ limit = 5 }) {
             style={{ cursor: 'pointer' }}
           >
             <div className="p-4">
-              <div className="mb-4">
-                <h3 className="text-base font-medium">
+              <div className="mb-3">
+                <h3 className="text-base font-medium mb-1">
                   {/* Render the title directly instead of using PillLink */}
                   <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                     <span className="truncate">{page.title || 'Untitled'}</span>
                   </span>
                 </h3>
+                <div className="text-sm text-muted-foreground">
+                  by{' '}
+                  {page.userId ? (
+                    <span
+                      className="text-primary hover:underline cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/user/${page.userId}`;
+                      }}
+                    >
+                      {page.username || 'Anonymous'}
+                    </span>
+                  ) : (
+                    <span>Anonymous</span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">

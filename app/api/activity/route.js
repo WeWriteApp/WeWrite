@@ -40,11 +40,32 @@ export async function GET(request) {
 
     // Check if Firebase Admin was initialized successfully
     if (!db) {
-      console.warn('API: Firebase Firestore not available, returning empty activity list');
-      return NextResponse.json({
-        activities: [],
-        message: "Firebase not initialized properly"
-      }, { headers: corsHeaders });
+      console.warn('API: Firebase Firestore not available, attempting to initialize again');
+      try {
+        initAdmin();
+        db = admin.firestore();
+        try {
+          rtdb = admin.database();
+        } catch (dbError) {
+          console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
+          rtdb = null;
+        }
+      } catch (initError) {
+        console.error('API: Failed to initialize Firebase Admin on retry:', initError);
+        return NextResponse.json({
+          activities: [],
+          message: "Firebase not initialized properly"
+        }, { status: 500, headers: corsHeaders });
+      }
+
+      // Check if initialization was successful
+      if (!db) {
+        console.error('API: Firebase Firestore still not available after retry');
+        return NextResponse.json({
+          activities: [],
+          message: "Firebase not initialized properly"
+        }, { status: 500, headers: corsHeaders });
+      }
     }
 
     // Get limit from query parameter - using a static approach
@@ -100,7 +121,7 @@ export async function GET(request) {
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
-            username: await getUsernameById(pageData.userId),
+            username: await getUsernameById(db, rtdb, pageData.userId),
             timestamp: pageData.lastModified?.toDate() || new Date(),
             currentContent: pageData.content,
             previousContent: "",
@@ -115,7 +136,7 @@ export async function GET(request) {
           pageId,
           pageName: pageData.title || "Untitled",
           userId: pageData.userId,
-          username: await getUsernameById(pageData.userId),
+          username: await getUsernameById(db, rtdb, pageData.userId),
           timestamp: historyData.timestamp?.toDate() || new Date(),
           currentContent: pageData.content,
           previousContent: historyData.content || "",
@@ -153,17 +174,38 @@ export async function GET(request) {
     return NextResponse.json({ activities: validActivities }, { headers: corsHeaders });
   } catch (err) {
     console.error("Error fetching server activity data:", err);
+    console.error("Error stack:", err.stack);
+
+    // Provide more detailed error information
+    let errorMessage = "Failed to fetch recent activity";
+    if (err.message) {
+      errorMessage += `: ${err.message}`;
+    }
+
+    // Check for specific error types
+    if (err.code === 'permission-denied') {
+      errorMessage = "Permission denied accessing activity data. Please try again later.";
+    } else if (err.code === 'unavailable') {
+      errorMessage = "Database service is currently unavailable. Please try again later.";
+    } else if (err.code === 'not-found') {
+      errorMessage = "Requested data not found. Please try again later.";
+    }
+
     return NextResponse.json(
-      { activities: [], error: "Failed to fetch recent activity" },
+      {
+        activities: [],
+        error: errorMessage,
+        errorCode: err.code || 'unknown'
+      },
       { status: 500, headers: corsHeaders }
     );
   }
 }
 
 // Helper function to get username from Firestore or RTDB
-async function getUsernameById(userId) {
+async function getUsernameById(db, rtdb, userId) {
   try {
-    if (!userId) return null;
+    if (!userId) return "Anonymous";
 
     let username = null;
 

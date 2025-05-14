@@ -46,7 +46,7 @@ export async function getServerActivityData(limitCount = 30) {
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
-            username: await getUsernameById(pageData.userId),
+            username: await getUsernameById(db, rtdb, pageData.userId),
             timestamp: pageData.lastModified?.toDate() || new Date(),
             currentContent: pageData.content,
             previousContent: "",
@@ -61,7 +61,7 @@ export async function getServerActivityData(limitCount = 30) {
           pageId,
           pageName: pageData.title || "Untitled",
           userId: pageData.userId,
-          username: await getUsernameById(pageData.userId),
+          username: await getUsernameById(db, rtdb, pageData.userId),
           timestamp: historyData.timestamp?.toDate() || new Date(),
           currentContent: pageData.content,
           previousContent: historyData.content || "",
@@ -96,12 +96,9 @@ export async function getServerActivityData(limitCount = 30) {
 }
 
 // Helper function to get username from Firestore or RTDB
-async function getUsernameById(userId) {
+async function getUsernameById(db, rtdb, userId) {
   try {
-    if (!userId) return null;
-
-    // Get Firebase Admin instances
-    const { db, rtdb } = initServerAdmin();
+    if (!userId) return "Anonymous";
 
     let username = null;
 
@@ -127,9 +124,10 @@ async function getUsernameById(userId) {
       }
     }
 
-    return username;
+    return username || "Missing username";
   } catch (err) {
     console.error("Error fetching user data:", err);
-    return null;
+    return "Missing username";
   }
 }
+

@@ -41,14 +41,14 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
     const fetchPages = async () => {
       try {
         setIsLoading(true);
-        
+
         if (!group.pages) {
           setPages([]);
           setFilteredPages([]);
           setIsLoading(false);
           return;
         }
-        
+
         // Transform group pages into a more usable format
         const pagesArray = await Promise.all(
           Object.entries(group.pages).map(async ([pageId, pageData]) => {
@@ -57,7 +57,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
               try {
                 const pageRef = ref(rtdb, `pages/${pageId}`);
                 const snapshot = await get(pageRef);
-                
+
                 if (snapshot.exists()) {
                   return {
                     id: pageId,
@@ -80,7 +80,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
             }
           })
         );
-        
+
         // Filter out null values (pages that couldn't be fetched)
         const validPages = pagesArray.filter(page => page !== null);
         setPages(validPages);
@@ -99,29 +99,29 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
   // Filter and sort pages when search term or sort options change
   useEffect(() => {
     if (!pages.length) return;
-    
+
     let filtered = [...pages];
-    
+
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(page => 
+      filtered = filtered.filter(page =>
         (page.title && page.title.toLowerCase().includes(term)) ||
         (page.username && page.username.toLowerCase().includes(term))
       );
     }
-    
+
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue = a[sortField];
       let bValue = b[sortField];
-      
+
       // Handle dates
       if (sortField === 'lastModified' || sortField === 'createdAt') {
         aValue = aValue ? new Date(aValue).getTime() : 0;
         bValue = bValue ? new Date(bValue).getTime() : 0;
       }
-      
+
       // Handle strings
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
@@ -129,7 +129,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
       if (typeof bValue === 'string') {
         bValue = bValue.toLowerCase();
       }
-      
+
       // Sort direction
       if (sortDirection === 'asc') {
         return aValue > bValue ? 1 : -1;
@@ -137,7 +137,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
         return aValue < bValue ? 1 : -1;
       }
     });
-    
+
     setFilteredPages(filtered);
   }, [pages, searchTerm, sortField, sortDirection]);
 
@@ -158,7 +158,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
       {/* Header with controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-xl font-semibold">Group Pages</h2>
-        
+
         {(isOwner || isMember) && (
           <div className="flex gap-2">
             <Button variant="outline" asChild>
@@ -174,7 +174,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
           </div>
         )}
       </div>
-      
+
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-center">
         <div className="relative w-full sm:w-auto flex-1">
@@ -186,7 +186,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div className="flex gap-2 self-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -198,37 +198,37 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Sort by</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => { setSortField('title'); setSortDirection('asc'); }}
                 className={sortField === 'title' && sortDirection === 'asc' ? 'bg-muted' : ''}
               >
                 Title (A-Z)
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => { setSortField('title'); setSortDirection('desc'); }}
                 className={sortField === 'title' && sortDirection === 'desc' ? 'bg-muted' : ''}
               >
                 Title (Z-A)
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => { setSortField('lastModified'); setSortDirection('desc'); }}
                 className={sortField === 'lastModified' && sortDirection === 'desc' ? 'bg-muted' : ''}
               >
                 Recently Updated
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => { setSortField('lastModified'); setSortDirection('asc'); }}
                 className={sortField === 'lastModified' && sortDirection === 'asc' ? 'bg-muted' : ''}
               >
                 Oldest Updated
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => { setSortField('createdAt'); setSortDirection('desc'); }}
                 className={sortField === 'createdAt' && sortDirection === 'desc' ? 'bg-muted' : ''}
               >
                 Newest Created
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => { setSortField('createdAt'); setSortDirection('asc'); }}
                 className={sortField === 'createdAt' && sortDirection === 'asc' ? 'bg-muted' : ''}
               >
@@ -236,7 +236,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1">
@@ -245,13 +245,13 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => setViewMode('grid')}
                 className={viewMode === 'grid' ? 'bg-muted' : ''}
               >
                 Grid View
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => setViewMode('table')}
                 className={viewMode === 'table' ? 'bg-muted' : ''}
               >
@@ -261,7 +261,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
           </DropdownMenu>
         </div>
       </div>
-      
+
       {/* Pages list */}
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -292,7 +292,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
             <div key={page.id} className="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
               <div className="mb-2">
                 <PillLink
-                  href={`/pages/${page.id}`}
+                  href={`/${page.id}`}
                   isPublic={page.isPublic}
                 >
                   {page.title || "Untitled"}
@@ -324,7 +324,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
                 <TableRow key={page.id}>
                   <TableCell>
                     <PillLink
-                      href={`/pages/${page.id}`}
+                      href={`/${page.id}`}
                       isPublic={page.isPublic}
                     >
                       {page.title || "Untitled"}
