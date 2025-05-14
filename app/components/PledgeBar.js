@@ -397,6 +397,8 @@ const PledgeBar = () => {
     // Check if subscription feature is enabled
     if (!isSubscriptionEnabled) {
       setShowSupportUsModal(true);
+      // Ensure we don't show the activation modal
+      setShowActivationModal(false);
       return;
     }
 
@@ -426,6 +428,8 @@ const PledgeBar = () => {
     // Don't save pledges if subscription feature is disabled
     if (!isSubscriptionEnabled) {
       setShowSupportUsModal(true);
+      // Ensure we don't show the activation modal
+      setShowActivationModal(false);
       return;
     }
 
@@ -487,6 +491,8 @@ const PledgeBar = () => {
             // Show Support Us modal when feature flag is off
             if (!isSubscriptionEnabled) {
               setShowSupportUsModal(true);
+              // Ensure we don't show the activation modal
+              setShowActivationModal(false);
             } else {
               setShowActivationModal(true);
             }
@@ -506,9 +512,9 @@ const PledgeBar = () => {
 
         {/* Modals rendered at document level */}
         {/* When subscription is enabled, show the activation modal */}
-        {typeof document !== 'undefined' && createPortal(
+        {typeof document !== 'undefined' && isSubscriptionEnabled && createPortal(
           <SubscriptionActivationModal
-            isOpen={showActivationModal && isSubscriptionEnabled}
+            isOpen={showActivationModal}
             onClose={() => setShowActivationModal(false)}
             isSignedIn={!!user}
           />,
@@ -518,7 +524,7 @@ const PledgeBar = () => {
         {/* When subscription is disabled, show the Support Us modal */}
         {typeof document !== 'undefined' && createPortal(
           <SupportUsModal
-            isOpen={showSupportUsModal || (showActivationModal && !isSubscriptionEnabled)}
+            isOpen={showSupportUsModal || (!isSubscriptionEnabled && showActivationModal)}
             onClose={() => {
               setShowSupportUsModal(false);
               setShowActivationModal(false);
@@ -553,6 +559,8 @@ const PledgeBar = () => {
               setShowActivationModal(true);
             } else {
               setShowSupportUsModal(true);
+              // Ensure we don't show the activation modal
+              setShowActivationModal(false);
             }
           }}
           onPledgeCustomAmount={() => {
@@ -561,6 +569,8 @@ const PledgeBar = () => {
               setShowActivationModal(true);
             } else {
               setShowSupportUsModal(true);
+              // Ensure we don't show the activation modal
+              setShowActivationModal(false);
             }
           }}
           onDeletePledge={() => {}}
@@ -569,9 +579,9 @@ const PledgeBar = () => {
 
         {/* Modals rendered at document level */}
         {/* When subscription is enabled, show the activation modal */}
-        {typeof document !== 'undefined' && createPortal(
+        {typeof document !== 'undefined' && isSubscriptionEnabled && createPortal(
           <SubscriptionActivationModal
-            isOpen={showActivationModal && isSubscriptionEnabled}
+            isOpen={showActivationModal}
             onClose={() => setShowActivationModal(false)}
             isSignedIn={!!user}
           />,
@@ -581,7 +591,7 @@ const PledgeBar = () => {
         {/* When subscription is disabled, show the Support Us modal */}
         {typeof document !== 'undefined' && createPortal(
           <SupportUsModal
-            isOpen={showSupportUsModal || (showActivationModal && !isSubscriptionEnabled)}
+            isOpen={showSupportUsModal || (!isSubscriptionEnabled && showActivationModal)}
             onClose={() => {
               setShowSupportUsModal(false);
               setShowActivationModal(false);
@@ -604,6 +614,8 @@ const PledgeBar = () => {
     // If subscription feature is disabled, show Support Us modal
     if (!isSubscriptionEnabled) {
       setShowSupportUsModal(true);
+      // Ensure we don't show the activation modal
+      setShowActivationModal(false);
       return;
     }
 
@@ -635,6 +647,8 @@ const PledgeBar = () => {
             // Show Support Us modal when feature flag is off
             if (!isSubscriptionEnabled) {
               setShowSupportUsModal(true);
+              // Ensure we don't show the activation modal
+              setShowActivationModal(false);
             } else {
               setShowActivationModal(true);
             }
@@ -674,9 +688,9 @@ const PledgeBar = () => {
 
       {/* Pledge Modal - rendered at document level to ensure proper positioning */}
       {/* When subscription is enabled, show the activation modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {typeof document !== 'undefined' && isSubscriptionEnabled && createPortal(
         <SubscriptionActivationModal
-          isOpen={showActivationModal && isSubscriptionEnabled}
+          isOpen={showActivationModal}
           onClose={() => setShowActivationModal(false)}
           isSignedIn={!!user}
         />,
@@ -687,7 +701,7 @@ const PledgeBar = () => {
       {/* When subscription is disabled, show the Support Us modal */}
       {typeof document !== 'undefined' && createPortal(
         <SupportUsModal
-          isOpen={showSupportUsModal || (showActivationModal && !isSubscriptionEnabled)}
+          isOpen={showSupportUsModal || (!isSubscriptionEnabled && showActivationModal)}
           onClose={() => {
             setShowSupportUsModal(false);
             setShowActivationModal(false);
