@@ -449,7 +449,13 @@ export default function AdminPage() {
               {featureFlags.map(flag => (
                 <div
                   key={flag.id}
-                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  className={`flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors ${flag.id !== 'admin_features' ? 'cursor-pointer' : ''}`}
+                  onClick={(e) => {
+                    // Only toggle if not clicking on the switch itself and not admin_features
+                    if (flag.id !== 'admin_features' && !isLoading && !e.target.closest('.switch-container')) {
+                      toggleFeatureFlag(flag.id as FeatureFlag);
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -460,11 +466,13 @@ export default function AdminPage() {
                         </span>
                       )}
                     </div>
-                    <Switch
-                      checked={flag.enabled}
-                      onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
-                      disabled={isLoading || flag.id === 'admin_features'} // Prevent disabling admin features
-                    />
+                    <div className="switch-container">
+                      <Switch
+                        checked={flag.enabled}
+                        onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
+                        disabled={isLoading || flag.id === 'admin_features'} // Prevent disabling admin features
+                      />
+                    </div>
                   </div>
                   <span className="text-sm text-muted-foreground">{flag.description}</span>
                   <div className="mt-2">
