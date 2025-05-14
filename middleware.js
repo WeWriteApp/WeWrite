@@ -20,7 +20,10 @@ export function middleware(request) {
                       path === "/subscription/";
 
   // Define paths that require admin access (only accessible to admin users)
-  const requiresAdmin = path === "/groups" ||
+  const requiresAdmin = false; // No paths require admin access by default
+
+  // Define paths that require authentication (groups functionality)
+  const requiresGroupsAuth = path === "/groups" ||
                       path === "/groups/" ||
                       path.startsWith("/groups/") ||
                       path === "/group" ||
@@ -88,7 +91,7 @@ export function middleware(request) {
   }
 
   // Only redirect to login for paths that explicitly require auth
-  if (requiresAuth && !token) {
+  if ((requiresAuth || requiresGroupsAuth) && !token) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("from", path);
     return NextResponse.redirect(loginUrl);

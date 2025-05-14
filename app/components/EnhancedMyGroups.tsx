@@ -7,12 +7,11 @@ import { onValue, ref, get } from "firebase/database";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Users, Plus, Lock, FileText } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { ChevronRight, Users, FileText, Plus, Lock } from "lucide-react";
+import { useMediaQuery } from "../hooks/use-media-query";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import SimpleSparkline from "./SimpleSparkline";
-import { useFeatureFlag } from "../utils/feature-flags";
-import SectionTitle from "./SectionTitle";
-import { Placeholder } from "./ui/placeholder";
-import { Loader } from "lucide-react";
 import PillLink from "./PillLink";
 
 interface Group {
@@ -25,61 +24,17 @@ interface Group {
   ownerUsername?: string;
   isPublic?: boolean;
   activity?: number[];
+  userRole?: string; // Added to track the current user's role in the group
 }
 
-export default function HomeGroupsSection() {
+export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: string }) {
   const { user } = useContext(AuthContext);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Check if the groups feature flag is enabled
-  const groupsEnabled = useFeatureFlag('groups', user?.email);
-
-  // Enhanced debug logging for groups feature flag
-  useEffect(() => {
-    console.log('[DEBUG] HomeGroupsSection - Groups feature flag:', groupsEnabled);
-    console.log('[DEBUG] HomeGroupsSection - User:', user?.email);
-
-    // Log additional information about the component state
-    console.log('[DEBUG] HomeGroupsSection - Component will render:', groupsEnabled ? 'YES' : 'NO');
-
-    // Check if the feature flag is enabled in the database directly
-    const checkFeatureFlagInDb = async () => {
-      try {
-        const { doc, getDoc } = await import('firebase/firestore');
-        const { db } = await import('../firebase/database');
-
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - Groups flag value:', flagsData['groups']);
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - Type:', typeof flagsData['groups']);
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - Strict equality (=== true):', flagsData['groups'] === true);
-        } else {
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - No feature flags document found');
-        }
-      } catch (error) {
-        console.error('[DEBUG] HomeGroupsSection - Error checking feature flag in DB:', error);
-      }
-    };
-
-    checkFeatureFlagInDb();
-  }, [groupsEnabled, user?.email]);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
-    if (!user?.uid) {
-      console.log('HomeGroupsSection - No user ID, skipping groups fetch');
-      return;
-    }
-
-    if (!groupsEnabled) {
-      console.log('HomeGroupsSection - Groups feature disabled, skipping groups fetch');
-      return;
-    }
-
-    console.log('HomeGroupsSection - Attempting to fetch groups for user:', user.uid);
+    if (!user?.uid) return;
 
     // Function to fetch groups where user is a member or owner
     const fetchGroups = () => {
@@ -109,55 +64,54 @@ export default function HomeGroupsSection() {
           );
           const isOwner = group.owner === user.uid;
 
-          if (isMember || isOwner) {
-            // Get real activity data for the group
-            // This will be based on page edits within the group
-            let activity = [];
+          // Determine user's role in this group
+          let userRole = null;
+          if (isOwner) {
+            userRole = "owner";
+          } else if (isMember) {
+            userRole = "member";
+          }
 
-            // If the group has pages, get activity data for each page
-            if (group.pages && Object.keys(group.pages).length > 0) {
-              // Create an array of 24 zeros (for 24 hours)
-              activity = Array(24).fill(0);
+          if (profileUserId) {
+            if (group.isPublic) {
+              // Create activity data for the group
+              let activity = generateActivityData(group);
 
-              // For each page in the group, add its activity to the group activity
-              Object.keys(group.pages).forEach(pageId => {
-                // If the page has activity data, add it to the group activity
-                if (group.pages[pageId] && group.pages[pageId].activity) {
-                  const pageActivity = group.pages[pageId].activity;
-                  // Add each hour's activity to the corresponding hour in the group activity
-                  pageActivity.forEach((count, hour) => {
-                    activity[hour] += count;
-                  });
-                }
-              });
-            } else {
-              // If no pages or no activity data, create a sparse array with a few non-zero values
-              // This ensures the sparkline shows something even for new groups
-              activity = Array(24).fill(0);
-              // Add a few random non-zero values
-              const randomHours = [
-                Math.floor(Math.random() * 8),
-                Math.floor(Math.random() * 8) + 8,
-                Math.floor(Math.random() * 8) + 16
-              ];
-              randomHours.forEach(hour => {
-                activity[hour] = Math.floor(Math.random() * 3) + 1;
+              userGroups.push({
+                id: groupId,
+                name: group.name,
+                description: group.description,
+                members: group.members,
+                pages: group.pages,
+                owner: group.owner,
+                ownerUsername: group.owner && usersData[group.owner]
+                  ? usersData[group.owner].username
+                  : 'Unknown',
+                isPublic: group.isPublic || false,
+                activity: activity,
+                userRole: userRole
               });
             }
+          } else {
+            if (isMember || isOwner) {
+              // Create activity data for the group
+              let activity = generateActivityData(group);
 
-            userGroups.push({
-              id: groupId,
-              name: group.name,
-              description: group.description,
-              members: group.members,
-              pages: group.pages,
-              owner: group.owner,
-              ownerUsername: group.owner && usersData[group.owner]
-                ? usersData[group.owner].username
-                : 'Unknown',
-              isPublic: group.isPublic || false,
-              activity: activity
-            });
+              userGroups.push({
+                id: groupId,
+                name: group.name,
+                description: group.description,
+                members: group.members,
+                pages: group.pages,
+                owner: group.owner,
+                ownerUsername: group.owner && usersData[group.owner]
+                  ? usersData[group.owner].username
+                  : 'Unknown',
+                isPublic: group.isPublic || false,
+                activity: activity,
+                userRole: userRole
+              });
+            }
           }
         });
 
@@ -168,7 +122,32 @@ export default function HomeGroupsSection() {
 
     const unsubscribe = fetchGroups();
     return () => unsubscribe();
-  }, [user?.uid, groupsEnabled]);
+  }, [user?.uid, profileUserId]);
+
+  // Function to generate activity data for a group
+  const generateActivityData = (group: any): number[] => {
+    // If the group has real activity data, use it
+    if (group.activity && Array.isArray(group.activity)) {
+      return group.activity;
+    }
+
+    // Otherwise, create a sparse array with a few non-zero values
+    // This ensures the sparkline shows something even for new groups
+    const activity = Array(24).fill(0);
+    
+    // Add a few random non-zero values
+    const randomHours = [
+      Math.floor(Math.random() * 8),
+      Math.floor(Math.random() * 8) + 8,
+      Math.floor(Math.random() * 8) + 16
+    ];
+    
+    randomHours.forEach(hour => {
+      activity[hour] = Math.floor(Math.random() * 3) + 1;
+    });
+    
+    return activity;
+  };
 
   // Function to get member count
   const getMemberCount = (members?: Record<string, { role: string; joinedAt: string }>) => {
@@ -180,25 +159,17 @@ export default function HomeGroupsSection() {
     return pages ? Object.keys(pages).length : 0;
   };
 
-  // If the groups feature is not enabled, don't render anything
-  if (!groupsEnabled) {
-    console.log('[DEBUG] HomeGroupsSection - Not rendering because groupsEnabled is:', groupsEnabled);
-    return null;
-  }
-
-  console.log('[DEBUG] HomeGroupsSection - Rendering component because groupsEnabled is:', groupsEnabled);
-
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <SectionTitle
-            icon={Users}
-            title="Your Groups"
-          />
+      <div className="w-full space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold flex items-center">
+            <Users className="h-5 w-5 mr-2" />
+            My Groups
+          </h2>
         </div>
         <div className="flex justify-center items-center py-8">
-          <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       </div>
     );
@@ -207,11 +178,11 @@ export default function HomeGroupsSection() {
   if (groups.length === 0) {
     return (
       <div className="w-full space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <SectionTitle
-            icon={Users}
-            title="Your Groups"
-          />
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold flex items-center">
+            <Users className="h-5 w-5 mr-2" />
+            My Groups
+          </h2>
           <Button variant="outline" asChild>
             <Link href="/group/new" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -219,35 +190,37 @@ export default function HomeGroupsSection() {
             </Link>
           </Button>
         </div>
-        <div className="border border-theme-medium rounded-lg overflow-hidden">
-          <div className="text-muted-foreground p-4 text-center">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-            <p className="mb-4">You haven't joined any groups yet.</p>
-            <Button variant="outline" asChild>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <Users className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-center">You haven't joined any groups yet.</p>
+            <Button variant="outline" className="mt-4" asChild>
               <Link href="/group/new">Create a Group</Link>
             </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // Only show up to 3 groups on the home page
-  const displayGroups = groups.slice(0, 3);
+  // Only show all groups when on the groups page
+  const displayGroups = profileUserId ? groups.slice(0, 4) : groups;
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <SectionTitle
-          icon={Users}
-          title="Your Groups"
-        />
-        <Button variant="outline" asChild>
-          <Link href="/group/new" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Group
-          </Link>
-        </Button>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold flex items-center">
+          <Users className="h-5 w-5 mr-2" />
+          My Groups
+        </h2>
+        {!profileUserId && (
+          <Button variant="outline" asChild>
+            <Link href="/group/new" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Group
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Desktop view (md and up): Table layout */}
@@ -277,6 +250,14 @@ export default function HomeGroupsSection() {
                     <PillLink href={`/group/${group.id}`}>
                       {group.name}
                     </PillLink>
+                    {group.userRole && (
+                      <Badge 
+                        variant={group.userRole === "owner" ? "default" : "secondary"} 
+                        className="ml-2 text-xs"
+                      >
+                        {group.userRole === "owner" ? "Owner" : "Member"}
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     by {group.ownerUsername}
@@ -329,8 +310,18 @@ export default function HomeGroupsSection() {
                     <span className="truncate">{group.name}</span>
                   </span>
                 </h3>
-                <div className="text-xs text-muted-foreground">
-                  by {group.ownerUsername}
+                <div className="flex items-center mt-1">
+                  <div className="text-xs text-muted-foreground">
+                    by {group.ownerUsername}
+                  </div>
+                  {group.userRole && (
+                    <Badge 
+                      variant={group.userRole === "owner" ? "default" : "secondary"} 
+                      className="ml-2 text-xs"
+                    >
+                      {group.userRole === "owner" ? "Owner" : "Member"}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -359,15 +350,6 @@ export default function HomeGroupsSection() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* View All button */}
-      <div className="flex justify-center mt-4">
-        <Button variant="outline" asChild>
-          <Link href="/groups">
-            View all groups
-          </Link>
-        </Button>
       </div>
     </div>
   );

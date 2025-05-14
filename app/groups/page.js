@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import MyGroups from "../components/MyGroups";
+import EnhancedMyGroups from "../components/EnhancedMyGroups";
 import { Button } from "../components/ui/button";
 import { Plus, ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +16,7 @@ export default function GroupsPage() {
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -37,7 +37,7 @@ export default function GroupsPage() {
             </p>
           </div>
         </div>
-        <Link href="/groups/new">
+        <Link href="/group/new">
           <Button className="gap-1.5">
             <Plus className="h-4 w-4" />
             New Group
@@ -48,38 +48,10 @@ export default function GroupsPage() {
       {isLoading ? (
         <GroupsLoadingSkeleton />
       ) : (
-        <div className="grid-container">
-          <MyGroups />
-        </div>
+        <EnhancedMyGroups />
       )}
 
-      <style jsx>{`
-        .grid-container :global(.space-y-4) {
-          margin-top: 0;
-        }
-        
-        .grid-container :global(.space-y-4 > div:first-child) {
-          margin-bottom: 1rem;
-        }
-        
-        .grid-container :global(.space-y-4 > div:not(:first-child)) {
-          display: grid;
-          grid-template-columns: repeat(1, minmax(0, 1fr));
-          gap: 1rem;
-        }
-        
-        @media (min-width: 640px) {
-          .grid-container :global(.space-y-4 > div:not(:first-child)) {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-        
-        @media (min-width: 1024px) {
-          .grid-container :global(.space-y-4 > div:not(:first-child)) {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-        }
-      `}</style>
+
     </div>
   );
 }
@@ -87,21 +59,58 @@ export default function GroupsPage() {
 // Loading skeleton for groups
 function GroupsLoadingSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <Card key={i}>
-          <CardHeader className="pb-2">
-            <Skeleton className="h-6 w-1/3" />
-            <Skeleton className="h-4 w-1/2 mt-2" />
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-4 w-1/5" />
+    <div className="space-y-4">
+      {/* Desktop view skeleton (md and up) */}
+      <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 w-full">
+        <div className="p-4">
+          <div className="flex justify-between border-b border-border pb-2">
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="py-4 border-b border-border/50">
+              <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-12 w-24" />
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile view skeleton (below md) */}
+      <div className="md:hidden grid grid-cols-1 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-6 w-1/3" />
+              <div className="flex items-center mt-1">
+                <Skeleton className="h-4 w-1/2 mr-2" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <div className="flex justify-between">
+                <div className="space-y-2">
+                  <div className="flex space-x-3">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                </div>
+                <Skeleton className="h-14 w-28 rounded-md" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

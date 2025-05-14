@@ -28,38 +28,38 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useMediaQuery("(max-width: 768px)");
-  
+
   useEffect(() => {
     if (!user?.uid) return;
-    
+
     // Function to fetch groups where user is a member or owner
     const fetchGroups = () => {
       const groupsRef = ref(rtdb, 'groups');
-      
+
       return onValue(groupsRef, async (snapshot) => {
         if (!snapshot.exists()) {
           setGroups([]);
           setLoading(false);
           return;
         }
-        
+
         const allGroups = snapshot.val();
         const userGroups: Group[] = [];
-        
+
         // Get all users to find owner usernames
         const usersRef = ref(rtdb, 'users');
         const usersSnapshot = await get(usersRef);
         const usersData = usersSnapshot.exists() ? usersSnapshot.val() : {};
-        
+
         Object.keys(allGroups).forEach(groupId => {
           const group = allGroups[groupId];
-          
+
           // Check if user is a member or owner
           const isMember = group.members && Object.keys(group.members).some(
             memberId => memberId === user.uid && group.members[memberId].role === 'member'
           );
           const isOwner = group.owner === user.uid;
-          
+
           if (profileUserId) {
             if (group.isPublic) {
               userGroups.push({
@@ -69,8 +69,8 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
                 members: group.members,
                 pages: group.pages,
                 owner: group.owner,
-                ownerUsername: group.owner && usersData[group.owner] 
-                  ? usersData[group.owner].username 
+                ownerUsername: group.owner && usersData[group.owner]
+                  ? usersData[group.owner].username
                   : 'Unknown',
                 isPublic: group.isPublic || false
               });
@@ -84,34 +84,34 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
                 members: group.members,
                 pages: group.pages,
                 owner: group.owner,
-                ownerUsername: group.owner && usersData[group.owner] 
-                  ? usersData[group.owner].username 
+                ownerUsername: group.owner && usersData[group.owner]
+                  ? usersData[group.owner].username
                   : 'Unknown',
                 isPublic: group.isPublic || false
               });
             }
           }
         });
-        
+
         setGroups(userGroups);
         setLoading(false);
       });
     };
-    
+
     const unsubscribe = fetchGroups();
     return () => unsubscribe();
   }, [user?.uid, profileUserId]);
-  
+
   // Function to get member count
   const getMemberCount = (members?: Record<string, { role: string; joinedAt: string }>) => {
     return members ? Object.keys(members).length : 0;
   };
-  
+
   // Function to get page count
   const getPageCount = (pages?: Record<string, boolean>) => {
     return pages ? Object.keys(pages).length : 0;
   };
-  
+
   if (loading) {
     return (
       <div className="w-full space-y-4">
@@ -140,7 +140,7 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
       </div>
     );
   }
-  
+
   if (groups.length === 0) {
     return (
       <div className="w-full space-y-4">
@@ -150,7 +150,7 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
             My Groups
           </h2>
           <Button variant="outline" asChild>
-            <Link href="/groups/new" className="flex items-center gap-2">
+            <Link href="/group/new" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New Group
             </Link>
@@ -161,17 +161,17 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-center">You haven't joined any groups yet.</p>
             <Button variant="outline" className="mt-4" asChild>
-              <Link href="/groups/new">Create a Group</Link>
+              <Link href="/group/new">Create a Group</Link>
             </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
-  
+
   // Only show all groups when on the groups page
   const displayGroups = profileUserId ? groups.slice(0, 4) : groups;
-  
+
   return (
     <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
@@ -181,17 +181,17 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
         </h2>
         {!profileUserId && (
           <Button variant="outline" asChild>
-            <Link href="/groups/new" className="flex items-center gap-2">
+            <Link href="/group/new" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               New Group
             </Link>
           </Button>
         )}
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {displayGroups.map((group) => (
-          <Link key={group.id} href={`/groups/${group.id}`} className="block">
+          <Link key={group.id} href={`/group/${group.id}`} className="block">
             <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center">
@@ -217,7 +217,7 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  
+
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -236,7 +236,7 @@ export default function MyGroups({ profileUserId }: { profileUserId?: string }) 
             </Card>
           </Link>
         ))}
-        
+
         {profileUserId && groups.length > 4 && (
           <Link href="/groups" className="block">
             <Card className="h-full hover:shadow-md transition-shadow cursor-pointer flex items-center justify-center p-6">
