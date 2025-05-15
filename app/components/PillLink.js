@@ -92,6 +92,8 @@ export const PillLink = forwardRef(({
     ${getPillStyleClasses()}
     ${groupId ? 'opacity-90' : ''}
     ${className}
+    text-indent-0
+    float-none
   `.trim().replace(/\s+/g, ' ');
 
   // External link with confirmation modal

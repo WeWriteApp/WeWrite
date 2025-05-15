@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo } from "react";
 import {
   createEditor,
   Transforms,
@@ -117,6 +117,25 @@ const UnifiedEditor = forwardRef(({
     }
   }, [initialContent]);
 
+  // We no longer need to synchronize line numbers since we're using inline paragraph numbers
+  useEffect(() => {
+    // No-op - keeping the effect as a placeholder in case we need to add initialization logic in the future
+  }, []);
+
+  // Share the linkEditorRef with child components via window
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.currentLinkEditorRef = linkEditorRef.current;
+    }
+
+    return () => {
+      // Clean up when component unmounts
+      if (typeof window !== 'undefined') {
+        window.currentLinkEditorRef = null;
+      }
+    };
+  }, []);
+
   // Insert a link at the current selection
   const insertLink = useCallback((url, text, options = {}) => {
     if (!url) return false;
@@ -164,6 +183,72 @@ const UnifiedEditor = forwardRef(({
     }
   }, [editor]);
 
+  // Create a ref for the link editor state
+  const linkEditorRef = useRef({
+    showLinkEditor: false,
+    setShowLinkEditor: null,
+    linkEditorPosition: { top: 0, left: 0 },
+    selectedLinkElement: null,
+    selectedLinkPath: null,
+    initialLinkValues: {}
+  });
+
+  // Function to open the link editor
+  const openLinkEditor = useCallback(() => {
+    try {
+      // Focus the editor first
+      safeReactEditor.focus(editor);
+
+      // Get the current selection
+      const { selection } = editor;
+
+      if (!selection) {
+        // If no selection, position at the end
+        const end = Editor.end(editor, []);
+        Transforms.select(editor, end);
+      }
+
+      // Position the link editor near the cursor
+      const domSelection = window.getSelection();
+      if (domSelection && domSelection.rangeCount > 0) {
+        const range = domSelection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        // Update the link editor position
+        linkEditorRef.current.linkEditorPosition = {
+          top: rect.bottom + window.pageYOffset,
+          left: rect.left + window.pageXOffset,
+        };
+      } else {
+        // Fallback position
+        linkEditorRef.current.linkEditorPosition = {
+          top: window.innerHeight / 2,
+          left: window.innerWidth / 2,
+        };
+      }
+
+      // Set initial values for a new link
+      linkEditorRef.current.selectedLinkElement = null;
+      linkEditorRef.current.selectedLinkPath = null;
+      linkEditorRef.current.initialLinkValues = {
+        text: '',
+        pageId: null,
+        pageTitle: ''
+      };
+
+      // Show the link editor
+      linkEditorRef.current.showLinkEditor = true;
+      if (linkEditorRef.current.setShowLinkEditor) {
+        linkEditorRef.current.setShowLinkEditor(true);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error opening link editor:', error);
+      return false;
+    }
+  }, [editor]);
+
   // Expose methods to parent components via ref
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -186,8 +271,12 @@ const UnifiedEditor = forwardRef(({
       }
     },
     insertLink, // Expose the insertLink method
+    openLinkEditor, // Expose the openLinkEditor method
     // Add any other methods you want to expose
   }));
+
+  // We no longer need to synchronize line numbers with editor content
+  // since we're using inline paragraph numbers
 
   // Handle editor changes
   const handleEditorChange = useCallback((value) => {
@@ -210,7 +299,34 @@ const UnifiedEditor = forwardRef(({
       case 'link':
         return <LinkComponent attributes={attributes} children={children} element={element} editor={editor} />;
       case 'paragraph':
-        return <p {...attributes}>{children}</p>;
+        // Get the paragraph index
+        let index = 0;
+        try {
+          const path = safeReactEditor.findPath(editor, element);
+          index = path[0]; // The first element of the path is the paragraph index
+        } catch (error) {
+          console.error('Error finding paragraph index:', error);
+        }
+
+        return (
+          <div {...attributes} className="paragraph-with-number">
+            {/* Paragraph number inline at beginning - non-selectable and non-interactive */}
+            <span
+              contentEditable={false}
+              className="paragraph-number-inline select-none"
+              style={{
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+                pointerEvents: 'none'
+              }}
+            >
+              {index + 1}
+            </span>
+            <p className="inline">{children}</p>
+          </div>
+        );
       default:
         return <p {...attributes}>{children}</p>;
     }
@@ -242,12 +358,50 @@ const UnifiedEditor = forwardRef(({
       lastSelectionRef.current = editor.selection;
     }
 
-    // Add any key handling logic here
+    // Handle single-keystroke deletion of links
+    if ((event.key === 'Delete' || event.key === 'Backspace') && editor.selection) {
+      const [node, path] = Editor.node(editor, editor.selection);
+
+      // Check if we're at a link or inside a link
+      let linkEntry = null;
+      try {
+        // Try to find a link node at or above the current selection
+        linkEntry = Editor.above(editor, {
+          at: editor.selection,
+          match: n => n.type === 'link',
+        });
+      } catch (error) {
+        console.error('Error finding link node:', error);
+      }
+
+      // If we found a link, delete the entire link with a single keystroke
+      if (linkEntry) {
+        event.preventDefault(); // Prevent default deletion behavior
+        const [linkNode, linkPath] = linkEntry;
+
+        try {
+          // Remove the entire link node
+          Transforms.removeNodes(editor, { at: linkPath });
+
+          // Insert a space to replace the link
+          Transforms.insertText(editor, ' ');
+
+          // Return early since we've handled the event
+          return;
+        } catch (error) {
+          console.error('Error removing link node:', error);
+          // If there's an error, let the default behavior happen
+        }
+      }
+    }
   }, [editor]);
+
+  // We no longer need to calculate line numbers for the editor content
+  // since we're using inline paragraph numbers
 
   return (
     <div className="unified-editor relative rounded-lg bg-background">
-      {/* Add custom CSS for pill links in the editor */}
+      {/* Add custom CSS for pill links and paragraph numbers in the editor */}
       <style jsx global>{`
         /* Ensure pill links in the editor match the site's appearance */
         .unified-editor .slate-pill-link {
@@ -275,6 +429,23 @@ const UnifiedEditor = forwardRef(({
         /* Ensure proper icon alignment */
         .unified-editor .slate-pill-link svg {
           flex-shrink: 0;
+        }
+
+        /* Inline paragraph number styling for editor */
+        .unified-editor .paragraph-number-inline {
+          display: inline-block;
+          min-width: 0.75rem;
+          text-align: right;
+          vertical-align: baseline;
+          opacity: 0.8;
+          position: relative;
+          top: -0.05em;
+          color: var(--muted-foreground);
+          font-size: 0.75rem;
+          user-select: none;
+          pointer-events: none;
+          margin-right: 0.25rem;
+          float: none;
         }
       `}</style>
 
@@ -308,6 +479,7 @@ const UnifiedEditor = forwardRef(({
               }
             }
           }}
+          // We no longer need to synchronize line numbers after DOM mutations
         />
       </Slate>
     </div>
@@ -337,11 +509,35 @@ InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
 
 // Link Component that matches the PillLink styling
 const LinkComponent = ({ attributes, children, element, editor }) => {
+  // Use the linkEditorRef from the parent component
+  const linkEditorRef = useRef(null);
+
+  // Get the linkEditorRef from the parent UnifiedEditor component
+  useEffect(() => {
+    // This will be set by the parent UnifiedEditor component
+    if (typeof window !== 'undefined' && window.currentLinkEditorRef) {
+      linkEditorRef.current = window.currentLinkEditorRef;
+    }
+  }, []);
+
+  // Local state for this component
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({});
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
   const [selectedLinkPath, setSelectedLinkPath] = useState(null);
   const [initialLinkValues, setInitialLinkValues] = useState({});
+
+  // Update the linkEditorRef when local state changes
+  useEffect(() => {
+    if (linkEditorRef.current) {
+      linkEditorRef.current.showLinkEditor = showLinkEditor;
+      linkEditorRef.current.setShowLinkEditor = setShowLinkEditor;
+      linkEditorRef.current.linkEditorPosition = linkEditorPosition;
+      linkEditorRef.current.selectedLinkElement = selectedLinkElement;
+      linkEditorRef.current.selectedLinkPath = selectedLinkPath;
+      linkEditorRef.current.initialLinkValues = initialLinkValues;
+    }
+  }, [showLinkEditor, linkEditorPosition, selectedLinkElement, selectedLinkPath, initialLinkValues]);
 
   // Use PillStyle context to get the current pill style
   const { pillStyle, getPillStyleClasses } = usePillStyle();
@@ -374,47 +570,93 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
     cursor-pointer
     ${linkTypeClass}
     slate-pill-link
+    text-indent-0
+    float-none
   `.trim().replace(/\s+/g, ' ');
 
+  /**
+   * Handle click on a link element
+   * This opens the link editor modal for editing the link
+   *
+   * @param {Event} e - The click event
+   */
   const handleClick = (e) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+
     try {
-      // Find the path to this element
-      const path = ReactEditor.findPath(editor, element);
+      // Find the path to this element using the safe wrapper
+      let path;
+      try {
+        path = safeReactEditor.findPath(editor, element);
+      } catch (pathError) {
+        console.warn("Could not find path to link element:", pathError);
+        // We'll still try to open the editor even without a path
+        path = null;
+      }
 
       // Store the element and path for the link editor
       setSelectedLinkElement(element);
       setSelectedLinkPath(path);
 
       // Set initial values for the link editor
+      const initialText = element.children && element.children[0] ? element.children[0].text || "" : "";
       setInitialLinkValues({
-        text: element.children && element.children[0] ? element.children[0].text || "" : "",
+        text: initialText,
         pageId: element.pageId || null,
-        pageTitle: element.pageTitle || ""
+        pageTitle: element.pageTitle || initialText
       });
 
-      // Position the link editor
-      const domSelection = window.getSelection();
-      if (domSelection && domSelection.rangeCount > 0) {
-        const range = domSelection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-
-        setLinkEditorPosition({
-          top: rect.bottom + window.pageYOffset,
-          left: rect.left + window.pageXOffset,
-        });
-      } else {
-        // Fallback position
-        setLinkEditorPosition({
-          top: window.innerHeight / 2,
-          left: window.innerWidth / 2,
-        });
-      }
+      // Position the link editor in the center of the screen for better visibility
+      setLinkEditorPosition({
+        top: window.innerHeight / 2,
+        left: window.innerWidth / 2,
+      });
 
       // Show the link editor
       setShowLinkEditor(true);
+
+      // Also update the shared ref
+      if (linkEditorRef.current) {
+        linkEditorRef.current.showLinkEditor = true;
+        linkEditorRef.current.selectedLinkElement = element;
+        linkEditorRef.current.selectedLinkPath = path;
+        linkEditorRef.current.initialLinkValues = {
+          text: initialText,
+          pageId: element.pageId || null,
+          pageTitle: element.pageTitle || initialText
+        };
+      }
+
+      // Prevent any other editor actions
+      setTimeout(() => {
+        // This ensures the editor doesn't try to handle this click
+        if (editor.selection) {
+          try {
+            // Preserve the selection
+            const savedSelection = editor.selection;
+            // We'll restore it after the link editor is closed
+            linkEditorRef.current.savedSelection = savedSelection;
+          } catch (selectionError) {
+            console.warn("Could not save selection:", selectionError);
+          }
+        }
+      }, 0);
     } catch (error) {
       console.error("Error handling link click:", error);
+      // Try a fallback approach
+      try {
+        // Just show the link editor with basic information
+        setShowLinkEditor(true);
+        setSelectedLinkElement(element);
+        setInitialLinkValues({
+          text: element.children?.[0]?.text || "",
+          pageId: element.pageId || null,
+          pageTitle: element.pageTitle || ""
+        });
+      } catch (fallbackError) {
+        console.error("Error in fallback link handling:", fallbackError);
+      }
     }
   };
 
@@ -520,18 +762,38 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   );
 };
 
-// Link Editor Component
+/**
+ * Link Editor Component
+ *
+ * This component provides a modal interface for creating and editing links.
+ * It supports both internal page links and external URLs.
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.position - Position for the editor (not used in modal mode)
+ * @param {Function} props.onSelect - Callback when a link is selected/created
+ * @param {Function} props.setShowLinkEditor - Function to hide the editor
+ * @param {string} props.initialText - Initial text for the link
+ * @param {string|null} props.initialPageId - Initial page ID for internal links
+ * @param {string} props.initialPageTitle - Initial page title for internal links
+ */
 const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle);
-  const [activeTab, setActiveTab] = useState("page");
+  const [activeTab, setActiveTab] = useState(initialPageId ? "page" : "external");
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   const [showAuthor, setShowAuthor] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
+  const [isValid, setIsValid] = useState(!!initialPageId); // Valid if editing an existing link
+  const [validationMessage, setValidationMessage] = useState("");
 
   // Determine if we're editing an existing link or creating a new one
   const isEditing = !!initialPageId || !!initialText;
+
+  // Input refs for focus management
+  const displayTextRef = useRef(null);
+  const pageSearchRef = useRef(null);
+  const externalUrlRef = useRef(null);
 
   // Track initial state for change detection
   const initialState = React.useRef({
@@ -555,11 +817,62 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     setHasChanged(changed);
   }, [displayText, pageTitle, selectedPageId, externalUrl, showAuthor, activeTab]);
 
-  // Validation helpers
-  const isPageValid = activeTab === 'page' && !!selectedPageId;
-  const isExternalValid = activeTab === 'external' && externalUrl && (externalUrl.startsWith('http://') || externalUrl.startsWith('https://'));
-  const canSave = hasChanged && ((activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid));
+  // Validate the form
+  const validateForm = useCallback(() => {
+    if (activeTab === "page") {
+      if (!selectedPageId) {
+        setIsValid(false);
+        setValidationMessage("Please select a page");
+        return false;
+      }
+    } else if (activeTab === "external") {
+      if (!externalUrl) {
+        setIsValid(false);
+        setValidationMessage("Please enter a URL");
+        return false;
+      }
 
+      // Basic URL validation
+      try {
+        // Add protocol if missing
+        let urlToCheck = externalUrl;
+        if (!/^https?:\/\//i.test(urlToCheck)) {
+          urlToCheck = 'https://' + urlToCheck;
+        }
+
+        new URL(urlToCheck);
+        setIsValid(true);
+        setValidationMessage("");
+      } catch (e) {
+        setIsValid(false);
+        setValidationMessage("Please enter a valid URL");
+        return false;
+      }
+    }
+
+    // Validate display text
+    if (!displayText.trim()) {
+      setIsValid(false);
+      setValidationMessage("Please enter display text for the link");
+      return false;
+    }
+
+    setIsValid(true);
+    setValidationMessage("");
+    return true;
+  }, [activeTab, selectedPageId, externalUrl, displayText]);
+
+  // Update validation when form changes
+  useEffect(() => {
+    validateForm();
+  }, [activeTab, selectedPageId, externalUrl, displayText, validateForm]);
+
+  // Validation helpers for UI
+  const isPageValid = activeTab === 'page' && !!selectedPageId && !!displayText;
+  const isExternalValid = activeTab === 'external' && !!externalUrl && !!displayText;
+  const canSave = hasChanged && isValid && ((activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid));
+
+  // Handle close
   const handleClose = () => {
     setShowLinkEditor(false);
   };
@@ -578,23 +891,41 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   // Handle save for external links
   const handleExternalSubmit = () => {
-    if (isExternalValid) {
-      onSelect({
-        url: externalUrl,
-        displayText: displayText,
-        isExternal: true
-      });
+    if (!validateForm()) {
+      return;
     }
+
+    // Add protocol if missing
+    let finalUrl = externalUrl;
+    if (!/^https?:\/\//i.test(finalUrl)) {
+      finalUrl = 'https://' + finalUrl;
+    }
+
+    onSelect({
+      type: "external",
+      url: finalUrl,
+      displayText: displayText || externalUrl,
+      isExternal: true
+    });
+
+    setShowLinkEditor(false);
   };
 
   // Handle save for page links
   const handleSave = (item) => {
-    if (canSave) {
-      onSelect({
-        ...item,
-        showAuthor
-      });
+    if (!validateForm()) {
+      return;
     }
+
+    onSelect({
+      type: "page",
+      pageId: item.id,
+      pageTitle: item.title || displayText,
+      displayText: displayText || item.title,
+      showAuthor
+    });
+
+    setShowLinkEditor(false);
   };
 
   // Position the link editor
@@ -665,27 +996,57 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
+          {/* Display validation message if there's an error */}
+          {validationMessage && (
+            <div className="px-4 pt-2 text-sm text-red-500">
+              {validationMessage}
+            </div>
+          )}
+
           {activeTab === 'page' ? (
             <div className="p-4">
               <div>
-                <TypeaheadSearch
-                  onSelect={(page) => {
-                    setSelectedPageId(page.id);
-                    setPageTitle(page.title);
-                    setDisplayText(page.title);
-                  }}
-                  placeholder="Search pages..."
-                  initialSelectedId={selectedPageId}
-                  displayText={displayText}
-                  setDisplayText={setDisplayText}
-                  preventRedirect={true}
-                  onInputChange={(value) => {
-                    if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
-                      setActiveTab('external');
-                      setExternalUrl(value);
-                    }
-                  }}
-                />
+                {/* Display text input */}
+                <div className="space-y-2 mb-4">
+                  <h2 className="text-sm font-medium">Link text</h2>
+                  <input
+                    ref={displayTextRef}
+                    type="text"
+                    value={displayText}
+                    onChange={handleDisplayTextChange}
+                    placeholder="Link text"
+                    className={`w-full p-2 bg-muted/50 rounded-lg border ${!displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                    autoFocus={!initialText}
+                  />
+                </div>
+
+                {/* Page search */}
+                <div className="space-y-2">
+                  <h2 className="text-sm font-medium">Search for a page</h2>
+                  <TypeaheadSearch
+                    ref={pageSearchRef}
+                    onSelect={(page) => {
+                      setSelectedPageId(page.id);
+                      setPageTitle(page.title);
+                      // Only set display text if it's empty or matches the previous page title
+                      if (!displayText.trim() || displayText === pageTitle) {
+                        setDisplayText(page.title);
+                      }
+                    }}
+                    placeholder="Search pages..."
+                    initialSelectedId={selectedPageId}
+                    displayText={pageTitle}
+                    preventRedirect={true}
+                    onInputChange={(value) => {
+                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
+                        setActiveTab('external');
+                        setExternalUrl(value);
+                      }
+                    }}
+                    className={!selectedPageId ? 'border-red-500' : ''}
+                  />
+                </div>
+
                 {/* Show Author Switch */}
                 <div className="flex items-center gap-2 mt-4 mb-4">
                   <input
@@ -702,26 +1063,35 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
           ) : (
             <div className="p-4 space-y-4">
               <div className="space-y-2">
-                <h2 className="text-sm font-medium">Text</h2>
+                <h2 className="text-sm font-medium">Link text</h2>
                 <input
+                  ref={displayTextRef}
                   type="text"
                   value={displayText}
                   onChange={handleDisplayTextChange}
                   placeholder="Link text"
-                  className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
+                  className={`w-full p-2 bg-muted/50 rounded-lg border ${!displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                  autoFocus={!initialText}
                 />
               </div>
 
               <div className="space-y-2">
                 <h2 className="text-sm font-medium">URL</h2>
                 <input
+                  ref={externalUrlRef}
                   type="url"
                   value={externalUrl}
                   onChange={handleExternalUrlChange}
                   placeholder="https://example.com"
-                  className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
+                  className={`w-full p-2 bg-muted/50 rounded-lg border ${!externalUrl ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                  autoFocus={!!initialText && !externalUrl}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://') && externalUrl &&
+                    'https:// will be added automatically'}
+                </p>
               </div>
+
               <div className="flex items-center gap-2 mb-2">
                 <input
                   type="checkbox"
@@ -736,13 +1106,20 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
           )}
         </div>
 
-        {/* Sticky footer with button */}
-        <div className="p-4 border-t border-border">
+        {/* Sticky footer with buttons */}
+        <div className="p-4 border-t border-border flex gap-2">
+          <button
+            onClick={handleClose}
+            className="flex-1 py-2 px-4 bg-muted hover:bg-muted/80 text-foreground font-medium rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+
           {activeTab === 'page' ? (
             <button
               onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
               disabled={!canSave}
-              className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isEditing ? 'Save changes' : 'Insert link'}
             </button>
@@ -750,9 +1127,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
             <button
               onClick={handleExternalSubmit}
               disabled={!canSave}
-              className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isEditing ? 'Save changes' : 'Add External Link'}
+              {isEditing ? 'Save changes' : 'Insert link'}
             </button>
           )}
         </div>

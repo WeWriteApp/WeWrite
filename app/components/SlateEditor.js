@@ -742,38 +742,38 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         // Attribution paragraphs - no special styling, just regular paragraph
         if (isAttributionParagraph) {
           return (
-            <p {...attributes} className="flex items-start gap-3 py-2.5">
-              <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+            <div {...attributes} className="paragraph-with-number py-2.5">
+              <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
                 {index + 1}
               </span>
-              <span className="flex-1">{children}</span>
-            </p>
+              <p className="inline">{children}</p>
+            </div>
           );
         }
 
         // Regular paragraph styling
         return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+          <div {...attributes} className="paragraph-with-number py-2.5">
+            <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
               {index + 1}
             </span>
-            <span className="flex-1">{children}</span>
-          </p>
+            <p className="inline">{children}</p>
+          </div>
         );
       default:
         const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
+          <div {...attributes} className="paragraph-with-number py-2.5">
             <span
-              className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0"
-              style={{ transform: 'translateY(0.15rem)', pointerEvents: 'none' }}
+              className="paragraph-number-inline select-none"
+              style={{ pointerEvents: 'none' }}
               tabIndex="-1"
               aria-hidden="true"
             >
               {defaultIndex + 1}
             </span>
-            <span className="flex-1">{children}</span>
-          </p>
+            <p className="inline">{children}</p>
+          </div>
         );
     }
   };
@@ -1127,6 +1127,8 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     cursor-pointer
     ${linkTypeClass}
     slate-pill-link
+    text-indent-0
+    float-none
   `.trim().replace(/\s+/g, ' ');
 
   return (

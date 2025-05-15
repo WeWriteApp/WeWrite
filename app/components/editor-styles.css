@@ -25,6 +25,10 @@
 /* Reset any default Slate editor link styles */
 [data-slate-editor] a.slate-pill-link {
   text-decoration: none;
+  text-indent: 0 !important; /* Prevent text-indent inheritance from paragraph */
+  padding-left: 0 !important; /* Prevent padding inheritance from paragraph */
+  display: inline-flex !important; /* Ensure proper display */
+  float: none !important; /* Prevent float inheritance */
 }
 
 /* Add @ symbol before user links */
@@ -73,4 +77,17 @@ a[data-pill-style="classic"].external-link:hover {
   a[data-pill-style="filled"].external-link {
     border-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.3);
   }
+}
+
+/* Ensure pill links are properly displayed in paragraphs */
+.paragraph-with-number a,
+.paragraph-with-number a.slate-pill-link,
+.paragraph-with-number a.page-link,
+.paragraph-with-number a.user-link,
+.paragraph-with-number a.external-link {
+  text-indent: 0 !important;
+  padding-left: 0 !important;
+  display: inline-flex !important;
+  float: none !important;
+  vertical-align: middle !important;
 }

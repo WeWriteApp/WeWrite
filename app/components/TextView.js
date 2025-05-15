@@ -123,6 +123,10 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     };
 
     window.addEventListener("scroll", handleScroll);
+
+    // Also run once on initial render to set positions
+    setTimeout(handleScroll, 100);
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
@@ -143,6 +147,12 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     setLoadedParagraphs([]);
     setIsInitialLoad(true);
   }, [content]);
+
+  // Function to handle any post-render tasks (simplified since we no longer need line number alignment)
+  const handlePostRender = useCallback(() => {
+    // This function is kept as a placeholder for any future post-render tasks
+    // Line number synchronization is no longer needed with inline paragraph numbers
+  }, []);
 
   // Modified loading animation effect to prevent layout shifts
   useEffect(() => {
@@ -167,6 +177,9 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         if (onRenderComplete && typeof onRenderComplete === 'function') {
           onRenderComplete();
         }
+
+        // Handle any post-render tasks
+        handlePostRender();
       }, 300);
 
       // If there are no paragraphs, call onRenderComplete immediately
@@ -177,14 +190,14 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         }
       }
     }
-  }, [parsedContents, isInitialLoad, onRenderComplete]);
+  }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender]);
 
   const getViewModeStyles = () => {
     // Use the effective mode for styling
     if (effectiveMode === LINE_MODES.DENSE) {
       return 'space-y-0 dense-mode'; // No spacing between paragraphs for dense mode
     } else {
-      return 'space-y-6'; // Normal spacing between paragraphs
+      return 'space-y-0 normal-mode'; // Normal mode with inline paragraph numbers
     }
   };
 
@@ -235,99 +248,109 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
           if (window.toast) {
             window.toast.info('Entering edit mode');
           }
+
+          // No need to re-align line numbers since we're using inline paragraph numbers
         }
       }, 300);
     }
   };
 
+  // We no longer need to generate line numbers since we're using inline paragraph numbers
+
+  // This effect is no longer needed since we're using inline paragraph numbers
+  // We've removed the complex alignment logic that was previously required
+  useEffect(() => {
+    // No-op - keeping the effect as a placeholder in case we need to add scroll-related
+    // functionality in the future
+  }, []);
+
   return (
-    <motion.div
-      className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
-        effectiveMode === LINE_MODES.NORMAL ? 'items-start' : ''
-      } ${
-        isScrolled ? 'pb-16' : ''
-      } ${
-        canEdit ? 'relative' : ''
-      } min-h-screen`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
-      onClick={() => {
-        if (canEdit && setIsEditing) {
-          // Show loading state immediately
-          if (typeof window !== 'undefined') {
-            // Remove any existing loading overlays first
-            const existingOverlay = document.getElementById('edit-loading-overlay');
-            if (existingOverlay) {
-              existingOverlay.remove();
-            }
-
-            // Add a loading overlay
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
-            loadingOverlay.id = 'edit-loading-overlay';
-
-            const spinner = document.createElement('div');
-            spinner.className = 'loader loader-md';
-            loadingOverlay.appendChild(spinner);
-
-            document.body.appendChild(loadingOverlay);
-
-            // Set a timeout to remove the overlay after 10 seconds (failsafe)
-            setTimeout(() => {
-              const overlay = document.getElementById('edit-loading-overlay');
-              if (overlay) {
-                overlay.remove();
-              }
-            }, 10000);
-          }
-
-          // Set editing state immediately
-          setIsEditing(true);
-
-          // Remove loading overlay after a short delay
-          setTimeout(() => {
+    <div className="relative">
+      <motion.div
+        className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
+          isScrolled ? 'pb-16' : ''
+        } ${
+          canEdit ? 'relative' : ''
+        } min-h-screen`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        onClick={() => {
+          if (canEdit && setIsEditing) {
+            // Show loading state immediately
             if (typeof window !== 'undefined') {
-              const overlay = document.getElementById('edit-loading-overlay');
-              if (overlay) {
-                overlay.remove();
+              // Remove any existing loading overlays first
+              const existingOverlay = document.getElementById('edit-loading-overlay');
+              if (existingOverlay) {
+                existingOverlay.remove();
               }
+
+              // Add a loading overlay
+              const loadingOverlay = document.createElement('div');
+              loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+              loadingOverlay.id = 'edit-loading-overlay';
+
+              const spinner = document.createElement('div');
+              spinner.className = 'loader loader-md';
+              loadingOverlay.appendChild(spinner);
+
+              document.body.appendChild(loadingOverlay);
+
+              // Set a timeout to remove the overlay after 10 seconds (failsafe)
+              setTimeout(() => {
+                const overlay = document.getElementById('edit-loading-overlay');
+                if (overlay) {
+                  overlay.remove();
+                }
+              }, 10000);
             }
-          }, 300);
-        }
-      }}
-      title={canEdit ? "Click anywhere to edit" : ""}
-    >
-      {canEdit && (
-        <div className="absolute top-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 rounded-bl-md">
-          Click to edit
-        </div>
-      )}
 
-      {!parsedContents && !isSearch && (
-        <div className="p-6 text-muted-foreground">No content available</div>
-      )}
+            // Set editing state immediately
+            setIsEditing(true);
 
-      {parsedContents && (
-        <RenderContent
-          key={renderKey}
-          contents={parsedContents}
-          language={language}
-          loadedParagraphs={loadedParagraphs}
-          effectiveMode={effectiveMode}
-          canEdit={canEdit}
-          activeLineIndex={activeLineIndex}
-          onActiveLine={handleActiveLine}
-          showDiff={showDiff}
-        />
-      )}
-    </motion.div>
+            // Remove loading overlay after a short delay
+            setTimeout(() => {
+              if (typeof window !== 'undefined') {
+                const overlay = document.getElementById('edit-loading-overlay');
+                if (overlay) {
+                  overlay.remove();
+                }
+              }
+            }, 300);
+          }
+        }}
+        title={canEdit ? "Click anywhere to edit" : ""}
+      >
+        {canEdit && (
+          <div className="absolute top-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 rounded-bl-md">
+            Click to edit
+          </div>
+        )}
+
+        {!parsedContents && !isSearch && (
+          <div className="p-6 text-muted-foreground">No content available</div>
+        )}
+
+        {parsedContents && (
+          <RenderContent
+            key={renderKey}
+            contents={parsedContents}
+            language={language}
+            loadedParagraphs={loadedParagraphs}
+            effectiveMode={effectiveMode}
+            canEdit={canEdit}
+            activeLineIndex={activeLineIndex}
+            onActiveLine={handleActiveLine}
+            showDiff={showDiff}
+          />
+        )}
+      </motion.div>
+    </div>
   );
 };
 
-export const RenderContent = ({ contents, language, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false }) => {
-  // Try to use the page context, but provide a fallback if it's not available
-  const pageContext = usePage();
+export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false }) => {
+  // Use the line mode settings
   const { lineMode } = useLineSettings();
 
   // Always use the latest lineMode from context to ensure immediate updates
@@ -444,7 +467,6 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
         <ParagraphNode
           key={index}
           node={node}
-          effectiveMode={mode}
           index={index}
           canEdit={canEdit}
           isActive={activeLineIndex === index}
@@ -469,11 +491,8 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  * - Standard text size (1rem/16px)
  * - Proper spacing between paragraphs
  */
-const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false }) => {
-  const { lineMode } = useLineSettings();
-  // Always use the latest lineMode from context to ensure immediate updates
-  // Fall back to effectiveMode only if lineMode is not available
-  const mode = lineMode || (effectiveMode === 'dense' ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
+const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false }) => {
+  // We're now using a simpler approach with inline paragraph numbers
 
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
@@ -483,6 +502,12 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
 
   // Spacing is now handled by paragraph-with-hanging-indent class
   const spacingClass = '';
+
+  // This effect is no longer needed since we're using inline paragraph numbers
+  useEffect(() => {
+    // No-op - keeping the effect as a placeholder in case we need paragraph-specific
+    // functionality in the future
+  }, []);
 
   // Handle click to edit
   const handleClick = () => {
@@ -527,19 +552,13 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
     return null;
   };
 
-  // Consistent paragraph number style for both modes
-  const renderParagraphNumber = (index) => (
-    <span className="paragraph-number-wrapper">
-      <span className="paragraph-number">
-        {index + 1}
-      </span>
-    </span>
-  );
+  // No longer needed as paragraph numbers are now in the left margin
 
   // Normal mode with motion animations
   return (
     <motion.div
       ref={paragraphRef}
+      id={`paragraph-${index + 1}`}
       className={`group relative ${spacingClass} ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -554,36 +573,16 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Normal mode - paragraph numbers create indentation */}
-      <div className="flex">
-        {/* Paragraph number - precisely aligned with centerline of first line of text */}
-        <motion.div
-          className="flex-shrink-0 w-6 text-right pr-1 flex items-center justify-end"
-          style={{
-            height: "1.5rem",
-            transform: "translateY(0.15rem)"
-          }}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            delay: 0.05,
-            type: "spring",
-            stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-            damping: ANIMATION_CONSTANTS.SPRING_DAMPING
-          }}
-        >
-          <span className="text-muted-foreground text-sm select-none leading-none">
-            {index + 1}
-          </span>
-        </motion.div>
+      {/* Normal mode - paragraph with inline number at beginning */}
+      <div className="paragraph-with-number">
+        {/* Paragraph number inline at beginning */}
+        <span className="paragraph-number-inline select-none">{index + 1}</span>
 
-        {/* Paragraph content */}
-        <div className="flex-1">
-          <p className={`text-left ${TEXT_SIZE} ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
-            {node.children && node.children.map((child, i) => renderChild(child, i))}
-            {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
-          </p>
-        </div>
+        <p className={`text-left ${TEXT_SIZE} leading-normal ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
+          {/* Paragraph content */}
+          {node.children && node.children.map((child, i) => renderChild(child, i))}
+          {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
+        </p>
       </div>
     </motion.div>
   );
@@ -591,7 +590,7 @@ const ParagraphNode = ({ node, effectiveMode = 'normal', index = 0, canEdit = fa
 
 // WeWrite only supports paragraph nodes, so we've removed CodeBlockNode, HeadingNode, and ListNode
 
-const LinkNode = ({ node, index }) => {
+const LinkNode = ({ node }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const href = node.url || node.href || node.link || '#';
   const pageId = extractPageId(href);

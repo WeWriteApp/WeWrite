@@ -298,22 +298,22 @@ const BasicSlateEditor = forwardRef(({ initialContent = "", onChange, placeholde
       case "paragraph":
         const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+          <div {...attributes} className="paragraph-with-number py-2.5">
+            <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
               {index + 1}
             </span>
-            <span className="flex-1">{children}</span>
-          </p>
+            <p className="inline">{children}</p>
+          </div>
         );
       default:
         const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
         return (
-          <p {...attributes} className="flex items-start gap-3 py-2.5">
-            <span className="text-sm text-muted-foreground flex items-center justify-end select-none w-6 text-right flex-shrink-0" style={{ transform: 'translateY(0.15rem)' }}>
+          <div {...attributes} className="paragraph-with-number py-2.5">
+            <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
               {defaultIndex + 1}
             </span>
-            <span className="flex-1">{children}</span>
-          </p>
+            <p className="inline">{children}</p>
+          </div>
         );
     }
   };
