@@ -592,11 +592,37 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     setSelectedLinkElement(element);
     setSelectedLinkPath(path); // path can be null, that's okay
 
-    // Pass initial values to the LinkEditor with safe access to properties
+    // Determine if this is an internal link (has pageId)
+    const isInternalLink = !!element.pageId || isPageLink(element.url);
+
+    // Get the display text from the element
+    const displayText = element.children && element.children[0] ? element.children[0].text || "" : "";
+
+    // For internal links, ensure we have the pageId and pageTitle
+    let pageId = element.pageId || null;
+    let pageTitle = element.pageTitle || "";
+
+    // If it's a page link but doesn't have pageId, try to extract it from the URL
+    if (isInternalLink && !pageId && element.url) {
+      const matches = element.url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+      if (matches && matches[1]) {
+        pageId = matches[1];
+      }
+    }
+
+    console.log("Opening link editor for:", {
+      isInternalLink,
+      displayText,
+      pageId,
+      pageTitle,
+      url: element.url
+    });
+
+    // Pass initial values to the LinkEditor
     setInitialLinkValues({
-      text: element.children && element.children[0] ? element.children[0].text || "" : "",
-      pageId: element.pageId || null,
-      pageTitle: element.pageTitle || ""
+      text: displayText,
+      pageId: pageId,
+      pageTitle: pageTitle
     });
 
     setShowLinkEditor(true);
@@ -1169,7 +1195,12 @@ const isLinkActive = (editor) => {
 const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
-  const [activeTab, setActiveTab] = useState("page"); // "page" or "external"
+
+  // Determine the initial active tab based on whether we have a pageId
+  // If initialPageId exists, it's an internal link, so set tab to "page"
+  // Otherwise, default to "page" for new links
+  const [activeTab, setActiveTab] = useState(initialPageId ? "page" : "page");
+
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   const [showAuthor, setShowAuthor] = useState(false);
@@ -1184,8 +1215,24 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
     selectedPageId: initialPageId,
     externalUrl: "",
     showAuthor: false,
-    activeTab: "page"
+    activeTab: initialPageId ? "page" : "page"
   });
+
+  // Initialize the component when editing an existing link
+  useEffect(() => {
+    // If we're editing an existing internal link (has pageId), make sure we're on the page tab
+    if (initialPageId) {
+      setActiveTab("page");
+      setSelectedPageId(initialPageId);
+
+      // If we have a custom display text (different from the page title), preserve it
+      if (initialText && initialPageTitle && initialText !== initialPageTitle) {
+        setDisplayText(initialText); // Keep the custom display text
+      } else if (initialPageTitle) {
+        setDisplayText(initialPageTitle); // Use the page title as display text
+      }
+    }
+  }, [initialPageId, initialPageTitle, initialText]);
 
   // Enable save if any field changes
   useEffect(() => {
