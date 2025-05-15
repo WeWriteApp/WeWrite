@@ -31,7 +31,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
     const fetchRelatedPages = async () => {
       setIsLoading(true);
 
-      if (!page || !page.id) {
+      if (!page || !page.id || !page.title) {
         setIsLoading(false);
         return;
       }
@@ -39,183 +39,87 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
       try {
         console.log(`Finding related pages for: ${page.id} (${page.title || 'Untitled'})`);
 
-        // Map of page IDs to page data with relevance score
-        const pageMap = new Map();
+        // Only focus on title word matching
+        // Extract significant words from the title
+        const titleWords = page.title
+          .toLowerCase()
+          .split(/\s+/)
+          .filter(word => word.length >= 2) // Include words of at least 2 characters
+          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
-        // First, get pages by the same author (user-based relevance) if userId is available
-        if (page.userId) {
-          const userPagesRef = collection(db, 'pages');
-          const userQuery = query(
-            userPagesRef,
-            where('userId', '==', page.userId),
-            where('isPublic', '==', true),
-            orderBy('lastModified', 'desc'), // Use lastModified instead of updatedAt for consistency
-            limit(maxPages * 3) // Increased limit for better coverage
-          );
+        console.log(`Title words for matching: ${titleWords.join(', ')}`);
 
-          try {
-            const userQuerySnapshot = await getDocs(userQuery);
-            console.log(`Found ${userQuerySnapshot.docs.length} pages by the same author`);
-
-            // Add user's pages with a base relevance score
-            userQuerySnapshot.docs.forEach(doc => {
-              const pageData = { id: doc.id, ...doc.data() };
-
-              // Skip the current page
-              if (pageData.id === page.id) return;
-
-              // Add to map with a base relevance score
-              pageMap.set(pageData.id, {
-                ...pageData,
-                relevanceScore: 1 // Base score for being by the same author
-              });
-            });
-          } catch (error) {
-            console.error('Error fetching user pages:', error);
-            // Continue with content-based search even if user-based fails
-          }
+        // If we don't have any significant words, return empty results
+        if (titleWords.length === 0) {
+          setRelatedPages([]);
+          setIsLoading(false);
+          return;
         }
 
-        // If we have a title, try to find content-based related pages
-        if (page.title) {
-          // Extract significant words from the title
-          const titleWords = page.title
-            .toLowerCase()
+        // Query for public pages
+        const pagesQuery = query(
+          collection(db, 'pages'),
+          where('isPublic', '==', true),
+          limit(100) // Limit to 100 pages for performance
+        );
+
+        const pagesSnapshot = await getDocs(pagesQuery);
+        console.log(`Analyzing ${pagesSnapshot.docs.length} public pages for title matches`);
+
+        // Array to store pages with matching titles
+        const matchingPages = [];
+
+        // Process each page
+        pagesSnapshot.docs.forEach(doc => {
+          const pageData = { id: doc.id, ...doc.data() };
+
+          // Skip the current page
+          if (pageData.id === page.id) return;
+
+          // Skip pages without titles
+          if (!pageData.title) return;
+
+          // Check for word matches in the title
+          const pageTitle = pageData.title.toLowerCase();
+          const pageTitleWords = pageTitle
             .split(/\s+/)
-            .filter(word => word.length >= 2) // Reduced minimum length to 2 characters
+            .filter(word => word.length >= 2)
             .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
-          console.log(`Title words for matching: ${titleWords.join(', ')}`);
+          // Find exact word matches
+          const exactMatches = titleWords.filter(word =>
+            pageTitleWords.includes(word)
+          );
 
-          // If we have significant words, search for content-based related pages
-          if (titleWords.length > 0) {
-            // Create a query for public pages - increase limit for better coverage
-            const contentQuery = query(
-              collection(db, 'pages'),
-              where('isPublic', '==', true),
-              limit(100) // Increased from 50 to 100
-            );
+          // Only include pages with at least one exact word match
+          if (exactMatches.length > 0) {
+            // Calculate a simple match count for sorting
+            const matchCount = exactMatches.length;
 
-            const contentQuerySnapshot = await getDocs(contentQuery);
-            console.log(`Analyzing ${contentQuerySnapshot.docs.length} public pages for content relevance`);
-
-            // Process each page for content relevance
-            contentQuerySnapshot.docs.forEach(doc => {
-              const pageData = { id: doc.id, ...doc.data() };
-
-              // Skip the current page
-              if (pageData.id === page.id) return;
-
-              // Calculate content relevance score
-              let relevanceScore = 0;
-
-              // Check title for word matches
-              if (pageData.title) {
-                const pageTitle = pageData.title.toLowerCase();
-                const pageTitleWords = pageTitle
-                  .split(/\s+/)
-                  .filter(word => word.length >= 2) // Reduced minimum length to 2 characters
-                  .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
-
-                // First, check for exact word matches
-                const exactMatches = titleWords.filter(word =>
-                  pageTitleWords.includes(word)
-                );
-
-                // Then check for partial matches
-                const partialMatches = titleWords.filter(word => {
-                  // Skip words that are already exact matches
-                  if (exactMatches.includes(word)) return false;
-
-                  // Check if any word in pageTitleWords contains this word as a substring
-                  // This helps with cases like "ACP" matching "Woke ACP"
-                  for (const pageWord of pageTitleWords) {
-                    if (pageWord.includes(word) || word.includes(pageWord)) {
-                      return true;
-                    }
-                  }
-
-                  return false;
-                });
-
-                // Combine all matching words for total count
-                const matchingWords = [...exactMatches, ...partialMatches];
-
-                if (matchingWords.length > 0) {
-                  // Give much higher score for exact matches
-                  if (exactMatches.length > 0) {
-                    // Higher score for more exact matching words
-                    relevanceScore += exactMatches.length * 5;
-
-                    // Bonus for matching a higher percentage of words exactly
-                    const exactMatchPercentage = exactMatches.length / titleWords.length;
-                    if (exactMatchPercentage >= 0.5) {
-                      relevanceScore += 10;
-                    } else if (exactMatchPercentage >= 0.25) {
-                      relevanceScore += 5;
-                    }
-                  }
-
-                  // Add smaller score for partial matches
-                  if (partialMatches.length > 0) {
-                    relevanceScore += partialMatches.length * 2; // Increased from 1 to 2
-                  }
-
-                  // Bonus for matching a higher percentage of words (exact + partial)
-                  const matchPercentage = matchingWords.length / titleWords.length;
-                  if (matchPercentage >= 0.5) {
-                    relevanceScore += 3;
-                  } else if (matchPercentage >= 0.25) {
-                    relevanceScore += 1;
-                  }
-                }
-
-                // Check for partial matches too
-                for (const word of titleWords) {
-                  if (pageTitle.includes(word) && !matchingWords.includes(word)) {
-                    relevanceScore += 1.0; // Increased from 0.5 to 1.0
-                  }
-                }
-
-                // If the page title contains the entire current page title as a substring
-                // or vice versa, give a big bonus
-                if (pageTitle.includes(page.title.toLowerCase()) ||
-                    page.title.toLowerCase().includes(pageTitle)) {
-                  relevanceScore += 15;
-                }
-              }
-
-              // If we already have this page in the map, add to its relevance score
-              if (pageMap.has(pageData.id)) {
-                const existing = pageMap.get(pageData.id);
-                pageMap.set(pageData.id, {
-                  ...existing,
-                  relevanceScore: existing.relevanceScore + relevanceScore
-                });
-              }
-              // Otherwise, if it has a relevance score, add it to the map
-              else if (relevanceScore > 0) {
-                pageMap.set(pageData.id, { ...pageData, relevanceScore });
-              }
+            matchingPages.push({
+              ...pageData,
+              matchCount
             });
           }
-        }
+        });
 
-        // Convert to array, filter out pages with low relevance and pages already linked in the content
-        const sortedPages = Array.from(pageMap.values())
-          // Lower the threshold to 1.0 to include more pages with partial matches
-          .filter(page => page.relevanceScore >= 1.0)
-          // Filter out pages that are already linked in the content
+        // Filter out pages that are already linked in the content
+        const filteredPages = matchingPages
           .filter(page => !linkedPageIds.includes(page.id))
-          .sort((a, b) => b.relevanceScore - a.relevanceScore ||
-                          (b.lastModified ? new Date(b.lastModified) : 0) -
-                          (a.lastModified ? new Date(a.lastModified) : 0))
+          .sort((a, b) => {
+            // Sort by match count first
+            if (b.matchCount !== a.matchCount) {
+              return b.matchCount - a.matchCount;
+            }
+            // Then by last modified date if available
+            return (b.lastModified ? new Date(b.lastModified) : 0) -
+                   (a.lastModified ? new Date(a.lastModified) : 0);
+          })
           .slice(0, maxPages);
 
-        console.log(`Found ${sortedPages.length} related pages with scores:`,
-          sortedPages.map(p => `${p.title || 'Untitled'} (${p.relevanceScore.toFixed(1)})`));
+        console.log(`Found ${filteredPages.length} related pages with title matches`);
 
-        setRelatedPages(sortedPages);
+        setRelatedPages(filteredPages);
       } catch (error) {
         console.error('Error fetching related pages:', error);
         // Set empty array on error to avoid undefined state
@@ -231,29 +135,20 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
     }
   }, [page, maxPages, linkedPageIds]);
 
-  // Render a consistent height container regardless of loading state
-  // Only render the full component when mounted to avoid hydration issues
-  if (!mounted) {
-    return (
-      <div className="mt-8 pt-6 min-h-[120px]">
-        <h3 className="text-lg font-medium mb-4">Related Pages</h3>
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px]">
-          <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
+  // Use a fixed height container to prevent layout shifts
+  // The component will maintain the same height regardless of loading state or content
   return (
-    <div className="mt-8 pt-6 min-h-[120px]">
+    <div className="mt-8 pt-6 min-h-[180px]">
       <h3 className="text-lg font-medium mb-4">Related Pages</h3>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px]">
+      {!mounted || isLoading ? (
+        // Loading state - fixed height placeholder
+        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg h-[100px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       ) : relatedPages.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+        // Results state - fixed height container with overflow
+        <div className="flex flex-wrap gap-2 py-4 border border-border/40 rounded-lg min-h-[100px] max-h-[200px] overflow-y-auto">
           {relatedPages.map(page => (
             <div key={page.id} className="flex-none max-w-full">
               <PillLink
@@ -267,7 +162,8 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           ))}
         </div>
       ) : (
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px] text-muted-foreground">
+        // Empty state - fixed height placeholder
+        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg h-[100px] text-muted-foreground">
           No related pages found
         </div>
       )}

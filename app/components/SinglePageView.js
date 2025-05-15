@@ -536,19 +536,17 @@ function SinglePageView({ params }) {
               </div>
             </div>
 
-            {/* Backlinks and Related Pages - Only show after content is fully rendered */}
-            {pageFullyRendered && (
-              <div className="container max-w-4xl mx-auto px-4">
-                {/* What Links Here section */}
-                <BacklinksSection page={page} />
+            {/* Backlinks and Related Pages - Always render with fixed height to prevent layout shifts */}
+            <div className="container max-w-4xl mx-auto px-4">
+              {/* What Links Here section */}
+              <BacklinksSection page={page} />
 
-                {/* Related Pages section */}
-                <RelatedPages
-                  page={page}
-                  linkedPageIds={extractLinkedPageIds(editorState)}
-                />
-              </div>
-            )}
+              {/* Related Pages section - Only pass data when content is fully rendered */}
+              <RelatedPages
+                page={pageFullyRendered ? page : null}
+                linkedPageIds={pageFullyRendered ? extractLinkedPageIds(editorState) : []}
+              />
+            </div>
           </>
         )}
       </div>
