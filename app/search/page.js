@@ -6,8 +6,8 @@ import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { ClearableInput } from '../components/ui/clearable-input';
-import { Link as LinkIcon, Search } from 'lucide-react';
-// import { useToast } from '../components/ui/use-toast';
+import { Share2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';
@@ -213,25 +213,50 @@ export default function SearchPage() {
     }
   };
 
-  // Copy search URL to clipboard
-  const copySearchUrl = () => {
+  // Share search URL using Web Share API or fallback to clipboard
+  const shareSearchUrl = () => {
     const url = new URL(window.location);
-    navigator.clipboard.writeText(url.toString())
+    const searchTerm = query.trim();
+    const shareTitle = searchTerm
+      ? `WeWrite Search: "${searchTerm}"`
+      : "WeWrite Search";
+    const shareText = searchTerm
+      ? `Check out these search results for "${searchTerm}" on WeWrite`
+      : "Check out WeWrite search";
+
+    // Try to use the Web Share API if available
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: url.toString()
+      })
+      .then(() => {
+        console.log("Content shared successfully");
+      })
+      .catch(err => {
+        console.error('Error sharing:', err);
+        // Fallback to clipboard if sharing was cancelled or failed
+        if (err.name !== 'AbortError') {
+          copyToClipboard(url.toString());
+        }
+      });
+    } else {
+      // Fallback for browsers that don't support the Web Share API
+      copyToClipboard(url.toString());
+    }
+  };
+
+  // Helper function to copy to clipboard with toast notification
+  const copyToClipboard = (textToCopy) => {
+    navigator.clipboard.writeText(textToCopy)
       .then(() => {
         console.log("Link copied to clipboard");
-        // toast({
-        //   title: "Link Copied",
-        //   description: "Search URL copied to clipboard",
-        // });
+        toast.success("Search URL copied to clipboard");
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);
-        console.error("Could not copy the URL to clipboard");
-        // toast({
-        //   title: "Copy Failed",
-        //   description: "Could not copy the URL to clipboard",
-        //   variant: "destructive"
-        // });
+        toast.error("Could not copy the URL to clipboard");
       });
   };
 
@@ -299,11 +324,11 @@ export default function SearchPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={copySearchUrl}
-            className="flex items-center gap-2"
+            onClick={shareSearchUrl}
+            className="flex items-center gap-2 rounded-2xl"
             aria-label="Share search results"
           >
-            <LinkIcon className="h-4 w-4" />
+            <Share2 className="h-4 w-4" />
             <span className="hidden sm:inline">Share</span>
           </Button>
         </div>
