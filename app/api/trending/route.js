@@ -30,7 +30,7 @@ export async function GET(request) {
   // Check if Firebase credentials are missing
   const useFirebase = db && app;
 
-  // If Firebase credentials are missing, return empty array instead of mock data
+  // If Firebase credentials are missing, return empty array
   if (!useFirebase) {
     console.log('Firebase credentials missing - returning empty trending pages array');
     return NextResponse.json({

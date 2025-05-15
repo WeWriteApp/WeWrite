@@ -1,6 +1,60 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    "users": {
+      "$uid": {
+        // Allow users to read any user profile
+        ".read": true,
+        // Allow users to write only to their own profile
+        ".write": "auth !== null && auth.uid === $uid",
+        // Bio-specific rules
+        "bio": {
+          ".read": true,
+          ".write": "auth !== null && auth.uid === $uid"
+        },
+        "bioLastEditor": {
+          ".read": true,
+          ".write": "auth !== null && auth.uid === $uid"
+        },
+        "bioLastEditTime": {
+          ".read": true,
+          ".write": "auth !== null && auth.uid === $uid"
+        }
+      }
+    },
+    "groups": {
+      "$groupId": {
+        // Allow anyone to read public groups
+        ".read": "data.child('isPublic').val() === true || (auth !== null && data.child('members').child(auth.uid).exists())",
+        // Allow only group owners and admins to update group settings
+        ".write": "auth !== null && (data.child('owner').val() === auth.uid || (data.child('members').child(auth.uid).exists() && data.child('members').child(auth.uid).child('role').val() === 'admin'))",
+        // About section can be edited by any group member
+        "about": {
+          ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
+          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
+        },
+        "aboutLastEditor": {
+          ".read": true,
+          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
+        },
+        "aboutLastEditTime": {
+          ".read": true,
+          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
+        },
+        "aboutHistory": {
+          ".read": "auth !== null && data.parent().child('members').child(auth.uid).exists()",
+          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
+        },
+        // Members management
+        "members": {
+          ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
+          ".write": "auth !== null && (data.parent().child('owner').val() === auth.uid || (data.parent().child('members').child(auth.uid).exists() && data.parent().child('members').child(auth.uid).child('role').val() === 'admin'))"
+        }
+      }
+    },
+    // Default rule for other paths - maintain backward compatibility for now
+    "$other": {
+      ".read": true,
+      ".write": true
+    }
   }
 }

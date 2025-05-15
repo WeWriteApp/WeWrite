@@ -1,0 +1,12 @@
+{
+  "name": "wewrite-cleanup-scripts",
+  "version": "1.0.0",
+  "description": "Scripts to clean up mock data in WeWrite",
+  "type": "module",
+  "scripts": {
+    "cleanup": "node cleanup-mock-data-client.js"
+  },
+  "dependencies": {
+    "firebase": "^10.7.0"
+  }
+}

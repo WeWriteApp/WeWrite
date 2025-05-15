@@ -176,6 +176,11 @@ export function getAnalyticsPageTitle(
       if (parts.length >= 2) {
         const authorPart = parts[1];
         username = authorPart.split(' on WeWrite')[0];
+
+        // Skip "Anonymous" usernames - we'll try to get a better one later
+        if (username === 'Anonymous') {
+          username = null;
+        }
       }
     }
 
@@ -196,9 +201,46 @@ export function getAnalyticsPageTitle(
       if (authorElement) {
         username = authorElement.getAttribute('data-author-username') ||
                   authorElement.textContent;
-        if (username) {
+
+        // Skip "Anonymous" usernames
+        if (username && username !== 'Anonymous' && username !== 'Missing username') {
           return `Page: ${contentTitle} by ${username}`;
         }
+      }
+
+      // If we couldn't find a valid username, try to get it from the page data
+      try {
+        // Attempt to find user ID in the DOM
+        const userIdElement = document.querySelector('[data-author-id]');
+        if (userIdElement) {
+          const userId = userIdElement.getAttribute('data-author-id');
+          if (userId) {
+            // We'll return the title without username for now, but trigger an async fetch
+            // to update the analytics later with the correct username
+            setTimeout(async () => {
+              try {
+                const { getUsernameById } = await import('../utils/userUtils');
+                const fetchedUsername = await getUsernameById(userId);
+
+                if (fetchedUsername && fetchedUsername !== 'Anonymous' && fetchedUsername !== 'Missing username') {
+                  // Update analytics with the correct username
+                  if (typeof window !== 'undefined' && window.gtag) {
+                    window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+                      page_path: window.location.pathname,
+                      page_title: `Page: ${contentTitle} by ${fetchedUsername}`,
+                      page_location: window.location.href
+                    });
+                    console.log('Updated analytics with fetched username:', fetchedUsername);
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching username for analytics:', error);
+              }
+            }, 500);
+          }
+        }
+      } catch (error) {
+        console.error('Error trying to get username from page data:', error);
       }
 
       return `Page: ${contentTitle}`;
@@ -238,6 +280,14 @@ export function getAnalyticsPageTitle(
       // Extract username if present in " by username on WeWrite" format
       const bySuffix = " by ";
       const onWeWriteSuffix = " on WeWrite";
+      const taglineSuffix = " - The social wiki where every page is a fundraiser";
+
+      // First, remove the tagline if present
+      if (cleanTitle.includes(taglineSuffix)) {
+        cleanTitle = cleanTitle.replace(taglineSuffix, '');
+      }
+
+      // Then extract username if present
       if (cleanTitle.includes(bySuffix)) {
         const titleParts = cleanTitle.split(bySuffix);
         cleanTitle = titleParts[0];
@@ -293,12 +343,56 @@ export function getAnalyticsPageTitle(
         return `Page: ${anyHeading}`;
       }
 
-      // If all else fails, use a generic title but trigger async fetch
-      return `Page: Content`;
+      // If all else fails, use a generic title but trigger async fetch with a longer timeout
+      // to ensure we eventually get the correct title
+      setTimeout(async () => {
+        try {
+          const { getPageMetadata } = await import('../firebase/database');
+          const metadata = await getPageMetadata(pageId);
+
+          if (metadata?.title) {
+            let updatedTitle = `Page: ${metadata.title}`;
+
+            // Include username if available
+            if (metadata.username &&
+                metadata.username !== 'Anonymous' &&
+                metadata.username !== 'Missing username') {
+              updatedTitle = `Page: ${metadata.title} by ${metadata.username}`;
+            } else if (metadata.userId) {
+              // Try to get username from userId
+              try {
+                const { getUsernameById } = await import('../utils/userUtils');
+                const username = await getUsernameById(metadata.userId);
+
+                if (username && username !== 'Anonymous' && username !== 'Missing username') {
+                  updatedTitle = `Page: ${metadata.title} by ${username}`;
+                }
+              } catch (error) {
+                console.error('Error fetching username for analytics:', error);
+              }
+            }
+
+            // Update analytics with the correct title
+            if (typeof window !== 'undefined' && window.gtag) {
+              window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+                page_path: window.location.pathname,
+                page_title: updatedTitle,
+                page_location: window.location.href
+              });
+              console.log('Updated analytics with fetched title:', updatedTitle);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching page metadata for analytics:', error);
+        }
+      }, 1000);
+
+      // Return a temporary title
+      return `Page: Loading Content`;
     }
 
     // Fallback to a better generic title instead of showing the ID
-    return `Page: Content`;
+    return `Page: Loading Content`;
   }
 
   // 3. Use document title if available and meaningful
@@ -349,8 +443,59 @@ export function getAnalyticsPageTitle(
  */
 async function fetchAndCachePageTitle(pageId: string): Promise<void> {
   try {
-    // Skip if we already have this in cache
-    if (pageTitleCache.has(pageId)) return;
+    // Skip if we already have this in cache, but still try to update with username
+    if (pageTitleCache.has(pageId)) {
+      const cachedTitle = pageTitleCache.get(pageId);
+      console.log(`Using cached title for ${pageId}: ${cachedTitle}`);
+
+      // Even if we have the title cached, we might need to update analytics with the username
+      try {
+        const metadata = await getPageMetadata(pageId);
+        if (metadata) {
+          let username = null;
+
+          // Try to get username from metadata
+          if (metadata.username &&
+              metadata.username !== 'Anonymous' &&
+              metadata.username !== 'Missing username') {
+            username = metadata.username;
+          }
+          // If no username in metadata but we have userId, try to get username from userId
+          else if (metadata.userId) {
+            try {
+              const { getUsernameById } = await import('../utils/userUtils');
+              const fetchedUsername = await getUsernameById(metadata.userId);
+
+              if (fetchedUsername &&
+                  fetchedUsername !== 'Anonymous' &&
+                  fetchedUsername !== 'Missing username') {
+                username = fetchedUsername;
+              }
+            } catch (error) {
+              console.error('Error fetching username by ID:', error);
+            }
+          }
+
+          // If we found a valid username, update analytics
+          if (username) {
+            const pageTitle = `Page: ${cachedTitle} by ${username}`;
+
+            if (typeof window !== 'undefined' && window.gtag) {
+              window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+                page_path: window.location.pathname,
+                page_title: pageTitle,
+                page_location: window.location.href
+              });
+              console.log('Updated analytics with cached title and fetched username:', pageTitle);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error updating analytics with username:', error);
+      }
+
+      return;
+    }
 
     // Try to get the page metadata directly
     try {
@@ -363,10 +508,33 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         if (typeof window !== 'undefined' && window.gtag) {
           const pathname = window.location.pathname;
           let pageTitle = `Page: ${metadata.title}`;
+          let username = null;
 
-          // Include username in the analytics title if available
-          if (metadata.username && metadata.username !== 'Anonymous' && metadata.username !== 'Missing username') {
-            pageTitle = `Page: ${metadata.title} by ${metadata.username}`;
+          // Try to get username from metadata
+          if (metadata.username &&
+              metadata.username !== 'Anonymous' &&
+              metadata.username !== 'Missing username') {
+            username = metadata.username;
+          }
+          // If no username in metadata but we have userId, try to get username from userId
+          else if (metadata.userId) {
+            try {
+              const { getUsernameById } = await import('../utils/userUtils');
+              const fetchedUsername = await getUsernameById(metadata.userId);
+
+              if (fetchedUsername &&
+                  fetchedUsername !== 'Anonymous' &&
+                  fetchedUsername !== 'Missing username') {
+                username = fetchedUsername;
+              }
+            } catch (error) {
+              console.error('Error fetching username by ID:', error);
+            }
+          }
+
+          // If we found a valid username, include it in the page title
+          if (username) {
+            pageTitle = `Page: ${metadata.title} by ${username}`;
           }
 
           window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
@@ -511,10 +679,33 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
 
       // Try to get the full metadata to include username
       const metadata = await getPageMetadata(pageId);
+      let username = null;
+
+      // Try to get username from metadata
       if (metadata?.username &&
           metadata.username !== 'Anonymous' &&
           metadata.username !== 'Missing username') {
-        return `Page: ${cachedTitle} by ${metadata.username}`;
+        username = metadata.username;
+      }
+      // If no username in metadata but we have userId, try to get username from userId
+      else if (metadata?.userId) {
+        try {
+          const { getUsernameById } = await import('../utils/userUtils');
+          const fetchedUsername = await getUsernameById(metadata.userId);
+
+          if (fetchedUsername &&
+              fetchedUsername !== 'Anonymous' &&
+              fetchedUsername !== 'Missing username') {
+            username = fetchedUsername;
+          }
+        } catch (error) {
+          console.error('Error fetching username by ID:', error);
+        }
+      }
+
+      // If we found a valid username, include it in the page title
+      if (username) {
+        return `Page: ${cachedTitle} by ${username}`;
       }
 
       return `Page: ${cachedTitle}`;
@@ -526,11 +717,33 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
       // Cache for future use
       pageTitleCache.set(pageId, metadata.title);
 
-      // Include username if available
+      let username = null;
+
+      // Try to get username from metadata
       if (metadata.username &&
           metadata.username !== 'Anonymous' &&
           metadata.username !== 'Missing username') {
-        return `Page: ${metadata.title} by ${metadata.username}`;
+        username = metadata.username;
+      }
+      // If no username in metadata but we have userId, try to get username from userId
+      else if (metadata.userId) {
+        try {
+          const { getUsernameById } = await import('../utils/userUtils');
+          const fetchedUsername = await getUsernameById(metadata.userId);
+
+          if (fetchedUsername &&
+              fetchedUsername !== 'Anonymous' &&
+              fetchedUsername !== 'Missing username') {
+            username = fetchedUsername;
+          }
+        } catch (error) {
+          console.error('Error fetching username by ID:', error);
+        }
+      }
+
+      // If we found a valid username, include it in the page title
+      if (username) {
+        return `Page: ${metadata.title} by ${username}`;
       }
 
       return `Page: ${metadata.title}`;
@@ -540,5 +753,5 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
   }
 
   // Return a better generic title instead of showing the ID
-  return `Page: Content`;
+  return `Page: Loading Content`;
 }

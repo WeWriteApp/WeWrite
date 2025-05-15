@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { PillLink } from './PillLink';
@@ -157,12 +157,12 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
 
       {!mounted || isLoading ? (
         // Loading state - fixed height placeholder
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg h-[100px]">
+        <div className="flex justify-center items-center py-4 h-[100px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       ) : relatedPages.length > 0 ? (
         // Results state - fixed height container with overflow
-        <div className="flex flex-wrap gap-2 py-4 border border-border/40 rounded-lg min-h-[100px] max-h-[200px] overflow-y-auto">
+        <div className="flex flex-wrap gap-2 py-4 min-h-[100px] max-h-[200px] overflow-y-auto">
           {relatedPages.map(page => (
             <div key={page.id} className="flex-none max-w-full">
               <PillLink
@@ -176,8 +176,8 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           ))}
         </div>
       ) : (
-        // Empty state - fixed height placeholder
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg h-[100px] text-muted-foreground">
+        // Empty state - fixed height placeholder with subtle dotted border
+        <div className="flex justify-center items-center py-4 h-[100px] text-muted-foreground border border-dotted border-border/30 rounded-md">
           No related pages found
         </div>
       )}

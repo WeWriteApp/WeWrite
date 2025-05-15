@@ -43,6 +43,11 @@ export default function HomeGroupsSection() {
     // Log additional information about the component state
     console.log('[DEBUG] HomeGroupsSection - Component will render:', groupsEnabled ? 'YES' : 'NO');
 
+    // Only run the DB check if the feature is enabled
+    if (!groupsEnabled) {
+      return;
+    }
+
     // Check if the feature flag is enabled in the database directly
     const checkFeatureFlagInDb = async () => {
       try {
@@ -114,20 +119,41 @@ export default function HomeGroupsSection() {
             // This will be based on page edits within the group
             let activity = [];
 
-            // If the group has pages, get activity data for each page
+            // If the group has pages, get edit activity data for each page
             if (group.pages && Object.keys(group.pages).length > 0) {
               // Create an array of 24 zeros (for 24 hours)
               activity = Array(24).fill(0);
 
-              // For each page in the group, add its activity to the group activity
-              Object.keys(group.pages).forEach(pageId => {
-                // If the page has activity data, add it to the group activity
-                if (group.pages[pageId] && group.pages[pageId].activity) {
-                  const pageActivity = group.pages[pageId].activity;
-                  // Add each hour's activity to the corresponding hour in the group activity
-                  pageActivity.forEach((count, hour) => {
-                    activity[hour] += count;
-                  });
+              // Get current date and time
+              const now = new Date();
+
+              // Calculate 24 hours ago
+              const twentyFourHoursAgo = new Date(now);
+              twentyFourHoursAgo.setHours(now.getHours() - 24);
+
+              // For each page in the group, check for edits in the last 24 hours
+              const pageIds = Object.keys(group.pages);
+
+              // For each page, check if it was modified in the last 24 hours
+              pageIds.forEach(pageId => {
+                const page = group.pages[pageId];
+                if (page && page.lastModified) {
+                  // Convert to Date if it's a string or timestamp
+                  const lastModified = typeof page.lastModified === 'string'
+                    ? new Date(page.lastModified)
+                    : page.lastModified instanceof Date
+                      ? page.lastModified
+                      : page.lastModified.toDate ? page.lastModified.toDate() : null;
+
+                  if (lastModified && lastModified >= twentyFourHoursAgo) {
+                    // Calculate hours ago (0-23, where 0 is the most recent hour)
+                    const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
+
+                    // Make sure the index is within bounds (0-23)
+                    if (hoursAgo >= 0 && hoursAgo < 24) {
+                      activity[23 - hoursAgo]++;
+                    }
+                  }
                 }
               });
             } else {
@@ -180,13 +206,13 @@ export default function HomeGroupsSection() {
     return pages ? Object.keys(pages).length : 0;
   };
 
+  console.log('[DEBUG] HomeGroupsSection - Rendering component because groupsEnabled is:', groupsEnabled);
+
   // If the groups feature is not enabled, don't render anything
   if (!groupsEnabled) {
     console.log('[DEBUG] HomeGroupsSection - Not rendering because groupsEnabled is:', groupsEnabled);
     return null;
   }
-
-  console.log('[DEBUG] HomeGroupsSection - Rendering component because groupsEnabled is:', groupsEnabled);
 
   if (loading) {
     return (
@@ -258,7 +284,7 @@ export default function HomeGroupsSection() {
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Group</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Members</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Pages</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity</th>
+              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Edit Activity (24h)</th>
             </tr>
           </thead>
           <tbody>

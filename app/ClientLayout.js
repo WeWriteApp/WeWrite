@@ -18,6 +18,7 @@ import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import AdminFeaturesWrapper from "./components/AdminFeaturesWrapper";
+import FeatureFlagCookieManager from "./components/FeatureFlagCookieManager";
 
 
 
@@ -61,6 +62,7 @@ export default function ClientLayout({ children }) {
                       <div className="flex flex-col min-h-screen bg-background pb-8">
                         {!isAuthPage && <UsernameWarningBanner />}
                         {!isAuthPage && <UsernameEnforcementBanner />}
+                        <FeatureFlagCookieManager />
                         <main className="flex-grow">
                           <AdminFeaturesWrapper>
                             {children}

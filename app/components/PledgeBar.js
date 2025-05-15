@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
-import { getUserSubscription, getPledge, createPledge, updatePledge } from "../firebase/subscription";
+import { getUserSubscription, getPledge, createPledge, updatePledge, listenToUserPledges } from "../firebase/subscription";
 import { getPageStats, getDocById } from "../firebase/database";
 import Link from "next/link";
 import CompositionBar from "./CompositionBar";
@@ -11,109 +11,276 @@ import { Button } from './ui/button';
 import SubscriptionActivationModal from './SubscriptionActivationModal';
 import SubscriptionComingSoonModal from './SubscriptionComingSoonModal';
 import SupportUsModal from './SupportUsModal';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, DollarSign, Plus, Minus } from 'lucide-react';
 import '../styles/pledge-bar-animations.css';
-import { useSubscriptionFeature } from '../hooks/useSubscriptionFeature';
+import { useFeatureFlag } from '../utils/feature-flags';
+import { useToast } from './ui/use-toast';
+import { Slider } from './ui/slider';
+import { Input } from './ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
   const [subscription, setSubscription] = useState(null);
-  const [donateAmount, setDonateAmount] = useState(0);
-  const [globalIncrement, setGlobalIncrement] = useState(1);
+  const [pledgeAmount, setPledgeAmount] = useState(0);
+  const [currentPledge, setCurrentPledge] = useState(null);
+  const [allPledges, setAllPledges] = useState([]);
+  const [availableFunds, setAvailableFunds] = useState(0);
   const [isConfirmed, setIsConfirmed] = useState(true);
   const [loading, setLoading] = useState(true);
   const [maxedOut, setMaxedOut] = useState(false);
   const [showActivationModal, setShowActivationModal] = useState(false);
-  const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
+  const [showRebalanceModal, setShowRebalanceModal] = useState(false);
   const [showSupportUsModal, setShowSupportUsModal] = useState(false);
-  const { isEnabled: isSubscriptionEnabled, showComingSoonModal, setShowComingSoonModal } =
-    useSubscriptionFeature(user?.email);
-  const [customAmountValue, setCustomAmountValue] = useState('');
-  const [isOwnPage, setIsOwnPage] = useState(false);
-  const [showMaxedOutWarning, setShowMaxedOutWarning] = useState(false);
+  const isSubscriptionEnabled = useFeatureFlag('subscription_management', user?.email);
+  const [pageData, setPageData] = useState(null);
+  const [sliderValue, setSliderValue] = useState(0);
+  const pageId = pathname.substring(1); // Remove the leading slash to get the page ID
   const [pageStats, setPageStats] = useState({
+    totalPledged: 0,
+    pledgeCount: 0,
     activeDonors: 0,
     monthlyIncome: 0,
     totalViews: 0
   });
-  const [pageTitle, setPageTitle] = useState('');
-  const [pledges, setPledges] = useState([]);
-  const [isPageView, setIsPageView] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState(0);
-  const [showSocialModal, setShowSocialModal] = useState(false);
-  const [visible, setVisible] = useState(true);
-  const [animateEntry, setAnimateEntry] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [showMoreButton, setShowMoreButton] = useState(true);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-  const [showMobileBackToTop, setShowMobileBackToTop] = useState(false);
-  const [showDesktopBackToTop, setShowDesktopBackToTop] = useState(false);
+  const [customAmountValue, setCustomAmountValue] = useState('');
+  const [isOwnPage, setIsOwnPage] = useState(false);
+  const [showMaxedOutWarning, setShowMaxedOutWarning] = useState(false);
 
-  const { id: pageId } = useParams();
+  // Effect to check if subscription feature is enabled
+  useEffect(() => {
+    if (!isSubscriptionEnabled) {
+      return;
+    }
 
-  // Function to scroll to metadata section or back to top
-  const scrollToMetadata = () => {
-    if (isAtBottom) {
-      // Scroll back to top
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      // Scroll to metadata section
-      const metadataSection = document.querySelector('[data-metadata-section]');
-      if (metadataSection) {
-        // Use scrollIntoView with additional offset to ensure it's visible
-        metadataSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Only proceed if we have a valid page ID
+    if (!pageId) {
+      return;
+    }
 
-        // Add a small delay and additional scroll to ensure it's fully visible
-        setTimeout(() => {
-          const offset = 100; // Adjust this value as needed
-          const elementPosition = metadataSection.getBoundingClientRect().top + window.pageYOffset;
-          window.scrollTo({
-            top: elementPosition - offset,
-            behavior: 'smooth'
-          });
-        }, 100);
-      } else {
-        // Fallback: if metadata section not found, scroll to bottom of page
-        window.scrollTo({
-          top: document.body.scrollHeight,
-          behavior: 'smooth'
-        });
+    // Fetch page data
+    const fetchPageData = async () => {
+      try {
+        const page = await getDocById('pages', pageId);
+        if (page) {
+          setPageData(page);
+          setPageTitle(page.title || 'Untitled');
+
+          // Check if the current user is the page owner
+          if (user && page.userId === user.uid) {
+            setIsOwnPage(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching page data:', error);
       }
+    };
+
+    fetchPageData();
+
+    // Fetch page stats
+    const fetchPageStats = async () => {
+      try {
+        const stats = await getPageStats(pageId);
+        if (stats) {
+          setPageStats(stats);
+        }
+      } catch (error) {
+        console.error('Error fetching page stats:', error);
+      }
+    };
+
+    fetchPageStats();
+  }, [pageId, user, isSubscriptionEnabled]);
+
+  // Effect to fetch user subscription and pledges
+  useEffect(() => {
+    if (!isSubscriptionEnabled || !user || !pageId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchSubscriptionAndPledge = async () => {
+      try {
+        // Get user's subscription
+        const userSubscription = await getUserSubscription(user.uid);
+        setSubscription(userSubscription);
+
+        if (userSubscription && userSubscription.status === 'active') {
+          // Calculate available funds
+          const totalAmount = userSubscription.amount || 0;
+          const pledgedAmount = userSubscription.pledgedAmount || 0;
+          const available = Math.max(0, totalAmount - pledgedAmount);
+          setAvailableFunds(available);
+
+          // Get current pledge for this page
+          const pledge = await getPledge(user.uid, pageId);
+          if (pledge) {
+            setCurrentPledge(pledge);
+            setPledgeAmount(pledge.amount);
+            setSliderValue(pledge.amount);
+          }
+
+          // Set up listener for all user pledges
+          const unsubscribe = listenToUserPledges(user.uid, (pledges) => {
+            setAllPledges(pledges);
+          });
+
+          return () => unsubscribe();
+        }
+      } catch (error) {
+        console.error('Error fetching subscription or pledge:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubscriptionAndPledge();
+  }, [user, pageId, isSubscriptionEnabled]);
+
+  // Handle pledge amount change via slider
+  const handleSliderChange = (value) => {
+    const newValue = value[0];
+    setSliderValue(newValue);
+
+    // Check if the new value exceeds available funds
+    if (newValue > availableFunds + (currentPledge?.amount || 0)) {
+      setShowMaxedOutWarning(true);
+    } else {
+      setShowMaxedOutWarning(false);
     }
   };
 
-  // Handle scroll events to hide/show the pledge bar
+  // Handle pledge submission
+  const handlePledgeSubmit = async () => {
+    if (!user || !pageId || !subscription) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const newAmount = sliderValue;
+
+      // Check if the amount exceeds available funds
+      if (newAmount > availableFunds + (currentPledge?.amount || 0)) {
+        setShowRebalanceModal(true);
+        setLoading(false);
+        return;
+      }
+
+      if (currentPledge) {
+        // Update existing pledge
+        await updatePledge(user.uid, pageId, newAmount, currentPledge.amount);
+        toast({
+          title: "Pledge updated",
+          description: `Your pledge to "${pageTitle}" has been updated to $${newAmount.toFixed(2)}/month.`,
+        });
+      } else {
+        // Create new pledge
+        await createPledge(user.uid, pageId, newAmount);
+        toast({
+          title: "Pledge created",
+          description: `You are now supporting "${pageTitle}" with $${newAmount.toFixed(2)}/month.`,
+        });
+      }
+
+      // Update current pledge
+      setCurrentPledge({
+        ...currentPledge,
+        amount: newAmount
+      });
+
+      // Update available funds
+      const totalAmount = subscription.amount || 0;
+      const pledgedAmount = subscription.pledgedAmount || 0;
+      const available = Math.max(0, totalAmount - pledgedAmount);
+      setAvailableFunds(available);
+
+    } catch (error) {
+      console.error('Error submitting pledge:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update your pledge. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle rebalancing pledges
+  const handleRebalancePledges = async () => {
+    setShowRebalanceModal(false);
+
+    // For now, just show the subscription management page
+    router.push('/account/subscription');
+  };
+
+  const [visible, setVisible] = useState(true);
+  const [animateEntry, setAnimateEntry] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Scroll handling effect
   useEffect(() => {
-    let lastKnownScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Hide when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY + 10) {
+        setVisible(false);
+      } else if (currentScrollY < lastScrollY - 10) {
+        setVisible(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Animate entry after a short delay
+    const timer = setTimeout(() => {
+      setAnimateEntry(true);
+    }, 500);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timer);
+    };
+  }, [lastScrollY]);
+
+  // Render the pledge bar
+  if (!isSubscriptionEnabled) {
+    return null;
+  }
+
+  // If user isn't logged in or doesn't have an active subscription, don't show the pledge bar
+  if (!user || !subscription || subscription.status !== 'active') {
+    return null;
+  }
+
+  // Don't show pledge bar on own pages
+  if (isOwnPage) {
+    return null;
+  }
+
+  // Scroll handling with throttling
+  useEffect(() => {
     let ticking = false;
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      // Check if we're at the bottom of the page
-      const isBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
-      setIsAtBottom(isBottom);
 
-      // Always show the bar when at the top or at the bottom of the page
-      if (currentScrollY <= 10 || isBottom) {
-        if (!visible) {
-          setVisible(true);
-          setTimeout(() => setAnimateEntry(true), 50);
-          setTimeout(() => setAnimateEntry(false), 2000);
-        }
-      }
-      // Hide immediately on any downward scroll when not at the top or bottom
-      else if (currentScrollY > lastKnownScrollY) {
+      // Hide when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY + 10) {
         setVisible(false);
-      } else if (currentScrollY < lastKnownScrollY) {
+      } else if (currentScrollY < lastScrollY - 10) {
         setVisible(true);
-        if (!visible) {
-          setTimeout(() => setAnimateEntry(true), 50);
-          setTimeout(() => setAnimateEntry(false), 2000);
-        }
       }
-      lastKnownScrollY = currentScrollY;
+
       setLastScrollY(currentScrollY);
       ticking = false;
     };
@@ -133,7 +300,143 @@ const PledgeBar = () => {
     return () => {
       window.removeEventListener('scroll', onScroll);
     };
-  }, []);
+  }, [lastScrollY]);
+
+  return (
+    <div
+      data-pledge-bar
+      className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+      } ${animateEntry ? 'spring-and-pulse' : ''}`}
+    >
+      <div className="bg-card border border-border shadow-lg rounded-lg p-4 w-full max-w-xl">
+        <div className="flex flex-col space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-medium">Support this page</h3>
+            <div className="text-sm text-muted-foreground">
+              Available: ${availableFunds.toFixed(2)}/month
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label htmlFor="pledge-amount" className="text-sm font-medium">
+                  Pledge amount
+                </label>
+                <span className="text-sm font-medium">
+                  ${sliderValue.toFixed(2)}/month
+                </span>
+              </div>
+
+              <Slider
+                id="pledge-amount"
+                value={[sliderValue]}
+                min={0}
+                max={Math.max(50, subscription.amount)}
+                step={0.5}
+                onValueChange={handleSliderChange}
+                className={showMaxedOutWarning ? "border-red-500" : ""}
+              />
+
+              {showMaxedOutWarning && (
+                <p className="text-xs text-red-500 mt-1">
+                  This exceeds your available funds. You'll need to adjust other pledges or increase your subscription.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSliderValue(0)}
+                disabled={loading}
+              >
+                Reset
+              </Button>
+              <Button
+                size="sm"
+                onClick={handlePledgeSubmit}
+                disabled={loading || (sliderValue === (currentPledge?.amount || 0))}
+              >
+                {loading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    {currentPledge ? "Update Pledge" : "Pledge Now"}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rebalance Modal */}
+      <Dialog open={showRebalanceModal} onOpenChange={setShowRebalanceModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adjust Your Pledges</DialogTitle>
+            <DialogDescription>
+              You've reached your monthly pledge limit. You can adjust your existing pledges or increase your subscription.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <h4 className="text-sm font-medium mb-2">Your Current Pledges</h4>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {allPledges.map(pledge => (
+                <div key={pledge.id} className="flex justify-between items-center p-2 bg-muted rounded">
+                  <span className="text-sm truncate max-w-[200px]">{pledge.title || pledge.pageId}</span>
+                  <span className="text-sm font-medium">${pledge.amount.toFixed(2)}/mo</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowRebalanceModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRebalancePledges}>
+              Manage Pledges
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modals rendered at document level */}
+      {/* When subscription is enabled, show the activation modal */}
+      {typeof document !== 'undefined' && createPortal(
+        <SubscriptionActivationModal
+          isOpen={showActivationModal}
+          onClose={() => setShowActivationModal(false)}
+          isSignedIn={!!user}
+        />,
+        document.body
+      )}
+
+      {/* When subscription is disabled, show the Support Us modal */}
+      {typeof document !== 'undefined' && createPortal(
+        <SupportUsModal
+          isOpen={showSupportUsModal || (!isSubscriptionEnabled && showActivationModal)}
+          onClose={() => {
+            setShowSupportUsModal(false);
+            setShowActivationModal(false);
+          }}
+        />,
+        document.body
+      )}
+    </div>
+  );
 
   // Show mobile back to top button when scrolled down on mobile
   useEffect(() => {

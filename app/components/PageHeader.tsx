@@ -357,7 +357,7 @@ export default function PageHeader({
                     <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading author...</span>
                   ) : (
                     groupId && groupName ? (
-                      <Link href={`/groups/${groupId}`} className="hover:underline">
+                      <Link href={`/group/${groupId}`} className="hover:underline">
                         <span data-component-name="PageHeader">in {groupName}</span>
                       </Link>
                     ) : (

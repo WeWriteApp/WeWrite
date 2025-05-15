@@ -29,31 +29,21 @@ export async function POST(request) {
       );
     }
 
-    // Initialize user variable
-    let user;
+    // Verify the authenticated user
+    const user = auth.currentUser;
 
-    // Skip auth check in development for testing
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Skipping auth check in development environment');
-      // In development, create a mock user object with the userId
-      user = { uid: userId, email: 'dev@example.com' };
-    } else {
-      // Verify the authenticated user
-      user = auth.currentUser;
+    // Log authentication state for debugging
+    console.log('Auth state:', {
+      currentUser: user ? { uid: user.uid, email: user.email } : null,
+      requestedUserId: userId
+    });
 
-      // Log authentication state for debugging
-      console.log('Auth state:', {
-        currentUser: user ? { uid: user.uid, email: user.email } : null,
-        requestedUserId: userId
-      });
-
-      // Ensure the user is authenticated and the userId matches
-      if (!user || user.uid !== userId) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
+    // Always require authentication and user ID match
+    if (!user || user.uid !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     // Round amount to 2 decimal places

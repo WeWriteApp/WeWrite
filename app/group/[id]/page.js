@@ -1,8 +1,25 @@
 import { fetchGroupFromFirebase } from "../../firebase/rtdb";
 import GroupProfileView from "../../components/GroupProfileView";
 import { Loader } from "lucide-react";
+import { redirect } from "next/navigation";
+import { isAdmin } from "../../utils/feature-flags";
+import { cookies } from "next/headers";
 
 export async function generateMetadata({ params }) {
+  // Check if the groups feature is enabled
+  const cookieStore = cookies();
+  const userEmail = cookieStore.get("user_email")?.value;
+  const groupsFeatureEnabled = cookieStore.get("feature_groups")?.value === "true";
+  const isUserAdmin = isAdmin(userEmail);
+
+  // If the feature is disabled or user is not an admin, return generic metadata
+  if (!isUserAdmin || !groupsFeatureEnabled) {
+    return {
+      title: "WeWrite",
+      description: "Create, collaborate, and share your writing with others in real-time",
+    };
+  }
+
   const group = await fetchGroupFromFirebase(params.id);
 
   if (!group) {
@@ -19,6 +36,18 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function Page({ params }) {
+  // Check if the groups feature is enabled
+  const cookieStore = cookies();
+  const userEmail = cookieStore.get("user_email")?.value;
+  const groupsFeatureEnabled = cookieStore.get("feature_groups")?.value === "true";
+  const isUserAdmin = isAdmin(userEmail);
+
+  // If the feature is disabled or user is not an admin, redirect to home
+  if (!isUserAdmin || !groupsFeatureEnabled) {
+    console.log(`[DEBUG] Group page - Feature disabled or non-admin user, redirecting to home. Admin: ${isUserAdmin}, Feature enabled: ${groupsFeatureEnabled}`);
+    redirect('/');
+  }
+
   const group = await fetchGroupFromFirebase(params.id);
 
   if (!group) {

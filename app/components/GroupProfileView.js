@@ -136,7 +136,7 @@ const GroupProfileView = ({ group }) => {
               variant="outline"
               size="sm"
               className="gap-1"
-              onClick={() => router.push(`/groups/${group.id}/settings`)}
+              onClick={() => router.push(`/group/${group.id}/settings`)}
             >
               <Settings className="h-4 w-4" />
               <span>Settings</span>

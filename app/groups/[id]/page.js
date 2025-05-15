@@ -1,38 +1,23 @@
-import { fetchGroupFromFirebase } from "../../firebase/rtdb";
-import GroupProfileView from "../../components/GroupProfileView";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Loader } from "lucide-react";
 
-export async function generateMetadata({ params }) {
-  const group = await fetchGroupFromFirebase(params.id);
+export default function GroupRedirectPage({ params }) {
+  const router = useRouter();
+  const { id } = params;
 
-  if (!group) {
-    return {
-      title: "Group Not Found",
-      description: "This group does not exist.",
-    };
-  } else {
-    return {
-      title: group.name,
-      description: group.description || `${group.name} - A collaborative group on WeWrite`,
-    };
-  }
-}
-
-export default async function Page({ params }) {
-  const group = await fetchGroupFromFirebase(params.id);
-
-  if (!group) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    // Redirect to the correct group page
+    if (id) {
+      router.push(`/group/${id}`);
+    }
+  }, [router, id]);
 
   return (
-    <div className="container mx-auto max-w-5xl">
-      <GroupProfileView group={group} />
+    <div className="flex items-center justify-center min-h-[50vh]">
+      <Loader className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
 }
-

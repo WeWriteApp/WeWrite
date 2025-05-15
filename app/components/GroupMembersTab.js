@@ -8,7 +8,6 @@ import { ref, get, set, update } from "firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
 import { toast } from "sonner";
 import { Badge } from "./ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { PillLink } from "./PillLink";
 import {
   Dialog,
@@ -130,41 +129,32 @@ export default function GroupMembersTab({ group, isOwner }) {
 
   // Search for users to add to the group
   const handleUserSearch = async () => {
-    if (!userSearchTerm) return;
+    if (!userSearchTerm || userSearchTerm.trim().length < 2) return;
 
     try {
       setIsSearching(true);
       setSearchResults([]);
 
-      // Search by email
-      const usersRef = ref(rtdb, 'users');
-      const snapshot = await get(usersRef);
+      // Import the searchUsers function from database.js
+      const { searchUsers } = await import("../firebase/database");
 
-      if (snapshot.exists()) {
-        const users = [];
-        const term = userSearchTerm.toLowerCase();
+      // Search for users using the searchUsers function
+      const users = await searchUsers(userSearchTerm);
 
-        snapshot.forEach(childSnapshot => {
-          const userData = childSnapshot.val();
-          const userId = childSnapshot.key;
+      // Filter out users who are already members of the group
+      const filteredUsers = users.filter(user =>
+        !(group.members && group.members[user.id])
+      );
 
-          // Skip users who are already members
-          if (group.members && group.members[userId]) return;
+      // Map users to the format expected by the component
+      // Only include username (not email) for privacy
+      const formattedUsers = filteredUsers.map(user => ({
+        id: user.id,
+        username: user.username || "Unknown User",
+        photoURL: user.photoURL || null
+      }));
 
-          // Match by email or username
-          if (
-            (userData.email && userData.email.toLowerCase().includes(term)) ||
-            (userData.username && userData.username.toLowerCase().includes(term))
-          ) {
-            users.push({
-              id: userId,
-              ...userData
-            });
-          }
-        });
-
-        setSearchResults(users);
-      }
+      setSearchResults(formattedUsers);
     } catch (err) {
       console.error("Error searching users:", err);
       toast({
@@ -350,18 +340,10 @@ export default function GroupMembersTab({ group, isOwner }) {
               {filteredMembers.map(member => (
                 <TableRow key={member.id}>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.photoURL} alt={member.username} />
-                        <AvatarFallback>
-                          {member.username ? member.username.charAt(0).toUpperCase() : 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <PillLink href={`/user/${member.id}`}>
-                          {member.username || "Unknown User"}
-                        </PillLink>
-                      </div>
+                    <div>
+                      <PillLink href={`/user/${member.id}`}>
+                        {member.username || "Unknown User"}
+                      </PillLink>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -456,16 +438,8 @@ export default function GroupMembersTab({ group, isOwner }) {
                         onClick={() => setSelectedUser(user)}
                       >
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={user.photoURL} alt={user.username} />
-                              <AvatarFallback>
-                                {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{user.username || "Unknown User"}</p>
-                            </div>
+                          <div>
+                            <p className="font-medium">{user.username || "Unknown User"}</p>
                           </div>
                         </TableCell>
                         <TableCell className="w-[40px]">

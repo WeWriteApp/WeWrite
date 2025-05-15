@@ -30,23 +30,12 @@ export async function GET(request) {
       currentUser: user ? { uid: user.uid, email: user.email } : null
     });
 
-    // Skip auth check in development for testing
-    if (process.env.NODE_ENV !== 'development') {
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Unauthorized', details: 'User not authenticated' },
-          { status: 401 }
-        );
-      }
-    } else {
-      // In development, if user is null, create a mock user for testing
-      if (!user) {
-        user = {
-          uid: 'test-user-id',
-          email: 'test@example.com'
-        };
-        console.log('Created mock user for development (GET):', user);
-      }
+    // Always require authentication
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', details: 'User not authenticated' },
+        { status: 401 }
+      );
     }
 
     const userId = user.uid;
@@ -143,23 +132,12 @@ export async function POST(request) {
       requestedUserId: userId
     });
 
-    // Skip auth check in development for testing
-    if (process.env.NODE_ENV !== 'development') {
-      if (!user || user.uid !== userId) {
-        return NextResponse.json(
-          { error: 'Unauthorized', details: 'User not authenticated or user ID mismatch' },
-          { status: 401 }
-        );
-      }
-    } else {
-      // In development, if user is null, create a mock user for testing
-      if (!user) {
-        user = {
-          uid: userId || 'test-user-id',
-          email: 'test@example.com'
-        };
-        console.log('Created mock user for development:', user);
-      }
+    // Always require authentication and user ID match
+    if (!user || user.uid !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized', details: 'User not authenticated or user ID mismatch' },
+        { status: 401 }
+      );
     }
 
     // Create a customer in Stripe if they don't exist yet

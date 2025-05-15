@@ -100,9 +100,11 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Function to reset banner state for testing
   const resetBannerState = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('pwa_banner_dismissed');
-      localStorage.removeItem('pwa_banner_dismissed_timestamp');
-      localStorage.removeItem('pwa_dont_remind');
+      // Get the device-specific storage keys
+      const deviceId = window.navigator.userAgent.replace(/\D+/g, '');
+      localStorage.removeItem(`device_${deviceId}_pwa_banner_dismissed`);
+      localStorage.removeItem(`device_${deviceId}_pwa_banner_dismissed_timestamp`);
+      localStorage.removeItem(`device_${deviceId}_pwa_dont_remind`);
       setShowBanner(true);
 
       // Track reset in analytics

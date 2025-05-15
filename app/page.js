@@ -9,7 +9,7 @@ import SearchButton from "./components/SearchButton";
 import LoginBanner from "./components/LoginBanner";
 import RecentActivity from "./components/RecentActivity";
 import TrendingPages from "./components/TrendingPages";
-import MyGroups from "./components/MyGroups";
+// Using HomeGroupsSection instead of MyGroups
 import HomeGroupsSection from "./components/HomeGroupsSection";
 
 import { AuthContext } from "./providers/AuthProvider";

@@ -3,26 +3,9 @@
  * This provides basic search functionality that works without server calls
  */
 
-// Mock data for testing - replace with actual data in production
-const mockPages = [
-  { id: 'page1', title: 'Getting Started Guide', userId: 'user1', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page2', title: 'Product Roadmap', userId: 'user1', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page3', title: 'Development Roadmap', userId: 'user2', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page4', title: 'Road to Success', userId: 'user2', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page5', title: 'Private Page', userId: 'user1', isPublic: false, lastModified: new Date().toISOString() },
-  { id: 'page6', title: 'Roadmap for 2023', userId: 'user1', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page7', title: 'Road Trip Planning', userId: 'user2', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page8', title: 'Off-Road Adventures', userId: 'user1', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page9', title: 'The Long Road Home', userId: 'user2', isPublic: true, lastModified: new Date().toISOString() },
-  { id: 'page10', title: 'Railroad History', userId: 'user1', isPublic: true, lastModified: new Date().toISOString() },
-];
-
-const mockUsers = [
-  { id: 'user1', username: 'johndoe', photoURL: null },
-  { id: 'user2', username: 'janedoe', photoURL: null },
-  { id: 'user3', username: 'roadrunner', photoURL: null },
-  { id: 'user4', username: 'roadwarrior', photoURL: null },
-];
+// Empty arrays for when database is unavailable
+const mockPages = [];
+const mockUsers = [];
 
 /**
  * Calculate a match score for a search result

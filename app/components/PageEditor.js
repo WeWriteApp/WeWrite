@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
-import SlateEditor from "./SlateEditor";
+import dynamic from "next/dynamic";
+
+// Import the unified editor dynamically to avoid SSR issues
+const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Globe, Lock, Link, MapPin, Save } from "lucide-react";
 import { Switch } from "./ui/switch";
@@ -533,14 +536,12 @@ const PageEditor = ({
       {/* Add separator line between actions and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
-      <SlateEditor
+      <UnifiedEditor
         ref={editorRef}
         initialContent={currentEditorValue}
-        onContentChange={handleContentChange}
-        onSave={!isSaving ? handleSave : null}
-        onDiscard={onCancel}
-        onInsert={handleInsertLink}
-        // Remove key prop to prevent re-creation and cursor jumps
+        onChange={handleContentChange}
+        placeholder="Start typing..."
+        contentType="wiki"
       />
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
@@ -627,7 +628,7 @@ const PageEditor = ({
                       {isSaving ? (
                         <div className="flex items-center gap-2">
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-                          <span>Saving</span>
+                          <span>Saving...</span>
                         </div>
                       ) : "Save"}
                     </Button>

@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import { SupporterIcon } from "./SupporterIcon";
 import { format } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/database";
+import { db } from "../firebase/config";
 
 /**
  * ActivityCard component displays a single activity card
@@ -113,8 +113,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     : `/${activity.pageId}`;
 
   return (
-    <a
-      href={activityUrl}
+    <div
       className={cn(
         "w-full wewrite-card border-0 shadow-none cursor-pointer no-underline",
         isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
@@ -236,7 +235,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           )}
         </div>
       </div>
-    </a>
+    </div>
   );
 };
 

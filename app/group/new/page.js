@@ -8,14 +8,24 @@ import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { MultiSelect } from "../../components/ui/multi-select";
 import { searchUsers } from "../../firebase/database";
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 export default function Page() {
   const { user } = useContext(AuthContext);
   const router = useRouter();
+  const groupsEnabled = useFeatureFlag('groups', user?.email);
   const [newGroup, setNewGroup] = useState({
     name: "",
     isPublic: true,
   });
+
+  // Check if groups feature is enabled
+  useEffect(() => {
+    if (!groupsEnabled) {
+      console.log('[DEBUG] New group page - Feature disabled, redirecting to home');
+      router.push('/');
+    }
+  }, [groupsEnabled, router]);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -25,13 +35,13 @@ export default function Page() {
       setSearchResults([]);
       return;
     }
-    
+
     setIsSearching(true);
     try {
       const users = await searchUsers(query);
       // Filter out the current user from search results
       const filteredUsers = users.filter(u => u.id !== user.uid);
-      
+
       // Map to format expected by MultiSelect
       setSearchResults(filteredUsers.map(u => ({
         id: u.id,
@@ -62,7 +72,7 @@ export default function Page() {
       role: "owner",
       joinedAt: new Date().toISOString()
     };
-    
+
     // Add selected members
     selectedMembers.forEach(member => {
       members[member.id] = {
@@ -88,29 +98,29 @@ export default function Page() {
   return (
     <div className="p-4 bg-background text-text">
       <div className="flex items-center mb-4">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="mr-2" 
+        <Button
+          variant="outline"
+          size="icon"
+          className="mr-2"
           onClick={() => router.push('/')}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-semibold">New Group</h1>
       </div>
-      
+
       <form className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
           Name:
-          <input 
-            className="border border-gray-500 rounded-md p-2 bg-background text-text" 
+          <input
+            className="border border-gray-500 rounded-md p-2 bg-background text-text"
             autoComplete="off"
-            type="text" 
-            value={newGroup.name} 
-            onChange={e => setNewGroup({ ...newGroup, name: e.target.value })} 
+            type="text"
+            value={newGroup.name}
+            onChange={e => setNewGroup({ ...newGroup, name: e.target.value })}
           />
         </label>
-        
+
         <label className="flex flex-col gap-1">
           Members:
           <MultiSelect
@@ -128,22 +138,22 @@ export default function Page() {
             Search for users by username or email
           </p>
         </label>
-        
+
         <label className="flex flex-row gap-1 items-center">
-          <input 
-            className="border border-gray-500 rounded-md p-2" 
+          <input
+            className="border border-gray-500 rounded-md p-2"
             autoComplete="off"
-            type="checkbox" 
-            checked={newGroup.isPublic} 
-            onChange={e => setNewGroup({ ...newGroup, isPublic: e.target.checked })} 
+            type="checkbox"
+            checked={newGroup.isPublic}
+            onChange={e => setNewGroup({ ...newGroup, isPublic: e.target.checked })}
           />
           <span>Is Public</span>
         </label>
-        
+
         <div className="flex flex-row gap-4 mt-2">
-          <Button 
+          <Button
             className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white"
-            type="button" 
+            type="button"
             onClick={handleSave}
           >
             Save

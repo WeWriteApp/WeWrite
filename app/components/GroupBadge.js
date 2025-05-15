@@ -38,7 +38,7 @@ export default function GroupBadge({ groupId,index }) {
 
   return (
     <Link className="p-4 border bg-background border-gray-500 rounded-lg fade-in
-    " href={`/groups/${group.id}`} style={{ animationDelay: `${index * 50}ms` }}>
+    " href={`/group/${group.id}`} style={{ animationDelay: `${index * 50}ms` }}>
       <h1
         className="text-lg font-semibold text-text"
       >{group.name}</h1>

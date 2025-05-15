@@ -1247,6 +1247,23 @@ export async function getPageMetadata(pageId) {
       ...pageSnapshot.data()
     };
 
+    // Ensure we have a valid username
+    if (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'Missing username') {
+      if (pageData.userId) {
+        try {
+          // Import the utility function to get username
+          const { getUsernameById } = await import('../utils/userUtils');
+          const username = await getUsernameById(pageData.userId);
+
+          if (username && username !== 'Anonymous' && username !== 'Missing username') {
+            pageData.username = username;
+          }
+        } catch (error) {
+          console.error('Error fetching username for page metadata:', error);
+        }
+      }
+    }
+
     // If we have a currentVersion, fetch it to get the content for OG image and description
     if (pageData.currentVersion) {
       try {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo } from "react";
 import {
   createEditor,
   Transforms,
@@ -68,10 +68,10 @@ const UnifiedEditor = ({ /* props */ }) => {
   // Editor creation and configuration
   const editor = React.useMemo(() => {
     const editor = withHistory(withReact(createEditor()));
-    
+
     // Store the original insertData function
     const { insertData } = editor;
-    
+
     // Override insertData to handle pasted content
     editor.insertData = (data) => {
       try {
@@ -83,10 +83,10 @@ const UnifiedEditor = ({ /* props */ }) => {
         insertData(data);
       }
     };
-    
+
     return editor;
   }, []);
-  
+
   return editor;
 };
 

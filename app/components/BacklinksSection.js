@@ -63,7 +63,7 @@ export default function BacklinksSection({ page, maxPages = 5 }) {
     return (
       <div className="mt-8 pt-6 min-h-[120px]">
         <h3 className="text-lg font-medium mb-4">What Links Here</h3>
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px]">
+        <div className="flex justify-center items-center py-4 min-h-[60px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       </div>
@@ -75,11 +75,11 @@ export default function BacklinksSection({ page, maxPages = 5 }) {
       <h3 className="text-lg font-medium mb-4">What Links Here</h3>
 
       {isLoading ? (
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px]">
+        <div className="flex justify-center items-center py-4 min-h-[60px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       ) : backlinks.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 py-4">
           {backlinks.map(page => (
             <div key={page.id} className="flex-none max-w-full">
               <PillLink
@@ -93,7 +93,7 @@ export default function BacklinksSection({ page, maxPages = 5 }) {
           ))}
         </div>
       ) : (
-        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px] text-muted-foreground">
+        <div className="flex justify-center items-center py-4 min-h-[60px] text-muted-foreground border border-dotted border-border/30 rounded-md">
           No pages link to this page
         </div>
       )}

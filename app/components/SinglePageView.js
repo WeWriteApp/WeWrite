@@ -1,6 +1,6 @@
 // This is a temporary file to fix the issue
 "use client";
-import React, { useEffect, useState, useContext, useRef, useCallback } from "react";
+import React, { useEffect, useState, useContext, useRef, useCallback, useMemo } from "react";
 import TextSelectionMenu from "./TextSelectionMenu";
 import TextHighlighter from "./TextHighlighter";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -329,6 +329,13 @@ function SinglePageView({ params }) {
     setPageFullyRendered(true);
   };
 
+  // Pre-compute memoized values for RelatedPages component to avoid hooks order issues
+  const memoizedPage = useMemo(() => pageFullyRendered ? page : null, [pageFullyRendered, page]);
+  const memoizedLinkedPageIds = useMemo(() =>
+    pageFullyRendered ? extractLinkedPageIds(editorState) : [],
+    [pageFullyRendered, editorState]
+  );
+
   const Layout = user ? DashboardLayout : PublicLayout;
 
   // If the page is deleted, use NotFoundWrapper
@@ -538,17 +545,14 @@ function SinglePageView({ params }) {
             </div>
 
             {/* Backlinks and Related Pages - Always render with fixed height to prevent layout shifts */}
-            <div className="container max-w-4xl mx-auto px-4">
+            <div className="w-full px-4">
               {/* What Links Here section */}
               <BacklinksSection page={page} />
 
-              {/* Related Pages section - Use memoized props to prevent re-renders */}
+              {/* Related Pages section - Using pre-computed memoized values */}
               <RelatedPages
-                page={useMemo(() => pageFullyRendered ? page : null, [pageFullyRendered, page])}
-                linkedPageIds={useMemo(() =>
-                  pageFullyRendered ? extractLinkedPageIds(editorState) : [],
-                  [pageFullyRendered, editorState, extractLinkedPageIds]
-                )}
+                page={memoizedPage}
+                linkedPageIds={memoizedLinkedPageIds}
               />
             </div>
           </>

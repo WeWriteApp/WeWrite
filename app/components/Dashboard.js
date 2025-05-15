@@ -4,7 +4,7 @@ import DashboardLayout from "../DashboardLayout";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
 import TopUsers from "../components/TopUsers";
-import YourGroups from "../components/YourGroups";
+import HomeGroupsSection from "../components/HomeGroupsSection";
 import AddUsername from "../components/AddUsername";
 import TypeaheadSearch from "../components/TypeaheadSearch";
 import { AuthContext } from "../providers/AuthProvider";
@@ -30,7 +30,7 @@ const Dashboard = () => {
       <Header />
       <div className="space-y-2">
         <AddUsername />
-        
+
         <h1 className="text-2xl font-semibold text-foreground">Your Pages</h1>
         <div className="flex items-center md:align-middle md:justify-between md:flex-row flex-col">
           <div className="md:w-1/2 w-full">
@@ -46,12 +46,12 @@ const Dashboard = () => {
           <h1 className="text-2xl font-semibold text-text">Your Groups</h1>
           <Link
             className="bg-background text-button-text border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-            href="/groups/new"
+            href="/group/new"
           >
             Create Group
           </Link>
         </div>
-        <YourGroups />
+        <HomeGroupsSection />
         */}
 
         <TopUsers />

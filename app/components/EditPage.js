@@ -29,6 +29,7 @@ const EditPage = ({
   const groups = useContext(GroupsContext);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(editorError);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const { logError } = useLogging();
 
   // Set edit mode in PageContext when component mounts
@@ -200,11 +201,20 @@ const EditPage = ({
             }
           }
 
-          // Add a minimal delay before redirecting to ensure Firebase has time to update
-          await new Promise(resolve => setTimeout(resolve, 300));
+          // Set isSaving to false and show success message
+          setIsSaving(false);
+          setError(null);
 
-          // Force reload the page to show the updated content
-          window.location.href = `/${page.id}`;
+          // Show a success toast
+          toast.success("Page saved successfully");
+
+          // Use a more reliable approach to ensure UI updates before navigation
+          // First, update the state and let React render the changes
+          setTimeout(() => {
+            // Then navigate to the page after the UI has updated
+            window.location.href = `/${page.id}`;
+          }, 100);
+
           return; // Exit the function on success
         } else {
           console.error(`Error saving new version on attempt ${currentAttempt}: result was falsy`);
@@ -222,6 +232,12 @@ const EditPage = ({
         if (currentAttempt >= maxAttempts) {
           setError("Failed to save: " + (error.message || "Unknown error"));
           await logError(error, "EditPage.js");
+
+          // Show error toast
+          toast.error("Failed to save: " + (error.message || "Unknown error"));
+
+          // Ensure isSaving is set to false on final error
+          setIsSaving(false);
         } else {
           console.log("Retrying save operation after error...");
           // Longer delay before retry
@@ -235,6 +251,9 @@ const EditPage = ({
       console.error("All save attempts failed");
       setError("Failed to save after multiple attempts. Please try again later.");
 
+      // Show error toast
+      toast.error("Failed to save. Please try again.");
+
       // Remove the loading overlay
       if (typeof window !== 'undefined') {
         const overlay = document.getElementById('save-loading-overlay');
@@ -242,9 +261,10 @@ const EditPage = ({
           overlay.remove();
         }
       }
-    }
 
-    setIsSaving(false);
+      // Always ensure isSaving is set to false to reset the UI state
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {

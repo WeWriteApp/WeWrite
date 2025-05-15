@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { Button } from "./ui/button";
-import { Edit, Save, X, Loader, AlertTriangle, History } from "lucide-react";
+import { Edit, Save, X, Loader, AlertTriangle } from "lucide-react";
 import { rtdb } from "../firebase/rtdb";
-import { ref, update, get, push, child } from "firebase/database";
+import { ref, update, get } from "firebase/database";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
@@ -11,108 +11,84 @@ import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { AuthContext } from "../providers/AuthProvider";
 
 // Import the unified editor dynamically to avoid SSR issues
-const UnifiedEditor = dynamic(() => import("./SlateEditor"), { ssr: false });
+const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
 
-export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
-  // Check if the user is a member of the group
+export default function UserBioTab({ profile }) {
   const { user } = useContext(AuthContext);
-  const [canEdit, setCanEdit] = useState(propCanEdit);
-
-  // Check if the user is a member of the group
-  useEffect(() => {
-    if (user && group && group.members && group.members[user.uid]) {
-      // User is a member of the group, allow editing
-      setCanEdit(true);
-    } else {
-      // Use the prop value for admins/owners
-      setCanEdit(propCanEdit);
-    }
-  }, [user, group, propCanEdit]);
   const [isEditing, setIsEditing] = useState(false);
-  const [aboutContent, setAboutContent] = useState(group.about || "");
-  const [originalContent, setOriginalContent] = useState(group.about || "");
+  const [bioContent, setBioContent] = useState(profile.bio || "");
+  const [originalContent, setOriginalContent] = useState(profile.bio || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [lastEditor, setLastEditor] = useState(group.aboutLastEditor || null);
-  const [lastEditTime, setLastEditTime] = useState(group.aboutLastEditTime || null);
-  const editorRef = useRef(null);
+  const [lastEditor, setLastEditor] = useState(null);
+  const [lastEditTime, setLastEditTime] = useState(null);
+
+  // Check if current user is the profile owner
+  const isProfileOwner = user && profile && user.uid === profile.uid;
 
   // Track if content has changed
-  const hasUnsavedChanges = isEditing && aboutContent !== originalContent;
+  const hasUnsavedChanges = isEditing && bioContent !== originalContent;
 
-  // Load the about content from the database
+  // Load the bio content from the database
   useEffect(() => {
-    const fetchAboutContent = async () => {
+    const fetchBioContent = async () => {
       try {
         setIsLoading(true);
-        const groupRef = ref(rtdb, `groups/${group.id}`);
-        const snapshot = await get(groupRef);
+        const userRef = ref(rtdb, `users/${profile.uid}`);
+        const snapshot = await get(userRef);
 
         if (snapshot.exists()) {
-          const groupData = snapshot.val();
-          if (groupData.about) {
-            setAboutContent(groupData.about);
-            setOriginalContent(groupData.about);
+          const userData = snapshot.val();
+          if (userData.bio) {
+            setBioContent(userData.bio);
+            setOriginalContent(userData.bio);
           }
-          if (groupData.aboutLastEditor) {
-            setLastEditor(groupData.aboutLastEditor);
+          if (userData.bioLastEditor) {
+            setLastEditor(userData.bioLastEditor);
           }
-          if (groupData.aboutLastEditTime) {
-            setLastEditTime(groupData.aboutLastEditTime);
+          if (userData.bioLastEditTime) {
+            setLastEditTime(userData.bioLastEditTime);
           }
         }
       } catch (err) {
-        console.error("Error fetching group about content:", err);
-        setError("Failed to load group information. Please try again later.");
+        console.error("Error fetching user bio content:", err);
+        setError("Failed to load user information. Please try again later.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAboutContent();
-  }, [group.id]);
+    fetchBioContent();
+  }, [profile.uid]);
 
-  // Handle saving the about content
+  // Handle saving the bio content
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      const groupRef = ref(rtdb, `groups/${group.id}`);
-      const currentTime = new Date().toISOString();
-      const editorName = user?.username || user?.displayName || user?.email || "Unknown";
+      const userRef = ref(rtdb, `users/${profile.uid}`);
 
-      // Save the current version to history
-      if (originalContent) {
-        const historyRef = child(groupRef, "aboutHistory");
-        await push(historyRef, {
-          content: originalContent,
-          editor: lastEditor || "Unknown",
-          timestamp: lastEditTime || group.createdAt || currentTime
-        });
-      }
-
-      // Update the group with new content and metadata
-      await update(groupRef, {
-        about: aboutContent,
-        aboutLastEditor: editorName,
-        aboutLastEditTime: currentTime
+      await update(userRef, {
+        bio: bioContent,
+        bioLastEditor: user?.username || user?.displayName || user?.email || "Unknown",
+        bioLastEditTime: new Date().toISOString()
       });
 
-      setOriginalContent(aboutContent);
-      setLastEditor(editorName);
-      setLastEditTime(currentTime);
+      setOriginalContent(bioContent);
       setIsEditing(false);
+      setLastEditor(user?.username || user?.displayName || user?.email || "Unknown");
+      setLastEditTime(new Date().toISOString());
 
       toast({
         title: "Success",
-        description: "Group information updated successfully",
+        description: "Bio updated successfully",
       });
       return true; // Indicate success for the useUnsavedChanges hook
     } catch (err) {
-      console.error("Error updating group about content:", err);
+      console.error("Error updating user bio content:", err);
       setError("Failed to save changes. Please try again.");
       toast({
         title: "Error",
-        description: "Failed to update group information",
+        description: "Failed to update bio",
         variant: "destructive",
       });
       return false; // Indicate failure for the useUnsavedChanges hook
@@ -124,7 +100,7 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
   // Memoized save function for the useUnsavedChanges hook
   const saveChanges = useCallback(() => {
     return handleSave();
-  }, [aboutContent, user, lastEditor, lastEditTime]);
+  }, [bioContent]);
 
   // Use the unsaved changes hook
   const {
@@ -143,17 +119,17 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
       handleNavigation('/');
     } else {
       // No changes, just exit edit mode
-      setAboutContent(originalContent);
+      setBioContent(originalContent);
       setIsEditing(false);
     }
   };
 
   // Handle content change in the editor
   const handleContentChange = (content) => {
-    setAboutContent(content);
+    setBioContent(content);
   };
 
-  if (isLoading && !aboutContent) {
+  if (isLoading && !bioContent) {
     return (
       <div className="flex justify-center items-center py-12">
         <Loader className="h-8 w-8 animate-spin text-primary" />
@@ -181,8 +157,8 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
     <div className="space-y-4">
       {/* Header with edit button */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">About this group</h2>
-        {canEdit && !isEditing && (
+        <h2 className="text-xl font-semibold">About {profile.username || "this user"}</h2>
+        {isProfileOwner && !isEditing && (
           <Button
             variant="outline"
             size="sm"
@@ -200,6 +176,7 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
               size="sm"
               onClick={handleCancel}
               className="gap-1"
+              disabled={isLoading}
             >
               <X className="h-4 w-4" />
               Cancel
@@ -209,14 +186,10 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
               size="sm"
               onClick={handleSave}
               className="gap-1"
-              disabled={isLoading || isHandlingNavigation}
+              disabled={isLoading}
             >
-              {isLoading || isHandlingNavigation ? (
-                <Loader className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save
+              <Save className="h-4 w-4" />
+              {isLoading ? "Saving..." : "Save"}
             </Button>
           </div>
         )}
@@ -227,38 +200,33 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
         {isEditing ? (
           <div className="min-h-[300px]">
             <UnifiedEditor
-              ref={editorRef}
-              initialContent={aboutContent}
+              initialContent={bioContent}
               onChange={handleContentChange}
-              placeholder="Write about this group..."
-              contentType="wiki"
-              showLineNumbers={true}
-              showInsertLinkButton={true}
-              showFormatButtons={false}
+              placeholder="Write about yourself..."
+              contentType="bio"
             />
           </div>
         ) : (
           <div className="prose dark:prose-invert max-w-none">
-            {aboutContent ? (
-              <div dangerouslySetInnerHTML={{ __html: aboutContent }} />
+            {bioContent ? (
+              <div dangerouslySetInnerHTML={{ __html: bioContent }} />
             ) : (
               <div className="text-muted-foreground italic">
-                {canEdit
-                  ? "This group doesn't have a description yet. Click Edit to add one."
-                  : "This group doesn't have a description yet."}
+                {isProfileOwner
+                  ? "You haven't added a bio yet. Click Edit to add one."
+                  : "This user hasn't added a bio yet."}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Group info and last editor */}
-      <div className="text-xs text-muted-foreground mt-4 space-y-1">
-        <p>Group created: {new Date(group.createdAt).toLocaleDateString()}</p>
-        {lastEditor && lastEditTime && (
+      {/* Last edit info */}
+      {lastEditor && lastEditTime && (
+        <div className="text-xs text-muted-foreground mt-4">
           <p>Last edited by: {lastEditor} on {new Date(lastEditTime).toLocaleString()}</p>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Unsaved Changes Dialog */}
       <UnsavedChangesDialog

@@ -1,24 +1,37 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import EnhancedMyGroups from "../components/EnhancedMyGroups";
 import { Button } from "../components/ui/button";
 import { Plus, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "../components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
+import { useRouter } from "next/navigation";
+import { useFeatureFlag } from "../utils/feature-flags";
+import { AuthContext } from "../providers/AuthProvider";
 
 export default function GroupsPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { user } = useContext(AuthContext);
+  const groupsEnabled = useFeatureFlag('groups', user?.email);
 
-  // Simulate loading state for demonstration
+  // Check if groups feature is enabled
   useEffect(() => {
+    if (!groupsEnabled) {
+      console.log('[DEBUG] Groups page - Feature disabled, redirecting to home');
+      router.push('/');
+      return;
+    }
+
+    // Simulate loading state for demonstration
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [groupsEnabled, router]);
 
   return (
     <div className="container mx-auto py-6 max-w-5xl">

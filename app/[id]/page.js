@@ -11,18 +11,27 @@ import ClientPage from '../pages/[id]/client-page.tsx';
 import { Loader } from '../components/Loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
+import { use } from 'react';
 
 export default function GlobalIDPage({ params }) {
   // Extract the ID from params and handle potential slashes
-  let { id } = params;
+  // Use React.use() to unwrap params as recommended by Next.js
+  const unwrappedParams = use(params);
+  let { id } = unwrappedParams;
+
+  // Ensure id is defined before processing
+  if (!id) {
+    console.error("ID is undefined in GlobalIDPage");
+    id = '';
+  }
 
   // If the ID contains encoded slashes, decode them
-  if (id.includes('%2F')) {
+  if (id && id.includes('%2F')) {
     id = decodeURIComponent(id);
   }
 
   // If the ID contains slashes, extract the first part
-  if (id.includes('/')) {
+  if (id && id.includes('/')) {
     id = id.split('/')[0];
   }
 

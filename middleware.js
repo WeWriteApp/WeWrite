@@ -22,13 +22,16 @@ export function middleware(request) {
   // Define paths that require admin access (only accessible to admin users)
   const requiresAdmin = false; // No paths require admin access by default
 
-  // Define paths that require authentication (groups functionality)
-  const requiresGroupsAuth = path === "/groups" ||
+  // Define paths related to groups functionality
+  const isGroupsPath = path === "/groups" ||
                       path === "/groups/" ||
                       path.startsWith("/groups/") ||
                       path === "/group" ||
                       path === "/group/" ||
                       path.startsWith("/group/");
+
+  // Groups paths require authentication
+  const requiresGroupsAuth = isGroupsPath;
 
   // Get the token from the cookies
   const token = request.cookies.get("session")?.value;
@@ -66,11 +69,9 @@ export function middleware(request) {
   // Redirect /groups/[id] to /group/[id]
   if (path.startsWith('/groups/')) {
     const id = path.replace('/groups/', '');
-    // Don't redirect /groups/new
-    if (id !== 'new') {
-      url.pathname = `/group/${id}`;
-      return NextResponse.redirect(url);
-    }
+    // Also redirect /groups/new to /group/new
+    url.pathname = `/group/${id}`;
+    return NextResponse.redirect(url);
   }
 
   // Redirect /g/[id] to /group/[id]
@@ -106,6 +107,22 @@ export function middleware(request) {
     // If not an admin, redirect to home page
     if (!isAdmin) {
       console.log(`[DEBUG] Non-admin user (${userEmail || 'unknown'}) attempted to access admin-only path: ${path}`);
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
+  // For groups paths, check if the user is an admin (since groups feature is admin-only)
+  if (isGroupsPath) {
+    // Get the user email from cookies
+    const userEmail = request.cookies.get("user_email")?.value;
+    const isAdmin = userEmail === "jamiegray2234@gmail.com";
+
+    // Check if the groups feature flag is enabled in cookies (set by client-side code)
+    const groupsFeatureEnabled = request.cookies.get("feature_groups")?.value === "true";
+
+    // If not an admin or the feature is disabled, redirect to home page
+    if (!isAdmin || !groupsFeatureEnabled) {
+      console.log(`[DEBUG] Groups access denied - User: ${userEmail || 'unknown'}, Admin: ${isAdmin}, Feature enabled: ${groupsFeatureEnabled}`);
       return NextResponse.redirect(new URL("/", request.url));
     }
   }

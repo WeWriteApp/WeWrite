@@ -22,7 +22,31 @@ export const getUsernameById = async (userId) => {
 
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      return userData.username || "Missing username";
+
+      // If username is "Anonymous", return "Missing username" instead
+      if (!userData.username || userData.username === "Anonymous") {
+        return "Missing username";
+      }
+
+      return userData.username;
+    }
+
+    // Try to get from RTDB as a fallback
+    try {
+      const { getDatabase, ref, get } = await import('firebase/database');
+      const { app } = await import('../firebase/config');
+      const rtdb = getDatabase(app);
+      const rtdbUserRef = ref(rtdb, `users/${userId}`);
+      const rtdbSnapshot = await get(rtdbUserRef);
+
+      if (rtdbSnapshot.exists()) {
+        const rtdbData = rtdbSnapshot.val();
+        if (rtdbData.username && rtdbData.username !== "Anonymous") {
+          return rtdbData.username;
+        }
+      }
+    } catch (rtdbError) {
+      console.error("Error fetching username from RTDB:", rtdbError);
     }
 
     return "Missing username";

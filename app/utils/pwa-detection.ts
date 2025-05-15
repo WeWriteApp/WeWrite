@@ -68,8 +68,8 @@ export const shouldShowPWABanner = (): boolean => {
     const dismissedTime = parseInt(dismissedTimestamp, 10);
     const currentTime = Date.now();
 
-    // If dismissed less than 7 days ago, don't show
-    if (currentTime - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
+    // If dismissed less than 1 day ago, don't show
+    if (currentTime - dismissedTime < 1 * 24 * 60 * 60 * 1000) {
       return false;
     }
   }

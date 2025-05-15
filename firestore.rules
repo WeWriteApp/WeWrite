@@ -2,12 +2,55 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Pages collection
+    match /pages/{pageId} {
+      // Allow reading public pages
+      allow read: if resource.data.isPublic == true;
 
-    // This rule allows anyone to view, edit, and delete all data in your Firestore database.
-    // WARNING: This makes your database completely public and accessible to anyone.
-    // Use with caution and ensure that you have proper security measures in place.
+      // Allow reading private pages if user is the owner
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Allow reading private pages if user is a member of the group the page belongs to
+      allow read: if request.auth != null && resource.data.groupId != null &&
+        exists(/databases/$(database)/documents/groupMembers/$(resource.data.groupId + '_' + request.auth.uid));
+
+      // Allow writing if user is the owner
+      allow write: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      // Allow reading any user profile
+      allow read: if true;
+
+      // Allow writing only to own profile
+      allow write: if request.auth != null && userId == request.auth.uid;
+    }
+
+    // Username history
+    match /usernameHistory/{docId} {
+      // Allow reading any username history
+      allow read: if true;
+
+      // Allow writing only to own history
+      allow write: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Feature flags - only admins can modify
+    match /config/featureFlags {
+      // Allow reading by anyone
+      allow read: if true;
+
+      // Only allow writing by admin users
+      allow write: if request.auth != null &&
+        (request.auth.token.email == 'jamiegray2234@gmail.com' ||
+         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)));
+    }
+
+    // Default rule - allow reading but restrict writing
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

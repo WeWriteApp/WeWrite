@@ -236,7 +236,7 @@ export default function TrendingPages({ limit = 5 }) {
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                   <div className="font-medium text-lg">
-                    {page.views.toLocaleString()}
+                    {page.views24h ? page.views24h.toLocaleString() : page.views.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">
                     views in 24h

@@ -26,24 +26,12 @@ export async function POST(request) {
       forceCleanup
     });
 
-    // Skip auth check in development for testing
-    if (process.env.NODE_ENV !== 'development') {
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Unauthorized', details: 'User not authenticated' },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.log('Skipping auth check in development environment');
-      // In development, if user is null, create a mock user for testing
-      if (!user) {
-        user = {
-          uid: 'test-user-id',
-          email: 'test@example.com'
-        };
-        console.log('Created mock user for development:', user);
-      }
+    // Always require authentication
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', details: 'User not authenticated' },
+        { status: 401 }
+      );
     }
 
     // Get the user's subscription from Firestore

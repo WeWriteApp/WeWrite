@@ -3,7 +3,7 @@ import React, { useState, useContext, useRef } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
 import SupporterBadge from "./SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Users } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ import usePages from "../hooks/usePages";
 import UsernameHistory from "./UsernameHistory";
 import FollowingList from "./FollowingList";
 import TypeaheadSearch from "./TypeaheadSearch";
+import UserBioTab from "./UserBioTab";
 
 
 
@@ -75,7 +76,7 @@ export default function UserProfileTabs({ profile }) {
   } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
 
   // Determine which tabs to show
-  const visibleTabs = ["activity", "pages", "following"];
+  const visibleTabs = ["activity", "bio", "pages", "following"];
   if (isCurrentUser) {
     visibleTabs.push("private");
   }
@@ -312,6 +313,15 @@ export default function UserProfileTabs({ profile }) {
               </TabsTrigger>
 
               <TabsTrigger
+                value="bio"
+                data-value="bio"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <BookText className="h-4 w-4" />
+                <span>Bio</span>
+              </TabsTrigger>
+
+              <TabsTrigger
                 value="pages"
                 data-value="pages"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
@@ -360,6 +370,17 @@ export default function UserProfileTabs({ profile }) {
             }`}
           >
             <RecentActivity limit={10} showViewAll={false} userId={profile?.uid} />
+          </TabsContent>
+
+          <TabsContent
+            value="bio"
+            className={`mt-0 transition-all duration-300 ${
+              activeTab === "bio"
+                ? "block"
+                : "hidden"
+            }`}
+          >
+            <UserBioTab profile={profile} />
           </TabsContent>
 
           <TabsContent

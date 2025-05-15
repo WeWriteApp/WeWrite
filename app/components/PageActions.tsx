@@ -11,6 +11,7 @@ import { deletePage } from "../firebase/database";
 import { getUserProfile } from "../firebase/auth";
 import { auth } from "../firebase/auth";
 import { useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
+import { cn } from "../lib/utils";
 
 import {
   DropdownMenu,
@@ -271,11 +272,14 @@ export function PageActions({
             <span className="text-sm">Reply</span>
           </Button>
 
-          {/* Dense Mode toggle - integrated with other buttons */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-full h-10 md:h-8 md:w-auto"
+          {/* Dense Mode toggle - using a div instead of Button to avoid nested buttons */}
+          <div
+            className={cn(
+              "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors",
+              "border border-theme-medium bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
+              "h-8 rounded-md px-3 text-xs",
+              "gap-2 w-full h-10 md:h-8 md:w-auto cursor-pointer"
+            )}
             onClick={() => {
               const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
               setCurrentLineMode(newMode); // Update local state immediately
@@ -291,7 +295,7 @@ export function PageActions({
               }}
             />
             <span className="text-sm">Dense mode</span>
-          </Button>
+          </div>
         </div>
       </div>
     </div>

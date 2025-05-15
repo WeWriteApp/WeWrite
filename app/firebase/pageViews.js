@@ -129,7 +129,7 @@ export const recordPageView = async (pageId, userId = null) => {
  */
 export const getPageViewsLast24Hours = async (pageId) => {
   try {
-    if (!pageId) return { total: 0, hourly: [] };
+    if (!pageId) return { total: 0, hourly: Array(24).fill(0) };
 
     // Get current date and time
     const now = new Date();
@@ -159,8 +159,9 @@ export const getPageViewsLast24Hours = async (pageId) => {
 
       // Add hours from yesterday that are within our 24-hour window
       for (let hour = currentHour + 1; hour < 24; hour++) {
-        hourlyData[hour - (currentHour + 1)] = yesterdayData.hours[hour] || 0;
-        total += hourlyData[hour - (currentHour + 1)];
+        const hourValue = yesterdayData.hours?.[hour] || 0;
+        hourlyData[hour - (currentHour + 1)] = hourValue;
+        total += hourValue;
       }
     }
 
@@ -170,8 +171,24 @@ export const getPageViewsLast24Hours = async (pageId) => {
 
       // Add hours from today
       for (let hour = 0; hour <= currentHour; hour++) {
-        hourlyData[hour + (24 - (currentHour + 1))] = todayData.hours[hour] || 0;
-        total += hourlyData[hour + (24 - (currentHour + 1))];
+        const hourValue = todayData.hours?.[hour] || 0;
+        hourlyData[hour + (24 - (currentHour + 1))] = hourValue;
+        total += hourValue;
+      }
+    }
+
+    // Get the page document to check if we need to update the 24-hour view count
+    const pageDoc = await getDoc(doc(db, "pages", pageId));
+
+    if (pageDoc.exists()) {
+      const pageData = pageDoc.data();
+
+      // If the page doesn't have a 24-hour view count field or it's significantly different
+      // from our calculated total, update it
+      if (pageData.views24h === undefined || Math.abs(pageData.views24h - total) > 5) {
+        await updateDoc(doc(db, "pages", pageId), {
+          views24h: total
+        });
       }
     }
 
@@ -378,7 +395,8 @@ export const getTrendingPages = async (limitCount = 5) => {
               ...page,
               title: pageData.title || 'Untitled',
               userId: pageData.userId,
-              username: username
+              username: username,
+              views24h: pageData.views24h || page.views
             };
           }
           return { ...page, title: 'Untitled' };

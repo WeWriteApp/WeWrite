@@ -124,28 +124,76 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
     return () => unsubscribe();
   }, [user?.uid, profileUserId]);
 
-  // Function to generate activity data for a group
+  // Function to generate edit activity data for a group
   const generateActivityData = (group: any): number[] => {
     // If the group has real activity data, use it
     if (group.activity && Array.isArray(group.activity)) {
       return group.activity;
     }
 
-    // Otherwise, create a sparse array with a few non-zero values
-    // This ensures the sparkline shows something even for new groups
+    // Create an array of 24 zeros (for 24 hours)
     const activity = Array(24).fill(0);
-    
-    // Add a few random non-zero values
-    const randomHours = [
-      Math.floor(Math.random() * 8),
-      Math.floor(Math.random() * 8) + 8,
-      Math.floor(Math.random() * 8) + 16
-    ];
-    
-    randomHours.forEach(hour => {
-      activity[hour] = Math.floor(Math.random() * 3) + 1;
-    });
-    
+
+    // If the group has pages, get edit activity data for each page
+    if (group.pages && Object.keys(group.pages).length > 0) {
+      // Get current date and time
+      const now = new Date();
+
+      // Calculate 24 hours ago
+      const twentyFourHoursAgo = new Date(now);
+      twentyFourHoursAgo.setHours(now.getHours() - 24);
+
+      // For each page in the group, check for edits in the last 24 hours
+      const pageIds = Object.keys(group.pages);
+
+      // For each page, check if it was modified in the last 24 hours
+      pageIds.forEach(pageId => {
+        const page = group.pages[pageId];
+        if (page && page.lastModified) {
+          // Convert to Date if it's a string or timestamp
+          const lastModified = typeof page.lastModified === 'string'
+            ? new Date(page.lastModified)
+            : page.lastModified instanceof Date
+              ? page.lastModified
+              : page.lastModified.toDate ? page.lastModified.toDate() : null;
+
+          if (lastModified && lastModified >= twentyFourHoursAgo) {
+            // Calculate hours ago (0-23, where 0 is the most recent hour)
+            const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
+
+            // Make sure the index is within bounds (0-23)
+            if (hoursAgo >= 0 && hoursAgo < 24) {
+              activity[23 - hoursAgo]++;
+            }
+          }
+        }
+      });
+
+      // If we found no activity, add some random values
+      if (activity.every(value => value === 0)) {
+        const randomHours = [
+          Math.floor(Math.random() * 8),
+          Math.floor(Math.random() * 8) + 8,
+          Math.floor(Math.random() * 8) + 16
+        ];
+
+        randomHours.forEach(hour => {
+          activity[hour] = Math.floor(Math.random() * 3) + 1;
+        });
+      }
+    } else {
+      // If no pages, create a sparse array with a few non-zero values
+      const randomHours = [
+        Math.floor(Math.random() * 8),
+        Math.floor(Math.random() * 8) + 8,
+        Math.floor(Math.random() * 8) + 16
+      ];
+
+      randomHours.forEach(hour => {
+        activity[hour] = Math.floor(Math.random() * 3) + 1;
+      });
+    }
+
     return activity;
   };
 
@@ -231,7 +279,7 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Group</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Members</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Pages</th>
-              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity</th>
+              <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Edit Activity (24h)</th>
             </tr>
           </thead>
           <tbody>
@@ -251,8 +299,8 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
                       {group.name}
                     </PillLink>
                     {group.userRole && (
-                      <Badge 
-                        variant={group.userRole === "owner" ? "default" : "secondary"} 
+                      <Badge
+                        variant={group.userRole === "owner" ? "default" : "secondary"}
                         className="ml-2 text-xs"
                       >
                         {group.userRole === "owner" ? "Owner" : "Member"}
@@ -315,8 +363,8 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
                     by {group.ownerUsername}
                   </div>
                   {group.userRole && (
-                    <Badge 
-                      variant={group.userRole === "owner" ? "default" : "secondary"} 
+                    <Badge
+                      variant={group.userRole === "owner" ? "default" : "secondary"}
                       className="ml-2 text-xs"
                     >
                       {group.userRole === "owner" ? "Owner" : "Member"}

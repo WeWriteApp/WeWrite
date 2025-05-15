@@ -284,71 +284,130 @@ const TopUsers = () => {
           )}
 
           {!loading && !error && allTimeUsers.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
-                  <TableHead className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap cursor-pointer" onClick={toggleSortDirection}>
-                    <div className="flex items-center justify-end gap-1">
-                      Pages
-                      {sortDirection === "desc" ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop view (md and larger): Table layout */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
+                      <TableHead className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap cursor-pointer" onClick={toggleSortDirection}>
+                        <div className="flex items-center justify-end gap-1">
+                          Pages
+                          {sortDirection === "desc" ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </div>
+                      </TableHead>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedUsers.map((user) => (
+                      <TableRow
+                        key={user.id}
+                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => window.location.href = `/user/${user.id}`}
+                      >
+                        <TableCell className="py-3 px-4">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PillLink
+                                  href={`/user/${user.id}`}
+                                  variant="primary"
+                                  onClick={(e) => e.stopPropagation()} // Prevent double navigation
+                                >
+                                  <span className="flex items-center gap-1">
+                                    {user.username || "Unknown User"}
+                                    {subscriptionEnabled && (
+                                      <SupporterIcon
+                                        tier={user.tier}
+                                        status={user.subscriptionStatus}
+                                        size="sm"
+                                      />
+                                    )}
+                                  </span>
+                                </PillLink>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span>View user's pages</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-medium">{user.pageCount}</TableCell>
+                        <TableCell className="py-3 px-4">
+                          <div className="w-24 h-8 ml-auto">
+                            <SimpleSparkline
+                              data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
+                              height={32}
+                              strokeWidth={1.5}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile view (smaller than md): Card grid layout */}
+              <div className="md:hidden grid grid-cols-1 gap-4">
                 {sortedUsers.map((user) => (
-                  <TableRow
+                  <div
                     key={user.id}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                    className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
                     onClick={() => window.location.href = `/user/${user.id}`}
+                    style={{ cursor: 'pointer' }}
                   >
-                    <TableCell className="py-3 px-4">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <PillLink
-                              href={`/user/${user.id}`}
-                              variant="primary"
-                              onClick={(e) => e.stopPropagation()} // Prevent double navigation
-                            >
-                              <span className="flex items-center gap-1">
-                                {user.username || "Unknown User"}
-                                {subscriptionEnabled && (
-                                  <SupporterIcon
-                                    tier={user.tier}
-                                    status={user.subscriptionStatus}
-                                    size="sm"
-                                  />
-                                )}
-                              </span>
-                            </PillLink>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span>View user's pages</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-right font-medium">{user.pageCount}</TableCell>
-                    <TableCell className="py-3 px-4">
-                      <div className="w-24 h-8 ml-auto">
-                        <SimpleSparkline
-                          data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
-                          height={32}
-                          strokeWidth={1.5}
-                        />
+                    <div className="p-4">
+                      <div className="mb-3">
+                        <h3 className="text-base font-medium mb-1">
+                          <PillLink
+                            href={`/user/${user.id}`}
+                            variant="primary"
+                            onClick={(e) => e.stopPropagation()} // Prevent double navigation
+                          >
+                            <span className="flex items-center gap-1">
+                              {user.username || "Unknown User"}
+                              {subscriptionEnabled && (
+                                <SupporterIcon
+                                  tier={user.tier}
+                                  status={user.subscriptionStatus}
+                                  size="sm"
+                                />
+                              )}
+                            </span>
+                          </PillLink>
+                        </h3>
                       </div>
-                    </TableCell>
-                  </TableRow>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <div className="font-medium text-lg">
+                            {user.pageCount}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            pages
+                          </div>
+                        </div>
+
+                        <div className="w-28 h-14 bg-background/50 rounded-md p-1">
+                          <SimpleSparkline
+                            data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
+                            height={48}
+                            strokeWidth={2}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </div>
 

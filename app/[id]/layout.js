@@ -3,14 +3,16 @@ import { getPageMetadata } from '../firebase/database';
 
 export async function generateMetadata({ params }) {
   try {
-    const id = params.id;
+    // Await params before accessing properties as required by Next.js
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const metadata = await getPageMetadata(id);
 
     if (metadata) {
-      // Format: "[pagename] by [username] on WeWrite - The social wiki where every page is a fundraiser"
+      // Format: "[pagename] by [username] on WeWrite"
       const pageTitle = metadata.title || 'Untitled';
       const username = metadata.username || 'Anonymous';
-      const formattedTitle = `${pageTitle} by ${username} on WeWrite - The social wiki where every page is a fundraiser`;
+      const formattedTitle = `${pageTitle} by ${username} on WeWrite`;
 
       // Use the extracted description from the first paragraph, or a default
       const description = metadata.description ||
