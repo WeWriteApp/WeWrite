@@ -103,6 +103,7 @@ export const PillLink = forwardRef(({
             setShowExternalLinkModal(true);
           }}
           className={baseStyles}
+          data-pill-style={pillStyle}
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
@@ -152,6 +153,7 @@ export const PillLink = forwardRef(({
       href={safeHref}
       className={baseStyles}
       tabIndex={0}
+      data-pill-style={pillStyle}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
       onClick={(e) => {

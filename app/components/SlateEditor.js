@@ -1068,7 +1068,6 @@ const InlineChromiumBugfix = forwardRef((_, ref) => (
 InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
 
 const LinkComponent = forwardRef(({ attributes, children, element, openLinkEditor }, ref) => {
-  // const selected = useSelected();
   const editor = useSlate();
   const { lineMode } = useLineSettings();
 
@@ -1106,56 +1105,26 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     }
   };
 
-  // We'll handle deletion in the editor's main keydown handler instead
-
   // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
   const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
 
   // Apply padding based on pill style
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
 
-  // Generate inline styles based on pill style to override any CSS specificity issues
-  let inlineStyles = {};
-
-  if (pillStyle === 'filled') {
-    inlineStyles = {
-      backgroundColor: 'var(--primary)',
-      color: 'var(--primary-foreground, white)',
-      border: '1.5px solid var(--primary-translucent, rgba(23, 104, 255, 0.2))',
-      fontWeight: '500',
-    };
-  } else if (pillStyle === 'outline') {
-    inlineStyles = {
-      backgroundColor: 'transparent',
-      color: 'var(--primary)',
-      border: '1.5px solid var(--primary-translucent, rgba(23, 104, 255, 0.4))',
-      fontWeight: '500',
-    };
-  } else if (pillStyle === 'classic') {
-    inlineStyles = {
-      backgroundColor: 'transparent',
-      color: 'var(--primary)',
-      border: 'none',
-      fontWeight: 'bold',
-      boxShadow: 'none',
-      padding: '0',
-    };
-  }
-
   // Base styles for all pill links - EXACTLY matching PillLink component
-  // Add !important to critical styles to ensure they take precedence
   const baseStyles = `
-    inline-flex items-center !important
-    my-0.5 !important
-    text-sm font-medium !important
-    rounded-lg !important
-    transition-colors !important
-    max-w-full !important
-    ${textWrapStyle} !important
-    ${classicPadding} !important
-    cursor-pointer !important
-    ${linkTypeClass} !important
-    editor-pill-link !important
+    inline-flex items-center
+    my-0.5
+    text-sm font-medium
+    rounded-lg
+    transition-colors
+    max-w-full
+    ${textWrapStyle}
+    ${classicPadding}
+    ${getPillStyleClasses()}
+    cursor-pointer
+    ${linkTypeClass}
+    slate-pill-link
   `.trim().replace(/\s+/g, ' ');
 
   return (
@@ -1165,7 +1134,6 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       onClick={handleClick}
       contentEditable={false} // Make the link non-editable
       className={baseStyles}
-      style={inlineStyles}
       data-pill-style={pillStyle}
       data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
       data-user-id={isUserLinkType ? (element.userId || '') : undefined}
@@ -1173,13 +1141,7 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
       <InlineChromiumBugfix />
-      <span
-        className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}
-        style={{
-          color: 'inherit',
-          fontWeight: 'inherit'
-        }}
-      >
+      <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>
         {children}
       </span>
       {isExternalLinkType || isExternalLink(element.url) ? (
