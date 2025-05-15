@@ -384,55 +384,37 @@ const PageEditor = ({
   const handleInsertLink = () => {
     console.log("Insert link button clicked");
 
-    // Use the openLinkEditor method directly instead of simulating @ key press
     if (editorRef.current) {
-      console.log("Editor ref exists, attempting to open link editor");
+      console.log("Editor ref exists, attempting to insert link");
 
-      // Call the openLinkEditor method we added to the SlateEditor ref
-      if (editorRef.current.openLinkEditor) {
-        console.log("Using openLinkEditor method");
+      // Focus the editor first
+      editorRef.current.focus();
+
+      // Use the insertLink method we added to the UnifiedEditor
+      if (editorRef.current.insertLink) {
+        console.log("Using insertLink method");
         try {
-          editorRef.current.openLinkEditor();
+          // Create a temporary link that will be edited by the user
+          // The LinkComponent will automatically open the link editor when clicked
+          editorRef.current.insertLink('#', 'Link text', {
+            // This will be a page link by default
+            pageId: null,
+            pageTitle: ''
+          });
+
+          // The link will be rendered as a pill link with the site's appearance settings
+          // and the user can click it to edit it
         } catch (error) {
-          console.error("Error calling openLinkEditor:", error);
-          // Fall back to @ key simulation if the method fails
-          simulateAtKeyPress();
+          console.error("Error inserting link:", error);
+          toast.error("Could not insert link. Please try again.");
         }
       } else {
-        console.log("openLinkEditor method not available, using @ key simulation");
-        simulateAtKeyPress();
+        console.error("insertLink method not available");
+        toast.error("Link insertion is not available. Please try again later.");
       }
     } else {
       console.error("Editor ref is not available");
-    }
-  };
-
-  // Helper function to simulate @ key press
-  const simulateAtKeyPress = () => {
-    try {
-      // First focus the editor
-      if (editorRef.current) {
-        editorRef.current.focus();
-      }
-
-      // Create and dispatch the @ key event
-      const atEvent = new KeyboardEvent('keydown', {
-        key: '@',
-        code: 'KeyAT',
-        keyCode: 50,
-        which: 50,
-        bubbles: true
-      });
-
-      // Make sure we have an active element to dispatch to
-      if (document.activeElement) {
-        console.log("Dispatching @ key event to:", document.activeElement);
-        document.activeElement.dispatchEvent(atEvent);
-      } else {
-        console.error("No active element to dispatch @ key event to");
-      }
-    } catch (error) {
-      console.error("Error simulating @ key press:", error);
+      toast.error("Editor is not ready. Please try again.");
     }
   };
 
