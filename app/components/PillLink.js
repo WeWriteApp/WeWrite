@@ -26,7 +26,8 @@ export const PillLink = forwardRef(({
   isOwned,
   byline,
   isLoading,
-  deleted = false
+  deleted = false,
+  isFallback = false
 }, ref) => {
   // Hooks
   const { user } = useAuth();
