@@ -1,12 +1,15 @@
 /* CENTRALIZED PILL LINK STYLING
  * This is the single source of truth for pill link styling in WeWrite
  * All components should import and use these styles
+ *
+ * IMPORTANT: The editor-pill-link class takes precedence over these styles
+ * to ensure consistent styling between view and edit modes
  */
 
 /* Base link styling */
 .editor-link,
-[data-slate-editor] a,
-[data-slate-node="element"] a {
+[data-slate-editor] a:not(.editor-pill-link),
+[data-slate-node="element"] a:not(.editor-pill-link) {
   color: var(--primary);
   text-decoration: none;
   transition: all 0.2s ease;
@@ -16,22 +19,25 @@
  * PILL LINK STYLING FOR PAGE LINKS
  * These styles apply to all page links across the application
  * The high specificity ensures they work in all contexts
+ *
+ * IMPORTANT: These styles are NOT applied to editor-pill-link elements
+ * which use inline styles from PillStyleContext instead
  */
-.editor-link[data-page-id],
-.editor-link.page-link,
-.page-link,
-[data-slate-editor] a[data-page-id],
-[data-slate-editor] a.page-link,
-[data-slate-editor] a.editor-link.page-link,
-[data-slate-node="element"] a[data-page-id],
-[data-slate-node="element"] a.page-link,
+.editor-link[data-page-id]:not(.editor-pill-link),
+.editor-link.page-link:not(.editor-pill-link),
+.page-link:not(.editor-pill-link),
+[data-slate-editor] a[data-page-id]:not(.editor-pill-link),
+[data-slate-editor] a.page-link:not(.editor-pill-link),
+[data-slate-editor] a.editor-link.page-link:not(.editor-pill-link),
+[data-slate-node="element"] a[data-page-id]:not(.editor-pill-link),
+[data-slate-node="element"] a.page-link:not(.editor-pill-link),
 /* Additional selectors for Slate editor */
-.slate-editor-container a[data-page-id],
-.slate-editor-container a.page-link,
-.reply-editor-container a[data-page-id],
-.reply-editor-container a.page-link,
-.editable-container a[data-page-id],
-.editable-container a.page-link {
+.slate-editor-container a[data-page-id]:not(.editor-pill-link),
+.slate-editor-container a.page-link:not(.editor-pill-link),
+.reply-editor-container a[data-page-id]:not(.editor-pill-link),
+.reply-editor-container a.page-link:not(.editor-pill-link),
+.editable-container a[data-page-id]:not(.editor-pill-link),
+.editable-container a.page-link:not(.editor-pill-link) {
   /* Use direct color values with fallbacks to CSS variables */
   background-color: #1768FF;
   background-color: var(--primary, #1768FF);
@@ -54,21 +60,24 @@
  * USER LINK STYLING
  * These styles apply to all user links across the application
  * The high specificity ensures they work in all contexts
+ *
+ * IMPORTANT: These styles are NOT applied to editor-pill-link elements
+ * which use inline styles from PillStyleContext instead
  */
-.user-link,
-.editor-link.user-link,
-[data-slate-editor] a.user-link,
-[data-slate-editor] a[data-user-id],
-[data-slate-editor] a.editor-link.user-link,
-[data-slate-node="element"] a.user-link,
-[data-slate-node="element"] a[data-user-id],
+.user-link:not(.editor-pill-link),
+.editor-link.user-link:not(.editor-pill-link),
+[data-slate-editor] a.user-link:not(.editor-pill-link),
+[data-slate-editor] a[data-user-id]:not(.editor-pill-link),
+[data-slate-editor] a.editor-link.user-link:not(.editor-pill-link),
+[data-slate-node="element"] a.user-link:not(.editor-pill-link),
+[data-slate-node="element"] a[data-user-id]:not(.editor-pill-link),
 /* Additional selectors for Slate editor */
-.slate-editor-container a.user-link,
-.slate-editor-container a[data-user-id],
-.reply-editor-container a.user-link,
-.reply-editor-container a[data-user-id],
-.editable-container a.user-link,
-.editable-container a[data-user-id] {
+.slate-editor-container a.user-link:not(.editor-pill-link),
+.slate-editor-container a[data-user-id]:not(.editor-pill-link),
+.reply-editor-container a.user-link:not(.editor-pill-link),
+.reply-editor-container a[data-user-id]:not(.editor-pill-link),
+.editable-container a.user-link:not(.editor-pill-link),
+.editable-container a[data-user-id]:not(.editor-pill-link) {
   /* Use direct color values with fallbacks to CSS variables */
   background-color: #1768FF;
   background-color: var(--primary, #1768FF);
@@ -122,11 +131,30 @@ a[data-username]::before,
 
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
-  .editor-link[data-page-id],
-  .editor-link.page-link,
-  .page-link,
-  .user-link,
-  .editor-link.user-link {
+  .editor-link[data-page-id]:not(.editor-pill-link),
+  .editor-link.page-link:not(.editor-pill-link),
+  .page-link:not(.editor-pill-link),
+  .user-link:not(.editor-pill-link),
+  .editor-link.user-link:not(.editor-pill-link) {
     border-color: rgba(var(--accent-color-rgb, 23, 104, 255), 0.3);
   }
+}
+
+/*
+ * EDITOR PILL LINK HOVER STATES
+ * These styles apply specifically to editor pill links
+ * and respect the pill style (filled, outline, classic)
+ */
+[data-slate-editor] a.editor-pill-link[data-pill-style="filled"]:hover {
+  background-color: var(--primary-hover, rgba(23, 104, 255, 0.9)) !important;
+  border-color: var(--primary-translucent, rgba(23, 104, 255, 0.3)) !important;
+}
+
+[data-slate-editor] a.editor-pill-link[data-pill-style="outline"]:hover {
+  background-color: var(--primary-translucent, rgba(23, 104, 255, 0.1)) !important;
+  border-color: var(--primary-translucent, rgba(23, 104, 255, 0.6)) !important;
+}
+
+[data-slate-editor] a.editor-pill-link[data-pill-style="classic"]:hover {
+  text-decoration: underline !important;
 }
