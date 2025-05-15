@@ -22,6 +22,8 @@ import PageFooter from "./PageFooter";
 import SiteFooter from "./SiteFooter";
 import PledgeBar from "./PledgeBar";
 import RelatedPages from "./RelatedPages";
+// Import BacklinksSection with dynamic import to avoid SSR issues
+const BacklinksSection = dynamic(() => import("./BacklinksSection"), { ssr: false });
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "./ui/button";
@@ -534,9 +536,13 @@ function SinglePageView({ params }) {
               </div>
             </div>
 
-            {/* Related Pages - Only show after content is fully rendered */}
+            {/* Backlinks and Related Pages - Only show after content is fully rendered */}
             {pageFullyRendered && (
               <div className="container max-w-4xl mx-auto px-4">
+                {/* What Links Here section */}
+                <BacklinksSection page={page} />
+
+                {/* Related Pages section */}
                 <RelatedPages
                   page={page}
                   linkedPageIds={extractLinkedPageIds(editorState)}

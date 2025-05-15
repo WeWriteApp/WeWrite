@@ -935,6 +935,133 @@ function extractLinksFromNodes(nodes) {
   return links;
 }
 
+/**
+ * Find pages that link to a specific page (backlinks)
+ *
+ * @param {string} targetPageId - The ID of the page to find backlinks for
+ * @param {number} limit - Maximum number of backlinks to return
+ * @returns {Promise<Array>} - Array of page objects that link to the target page
+ */
+export async function findBacklinks(targetPageId, limit = 10) {
+  try {
+    if (!targetPageId) {
+      console.error("findBacklinks called with empty targetPageId");
+      return [];
+    }
+
+    // Ensure we're in a browser environment
+    if (typeof window === 'undefined') {
+      console.log('findBacklinks called in server context, returning empty array');
+      return [];
+    }
+
+    // Generate cache key for this query
+    const cacheKey = generateCacheKey('backlinks', targetPageId, limit.toString());
+    const cachedData = getCacheItem(cacheKey);
+
+    if (cachedData) {
+      console.log(`Using cached backlinks for page ${targetPageId}`);
+      return cachedData;
+    }
+
+    console.log(`Finding backlinks for page ${targetPageId}`);
+
+    // Dynamically import Firestore functions to avoid SSR issues
+    const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
+
+    // Get all pages from Firestore, ordered by last modified date
+    const pagesRef = collection(db, 'pages');
+    const pagesQuery = query(
+      pagesRef,
+      orderBy('lastModified', 'desc'),
+      firestoreLimit(100) // Limit to most recent 100 pages for performance
+    );
+
+    const pagesSnapshot = await getDocs(pagesQuery);
+    const backlinkPages = [];
+
+    // Process each page to check if it links to the target page
+    for (const docSnapshot of pagesSnapshot.docs) {
+      const pageData = { id: docSnapshot.id, ...docSnapshot.data() };
+
+      // Skip the target page itself
+      if (pageData.id === targetPageId) continue;
+
+      // Skip if the page doesn't have content
+      if (!pageData.content) continue;
+
+      try {
+        // Parse the content to check for links
+        const content = JSON.parse(pageData.content);
+
+        // Check if this page links to the target page
+        if (pageContainsLinkTo(content, targetPageId)) {
+          backlinkPages.push(pageData);
+
+          // Break early if we've found enough backlinks
+          if (backlinkPages.length >= limit) break;
+        }
+      } catch (error) {
+        console.error(`Error parsing content for page ${pageData.id}:`, error);
+      }
+    }
+
+    // Cache the results for 5 minutes
+    setCacheItem(cacheKey, backlinkPages, 5 * 60 * 1000);
+
+    return backlinkPages;
+  } catch (error) {
+    console.error("Error finding backlinks:", error);
+    return [];
+  }
+}
+
+/**
+ * Check if a page's content contains a link to the target page
+ *
+ * @param {Array} content - The page content as a Slate document
+ * @param {string} targetPageId - The ID of the page to check for links to
+ * @returns {boolean} - True if the content contains a link to the target page
+ */
+function pageContainsLinkTo(content, targetPageId) {
+  // Set to track found links
+  const foundLinks = new Set();
+
+  // Recursive function to traverse nodes and find links
+  const traverseNodes = (node) => {
+    // Check if the node is a link
+    if (node.type === 'link' && node.url) {
+      // Check if it's an internal page link
+      if (node.url.startsWith('/') || node.url.startsWith('/pages/')) {
+        // Extract the page ID from the URL
+        const pageId = node.url.replace('/pages/', '').replace('/', '');
+        if (pageId === targetPageId) {
+          foundLinks.add(pageId);
+          return true;
+        }
+      }
+    }
+
+    // Recursively check children if they exist
+    if (node.children && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        if (traverseNodes(child)) return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Start traversal on each top-level node
+  if (Array.isArray(content)) {
+    for (const node of content) {
+      if (traverseNodes(node)) return true;
+    }
+  }
+
+  return false;
+}
+
 export const getUsernameByEmail = async (email) => {
   try {
     const q = query(collection(db, "users"), where("email", "==", email), limit(1));

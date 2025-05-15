@@ -20,6 +20,12 @@ import { Loader2 } from 'lucide-react';
 export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 }) {
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component is mounted before rendering to avoid hydration issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchRelatedPages = async () => {
@@ -196,38 +202,46 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
     fetchRelatedPages();
   }, [page, maxPages, linkedPageIds]);
 
-  if (isLoading) {
+  // Render a consistent height container regardless of loading state
+  // Only render the full component when mounted to avoid hydration issues
+  if (!mounted) {
     return (
-      <div className="mt-8 pt-6">
+      <div className="mt-8 pt-6 min-h-[120px]">
         <h3 className="text-lg font-medium mb-4">Related Pages</h3>
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       </div>
     );
   }
 
-  // If there are no related pages after filtering out linked pages, don't show the section at all
-  if (relatedPages.length === 0) {
-    return null;
-  }
-
   return (
-    <div className="mt-8 pt-6">
+    <div className="mt-8 pt-6 min-h-[120px]">
       <h3 className="text-lg font-medium mb-4">Related Pages</h3>
-      <div className="flex flex-wrap gap-2">
-        {relatedPages.map(page => (
-          <div key={page.id} className="flex-none max-w-full">
-            <PillLink
-              key={page.id}
-              href={`/${page.id}`}
-              className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
-            >
-              {page.title || "Untitled"}
-            </PillLink>
-          </div>
-        ))}
-      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px]">
+          <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+        </div>
+      ) : relatedPages.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {relatedPages.map(page => (
+            <div key={page.id} className="flex-none max-w-full">
+              <PillLink
+                key={page.id}
+                href={`/${page.id}`}
+                className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+              >
+                {page.title || "Untitled"}
+              </PillLink>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex justify-center items-center py-4 border border-border/40 rounded-lg min-h-[60px] text-muted-foreground">
+          No related pages found
+        </div>
+      )}
     </div>
   );
 }

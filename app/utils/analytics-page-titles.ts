@@ -108,14 +108,42 @@ export function getAnalyticsPageTitle(
 
   // User profile pages
   if (pathname.startsWith('/user/')) {
+    // Try to get the username from the DOM first (most accurate)
     const username = document.querySelector('h1')?.textContent;
     if (username) {
       return `User: ${username}`;
     }
 
+    // Try to get username from document title
+    if (documentTitle && documentTitle.includes(' on WeWrite')) {
+      const displayName = documentTitle.split(' on WeWrite')[0];
+      if (displayName && displayName !== 'WeWrite') {
+        return `User: ${displayName}`;
+      }
+    }
+
+    // Try to get username from a specific element with user data
+    const userElement = document.querySelector('[data-username]');
+    if (userElement) {
+      const dataUsername = userElement.getAttribute('data-username');
+      if (dataUsername) {
+        return `User: ${dataUsername}`;
+      }
+    }
+
     // Extract username from URL as fallback
-    const usernameFromPath = pathname.split('/').pop();
-    return `User: ${usernameFromPath}`;
+    const userId = pathname.split('/').pop();
+
+    // If it looks like a user ID (not a username), try to find a better display
+    if (userId && userId.length > 10) {
+      // Look for any username display in the page
+      const usernameDisplay = document.querySelector('.username, [data-user-profile-name]');
+      if (usernameDisplay && usernameDisplay.textContent) {
+        return `User: ${usernameDisplay.textContent.trim()}`;
+      }
+    }
+
+    return `User: ${userId}`;
   }
 
   // Group pages
@@ -138,17 +166,59 @@ export function getAnalyticsPageTitle(
       return 'Page Editor';
     }
 
-    // Try to get the page title from the DOM first (most accurate)
+    // Try to get the page title and author from the DOM first (most accurate)
     const contentTitle = document.querySelector('h1')?.textContent;
+    let username = null;
+
+    // Try to extract username from document title
+    if (documentTitle && documentTitle.includes(' by ')) {
+      const parts = documentTitle.split(' by ');
+      if (parts.length >= 2) {
+        const authorPart = parts[1];
+        username = authorPart.split(' on WeWrite')[0];
+      }
+    }
+
+    // If we have both title and username from DOM/document title
+    if (contentTitle && contentTitle !== 'Untitled' && username) {
+      // Cache this title for future use
+      pageTitleCache.set(pageId, contentTitle);
+      return `Page: ${contentTitle} by ${username}`;
+    }
+
+    // If we have just the title from DOM
     if (contentTitle && contentTitle !== 'Untitled') {
       // Cache this title for future use
       pageTitleCache.set(pageId, contentTitle);
+
+      // Try to find username in the page
+      const authorElement = document.querySelector('[data-author-username]');
+      if (authorElement) {
+        username = authorElement.getAttribute('data-author-username') ||
+                  authorElement.textContent;
+        if (username) {
+          return `Page: ${contentTitle} by ${username}`;
+        }
+      }
+
       return `Page: ${contentTitle}`;
     }
 
     // Check if we have this page title in our cache
     if (pageTitleCache.has(pageId)) {
-      return `Page: ${pageTitleCache.get(pageId)}`;
+      const cachedTitle = pageTitleCache.get(pageId);
+
+      // Try to find username in the page
+      const authorElement = document.querySelector('[data-author-username]');
+      if (authorElement) {
+        username = authorElement.getAttribute('data-author-username') ||
+                  authorElement.textContent;
+        if (username) {
+          return `Page: ${cachedTitle} by ${username}`;
+        }
+      }
+
+      return `Page: ${cachedTitle}`;
     }
 
     // Check document title for page name
@@ -158,17 +228,22 @@ export function getAnalyticsPageTitle(
         !documentTitle.includes('undefined')) {
       // Clean up the document title
       let cleanTitle = documentTitle;
+      let extractedUsername = null;
 
       // Remove "WeWrite - " prefix if present
       if (cleanTitle.startsWith('WeWrite - ')) {
         cleanTitle = cleanTitle.substring('WeWrite - '.length);
       }
 
-      // Remove " by username on WeWrite" suffix if present
+      // Extract username if present in " by username on WeWrite" format
       const bySuffix = " by ";
       const onWeWriteSuffix = " on WeWrite";
       if (cleanTitle.includes(bySuffix)) {
-        cleanTitle = cleanTitle.substring(0, cleanTitle.indexOf(bySuffix));
+        const titleParts = cleanTitle.split(bySuffix);
+        cleanTitle = titleParts[0];
+        if (titleParts.length > 1) {
+          extractedUsername = titleParts[1].split(onWeWriteSuffix)[0];
+        }
       } else if (cleanTitle.includes(onWeWriteSuffix)) {
         cleanTitle = cleanTitle.substring(0, cleanTitle.indexOf(onWeWriteSuffix));
       }
@@ -176,6 +251,11 @@ export function getAnalyticsPageTitle(
       if (cleanTitle && cleanTitle !== 'Untitled') {
         // Cache this title for future use
         pageTitleCache.set(pageId, cleanTitle);
+
+        // Return with username if available
+        if (extractedUsername) {
+          return `Page: ${cleanTitle} by ${extractedUsername}`;
+        }
         return `Page: ${cleanTitle}`;
       }
     }
@@ -201,6 +281,15 @@ export function getAnalyticsPageTitle(
       // Look for any heading element as a last resort
       const anyHeading = document.querySelector('h1, h2, h3')?.textContent;
       if (anyHeading && anyHeading !== 'Untitled') {
+        // Try to find username in the page
+        const authorElement = document.querySelector('[data-author-username]');
+        if (authorElement) {
+          const username = authorElement.getAttribute('data-author-username') ||
+                          authorElement.textContent;
+          if (username) {
+            return `Page: ${anyHeading} by ${username}`;
+          }
+        }
         return `Page: ${anyHeading}`;
       }
 
@@ -270,10 +359,15 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         // We have a valid title from metadata
         pageTitleCache.set(pageId, metadata.title);
 
-        // Update analytics with the actual page title
+        // Update analytics with the actual page title including username if available
         if (typeof window !== 'undefined' && window.gtag) {
           const pathname = window.location.pathname;
-          const pageTitle = `Page: ${metadata.title}`;
+          let pageTitle = `Page: ${metadata.title}`;
+
+          // Include username in the analytics title if available
+          if (metadata.username && metadata.username !== 'Anonymous' && metadata.username !== 'Missing username') {
+            pageTitle = `Page: ${metadata.title} by ${metadata.username}`;
+          }
 
           window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
             page_path: pathname,
@@ -300,7 +394,33 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
       // This helps correct the page title in GA after we've fetched it
       if (typeof window !== 'undefined' && window.gtag) {
         const pathname = window.location.pathname;
-        const pageTitle = `Page: ${title}`;
+
+        // Try to get the username from the DOM or document title
+        let username = null;
+
+        // Try to extract username from document title
+        if (document.title && document.title.includes(' by ')) {
+          const parts = document.title.split(' by ');
+          if (parts.length >= 2) {
+            const authorPart = parts[1];
+            username = authorPart.split(' on WeWrite')[0];
+          }
+        }
+
+        // If not found in document title, try to find in DOM
+        if (!username) {
+          const authorElement = document.querySelector('[data-author-username]');
+          if (authorElement) {
+            username = authorElement.getAttribute('data-author-username') ||
+                      authorElement.textContent;
+          }
+        }
+
+        // Format the page title with username if available
+        let pageTitle = `Page: ${title}`;
+        if (username) {
+          pageTitle = `Page: ${title} by ${username}`;
+        }
 
         window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
           page_path: pathname,
@@ -330,10 +450,36 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
           }
         }
 
-        // Try to get the title from the DOM as a last resort
+        // Try to get the title and username from the DOM as a last resort
         const h1Element = document.querySelector('h1');
         if (h1Element && h1Element.textContent && h1Element.textContent !== 'Untitled') {
-          pageTitle = `Page: ${h1Element.textContent}`;
+          // Try to get the username from the DOM or document title
+          let username = null;
+
+          // Try to extract username from document title
+          if (document.title && document.title.includes(' by ')) {
+            const parts = document.title.split(' by ');
+            if (parts.length >= 2) {
+              const authorPart = parts[1];
+              username = authorPart.split(' on WeWrite')[0];
+            }
+          }
+
+          // If not found in document title, try to find in DOM
+          if (!username) {
+            const authorElement = document.querySelector('[data-author-username]');
+            if (authorElement) {
+              username = authorElement.getAttribute('data-author-username') ||
+                        authorElement.textContent;
+            }
+          }
+
+          // Format the page title with username if available
+          if (username) {
+            pageTitle = `Page: ${h1Element.textContent} by ${username}`;
+          } else {
+            pageTitle = `Page: ${h1Element.textContent}`;
+          }
         }
 
         window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
@@ -361,7 +507,17 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
   try {
     // Check cache first
     if (pageTitleCache.has(pageId)) {
-      return `Page: ${pageTitleCache.get(pageId)}`;
+      const cachedTitle = pageTitleCache.get(pageId);
+
+      // Try to get the full metadata to include username
+      const metadata = await getPageMetadata(pageId);
+      if (metadata?.username &&
+          metadata.username !== 'Anonymous' &&
+          metadata.username !== 'Missing username') {
+        return `Page: ${cachedTitle} by ${metadata.username}`;
+      }
+
+      return `Page: ${cachedTitle}`;
     }
 
     // Fetch from database
@@ -369,6 +525,14 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
     if (metadata?.title) {
       // Cache for future use
       pageTitleCache.set(pageId, metadata.title);
+
+      // Include username if available
+      if (metadata.username &&
+          metadata.username !== 'Anonymous' &&
+          metadata.username !== 'Missing username') {
+        return `Page: ${metadata.title} by ${metadata.username}`;
+      }
+
       return `Page: ${metadata.title}`;
     }
   } catch (error) {
