@@ -20,29 +20,16 @@
   margin-right: 1px;
 }
 
-/* Hover states */
-.slateEditor :global([data-slate-editor] a.page-link:hover),
-.slateEditor :global([data-slate-editor] a.editor-link.page-link:hover),
-.slateEditor :global([data-slate-editor] a.user-link:hover),
-.slateEditor :global([data-slate-editor] a.editor-link.user-link:hover) {
-  background-color: var(--primary-hover, hsl(var(--primary) / 0.8));
-  color: var(--primary-foreground, white);
-}
+/*
+ * Hover and active states are now handled by the PillStyleContext
+ * and the centralized styles in editor-styles.css
+ * This ensures consistent styling across the entire application
+ * based on the user's selected pill style (filled, outline, classic)
+ */
 
-/* Active states */
-.slateEditor :global([data-slate-editor] a.page-link:active),
-.slateEditor :global([data-slate-editor] a.editor-link.page-link:active),
-.slateEditor :global([data-slate-editor] a.user-link:active),
-.slateEditor :global([data-slate-editor] a.editor-link.user-link:active) {
-  background-color: var(--primary-active, hsl(var(--primary) / 0.7));
-}
-
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .slateEditor :global([data-slate-editor] a.page-link),
-  .slateEditor :global([data-slate-editor] a.editor-link.page-link),
-  .slateEditor :global([data-slate-editor] a.user-link),
-  .slateEditor :global([data-slate-editor] a.editor-link.user-link) {
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-}
+/*
+ * Dark mode adjustments are now handled by the PillStyleContext
+ * and the centralized styles in editor-styles.css
+ * This ensures consistent styling across the entire application
+ * based on the user's selected pill style and theme
+ */

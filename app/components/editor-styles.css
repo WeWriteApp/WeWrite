@@ -1,6 +1,11 @@
 /* CENTRALIZED PILL LINK STYLING
  * This is the single source of truth for pill link styling in WeWrite
  * All components should import and use these styles
+ *
+ * IMPORTANT: To ensure consistent link appearance between edit and view modes:
+ * 1. Do NOT use !important flags to override these styles
+ * 2. Both SlateEditor.js and PillLink.js must use the same styling approach
+ * 3. Always respect the user's pill style preference from PillStyleContext
  */
 
 /* Base link styling for non-pill links */

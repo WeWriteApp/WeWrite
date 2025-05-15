@@ -1112,6 +1112,8 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
 
   // Base styles for all pill links - EXACTLY matching PillLink component
+  // IMPORTANT: This must match the styles in PillLink.js to ensure consistent appearance
+  // between edit mode and view mode. Any changes here should also be made in PillLink.js.
   const baseStyles = `
     inline-flex items-center
     my-0.5

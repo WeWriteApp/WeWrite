@@ -74,6 +74,8 @@ export const PillLink = forwardRef(({
   // No inline style needed, we'll use CSS classes from getPillStyleClasses()
 
   // Base styles for all pill links
+  // IMPORTANT: This must match the styles in SlateEditor.js LinkComponent to ensure consistent appearance
+  // between view mode and edit mode. Any changes here should also be made in SlateEditor.js.
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
   // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
   const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
