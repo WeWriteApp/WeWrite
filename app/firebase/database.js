@@ -955,26 +955,24 @@ export async function findBacklinks(targetPageId, limit = 10) {
       return [];
     }
 
-    // Generate cache key for this query
-    const cacheKey = generateCacheKey('backlinks', targetPageId, limit.toString());
-    const cachedData = getCacheItem(cacheKey);
+    // Normalize the targetPageId to handle any format inconsistencies
+    const normalizedTargetId = targetPageId.trim();
 
-    if (cachedData) {
-      console.log(`Using cached backlinks for page ${targetPageId}`);
-      return cachedData;
-    }
+    console.log(`Finding backlinks for page ${normalizedTargetId}`);
 
-    console.log(`Finding backlinks for page ${targetPageId}`);
+    // Skip cache for now to ensure fresh results during debugging
+    // We'll re-enable caching once the feature is working correctly
 
     // Dynamically import Firestore functions to avoid SSR issues
     const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
 
     // Get all pages from Firestore, ordered by last modified date
+    // Increase the limit to ensure we don't miss any backlinks
     const pagesRef = collection(db, 'pages');
     const pagesQuery = query(
       pagesRef,
       orderBy('lastModified', 'desc'),
-      firestoreLimit(100) // Limit to most recent 100 pages for performance
+      firestoreLimit(200) // Increased limit for better coverage
     );
 
     const pagesSnapshot = await getDocs(pagesQuery);
@@ -985,7 +983,7 @@ export async function findBacklinks(targetPageId, limit = 10) {
       const pageData = { id: docSnapshot.id, ...docSnapshot.data() };
 
       // Skip the target page itself
-      if (pageData.id === targetPageId) continue;
+      if (pageData.id === normalizedTargetId) continue;
 
       // Skip if the page doesn't have content
       if (!pageData.content) continue;
@@ -994,8 +992,11 @@ export async function findBacklinks(targetPageId, limit = 10) {
         // Parse the content to check for links
         const content = JSON.parse(pageData.content);
 
+        console.log(`Checking page ${pageData.id} (${pageData.title || 'Untitled'}) for links to ${normalizedTargetId}`);
+
         // Check if this page links to the target page
-        if (pageContainsLinkTo(content, targetPageId)) {
+        if (pageContainsLinkTo(content, normalizedTargetId)) {
+          console.log(`Found backlink in page ${pageData.id} (${pageData.title || 'Untitled'})`);
           backlinkPages.push(pageData);
 
           // Break early if we've found enough backlinks
@@ -1006,8 +1007,10 @@ export async function findBacklinks(targetPageId, limit = 10) {
       }
     }
 
-    // Cache the results for 5 minutes
-    setCacheItem(cacheKey, backlinkPages, 5 * 60 * 1000);
+    console.log(`Found ${backlinkPages.length} backlinks for page ${normalizedTargetId}`);
+
+    // Re-enable caching once we confirm the feature is working
+    // setCacheItem(cacheKey, backlinkPages, 5 * 60 * 1000);
 
     return backlinkPages;
   } catch (error) {
@@ -1024,20 +1027,46 @@ export async function findBacklinks(targetPageId, limit = 10) {
  * @returns {boolean} - True if the content contains a link to the target page
  */
 function pageContainsLinkTo(content, targetPageId) {
+  // Normalize the target page ID for consistent comparison
+  const normalizedTargetId = targetPageId.trim();
+
   // Set to track found links
   const foundLinks = new Set();
+
+  // Debug logging
+  console.log(`Checking if content contains link to page: ${normalizedTargetId}`);
 
   // Recursive function to traverse nodes and find links
   const traverseNodes = (node) => {
     // Check if the node is a link
-    if (node.type === 'link' && node.url) {
-      // Check if it's an internal page link
-      if (node.url.startsWith('/') || node.url.startsWith('/pages/')) {
-        // Extract the page ID from the URL
-        const pageId = node.url.replace('/pages/', '').replace('/', '');
-        if (pageId === targetPageId) {
-          foundLinks.add(pageId);
+    if (node.type === 'link') {
+      // First check if pageId property is directly available
+      if (node.pageId) {
+        const normalizedNodePageId = node.pageId.trim();
+        if (normalizedNodePageId === normalizedTargetId) {
+          console.log(`Found direct pageId match: ${normalizedNodePageId}`);
+          foundLinks.add(normalizedNodePageId);
           return true;
+        }
+      }
+
+      // Then check URL if available
+      if (node.url) {
+        // Check if it's an internal page link - handle all possible URL formats
+        if (node.url.startsWith('/') || node.url.startsWith('/pages/')) {
+          // Extract the page ID from the URL - handle all possible formats
+          let pageId = node.url;
+
+          // Remove leading slashes and 'pages/' prefix
+          pageId = pageId.replace(/^\/+/, ''); // Remove all leading slashes
+          pageId = pageId.replace(/^pages\//, ''); // Remove 'pages/' prefix if present
+          pageId = pageId.trim(); // Trim any whitespace
+
+          if (pageId === normalizedTargetId) {
+            console.log(`Found URL match: ${pageId} from URL ${node.url}`);
+            foundLinks.add(pageId);
+            return true;
+          }
         }
       }
     }
@@ -1059,7 +1088,7 @@ function pageContainsLinkTo(content, targetPageId) {
     }
   }
 
-  return false;
+  return foundLinks.size > 0;
 }
 
 export const getUsernameByEmail = async (email) => {

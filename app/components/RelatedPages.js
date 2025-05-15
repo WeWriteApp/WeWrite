@@ -31,40 +31,50 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
     const fetchRelatedPages = async () => {
       setIsLoading(true);
 
-      if (!page || !page.id || !page.userId) {
+      if (!page || !page.id) {
         setIsLoading(false);
         return;
       }
 
       try {
-        // First, get pages by the same author (user-based relevance)
-        const userPagesRef = collection(db, 'pages');
-        const userQuery = query(
-          userPagesRef,
-          where('userId', '==', page.userId),
-          where('isPublic', '==', true),
-          orderBy('updatedAt', 'desc'),
-          limit(maxPages * 2)
-        );
-
-        const userQuerySnapshot = await getDocs(userQuery);
+        console.log(`Finding related pages for: ${page.id} (${page.title || 'Untitled'})`);
 
         // Map of page IDs to page data with relevance score
         const pageMap = new Map();
 
-        // Add user's pages with a base relevance score
-        userQuerySnapshot.docs.forEach(doc => {
-          const pageData = { id: doc.id, ...doc.data() };
+        // First, get pages by the same author (user-based relevance) if userId is available
+        if (page.userId) {
+          const userPagesRef = collection(db, 'pages');
+          const userQuery = query(
+            userPagesRef,
+            where('userId', '==', page.userId),
+            where('isPublic', '==', true),
+            orderBy('lastModified', 'desc'), // Use lastModified instead of updatedAt for consistency
+            limit(maxPages * 3) // Increased limit for better coverage
+          );
 
-          // Skip the current page
-          if (pageData.id === page.id) return;
+          try {
+            const userQuerySnapshot = await getDocs(userQuery);
+            console.log(`Found ${userQuerySnapshot.docs.length} pages by the same author`);
 
-          // Add to map with a base relevance score
-          pageMap.set(pageData.id, {
-            ...pageData,
-            relevanceScore: 1 // Base score for being by the same author
-          });
-        });
+            // Add user's pages with a base relevance score
+            userQuerySnapshot.docs.forEach(doc => {
+              const pageData = { id: doc.id, ...doc.data() };
+
+              // Skip the current page
+              if (pageData.id === page.id) return;
+
+              // Add to map with a base relevance score
+              pageMap.set(pageData.id, {
+                ...pageData,
+                relevanceScore: 1 // Base score for being by the same author
+              });
+            });
+          } catch (error) {
+            console.error('Error fetching user pages:', error);
+            // Continue with content-based search even if user-based fails
+          }
+        }
 
         // If we have a title, try to find content-based related pages
         if (page.title) {
@@ -72,19 +82,22 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           const titleWords = page.title
             .toLowerCase()
             .split(/\s+/)
-            .filter(word => word.length >= 3)
+            .filter(word => word.length >= 2) // Reduced minimum length to 2 characters
             .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+
+          console.log(`Title words for matching: ${titleWords.join(', ')}`);
 
           // If we have significant words, search for content-based related pages
           if (titleWords.length > 0) {
-            // Create a query for public pages
+            // Create a query for public pages - increase limit for better coverage
             const contentQuery = query(
               collection(db, 'pages'),
               where('isPublic', '==', true),
-              limit(50)
+              limit(100) // Increased from 50 to 100
             );
 
             const contentQuerySnapshot = await getDocs(contentQuery);
+            console.log(`Analyzing ${contentQuerySnapshot.docs.length} public pages for content relevance`);
 
             // Process each page for content relevance
             contentQuerySnapshot.docs.forEach(doc => {
@@ -101,7 +114,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
                 const pageTitle = pageData.title.toLowerCase();
                 const pageTitleWords = pageTitle
                   .split(/\s+/)
-                  .filter(word => word.length >= 3)
+                  .filter(word => word.length >= 2) // Reduced minimum length to 2 characters
                   .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
                 // First, check for exact word matches
@@ -145,7 +158,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
 
                   // Add smaller score for partial matches
                   if (partialMatches.length > 0) {
-                    relevanceScore += partialMatches.length * 1;
+                    relevanceScore += partialMatches.length * 2; // Increased from 1 to 2
                   }
 
                   // Bonus for matching a higher percentage of words (exact + partial)
@@ -160,8 +173,15 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
                 // Check for partial matches too
                 for (const word of titleWords) {
                   if (pageTitle.includes(word) && !matchingWords.includes(word)) {
-                    relevanceScore += 0.5; // Lower score for partial matches
+                    relevanceScore += 1.0; // Increased from 0.5 to 1.0
                   }
+                }
+
+                // If the page title contains the entire current page title as a substring
+                // or vice versa, give a big bonus
+                if (pageTitle.includes(page.title.toLowerCase()) ||
+                    page.title.toLowerCase().includes(pageTitle)) {
+                  relevanceScore += 15;
                 }
               }
 
@@ -181,25 +201,34 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           }
         }
 
-        // Convert to array, filter out pages with no content relevance and pages already linked in the content
+        // Convert to array, filter out pages with low relevance and pages already linked in the content
         const sortedPages = Array.from(pageMap.values())
-          // Only include pages that have a relevance score from content matching (not just author-based)
-          // Increase the threshold to 2.0 to prioritize pages with at least some exact word matches
-          .filter(page => page.relevanceScore >= 2.0)
+          // Lower the threshold to 1.0 to include more pages with partial matches
+          .filter(page => page.relevanceScore >= 1.0)
           // Filter out pages that are already linked in the content
           .filter(page => !linkedPageIds.includes(page.id))
-          .sort((a, b) => b.relevanceScore - a.relevanceScore || b.updatedAt - a.updatedAt)
+          .sort((a, b) => b.relevanceScore - a.relevanceScore ||
+                          (b.lastModified ? new Date(b.lastModified) : 0) -
+                          (a.lastModified ? new Date(a.lastModified) : 0))
           .slice(0, maxPages);
+
+        console.log(`Found ${sortedPages.length} related pages with scores:`,
+          sortedPages.map(p => `${p.title || 'Untitled'} (${p.relevanceScore.toFixed(1)})`));
 
         setRelatedPages(sortedPages);
       } catch (error) {
         console.error('Error fetching related pages:', error);
+        // Set empty array on error to avoid undefined state
+        setRelatedPages([]);
       }
 
       setIsLoading(false);
     };
 
-    fetchRelatedPages();
+    // Only fetch related pages if we have a valid page object
+    if (page && page.id) {
+      fetchRelatedPages();
+    }
   }, [page, maxPages, linkedPageIds]);
 
   // Render a consistent height container regardless of loading state
