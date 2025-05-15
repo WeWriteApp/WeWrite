@@ -22,118 +22,132 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
+  // Use a ref to track if we've already fetched data for this page
+  // This prevents re-fetching during scroll events
+  const dataFetchedRef = useRef(false);
+  const pageIdRef = useRef(null);
+
   // Ensure component is mounted before rendering to avoid hydration issues
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Reset the dataFetched flag when the page changes
   useEffect(() => {
-    const fetchRelatedPages = async () => {
-      setIsLoading(true);
+    if (page && page.id !== pageIdRef.current) {
+      dataFetchedRef.current = false;
+      pageIdRef.current = page?.id || null;
+    }
+  }, [page]);
 
-      if (!page || !page.id || !page.title) {
-        setIsLoading(false);
-        return;
-      }
+  useEffect(() => {
+    // Only fetch data if:
+    // 1. We have a valid page object
+    // 2. We haven't already fetched data for this page
+    // 3. The component is mounted
+    if (page && page.id && page.title && !dataFetchedRef.current && mounted) {
+      const fetchRelatedPages = async () => {
+        setIsLoading(true);
 
-      try {
-        console.log(`Finding related pages for: ${page.id} (${page.title || 'Untitled'})`);
+        try {
+          console.log(`Finding related pages for: ${page.id} (${page.title || 'Untitled'})`);
 
-        // Only focus on title word matching
-        // Extract significant words from the title
-        const titleWords = page.title
-          .toLowerCase()
-          .split(/\s+/)
-          .filter(word => word.length >= 2) // Include words of at least 2 characters
-          .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+          // Mark that we've fetched data for this page
+          dataFetchedRef.current = true;
 
-        console.log(`Title words for matching: ${titleWords.join(', ')}`);
-
-        // If we don't have any significant words, return empty results
-        if (titleWords.length === 0) {
-          setRelatedPages([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // Query for public pages
-        const pagesQuery = query(
-          collection(db, 'pages'),
-          where('isPublic', '==', true),
-          limit(100) // Limit to 100 pages for performance
-        );
-
-        const pagesSnapshot = await getDocs(pagesQuery);
-        console.log(`Analyzing ${pagesSnapshot.docs.length} public pages for title matches`);
-
-        // Array to store pages with matching titles
-        const matchingPages = [];
-
-        // Process each page
-        pagesSnapshot.docs.forEach(doc => {
-          const pageData = { id: doc.id, ...doc.data() };
-
-          // Skip the current page
-          if (pageData.id === page.id) return;
-
-          // Skip pages without titles
-          if (!pageData.title) return;
-
-          // Check for word matches in the title
-          const pageTitle = pageData.title.toLowerCase();
-          const pageTitleWords = pageTitle
+          // Only focus on title word matching
+          // Extract significant words from the title
+          const titleWords = page.title
+            .toLowerCase()
             .split(/\s+/)
-            .filter(word => word.length >= 2)
+            .filter(word => word.length >= 2) // Include words of at least 2 characters
             .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
 
-          // Find exact word matches
-          const exactMatches = titleWords.filter(word =>
-            pageTitleWords.includes(word)
+          console.log(`Title words for matching: ${titleWords.join(', ')}`);
+
+          // If we don't have any significant words, return empty results
+          if (titleWords.length === 0) {
+            setRelatedPages([]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Query for public pages
+          const pagesQuery = query(
+            collection(db, 'pages'),
+            where('isPublic', '==', true),
+            limit(100) // Limit to 100 pages for performance
           );
 
-          // Only include pages with at least one exact word match
-          if (exactMatches.length > 0) {
-            // Calculate a simple match count for sorting
-            const matchCount = exactMatches.length;
+          const pagesSnapshot = await getDocs(pagesQuery);
+          console.log(`Analyzing ${pagesSnapshot.docs.length} public pages for title matches`);
 
-            matchingPages.push({
-              ...pageData,
-              matchCount
-            });
-          }
-        });
+          // Array to store pages with matching titles
+          const matchingPages = [];
 
-        // Filter out pages that are already linked in the content
-        const filteredPages = matchingPages
-          .filter(page => !linkedPageIds.includes(page.id))
-          .sort((a, b) => {
-            // Sort by match count first
-            if (b.matchCount !== a.matchCount) {
-              return b.matchCount - a.matchCount;
+          // Process each page
+          pagesSnapshot.docs.forEach(doc => {
+            const pageData = { id: doc.id, ...doc.data() };
+
+            // Skip the current page
+            if (pageData.id === page.id) return;
+
+            // Skip pages without titles
+            if (!pageData.title) return;
+
+            // Check for word matches in the title
+            const pageTitle = pageData.title.toLowerCase();
+            const pageTitleWords = pageTitle
+              .split(/\s+/)
+              .filter(word => word.length >= 2)
+              .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+
+            // Find exact word matches
+            const exactMatches = titleWords.filter(word =>
+              pageTitleWords.includes(word)
+            );
+
+            // Only include pages with at least one exact word match
+            if (exactMatches.length > 0) {
+              // Calculate a simple match count for sorting
+              const matchCount = exactMatches.length;
+
+              matchingPages.push({
+                ...pageData,
+                matchCount
+              });
             }
-            // Then by last modified date if available
-            return (b.lastModified ? new Date(b.lastModified) : 0) -
-                   (a.lastModified ? new Date(a.lastModified) : 0);
-          })
-          .slice(0, maxPages);
+          });
 
-        console.log(`Found ${filteredPages.length} related pages with title matches`);
+          // Filter out pages that are already linked in the content
+          const filteredPages = matchingPages
+            .filter(page => !linkedPageIds.includes(page.id))
+            .sort((a, b) => {
+              // Sort by match count first
+              if (b.matchCount !== a.matchCount) {
+                return b.matchCount - a.matchCount;
+              }
+              // Then by last modified date if available
+              return (b.lastModified ? new Date(b.lastModified) : 0) -
+                     (a.lastModified ? new Date(a.lastModified) : 0);
+            })
+            .slice(0, maxPages);
 
-        setRelatedPages(filteredPages);
-      } catch (error) {
-        console.error('Error fetching related pages:', error);
-        // Set empty array on error to avoid undefined state
-        setRelatedPages([]);
-      }
+          console.log(`Found ${filteredPages.length} related pages with title matches`);
 
-      setIsLoading(false);
-    };
+          setRelatedPages(filteredPages);
+        } catch (error) {
+          console.error('Error fetching related pages:', error);
+          // Set empty array on error to avoid undefined state
+          setRelatedPages([]);
+        }
 
-    // Only fetch related pages if we have a valid page object
-    if (page && page.id) {
+        setIsLoading(false);
+      };
+
       fetchRelatedPages();
     }
-  }, [page, maxPages, linkedPageIds]);
+  }, [page, maxPages, linkedPageIds, mounted]);
 
   // Use a fixed height container to prevent layout shifts
   // The component will maintain the same height regardless of loading state or content

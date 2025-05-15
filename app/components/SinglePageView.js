@@ -292,7 +292,8 @@ function SinglePageView({ params }) {
   }, [page, user]);
 
   // Function to extract linked page IDs from content
-  const extractLinkedPageIds = (content) => {
+  // Memoize this function to prevent recalculation on every render
+  const extractLinkedPageIds = useCallback((content) => {
     if (!content || !Array.isArray(content)) return [];
 
     const linkedIds = new Set();
@@ -321,7 +322,7 @@ function SinglePageView({ params }) {
     content.forEach(traverseNodes);
 
     return Array.from(linkedIds);
-  };
+  }, [params.id]);
 
   // Function to handle when page content is fully rendered
   const handlePageFullyRendered = () => {
@@ -541,10 +542,13 @@ function SinglePageView({ params }) {
               {/* What Links Here section */}
               <BacklinksSection page={page} />
 
-              {/* Related Pages section - Only pass data when content is fully rendered */}
+              {/* Related Pages section - Use memoized props to prevent re-renders */}
               <RelatedPages
-                page={pageFullyRendered ? page : null}
-                linkedPageIds={pageFullyRendered ? extractLinkedPageIds(editorState) : []}
+                page={useMemo(() => pageFullyRendered ? page : null, [pageFullyRendered, page])}
+                linkedPageIds={useMemo(() =>
+                  pageFullyRendered ? extractLinkedPageIds(editorState) : [],
+                  [pageFullyRendered, editorState, extractLinkedPageIds]
+                )}
               />
             </div>
           </>
