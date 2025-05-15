@@ -9,6 +9,7 @@ import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../firebase/config";
 import { listenToPageById, getPageVersions } from "../firebase/database";
 import { recordPageView } from "../firebase/pageViews";
+import { trackPageViewWhenReady } from "../utils/analytics-page-titles";
 import PageViewCounter from "./PageViewCounter";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
@@ -161,9 +162,24 @@ function SinglePageView({ params }) {
     if (!viewRecorded.current && !isLoading && page && isPublic) {
       // Mark that we've recorded the view to prevent duplicate recordings
       viewRecorded.current = true;
-      // Record the page view
+
+      // Record the page view in our database
       recordPageView(params.id, user?.uid);
       console.log('Recording page view for', params.id);
+
+      // Track the page view in Google Analytics with our improved tracking
+      // This will wait until the page title and username are fully loaded
+      if (page.title) {
+        // If we already have a title, use it as a starting point
+        const initialTitle = page.username
+          ? `Page: ${page.title} by ${page.username}`
+          : `Page: ${page.title}`;
+
+        trackPageViewWhenReady(params.id, initialTitle);
+      } else {
+        // If we don't have a title yet, let the tracking function handle it
+        trackPageViewWhenReady(params.id);
+      }
     }
   }, [params.id, isLoading, page, isPublic, user?.uid]);
 
@@ -201,6 +217,16 @@ function SinglePageView({ params }) {
             setTitle(`Untitled (${pageData.id.substring(0, 6)})`);
           } else {
             setTitle(pageData.title);
+          }
+
+          // If the page is already marked as viewed, update analytics with the better title
+          if (viewRecorded.current && isPublic) {
+            // Track with improved title now that we have it
+            const analyticsTitle = pageData.username
+              ? `Page: ${pageData.title} by ${pageData.username}`
+              : `Page: ${pageData.title}`;
+
+            trackPageViewWhenReady(params.id, analyticsTitle);
           }
         }
 

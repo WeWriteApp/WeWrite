@@ -15,6 +15,13 @@ import { auth } from '../firebase/auth';
 // Cache for page titles to avoid excessive database queries
 const pageTitleCache = new Map<string, string>();
 
+// Flag to track if we've already sent the initial page view for the current page
+// This helps prevent duplicate tracking when we update with better titles
+const trackedPages = new Set<string>();
+
+// Store pending analytics updates to avoid race conditions
+const pendingAnalyticsUpdates = new Map<string, NodeJS.Timeout>();
+
 /**
  * Extract a page ID from a URL path
  *
@@ -343,51 +350,14 @@ export function getAnalyticsPageTitle(
         return `Page: ${anyHeading}`;
       }
 
-      // If all else fails, use a generic title but trigger async fetch with a longer timeout
+      // If all else fails, use a generic title but trigger our delayed tracking
       // to ensure we eventually get the correct title
-      setTimeout(async () => {
-        try {
-          const { getPageMetadata } = await import('../firebase/database');
-          const metadata = await getPageMetadata(pageId);
 
-          if (metadata?.title) {
-            let updatedTitle = `Page: ${metadata.title}`;
+      // Start the delayed tracking process
+      trackPageViewWhenReady(pageId, `Page: ${pageId}`);
 
-            // Include username if available
-            if (metadata.username &&
-                metadata.username !== 'Anonymous' &&
-                metadata.username !== 'Missing username') {
-              updatedTitle = `Page: ${metadata.title} by ${metadata.username}`;
-            } else if (metadata.userId) {
-              // Try to get username from userId
-              try {
-                const { getUsernameById } = await import('../utils/userUtils');
-                const username = await getUsernameById(metadata.userId);
-
-                if (username && username !== 'Anonymous' && username !== 'Missing username') {
-                  updatedTitle = `Page: ${metadata.title} by ${username}`;
-                }
-              } catch (error) {
-                console.error('Error fetching username for analytics:', error);
-              }
-            }
-
-            // Update analytics with the correct title
-            if (typeof window !== 'undefined' && window.gtag) {
-              window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
-                page_path: window.location.pathname,
-                page_title: updatedTitle,
-                page_location: window.location.href
-              });
-              console.log('Updated analytics with fetched title:', updatedTitle);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching page metadata for analytics:', error);
-        }
-      }, 1000);
-
-      // Return a temporary title
+      // Return a temporary title that won't be used for analytics
+      // The trackPageViewWhenReady function will handle the actual tracking
       return `Page: Loading Content`;
     }
 
@@ -661,6 +631,179 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
     }
   } catch (error) {
     console.error('Error fetching page title for analytics:', error);
+  }
+}
+
+/**
+ * Check if the content is ready for analytics tracking
+ * This verifies that we have a valid title and username (if applicable)
+ *
+ * @param pageId - The page ID to check
+ * @param currentTitle - The current title we have
+ * @returns Object with isReady flag and improved title if available
+ */
+export function isContentReadyForAnalytics(pageId: string, currentTitle?: string): {
+  isReady: boolean;
+  title: string;
+  hasUsername: boolean;
+} {
+  // If we're not in a browser environment, content is never ready
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return { isReady: false, title: currentTitle || `Page: ${pageId}`, hasUsername: false };
+  }
+
+  // Default response
+  const result = {
+    isReady: false,
+    title: currentTitle || `Page: ${pageId}`,
+    hasUsername: false
+  };
+
+  // Check if we have a loading placeholder title
+  const isLoadingTitle = !currentTitle ||
+    currentTitle === `Page: ${pageId}` ||
+    currentTitle === 'Page: Loading Content';
+
+  // If we already have a good title (not a loading placeholder), we're ready
+  if (!isLoadingTitle) {
+    // Check if we have username information
+    result.hasUsername = currentTitle?.includes(' by ') || false;
+
+    // If the title includes username or we don't need username, we're fully ready
+    if (result.hasUsername) {
+      result.isReady = true;
+      return result;
+    }
+  }
+
+  // Try to get the page title from the DOM
+  const contentTitle = document.querySelector('h1')?.textContent;
+  let username = null;
+
+  // Try to extract username from document title
+  if (document.title && document.title.includes(' by ')) {
+    const parts = document.title.split(' by ');
+    if (parts.length >= 2) {
+      const authorPart = parts[1];
+      username = authorPart.split(' on WeWrite')[0];
+
+      // Skip "Anonymous" usernames
+      if (username === 'Anonymous') {
+        username = null;
+      }
+    }
+  }
+
+  // If not found in document title, try to find in DOM
+  if (!username) {
+    const authorElement = document.querySelector('[data-author-username]');
+    if (authorElement) {
+      username = authorElement.getAttribute('data-author-username') ||
+                authorElement.textContent;
+
+      // Skip "Anonymous" usernames
+      if (username === 'Anonymous' || username === 'Missing username') {
+        username = null;
+      }
+    }
+  }
+
+  // If we have both title and username, we're fully ready
+  if (contentTitle && contentTitle !== 'Untitled' && username) {
+    result.isReady = true;
+    result.title = `Page: ${contentTitle} by ${username}`;
+    result.hasUsername = true;
+    return result;
+  }
+
+  // If we have just the title, we're partially ready
+  if (contentTitle && contentTitle !== 'Untitled') {
+    // We have a title but no username - this is better than nothing
+    result.title = `Page: ${contentTitle}`;
+    result.isReady = true;
+    return result;
+  }
+
+  // Content is not ready
+  return result;
+}
+
+/**
+ * Track a page view with Google Analytics, but only if the content is ready
+ * If content is not ready, it will delay tracking until content is available
+ *
+ * @param pageId - The page ID
+ * @param currentTitle - The current title we have
+ * @param maxRetries - Maximum number of retries before giving up
+ * @returns Promise that resolves when tracking is complete or max retries reached
+ */
+export function trackPageViewWhenReady(
+  pageId: string,
+  currentTitle?: string,
+  maxRetries: number = 10
+): void {
+  // Generate a unique key for this page view
+  const trackingKey = `${pageId}_${Date.now()}`;
+
+  // Clear any existing pending updates for this page
+  if (pendingAnalyticsUpdates.has(pageId)) {
+    clearTimeout(pendingAnalyticsUpdates.get(pageId));
+    pendingAnalyticsUpdates.delete(pageId);
+  }
+
+  // Check if content is ready
+  const { isReady, title, hasUsername } = isContentReadyForAnalytics(pageId, currentTitle);
+
+  // If content is ready, track the page view
+  if (isReady) {
+    // Only track if we haven't already tracked this page with this title
+    const cacheKey = `${pageId}_${title}`;
+    if (!trackedPages.has(cacheKey)) {
+      // Track the page view
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+          page_path: window.location.pathname,
+          page_title: title,
+          page_location: window.location.href
+        });
+
+        console.log('Analytics tracked with verified content:', title);
+
+        // Mark this page as tracked
+        trackedPages.add(cacheKey);
+      }
+    }
+
+    // If we don't have username yet, continue trying to get it
+    if (!hasUsername && maxRetries > 0) {
+      const timeout = setTimeout(() => {
+        trackPageViewWhenReady(pageId, title, maxRetries - 1);
+      }, 500);
+
+      pendingAnalyticsUpdates.set(pageId, timeout);
+    }
+
+    return;
+  }
+
+  // Content is not ready, retry after a delay if we have retries left
+  if (maxRetries > 0) {
+    const timeout = setTimeout(() => {
+      trackPageViewWhenReady(pageId, currentTitle, maxRetries - 1);
+    }, 500);
+
+    pendingAnalyticsUpdates.set(pageId, timeout);
+  } else {
+    console.log('Max retries reached for tracking page view, using best available title:', title);
+
+    // Track with the best title we have as a last resort
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+        page_path: window.location.pathname,
+        page_title: title,
+        page_location: window.location.href
+      });
+    }
   }
 }
 

@@ -5,7 +5,12 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { getAnalyticsInstance } from '../utils/analytics';
 import { useRouter } from 'next/navigation';
-import { getAnalyticsPageTitle, getAnalyticsPageTitleForId } from '../utils/analytics-page-titles';
+import {
+  getAnalyticsPageTitle,
+  getAnalyticsPageTitleForId,
+  trackPageViewWhenReady,
+  isContentReadyForAnalytics
+} from '../utils/analytics-page-titles';
 
 /**
  * UnifiedAnalyticsProvider
@@ -95,8 +100,24 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
             if (initialized && pathname) {
               const url = pathname + (searchParams?.toString() || '');
               const pageId = extractPageId(pathname);
-              analytics.pageView(url, newTitle, pageId);
-              if (isDev) console.log('Re-tracked page view with updated title:', newTitle);
+
+              if (pageId) {
+                // For content pages, use our improved tracking
+                const { isReady, title } = isContentReadyForAnalytics(pageId, newTitle);
+
+                if (isReady && title !== 'Page: Loading Content') {
+                  // Content is ready, track with the verified title
+                  analytics.pageView(url, title, pageId);
+                  if (isDev) console.log('Re-tracked page view with verified title:', title);
+                } else {
+                  // Content is not ready, use delayed tracking
+                  trackPageViewWhenReady(pageId, newTitle);
+                }
+              } else {
+                // For non-content pages, track normally
+                analytics.pageView(url, newTitle, pageId);
+                if (isDev) console.log('Re-tracked page view with updated title:', newTitle);
+              }
             }
           }
         }
@@ -136,24 +157,24 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       // Extract page ID from URL if present (for pages/[id] routes)
       const pageId = extractPageId(pathname);
 
-      // For page routes, try to get a better title asynchronously if needed
+      // For content pages, use our improved tracking that waits for content to be ready
       if (pageId && (pathname.includes('/pages/') || pathname.match(/\/[a-zA-Z0-9]{20}/))) {
-        // First track with what we have
-        analytics.pageView(url, pageTitle, pageId);
+        // Check if content is ready for tracking
+        const { isReady, title } = isContentReadyForAnalytics(pageId, pageTitle);
 
-        // Then try to get a better title asynchronously
-        if (pageTitle === `Page: ${pageId}`) {
-          try {
-            getAnalyticsPageTitleForId(pageId).then(betterTitle => {
-              if (betterTitle !== `Page: ${pageId}`) {
-                // Re-track with the better title
-                analytics.pageView(url, betterTitle, pageId);
-                if (isDev) console.log('Re-tracked page view with better title:', betterTitle);
-              }
-            });
-          } catch (titleErr) {
-            console.error('Error getting better page title:', titleErr);
-          }
+        if (isReady && title !== 'Page: Loading Content') {
+          // Content is ready, track immediately with the verified title
+          analytics.pageView(url, title, pageId);
+          if (isDev) console.log('Page view tracked with verified content:', title);
+        } else {
+          // Content is not ready, use delayed tracking
+          if (isDev) console.log('Content not ready, using delayed tracking');
+
+          // Start the delayed tracking process
+          trackPageViewWhenReady(pageId, pageTitle);
+
+          // Don't track with placeholder title to avoid "Page: Loading Content" in analytics
+          // The trackPageViewWhenReady function will handle the actual tracking when content is ready
         }
       } else {
         // For non-page routes, just track normally

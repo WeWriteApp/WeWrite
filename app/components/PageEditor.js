@@ -385,28 +385,21 @@ const PageEditor = ({
     console.log("Insert link button clicked");
 
     if (editorRef.current) {
-      console.log("Editor ref exists, attempting to insert link");
+      console.log("Editor ref exists, attempting to open link editor");
 
       // Focus the editor first
       editorRef.current.focus();
 
-      // Use the insertLink method we added to the UnifiedEditor
-      if (editorRef.current.insertLink) {
-        console.log("Using insertLink method");
+      // Use the openLinkEditor method we added to the UnifiedEditor
+      if (editorRef.current.openLinkEditor) {
+        console.log("Using openLinkEditor method");
         try {
-          // Create a temporary link that will be edited by the user
-          // The LinkComponent will automatically open the link editor when clicked
-          editorRef.current.insertLink('#', 'Link text', {
-            // This will be a page link by default
-            pageId: null,
-            pageTitle: ''
-          });
-
-          // The link will be rendered as a pill link with the site's appearance settings
-          // and the user can click it to edit it
+          // Open the link editor directly without creating a temporary link first
+          // This fixes the issue where a link was prematurely created
+          editorRef.current.openLinkEditor();
         } catch (error) {
-          console.error("Error inserting link:", error);
-          toast.error("Could not insert link. Please try again.");
+          console.error("Error opening link editor:", error);
+          toast.error("Could not open link editor. Please try again.");
         }
       } else {
         console.error("insertLink method not available");
