@@ -70,21 +70,21 @@ const AddToPageButton = ({ page, className = "" }) => {
   return (
     <>
       <Button
-        variant="outline"
-        size="sm"
-        className={`gap-2 w-full h-10 md:h-8 md:w-auto ${className}`}
+        variant="default"
+        size="lg"
+        className={`gap-2 w-full md:w-auto rounded-2xl font-medium ${className}`}
         onClick={() => setIsOpen(true)}
         disabled={isAdding}
       >
         {isAdding ? (
           <>
-            <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
-            <span className="text-sm">Adding...</span>
+            <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+            <span>Adding...</span>
           </>
         ) : (
           <>
-            <Plus className="h-4 w-4" />
-            <span className="text-sm">Add to Page</span>
+            <Plus className="h-5 w-5" />
+            <span>Add to Page</span>
           </>
         )}
       </Button>
@@ -117,11 +117,12 @@ const AddToPageButton = ({ page, className = "" }) => {
             <Button
               onClick={handleInsert}
               disabled={!selectedPage || isAdding}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto rounded-2xl font-medium"
+              size="lg"
             >
               {isAdding ? (
                 <>
-                  <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+                  <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
                   <span>Adding...</span>
                 </>
               ) : (

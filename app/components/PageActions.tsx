@@ -40,7 +40,7 @@ import TypeaheadSearch from './TypeaheadSearch';
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
   ssr: false,
-  loading: () => <Button variant="outline" size="sm" className="gap-2 w-full h-10 md:h-8 md:w-auto" disabled>Loading...</Button>
+  loading: () => <Button variant="outline" size="lg" className="gap-2 w-full rounded-2xl" disabled>Loading...</Button>
 });
 
 /**
@@ -229,28 +229,28 @@ export function PageActions({
       {/* All buttons - horizontal on desktop, vertical on mobile */}
       <div className="flex flex-col items-stretch gap-3 w-full">
         {/* Main action buttons - horizontal on desktop, vertical on mobile */}
-        <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center">
+        <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
           {/* Owner-only actions - Edit and Delete buttons */}
           {isOwner && (
             <>
               <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 w-full h-10 md:h-8 md:w-auto"
+                variant={isEditing ? "outline" : "default"}
+                size="lg"
+                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
                 onClick={() => setIsEditing && setIsEditing(!isEditing)}
               >
-                {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                <span className="text-sm">{isEditing ? "Cancel" : "Edit"}</span>
+                {isEditing ? <X className="h-5 w-5" /> : <Edit className="h-5 w-5" />}
+                <span>{isEditing ? "Cancel" : "Edit"}</span>
               </Button>
               {isEditing && (
                 <Button
                   variant="destructive"
-                  size="sm"
-                  className="gap-2 w-full h-10 md:h-8 md:w-auto text-white"
+                  size="lg"
+                  className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
                   onClick={handleDelete}
                 >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="text-sm">Delete</span>
+                  <Trash2 className="h-5 w-5" />
+                  <span>Delete</span>
                 </Button>
               )}
             </>
@@ -263,22 +263,24 @@ export function PageActions({
 
           {/* Reply button - available to all users */}
           <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 w-full h-10 md:h-8 md:w-auto"
+            variant="default"
+            size="lg"
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium"
             onClick={handleReply}
           >
-            <Reply className="h-4 w-4" />
-            <span className="text-sm">Reply</span>
+            <Reply className="h-5 w-5" />
+            <span>Reply</span>
           </Button>
+        </div>
 
-          {/* Dense Mode toggle - using a div instead of Button to avoid nested buttons */}
+        {/* Dense Mode toggle in its own row - using a div instead of Button to avoid nested buttons */}
+        <div className="mt-2">
           <div
             className={cn(
-              "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors",
+              "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl font-medium transition-colors",
               "border border-theme-medium bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
-              "h-8 rounded-md px-3 text-xs",
-              "gap-2 w-full h-10 md:h-8 md:w-auto cursor-pointer"
+              "h-10 px-4 py-2",
+              "gap-2 w-full cursor-pointer"
             )}
             onClick={() => {
               const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
@@ -294,7 +296,7 @@ export function PageActions({
                 setLineMode(newMode); // Update the mode without page reload
               }}
             />
-            <span className="text-sm">Dense mode</span>
+            <span>Dense mode</span>
           </div>
         </div>
       </div>
