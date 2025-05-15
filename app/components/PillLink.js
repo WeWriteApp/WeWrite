@@ -56,6 +56,9 @@ export const PillLink = forwardRef(({
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
 
+  // Ensure we have a valid href to prevent errors
+  const safeHref = href || '#';
+
   // Format display title
   let displayTitle = children;
   if (typeof children === 'string') {
@@ -146,24 +149,27 @@ export const PillLink = forwardRef(({
   return (
     <a
       ref={ref}
-      href={href}
+      href={safeHref}
       className={baseStyles}
       tabIndex={0}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
       onClick={(e) => {
-        e.preventDefault(); // Prevent default to handle navigation manually
+        // Only prevent default and navigate if we have a valid href
+        if (href && href !== '#') {
+          e.preventDefault(); // Prevent default to handle navigation manually
 
-        console.log('PillLink clicked:', {
-          href,
-          isPageLink: isPageLinkType,
-          isUserLink: isUserLinkType,
-          pageId: isPageLinkType ? pageId : undefined
-        });
+          console.log('PillLink clicked:', {
+            href,
+            isPageLink: isPageLinkType,
+            isUserLink: isUserLinkType,
+            pageId: isPageLinkType ? pageId : undefined
+          });
 
-        // Force a hard navigation using window.location.href
-        // This bypasses any router issues and ensures the navigation works
-        window.location.href = href;
+          // Force a hard navigation using window.location.href
+          // This bypasses any router issues and ensures the navigation works
+          window.location.href = href;
+        }
       }}
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}

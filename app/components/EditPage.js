@@ -10,6 +10,7 @@ import { usePage } from "../contexts/PageContext";
 import PageEditor from "./PageEditor";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import { toast } from "../components/ui/use-toast";
 
 const EditPage = ({
   isEditing,

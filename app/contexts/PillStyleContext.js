@@ -66,7 +66,7 @@ export function PillStyleProvider({ children }) {
         bg-primary
         border-[1.5px] border-primary/20
         hover:bg-primary/90 hover:border-primary/30
-        text-white
+        text-primary-foreground
       `;
     }
   };

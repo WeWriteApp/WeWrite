@@ -53,6 +53,7 @@ import TypeaheadSearch from "./TypeaheadSearch";
 import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { usePillStyle } from '../contexts/PillStyleContext';
 import { motion } from "framer-motion";
 import "../styles/shake-animation.css";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
@@ -1110,7 +1111,14 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
 
   // Get pill style classes to match PillLink component
   const getPillStyleClasses = () => {
-    return 'bg-primary text-primary-foreground hover:bg-primary/90';
+    // Import the usePillStyle hook if available, otherwise use default styling
+    try {
+      const { getPillStyleClasses } = usePillStyle();
+      return getPillStyleClasses();
+    } catch (error) {
+      // Fallback to default styling if the hook is not available
+      return 'bg-primary text-primary-foreground hover:bg-primary/90';
+    }
   };
 
   // Base styles for all pill links (matching PillLink)
