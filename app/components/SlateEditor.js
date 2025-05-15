@@ -1072,6 +1072,9 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
   const editor = useSlate();
   const { lineMode } = useLineSettings();
 
+  // Use PillStyle context to get the current pill style
+  const { pillStyle, getPillStyleClasses } = usePillStyle();
+
   // Use our utility functions to determine link type
   const isUserLinkType = isUserLink(element.url) || element.isUser || element.className === 'user-link';
   const isPageLinkType = isPageLink(element.url) || element.pageId || element.className === 'page-link';
@@ -1079,10 +1082,6 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
 
   // Determine the appropriate class based on link type
   const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
-
-  // Determine if we should truncate the link based on the line mode
-  // Only allow wrapping in classic mode, truncate in filled and outline modes
-  const shouldTruncate = lineMode === LINE_MODES.NORMAL;
 
   const handleClick = (e) => {
     e.preventDefault();
@@ -1109,32 +1108,25 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
 
   // We'll handle deletion in the editor's main keydown handler instead
 
-  // Get pill style classes to match PillLink component
-  const getPillStyleClasses = () => {
-    // Import the usePillStyle hook if available, otherwise use default styling
-    try {
-      const { getPillStyleClasses } = usePillStyle();
-      return getPillStyleClasses();
-    } catch (error) {
-      // Fallback to default styling if the hook is not available
-      return 'bg-primary text-primary-foreground hover:bg-primary/90';
-    }
-  };
+  // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
+  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
 
-  // Base styles for all pill links (matching PillLink)
+  // Apply padding based on pill style
+  const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
+
+  // Base styles for all pill links - EXACTLY matching PillLink component
   const baseStyles = `
     inline-flex items-center
     my-0.5
-    px-2 py-0.5
     text-sm font-medium
     rounded-lg
     transition-colors
     max-w-full
-    whitespace-nowrap truncate
+    ${textWrapStyle}
+    ${classicPadding}
     ${getPillStyleClasses()}
     cursor-pointer
     ${linkTypeClass}
-    ${shouldTruncate ? 'truncate-link' : ''}
   `.trim().replace(/\s+/g, ' ');
 
   return (
@@ -1150,7 +1142,7 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
       <InlineChromiumBugfix />
-      <span className="pill-text overflow-hidden truncate">
+      <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>
         {children}
       </span>
       {isExternalLinkType || isExternalLink(element.url) ? (
