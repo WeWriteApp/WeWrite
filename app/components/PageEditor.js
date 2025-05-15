@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 // Import the unified editor dynamically to avoid SSR issues
 const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { Globe, Lock, Link, MapPin, Save } from "lucide-react";
+import { Globe, Lock, Link, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -16,7 +16,7 @@ import { Transforms } from "slate";
 import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 import MapEditor from "./MapEditor";
-import { useEditorAutoSave } from "../hooks/useAutoSave";
+
 import { toast } from "sonner";
 import { useFeatureFlag } from "../utils/feature-flags";
 
@@ -80,11 +80,6 @@ const PageEditor = ({
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 
-  // Keep the API compatible with the rest of the code
-  const [savedContent, setSavedContent, clearSavedContent, isAutoSaving] = useEditorAutoSave(
-    '', initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
-  );
-
   const [titleError, setTitleError] = useState(false);
   const { user } = useContext(AuthContext);
   const editorRef = useRef(null);
@@ -103,6 +98,21 @@ const PageEditor = ({
     handleSave: !isSaving ? handleSave : null, // Only allow save when not already saving
     isSaving
   });
+
+  // Listen for custom save event from the editor
+  useEffect(() => {
+    const handleSaveEvent = () => {
+      if (!isSaving) {
+        handleSave();
+      }
+    };
+
+    document.addEventListener('editor-save-requested', handleSaveEvent);
+
+    return () => {
+      document.removeEventListener('editor-save-requested', handleSaveEvent);
+    };
+  }, [isSaving, handleSave]);
 
   // Fetch original page data for reply functionality
   useEffect(() => {
@@ -328,6 +338,8 @@ const PageEditor = ({
 
   // Handle save with validation
   function handleSave() {
+    console.log("handleSave called");
+
     if (!user) {
       console.log("User not authenticated");
       return;
@@ -347,12 +359,14 @@ const PageEditor = ({
 
     // Validate editor content
     if (!currentEditorValue || !Array.isArray(currentEditorValue) || currentEditorValue.length === 0) {
-      console.log("Editor content is invalid");
+      console.log("Editor content is invalid", currentEditorValue);
       return;
     }
 
     // Clear any title error
     setTitleError(false);
+
+    console.log("Calling onSave with editor content");
 
     // Call the provided onSave function with the current editor value
     if (onSave) {
@@ -361,6 +375,8 @@ const PageEditor = ({
       } catch (error) {
         console.error("Error during save:", error);
       }
+    } else {
+      console.error("onSave function is not defined");
     }
   }
 
@@ -518,22 +534,7 @@ const PageEditor = ({
         )}
       </div>
 
-      {/* Auto-save indicator */}
-      <div className="flex items-center justify-end mb-2">
-        {isAutoSaving ? (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Save className="h-3 w-3 mr-1 animate-pulse" />
-            <span>Auto-saving...</span>
-          </div>
-        ) : (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Save className="h-3 w-3 mr-1" />
-            <span>Auto-save enabled</span>
-          </div>
-        )}
-      </div>
-
-      {/* Add separator line between actions and content */}
+      {/* Add separator line between title and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
       <UnifiedEditor
@@ -620,7 +621,10 @@ const PageEditor = ({
                 <TooltipTrigger asChild>
                   <div>
                     <Button
-                      onClick={handleSave}
+                      onClick={() => {
+                        console.log("Save button clicked");
+                        handleSave();
+                      }}
                       disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
                       variant="default"
                       className="min-w-[80px]"

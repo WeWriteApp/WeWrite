@@ -72,6 +72,8 @@ const EditPage = ({
 
   // Handle save action
   const handleSave = async (editorContent) => {
+    console.log("EditPage handleSave called with content:", editorContent);
+
     if (!user) {
       setError("User not authenticated");
       return;
@@ -80,6 +82,7 @@ const EditPage = ({
     // Ensure we have valid editor content
     if (!editorContent || !Array.isArray(editorContent) || editorContent.length === 0) {
       setError("Invalid editor content. Please try again.");
+      console.error("Invalid editor content:", editorContent);
       return;
     }
 

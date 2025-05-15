@@ -421,7 +421,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
     // Handle cmd+enter to save
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
-      // TODO: Implement save functionality
+      // Trigger save by dispatching a custom event that PageEditor can listen for
+      const saveEvent = new CustomEvent('editor-save-requested');
+      document.dispatchEvent(saveEvent);
       return;
     }
 
@@ -1106,25 +1108,46 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
 
   // We'll handle deletion in the editor's main keydown handler instead
 
+  // Get pill style classes to match PillLink component
+  const getPillStyleClasses = () => {
+    return 'bg-primary text-primary-foreground hover:bg-primary/90';
+  };
+
+  // Base styles for all pill links (matching PillLink)
+  const baseStyles = `
+    inline-flex items-center
+    my-0.5
+    px-2 py-0.5
+    text-sm font-medium
+    rounded-lg
+    transition-colors
+    max-w-full
+    whitespace-nowrap truncate
+    ${getPillStyleClasses()}
+    cursor-pointer
+    ${linkTypeClass}
+    ${shouldTruncate ? 'truncate-link' : ''}
+  `.trim().replace(/\s+/g, ' ');
+
   return (
     <a
       {...attributes}
       ref={ref}
       onClick={handleClick}
       contentEditable={false} // Make the link non-editable
-      className={`inline-flex items-center my-0.5 px-1.5 py-0.5 text-sm font-medium rounded-[8px] transition-colors duration-200 bg-primary text-primary-foreground border-[1.5px] border-[rgba(255,255,255,0.2)] hover:bg-primary/90 hover:border-[rgba(255,255,255,0.3)] shadow-sm cursor-pointer ${linkTypeClass} ${shouldTruncate ? 'truncate-link' : ''}`}
+      className={baseStyles}
       data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
       data-user-id={isUserLinkType ? (element.userId || '') : undefined}
       data-link-type={linkTypeClass}
       title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
       <InlineChromiumBugfix />
-      <div className={`flex items-center gap-0.5 min-w-0 ${shouldTruncate ? 'max-w-[200px] truncate' : ''}`}>
+      <span className="pill-text overflow-hidden truncate">
         {children}
-        {isExternalLinkType || isExternalLink(element.url) ? (
-          <ExternalLink className="inline-block h-3 w-3 ml-1 flex-shrink-0" />
-        ) : null}
-      </div>
+      </span>
+      {isExternalLinkType || isExternalLink(element.url) ? (
+        <ExternalLink size={14} className="ml-1 flex-shrink-0" />
+      ) : null}
       <InlineChromiumBugfix />
     </a>
   );
