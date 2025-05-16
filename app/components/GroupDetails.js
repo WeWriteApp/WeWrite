@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
 import { Trash2, Users, FileText, Plus, ChevronLeft, Globe, Lock } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "./ui/switch";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import {
   Dialog,
   DialogContent,

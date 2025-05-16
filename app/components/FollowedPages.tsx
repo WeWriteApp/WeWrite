@@ -8,7 +8,7 @@ import { PillLink } from './PillLink';
 import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { AuthContext } from '../providers/AuthProvider';
-import { toast } from 'sonner';
+import { toast } from './ui/use-toast';
 import UnfollowConfirmationDialog from './UnfollowConfirmationDialog';
 import { ErrorDisplay } from './ui/error-display';
 
@@ -196,7 +196,9 @@ export default function FollowedPages({
         </div>
         <h3 className="text-lg font-medium mb-2">No followed pages yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
-          When you follow pages, they'll appear here so you can easily find them later.
+          {isCurrentUser
+            ? "When you follow pages, they'll appear here so you can easily find them later."
+            : "This user isn't following any pages yet."}
         </p>
       </div>
     );

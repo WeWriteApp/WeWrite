@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFo
 import TypeaheadSearch from './TypeaheadSearch';
 import { AuthContext } from '../providers/AuthProvider';
 import { appendPageReference } from '../firebase/database';
-import { toast } from 'sonner';
+import { toast } from './ui/use-toast';
 import { useRouter } from 'next/navigation';
 
 const AddToPageButton = ({ page, className = "" }) => {

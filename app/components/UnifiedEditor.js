@@ -91,13 +91,16 @@ const ensureValidContent = (content) => {
  * @param {Function} props.onChange - Callback when content changes
  * @param {string} props.placeholder - Placeholder text when editor is empty
  * @param {string} props.contentType - Type of content being edited (wiki, about, bio)
+ * @param {Function} props.onKeyDown - Callback for keyboard events
  */
-const UnifiedEditor = forwardRef(({
-  initialContent = [createDefaultParagraph()],
-  onChange,
-  placeholder = "Start typing...",
-  contentType = "wiki"
-}, ref) => {
+const UnifiedEditor = forwardRef((props, ref) => {
+  const {
+    initialContent = [createDefaultParagraph()],
+    onChange,
+    placeholder = "Start typing...",
+    contentType = "wiki",
+    onKeyDown
+  } = props;
   // Create editor instance
   const [editor] = useState(() => withHistory(withReact(createEditor())));
   const [editorValue, setEditorValue] = useState(ensureValidContent(initialContent));
@@ -236,6 +239,17 @@ const UnifiedEditor = forwardRef(({
         pageTitle: ''
       };
 
+      // Create a local state setter function if it doesn't exist
+      if (!linkEditorRef.current.setShowLinkEditor) {
+        linkEditorRef.current.setShowLinkEditor = (value) => {
+          linkEditorRef.current.showLinkEditor = value;
+          // Force a re-render by dispatching a custom event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('linkEditorStateChange', { detail: { showLinkEditor: value } }));
+          }
+        };
+      }
+
       // Show the link editor
       linkEditorRef.current.showLinkEditor = true;
       if (linkEditorRef.current.setShowLinkEditor) {
@@ -358,6 +372,53 @@ const UnifiedEditor = forwardRef(({
       lastSelectionRef.current = editor.selection;
     }
 
+    // Handle @ symbol to trigger link insertion
+    if (event.key === '@' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      // Check if the previous character is a backslash (escape sequence)
+      let isEscaped = false;
+
+      try {
+        if (editor.selection) {
+          const { anchor } = editor.selection;
+          const prevPointPath = [...anchor.path];
+          const prevPoint = { path: prevPointPath, offset: Math.max(0, anchor.offset - 1) };
+
+          // Get the previous character
+          const range = { anchor: prevPoint, focus: anchor };
+          const fragment = Editor.fragment(editor, range);
+          const text = Node.string(fragment[0]);
+
+          // If the previous character is a backslash, it's an escape sequence
+          if (text === '\\') {
+            isEscaped = true;
+
+            // Delete the backslash
+            Transforms.delete(editor, { at: range });
+
+            // Insert the @ symbol as a regular character
+            Transforms.insertText(editor, '@');
+
+            // Don't show the link editor
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for escape sequence:', error);
+      }
+
+      // If not escaped, prevent default and show link editor
+      if (!isEscaped) {
+        event.preventDefault();
+        console.log("@ key pressed, showing link editor");
+        openLinkEditor();
+      }
+    }
+
+    // Pass the event to the parent component's onKeyDown handler if provided
+    if (props.onKeyDown) {
+      props.onKeyDown(event);
+    }
+
     // Handle single-keystroke deletion of links
     if ((event.key === 'Delete' || event.key === 'Backspace') && editor.selection) {
       const [node, path] = Editor.node(editor, editor.selection);
@@ -394,7 +455,7 @@ const UnifiedEditor = forwardRef(({
         }
       }
     }
-  }, [editor]);
+  }, [editor, openLinkEditor, props.onKeyDown]);
 
   // We no longer need to calculate line numbers for the editor content
   // since we're using inline paragraph numbers
@@ -448,6 +509,32 @@ const UnifiedEditor = forwardRef(({
           float: none;
         }
       `}</style>
+
+      {/* Editor help tooltip */}
+      <div className="absolute top-2 right-2 z-10">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label="Editor help"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <path d="M12 17h.01"/>
+                </svg>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="text-sm">
+                <strong>Tip:</strong> Type <code>@</code> to insert a link to a page or user.
+                Use <code>\@</code> to type a literal @ symbol.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       <Slate
         editor={editor}
@@ -538,6 +625,23 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       linkEditorRef.current.initialLinkValues = initialLinkValues;
     }
   }, [showLinkEditor, linkEditorPosition, selectedLinkElement, selectedLinkPath, initialLinkValues]);
+
+  // Listen for custom events to update the link editor state
+  useEffect(() => {
+    const handleLinkEditorStateChange = (event) => {
+      if (event.detail && event.detail.showLinkEditor !== undefined) {
+        setShowLinkEditor(event.detail.showLinkEditor);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('linkEditorStateChange', handleLinkEditorStateChange);
+
+      return () => {
+        window.removeEventListener('linkEditorStateChange', handleLinkEditorStateChange);
+      };
+    }
+  }, []);
 
   // Use PillStyle context to get the current pill style
   const { pillStyle, getPillStyleClasses } = usePillStyle();

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Copy, Link } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from './ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '../providers/AuthProvider';
 

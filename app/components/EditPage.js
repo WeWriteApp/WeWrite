@@ -10,7 +10,7 @@ import { usePage } from "../contexts/PageContext";
 import PageEditor from "./PageEditor";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
-import { toast } from "../components/ui/use-toast";
+import { toast } from "./ui/use-toast";
 
 const EditPage = ({
   isEditing,
@@ -209,6 +209,13 @@ const EditPage = ({
           setIsSaving(false);
           setError(null);
 
+          // Reset all change tracking states to prevent unsaved changes warning
+          // This is crucial to fix the issue where the warning appears after a successful save
+          setHasContentChanged(false);
+          setHasTitleChanged(false);
+          setHasVisibilityChanged(false);
+          setHasLocationChanged(false);
+
           // Show a success toast
           toast.success("Page saved successfully");
 
@@ -294,6 +301,17 @@ const EditPage = ({
 
   // Track if there are any unsaved changes
   const hasUnsavedChanges = hasContentChanged || hasTitleChanged || hasVisibilityChanged || hasLocationChanged;
+
+  // Log changes state for debugging
+  useEffect(() => {
+    console.log('Change tracking state:', {
+      hasContentChanged,
+      hasTitleChanged,
+      hasVisibilityChanged,
+      hasLocationChanged,
+      hasUnsavedChanges
+    });
+  }, [hasContentChanged, hasTitleChanged, hasVisibilityChanged, hasLocationChanged, hasUnsavedChanges]);
 
   // Memoized save function for the useUnsavedChanges hook
   const saveChanges = useCallback(() => {

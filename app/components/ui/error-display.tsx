@@ -8,7 +8,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger
 } from './collapsible';
-import { toast } from 'sonner';
+import { toast } from './use-toast';
 import { cn } from '../../lib/utils';
 
 interface ErrorDisplayProps {

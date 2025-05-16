@@ -5,10 +5,14 @@ import { useRouter } from 'next/navigation';
 
 /**
  * Hook to handle unsaved changes and prevent accidental navigation
- * 
+ *
  * @param {boolean} hasUnsavedChanges - Whether there are unsaved changes
  * @param {Function} saveFunction - Function to call to save changes
  * @returns {Object} - Object containing dialog state and handlers
+ *
+ * IMPORTANT: When implementing the save function, make sure to reset all change tracking states
+ * (e.g., hasContentChanged, hasTitleChanged, etc.) to false after a successful save.
+ * Otherwise, the unsaved changes warning will still appear even after saving successfully.
  */
 export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
   const router = useRouter();
@@ -53,14 +57,18 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
 
   // Function to handle "Stay and Save" action
   const handleStayAndSave = useCallback(async () => {
+    console.log('handleStayAndSave called, current hasUnsavedChanges:', hasUnsavedChanges);
     setIsHandlingNavigation(true);
     try {
       // Call the save function
       await saveFunction();
-      
+
       // After saving, close the dialog
       setShowDialog(false);
-      
+
+      // Log the state after saving
+      console.log('Save completed in handleStayAndSave, hasUnsavedChanges should be reset by saveFunction');
+
       // If there was a pending navigation, proceed with it
       if (pendingUrl) {
         router.push(pendingUrl);
@@ -71,18 +79,18 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
     } finally {
       setIsHandlingNavigation(false);
     }
-  }, [pendingUrl, router, saveFunction]);
+  }, [pendingUrl, router, saveFunction, hasUnsavedChanges]);
 
   // Function to handle "Leave without Saving" action
   const handleLeaveWithoutSaving = useCallback(() => {
     setIsHandlingNavigation(true);
     setShowDialog(false);
-    
+
     // If there was a pending navigation, proceed with it
     if (pendingUrl) {
       router.push(pendingUrl);
     }
-    
+
     setIsHandlingNavigation(false);
   }, [pendingUrl, router]);
 

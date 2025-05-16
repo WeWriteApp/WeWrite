@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getPageMetadata } from '../firebase/database';
+import Script from 'next/script';
 
 export async function generateMetadata({ params }) {
   try {
@@ -45,6 +46,62 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default function GlobalIDLayout({ children }) {
-  return children;
+export default async function GlobalIDLayout({ children, params }) {
+  // Get the page metadata for schema markup
+  let schemaMarkup = null;
+
+  try {
+    const id = params.id;
+    const metadata = await getPageMetadata(id);
+
+    if (metadata) {
+      // Create schema markup for the page
+      const pageTitle = metadata.title || 'Untitled';
+      const username = metadata.username || 'Anonymous';
+      const description = metadata.description || '';
+      const datePublished = metadata.createdAt || new Date().toISOString();
+      const dateModified = metadata.lastModified || datePublished;
+
+      // Generate schema markup
+      schemaMarkup = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: pageTitle,
+        description: description,
+        author: {
+          '@type': 'Person',
+          name: username
+        },
+        datePublished: datePublished,
+        dateModified: dateModified,
+        publisher: {
+          '@type': 'Organization',
+          name: 'WeWrite',
+          logo: {
+            '@type': 'ImageObject',
+            url: `${process.env.NEXT_PUBLIC_BASE_URL}/logo.png`
+          }
+        },
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': `${process.env.NEXT_PUBLIC_BASE_URL}/${id}`
+        }
+      };
+    }
+  } catch (error) {
+    console.error('Error generating schema markup:', error);
+  }
+
+  return (
+    <>
+      {schemaMarkup && (
+        <Script
+          id="schema-markup"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+        />
+      )}
+      {children}
+    </>
+  );
 }

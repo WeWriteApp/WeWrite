@@ -1,52 +1,210 @@
-import { toast as sonnerToast } from "sonner"
+import * as React from "react"
 
-type ToastProps = {
-  title?: string
-  description?: string
-  variant?: "default" | "destructive" | "success"
-  [key: string]: any
+import type {
+  ToastActionElement,
+  ToastProps,
+} from "./toast"
+
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
 }
 
-export const toast = {
-  // Basic toast methods that map directly to Sonner
-  success: (message: string, options?: any) => sonnerToast.success(message, options),
-  error: (message: string, options?: any) => sonnerToast.error(message, options),
-  info: (message: string, options?: any) => sonnerToast.info(message, options),
-  warning: (message: string, options?: any) => sonnerToast.warning(message, options),
-  
-  // Custom method to maintain compatibility with shadcn/ui toast API
-  custom: ({ title, description, variant, ...props }: ToastProps) => {
-    switch (variant) {
-      case "destructive":
-        return sonnerToast.error(title, { description, ...props });
-      case "success":
-        return sonnerToast.success(title, { description, ...props });
-      default:
-        return sonnerToast(title, { description, ...props });
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST",
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_VALUE
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | {
+      type: ActionType["ADD_TOAST"]
+      toast: ToasterToast
     }
-  },
-  
-  // Default method to show a standard toast
-  default: (message: string, options?: any) => sonnerToast(message, options),
-  
-  // Dismiss method for compatibility
-  dismiss: (toastId?: string) => {
-    if (toastId) {
-      sonnerToast.dismiss(toastId);
-    } else {
-      sonnerToast.dismiss();
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<ToasterToast>
     }
-  },
-  
-  // For compatibility with the shadcn/ui API
-  promise: sonnerToast.promise
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: string
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: string
+    }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case actionTypes.ADD_TOAST:
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      }
+
+    case actionTypes.UPDATE_TOAST:
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      }
+
+    case actionTypes.DISMISS_TOAST: {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined
+            ? {
+                ...t,
+                open: false,
+              }
+            : t
+        ),
+      }
+    }
+    case actionTypes.REMOVE_TOAST:
+      if (action.toastId === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
+}
+
+function addToRemoveQueue(toastId: string) {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: actionTypes.REMOVE_TOAST,
+      toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export function toast({
+  ...props
+}: Omit<ToasterToast, "id">) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({
+      type: actionTypes.UPDATE_TOAST,
+      toast: { ...props, id },
+    })
+  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
+
+  dispatch({
+    type: actionTypes.ADD_TOAST,
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
+
+  return {
+    id,
+    dismiss,
+    update,
+  }
+}
+
+// Helper functions for common toast types
+toast.success = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
+  return toast({ title, variant: "success", ...options });
 };
 
-// Provide a compatible API with the shadcn/ui implementation
+toast.error = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
+  return toast({ title, variant: "destructive", ...options });
+};
+
+toast.info = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
+  return toast({ title, ...options });
+};
+
+toast.warning = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
+  return toast({ title, ...options });
+};
+
+toast.dismiss = (toastId?: string) => {
+  dispatch({ type: actionTypes.DISMISS_TOAST, toastId })
+}
+
 export function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
   return {
+    ...state,
     toast,
-    dismiss: toast.dismiss,
-    toasts: [] // Empty array for compatibility
-  };
+    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+  }
 }

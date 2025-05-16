@@ -14,7 +14,7 @@ import {
   DialogDescription,
   DialogFooter
 } from './ui/dialog';
-import { toast } from 'sonner';
+import { toast } from './ui/use-toast';
 import { followPage, unfollowPage, isFollowingPage } from '../firebase/follows';
 import { createFollowNotification } from '../firebase/notifications';
 
@@ -28,8 +28,9 @@ import { createFollowNotification } from '../firebase/notifications';
  * @param {string} props.pageId - The ID of the page to follow/unfollow
  * @param {string} props.pageTitle - The title of the page (for notifications)
  * @param {string} props.className - Additional CSS classes
+ * @param {string} props.size - Button size (sm, md, lg)
  */
-export default function FollowButton({ pageId, pageTitle = "this page", className = "", pageOwnerId }) {
+export default function FollowButton({ pageId, pageTitle = "this page", className = "", pageOwnerId, size = "sm" }) {
   const { user } = useContext(AuthContext);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -141,10 +142,10 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
     <>
       <Button
         variant={isFollowing ? "outline" : "default"}
-        size="sm"
+        size={size}
         onClick={handleFollowClick}
         disabled={isLoading}
-        className={`relative h-10 md:h-8 ${className}`}
+        className={`relative ${className}`}
       >
         <AnimatePresence mode="wait">
           {isFollowing ? (
@@ -161,10 +162,10 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 15 }}
                 >
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className={size === "lg" ? "h-5 w-5 text-green-500" : "h-4 w-4 text-green-500"} />
                 </motion.div>
               ) : (
-                <Check className="h-4 w-4" />
+                <Check className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
               )}
               Following
             </motion.div>
@@ -176,7 +177,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
               exit={{ opacity: 0, y: 5 }}
               className="flex items-center gap-1"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />
               Follow
             </motion.div>
           )}

@@ -142,14 +142,18 @@ function SinglePageView({ params }) {
     // 1. Page is loaded (!isLoading)
     // 2. Page exists (page !== null)
     // 3. Page isn't deleted (!isDeleted)
-    // 4. User owns the page (regardless of whether it's public or private)
+    // 4. User owns the page OR is a member of the group that owns the page
     canEdit: Boolean(
       !isLoading &&
       page !== null &&
       !isDeleted &&
       user?.uid &&
-      page?.userId &&
-      user.uid === page.userId
+      (
+        // User is the page owner
+        (page?.userId && user.uid === page.userId) ||
+        // OR page belongs to a group and user is a member of that group
+        (page?.groupId && hasGroupAccess)
+      )
     )
   });
 
@@ -210,6 +214,36 @@ function SinglePageView({ params }) {
         setGroupId(pageData.groupId || null);
         setGroupName(pageData.groupName || null);
 
+        // Check group access if the page belongs to a group
+        if (pageData.groupId && user?.uid) {
+          // Get the group data to check if the user is a member
+          const db = getDatabase(app);
+          const groupRef = ref(db, `groups/${pageData.groupId}`);
+
+          onValue(groupRef, (snapshot) => {
+            if (snapshot.exists()) {
+              const groupData = snapshot.val();
+
+              // Check if the group is private
+              setGroupIsPrivate(!groupData.isPublic);
+
+              // Check if the user is a member of the group
+              const isMember = groupData.members && groupData.members[user.uid];
+              setHasGroupAccess(isMember);
+            } else {
+              // Group doesn't exist
+              setGroupIsPrivate(false);
+              setHasGroupAccess(false);
+            }
+          }, {
+            onlyOnce: true
+          });
+        } else {
+          // Reset group access state if the page doesn't belong to a group
+          setGroupIsPrivate(false);
+          setHasGroupAccess(false);
+        }
+
         // Set page title for document title
         if (pageData.title) {
           // If the page has a title of "Untitled", add a more descriptive suffix
@@ -265,15 +299,20 @@ function SinglePageView({ params }) {
   // Check for edit=true URL parameter and set isEditing state
   useEffect(() => {
     if (searchParams && searchParams.get('edit') === 'true' && !isLoading && page) {
-      // Only set editing mode if the user is the owner of the page
-      if (user && user.uid === page.userId) {
+      // Set editing mode if the user is the owner of the page or a member of the group
+      if (user && (
+        // User is the page owner
+        user.uid === page.userId ||
+        // OR page belongs to a group and user is a member of that group
+        (page.groupId && hasGroupAccess)
+      )) {
         console.log('Setting edit mode from URL parameter');
         setIsEditing(true);
       } else {
-        console.log('User is not the owner of the page, cannot edit');
+        console.log('User does not have edit permissions for this page');
       }
     }
-  }, [searchParams, isLoading, page, user]);
+  }, [searchParams, isLoading, page, user, hasGroupAccess]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {
@@ -558,7 +597,14 @@ function SinglePageView({ params }) {
                         viewMode={lineMode}
                         onRenderComplete={handlePageFullyRendered}
                         setIsEditing={setIsEditing}
-                        canEdit={user?.uid === page?.userId}
+                        canEdit={
+                          user?.uid && (
+                            // User is the page owner
+                            user.uid === page.userId ||
+                            // OR page belongs to a group and user is a member of that group
+                            (page.groupId && hasGroupAccess)
+                          )
+                        }
                       />
                       {/* Add text selection menu */}
                       <TextSelectionMenu contentRef={contentRef} />
@@ -589,7 +635,14 @@ function SinglePageView({ params }) {
           <PageFooter
             page={page}
             content={editorState}
-            isOwner={user?.uid === page?.userId}
+            isOwner={
+              user?.uid && (
+                // User is the page owner
+                user.uid === page.userId ||
+                // OR page belongs to a group and user is a member of that group
+                (page.groupId && hasGroupAccess)
+              )
+            }
             isEditing={isEditing}
             setIsEditing={setIsEditing}
           />

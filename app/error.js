@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger
 } from "./components/ui/collapsible";
-import { toast } from "sonner";
+import { toast } from "./components/ui/use-toast";
 
 export default function Error({ error, reset }) {
   const [isOpen, setIsOpen] = useState(false);

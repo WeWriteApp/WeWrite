@@ -1,5 +1,6 @@
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { app } from '../../firebase/config';
+import Script from 'next/script';
 
 export async function generateMetadata({ params }) {
   try {
@@ -68,6 +69,70 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default function UserLayout({ children }) {
-  return children;
+export default async function UserLayout({ children, params }) {
+  // Get the user data for schema markup
+  let schemaMarkup = null;
+
+  try {
+    const { id } = params;
+    const rtdb = getDatabase(app);
+
+    // First, try to get user by ID directly
+    const userByIdRef = ref(rtdb, `users/${id}`);
+    const userByIdSnapshot = await get(userByIdRef);
+
+    let userData = null;
+    let userId = null;
+
+    if (userByIdSnapshot.exists()) {
+      userData = userByIdSnapshot.val();
+      userId = id;
+    } else {
+      // If not found by ID, try to find by username
+      const usersRef = ref(rtdb, 'users');
+      const usernameQuery = query(usersRef, orderByChild('username'), equalTo(id));
+      const usernameSnapshot = await get(usernameQuery);
+
+      if (usernameSnapshot.exists()) {
+        const userEntry = Object.entries(usernameSnapshot.val())[0];
+        userId = userEntry[0];
+        userData = userEntry[1];
+      }
+    }
+
+    if (userData) {
+      const displayName = userData.displayName || userData.username || 'User';
+      const bio = typeof userData.bio === 'string'
+        ? userData.bio
+        : Array.isArray(userData.bio)
+          ? userData.bio.map(node =>
+              node.children?.map(child => child.text || '').join('') || ''
+            ).join(' ')
+          : '';
+
+      // Generate schema markup for Person
+      schemaMarkup = {
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: displayName,
+        description: bio.substring(0, 160),
+        url: `${process.env.NEXT_PUBLIC_BASE_URL}/user/${id}`
+      };
+    }
+  } catch (error) {
+    console.error('Error generating schema markup for user:', error);
+  }
+
+  return (
+    <>
+      {schemaMarkup && (
+        <Script
+          id="schema-markup"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }}
+        />
+      )}
+      {children}
+    </>
+  );
 }

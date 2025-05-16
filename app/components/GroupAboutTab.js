@@ -1,17 +1,18 @@
 "use client";
 import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { Button } from "./ui/button";
-import { Edit, Save, X, Loader, AlertTriangle, History } from "lucide-react";
+import { Edit, Save, X, Loader, AlertTriangle, History, Link } from "lucide-react";
 import { rtdb } from "../firebase/rtdb";
 import { ref, update, get, push, child } from "firebase/database";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { AuthContext } from "../providers/AuthProvider";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 // Import the unified editor dynamically to avoid SSR issues
-const UnifiedEditor = dynamic(() => import("./SlateEditor"), { ssr: false });
+const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
 
 export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
   // Check if the user is a member of the group
@@ -102,19 +103,12 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
       setLastEditTime(currentTime);
       setIsEditing(false);
 
-      toast({
-        title: "Success",
-        description: "Group information updated successfully",
-      });
+      toast.success("Group information updated successfully");
       return true; // Indicate success for the useUnsavedChanges hook
     } catch (err) {
       console.error("Error updating group about content:", err);
       setError("Failed to save changes. Please try again.");
-      toast({
-        title: "Error",
-        description: "Failed to update group information",
-        variant: "destructive",
-      });
+      toast.error("Failed to update group information");
       return false; // Indicate failure for the useUnsavedChanges hook
     } finally {
       setIsLoading(false);
@@ -151,6 +145,44 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
   // Handle content change in the editor
   const handleContentChange = (content) => {
     setAboutContent(content);
+  };
+
+  // Handle inserting a link
+  const handleInsertLink = () => {
+    if (editorRef.current) {
+      console.log("Editor ref exists, attempting to open link editor");
+
+      // Focus the editor first
+      editorRef.current.focus();
+
+      // Use the openLinkEditor method we added to the UnifiedEditor
+      if (editorRef.current.openLinkEditor) {
+        console.log("Using openLinkEditor method");
+        try {
+          // Open the link editor directly without creating a temporary link first
+          editorRef.current.openLinkEditor();
+        } catch (error) {
+          console.error("Error opening link editor:", error);
+          toast.error("Could not open link editor. Please try again.");
+        }
+      } else {
+        console.error("openLinkEditor method not available");
+        toast.error("Link insertion is not available. Please try again later.");
+      }
+    } else {
+      console.error("Editor ref not available");
+      toast.error("Editor is not ready. Please try again later.");
+    }
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (event) => {
+    // Save on Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      handleSave();
+      toast.info("Saving changes...");
+    }
   };
 
   if (isLoading && !aboutContent) {
@@ -225,22 +257,89 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
       {/* Content display or editor */}
       <div className="bg-card rounded-lg border border-border p-4">
         {isEditing ? (
-          <div className="min-h-[300px]">
-            <UnifiedEditor
-              ref={editorRef}
-              initialContent={aboutContent}
-              onChange={handleContentChange}
-              placeholder="Write about this group..."
-              contentType="wiki"
-              showLineNumbers={true}
-              showInsertLinkButton={true}
-              showFormatButtons={false}
-            />
+          <div>
+            {/* Editor toolbar */}
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              {/* Insert Link button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleInsertLink}
+                      variant="outline"
+                      className="flex items-center gap-1.5 bg-background/90 border-input"
+                    >
+                      <Link className="h-4 w-4" />
+                      <span className="text-sm font-medium">Insert Link</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Insert a link to a page or external site</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Keyboard shortcut hint */}
+              <div className="text-xs text-muted-foreground">
+                Press <kbd className="px-1 py-0.5 bg-muted rounded border border-border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-muted rounded border border-border">Enter</kbd> to save
+              </div>
+            </div>
+
+            {/* Editor */}
+            <div className="min-h-[300px]">
+              <UnifiedEditor
+                ref={editorRef}
+                initialContent={aboutContent}
+                onChange={handleContentChange}
+                placeholder="Write about this group..."
+                contentType="about"
+                onKeyDown={handleKeyDown}
+              />
+            </div>
           </div>
         ) : (
           <div className="prose dark:prose-invert max-w-none">
             {aboutContent ? (
-              <div dangerouslySetInnerHTML={{ __html: aboutContent }} />
+              <div>
+                {typeof aboutContent === 'string' ? (
+                  // If it's a string, render it as HTML (legacy format)
+                  <div dangerouslySetInnerHTML={{ __html: aboutContent }} />
+                ) : Array.isArray(aboutContent) ? (
+                  // If it's an array (Slate format), render it properly
+                  <div className="unified-editor-content">
+                    {aboutContent.map((node, i) => {
+                      if (node.type === 'paragraph') {
+                        return (
+                          <p key={i} className="mb-4">
+                            {node.children.map((child, j) => {
+                              if (child.type === 'link') {
+                                return (
+                                  <a
+                                    key={j}
+                                    href={child.url}
+                                    className="slate-pill-link"
+                                    target={child.isExternal ? "_blank" : undefined}
+                                    rel={child.isExternal ? "noopener noreferrer" : undefined}
+                                  >
+                                    {child.children[0]?.text || child.url}
+                                  </a>
+                                );
+                              }
+                              return <span key={j}>{child.text}</span>;
+                            })}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                ) : (
+                  // If it's an object but not in the expected format, display a message
+                  <div className="text-muted-foreground">
+                    Content format not recognized. Please edit to update.
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="text-muted-foreground italic">
                 {canEdit

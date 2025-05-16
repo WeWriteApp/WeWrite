@@ -10,15 +10,15 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { MoreHorizontal, Trash2, UserPlus, Check, X, LogOut } from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger
 } from "./ui/dropdown-menu";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "./ui/table";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import { useRouter } from "next/navigation";
 
 interface Member {
@@ -53,17 +53,17 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
   // Fetch member details
   useEffect(() => {
     if (!members) return;
-    
+
     const fetchMemberDetails = async () => {
       const usersRef = ref(rtdb, 'users');
       const usersSnapshot = await get(usersRef);
-      
+
       if (!usersSnapshot.exists()) return;
-      
+
       const usersData = usersSnapshot.val();
       const membersArray: Member[] = [];
       const usersArray: User[] = [];
-      
+
       // First collect all users
       Object.keys(usersData).forEach(userId => {
         usersArray.push({
@@ -71,12 +71,12 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
           username: usersData[userId].username || 'Unknown User'
         });
       });
-      
+
       // Then map members with their details
       Object.keys(members).forEach(memberId => {
         const memberData = members[memberId];
         const userData = usersData[memberId];
-        
+
         if (userData) {
           membersArray.push({
             id: memberId,
@@ -86,22 +86,22 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
           });
         }
       });
-      
+
       setMembersList(membersArray);
       setUsers(usersArray);
     };
-    
+
     fetchMemberDetails();
   }, [members]);
-  
+
   // Filter users based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredUsers([]);
       return;
     }
-    
-    const filtered = users.filter(user => 
+
+    const filtered = users.filter(user =>
       user.username.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredUsers(filtered);
@@ -109,11 +109,11 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
 
   const handleRemoveMember = async (memberId: string) => {
     if (!confirm("Are you sure you want to remove this member?")) return;
-    
+
     try {
       const updatedMembers = { ...members };
       delete updatedMembers[memberId];
-      
+
       const membersRef = ref(rtdb, `groups/${groupId}/members`);
       await set(membersRef, updatedMembers);
       toast.success("Member removed successfully");
@@ -126,15 +126,15 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
   const handleLeaveGroup = async () => {
     if (!user?.uid) return;
     if (!confirm("Are you sure you want to leave this group?")) return;
-    
+
     try {
       const updatedMembers = { ...members };
       delete updatedMembers[user.uid];
-      
+
       const membersRef = ref(rtdb, `groups/${groupId}/members`);
       await set(membersRef, updatedMembers);
       toast.success("You have left the group");
-      
+
       // Redirect to groups page
       router.push("/groups");
     } catch (error) {
@@ -145,20 +145,20 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
 
   const handleAddMember = async () => {
     if (!selectedUser) return;
-    
+
     setIsLoading(true);
     try {
-      const updatedMembers = { 
+      const updatedMembers = {
         ...members,
         [selectedUser.id]: {
           role: "member",
           joinedAt: new Date().toISOString()
         }
       };
-      
+
       const membersRef = ref(rtdb, `groups/${groupId}/members`);
       await set(membersRef, updatedMembers);
-      
+
       setIsDialogOpen(false);
       setSearchTerm('');
       setSelectedUser(null);
@@ -177,9 +177,9 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
         <h3 className="text-lg font-medium">Members ({membersList.length})</h3>
         <div className="flex gap-2">
           {!isOwner && user?.uid && members[user.uid] && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleLeaveGroup}
               className="flex items-center gap-1 text-destructive"
             >
@@ -212,8 +212,8 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
                         if (e.target.value.length > 2) {
-                          const filtered = users.filter(u => 
-                            u.username.toLowerCase().includes(e.target.value.toLowerCase()) && 
+                          const filtered = users.filter(u =>
+                            u.username.toLowerCase().includes(e.target.value.toLowerCase()) &&
                             !membersList.some(m => m.id === u.id)
                           );
                           setFilteredUsers(filtered);
@@ -226,7 +226,7 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
                   {filteredUsers.length > 0 ? (
                     <div className="max-h-[200px] overflow-y-auto border rounded-md">
                       {filteredUsers.map(user => (
-                        <div 
+                        <div
                           key={user.id}
                           className={`p-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center ${selectedUser?.id === user.id ? 'bg-gray-100' : ''}`}
                           onClick={() => setSelectedUser(user)}
@@ -242,8 +242,8 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                  <Button 
-                    onClick={handleAddMember} 
+                  <Button
+                    onClick={handleAddMember}
                     disabled={!selectedUser || isLoading}
                   >
                     {isLoading ? 'Adding...' : 'Add Member'}

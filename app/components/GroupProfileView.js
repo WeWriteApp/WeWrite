@@ -10,7 +10,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/database";
 import { rtdb } from "../firebase/rtdb";
 import { ref, update } from "firebase/database";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import GroupProfileTabs from "./GroupProfileTabs";
 import {
   Dialog,

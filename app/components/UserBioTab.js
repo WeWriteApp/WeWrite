@@ -1,14 +1,15 @@
 "use client";
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { Button } from "./ui/button";
-import { Edit, Save, X, Loader, AlertTriangle } from "lucide-react";
+import { Edit, Save, X, Loader, AlertTriangle, Link } from "lucide-react";
 import { rtdb } from "../firebase/rtdb";
 import { ref, update, get } from "firebase/database";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { AuthContext } from "../providers/AuthProvider";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 // Import the unified editor dynamically to avoid SSR issues
 const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
@@ -22,6 +23,7 @@ export default function UserBioTab({ profile }) {
   const [error, setError] = useState(null);
   const [lastEditor, setLastEditor] = useState(null);
   const [lastEditTime, setLastEditTime] = useState(null);
+  const editorRef = useRef(null);
 
   // Check if current user is the profile owner
   const isProfileOwner = user && profile && user.uid === profile.uid;
@@ -67,30 +69,29 @@ export default function UserBioTab({ profile }) {
       setIsLoading(true);
       const userRef = ref(rtdb, `users/${profile.uid}`);
 
+      // Ensure we're saving the content in the correct format
+      // The UnifiedEditor returns an array of nodes, which we want to preserve
+      const contentToSave = bioContent;
+
+      console.log("Saving bio content:", contentToSave);
+
       await update(userRef, {
-        bio: bioContent,
+        bio: contentToSave,
         bioLastEditor: user?.username || user?.displayName || user?.email || "Unknown",
         bioLastEditTime: new Date().toISOString()
       });
 
-      setOriginalContent(bioContent);
+      setOriginalContent(contentToSave);
       setIsEditing(false);
       setLastEditor(user?.username || user?.displayName || user?.email || "Unknown");
       setLastEditTime(new Date().toISOString());
 
-      toast({
-        title: "Success",
-        description: "Bio updated successfully",
-      });
+      toast.success("Bio updated successfully");
       return true; // Indicate success for the useUnsavedChanges hook
     } catch (err) {
       console.error("Error updating user bio content:", err);
       setError("Failed to save changes. Please try again.");
-      toast({
-        title: "Error",
-        description: "Failed to update bio",
-        variant: "destructive",
-      });
+      toast.error("Failed to update bio");
       return false; // Indicate failure for the useUnsavedChanges hook
     } finally {
       setIsLoading(false);
@@ -126,7 +127,51 @@ export default function UserBioTab({ profile }) {
 
   // Handle content change in the editor
   const handleContentChange = (content) => {
+    // Ensure we're storing the content in the correct format
+    // If it's already an object/array, use it directly; otherwise stringify it
     setBioContent(content);
+    console.log("Bio content updated:", content);
+  };
+
+  // Handle inserting a link
+  const handleInsertLink = () => {
+    if (editorRef.current) {
+      console.log("Editor ref exists, attempting to open link editor");
+
+      // Focus the editor first
+      editorRef.current.focus();
+
+      // Use the openLinkEditor method we added to the UnifiedEditor
+      if (editorRef.current.openLinkEditor) {
+        console.log("Using openLinkEditor method");
+        try {
+          // Ensure we're properly calling the openLinkEditor method
+          setTimeout(() => {
+            // Add a small delay to ensure the editor is focused
+            editorRef.current.openLinkEditor();
+          }, 10);
+        } catch (error) {
+          console.error("Error opening link editor:", error);
+          toast.error("Could not open link editor. Please try again.");
+        }
+      } else {
+        console.error("openLinkEditor method not available");
+        toast.error("Link insertion is not available. Please try again later.");
+      }
+    } else {
+      console.error("Editor ref not available");
+      toast.error("Editor is not ready. Please try again later.");
+    }
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (event) => {
+    // Save on Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      handleSave();
+      toast.info("Saving changes...");
+    }
   };
 
   if (isLoading && !bioContent) {
@@ -198,18 +243,89 @@ export default function UserBioTab({ profile }) {
       {/* Content display or editor */}
       <div className="bg-card rounded-lg border border-border p-4">
         {isEditing ? (
-          <div className="min-h-[300px]">
-            <UnifiedEditor
-              initialContent={bioContent}
-              onChange={handleContentChange}
-              placeholder="Write about yourself..."
-              contentType="bio"
-            />
+          <div>
+            {/* Editor toolbar */}
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              {/* Insert Link button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleInsertLink}
+                      variant="outline"
+                      className="flex items-center gap-1.5 bg-background/90 border-input"
+                    >
+                      <Link className="h-4 w-4" />
+                      <span className="text-sm font-medium">Insert Link</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Insert a link to a page or external site</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Keyboard shortcut hint */}
+              <div className="text-xs text-muted-foreground">
+                Press <kbd className="px-1 py-0.5 bg-muted rounded border border-border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-muted rounded border border-border">Enter</kbd> to save
+              </div>
+            </div>
+
+            {/* Editor */}
+            <div className="min-h-[300px]">
+              <UnifiedEditor
+                ref={editorRef}
+                initialContent={bioContent}
+                onChange={handleContentChange}
+                placeholder="Write about yourself..."
+                contentType="bio"
+                onKeyDown={handleKeyDown}
+              />
+            </div>
           </div>
         ) : (
           <div className="prose dark:prose-invert max-w-none">
             {bioContent ? (
-              <div dangerouslySetInnerHTML={{ __html: bioContent }} />
+              <div>
+                {typeof bioContent === 'string' ? (
+                  // If it's a string, render it as HTML (legacy format)
+                  <div dangerouslySetInnerHTML={{ __html: bioContent }} />
+                ) : Array.isArray(bioContent) ? (
+                  // If it's an array (Slate format), render it properly
+                  <div className="unified-editor-content">
+                    {bioContent.map((node, i) => {
+                      if (node.type === 'paragraph') {
+                        return (
+                          <p key={i} className="mb-4">
+                            {node.children.map((child, j) => {
+                              if (child.type === 'link') {
+                                return (
+                                  <a
+                                    key={j}
+                                    href={child.url}
+                                    className="slate-pill-link"
+                                    target={child.isExternal ? "_blank" : undefined}
+                                    rel={child.isExternal ? "noopener noreferrer" : undefined}
+                                  >
+                                    {child.children[0]?.text || child.url}
+                                  </a>
+                                );
+                              }
+                              return <span key={j}>{child.text}</span>;
+                            })}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                ) : (
+                  // If it's an object but not in the expected format, display a message
+                  <div className="text-muted-foreground">
+                    Content format not recognized. Please edit to update.
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="text-muted-foreground italic">
                 {isProfileOwner

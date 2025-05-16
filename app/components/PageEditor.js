@@ -17,7 +17,7 @@ import { getUsernameById } from "../utils/userUtils";
 import { createReplyAttribution } from "../utils/linkUtils";
 import MapEditor from "./MapEditor";
 
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import { useFeatureFlag } from "../utils/feature-flags";
 
 // Safely check if ReactEditor methods exist before using them

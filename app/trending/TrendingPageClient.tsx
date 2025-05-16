@@ -13,6 +13,7 @@ interface TrendingPage {
   id: string;
   title: string;
   views: number;
+  views24h?: number;
   hourlyViews: number[];
   userId?: string;
   username?: string;
@@ -191,7 +192,7 @@ export default function TrendingPageClient() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-medium">
-                      {page.views.toLocaleString()}
+                      {(page.views24h !== undefined ? page.views24h : page.views).toLocaleString()}
                     </td>
                     <td className="py-3 px-4">
                       <div className="w-24 h-8 ml-auto">
@@ -243,7 +244,7 @@ export default function TrendingPageClient() {
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <div className="font-medium text-lg">
-                        {page.views.toLocaleString()}
+                        {(page.views24h !== undefined ? page.views24h : page.views).toLocaleString()}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         views in 24h

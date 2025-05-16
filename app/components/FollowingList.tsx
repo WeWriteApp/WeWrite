@@ -182,11 +182,11 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
           <Users className="h-5 w-5 text-primary" />
         </div>
-        <h3 className="text-lg font-medium mb-2">No followed users yet</h3>
+        <h3 className="text-lg font-medium mb-2">No followed users or pages yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
           {isCurrentUser
-            ? "When you follow users, they'll appear here so you can easily find them later."
-            : "This user isn't following anyone yet."}
+            ? "When you follow users or pages, they'll appear here so you can easily find them later."
+            : "This user isn't following anyone or any pages yet."}
         </p>
       </div>
     );

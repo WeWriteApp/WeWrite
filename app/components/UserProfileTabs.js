@@ -3,7 +3,7 @@ import React, { useState, useContext, useRef } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "./ui/button";
 import SupporterBadge from "./SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,8 @@ import UsernameHistory from "./UsernameHistory";
 import FollowingList from "./FollowingList";
 import TypeaheadSearch from "./TypeaheadSearch";
 import UserBioTab from "./UserBioTab";
+import { useFeatureFlag } from "../utils/feature-flags";
+import FollowingTabContent from "./FollowingTabContent";
 
 
 
@@ -51,7 +53,7 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
 }
 
 export default function UserProfileTabs({ profile }) {
-  const [activeTab, setActiveTab] = useState("activity");
+  const [activeTab, setActiveTab] = useState("bio"); // Changed default tab to "bio"
   const [direction, setDirection] = useState(0); // -1 for right, 1 for left
   const { user } = useContext(AuthContext);
   const isCurrentUser = user && profile && user.uid === profile.uid;
@@ -61,6 +63,9 @@ export default function UserProfileTabs({ profile }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragX, setDragX] = useState(0);
   const tabsRef = useRef(null);
+
+  // Check if groups feature is enabled
+  const groupsEnabled = useFeatureFlag('groups', user?.email);
 
   // Use the usePages hook to get the user's pages
   const {
@@ -75,8 +80,18 @@ export default function UserProfileTabs({ profile }) {
     fetchMorePrivatePages
   } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
 
-  // Determine which tabs to show
-  const visibleTabs = ["activity", "bio", "pages", "following"];
+  // Determine which tabs to show in the requested order
+  const visibleTabs = ["bio", "pages", "activity"];
+
+  // Add groups tab only if the feature is enabled
+  if (groupsEnabled) {
+    visibleTabs.push("groups");
+  }
+
+  // Add following tab
+  visibleTabs.push("following");
+
+  // Add private tab only for the current user
   if (isCurrentUser) {
     visibleTabs.push("private");
   }
@@ -295,7 +310,7 @@ export default function UserProfileTabs({ profile }) {
   return (
     <div className="mt-6">
       <Tabs
-        defaultValue="activity"
+        defaultValue="bio"
         value={activeTab}
         onValueChange={handleTabChange}
         className="w-full"
@@ -303,15 +318,7 @@ export default function UserProfileTabs({ profile }) {
         <div id="profile-tabs-header" className="relative border-b border-border/40 mb-4 bg-background z-10">
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">
-              <TabsTrigger
-                value="activity"
-                data-value="activity"
-                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-              >
-                <Clock className="h-4 w-4" />
-                <span>Activity</span>
-              </TabsTrigger>
-
+              {/* Bio tab (first/default) */}
               <TabsTrigger
                 value="bio"
                 data-value="bio"
@@ -321,6 +328,7 @@ export default function UserProfileTabs({ profile }) {
                 <span>Bio</span>
               </TabsTrigger>
 
+              {/* Pages tab */}
               <TabsTrigger
                 value="pages"
                 data-value="pages"
@@ -330,15 +338,39 @@ export default function UserProfileTabs({ profile }) {
                 <span>Pages</span>
               </TabsTrigger>
 
+              {/* Activity tab */}
+              <TabsTrigger
+                value="activity"
+                data-value="activity"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <Clock className="h-4 w-4" />
+                <span>Activity</span>
+              </TabsTrigger>
+
+              {/* Groups tab - only if feature is enabled */}
+              {groupsEnabled && (
+                <TabsTrigger
+                  value="groups"
+                  data-value="groups"
+                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Groups</span>
+                </TabsTrigger>
+              )}
+
+              {/* Following tab */}
               <TabsTrigger
                 value="following"
                 data-value="following"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
-                <Users className="h-4 w-4" />
+                <Heart className="h-4 w-4" />
                 <span>Following</span>
               </TabsTrigger>
 
+              {/* Private tab - only for current user */}
               {isCurrentUser && (
                 <TabsTrigger
                   value="private"
@@ -439,8 +471,38 @@ export default function UserProfileTabs({ profile }) {
                 : "hidden"
             }`}
           >
-            <FollowingList userId={profile?.uid} isCurrentUser={isCurrentUser} />
+            <FollowingTabContent userId={profile?.uid} isCurrentUser={isCurrentUser} />
           </TabsContent>
+
+          {/* Groups tab content - only shown if feature is enabled */}
+          {groupsEnabled && (
+            <TabsContent
+              value="groups"
+              className={`mt-0 transition-all duration-300 ${
+                activeTab === "groups"
+                  ? "block"
+                  : "hidden"
+              }`}
+            >
+              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">User Groups</h3>
+                <p className="text-sm text-muted-foreground max-w-md mb-4">
+                  Groups that {isCurrentUser ? "you belong" : `${profile?.username || 'this user'} belongs`} to will appear here.
+                </p>
+                {isCurrentUser && (
+                  <Link href="/groups">
+                    <Button variant="outline" className="gap-2">
+                      <Users className="h-4 w-4" />
+                      View My Groups
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </TabsContent>
+          )}
 
           {isCurrentUser && (
             <TabsContent

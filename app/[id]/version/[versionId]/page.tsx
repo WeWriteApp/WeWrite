@@ -14,7 +14,7 @@ import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import TextView from '../../../components/TextView';
-import { toast } from 'sonner';
+import { toast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';
 

@@ -6,7 +6,7 @@ import { Input } from "./ui/input";
 import { rtdb } from "../firebase/rtdb";
 import { ref, get, set, update } from "firebase/database";
 import { AuthContext } from "../providers/AuthProvider";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import { Badge } from "./ui/badge";
 import { PillLink } from "./PillLink";
 import {

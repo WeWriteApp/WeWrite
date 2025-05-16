@@ -394,9 +394,12 @@ export default function PageHeader({
                 }`}
                 onClick={() => {
                   // Create Twitter share text in the format: "[title]" by [username] on @WeWriteApp [URL]
+                  // Or "[title]" in [groupName] on @WeWriteApp [URL] for group pages
                   const pageTitle = title || 'WeWrite Page';
                   const pageUrl = window.location.href;
-                  const twitterText = `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
+                  const twitterText = groupId && groupName
+                    ? `"${pageTitle}" in ${groupName} on @WeWriteApp ${pageUrl}`
+                    : `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
 
                   // Check if the Web Share API is available
                   if (navigator.share) {

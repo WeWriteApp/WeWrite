@@ -315,9 +315,14 @@ export const getTrendingPages = async (limitCount = 5) => {
       }
     });
 
-    // Convert to array and sort by views
+    // Convert to array and sort by 24h views
     let trendingPages = Array.from(pageViewsMap.values())
-      .sort((a, b) => b.views - a.views)
+      .sort((a, b) => {
+        // Use views24h for sorting if available, otherwise fall back to views
+        const aViews = a.views24h !== undefined ? a.views24h : a.views;
+        const bViews = b.views24h !== undefined ? b.views24h : b.views;
+        return bViews - aViews;
+      })
       .slice(0, limitCount);
 
     // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
@@ -325,12 +330,13 @@ export const getTrendingPages = async (limitCount = 5) => {
       try {
         console.log(`Not enough trending pages (${trendingPages.length}), fetching additional pages`);
 
-        // Query for pages with the most total views (only public pages)
+        // Query for pages with the most 24-hour views (only public pages)
+        // First try to query using views24h field
         const pagesQuery = query(
           collection(db, "pages"),
           where("isPublic", "==", true), // Only get public pages
-          where("views", ">", 0), // Only get pages with views > 0
-          orderBy("views", "desc"),
+          where("views24h", ">", 0), // Only get pages with 24h views > 0
+          orderBy("views24h", "desc"),
           limit(limitCount - trendingPages.length)
         );
 
@@ -344,20 +350,27 @@ export const getTrendingPages = async (limitCount = 5) => {
         pagesSnapshot.forEach(doc => {
           const pageData = doc.data();
           const pageId = doc.id;
+          const pageViews24h = pageData.views24h || 0;
           const pageViews = pageData.views || 0;
 
-          if (!existingPageIds.has(pageId) && pageViews > 0) {
-            console.log(`Adding page ${pageId} with ${pageViews} total views`);
+          if (!existingPageIds.has(pageId) && (pageViews24h > 0 || pageViews > 0)) {
+            console.log(`Adding page ${pageId} with ${pageViews24h} views in 24h (total: ${pageViews})`);
             trendingPages.push({
               id: pageId,
-              views: pageViews
+              views: pageViews,
+              views24h: pageViews24h
             });
           }
         });
 
-        // Re-sort the combined list
+        // Re-sort the combined list by 24h views
         trendingPages = trendingPages
-          .sort((a, b) => b.views - a.views)
+          .sort((a, b) => {
+            // Use views24h for sorting if available, otherwise fall back to views
+            const aViews = a.views24h !== undefined ? a.views24h : a.views;
+            const bViews = b.views24h !== undefined ? b.views24h : b.views;
+            return bViews - aViews;
+          })
           .slice(0, limitCount);
       } catch (err) {
         console.error('Error fetching additional trending pages:', err);

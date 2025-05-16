@@ -148,6 +148,9 @@ export const createPage = async (data) => {
       username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
+      // Add group ID if provided
+      groupId: data.groupId || null,
+      groupName: data.groupName || null,
       // Add location data if provided
       location: data.location || null,
       // Add fundraising fields
@@ -173,7 +176,8 @@ export const createPage = async (data) => {
         content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
         createdAt: new Date().toISOString(),
         userId: data.userId,
-        username: username || "Anonymous" // Also store username in version data for consistency
+        username: username || "Anonymous", // Also store username in version data for consistency
+        groupId: data.groupId || null // Store group ID if the page belongs to a group
       };
 
       try {
@@ -754,11 +758,26 @@ export const saveNewVersion = async (pageId, data) => {
       }
     }
 
+    // Get the page data to check for group ownership
+    let groupId = data.groupId;
+    if (!groupId) {
+      try {
+        const pageDoc = await getDoc(pageRef);
+        if (pageDoc.exists()) {
+          const pageData = pageDoc.data();
+          groupId = pageData.groupId || null;
+        }
+      } catch (error) {
+        console.error("Error fetching page data for group ID:", error);
+      }
+    }
+
     const versionData = {
       content: contentString,
       createdAt: new Date().toISOString(),
       userId: data.userId,
-      username: username || "Anonymous"
+      username: username || "Anonymous",
+      groupId: groupId || null
     };
 
     // First update the page document directly to ensure content is immediately available

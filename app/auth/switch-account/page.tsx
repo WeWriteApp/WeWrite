@@ -15,31 +15,35 @@ export default function SwitchAccountPage() {
     const completeAccountSwitch = async () => {
       try {
         // Collect debug information
-        const debug = {
-          isSwitching: sessionStorage.getItem('wewrite_switching'),
-          switchToAccount: sessionStorage.getItem('wewrite_switch_to'),
-          accounts: sessionStorage.getItem('wewrite_accounts'),
-          cookies: {
-            userId: Cookies.get('wewrite_user_id'),
-            authenticated: Cookies.get('wewrite_authenticated'),
-            session: Cookies.get('session'),
-            userSession: Cookies.get('userSession')
-          },
-          currentUser: auth.currentUser ? {
-            uid: auth.currentUser.uid,
-            email: auth.currentUser.email
-          } : null,
-          localStorage: {
-            switchToAccount: localStorage.getItem('switchToAccount'),
-            accountSwitchInProgress: localStorage.getItem('accountSwitchInProgress'),
-            savedAccounts: localStorage.getItem('savedAccounts')
-          }
-        };
+        let debug = {};
+
+        if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined' && typeof localStorage !== 'undefined') {
+          debug = {
+            isSwitching: sessionStorage.getItem('wewrite_switching'),
+            switchToAccount: sessionStorage.getItem('wewrite_switch_to'),
+            accounts: sessionStorage.getItem('wewrite_accounts'),
+            cookies: {
+              userId: Cookies.get('wewrite_user_id'),
+              authenticated: Cookies.get('wewrite_authenticated'),
+              session: Cookies.get('session'),
+              userSession: Cookies.get('userSession')
+            },
+            currentUser: auth.currentUser ? {
+              uid: auth.currentUser.uid,
+              email: auth.currentUser.email
+            } : null,
+            localStorage: {
+              switchToAccount: localStorage.getItem('switchToAccount'),
+              accountSwitchInProgress: localStorage.getItem('accountSwitchInProgress'),
+              savedAccounts: localStorage.getItem('savedAccounts')
+            }
+          };
+        }
 
         setDebugInfo(debug);
 
         // Check if we're in the middle of an account switch
-        if (sessionStorage.getItem('wewrite_switching') !== 'true') {
+        if (typeof sessionStorage === 'undefined' || sessionStorage.getItem('wewrite_switching') !== 'true') {
           setError('No account switch in progress');
           setTimeout(() => router.push('/'), 1000);
           return;
@@ -48,15 +52,23 @@ export default function SwitchAccountPage() {
         setStatus('Getting account data...');
 
         // Get the account to switch to
-        const switchToJson = sessionStorage.getItem('wewrite_switch_to');
+        const switchToJson = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('wewrite_switch_to') : null;
         if (!switchToJson) {
           setError('No account to switch to found');
           setTimeout(() => router.push('/'), 1000);
           return;
         }
 
-        const switchToAccount = JSON.parse(switchToJson);
-        console.log('Switching to account:', switchToAccount.email);
+        let switchToAccount;
+        try {
+          switchToAccount = JSON.parse(switchToJson);
+          console.log('Switching to account:', switchToAccount.email);
+        } catch (parseError) {
+          console.error('Error parsing account data:', parseError);
+          setError('Invalid account data');
+          setTimeout(() => router.push('/'), 1000);
+          return;
+        }
 
         // Make sure we're completely signed out of Firebase
         if (auth.currentUser) {
@@ -71,26 +83,39 @@ export default function SwitchAccountPage() {
         }
 
         // Set cookies for session-based auth
-        Cookies.set('wewrite_user_id', switchToAccount.uid, { expires: 7 });
-        Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
-        Cookies.set('userSession', JSON.stringify({
-          uid: switchToAccount.uid,
-          email: switchToAccount.email,
-          username: switchToAccount.username
-        }), { expires: 7 });
+        try {
+          Cookies.set('wewrite_user_id', switchToAccount.uid, { expires: 7 });
+          Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+          Cookies.set('userSession', JSON.stringify({
+            uid: switchToAccount.uid,
+            email: switchToAccount.email,
+            username: switchToAccount.username
+          }), { expires: 7 });
+        } catch (cookieError) {
+          console.error('Error setting cookies:', cookieError);
+          // Continue anyway, as we might still be able to redirect
+        }
 
         // Clear the account switch flags
-        sessionStorage.removeItem('wewrite_switching');
-        sessionStorage.removeItem('wewrite_switch_to');
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.removeItem('wewrite_switching');
+          sessionStorage.removeItem('wewrite_switch_to');
+        }
 
         // Also clear any old localStorage items
-        localStorage.removeItem('switchToAccount');
-        localStorage.removeItem('accountSwitchInProgress');
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('switchToAccount');
+          localStorage.removeItem('accountSwitchInProgress');
+        }
 
         setStatus('Redirecting to home page...');
 
         // Redirect to home page
-        window.location.href = '/';
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        } else {
+          router.push('/');
+        }
       } catch (error) {
         console.error('Error switching account:', error);
         setError(`Error switching account: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -116,7 +141,10 @@ export default function SwitchAccountPage() {
         )}
 
         {/* Debug information - only shown when URL has ?debug=true */}
-        {typeof window !== 'undefined' && window.location.search.includes('debug=true') && (
+        {typeof window !== 'undefined' &&
+         typeof window.location !== 'undefined' &&
+         typeof window.location.search === 'string' &&
+         window.location.search.includes('debug=true') && (
           <div className="mt-8 text-left bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
             <h2 className="text-lg font-semibold mb-2">Debug Information</h2>
             <pre className="text-xs whitespace-pre-wrap">

@@ -7,7 +7,7 @@ import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { ClearableInput } from '../components/ui/clearable-input';
 import { Share2, Search } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../components/ui/use-toast';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';

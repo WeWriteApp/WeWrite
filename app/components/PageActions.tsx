@@ -6,7 +6,7 @@ import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from
 import dynamic from 'next/dynamic';
 import { Switch } from "./ui/switch";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "./ui/use-toast";
 import { deletePage } from "../firebase/database";
 import { getUserProfile } from "../firebase/auth";
 import { auth } from "../firebase/auth";
@@ -36,6 +36,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
+import FollowButton from './FollowButton';
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
@@ -84,6 +85,7 @@ interface PageActionsProps {
   isEditing?: boolean;
   setIsEditing?: (value: boolean) => void;
   className?: string;
+  showFollowButton?: boolean;
 }
 
 export function PageActions({
@@ -92,10 +94,12 @@ export function PageActions({
   isOwner = false,
   isEditing = false,
   setIsEditing,
-  className = ""
+  className = "",
+  showFollowButton = false
 }: PageActionsProps) {
   const router = useRouter();
   const { lineMode, setLineMode } = useLineSettings();
+  const { user } = useContext(AuthContext);
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
   const [currentLineMode, setCurrentLineMode] = useState(lineMode);
 
@@ -257,6 +261,17 @@ export function PageActions({
           )}
 
           {/* Share button removed - now only in page header */}
+
+          {/* Follow button - available to non-owners when logged in */}
+          {showFollowButton && user && !isOwner && !isEditing && (
+            <FollowButton
+              pageId={page.id}
+              pageTitle={page.title}
+              pageOwnerId={page.userId}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium h-12 md:h-12"
+              size="lg"
+            />
+          )}
 
           {/* Add to Page button - available to all users */}
           <AddToPageButton page={page} />
