@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import usePages from "../hooks/usePages";
+import useOptimizedPages from "../hooks/useOptimizedPages";
 import { auth } from "../firebase/config";
 import { useAuth } from "./AuthProvider";
 import Cookies from 'js-cookie';
@@ -18,15 +18,16 @@ export const DataProvider = ({ children }) => {
   const [loadingStartTime, setLoadingStartTime] = useState(null);
   const [recoveryAttempted, setRecoveryAttempted] = useState(false);
 
-  // Use the usePages hook, passing in the userId if the user is authenticated
+  // Use the optimized pages hook, passing in the userId if the user is authenticated
   const {
     pages,
     loading: pagesLoading,
     loadMorePages,
     isMoreLoading,
     hasMorePages,
-    error
-  } = usePages(user ? user.uid : null, true, user?.uid, false); // Use `user.uid` to fetch pages for the logged-in user, with default limit for home page
+    error,
+    refreshPages
+  } = useOptimizedPages(user ? user.uid : null, true, user?.uid, false); // Use `user.uid` to fetch pages for the logged-in user, with default limit for home page
 
   // Derive loading state with timeout protection
   const [loading, setLoading] = useState(pagesLoading);
@@ -152,12 +153,48 @@ export const DataProvider = ({ children }) => {
     }
   }, [user, isAuthenticated, pages, loading]);
 
-  // Log any errors from usePages
+  // Handle errors from usePages
+  const [errorVisible, setErrorVisible] = useState(false);
+
   useEffect(() => {
     if (error) {
       console.error("DataProvider received error from usePages:", error);
+
+      // Show error message to user
+      setErrorVisible(true);
+
+      // Auto-hide error after 10 seconds
+      const hideErrorTimer = setTimeout(() => {
+        setErrorVisible(false);
+      }, 10000);
+
+      return () => clearTimeout(hideErrorTimer);
+    } else {
+      setErrorVisible(false);
     }
   }, [error]);
+
+  // Listen for the loading-force-completed event
+  useEffect(() => {
+    const handleForceComplete = (event) => {
+      console.log("DataProvider: Received force-complete event", event.detail);
+
+      // Force loading to false
+      setForceLoaded(true);
+      setLoading(false);
+
+      // If we have pages data, don't show error UI
+      if (pages && pages.length > 0) {
+        setErrorVisible(false);
+      }
+    };
+
+    window.addEventListener('loading-force-completed', handleForceComplete);
+
+    return () => {
+      window.removeEventListener('loading-force-completed', handleForceComplete);
+    };
+  }, [pages]);
 
   // Optionally: Handle filtered pages if needed
   const filtered = [];
@@ -188,6 +225,7 @@ export const DataProvider = ({ children }) => {
     setRecoveryAttempted(false);
     setLoadingStartTime(Date.now()); // Start a new loading timer
     setLoading(true); // Force loading state to true
+    setErrorVisible(false); // Hide any error messages
 
     // Clear any existing timeouts
     if (loadingTimeoutRef.current) {
@@ -199,9 +237,14 @@ export const DataProvider = ({ children }) => {
       shortTimeoutRef.current = null;
     }
 
-    // Trigger a refresh event to retry data fetching
-    const refreshEvent = new CustomEvent('force-refresh-pages');
-    window.dispatchEvent(refreshEvent);
+    // Use the refreshPages function directly instead of dispatching an event
+    if (refreshPages) {
+      refreshPages();
+    } else {
+      // Fallback to the event if refreshPages is not available
+      const refreshEvent = new CustomEvent('force-refresh-pages');
+      window.dispatchEvent(refreshEvent);
+    }
 
     // Set up new timeouts
     shortTimeoutRef.current = setTimeout(() => {
@@ -212,7 +255,7 @@ export const DataProvider = ({ children }) => {
         setLoading(false);
       }
     }, 5000);
-  }, [pagesLoading]);
+  }, [pagesLoading, refreshPages]);
 
   return (
     <DataContext.Provider
@@ -226,11 +269,43 @@ export const DataProvider = ({ children }) => {
         isAuthenticated, // Add the authentication state to the context
         forceLoaded, // Expose the force loaded state
         error, // Expose any errors from usePages
+        errorVisible, // Expose whether the error is visible
         resetLoading, // Expose the enhanced reset loading function
-        recoveryAttempted // Expose whether recovery has been attempted
+        recoveryAttempted, // Expose whether recovery has been attempted
+        dismissError: () => setErrorVisible(false) // Function to dismiss the error
       }}
     >
       {children}
+
+      {/* Error Toast - Only shown when errorVisible is true */}
+      {errorVisible && error && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg shadow-lg border border-red-200 dark:border-red-800 max-w-md w-full">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium">{error}</p>
+              <div className="mt-2 flex space-x-2">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="text-xs px-2 py-1 rounded bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+                >
+                  Refresh
+                </button>
+                <button
+                  onClick={() => setErrorVisible(false)}
+                  className="text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-800 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DataContext.Provider>
   );
 };

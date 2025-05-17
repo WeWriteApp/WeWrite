@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PageLoader } from './page-loader';
 import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import { Button } from './button';
@@ -17,6 +17,7 @@ interface SmartLoaderProps {
   fallbackContent?: React.ReactNode;
   children?: React.ReactNode;
   autoRecover?: boolean;
+  initialLoadTimeoutMs?: number; // Shorter timeout for initial page loads
 }
 
 /**
@@ -48,15 +49,43 @@ export function SmartLoader({
   onRetry,
   fallbackContent,
   children,
-  autoRecover = true
+  autoRecover = true,
+  initialLoadTimeoutMs = 5000 // Default to 5 seconds for initial load
 }: SmartLoaderProps) {
   const [loadStartTime] = useState(Date.now());
   const [loadingTime, setLoadingTime] = useState(0);
+  const isInitialLoadRef = useRef(true);
+  const isInitialRenderRef = useRef(true);
+
+  // Determine if this is the initial page load
+  useEffect(() => {
+    if (isInitialRenderRef.current) {
+      isInitialRenderRef.current = false;
+
+      // Check if this is the first load after page navigation
+      if (typeof window !== 'undefined') {
+        const lastPageLoad = parseInt(sessionStorage.getItem('lastPageLoad') || '0');
+        const now = Date.now();
+
+        // If this is the first load or it's been more than 30 seconds since last load
+        if (!lastPageLoad || (now - lastPageLoad > 30000)) {
+          isInitialLoadRef.current = true;
+          sessionStorage.setItem('lastPageLoad', now.toString());
+          console.log('SmartLoader: Detected initial page load');
+        } else {
+          isInitialLoadRef.current = false;
+        }
+      }
+    }
+  }, []);
 
   // Use the loading timeout hook to detect stalled loading
+  // Use a shorter timeout for initial page loads to prevent long waits
+  const effectiveTimeoutMs = isInitialLoadRef.current ? initialLoadTimeoutMs : timeoutMs;
+
   const { isStalled, resetTimeout, progress, forceComplete } = useLoadingTimeout(
     isLoading,
-    timeoutMs,
+    effectiveTimeoutMs,
     null, // No onTimeout callback
     autoRecover // Pass autoRecover to the hook
   );
@@ -92,6 +121,27 @@ export function SmartLoader({
       onRetry();
     }
   };
+
+  // Add a safety mechanism to force-complete loading after a maximum time
+  // This prevents users from getting stuck in loading states
+  useEffect(() => {
+    if (!isLoading) return;
+
+    // Set a hard maximum loading time (30 seconds)
+    const hardMaxTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn('SmartLoader: Hard maximum loading time reached, forcing completion');
+        forceComplete();
+
+        // If there's an onRetry function, call it to attempt to load content
+        if (onRetry && typeof onRetry === 'function') {
+          onRetry();
+        }
+      }
+    }, 30000); // 30 seconds absolute maximum
+
+    return () => clearTimeout(hardMaxTimeout);
+  }, [isLoading, forceComplete, onRetry]);
 
   // If not loading, render children
   if (!isLoading) {

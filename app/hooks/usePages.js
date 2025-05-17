@@ -62,8 +62,26 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
     // Set up a timeout to detect stalled queries
     const queryTimeoutId = setTimeout(() => {
       console.warn("usePages: Query execution taking too long, may be stalled");
-      // We don't set loading to false here, as that would be handled by the DataProvider timeout
-    }, 8000); // 8 seconds timeout for query execution
+      // Force loading to false after timeout to prevent infinite loading state
+      setLoading(false);
+
+      // Instead of just setting an error, provide empty data as a fallback
+      if (pages.length === 0) {
+        console.log("usePages: Providing empty data as fallback");
+        setPages([]);
+        setPrivatePages([]);
+      }
+
+      setError("Query execution is taking longer than expected. Please try refreshing the page.");
+
+      // Dispatch an event that other components can listen for
+      if (typeof window !== 'undefined') {
+        const forceCompleteEvent = new CustomEvent('loading-force-completed', {
+          detail: { source: 'usePages', reason: 'query-timeout' }
+        });
+        window.dispatchEvent(forceCompleteEvent);
+      }
+    }, 3000); // Reduced to 3 seconds for faster recovery
 
     try {
       const unsubscribe = onSnapshot(pagesQuery, (snapshot) => {
@@ -297,6 +315,49 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
   useEffect(() => {
     let unsubscribe = () => {};
     let fetchTimeoutId = null;
+    let hardTimeoutId = null;
+
+    // Set a hard timeout to prevent infinite loading state
+    hardTimeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn("usePages: Hard timeout reached, forcing completion");
+        setLoading(false);
+
+        // Provide empty data as a fallback
+        if (pages.length === 0) {
+          console.log("usePages: Hard timeout - providing empty data as fallback");
+          setPages([]);
+          setPrivatePages([]);
+          setHasMorePages(false);
+          setHasMorePrivatePages(false);
+        }
+
+        // Set a more user-friendly error message
+        setError("We couldn't load your content. You can continue browsing with limited functionality.");
+
+        // Dispatch an event that other components can listen for with detailed information
+        if (typeof window !== 'undefined') {
+          const forceCompleteEvent = new CustomEvent('loading-force-completed', {
+            detail: {
+              source: 'usePages',
+              reason: 'hard-timeout',
+              userId: userId
+            }
+          });
+          window.dispatchEvent(forceCompleteEvent);
+
+          // Also dispatch a custom event for analytics
+          const analyticsEvent = new CustomEvent('analytics-event', {
+            detail: {
+              eventName: 'page_load_timeout',
+              userId: userId,
+              timestamp: Date.now()
+            }
+          });
+          window.dispatchEvent(analyticsEvent);
+        }
+      }
+    }, 8000); // Reduced from 15 to 8 seconds for faster recovery
 
     const attemptFetch = () => {
       // Increment fetch attempts
@@ -328,6 +389,12 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         } else {
           console.error("usePages: Max fetch attempts reached, giving up");
           setLoading(false);
+
+          // Dispatch an event that other components can listen for
+          if (typeof window !== 'undefined') {
+            const forceCompleteEvent = new CustomEvent('loading-force-completed');
+            window.dispatchEvent(forceCompleteEvent);
+          }
         }
       }
     };
@@ -373,10 +440,15 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         }
         window.removeEventListener('force-refresh-pages', handleForceRefresh);
 
-        // Clear any pending fetch timeout
+        // Clear any pending timeouts
         if (fetchTimeoutId) {
           clearTimeout(fetchTimeoutId);
           fetchTimeoutId = null;
+        }
+
+        if (hardTimeoutId) {
+          clearTimeout(hardTimeoutId);
+          hardTimeoutId = null;
         }
       } catch (err) {
         console.error("usePages: Error during cleanup:", err);

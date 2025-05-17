@@ -10,6 +10,8 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { AuthContext } from "../providers/AuthProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import EmptyContentState from "./EmptyContentState";
+import { GroupAboutSkeleton } from "./ui/page-skeleton";
 
 // Import the unified editor dynamically to avoid SSR issues
 const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
@@ -208,8 +210,8 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
 
   if (isLoading && !aboutContent) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
+      <div className="py-8">
+        <GroupAboutSkeleton />
       </div>
     );
   }
@@ -235,7 +237,8 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
       {/* Header with edit button */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">About this group</h2>
-        {canEdit && !isEditing && (
+        {/* Only show Edit button when there is content and not in edit mode */}
+        {canEdit && !isEditing && aboutContent && (
           <Button
             variant="outline"
             size="sm"
@@ -362,11 +365,14 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
                 )}
               </div>
             ) : (
-              <div className="text-muted-foreground italic">
-                {canEdit
-                  ? "This group doesn't have a description yet. Click Edit to add one."
-                  : "This group doesn't have a description yet."}
-              </div>
+              <EmptyContentState
+                onActivate={() => setIsEditing(true)}
+                isOwner={canEdit}
+                ownerMessage="This group doesn't have a description yet."
+                visitorMessage="This group doesn't have a description yet."
+                message="to add a description"
+                placeholder="Describe the purpose of this group, its goals, or guidelines for members."
+              />
             )}
           </div>
         )}

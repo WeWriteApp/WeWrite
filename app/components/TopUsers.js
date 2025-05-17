@@ -22,26 +22,26 @@ const UserListSkeleton = () => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Username</TableHead>
-          <TableHead className="text-right">
+          <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
+          <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right">
             <div className="flex items-center justify-end gap-1">
               Pages
               <ChevronDown className="h-4 w-4 text-muted-foreground/50" />
             </div>
           </TableHead>
-          <TableHead>Activity (24h)</TableHead>
+          <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right">Activity (24h)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {[...Array(8)].map((_, i) => (
           <TableRow key={i}>
-            <TableCell>
+            <TableCell className="py-3 px-4">
               <div className="inline-flex px-3 py-1.5 items-center gap-1 whitespace-nowrap rounded-[12px] bg-muted animate-pulse border-[1.5px] border-muted/50 w-32 h-8"></div>
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell className="py-3 px-4 text-right">
               <div className="h-4 w-8 bg-muted animate-pulse rounded ml-auto"></div>
             </TableCell>
-            <TableCell>
+            <TableCell className="py-3 px-4 text-right">
               <div className="w-24 h-8 bg-muted animate-pulse rounded ml-auto"></div>
             </TableCell>
           </TableRow>
@@ -291,7 +291,7 @@ const TopUsers = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
-                      <TableHead className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap cursor-pointer" onClick={toggleSortDirection}>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right cursor-pointer" onClick={toggleSortDirection}>
                         <div className="flex items-center justify-end gap-1">
                           Pages
                           {sortDirection === "desc" ? (
@@ -301,7 +301,7 @@ const TopUsers = () => {
                           )}
                         </div>
                       </TableHead>
-                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Activity (24h)</TableHead>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right">Activity (24h)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -339,7 +339,7 @@ const TopUsers = () => {
                           </TooltipProvider>
                         </TableCell>
                         <TableCell className="py-3 px-4 text-right font-medium">{user.pageCount}</TableCell>
-                        <TableCell className="py-3 px-4">
+                        <TableCell className="py-3 px-4 text-right">
                           <div className="w-24 h-8 ml-auto">
                             <SimpleSparkline
                               data={userActivityData[user.id]?.hourly || Array(24).fill(0)}

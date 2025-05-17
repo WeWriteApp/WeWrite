@@ -1,12 +1,13 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { FileText, Users, Info, Plus, Loader } from "lucide-react";
+import { FileText, Users, Info, Plus, Loader, Clock } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import GroupAboutTab from "./GroupAboutTab";
 import GroupPagesTab from "./GroupPagesTab";
 import GroupMembersTab from "./GroupMembersTab";
+import GroupActivityTab from "./GroupActivityTab";
 
 export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) {
   const [activeTab, setActiveTab] = useState("about");
@@ -23,7 +24,7 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
   // Function to handle tab change
   const handleTabChange = (value) => {
     // Determine the direction of the tab change for animation
-    const tabValues = ["about", "pages", "members"];
+    const tabValues = ["about", "pages", "members", "activity"];
     const currentIndex = tabValues.indexOf(activeTab);
     const newIndex = tabValues.indexOf(value);
 
@@ -83,7 +84,7 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
     const isLeftSwipe = distance < -50;
     const isRightSwipe = distance > 50;
 
-    const tabValues = ["about", "pages", "members"];
+    const tabValues = ["about", "pages", "members", "activity"];
     const currentIndex = tabValues.indexOf(activeTab);
 
     if (isLeftSwipe && currentIndex < tabValues.length - 1) {
@@ -184,6 +185,14 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
                 <Users className="h-4 w-4" />
                 <span>Members</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="activity"
+                data-value="activity"
+                className="flex items-center gap-1.5 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
+              >
+                <Clock className="h-4 w-4" />
+                <span>Activity</span>
+              </TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -226,6 +235,17 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
             }`}
           >
             <GroupMembersTab group={group} isOwner={isOwner} />
+          </TabsContent>
+
+          <TabsContent
+            value="activity"
+            className={`mt-0 transition-all duration-300 ${
+              activeTab === "activity"
+                ? "block"
+                : "hidden"
+            }`}
+          >
+            <GroupActivityTab group={group} />
           </TabsContent>
         </div>
       </Tabs>

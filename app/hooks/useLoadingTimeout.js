@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * 2. Providing a fallback state when loading takes too long
  * 3. Offering error recovery options
  * 4. Automatically recovering from stalled states
+ * 5. Detecting and handling initial page loads more aggressively
  *
  * @param {boolean} isLoading - The current loading state
  * @param {number} timeoutMs - Timeout in milliseconds before considering loading as stalled
@@ -23,11 +24,51 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
   const [elapsedTime, setElapsedTime] = useState(0);
   const intervalRef = useRef(null);
   const maxTimeRef = useRef(timeoutMs * 3); // Maximum time before auto-recovery
+  const isInitialPageLoadRef = useRef(true);
+  const checkIntervalRef = useRef(null);
 
   // Track recovery attempts
   const recoveryAttemptsRef = useRef(0);
-  const maxRecoveryAttempts = 2;
+  const maxRecoveryAttempts = 3; // Increased from 2 to 3
   const lastRecoveryTimeRef = useRef(0);
+
+  // Check if this is the initial page load
+  useEffect(() => {
+    if (isInitialPageLoadRef.current && typeof window !== 'undefined') {
+      // Check if we've recorded a page load in this session
+      const hasLoadedBefore = sessionStorage.getItem('pageLoadedBefore');
+
+      if (!hasLoadedBefore) {
+        // This is the first load in this session
+        console.log('useLoadingTimeout: Detected initial page load in this session');
+        sessionStorage.setItem('pageLoadedBefore', 'true');
+        isInitialPageLoadRef.current = true;
+
+        // For initial page loads, we'll use more aggressive timeouts
+        // and check more frequently
+        if (checkIntervalRef.current) {
+          clearInterval(checkIntervalRef.current);
+        }
+
+        checkIntervalRef.current = setInterval(() => {
+          // Check if we're still loading after 5 seconds
+          if (isLoading && Date.now() - startTime > 5000) {
+            console.warn('useLoadingTimeout: Initial page load taking too long, attempting recovery');
+            forceComplete();
+          }
+        }, 1000);
+
+        return () => {
+          if (checkIntervalRef.current) {
+            clearInterval(checkIntervalRef.current);
+            checkIntervalRef.current = null;
+          }
+        };
+      } else {
+        isInitialPageLoadRef.current = false;
+      }
+    }
+  }, [isLoading, startTime]);
 
   // Reset the timeout state when loading state changes
   useEffect(() => {
@@ -63,10 +104,16 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
         }
 
         // Auto-recovery: If loading has been going on for too long, try recovery steps
-        if (autoRecover && elapsed >= timeoutMs * 1.5) {
-          // Only attempt recovery if we haven't tried too recently (at least 5 seconds between attempts)
+        // Use more aggressive timeouts for initial page loads
+        const recoveryThreshold = isInitialPageLoadRef.current ? timeoutMs * 0.8 : timeoutMs * 1.5;
+
+        if (autoRecover && elapsed >= recoveryThreshold) {
+          // Only attempt recovery if we haven't tried too recently
+          // Use shorter intervals for initial page loads
+          const minTimeBetweenRecoveries = isInitialPageLoadRef.current ? 2000 : 5000;
           const timeSinceLastRecovery = currentTime - lastRecoveryTimeRef.current;
-          if (timeSinceLastRecovery >= 5000) {
+
+          if (timeSinceLastRecovery >= minTimeBetweenRecoveries) {
             lastRecoveryTimeRef.current = currentTime;
             recoveryAttemptsRef.current += 1;
 
@@ -76,8 +123,26 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
             if (recoveryAttemptsRef.current === 1) {
               forceComplete();
             }
-            // Second attempt: Try to reload the page
-            else if (recoveryAttemptsRef.current === 2 && typeof window !== 'undefined') {
+            // Second attempt: Try to clear any cached data that might be causing issues
+            else if (recoveryAttemptsRef.current === 2) {
+              console.warn('useLoadingTimeout: Second recovery attempt, clearing session data');
+
+              // Clear any session-specific data that might be causing the issue
+              if (typeof window !== 'undefined') {
+                // Clear specific session storage items that might be related to loading state
+                sessionStorage.removeItem('lastPageLoad');
+                sessionStorage.removeItem('renderedComponents');
+
+                // Dispatch a custom event that components can listen for to reset their state
+                const resetEvent = new CustomEvent('force-reset-loading-state');
+                window.dispatchEvent(resetEvent);
+              }
+
+              // Force complete after clearing data
+              forceComplete();
+            }
+            // Third attempt: Try to reload the page
+            else if (recoveryAttemptsRef.current === 3 && typeof window !== 'undefined') {
               // Add a flag to localStorage to prevent reload loops
               const reloadCount = parseInt(localStorage.getItem('loadingTimeoutReloadCount') || '0');
               if (reloadCount < 2) { // Limit to 2 reload attempts
@@ -137,13 +202,30 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
 
   // Function to force the loading to "complete" (for recovery)
   const forceComplete = useCallback(() => {
+    // Clear all intervals and timers
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current);
+      checkIntervalRef.current = null;
+    }
+
+    // Reset all state
     setStartTime(null);
     setIsTimedOut(false);
     setElapsedTime(0);
+
+    // Log the forced completion
+    console.log('useLoadingTimeout: Forced loading completion');
+
+    // Dispatch an event that other components can listen for
+    if (typeof window !== 'undefined') {
+      const forceCompleteEvent = new CustomEvent('loading-force-completed');
+      window.dispatchEvent(forceCompleteEvent);
+    }
   }, []);
 
   return {

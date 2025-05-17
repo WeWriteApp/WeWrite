@@ -1,13 +1,16 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Plus, FileText, Clock, Loader, Search, SortAsc, SortDesc, Filter } from "lucide-react";
+import { Plus, FileText, Clock, Loader, Search, SortAsc, SortDesc, Filter, Eye, Activity } from "lucide-react";
 import Link from "next/link";
 import { rtdb } from "../firebase/rtdb";
 import { ref, get } from "firebase/database";
 import { Input } from "./ui/input";
 import { PillLink } from "./PillLink";
 import AddExistingPageDialog from "./AddExistingPageDialog";
+import SimpleSparkline from "./SimpleSparkline";
+import { getBatchPageActivityLast24Hours } from "../firebase/groupPageActivity";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,8 +36,10 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("lastModified");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [viewMode, setViewMode] = useState("grid"); // grid or table
+  const [viewMode, setViewMode] = useState("table"); // Changed default to table
   const [refreshKey, setRefreshKey] = useState(0);
+  const [pageActivityData, setPageActivityData] = useState({});
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
 
   // Load pages from the group
   useEffect(() => {
@@ -140,6 +145,31 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
 
     setFilteredPages(filtered);
   }, [pages, searchTerm, sortField, sortDirection]);
+
+  // Fetch activity data for pages
+  useEffect(() => {
+    const fetchPageActivityData = async () => {
+      if (!pages.length) return;
+
+      try {
+        setIsLoadingActivity(true);
+
+        // Get all page IDs
+        const pageIds = pages.map(page => page.id);
+
+        // Fetch activity data for all pages
+        const activityData = await getBatchPageActivityLast24Hours(pageIds);
+
+        setPageActivityData(activityData);
+      } catch (err) {
+        console.error("Error fetching page activity data:", err);
+      } finally {
+        setIsLoadingActivity(false);
+      }
+    };
+
+    fetchPageActivityData();
+  }, [pages]);
 
   // Handle pages added
   const handlePagesAdded = () => {
@@ -310,13 +340,32 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
                   {page.title || "Untitled"}
                 </PillLink>
               </div>
-              <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <div className="flex justify-between items-center text-xs text-muted-foreground mb-2">
                 <div className="flex items-center">
                   <span>by {getAuthorUsername(page)}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   <span>{formatDate(page.lastModified)}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Eye className="h-3 w-3" />
+                  <span>{(page.viewCount || 0).toLocaleString()} views</span>
+                </div>
+                <div className="w-20 h-8">
+                  {isLoadingActivity ? (
+                    <div className="flex justify-center items-center h-full">
+                      <Loader className="h-3 w-3 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <SimpleSparkline
+                      data={pageActivityData[page.id]?.hourly || Array(24).fill(0)}
+                      height={32}
+                      strokeWidth={1.5}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -328,9 +377,38 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last Updated</TableHead>
+                <TableHead>Last Editor</TableHead>
+                <TableHead>Last Edit Time</TableHead>
+                <TableHead className="text-right">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-end gap-1 cursor-help">
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <span>Views</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Total page views</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
+                <TableHead className="text-right">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-end gap-1 cursor-help">
+                          <Activity className="h-4 w-4 text-muted-foreground" />
+                          <span>Activity (24h)</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Edit activity in the last 24 hours</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -344,13 +422,30 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
                       {page.title || "Untitled"}
                     </PillLink>
                   </TableCell>
-                  <TableCell label="Author">
+                  <TableCell label="Last Editor">
                     <div className="flex items-center">
-                      <span>by {getAuthorUsername(page)}</span>
+                      <span>{getAuthorUsername(page)}</span>
                     </div>
                   </TableCell>
-                  <TableCell label="Created">{formatDate(page.createdAt)}</TableCell>
-                  <TableCell label="Last Updated">{formatDate(page.lastModified)}</TableCell>
+                  <TableCell label="Last Edit Time">{formatDate(page.lastModified)}</TableCell>
+                  <TableCell label="Views" className="text-right font-medium">
+                    {(page.viewCount || 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell label="Activity (24h)">
+                    <div className="w-24 h-8 ml-auto">
+                      {isLoadingActivity ? (
+                        <div className="flex justify-center items-center h-full">
+                          <Loader className="h-3 w-3 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <SimpleSparkline
+                          data={pageActivityData[page.id]?.hourly || Array(24).fill(0)}
+                          height={32}
+                          strokeWidth={1.5}
+                        />
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

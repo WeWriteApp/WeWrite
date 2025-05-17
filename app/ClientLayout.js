@@ -21,6 +21,7 @@ import { usePathname } from "next/navigation";
 import AdminFeaturesWrapper from "./components/AdminFeaturesWrapper";
 import FeatureFlagCookieManager from "./components/FeatureFlagCookieManager";
 import { PageTransition } from "./components/ui/page-transition";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 
 
@@ -68,9 +69,11 @@ export default function ClientLayout({ children }) {
                                   <FeatureFlagCookieManager />
                                   <main className="flex-grow">
                                     <AdminFeaturesWrapper>
-                                      <PageTransition enableTransitions={!isAuthPage}>
-                                        {children}
-                                      </PageTransition>
+                                      <ErrorBoundary>
+                                        <PageTransition enableTransitions={!isAuthPage}>
+                                          {children}
+                                        </PageTransition>
+                                      </ErrorBoundary>
                                     </AdminFeaturesWrapper>
                                   </main>
                                 </div>

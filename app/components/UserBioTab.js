@@ -10,6 +10,8 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { AuthContext } from "../providers/AuthProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import EmptyContentState from "./EmptyContentState";
+import { UserBioSkeleton } from "./ui/page-skeleton";
 
 // Import the unified editor dynamically to avoid SSR issues
 const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
@@ -194,8 +196,8 @@ export default function UserBioTab({ profile }) {
 
   if (isLoading && !bioContent) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
+      <div className="py-8">
+        <UserBioSkeleton />
       </div>
     );
   }
@@ -221,7 +223,8 @@ export default function UserBioTab({ profile }) {
       {/* Header with edit button */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">About {profile.username || "this user"}</h2>
-        {isProfileOwner && !isEditing && (
+        {/* Only show Edit button when there is content and not in edit mode */}
+        {isProfileOwner && !isEditing && bioContent && (
           <Button
             variant="outline"
             size="sm"
@@ -345,11 +348,13 @@ export default function UserBioTab({ profile }) {
                 )}
               </div>
             ) : (
-              <div className="text-muted-foreground italic">
-                {isProfileOwner
-                  ? "You haven't added a bio yet. Click Edit to add one."
-                  : "This user hasn't added a bio yet."}
-              </div>
+              <EmptyContentState
+                onActivate={() => setIsEditing(true)}
+                isOwner={isProfileOwner}
+                ownerMessage="You haven't added a bio yet."
+                visitorMessage={`${profile.username || "This user"} hasn't added a bio yet.`}
+                placeholder="Share information about yourself, your interests, or your background."
+              />
             )}
           </div>
         )}
