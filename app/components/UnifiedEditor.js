@@ -108,6 +108,11 @@ const UnifiedEditor = forwardRef((props, ref) => {
   const editableRef = useRef(null);
   const lastSelectionRef = useRef(null);
 
+  // CRITICAL FIX: Add missing state variables for link editor
+  const [showLinkEditor, setShowLinkEditor] = useState(false);
+  const [linkEditorPosition, setLinkEditorPosition] = useState({ top: 0, left: 0 });
+  const [initialLinkValues, setInitialLinkValues] = useState({});
+
   // Track if we've already set up the editor
   const isInitializedRef = useRef(false);
 
@@ -128,6 +133,12 @@ const UnifiedEditor = forwardRef((props, ref) => {
   // Share the linkEditorRef with child components via window
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Update the ref with the latest state setters
+      linkEditorRef.current.setShowLinkEditor = setShowLinkEditor;
+      linkEditorRef.current.setLinkEditorPosition = setLinkEditorPosition;
+      linkEditorRef.current.setInitialLinkValues = setInitialLinkValues;
+
+      // Share the ref globally
       window.currentLinkEditorRef = linkEditorRef.current;
     }
 
@@ -137,7 +148,7 @@ const UnifiedEditor = forwardRef((props, ref) => {
         window.currentLinkEditorRef = null;
       }
     };
-  }, []);
+  }, [setShowLinkEditor, setLinkEditorPosition, setInitialLinkValues]);
 
   // Insert a link at the current selection
   const insertLink = useCallback((url, text, options = {}) => {
@@ -189,17 +200,19 @@ const UnifiedEditor = forwardRef((props, ref) => {
   // Create a ref for the link editor state
   const linkEditorRef = useRef({
     showLinkEditor: false,
-    setShowLinkEditor: null,
-    linkEditorPosition: { top: 0, left: 0 },
+    setShowLinkEditor: setShowLinkEditor,
+    linkEditorPosition: linkEditorPosition,
+    setLinkEditorPosition: setLinkEditorPosition,
+    initialLinkValues: initialLinkValues,
+    setInitialLinkValues: setInitialLinkValues,
     selectedLinkElement: null,
-    selectedLinkPath: null,
-    initialLinkValues: {}
+    selectedLinkPath: null
   });
 
   // Function to open the link editor
-  const openLinkEditor = useCallback(() => {
+  const openLinkEditor = useCallback((initialTab = "page") => {
     try {
-      console.log('[DEBUG] openLinkEditor called');
+      console.log('[DEBUG] openLinkEditor called with initialTab:', initialTab);
 
       // Focus the editor first
       safeReactEditor.focus(editor);
@@ -238,7 +251,8 @@ const UnifiedEditor = forwardRef((props, ref) => {
       linkEditorRef.current.initialLinkValues = {
         text: '',
         pageId: null,
-        pageTitle: ''
+        pageTitle: '',
+        initialTab: initialTab // Set the initial tab
       };
 
       // Get the selected text to use as the initial display text
@@ -278,12 +292,14 @@ const UnifiedEditor = forwardRef((props, ref) => {
         const event = new CustomEvent('show-link-editor', {
           detail: {
             position: linkEditorRef.current.linkEditorPosition,
-            initialValues: linkEditorRef.current.initialLinkValues
+            initialValues: linkEditorRef.current.initialLinkValues,
+            initialTab: initialTab, // Include the initialTab parameter directly
+            showLinkEditor: true // Explicitly set showLinkEditor to true
           }
         });
         document.dispatchEvent(event);
 
-        console.log('[DEBUG] Dispatched show-link-editor event');
+        console.log('[DEBUG] Dispatched show-link-editor event with initialTab:', initialTab);
       } catch (error) {
         console.error('[DEBUG] Error dispatching show-link-editor event:', error);
       }
@@ -318,6 +334,12 @@ const UnifiedEditor = forwardRef((props, ref) => {
     },
     insertLink, // Expose the insertLink method
     openLinkEditor, // Expose the openLinkEditor method
+    // CRITICAL FIX: Expose the setShowLinkEditor method
+    setShowLinkEditor: (value) => {
+      console.log('[DEBUG] External call to setShowLinkEditor:', value);
+      setShowLinkEditor(value);
+      return true;
+    },
     // Add any other methods you want to expose
   }));
 
@@ -440,16 +462,57 @@ const UnifiedEditor = forwardRef((props, ref) => {
 
       // If not escaped, prevent default and show link editor
       if (!isEscaped) {
+        // Prevent default to stop the @ from being inserted
         event.preventDefault();
-        console.log("@ key pressed, showing link editor");
+        console.log("@ key pressed, showing link editor with Pages tab");
 
-        // Insert the @ symbol first
-        Transforms.insertText(editor, '@');
+        // CRITICAL FIX: Directly set the state to show the link editor
+        // Don't insert the @ symbol when using it as a shortcut
+        console.log('[DEBUG] Setting showLinkEditor to true directly from @ handler');
+        setShowLinkEditor(true);
+        setInitialLinkValues({
+          text: '',
+          pageId: null,
+          pageTitle: '',
+          initialTab: 'page'
+        });
+        setLinkEditorPosition({
+          top: window.innerHeight / 2,
+          left: window.innerWidth / 2,
+        });
 
-        // Then open the link editor
+        // Then try multiple approaches to ensure the link editor appears
         setTimeout(() => {
-          openLinkEditor();
-        }, 10);
+          // 1. Try setting the state again
+          setShowLinkEditor(true);
+
+          // 2. Directly dispatch the custom event to show the link editor
+          try {
+            const event = new CustomEvent('show-link-editor', {
+              detail: {
+                position: {
+                  top: window.innerHeight / 2,
+                  left: window.innerWidth / 2,
+                },
+                initialTab: "page",
+                showLinkEditor: true
+              }
+            });
+            document.dispatchEvent(event);
+            console.log('[DEBUG] Directly dispatched show-link-editor event for @ mention');
+
+            // 3. Force a global event as well
+            window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
+              detail: {
+                showLinkEditor: true
+              }
+            }));
+          } catch (eventError) {
+            console.error('[DEBUG] Error dispatching @ mention event:', eventError);
+            // 4. Fallback to the openLinkEditor method
+            openLinkEditor("page");
+          }
+        }, 100);
       }
     }
 
@@ -549,6 +612,8 @@ const UnifiedEditor = forwardRef((props, ref) => {
         }
       `}</style>
 
+      {/* Global Link Editor removed to avoid duplicate LinkEditor components */}
+
       {/* Editor help tooltip */}
       <div className="absolute top-2 right-2 z-10">
         <TooltipProvider>
@@ -607,6 +672,37 @@ const UnifiedEditor = forwardRef((props, ref) => {
           }}
           // We no longer need to synchronize line numbers after DOM mutations
         />
+
+        {/* Render the LinkEditor when showLinkEditor is true */}
+        {showLinkEditor && (
+          <div className="fixed inset-0 z-[1000]">
+            <LinkEditor
+              position={linkEditorPosition}
+              onSelect={(item) => {
+                // Insert the link
+                insertLink(
+                  item.isExternal ? item.url : `/${item.pageId}`,
+                  item.displayText || item.title,
+                  {
+                    pageId: item.pageId,
+                    pageTitle: item.pageTitle,
+                    isExternal: item.isExternal,
+                    isUser: item.isUser,
+                    userId: item.userId,
+                    isPublic: item.isPublic !== false
+                  }
+                );
+                // Hide the link editor
+                setShowLinkEditor(false);
+              }}
+              setShowLinkEditor={setShowLinkEditor}
+              initialText={initialLinkValues.text || ""}
+              initialPageId={initialLinkValues.pageId || null}
+              initialPageTitle={initialLinkValues.pageTitle || ""}
+              initialTab={initialLinkValues.initialTab || "page"}
+            />
+          </div>
+        )}
       </Slate>
     </div>
   );
@@ -638,6 +734,11 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   // Use the linkEditorRef from the parent component
   const linkEditorRef = useRef(null);
 
+  // Access shared state for the link editor
+  const [showLinkEditor, setShowLinkEditor] = useState(false);
+  const [linkEditorPosition, setLinkEditorPosition] = useState({ top: 0, left: 0 });
+  const [initialLinkValues, setInitialLinkValues] = useState({});
+
   // Get the linkEditorRef from the parent UnifiedEditor component
   useEffect(() => {
     // This will be set by the parent UnifiedEditor component
@@ -647,23 +748,26 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   }, []);
 
   // Local state for this component
-  const [showLinkEditor, setShowLinkEditor] = useState(false);
-  const [linkEditorPosition, setLinkEditorPosition] = useState({});
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
   const [selectedLinkPath, setSelectedLinkPath] = useState(null);
-  const [initialLinkValues, setInitialLinkValues] = useState({});
 
   // Update the linkEditorRef when local state changes
   useEffect(() => {
     if (linkEditorRef.current) {
-      linkEditorRef.current.showLinkEditor = showLinkEditor;
-      linkEditorRef.current.setShowLinkEditor = setShowLinkEditor;
-      linkEditorRef.current.linkEditorPosition = linkEditorPosition;
+      // Only update the selected element and path from this component
       linkEditorRef.current.selectedLinkElement = selectedLinkElement;
       linkEditorRef.current.selectedLinkPath = selectedLinkPath;
-      linkEditorRef.current.initialLinkValues = initialLinkValues;
+
+      // Get the parent component's state
+      if (typeof window !== 'undefined' && window.currentLinkEditorRef) {
+        // Copy over the parent's state for these properties
+        linkEditorRef.current.showLinkEditor = window.currentLinkEditorRef.showLinkEditor;
+        linkEditorRef.current.setShowLinkEditor = window.currentLinkEditorRef.setShowLinkEditor;
+        linkEditorRef.current.linkEditorPosition = window.currentLinkEditorRef.linkEditorPosition;
+        linkEditorRef.current.initialLinkValues = window.currentLinkEditorRef.initialLinkValues;
+      }
     }
-  }, [showLinkEditor, linkEditorPosition, selectedLinkElement, selectedLinkPath, initialLinkValues]);
+  }, [selectedLinkElement, selectedLinkPath]);
 
   // Listen for custom events to update the link editor state
   useEffect(() => {
@@ -674,16 +778,53 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
     };
 
     const handleShowLinkEditor = (event) => {
-      console.log('[DEBUG] Received show-link-editor event');
+      console.log('[DEBUG] Received show-link-editor event', event.detail);
+
+      // Always log the current state before making changes
+      console.log('[DEBUG] Current state before changes:', {
+        showLinkEditor,
+        linkEditorPosition,
+        initialLinkValues
+      });
+
       if (event.detail) {
+        // Set the link editor position
         if (event.detail.position) {
           setLinkEditorPosition(event.detail.position);
+        } else {
+          // Default position in the center of the screen if not specified
+          setLinkEditorPosition({
+            top: window.innerHeight / 2,
+            left: window.innerWidth / 2,
+          });
         }
-        if (event.detail.initialValues) {
-          setInitialLinkValues(event.detail.initialValues);
-        }
-        // Show the link editor
+
+        // Create initial values object with any passed values
+        const initialValues = {
+          ...(event.detail.initialValues || {}),
+          initialTab: event.detail.initialTab || "page" // Default to "page" tab if not specified
+        };
+
+        // Set the initial values for the link editor
+        setInitialLinkValues(initialValues);
+
+        // CRITICAL FIX: Always set showLinkEditor to true regardless of event.detail.showLinkEditor
         setShowLinkEditor(true);
+
+        // Log that we're showing the link editor
+        console.log('[DEBUG] FORCE Setting showLinkEditor to true');
+
+        // Force a re-render by updating the DOM directly as a last resort
+        setTimeout(() => {
+          console.log('[DEBUG] Checking if link editor is visible after timeout');
+          console.log('[DEBUG] Current showLinkEditor state:', showLinkEditor);
+
+          // If still not visible, try to force it
+          if (!showLinkEditor) {
+            console.log('[DEBUG] Link editor still not visible, forcing state update');
+            setShowLinkEditor(true);
+          }
+        }, 100);
       }
     };
 
@@ -760,31 +901,38 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
 
       // Set initial values for the link editor
       const initialText = element.children && element.children[0] ? element.children[0].text || "" : "";
-      setInitialLinkValues({
-        text: initialText,
-        pageId: element.pageId || null,
-        pageTitle: element.pageTitle || initialText
-      });
 
-      // Position the link editor in the center of the screen for better visibility
-      setLinkEditorPosition({
-        top: window.innerHeight / 2,
-        left: window.innerWidth / 2,
-      });
+      // Instead of using local state, directly update the parent component's state
+      if (typeof window !== 'undefined' && window.currentLinkEditorRef) {
+        // Update the parent's state
+        if (window.currentLinkEditorRef.setShowLinkEditor) {
+          // Store the element and path in the parent's ref
+          window.currentLinkEditorRef.selectedLinkElement = element;
+          window.currentLinkEditorRef.selectedLinkPath = path;
 
-      // Show the link editor
-      setShowLinkEditor(true);
+          // Update the parent's initialLinkValues
+          if (window.currentLinkEditorRef.setInitialLinkValues) {
+            window.currentLinkEditorRef.setInitialLinkValues({
+              text: initialText,
+              pageId: element.pageId || null,
+              pageTitle: element.pageTitle || initialText,
+              initialTab: "page"
+            });
+          }
 
-      // Also update the shared ref
-      if (linkEditorRef.current) {
-        linkEditorRef.current.showLinkEditor = true;
-        linkEditorRef.current.selectedLinkElement = element;
-        linkEditorRef.current.selectedLinkPath = path;
-        linkEditorRef.current.initialLinkValues = {
-          text: initialText,
-          pageId: element.pageId || null,
-          pageTitle: element.pageTitle || initialText
-        };
+          // Update the parent's position
+          if (window.currentLinkEditorRef.setLinkEditorPosition) {
+            window.currentLinkEditorRef.setLinkEditorPosition({
+              top: window.innerHeight / 2,
+              left: window.innerWidth / 2,
+            });
+          }
+
+          // Show the link editor in the parent component
+          window.currentLinkEditorRef.setShowLinkEditor(true);
+
+          console.log('[DEBUG] Updated parent component state directly');
+        }
       }
 
       // Prevent any other editor actions
@@ -820,7 +968,7 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   };
 
   // Handle selection from the link editor
-  const handleSelection = (item) => {
+  const handleSelection = useCallback((item) => {
     // Check if this is an external link
     if (item.isExternal) {
       const displayText = item.displayText || item.url;
@@ -881,7 +1029,7 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
 
     // Hide the dropdown
     setShowLinkEditor(false);
-  };
+  }, [editor, selectedLinkElement, selectedLinkPath, setSelectedLinkElement, setSelectedLinkPath, setInitialLinkValues, setShowLinkEditor]);
 
   return (
     <>
@@ -907,16 +1055,12 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
         <InlineChromiumBugfix />
       </a>
 
-      {showLinkEditor && (
-        <LinkEditor
-          position={linkEditorPosition}
-          onSelect={handleSelection}
-          setShowLinkEditor={setShowLinkEditor}
-          initialText={initialLinkValues.text || ""}
-          initialPageId={initialLinkValues.pageId || null}
-          initialPageTitle={initialLinkValues.pageTitle || ""}
-        />
-      )}
+      {/* LinkEditor is now handled by the parent component */}
+
+      {/* Debug element to verify state */}
+      <div style={{ display: 'none' }}>
+        {`Link Editor State: ${showLinkEditor ? 'Visible' : 'Hidden'}`}
+      </div>
     </>
   );
 };
@@ -934,11 +1078,13 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
  * @param {string} props.initialText - Initial text for the link
  * @param {string|null} props.initialPageId - Initial page ID for internal links
  * @param {string} props.initialPageTitle - Initial page title for internal links
+ * @param {string} props.initialTab - Initial tab to show ("page" or "external")
  */
-const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
+const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialTab = "page" }) => {
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle);
-  const [activeTab, setActiveTab] = useState(initialPageId ? "page" : "external");
+  // Use the initialTab parameter if provided, otherwise determine based on initialPageId
+  const [activeTab, setActiveTab] = useState(initialTab || (initialPageId ? "page" : "external"));
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
   const [showAuthor, setShowAuthor] = useState(false);
@@ -961,7 +1107,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     selectedPageId: initialPageId,
     externalUrl: "",
     showAuthor: false,
-    activeTab: "page"
+    activeTab: initialTab || "page"
   });
 
   // Enable save if any field changes
@@ -1033,6 +1179,26 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   // Handle close
   const handleClose = () => {
+    // CRITICAL FIX: Use the parent component's state setter if available
+    if (typeof window !== 'undefined' && window.currentLinkEditorRef && window.currentLinkEditorRef.setShowLinkEditor) {
+      console.log('[DEBUG] Using parent component setShowLinkEditor in handleClose');
+      window.currentLinkEditorRef.setShowLinkEditor(false);
+
+      // Also dispatch the event to ensure the link editor is hidden
+      try {
+        const event = new CustomEvent('show-link-editor', {
+          detail: {
+            showLinkEditor: false
+          }
+        });
+        document.dispatchEvent(event);
+        console.log('[DEBUG] Dispatched show-link-editor event to hide from LinkEditor handleClose');
+      } catch (eventError) {
+        console.error('[DEBUG] Error dispatching event from LinkEditor handleClose:', eventError);
+      }
+    }
+
+    // Also use the local setter as a fallback
     setShowLinkEditor(false);
   };
 
@@ -1067,6 +1233,26 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       isExternal: true
     });
 
+    // CRITICAL FIX: Use the parent component's state setter if available
+    if (typeof window !== 'undefined' && window.currentLinkEditorRef && window.currentLinkEditorRef.setShowLinkEditor) {
+      console.log('[DEBUG] Using parent component setShowLinkEditor in handleExternalSubmit');
+      window.currentLinkEditorRef.setShowLinkEditor(false);
+
+      // Also dispatch the event to ensure the link editor is hidden
+      try {
+        const event = new CustomEvent('show-link-editor', {
+          detail: {
+            showLinkEditor: false
+          }
+        });
+        document.dispatchEvent(event);
+        console.log('[DEBUG] Dispatched show-link-editor event to hide from handleExternalSubmit');
+      } catch (eventError) {
+        console.error('[DEBUG] Error dispatching event from handleExternalSubmit:', eventError);
+      }
+    }
+
+    // Also use the local setter as a fallback
     setShowLinkEditor(false);
   };
 
@@ -1084,6 +1270,26 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       showAuthor
     });
 
+    // CRITICAL FIX: Use the parent component's state setter if available
+    if (typeof window !== 'undefined' && window.currentLinkEditorRef && window.currentLinkEditorRef.setShowLinkEditor) {
+      console.log('[DEBUG] Using parent component setShowLinkEditor in handleSave');
+      window.currentLinkEditorRef.setShowLinkEditor(false);
+
+      // Also dispatch the event to ensure the link editor is hidden
+      try {
+        const event = new CustomEvent('show-link-editor', {
+          detail: {
+            showLinkEditor: false
+          }
+        });
+        document.dispatchEvent(event);
+        console.log('[DEBUG] Dispatched show-link-editor event to hide from handleSave');
+      } catch (eventError) {
+        console.error('[DEBUG] Error dispatching event from handleSave:', eventError);
+      }
+    }
+
+    // Also use the local setter as a fallback
     setShowLinkEditor(false);
   };
 
