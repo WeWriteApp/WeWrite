@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
+import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 
 interface PageLoaderProps {
   message?: string;
@@ -21,6 +22,12 @@ export function PageLoader({
   fullScreen = true,
   className
 }: PageLoaderProps) {
+  // Use a unique ID for this loader instance
+  const componentId = `page-loader-${message || 'default'}`;
+
+  // Control animation to prevent double rendering effect
+  const shouldAnimate = useControlledAnimation(componentId);
+
   const Container = fullScreen ? motion.div : "div";
 
   return (
@@ -30,7 +37,7 @@ export function PageLoader({
         fullScreen ? "fixed inset-0 bg-background/80 backdrop-blur-sm z-50" : "h-full w-full py-8",
         className
       )}
-      {...(fullScreen ? {
+      {...(fullScreen && shouldAnimate ? {
         initial: { opacity: 0 },
         animate: { opacity: 1 },
         exit: { opacity: 0 },

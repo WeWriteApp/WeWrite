@@ -4,16 +4,25 @@ import Script from 'next/script';
 
 export async function generateMetadata({ params }) {
   try {
-    // Await params before accessing properties as required by Next.js
-    const resolvedParams = await params;
-    const id = resolvedParams.id;
+    // Properly extract id from params - ensure params is awaited
+    const unwrappedParams = await params;
+    const { id } = unwrappedParams;
     const metadata = await getPageMetadata(id);
 
     if (metadata) {
-      // Format: "[pagename] by [username] on WeWrite"
+      // Get page title
       const pageTitle = metadata.title || 'Untitled';
-      const username = metadata.username || 'Anonymous';
-      const formattedTitle = `${pageTitle} by ${username} on WeWrite`;
+      let formattedTitle;
+
+      // Format title based on whether the page belongs to a group
+      if (metadata.groupId && metadata.groupName) {
+        // Format: "[pagename] in [groupName] on WeWrite"
+        formattedTitle = `${pageTitle} in ${metadata.groupName} on WeWrite`;
+      } else {
+        // Format: "[pagename] by [username] on WeWrite"
+        const username = metadata.username || 'Anonymous';
+        formattedTitle = `${pageTitle} by ${username} on WeWrite`;
+      }
 
       // Use the extracted description from the first paragraph, or a default
       const description = metadata.description ||
@@ -51,13 +60,14 @@ export default async function GlobalIDLayout({ children, params }) {
   let schemaMarkup = null;
 
   try {
-    const id = params.id;
+    // Properly extract id from params - ensure params is awaited
+    const unwrappedParams = await params;
+    const { id } = unwrappedParams;
     const metadata = await getPageMetadata(id);
 
     if (metadata) {
       // Create schema markup for the page
       const pageTitle = metadata.title || 'Untitled';
-      const username = metadata.username || 'Anonymous';
       const description = metadata.description || '';
       const datePublished = metadata.createdAt || new Date().toISOString();
       const dateModified = metadata.lastModified || datePublished;
@@ -68,10 +78,6 @@ export default async function GlobalIDLayout({ children, params }) {
         '@type': 'Article',
         headline: pageTitle,
         description: description,
-        author: {
-          '@type': 'Person',
-          name: username
-        },
         datePublished: datePublished,
         dateModified: dateModified,
         publisher: {
@@ -87,6 +93,30 @@ export default async function GlobalIDLayout({ children, params }) {
           '@id': `${process.env.NEXT_PUBLIC_BASE_URL}/${id}`
         }
       };
+
+      // Add author or group information based on whether the page belongs to a group
+      if (metadata.groupId && metadata.groupName) {
+        // For group pages, add the group as the publisher
+        schemaMarkup.publisher = {
+          '@type': 'Organization',
+          name: metadata.groupName,
+          parentOrganization: {
+            '@type': 'Organization',
+            name: 'WeWrite',
+            logo: {
+              '@type': 'ImageObject',
+              url: `${process.env.NEXT_PUBLIC_BASE_URL}/logo.png`
+            }
+          }
+        };
+      } else {
+        // For regular pages, add the author
+        const username = metadata.username || 'Anonymous';
+        schemaMarkup.author = {
+          '@type': 'Person',
+          name: username
+        };
+      }
     }
   } catch (error) {
     console.error('Error generating schema markup:', error);

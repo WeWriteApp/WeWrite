@@ -499,18 +499,41 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
     if (event.key === "@") {
       event.preventDefault();
-      const { selection } = editor;
 
-      console.log("@ key pressed, showing link editor menu");
+      try {
+        console.log("@ key pressed, showing link editor menu");
 
-      // Always show the link editor menu, even if there's no selection
-      if (selection) {
-        showLinkEditorMenu(editor, selection);
-      } else {
-        // If no selection, position at the end
-        const end = Editor.end(editor, []);
-        Transforms.select(editor, end);
-        showLinkEditorMenu(editor, editor.selection);
+        // Focus the editor first to ensure we have a valid selection
+        safeReactEditor.focus(editor);
+
+        // Get the current selection after focusing
+        const { selection } = editor;
+
+        // Always show the link editor menu, even if there's no selection
+        if (selection) {
+          showLinkEditorMenu(editor, selection);
+        } else {
+          // If no selection, position at the end
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+          showLinkEditorMenu(editor, editor.selection);
+        }
+      } catch (error) {
+        console.error("Error handling @ key:", error);
+        // Fallback method
+        try {
+          const end = Editor.end(editor, []);
+          Transforms.select(editor, end);
+
+          // Position the link editor in the center as a last resort
+          setLinkEditorPosition({
+            top: window.innerHeight / 2,
+            left: window.innerWidth / 2,
+          });
+          setShowLinkEditor(true);
+        } catch (fallbackError) {
+          console.error("Error in fallback @ key handling:", fallbackError);
+        }
       }
     }
 
@@ -521,7 +544,10 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
 
   const showLinkEditorMenu = (editor, editorSelection) => {
     try {
-      // First try to use the editor selection if provided
+      // First ensure the editor is focused
+      safeReactEditor.focus(editor);
+
+      // Try to use the editor selection if provided
       if (editor && editorSelection) {
         try {
           // Use our safe wrapper for ReactEditor.toDOMRange
@@ -537,6 +563,12 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             setShowLinkEditor(true);
             setSelectedLinkElement(null);
             setSelectedLinkPath(null);
+
+            // Ensure the editor stays focused
+            setTimeout(() => {
+              safeReactEditor.focus(editor);
+            }, 10);
+
             return;
           }
         } catch (editorError) {
@@ -549,7 +581,24 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) {
         console.warn("No selection available");
-        // Position the link editor in the center as a fallback
+
+        // Try to find the editor element and position relative to it
+        try {
+          const editorElement = document.querySelector('[data-slate-editor=true]');
+          if (editorElement) {
+            const rect = editorElement.getBoundingClientRect();
+            setLinkEditorPosition({
+              top: rect.top + 100 + window.pageYOffset, // Position 100px below the top of the editor
+              left: rect.left + 100 + window.pageXOffset, // Position 100px from the left of the editor
+            });
+            setShowLinkEditor(true);
+            return;
+          }
+        } catch (elementError) {
+          console.error("Error finding editor element:", elementError);
+        }
+
+        // Position the link editor in the center as a last resort
         setLinkEditorPosition({
           top: window.innerHeight / 2,
           left: window.innerWidth / 2,
@@ -558,13 +607,22 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         return;
       }
 
-      const range = selection.getRangeAt(0).cloneRange();
-      const rect = range.getBoundingClientRect();
+      try {
+        const range = selection.getRangeAt(0).cloneRange();
+        const rect = range.getBoundingClientRect();
 
-      setLinkEditorPosition({
-        top: rect.bottom + window.pageYOffset,
-        left: rect.left + window.pageXOffset,
-      });
+        setLinkEditorPosition({
+          top: rect.bottom + window.pageYOffset,
+          left: rect.left + window.pageXOffset,
+        });
+      } catch (rangeError) {
+        console.error("Error getting range rect:", rangeError);
+        // Position in center as last resort
+        setLinkEditorPosition({
+          top: window.innerHeight / 2,
+          left: window.innerWidth / 2,
+        });
+      }
 
       setShowLinkEditor(true);
       setSelectedLinkElement(null);

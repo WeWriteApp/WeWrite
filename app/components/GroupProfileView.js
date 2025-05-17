@@ -3,13 +3,13 @@ import React, { useContext, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
-import { Loader, Settings, ChevronLeft, FileText, Users, Eye, Share2, Globe, Lock } from "lucide-react";
+import { Loader, Settings, ChevronLeft, FileText, Users, Eye, Share2, Globe, Lock, LogOut, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Switch } from "./ui/switch";
+import VisibilityDropdown from "./VisibilityDropdown";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/database";
 import { rtdb } from "../firebase/rtdb";
-import { ref, update } from "firebase/database";
+import { ref, update, set } from "firebase/database";
 import { toast } from "./ui/use-toast";
 import GroupProfileTabs from "./GroupProfileTabs";
 import {
@@ -32,6 +32,12 @@ const GroupProfileView = ({ group }) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingVisibilityChange, setPendingVisibilityChange] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
+  const [isLeavingGroup, setIsLeavingGroup] = useState(false);
+  const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   // Check if this user is the group owner or a member
   const isOwner = user && user.uid === group.owner;
@@ -77,17 +83,121 @@ const GroupProfileView = ({ group }) => {
     setPendingVisibilityChange(null);
   };
 
+  // Handle leaving the group
+  const handleLeaveGroup = async () => {
+    if (!user || !user.uid || !group || !group.id) return;
+
+    try {
+      setIsLeavingGroup(true);
+
+      // Remove the user from the group's members list
+      const memberRef = ref(rtdb, `groups/${group.id}/members/${user.uid}`);
+      await set(memberRef, null);
+
+      // Show success toast
+      toast({
+        title: "Success",
+        description: `You have left ${group.name}`,
+      });
+
+      // Redirect to groups page
+      router.push('/groups');
+    } catch (error) {
+      console.error("Error leaving group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to leave the group. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLeavingGroup(false);
+      setShowLeaveGroupDialog(false);
+    }
+  };
+
+  // Handle deleting the group
+  const handleDeleteGroup = async () => {
+    if (!user || !user.uid || !group || !group.id) return;
+
+    // Verify confirmation text matches group name
+    if (deleteConfirmText !== group.name) {
+      setDeleteError("Please type the exact group name to confirm deletion");
+      return;
+    }
+
+    try {
+      setIsDeletingGroup(true);
+      setDeleteError('');
+
+      // Get all pages in the group
+      const groupPages = group.pages || {};
+
+      // For each page, transfer ownership back to the original creator
+      if (Object.keys(groupPages).length > 0) {
+        // Get all pages data
+        const pagesPromises = Object.keys(groupPages).map(async (pageId) => {
+          try {
+            // Get the page document from Firestore
+            const pageDoc = await getDoc(doc(db, "pages", pageId));
+
+            if (pageDoc.exists()) {
+              const pageData = pageDoc.data();
+
+              // Update the page to remove group association
+              await update(doc(db, "pages", pageId), {
+                groupId: null,
+                lastModified: new Date().toISOString()
+              });
+            }
+          } catch (pageError) {
+            console.error(`Error processing page ${pageId}:`, pageError);
+          }
+        });
+
+        // Wait for all page updates to complete
+        await Promise.all(pagesPromises);
+      }
+
+      // Delete the group
+      const groupRef = ref(rtdb, `groups/${group.id}`);
+      await set(groupRef, null);
+
+      // Show success toast
+      toast({
+        title: "Success",
+        description: `Group '${group.name}' has been deleted`,
+      });
+
+      // Redirect to groups page
+      router.push('/groups');
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      setDeleteError("Failed to delete the group. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to delete the group. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeletingGroup(false);
+      setShowDeleteGroupDialog(false);
+    }
+  };
+
   return (
     <div className="p-2">
-      {/* Navigation bar */}
+      {/* Navigation bar - avoiding position:sticky/fixed to prevent Next.js scroll issues */}
       <div className="flex items-center mb-6">
         <div className="flex-1">
-          <Link href="/">
-            <Button variant="outline" size="sm" className="gap-1">
-              <ChevronLeft className="h-4 w-4" />
-              <span>Back</span>
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => window.location.href = '/'}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
         </div>
 
         {/* Right side buttons */}
@@ -96,7 +206,7 @@ const GroupProfileView = ({ group }) => {
           <Button
             variant="outline"
             size="sm"
-            className="gap-1"
+            className="gap-1 rounded-2xl"
             onClick={() => {
               const groupUrl = window.location.href;
               const shareText = `${group.name} group on @WeWriteApp ${groupUrl}`;
@@ -130,16 +240,42 @@ const GroupProfileView = ({ group }) => {
             <span>Share</span>
           </Button>
 
+          {/* Leave Group button - only visible for members who are not owners */}
+          {isMember && !isOwner && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 rounded-2xl"
+              onClick={() => setShowLeaveGroupDialog(true)}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Leave Group</span>
+            </Button>
+          )}
+
           {/* Settings button - only visible for group owner */}
           {isOwner && (
             <Button
               variant="outline"
               size="sm"
-              className="gap-1"
+              className="gap-1 rounded-2xl"
               onClick={() => router.push(`/group/${group.id}/settings`)}
             >
               <Settings className="h-4 w-4" />
               <span>Settings</span>
+            </Button>
+          )}
+
+          {/* Delete Group button - only visible for group owner */}
+          {isOwner && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1 rounded-2xl"
+              onClick={() => setShowDeleteGroupDialog(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Group</span>
             </Button>
           )}
         </div>
@@ -153,8 +289,14 @@ const GroupProfileView = ({ group }) => {
           </Link>
         </div>
 
-        {/* Visibility badge */}
-        {isOwner && (
+        {/* Visibility dropdown - always visible, but only interactive for owners */}
+        {isOwner ? (
+          <VisibilityDropdown
+            isPublic={isPublic}
+            onVisibilityChange={handleVisibilityToggle}
+            disabled={isLoading}
+          />
+        ) : (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
             {isPublic ? (
               <Globe className="h-4 w-4 text-green-500" />
@@ -164,12 +306,6 @@ const GroupProfileView = ({ group }) => {
             <span className="text-sm font-medium">
               {isPublic ? "Public Group" : "Private Group"}
             </span>
-            <Switch
-              checked={isPublic}
-              onCheckedChange={handleVisibilityToggle}
-              disabled={isLoading}
-              aria-label="Toggle group visibility"
-            />
           </div>
         )}
       </div>
@@ -250,6 +386,91 @@ const GroupProfileView = ({ group }) => {
             <Button onClick={confirmVisibilityChange} disabled={isLoading}>
               {isLoading ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave Group confirmation dialog */}
+      <Dialog open={showLeaveGroupDialog} onOpenChange={setShowLeaveGroupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave Group</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave this group? This action cannot be undone.
+              <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-900 rounded-md text-amber-800 dark:text-amber-300">
+                <p>You will lose access to all group-exclusive content.</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <DialogClose asChild>
+              <Button variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleLeaveGroup}
+              disabled={isLeavingGroup}
+              className="rounded-2xl"
+            >
+              {isLeavingGroup ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}
+              Leave Group
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Group confirmation dialog */}
+      <Dialog open={showDeleteGroupDialog} onOpenChange={setShowDeleteGroupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Group</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this group? This action cannot be undone.
+              <div className="mt-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 rounded-md text-red-800 dark:text-red-300">
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>The group will be permanently deleted</li>
+                  <li>All group pages will be returned to their original creators</li>
+                  <li>All members will lose group access</li>
+                  <li>This action cannot be undone</li>
+                </ul>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-4">
+            <label htmlFor="confirm-delete" className="text-sm font-medium">
+              Type <span className="font-bold">{group.name}</span> to confirm deletion:
+            </label>
+            <input
+              id="confirm-delete"
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Type group name here"
+            />
+            {deleteError && (
+              <p className="text-sm text-red-500 mt-1">{deleteError}</p>
+            )}
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <DialogClose asChild>
+              <Button variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteGroup}
+              disabled={isDeletingGroup || deleteConfirmText !== group.name}
+              className="rounded-2xl"
+            >
+              {isDeletingGroup ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete Group
             </Button>
           </DialogFooter>
         </DialogContent>

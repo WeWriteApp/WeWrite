@@ -103,9 +103,9 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
-      {/* Word and character count - moved above action buttons */}
+      {/* Word and character count - centered above action buttons */}
       {!isEditing && content && (
-        <div className="mb-4 flex flex-wrap gap-4 items-center">
+        <div className="mb-4 flex justify-center w-full">
           <WordCounter content={content} />
         </div>
       )}

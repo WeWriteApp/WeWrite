@@ -36,14 +36,29 @@ const ActivityCard = ({ activity }) => {
             {activity.pageName || "Untitled page"}
           </PillLink>
           <span className="text-xs">
-            <span className="text-foreground">edited by{" "}</span>
-            <Link
-              href={`/user/${activity.userId}`}
-              className="hover:underline text-primary"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {activity.username || "anonymous"}
-            </Link>
+            {activity.groupId && activity.groupName ? (
+              <>
+                <span className="text-foreground">edited in{" "}</span>
+                <Link
+                  href={`/group/${activity.groupId}`}
+                  className="hover:underline text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {activity.groupName}
+                </Link>
+              </>
+            ) : (
+              <>
+                <span className="text-foreground">edited by{" "}</span>
+                <Link
+                  href={`/user/${activity.userId}`}
+                  className="hover:underline text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {activity.username || "anonymous"}
+                </Link>
+              </>
+            )}
           </span>
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-1">

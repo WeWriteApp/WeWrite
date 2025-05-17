@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/button";
 import { MultiSelect } from "../../components/ui/multi-select";
 import { searchUsers } from "../../firebase/database";
 import { useFeatureFlag } from "../../utils/feature-flags";
+import VisibilityDropdown from "../../components/VisibilityDropdown";
 
 export default function Page() {
   const { user } = useContext(AuthContext);
@@ -139,16 +140,18 @@ export default function Page() {
           </p>
         </label>
 
-        <label className="flex flex-row gap-1 items-center">
-          <input
-            className="border border-gray-500 rounded-md p-2"
-            autoComplete="off"
-            type="checkbox"
-            checked={newGroup.isPublic}
-            onChange={e => setNewGroup({ ...newGroup, isPublic: e.target.checked })}
+        <div className="flex flex-col gap-1 mb-4">
+          <label className="text-sm font-medium">Visibility:</label>
+          <VisibilityDropdown
+            isPublic={newGroup.isPublic}
+            onVisibilityChange={(isPublic) => setNewGroup({ ...newGroup, isPublic })}
           />
-          <span>Is Public</span>
-        </label>
+          <p className="text-sm text-muted-foreground mt-1">
+            {newGroup.isPublic
+              ? "Public groups can be found and viewed by anyone"
+              : "Private groups are only visible to members"}
+          </p>
+        </div>
 
         <div className="flex flex-row gap-4 mt-2">
           <Button

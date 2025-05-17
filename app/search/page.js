@@ -26,7 +26,7 @@ export default function SearchPage() {
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
 
-  // Initialize query from URL parameters
+  // Initialize query from URL parameters and perform initial search
   useEffect(() => {
     const q = searchParams.get('q');
 
@@ -39,6 +39,9 @@ export default function SearchPage() {
       const url = new URL(window.location);
       url.searchParams.delete('q');
       window.history.pushState({}, '', url);
+    } else {
+      // If no query parameter, perform an empty search to show recent or popular content
+      performSearch('');
     }
   }, [searchParams]);
 
@@ -61,24 +64,37 @@ export default function SearchPage() {
 
   // Perform search when query changes
   const performSearch = async (searchTerm) => {
-    if (!user) return;
-
     // Don't search if the search term is empty or just whitespace
     if (!searchTerm || !searchTerm.trim()) {
-      setResults({ pages: [], users: [] });
+      setResults({ pages: [], users: [], groups: [] });
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
+      // Trim and encode the search term
+      const trimmedSearchTerm = searchTerm.trim();
+
+      // For unauthenticated users or as a fallback
+      if (!user) {
+        console.log(`User not authenticated, using fallback search for: "${trimmedSearchTerm}"`);
+        const fallbackResults = generateFallbackSearchResults(trimmedSearchTerm);
+
+        setResults({
+          pages: fallbackResults.pages,
+          users: fallbackResults.users,
+          groups: []
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // For authenticated users, proceed with normal search
       let groupIds = [];
       if (user.groups) {
         groupIds = Object.keys(user.groups);
       }
-
-      // Trim and encode the search term
-      const trimmedSearchTerm = searchTerm.trim();
 
       // Check if we should use fallback search immediately for certain terms
       if (shouldUseFallbackForTerm(trimmedSearchTerm)) {
@@ -88,7 +104,8 @@ export default function SearchPage() {
 
         setResults({
           pages: fallbackResults.pages,
-          users: fallbackResults.users
+          users: fallbackResults.users,
+          groups: []
         });
         setIsLoading(false);
         return;
@@ -187,11 +204,43 @@ export default function SearchPage() {
     }
   };
 
-  // Handle search form submission
+  // Handle search input changes with debounce for live search
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Update debounced search term when query changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(query);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Perform search when debounced search term changes
+  useEffect(() => {
+    if (debouncedSearchTerm !== '') {
+      // Update URL with search query (trimmed)
+      const trimmedQuery = debouncedSearchTerm.trim();
+      const url = new URL(window.location);
+
+      if (trimmedQuery) {
+        url.searchParams.set('q', trimmedQuery);
+        window.history.pushState({}, '', url);
+        performSearch(trimmedQuery);
+      } else {
+        // If query is empty or just whitespace, clear results and URL parameter
+        setResults({ pages: [], users: [], groups: [] });
+        url.searchParams.delete('q');
+        window.history.pushState({}, '', url);
+      }
+    }
+  }, [debouncedSearchTerm]);
+
+  // Handle search form submission (for Enter key)
   const handleSearch = (e) => {
     e.preventDefault();
 
-    // Trim the query to handle whitespace
+    // Immediately perform search without waiting for debounce
     const trimmedQuery = query.trim();
 
     if (trimmedQuery) {
@@ -204,7 +253,7 @@ export default function SearchPage() {
       performSearch(trimmedQuery);
     } else {
       // If query is empty or just whitespace, clear results and URL parameter
-      setResults({ pages: [], users: [] });
+      setResults({ pages: [], users: [], groups: [] });
 
       // Remove the q parameter from URL
       const url = new URL(window.location);
@@ -344,6 +393,12 @@ export default function SearchPage() {
             className="flex-1"
             ref={searchInputRef}
             autoFocus={true}
+            onFocus={() => {
+              // For mobile devices, try to open the keyboard
+              if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+                searchInputRef.current?.click();
+              }
+            }}
           />
           <Button type="submit">Search</Button>
         </div>

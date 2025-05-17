@@ -135,23 +135,44 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
         {/* User and timestamp info */}
         <div className="flex justify-between items-center w-full mt-1 flex-shrink-0">
           <div className="text-xs">
-            <span className="text-foreground">{isNewPage ? "created by" : "edited by"}{" "}</span>
-            {/* Don't make user links clickable for sample data */}
-            {activity.isSample ? (
-              <span className="text-primary">
-                {activity.username || "anonymous"}
-              </span>
+            {activity.groupId && activity.groupName ? (
+              <>
+                <span className="text-foreground">{isNewPage ? "created in" : "edited in"}{" "}</span>
+                <Link
+                  href={`/group/${activity.groupId}`}
+                  className="hover:underline text-primary"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {activity.groupName}
+                </Link>
+              </>
             ) : (
-              <span className="text-primary">
-                {activity.username || "anonymous"}
-                {subscriptionEnabled && (
-                  <SupporterIcon
-                    tier={activity.tier}
-                    status={activity.subscriptionStatus}
-                    size="sm"
-                  />
+              <>
+                <span className="text-foreground">{isNewPage ? "created by" : "edited by"}{" "}</span>
+                {/* Don't make user links clickable for sample data */}
+                {activity.isSample ? (
+                  <span className="text-primary">
+                    {activity.username || "anonymous"}
+                  </span>
+                ) : (
+                  <span className="text-primary">
+                    <Link
+                      href={`/user/${activity.userId}`}
+                      className="hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {activity.username || "anonymous"}
+                    </Link>
+                    {subscriptionEnabled && (
+                      <SupporterIcon
+                        tier={activity.tier}
+                        status={activity.subscriptionStatus}
+                        size="sm"
+                      />
+                    )}
+                  </span>
                 )}
-              </span>
+              </>
             )}
           </div>
           <TooltipProvider>

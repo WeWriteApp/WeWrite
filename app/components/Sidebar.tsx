@@ -4,6 +4,7 @@ import * as React from "react"
 import { useState, useEffect, useContext } from "react"
 import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { auth } from "../firebase/config"
 import { signOut } from "firebase/auth"
 import { cn } from "../lib/utils"
@@ -209,16 +210,23 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
               {/* Groups navigation item - only visible when feature flag is enabled */}
               {groupsEnabled && (
-                <button
-                  onClick={() => router.push('/groups')}
-                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-                >
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    <span>Groups</span>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <Link href="/groups" passHref>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('[DEBUG] Sidebar - Groups button clicked, navigating to /groups');
+                      // Use window.location for more reliable navigation
+                      window.location.href = '/groups';
+                    }}
+                    className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                  >
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 mr-2" />
+                      <span>Groups</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                </Link>
               )}
               {/* Debug element to show when groups feature is disabled */}
               {!groupsEnabled && process.env.NODE_ENV === 'development' && (

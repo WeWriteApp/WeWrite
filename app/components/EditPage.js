@@ -279,7 +279,14 @@ const EditPage = ({
   };
 
   const handleCancel = () => {
+    console.log('[DEBUG] EditPage - Cancel button clicked, redirecting to page view:', page.id);
     setIsEditing(false);
+
+    // Navigate to the page view
+    if (page && page.id) {
+      // Use window.location for more reliable navigation
+      window.location.href = `/${page.id}`;
+    }
   };
 
   // Display error message if provided
@@ -370,9 +377,16 @@ const EditPage = ({
 
   // Override the cancel handler to check for unsaved changes
   const handleCancelWithCheck = () => {
+    // Get the page URL to return to
+    const returnUrl = page && page.id ? `/${page.id}` : '/';
+    console.log('[DEBUG] EditPage - handleCancelWithCheck called, returnUrl:', returnUrl);
+
     if (hasUnsavedChanges) {
-      handleNavigation('/');
+      // If there are unsaved changes, show the confirmation dialog
+      // and set the return URL to the page being edited
+      handleNavigation(returnUrl);
     } else {
+      // If no unsaved changes, just cancel and return to the page
       handleCancel();
     }
   };

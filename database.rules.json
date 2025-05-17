@@ -48,6 +48,11 @@
         "members": {
           ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
           ".write": "auth !== null && (data.parent().child('owner').val() === auth.uid || (data.parent().child('members').child(auth.uid).exists() && data.parent().child('members').child(auth.uid).child('role').val() === 'admin'))"
+        },
+        // Pages in groups
+        "pages": {
+          ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
+          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
         }
       }
     },

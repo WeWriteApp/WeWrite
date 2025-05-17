@@ -199,6 +199,8 @@ const UnifiedEditor = forwardRef((props, ref) => {
   // Function to open the link editor
   const openLinkEditor = useCallback(() => {
     try {
+      console.log('[DEBUG] openLinkEditor called');
+
       // Focus the editor first
       safeReactEditor.focus(editor);
 
@@ -239,6 +241,19 @@ const UnifiedEditor = forwardRef((props, ref) => {
         pageTitle: ''
       };
 
+      // Get the selected text to use as the initial display text
+      if (selection && !Range.isCollapsed(selection)) {
+        try {
+          const fragment = Editor.fragment(editor, selection);
+          const text = fragment.map(n => Node.string(n)).join('\n');
+          if (text) {
+            linkEditorRef.current.initialLinkValues.text = text;
+          }
+        } catch (error) {
+          console.error('[DEBUG] Error getting selected text:', error);
+        }
+      }
+
       // Create a local state setter function if it doesn't exist
       if (!linkEditorRef.current.setShowLinkEditor) {
         linkEditorRef.current.setShowLinkEditor = (value) => {
@@ -254,6 +269,23 @@ const UnifiedEditor = forwardRef((props, ref) => {
       linkEditorRef.current.showLinkEditor = true;
       if (linkEditorRef.current.setShowLinkEditor) {
         linkEditorRef.current.setShowLinkEditor(true);
+      }
+
+      // Force a re-render to show the link editor
+      // This is a critical fix to ensure the link editor appears
+      try {
+        // Create a custom event to trigger the link editor
+        const event = new CustomEvent('show-link-editor', {
+          detail: {
+            position: linkEditorRef.current.linkEditorPosition,
+            initialValues: linkEditorRef.current.initialLinkValues
+          }
+        });
+        document.dispatchEvent(event);
+
+        console.log('[DEBUG] Dispatched show-link-editor event');
+      } catch (error) {
+        console.error('[DEBUG] Error dispatching show-link-editor event:', error);
       }
 
       return true;
@@ -410,7 +442,14 @@ const UnifiedEditor = forwardRef((props, ref) => {
       if (!isEscaped) {
         event.preventDefault();
         console.log("@ key pressed, showing link editor");
-        openLinkEditor();
+
+        // Insert the @ symbol first
+        Transforms.insertText(editor, '@');
+
+        // Then open the link editor
+        setTimeout(() => {
+          openLinkEditor();
+        }, 10);
       }
     }
 
@@ -634,11 +673,27 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       }
     };
 
+    const handleShowLinkEditor = (event) => {
+      console.log('[DEBUG] Received show-link-editor event');
+      if (event.detail) {
+        if (event.detail.position) {
+          setLinkEditorPosition(event.detail.position);
+        }
+        if (event.detail.initialValues) {
+          setInitialLinkValues(event.detail.initialValues);
+        }
+        // Show the link editor
+        setShowLinkEditor(true);
+      }
+    };
+
     if (typeof window !== 'undefined') {
       window.addEventListener('linkEditorStateChange', handleLinkEditorStateChange);
+      document.addEventListener('show-link-editor', handleShowLinkEditor);
 
       return () => {
         window.removeEventListener('linkEditorStateChange', handleLinkEditorStateChange);
+        document.removeEventListener('show-link-editor', handleShowLinkEditor);
       };
     }
   }, []);

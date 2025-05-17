@@ -136,30 +136,48 @@ export default function UserBioTab({ profile }) {
   // Handle inserting a link
   const handleInsertLink = () => {
     if (editorRef.current) {
-      console.log("Editor ref exists, attempting to open link editor");
+      console.log("[DEBUG] Editor ref exists, attempting to open link editor");
 
       // Focus the editor first
-      editorRef.current.focus();
+      try {
+        editorRef.current.focus();
+        console.log("[DEBUG] Editor focused successfully");
+      } catch (focusError) {
+        console.error("[DEBUG] Error focusing editor:", focusError);
+      }
 
       // Use the openLinkEditor method we added to the UnifiedEditor
       if (editorRef.current.openLinkEditor) {
-        console.log("Using openLinkEditor method");
+        console.log("[DEBUG] Using openLinkEditor method");
         try {
-          // Ensure we're properly calling the openLinkEditor method
+          // Open the link editor directly without creating a temporary link first
+          const result = editorRef.current.openLinkEditor();
+          console.log("[DEBUG] openLinkEditor result:", result);
+
+          // Force a custom event to ensure the link editor appears
           setTimeout(() => {
-            // Add a small delay to ensure the editor is focused
-            editorRef.current.openLinkEditor();
-          }, 10);
+            try {
+              const event = new CustomEvent('show-link-editor', {
+                detail: {
+                  source: 'insert-link-button-bio'
+                }
+              });
+              document.dispatchEvent(event);
+              console.log("[DEBUG] Dispatched show-link-editor event from bio button");
+            } catch (eventError) {
+              console.error("[DEBUG] Error dispatching event:", eventError);
+            }
+          }, 50);
         } catch (error) {
-          console.error("Error opening link editor:", error);
+          console.error("[DEBUG] Error opening link editor:", error);
           toast.error("Could not open link editor. Please try again.");
         }
       } else {
-        console.error("openLinkEditor method not available");
+        console.error("[DEBUG] openLinkEditor method not available");
         toast.error("Link insertion is not available. Please try again later.");
       }
     } else {
-      console.error("Editor ref not available");
+      console.error("[DEBUG] Editor ref not available");
       toast.error("Editor is not ready. Please try again later.");
     }
   };

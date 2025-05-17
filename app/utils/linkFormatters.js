@@ -37,6 +37,16 @@ export const isUserLink = (url) => {
 };
 
 /**
+ * Determine if a link is a group link based on its URL
+ * @param {string} url - The URL to check
+ * @returns {boolean} - True if it's a group link, false otherwise
+ */
+export const isGroupLink = (url) => {
+  if (!url) return false;
+  return url.includes('/group/') || url.includes('/g/');
+};
+
+/**
  * Determine if a link is a page link based on its URL
  * @param {string} url - The URL to check
  * @returns {boolean} - True if it's a page link, false otherwise
@@ -46,8 +56,7 @@ export const isPageLink = (url) => {
   // If it's not a user link, external link, or group link, it's a page link
   return !isUserLink(url) &&
          !isExternalLink(url) &&
-         !url.includes('/group/') &&
-         !url.includes('/g/');
+         !isGroupLink(url);
 };
 
 /**

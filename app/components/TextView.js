@@ -12,6 +12,7 @@ import { isExternalLink } from "../utils/linkFormatters";
 import { Button } from "./ui/button";
 import { ExternalLink } from "lucide-react";
 import Modal from "./ui/modal";
+import { useControlledAnimation } from "../hooks/useControlledAnimation";
 import "./paragraph-styles.css";
 import "./diff-styles.css";
 
@@ -264,6 +265,13 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     // functionality in the future
   }, []);
 
+  // Generate a unique component ID for this TextView instance
+  const componentId = `text-view-${page?.id || 'default'}`;
+
+  // Control animation to prevent double rendering effect
+  // Enable animateOnNavigation to ensure smooth transitions between pages
+  const shouldAnimate = useControlledAnimation(componentId, false, true);
+
   return (
     <div className="relative">
       <motion.div
@@ -274,7 +282,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         } min-h-screen`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         onClick={() => {
           if (canEdit && setIsEditing) {
             // Show loading state immediately
@@ -554,7 +562,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
   // No longer needed as paragraph numbers are now in the left margin
 
-  // Normal mode with motion animations
+  // Normal mode with motion animations - staggered entry for paragraphs
   return (
     <motion.div
       ref={paragraphRef}
@@ -566,7 +574,8 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
         type: "spring",
         stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
-        mass: ANIMATION_CONSTANTS.SPRING_MASS
+        mass: ANIMATION_CONSTANTS.SPRING_MASS,
+        delay: 0.05 * index // Stagger the animation based on paragraph index
       }}
       onClick={handleClick}
       onMouseEnter={() => canEdit && setLineHovered(true)}

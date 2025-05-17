@@ -1,0 +1,50 @@
+/* Responsive table styles */
+
+/* On small screens, convert table to card layout */
+@media (max-width: 768px) {
+  /* Hide table headers on mobile */
+  .responsive-table thead {
+    display: none;
+  }
+
+  /* Make rows display as cards */
+  .responsive-table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 0.5rem;
+  }
+
+  /* Style cells as key-value pairs */
+  .responsive-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    text-align: right;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .responsive-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  /* Add labels for each cell */
+  .responsive-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    text-align: left;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Center action buttons */
+  .responsive-table tbody td:last-child {
+    justify-content: center;
+  }
+}
+
+/* Dark mode adjustments */
+.dark .responsive-table tbody tr {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}

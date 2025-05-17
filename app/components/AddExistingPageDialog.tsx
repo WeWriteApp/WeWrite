@@ -11,6 +11,7 @@ import { ref, get, update } from "firebase/database";
 import { getEditablePagesByUser } from "../firebase/database";
 import { Badge } from "./ui/badge";
 import { cn, interactiveCard } from "../lib/utils";
+import PrivacyWarningModal from "./PrivacyWarningModal";
 
 interface Page {
   id: string;
@@ -42,6 +43,9 @@ export default function AddExistingPageDialog({
   const [loading, setLoading] = useState(true);
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
+  const [isGroupPublic, setIsGroupPublic] = useState(false);
+  const [showPrivacyWarning, setShowPrivacyWarning] = useState(false);
+  const [pendingPrivatePageIds, setPendingPrivatePageIds] = useState<string[]>([]);
   const { user } = useContext(AuthContext);
 
   // Fetch user's pages when dialog opens
@@ -82,13 +86,16 @@ export default function AddExistingPageDialog({
         groupName: page.groupName
       }));
 
-      // Get current group pages to exclude
+      // Get current group pages to exclude and check group privacy status
       const groupRef = ref(rtdb, `groups/${groupId}`);
       const groupSnapshot = await get(groupRef);
 
       if (groupSnapshot.exists()) {
         const groupData = groupSnapshot.val();
         const groupPageIds = groupData.pages ? Object.keys(groupData.pages) : [];
+
+        // Set group privacy status
+        setIsGroupPublic(groupData.isPublic || false);
 
         // Filter out pages that are already in the group
         const availablePages = userPages.filter(page => !groupPageIds.includes(page.id));
@@ -118,6 +125,25 @@ export default function AddExistingPageDialog({
   const handleAddPages = async () => {
     if (selectedPages.length === 0) return;
 
+    // Check if any selected pages are private
+    const selectedPageObjects = pages.filter(page => selectedPages.includes(page.id));
+    const privatePages = selectedPageObjects.filter(page => !page.isPublic);
+
+    if (privatePages.length > 0) {
+      // Store private page IDs for later processing
+      setPendingPrivatePageIds(privatePages.map(page => page.id));
+      // Show privacy warning modal
+      setShowPrivacyWarning(true);
+      return;
+    }
+
+    // If no private pages, proceed with adding
+    await addPagesToGroup(selectedPages);
+  };
+
+  const addPagesToGroup = async (pageIds: string[]) => {
+    if (pageIds.length === 0) return;
+
     setAdding(true);
     try {
       // Get the group reference
@@ -128,7 +154,7 @@ export default function AddExistingPageDialog({
       const currentPages = groupPagesSnapshot.exists() ? groupPagesSnapshot.val() : {};
 
       // Add selected pages
-      const selectedPageObjects = pages.filter(page => selectedPages.includes(page.id));
+      const selectedPageObjects = pages.filter(page => pageIds.includes(page.id));
       const updates: Record<string, any> = {};
 
       selectedPageObjects.forEach(page => {
@@ -149,6 +175,7 @@ export default function AddExistingPageDialog({
       // Close dialog and reset state
       setOpen(false);
       setSelectedPages([]);
+      setPendingPrivatePageIds([]);
       if (onPagesAdded) onPagesAdded();
     } catch (error) {
       console.error("Error adding pages to group:", error);
@@ -157,23 +184,35 @@ export default function AddExistingPageDialog({
     }
   };
 
+  const handlePrivacyWarningClose = () => {
+    setShowPrivacyWarning(false);
+    setPendingPrivatePageIds([]);
+  };
+
+  const handlePrivacyWarningConfirm = async () => {
+    // User confirmed, proceed with adding the private pages
+    await addPagesToGroup(selectedPages);
+    setShowPrivacyWarning(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Existing Page
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Add Existing Pages to Group</DialogTitle>
-          <DialogDescription>
-            Select pages you want to add to this group. Group members will be able to edit these pages.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button variant="outline" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Existing Page
+            </Button>
+          )}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add Existing Pages to Group</DialogTitle>
+            <DialogDescription>
+              Select pages you want to add to this group. Group members will be able to edit these pages.
+            </DialogDescription>
+          </DialogHeader>
 
         <div className="relative my-4">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -268,5 +307,15 @@ export default function AddExistingPageDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Privacy Warning Modal */}
+    <PrivacyWarningModal
+      isOpen={showPrivacyWarning}
+      onClose={handlePrivacyWarningClose}
+      onConfirm={handlePrivacyWarningConfirm}
+      isGroupPublic={isGroupPublic}
+      isLoading={adding}
+    />
+    </>
   );
 }

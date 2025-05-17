@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import { rtdb } from '../firebase/rtdb';
 import { onValue, ref, get } from "firebase/database";
@@ -32,6 +33,7 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const router = useRouter();
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -125,13 +127,10 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
   }, [user?.uid, profileUserId]);
 
   // Function to generate edit activity data for a group
+  // This function calculates the actual edit activity in the last 24 hours
+  // based on page modifications, not view counts
   const generateActivityData = (group: any): number[] => {
-    // If the group has real activity data, use it
-    if (group.activity && Array.isArray(group.activity)) {
-      return group.activity;
-    }
-
-    // Create an array of 24 zeros (for 24 hours)
+    // Always create a fresh array of 24 zeros (for 24 hours)
     const activity = Array(24).fill(0);
 
     // If the group has pages, get edit activity data for each page
@@ -289,7 +288,24 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
                 className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
-                  window.location.href = `/group/${group.id}`;
+                  // Use direct navigation to avoid scroll issues with sticky headers
+                  console.log('Group row clicked, using direct navigation', {
+                    groupId: group.id,
+                    url: `/group/${group.id}`
+                  });
+
+                  try {
+                    // Create a full URL to ensure proper navigation
+                    const baseUrl = window.location.origin;
+                    const fullUrl = `${baseUrl}/group/${group.id}`;
+                    console.log('EnhancedMyGroups - Navigating to full URL:', fullUrl);
+
+                    // Use window.location.href for more reliable navigation
+                    window.location.href = fullUrl;
+                  } catch (error) {
+                    console.error('Error with navigation, falling back to direct href', error);
+                    window.location.href = `/group/${group.id}`;
+                  }
                 }}
               >
                 <td className="py-3 px-4">
@@ -329,6 +345,7 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
                       data={group.activity || []}
                       height={40}
                       strokeWidth={1.5}
+                      title="Edit activity in the last 24 hours"
                     />
                   </div>
                 </td>
@@ -346,7 +363,24 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
             className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
             onClick={(e) => {
               e.preventDefault();
-              window.location.href = `/group/${group.id}`;
+              // Use direct navigation to avoid scroll issues with sticky headers
+              console.log('Group card clicked (mobile), using direct navigation', {
+                groupId: group.id,
+                url: `/group/${group.id}`
+              });
+
+              try {
+                // Create a full URL to ensure proper navigation
+                const baseUrl = window.location.origin;
+                const fullUrl = `${baseUrl}/group/${group.id}`;
+                console.log('EnhancedMyGroups - Navigating to full URL (mobile):', fullUrl);
+
+                // Use window.location.href for more reliable navigation
+                window.location.href = fullUrl;
+              } catch (error) {
+                console.error('Error with navigation, falling back to direct href', error);
+                window.location.href = `/group/${group.id}`;
+              }
             }}
             style={{ cursor: 'pointer' }}
           >
@@ -392,6 +426,7 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
                     data={group.activity || []}
                     height={48}
                     strokeWidth={2}
+                    title="Edit activity in the last 24 hours"
                   />
                 </div>
               </div>

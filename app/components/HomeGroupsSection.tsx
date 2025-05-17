@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthContext } from "../providers/AuthProvider";
 import { rtdb } from '../firebase/rtdb';
 import { onValue, ref, get } from "firebase/database";
@@ -31,9 +32,19 @@ export default function HomeGroupsSection() {
   const { user } = useContext(AuthContext);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   // Check if the groups feature flag is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
+
+  // Log the feature flag status for debugging
+  useEffect(() => {
+    console.log('[DEBUG] HomeGroupsSection - Groups feature flag status:', {
+      enabled: groupsEnabled,
+      userEmail: user?.email,
+      userId: user?.uid
+    });
+  }, [groupsEnabled, user?.email, user?.uid]);
 
   // Enhanced debug logging for groups feature flag
   useEffect(() => {
@@ -115,8 +126,9 @@ export default function HomeGroupsSection() {
           const isOwner = group.owner === user.uid;
 
           if (isMember || isOwner) {
-            // Get real activity data for the group
-            // This will be based on page edits within the group
+            // Generate edit activity data for the group
+            // This calculates the actual edit activity in the last 24 hours
+            // based on page modifications, not view counts
             let activity = [];
 
             // If the group has pages, get edit activity data for each page
@@ -294,7 +306,26 @@ export default function HomeGroupsSection() {
                 className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
-                  window.location.href = `/group/${group.id}`;
+                  // Use direct navigation to avoid scroll issues with sticky headers
+                  console.log('HomeGroupsSection - Group row clicked, using direct navigation', {
+                    groupId: group.id,
+                    url: `/group/${group.id}`,
+                    currentLocation: window.location.href
+                  });
+
+                  // Force a hard navigation by setting location.href
+                  try {
+                    // Create a full URL to ensure proper navigation
+                    const baseUrl = window.location.origin;
+                    const fullUrl = `${baseUrl}/group/${group.id}`;
+                    console.log('Navigating to full URL:', fullUrl);
+
+                    // Use window.location.href for more reliable navigation
+                    window.location.href = fullUrl;
+                  } catch (error) {
+                    console.error('Error with navigation, falling back to direct href', error);
+                    window.location.href = `/group/${group.id}`;
+                  }
                 }}
               >
                 <td className="py-3 px-4">
@@ -326,6 +357,7 @@ export default function HomeGroupsSection() {
                       data={group.activity || []}
                       height={40}
                       strokeWidth={1.5}
+                      title="Edit activity in the last 24 hours"
                     />
                   </div>
                 </td>
@@ -343,7 +375,26 @@ export default function HomeGroupsSection() {
             className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
             onClick={(e) => {
               e.preventDefault();
-              window.location.href = `/group/${group.id}`;
+              // Use direct navigation to avoid scroll issues with sticky headers
+              console.log('HomeGroupsSection - Group card clicked (mobile), using direct navigation', {
+                groupId: group.id,
+                url: `/group/${group.id}`,
+                currentLocation: window.location.href
+              });
+
+              // Force a hard navigation by setting location.href
+              try {
+                // Create a full URL to ensure proper navigation
+                const baseUrl = window.location.origin;
+                const fullUrl = `${baseUrl}/group/${group.id}`;
+                console.log('Navigating to full URL (mobile):', fullUrl);
+
+                // Use window.location.href for more reliable navigation
+                window.location.href = fullUrl;
+              } catch (error) {
+                console.error('Error with navigation, falling back to direct href', error);
+                window.location.href = `/group/${group.id}`;
+              }
             }}
             style={{ cursor: 'pointer' }}
           >
@@ -379,6 +430,7 @@ export default function HomeGroupsSection() {
                     data={group.activity || []}
                     height={48}
                     strokeWidth={2}
+                    title="Edit activity in the last 24 hours"
                   />
                 </div>
               </div>
@@ -389,10 +441,15 @@ export default function HomeGroupsSection() {
 
       {/* View All button */}
       <div className="flex justify-center mt-4">
-        <Button variant="outline" asChild>
-          <Link href="/groups">
-            View all groups
-          </Link>
+        <Button
+          variant="outline"
+          onClick={() => {
+            console.log('[DEBUG] HomeGroupsSection - View all groups button clicked, navigating to /groups');
+            // Use window.location for more reliable navigation
+            window.location.href = '/groups';
+          }}
+        >
+          View all groups
         </Button>
       </div>
     </div>

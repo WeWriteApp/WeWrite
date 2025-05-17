@@ -39,22 +39,16 @@ export const checkPageAccess = async (pageData, userId) => {
     };
   }
 
-  // Public pages are accessible to everyone
-  if (pageData.isPublic) {
-    return {
-      hasAccess: true
-    };
-  }
-
-  // Private pages are accessible to their owners
+  // Private pages are accessible to their owners regardless of other settings
   if (userId && pageData.userId === userId) {
     return {
-      hasAccess: true
+      hasAccess: true,
+      reason: "owner"
     };
   }
 
-  // Check if the page belongs to a group and if the user is a member of that group
-  if (userId && pageData.groupId) {
+  // Check if the page belongs to a group
+  if (pageData.groupId) {
     try {
       const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
       const groupSnapshot = await get(groupRef);
@@ -62,22 +56,69 @@ export const checkPageAccess = async (pageData, userId) => {
       if (groupSnapshot.exists()) {
         const groupData = groupSnapshot.val();
 
-        // Check if the user is a member of the group
-        if (groupData.members && groupData.members[userId]) {
+        // If the group is public, public pages are accessible to everyone
+        if (groupData.isPublic && pageData.isPublic) {
           return {
-            hasAccess: true
+            hasAccess: true,
+            reason: "public page in public group"
+          };
+        }
+
+        // If the group is public, private pages are also accessible to everyone
+        // This is because adding a page to a public group makes it visible to everyone
+        if (groupData.isPublic && !pageData.isPublic) {
+          return {
+            hasAccess: true,
+            reason: "private page in public group"
+          };
+        }
+
+        // For private groups, check if the user is a member
+        if (!groupData.isPublic) {
+          // If user is not logged in, deny access to private group content
+          if (!userId) {
+            return {
+              hasAccess: false,
+              error: "Access denied: This page belongs to a private group"
+            };
+          }
+
+          // Check if the user is a member of the group
+          if (groupData.members && groupData.members[userId]) {
+            return {
+              hasAccess: true,
+              reason: "group member"
+            };
+          }
+
+          // If not a member, deny access
+          return {
+            hasAccess: false,
+            error: "Access denied: This page belongs to a private group and is only accessible to group members"
           };
         }
       }
     } catch (error) {
       console.error("Error checking group membership:", error);
+      return {
+        hasAccess: false,
+        error: "Error checking group access"
+      };
     }
   }
 
-  // Otherwise, access is denied
+  // For pages not in groups, public pages are accessible to everyone
+  if (pageData.isPublic) {
+    return {
+      hasAccess: true,
+      reason: "public page"
+    };
+  }
+
+  // Otherwise, access is denied (private page not in a group and user is not the owner)
   return {
     hasAccess: false,
-    error: "Access denied: This page is private and can only be viewed by its owner or group members"
+    error: "Access denied: This page is private and can only be viewed by its owner"
   };
 };
 

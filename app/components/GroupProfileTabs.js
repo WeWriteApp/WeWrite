@@ -26,13 +26,13 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
     const tabValues = ["about", "pages", "members"];
     const currentIndex = tabValues.indexOf(activeTab);
     const newIndex = tabValues.indexOf(value);
-    
+
     if (newIndex > currentIndex) {
       setDirection(-1); // Moving right
     } else if (newIndex < currentIndex) {
       setDirection(1); // Moving left
     }
-    
+
     setActiveTab(value);
     scrollTabIntoView(value);
   };
@@ -68,7 +68,7 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
 
   const handleTouchMove = (e) => {
     setTouchEnd(e.targetTouches[0].clientX);
-    
+
     if (touchStart && touchEnd) {
       const distance = touchEnd - touchStart;
       setIsDragging(true);
@@ -78,14 +78,14 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-    
+
     const distance = touchEnd - touchStart;
     const isLeftSwipe = distance < -50;
     const isRightSwipe = distance > 50;
-    
+
     const tabValues = ["about", "pages", "members"];
     const currentIndex = tabValues.indexOf(activeTab);
-    
+
     if (isLeftSwipe && currentIndex < tabValues.length - 1) {
       // Swipe left, go to next tab
       handleTabChange(tabValues[currentIndex + 1]);
@@ -93,21 +93,22 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
       // Swipe right, go to previous tab
       handleTabChange(tabValues[currentIndex - 1]);
     }
-    
+
     setIsDragging(false);
     setDragX(0);
     setTouchStart(null);
     setTouchEnd(null);
   };
 
-  // Handle scroll to make tabs sticky
+  // Handle scroll to make tabs sticky using a different approach
+  // that avoids conflicts with Next.js auto-scroll behavior
   useEffect(() => {
     const handleScroll = () => {
       if (!tabsOriginalTop) return;
-      
+
       const scrollY = window.scrollY;
       const shouldBeSticky = scrollY > tabsOriginalTop;
-      
+
       if (shouldBeSticky !== isTabsSticky) {
         setIsTabsSticky(shouldBeSticky);
       }
@@ -123,7 +124,8 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
       }
     }, 100);
 
-    window.addEventListener('scroll', handleScroll);
+    // Use passive event listener for better performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [tabsOriginalTop, isTabsSticky]);
 
@@ -136,17 +138,25 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
 
   return (
     <div className="mt-6">
+      {/* Add a spacer div that takes up space when tabs are sticky */}
+      {isTabsSticky && (
+        <div style={{ height: `${tabsHeight}px` }} className="w-full" />
+      )}
       <Tabs
         defaultValue="about"
         value={activeTab}
         onValueChange={handleTabChange}
         className="w-full"
       >
-        <div 
-          id="group-tabs-header" 
-          className={`relative border-b border-border/40 mb-4 bg-background z-10 ${
-            isTabsSticky ? 'sticky top-0 shadow-sm' : ''
+        <div
+          id="group-tabs-header"
+          className={`border-b border-border/40 mb-4 bg-background z-10 ${
+            isTabsSticky ? 'shadow-sm group-tabs-header-sticky' : ''
           }`}
+          style={{
+            position: 'relative', // Always use relative positioning to avoid Next.js scroll issues
+            width: '100%'
+          }}
         >
           <div className="overflow-x-auto scrollbar-hide pb-0.5">
             <TabsList className="flex w-max border-0 bg-transparent p-0 justify-start h-auto min-h-0">

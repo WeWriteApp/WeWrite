@@ -153,6 +153,13 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
     return date.toLocaleDateString();
   };
 
+  // Get author username with fallback
+  const getAuthorUsername = (page) => {
+    if (!page) return 'Unknown';
+    // Try to get the username from various possible properties
+    return page.username || page.authorUsername || page.author?.username || 'Unknown';
+  };
+
   return (
     <div className="space-y-4">
       {/* Header with controls */}
@@ -161,11 +168,13 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
 
         {(isOwner || isMember) && (
           <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/new?groupId=${group.id}`} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New Page
-              </Link>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => window.location.href = `/new?groupId=${group.id}`}
+            >
+              <Plus className="h-4 w-4" />
+              New Page
             </Button>
             <AddExistingPageDialog
               groupId={group.id}
@@ -280,8 +289,11 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
           <p>No pages found</p>
           {(isOwner || isMember) && searchTerm === "" && (
             <div className="flex gap-2 justify-center mt-4">
-              <Button variant="outline" asChild>
-                <Link href={`/new?groupId=${group.id}`}>Create your first page</Link>
+              <Button
+                variant="outline"
+                onClick={() => window.location.href = `/new?groupId=${group.id}`}
+              >
+                Create your first page
               </Button>
             </div>
           )}
@@ -299,7 +311,9 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
                 </PillLink>
               </div>
               <div className="flex justify-between items-center text-xs text-muted-foreground">
-                <span>{page.username || "Anonymous"}</span>
+                <div className="flex items-center">
+                  <span>by {getAuthorUsername(page)}</span>
+                </div>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   <span>{formatDate(page.lastModified)}</span>
@@ -309,9 +323,9 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
           ))}
         </div>
       ) : (
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
+        <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100">
+          <Table className="responsive-table">
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Author</TableHead>
@@ -322,7 +336,7 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
             <TableBody>
               {filteredPages.map(page => (
                 <TableRow key={page.id}>
-                  <TableCell>
+                  <TableCell label="Title">
                     <PillLink
                       href={`/${page.id}`}
                       isPublic={page.isPublic}
@@ -330,9 +344,13 @@ export default function GroupPagesTab({ group, isOwner, isMember }) {
                       {page.title || "Untitled"}
                     </PillLink>
                   </TableCell>
-                  <TableCell>{page.username || "Anonymous"}</TableCell>
-                  <TableCell>{formatDate(page.createdAt)}</TableCell>
-                  <TableCell>{formatDate(page.lastModified)}</TableCell>
+                  <TableCell label="Author">
+                    <div className="flex items-center">
+                      <span>by {getAuthorUsername(page)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell label="Created">{formatDate(page.createdAt)}</TableCell>
+                  <TableCell label="Last Updated">{formatDate(page.lastModified)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

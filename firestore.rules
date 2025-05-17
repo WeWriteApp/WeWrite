@@ -4,15 +4,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Pages collection
     match /pages/{pageId} {
-      // Allow reading public pages
-      allow read: if resource.data.isPublic == true;
-
-      // Allow reading private pages if user is the owner
+      // Allow reading if user is the owner
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
 
-      // Allow reading private pages if user is a member of the group the page belongs to
-      allow read: if request.auth != null && resource.data.groupId != null &&
-        exists(/databases/$(database)/documents/groupMembers/$(resource.data.groupId + '_' + request.auth.uid));
+      // Allow reading public pages that don't belong to a group
+      allow read: if resource.data.isPublic == true && resource.data.groupId == null;
+
+      // For pages that belong to a group, check group access
+      allow read: if resource.data.groupId != null && (
+        // Public groups: all pages (public and private) are accessible to everyone
+        get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.isPublic == true ||
+
+        // Private groups: only members can access
+        (request.auth != null &&
+          exists(/databases/$(database)/documents/groups/$(resource.data.groupId)/members/$(request.auth.uid)))
+      );
 
       // Allow writing if user is the owner
       allow write: if request.auth != null && resource.data.userId == request.auth.uid;

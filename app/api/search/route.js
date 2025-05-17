@@ -547,16 +547,38 @@ export async function GET(request) {
     console.log(`Search API called with searchTerm: "${searchTerm}", userId: ${userId}, filterByUserId: ${filterByUserId}`);
     console.log(`SEARCH API USING FIXED MULTI-WORD SEARCH LOGIC`);
 
-
+    // For unauthenticated users, return only public content
     if (!userId) {
-      return NextResponse.json(
-        {
-          pages: [],
-          users: [],
-          message: "userId is required"
-        },
-        { status: 400 }
-      );
+      console.log('No userId provided, returning only public content');
+
+      // Search for public pages in Firestore
+      const publicPages = await searchPagesInFirestore(null, searchTerm, [], null);
+
+      // Search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          const { searchUsers } = await import('../../firebase/database');
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user'
+          }));
+        } catch (userError) {
+          console.error('Error searching for users:', userError);
+        }
+      }
+
+      return NextResponse.json({
+        pages: publicPages,
+        users,
+        source: "unauthenticated_search"
+      }, { status: 200 });
     }
 
     // If BigQuery is not initialized, use Firestore fallback

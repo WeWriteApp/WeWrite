@@ -2,10 +2,11 @@
 
 import React, { useState, forwardRef } from "react";
 import Link from "next/link";
-import { Lock, ExternalLink, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Lock, ExternalLink, Trash2, Users } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
 import { useAuth } from "../providers/AuthProvider";
-import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
+import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../utils/linkFormatters";
 import Modal from "./ui/modal";
 import { Button } from "./ui/button";
 import { usePillStyle } from "../contexts/PillStyleContext";
@@ -33,6 +34,7 @@ export const PillLink = forwardRef(({
   const { user } = useAuth();
   const { getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
+  const router = useRouter();
 
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
@@ -53,9 +55,19 @@ export const PillLink = forwardRef(({
   // Determine link properties
   const showLock = isPublic === false;
   const isUserLinkType = isUserLink(href);
+  const isGroupLinkType = isGroupLink(href);
   const isPageLinkType = isPageLink(href);
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
+
+  // PillLink components should never show group attribution
+  let formattedByline = null;
+
+  // Only show byline if it's not related to a group
+  if (byline && isPageLinkType && !groupId) {
+    // For pages without groupId, format as "by [username]"
+    formattedByline = `by ${byline}`;
+  }
 
   // Ensure we have a valid href to prevent errors
   const safeHref = href || '#';
@@ -69,6 +81,15 @@ export const PillLink = forwardRef(({
       displayTitle = formatPageTitle(children);
     }
   }
+
+  // Log the link type for debugging
+  console.log('PillLink properties:', {
+    href,
+    isUserLink: isUserLinkType,
+    isGroupLink: isGroupLinkType,
+    isPageLink: isPageLinkType,
+    isExternalLink: isExternalLinkType
+  });
 
   // Get pill style
   const { pillStyle } = usePillStyle();
@@ -90,7 +111,6 @@ export const PillLink = forwardRef(({
     ${textWrapStyle}
     ${classicPadding}
     ${getPillStyleClasses()}
-    ${groupId ? 'opacity-90' : ''}
     ${className}
     text-indent-0
     float-none
@@ -114,7 +134,7 @@ export const PillLink = forwardRef(({
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
           <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
-          {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
+          {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
 
         <Modal
@@ -151,7 +171,7 @@ export const PillLink = forwardRef(({
     );
   }
 
-  // Internal link (user or page)
+  // Internal link (user, group, or page)
   return (
     <a
       ref={ref}
@@ -161,6 +181,7 @@ export const PillLink = forwardRef(({
       data-pill-style={pillStyle}
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
+      data-group-id={isGroupLinkType ? pageId : undefined}
       onClick={(e) => {
         // Only prevent default and navigate if we have a valid href
         if (href && href !== '#') {
@@ -170,18 +191,55 @@ export const PillLink = forwardRef(({
             href,
             isPageLink: isPageLinkType,
             isUserLink: isUserLinkType,
+            isGroupLink: isGroupLinkType,
             pageId: isPageLinkType ? pageId : undefined
           });
 
-          // Force a hard navigation using window.location.href
-          // This bypasses any router issues and ensures the navigation works
-          window.location.href = href;
+          // Special handling for group links to avoid scroll issues
+          if (isGroupLinkType) {
+            console.log('PillLink - Group link clicked, using window.location for navigation', {
+              href,
+              groupId: pageId,
+              location: window.location.href
+            });
+
+            // Ensure we have a valid group ID
+            if (pageId) {
+              // Use direct navigation for group links to avoid scroll issues
+              try {
+                // Create a full URL to ensure proper navigation
+                const baseUrl = window.location.origin;
+                const fullUrl = `${baseUrl}/group/${pageId}`;
+                console.log('PillLink - Navigating to full URL:', fullUrl);
+
+                // Use window.location.href for more reliable navigation
+                window.location.href = fullUrl;
+              } catch (error) {
+                console.error('PillLink - Error with navigation, falling back to direct href', error);
+                window.location.href = `/group/${pageId}`;
+              }
+            } else {
+              // If we don't have a valid pageId, use the href directly
+              window.location.href = href;
+            }
+            return;
+          }
+
+          // Use Next.js router for navigation when possible
+          if (typeof window !== 'undefined') {
+            // Use router.push for client-side navigation
+            router.push(href);
+          } else {
+            // Fallback to direct navigation if router is not available
+            window.location.href = href;
+          }
         }
       }}
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
+      {isGroupLinkType && <Users size={14} className="mr-1 flex-shrink-0" />}
       <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
-      {byline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{byline}</span>}
+      {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );
 });

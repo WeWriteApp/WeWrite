@@ -268,7 +268,7 @@ export function PageActions({
               pageId={page.id}
               pageTitle={page.title}
               pageOwnerId={page.userId}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium h-12 md:h-12"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
               size="lg"
             />
           )}

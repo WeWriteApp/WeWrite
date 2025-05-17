@@ -363,6 +363,18 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Fade in animation for controlled rendering */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Hide the spinner for WebKit browsers (Chrome, Safari) */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -678,6 +690,19 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 
 .dark .sticky-tabs {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Group tabs header styling - using transform instead of position:fixed */
+.group-tabs-header-sticky {
+  position: relative !important;
+  transform: translateY(0);
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background-color: hsl(var(--background));
+  z-index: 50;
+  transition: transform 0.2s ease-out;
 }
 
 @keyframes slideDown {

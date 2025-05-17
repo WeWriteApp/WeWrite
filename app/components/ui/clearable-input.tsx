@@ -11,6 +11,24 @@ export interface ClearableInputProps extends InputProps {
 
 const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
   ({ className, value, onChange, onClear, ...props }, ref) => {
+    // Create an internal ref if one is not provided
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    // Combine the forwarded ref with our internal ref
+    const setRefs = (element: HTMLInputElement) => {
+      // Update our internal ref
+      if (inputRef.current !== element) {
+        inputRef.current = element;
+      }
+
+      // Forward the ref
+      if (typeof ref === 'function') {
+        ref(element);
+      } else if (ref) {
+        ref.current = element;
+      }
+    };
+
     const handleClear = () => {
       if (onChange) {
         // Create a synthetic event to simulate input change
@@ -19,10 +37,15 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
         } as React.ChangeEvent<HTMLInputElement>
         onChange(event)
       }
-      
+
       // Call the onClear callback if provided
       if (onClear) {
         onClear()
+      }
+
+      // Focus the input after clearing
+      if (inputRef.current) {
+        inputRef.current.focus();
       }
     }
 
@@ -32,7 +55,7 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
           className={cn("pr-8", className)}
           value={value}
           onChange={onChange}
-          ref={ref}
+          ref={setRefs}
           {...props}
         />
         {value && String(value).length > 0 && (

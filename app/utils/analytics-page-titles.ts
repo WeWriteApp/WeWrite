@@ -191,6 +191,18 @@ export function getAnalyticsPageTitle(
       }
     }
 
+    // Check if this is a group page
+    const groupElement = document.querySelector('[data-group-name]');
+    const groupName = groupElement ? groupElement.getAttribute('data-group-name') || groupElement.textContent : null;
+    const hasGroup = groupName && groupName !== 'Unknown';
+
+    // If we have both title and group name
+    if (contentTitle && contentTitle !== 'Untitled' && hasGroup) {
+      // Cache this title for future use
+      pageTitleCache.set(pageId, contentTitle);
+      return `Page: ${contentTitle} in ${groupName}`;
+    }
+
     // If we have both title and username from DOM/document title
     if (contentTitle && contentTitle !== 'Untitled' && username) {
       // Cache this title for future use
@@ -203,7 +215,18 @@ export function getAnalyticsPageTitle(
       // Cache this title for future use
       pageTitleCache.set(pageId, contentTitle);
 
-      // Try to find username in the page
+      // First try to find group name in the page
+      const groupElement = document.querySelector('[data-group-name]');
+      if (groupElement) {
+        const groupName = groupElement.getAttribute('data-group-name') || groupElement.textContent;
+
+        // Skip "Unknown" group names
+        if (groupName && groupName !== 'Unknown') {
+          return `Page: ${contentTitle} in ${groupName}`;
+        }
+      }
+
+      // If no group, try to find username in the page
       const authorElement = document.querySelector('[data-author-username]');
       if (authorElement) {
         username = authorElement.getAttribute('data-author-username') ||
@@ -257,7 +280,18 @@ export function getAnalyticsPageTitle(
     if (pageTitleCache.has(pageId)) {
       const cachedTitle = pageTitleCache.get(pageId);
 
-      // Try to find username in the page
+      // First try to find group name in the page
+      const groupElement = document.querySelector('[data-group-name]');
+      if (groupElement) {
+        const groupName = groupElement.getAttribute('data-group-name') || groupElement.textContent;
+
+        // Skip "Unknown" group names
+        if (groupName && groupName !== 'Unknown') {
+          return `Page: ${cachedTitle} in ${groupName}`;
+        }
+      }
+
+      // If no group, try to find username in the page
       const authorElement = document.querySelector('[data-author-username]');
       if (authorElement) {
         username = authorElement.getAttribute('data-author-username') ||
@@ -278,12 +312,15 @@ export function getAnalyticsPageTitle(
       // Clean up the document title
       let cleanTitle = documentTitle;
       let extractedUsername = null;
+      let extractedGroupName = null;
 
       // Remove "WeWrite - " prefix if present
       if (cleanTitle.startsWith('WeWrite - ')) {
         cleanTitle = cleanTitle.substring('WeWrite - '.length);
       }
 
+      // Extract group name if present in " in groupName on WeWrite" format
+      const inSuffix = " in ";
       // Extract username if present in " by username on WeWrite" format
       const bySuffix = " by ";
       const onWeWriteSuffix = " on WeWrite";
@@ -294,8 +331,16 @@ export function getAnalyticsPageTitle(
         cleanTitle = cleanTitle.replace(taglineSuffix, '');
       }
 
-      // Then extract username if present
-      if (cleanTitle.includes(bySuffix)) {
+      // Then extract group name or username if present
+      if (cleanTitle.includes(inSuffix)) {
+        // Format: "[pagename] in [groupName] on WeWrite"
+        const titleParts = cleanTitle.split(inSuffix);
+        cleanTitle = titleParts[0];
+        if (titleParts.length > 1) {
+          extractedGroupName = titleParts[1].split(onWeWriteSuffix)[0];
+        }
+      } else if (cleanTitle.includes(bySuffix)) {
+        // Format: "[pagename] by [username] on WeWrite"
         const titleParts = cleanTitle.split(bySuffix);
         cleanTitle = titleParts[0];
         if (titleParts.length > 1) {
@@ -309,8 +354,12 @@ export function getAnalyticsPageTitle(
         // Cache this title for future use
         pageTitleCache.set(pageId, cleanTitle);
 
+        // Return with group name if available
+        if (extractedGroupName) {
+          return `Page: ${cleanTitle} in ${extractedGroupName}`;
+        }
         // Return with username if available
-        if (extractedUsername) {
+        else if (extractedUsername) {
           return `Page: ${cleanTitle} by ${extractedUsername}`;
         }
         return `Page: ${cleanTitle}`;
@@ -338,7 +387,18 @@ export function getAnalyticsPageTitle(
       // Look for any heading element as a last resort
       const anyHeading = document.querySelector('h1, h2, h3')?.textContent;
       if (anyHeading && anyHeading !== 'Untitled') {
-        // Try to find username in the page
+        // First try to find group name in the page
+        const groupElement = document.querySelector('[data-group-name]');
+        if (groupElement) {
+          const groupName = groupElement.getAttribute('data-group-name') || groupElement.textContent;
+
+          // Skip "Unknown" group names
+          if (groupName && groupName !== 'Unknown') {
+            return `Page: ${anyHeading} in ${groupName}`;
+          }
+        }
+
+        // If no group, try to find username in the page
         const authorElement = document.querySelector('[data-author-username]');
         if (authorElement) {
           const username = authorElement.getAttribute('data-author-username') ||
@@ -418,37 +478,14 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
       const cachedTitle = pageTitleCache.get(pageId);
       console.log(`Using cached title for ${pageId}: ${cachedTitle}`);
 
-      // Even if we have the title cached, we might need to update analytics with the username
+      // Even if we have the title cached, we might need to update analytics with the group name or username
       try {
         const metadata = await getPageMetadata(pageId);
         if (metadata) {
-          let username = null;
-
-          // Try to get username from metadata
-          if (metadata.username &&
-              metadata.username !== 'Anonymous' &&
-              metadata.username !== 'Missing username') {
-            username = metadata.username;
-          }
-          // If no username in metadata but we have userId, try to get username from userId
-          else if (metadata.userId) {
-            try {
-              const { getUsernameById } = await import('../utils/userUtils');
-              const fetchedUsername = await getUsernameById(metadata.userId);
-
-              if (fetchedUsername &&
-                  fetchedUsername !== 'Anonymous' &&
-                  fetchedUsername !== 'Missing username') {
-                username = fetchedUsername;
-              }
-            } catch (error) {
-              console.error('Error fetching username by ID:', error);
-            }
-          }
-
-          // If we found a valid username, update analytics
-          if (username) {
-            const pageTitle = `Page: ${cachedTitle} by ${username}`;
+          // Check if this is a group page
+          if (metadata.groupId && metadata.groupName) {
+            // For group pages, use the group name
+            const pageTitle = `Page: ${cachedTitle} in ${metadata.groupName}`;
 
             if (typeof window !== 'undefined' && window.gtag) {
               window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
@@ -456,7 +493,46 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
                 page_title: pageTitle,
                 page_location: window.location.href
               });
-              console.log('Updated analytics with cached title and fetched username:', pageTitle);
+              console.log('Updated analytics with cached title and group name:', pageTitle);
+            }
+          } else {
+            // For regular pages, try to get the username
+            let username = null;
+
+            // Try to get username from metadata
+            if (metadata.username &&
+                metadata.username !== 'Anonymous' &&
+                metadata.username !== 'Missing username') {
+              username = metadata.username;
+            }
+            // If no username in metadata but we have userId, try to get username from userId
+            else if (metadata.userId) {
+              try {
+                const { getUsernameById } = await import('../utils/userUtils');
+                const fetchedUsername = await getUsernameById(metadata.userId);
+
+                if (fetchedUsername &&
+                    fetchedUsername !== 'Anonymous' &&
+                    fetchedUsername !== 'Missing username') {
+                  username = fetchedUsername;
+                }
+              } catch (error) {
+                console.error('Error fetching username by ID:', error);
+              }
+            }
+
+            // If we found a valid username, update analytics
+            if (username) {
+              const pageTitle = `Page: ${cachedTitle} by ${username}`;
+
+              if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
+                  page_path: window.location.pathname,
+                  page_title: pageTitle,
+                  page_location: window.location.href
+                });
+                console.log('Updated analytics with cached title and fetched username:', pageTitle);
+              }
             }
           }
         }
@@ -474,37 +550,45 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         // We have a valid title from metadata
         pageTitleCache.set(pageId, metadata.title);
 
-        // Update analytics with the actual page title including username if available
+        // Update analytics with the actual page title including group name or username if available
         if (typeof window !== 'undefined' && window.gtag) {
           const pathname = window.location.pathname;
           let pageTitle = `Page: ${metadata.title}`;
-          let username = null;
 
-          // Try to get username from metadata
-          if (metadata.username &&
-              metadata.username !== 'Anonymous' &&
-              metadata.username !== 'Missing username') {
-            username = metadata.username;
-          }
-          // If no username in metadata but we have userId, try to get username from userId
-          else if (metadata.userId) {
-            try {
-              const { getUsernameById } = await import('../utils/userUtils');
-              const fetchedUsername = await getUsernameById(metadata.userId);
+          // Check if this is a group page
+          if (metadata.groupId && metadata.groupName) {
+            // For group pages, use the group name
+            pageTitle = `Page: ${metadata.title} in ${metadata.groupName}`;
+          } else {
+            // For regular pages, try to get the username
+            let username = null;
 
-              if (fetchedUsername &&
-                  fetchedUsername !== 'Anonymous' &&
-                  fetchedUsername !== 'Missing username') {
-                username = fetchedUsername;
-              }
-            } catch (error) {
-              console.error('Error fetching username by ID:', error);
+            // Try to get username from metadata
+            if (metadata.username &&
+                metadata.username !== 'Anonymous' &&
+                metadata.username !== 'Missing username') {
+              username = metadata.username;
             }
-          }
+            // If no username in metadata but we have userId, try to get username from userId
+            else if (metadata.userId) {
+              try {
+                const { getUsernameById } = await import('../utils/userUtils');
+                const fetchedUsername = await getUsernameById(metadata.userId);
 
-          // If we found a valid username, include it in the page title
-          if (username) {
-            pageTitle = `Page: ${metadata.title} by ${username}`;
+                if (fetchedUsername &&
+                    fetchedUsername !== 'Anonymous' &&
+                    fetchedUsername !== 'Missing username') {
+                  username = fetchedUsername;
+                }
+              } catch (error) {
+                console.error('Error fetching username by ID:', error);
+              }
+            }
+
+            // If we found a valid username, include it in the page title
+            if (username) {
+              pageTitle = `Page: ${metadata.title} by ${username}`;
+            }
           }
 
           window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
@@ -554,9 +638,15 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
           }
         }
 
-        // Format the page title with username if available
+        // Check if this is a group page
+        const groupElement = document.querySelector('[data-group-name]');
+        const groupName = groupElement ? groupElement.getAttribute('data-group-name') || groupElement.textContent : null;
+
+        // Format the page title with group name or username if available
         let pageTitle = `Page: ${title}`;
-        if (username) {
+        if (groupName && groupName !== 'Unknown') {
+          pageTitle = `Page: ${title} in ${groupName}`;
+        } else if (username) {
           pageTitle = `Page: ${title} by ${username}`;
         }
 
@@ -612,8 +702,14 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
             }
           }
 
-          // Format the page title with username if available
-          if (username) {
+          // Check if this is a group page
+          const groupElement = document.querySelector('[data-group-name]');
+          const groupName = groupElement ? groupElement.getAttribute('data-group-name') || groupElement.textContent : null;
+
+          // Format the page title with group name or username if available
+          if (groupName && groupName !== 'Unknown') {
+            pageTitle = `Page: ${h1Element.textContent} in ${groupName}`;
+          } else if (username) {
             pageTitle = `Page: ${h1Element.textContent} by ${username}`;
           } else {
             pageTitle = `Page: ${h1Element.textContent}`;
@@ -666,11 +762,13 @@ export function isContentReadyForAnalytics(pageId: string, currentTitle?: string
 
   // If we already have a good title (not a loading placeholder), we're ready
   if (!isLoadingTitle) {
-    // Check if we have username information
-    result.hasUsername = currentTitle?.includes(' by ') || false;
+    // Check if we have username or group information
+    const hasUsername = currentTitle?.includes(' by ') || false;
+    const hasGroup = currentTitle?.includes(' in ') || false;
 
-    // If the title includes username or we don't need username, we're fully ready
-    if (result.hasUsername) {
+    // If the title includes username or group name, we're fully ready
+    if (hasUsername || hasGroup) {
+      result.hasUsername = hasUsername;
       result.isReady = true;
       return result;
     }
@@ -708,6 +806,18 @@ export function isContentReadyForAnalytics(pageId: string, currentTitle?: string
     }
   }
 
+  // Check if this is a group page
+  const groupElement = document.querySelector('[data-group-name]');
+  const groupName = groupElement ? groupElement.getAttribute('data-group-name') || groupElement.textContent : null;
+  const hasGroup = groupName && groupName !== 'Unknown';
+
+  // If we have both title and group name, we're fully ready
+  if (contentTitle && contentTitle !== 'Untitled' && hasGroup) {
+    result.isReady = true;
+    result.title = `Page: ${contentTitle} in ${groupName}`;
+    return result;
+  }
+
   // If we have both title and username, we're fully ready
   if (contentTitle && contentTitle !== 'Untitled' && username) {
     result.isReady = true;
@@ -718,7 +828,7 @@ export function isContentReadyForAnalytics(pageId: string, currentTitle?: string
 
   // If we have just the title, we're partially ready
   if (contentTitle && contentTitle !== 'Untitled') {
-    // We have a title but no username - this is better than nothing
+    // We have a title but no username or group name - this is better than nothing
     result.title = `Page: ${contentTitle}`;
     result.isReady = true;
     return result;
@@ -820,38 +930,46 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
     if (pageTitleCache.has(pageId)) {
       const cachedTitle = pageTitleCache.get(pageId);
 
-      // Try to get the full metadata to include username
+      // Try to get the full metadata to include group name or username
       const metadata = await getPageMetadata(pageId);
-      let username = null;
 
-      // Try to get username from metadata
-      if (metadata?.username &&
-          metadata.username !== 'Anonymous' &&
-          metadata.username !== 'Missing username') {
-        username = metadata.username;
-      }
-      // If no username in metadata but we have userId, try to get username from userId
-      else if (metadata?.userId) {
-        try {
-          const { getUsernameById } = await import('../utils/userUtils');
-          const fetchedUsername = await getUsernameById(metadata.userId);
+      // Check if this is a group page
+      if (metadata?.groupId && metadata?.groupName) {
+        // For group pages, use the group name
+        return `Page: ${cachedTitle} in ${metadata.groupName}`;
+      } else {
+        // For regular pages, try to get the username
+        let username = null;
 
-          if (fetchedUsername &&
-              fetchedUsername !== 'Anonymous' &&
-              fetchedUsername !== 'Missing username') {
-            username = fetchedUsername;
-          }
-        } catch (error) {
-          console.error('Error fetching username by ID:', error);
+        // Try to get username from metadata
+        if (metadata?.username &&
+            metadata.username !== 'Anonymous' &&
+            metadata.username !== 'Missing username') {
+          username = metadata.username;
         }
-      }
+        // If no username in metadata but we have userId, try to get username from userId
+        else if (metadata?.userId) {
+          try {
+            const { getUsernameById } = await import('../utils/userUtils');
+            const fetchedUsername = await getUsernameById(metadata.userId);
 
-      // If we found a valid username, include it in the page title
-      if (username) {
-        return `Page: ${cachedTitle} by ${username}`;
-      }
+            if (fetchedUsername &&
+                fetchedUsername !== 'Anonymous' &&
+                fetchedUsername !== 'Missing username') {
+              username = fetchedUsername;
+            }
+          } catch (error) {
+            console.error('Error fetching username by ID:', error);
+          }
+        }
 
-      return `Page: ${cachedTitle}`;
+        // If we found a valid username, include it in the page title
+        if (username) {
+          return `Page: ${cachedTitle} by ${username}`;
+        }
+
+        return `Page: ${cachedTitle}`;
+      }
     }
 
     // Fetch from database
@@ -860,36 +978,43 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
       // Cache for future use
       pageTitleCache.set(pageId, metadata.title);
 
-      let username = null;
+      // Check if this is a group page
+      if (metadata.groupId && metadata.groupName) {
+        // For group pages, use the group name
+        return `Page: ${metadata.title} in ${metadata.groupName}`;
+      } else {
+        // For regular pages, try to get the username
+        let username = null;
 
-      // Try to get username from metadata
-      if (metadata.username &&
-          metadata.username !== 'Anonymous' &&
-          metadata.username !== 'Missing username') {
-        username = metadata.username;
-      }
-      // If no username in metadata but we have userId, try to get username from userId
-      else if (metadata.userId) {
-        try {
-          const { getUsernameById } = await import('../utils/userUtils');
-          const fetchedUsername = await getUsernameById(metadata.userId);
-
-          if (fetchedUsername &&
-              fetchedUsername !== 'Anonymous' &&
-              fetchedUsername !== 'Missing username') {
-            username = fetchedUsername;
-          }
-        } catch (error) {
-          console.error('Error fetching username by ID:', error);
+        // Try to get username from metadata
+        if (metadata.username &&
+            metadata.username !== 'Anonymous' &&
+            metadata.username !== 'Missing username') {
+          username = metadata.username;
         }
-      }
+        // If no username in metadata but we have userId, try to get username from userId
+        else if (metadata.userId) {
+          try {
+            const { getUsernameById } = await import('../utils/userUtils');
+            const fetchedUsername = await getUsernameById(metadata.userId);
 
-      // If we found a valid username, include it in the page title
-      if (username) {
-        return `Page: ${metadata.title} by ${username}`;
-      }
+            if (fetchedUsername &&
+                fetchedUsername !== 'Anonymous' &&
+                fetchedUsername !== 'Missing username') {
+              username = fetchedUsername;
+            }
+          } catch (error) {
+            console.error('Error fetching username by ID:', error);
+          }
+        }
 
-      return `Page: ${metadata.title}`;
+        // If we found a valid username, include it in the page title
+        if (username) {
+          return `Page: ${metadata.title} by ${username}`;
+        }
+
+        return `Page: ${metadata.title}`;
+      }
     }
   } catch (error) {
     console.error('Error fetching page title for analytics:', error);

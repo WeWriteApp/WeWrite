@@ -27,6 +27,7 @@ export interface Page {
   lastModified?: string;
   createdAt: string;
   groupId?: string;
+  groupName?: string;
 }
 
 interface PageListProps {
@@ -173,7 +174,6 @@ export default function PageList({
             {displayPages.map((page) => (
               <div key={page.id} className="flex-none max-w-full">
                 <PillLink
-                  groupId={page.groupId}
                   href={`/${page.id}`}
                   isPublic={page.isPublic}
                   byline={page.authorName}

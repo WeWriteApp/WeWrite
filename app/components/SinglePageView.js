@@ -30,6 +30,8 @@ import Head from "next/head";
 import { Button } from "./ui/button";
 import { EditorContent } from "./SlateEditor";
 import TextView from "./TextView";
+import { PageLoader } from "./ui/page-loader";
+import { SmartLoader } from "./ui/smart-loader";
 import {
   Loader,
   Lock,
@@ -172,12 +174,19 @@ function SinglePageView({ params }) {
       console.log('Recording page view for', params.id);
 
       // Track the page view in Google Analytics with our improved tracking
-      // This will wait until the page title and username are fully loaded
+      // This will wait until the page title and username/group are fully loaded
       if (page.title) {
         // If we already have a title, use it as a starting point
-        const initialTitle = page.username
-          ? `Page: ${page.title} by ${page.username}`
-          : `Page: ${page.title}`;
+        let initialTitle;
+
+        // Format title based on whether the page belongs to a group
+        if (page.groupId && page.groupName) {
+          initialTitle = `Page: ${page.title} in ${page.groupName}`;
+        } else if (page.username) {
+          initialTitle = `Page: ${page.title} by ${page.username}`;
+        } else {
+          initialTitle = `Page: ${page.title}`;
+        }
 
         trackPageViewWhenReady(params.id, initialTitle);
       } else {
@@ -187,15 +196,55 @@ function SinglePageView({ params }) {
     }
   }, [params.id, isLoading, page, isPublic, user?.uid]);
 
+  // Add a timeout ref to prevent infinite loading
+  const loadingTimeoutRef = useRef(null);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const [loadAttempts, setLoadAttempts] = useState(0);
+  const maxLoadAttempts = 3;
+
   useEffect(() => {
     if (params.id) {
       setIsLoading(true);
+      setLoadingTimedOut(false);
+
+      // Set a timeout to prevent infinite loading
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+
+      // Shorter timeout for subsequent attempts
+      const timeoutDuration = loadAttempts === 0 ? 20000 : 10000; // 20s first try, 10s for retries
+
+      loadingTimeoutRef.current = setTimeout(() => {
+        console.warn(`SinglePageView: Loading timeout reached (attempt ${loadAttempts + 1}/${maxLoadAttempts}), forcing completion`);
+
+        if (loadAttempts < maxLoadAttempts - 1) {
+          // Try again with a shorter timeout
+          setLoadAttempts(prev => prev + 1);
+          // Keep loading state true to trigger this effect again
+        } else {
+          // Max attempts reached, give up and show error state
+          setIsLoading(false);
+          setLoadingTimedOut(true);
+          console.error("SinglePageView: Max load attempts reached, giving up");
+        }
+      }, timeoutDuration);
 
       // Make sure we pass the user ID to the listenToPageById function
       const currentUserId = user?.uid || null;
-      console.log(`Setting up page listener with user ID: ${currentUserId || 'anonymous'}`);
+      console.log(`Setting up page listener with user ID: ${currentUserId || 'anonymous'} (attempt ${loadAttempts + 1}/${maxLoadAttempts})`);
 
       const unsubscribe = listenToPageById(params.id, async (data) => {
+        // Clear the timeout since we got a response
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+
+        // Reset the timeout flag and load attempts if we got a successful response
+        setLoadingTimedOut(false);
+        setLoadAttempts(0);
+
         if (data.error) {
           setError(data.error);
           setIsLoading(false);
@@ -211,35 +260,44 @@ function SinglePageView({ params }) {
 
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
-        setGroupId(pageData.groupId || null);
-        setGroupName(pageData.groupName || null);
 
-        // Check group access if the page belongs to a group
-        if (pageData.groupId && user?.uid) {
-          // Get the group data to check if the user is a member
-          const db = getDatabase(app);
-          const groupRef = ref(db, `groups/${pageData.groupId}`);
+        // Check if the page belongs to a group
+        if (pageData.groupId) {
+          setGroupId(pageData.groupId);
 
-          onValue(groupRef, (snapshot) => {
-            if (snapshot.exists()) {
-              const groupData = snapshot.val();
+          // If groupName is already in the page data, use it
+          if (pageData.groupName) {
+            setGroupName(pageData.groupName);
+          } else {
+            // Otherwise, fetch the group name from the database
+            const db = getDatabase(app);
+            const groupRef = ref(db, `groups/${pageData.groupId}`);
 
-              // Check if the group is private
-              setGroupIsPrivate(!groupData.isPublic);
+            onValue(groupRef, (snapshot) => {
+              if (snapshot.exists()) {
+                const groupData = snapshot.val();
+                setGroupName(groupData.name);
 
-              // Check if the user is a member of the group
-              const isMember = groupData.members && groupData.members[user.uid];
-              setHasGroupAccess(isMember);
-            } else {
-              // Group doesn't exist
-              setGroupIsPrivate(false);
-              setHasGroupAccess(false);
-            }
-          }, {
-            onlyOnce: true
-          });
+                // Check if the group is private
+                setGroupIsPrivate(!groupData.isPublic);
+
+                // Check if the user is a member of the group
+                const isMember = user?.uid && groupData.members && groupData.members[user.uid];
+                setHasGroupAccess(isMember);
+              } else {
+                // Group doesn't exist
+                setGroupName(null);
+                setGroupIsPrivate(false);
+                setHasGroupAccess(false);
+              }
+            }, {
+              onlyOnce: true
+            });
+          }
         } else {
-          // Reset group access state if the page doesn't belong to a group
+          // Reset group state if the page doesn't belong to a group
+          setGroupId(null);
+          setGroupName(null);
           setGroupIsPrivate(false);
           setHasGroupAccess(false);
         }
@@ -256,9 +314,16 @@ function SinglePageView({ params }) {
           // If the page is already marked as viewed, update analytics with the better title
           if (viewRecorded.current && isPublic) {
             // Track with improved title now that we have it
-            const analyticsTitle = pageData.username
-              ? `Page: ${pageData.title} by ${pageData.username}`
-              : `Page: ${pageData.title}`;
+            let analyticsTitle;
+
+            // Format title based on whether the page belongs to a group
+            if (pageData.groupId && pageData.groupName) {
+              analyticsTitle = `Page: ${pageData.title} in ${pageData.groupName}`;
+            } else if (pageData.username) {
+              analyticsTitle = `Page: ${pageData.title} by ${pageData.username}`;
+            } else {
+              analyticsTitle = `Page: ${pageData.title}`;
+            }
 
             trackPageViewWhenReady(params.id, analyticsTitle);
           }
@@ -291,10 +356,22 @@ function SinglePageView({ params }) {
       }, currentUserId); // Pass the user ID here
 
       return () => {
+        // Clean up the listener when the component unmounts
         unsubscribe();
+
+        // Clear the timeout if it exists
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+
+        // Reset state to prevent memory leaks
+        setIsLoading(false);
+        setLoadingTimedOut(false);
+        setLoadAttempts(0);
       };
     }
-  }, [params.id, user?.uid]); // Added user?.uid as a dependency
+  }, [params.id, user?.uid, loadAttempts]); // Added loadAttempts to dependencies to trigger retries
 
   // Check for edit=true URL parameter and set isEditing state
   useEffect(() => {
@@ -440,8 +517,46 @@ function SinglePageView({ params }) {
         </Head>
         <PageHeader />
         <div className="min-h-[400px] w-full">
-          {isLoading ? (
-            <Loader />
+          {isLoading || loadingTimedOut ? (
+            <SmartLoader
+              isLoading={isLoading}
+              message={`Loading page${loadAttempts > 0 ? ` (attempt ${loadAttempts + 1}/${maxLoadAttempts})` : ''}...`}
+              timeoutMs={10000}
+              autoRecover={true}
+              onRetry={() => {
+                // Attempt to reload the page data
+                if (params.id) {
+                  setIsLoading(true);
+                  setLoadingTimedOut(false);
+                  // Reset load attempts on manual retry
+                  setLoadAttempts(0);
+                  listenToPageById(params.id, (data) => {
+                    if (data.error) {
+                      setError(data.error);
+                    } else {
+                      setPage(data.pageData || data);
+                    }
+                    setIsLoading(false);
+                  }, user?.uid || null);
+                }
+              }}
+              fallbackContent={
+                <div>
+                  <p>We're having trouble loading this page. This could be due to:</p>
+                  <ul className="list-disc list-inside text-left mt-2 mb-2">
+                    <li>Slow network connection</li>
+                    <li>Server issues</li>
+                    <li>The page may have been deleted</li>
+                  </ul>
+                  <p className="mt-2">You can try:</p>
+                  <ul className="list-disc list-inside text-left mt-2">
+                    <li>Checking your internet connection</li>
+                    <li>Refreshing the page</li>
+                    <li>Coming back later</li>
+                  </ul>
+                </div>
+              }
+            />
           ) : error ? (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <div className="max-w-md w-full">
@@ -466,9 +581,51 @@ function SinglePageView({ params }) {
           <title>Loading... - WeWrite</title>
         </Head>
         <PageHeader />
-        <div className="flex items-center justify-center min-h-[50vh] w-full">
-          <div className="loader loader-lg"></div>
-        </div>
+        <SmartLoader
+          isLoading={isLoading}
+          message={`Loading page content${loadAttempts > 0 ? ` (attempt ${loadAttempts + 1}/${maxLoadAttempts})` : ''}...`}
+          timeoutMs={10000}
+          autoRecover={true}
+          onRetry={() => {
+            // Attempt to reload the page data
+            if (params.id) {
+              setIsLoading(true);
+              setLoadingTimedOut(false);
+              // Reset load attempts on manual retry
+              setLoadAttempts(0);
+              listenToPageById(params.id, (data) => {
+                if (data.error) {
+                  setError(data.error);
+                } else {
+                  setPage(data.pageData || data);
+                }
+                setIsLoading(false);
+              }, user?.uid || null);
+            }
+          }}
+          fallbackContent={
+            <div>
+              <p>We're having trouble loading this page. This could be due to:</p>
+              <ul className="list-disc list-inside text-left mt-2 mb-2">
+                <li>Slow network connection</li>
+                <li>Server issues</li>
+                <li>The page may have been deleted</li>
+              </ul>
+              <p className="mt-2">You can try:</p>
+              <ul className="list-disc list-inside text-left mt-2">
+                <li>Checking your internet connection</li>
+                <li>Refreshing the page</li>
+                <li>Coming back later</li>
+              </ul>
+              {loadAttempts >= maxLoadAttempts && (
+                <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md">
+                  <p className="font-medium">Multiple loading attempts failed</p>
+                  <p className="text-sm mt-1">Please try refreshing the page or coming back later.</p>
+                </div>
+              )}
+            </div>
+          }
+        />
       </Layout>
     );
   }
@@ -508,8 +665,8 @@ function SinglePageView({ params }) {
     );
   }
 
-  // Check if this is a private page
-  if (!isPublic) {
+  // Check if this is a private page that doesn't belong to a group
+  if (!isPublic && !groupId) {
     // If user is logged in and is the owner, allow access
     if (user && user.uid === page.userId) {
       // Continue to render the page for the owner
@@ -553,6 +710,9 @@ function SinglePageView({ params }) {
       );
     }
   }
+
+  // For private pages in groups, access is handled by the groupIsPrivate check above
+  // and by the checkPageAccess function in the database.js file
 
   return (
     <Layout>

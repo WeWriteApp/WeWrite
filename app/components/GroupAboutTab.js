@@ -150,23 +150,44 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
   // Handle inserting a link
   const handleInsertLink = () => {
     if (editorRef.current) {
-      console.log("Editor ref exists, attempting to open link editor");
+      console.log("[DEBUG] Editor ref exists, attempting to open link editor");
 
       // Focus the editor first
-      editorRef.current.focus();
+      try {
+        editorRef.current.focus();
+        console.log("[DEBUG] Editor focused successfully");
+      } catch (focusError) {
+        console.error("[DEBUG] Error focusing editor:", focusError);
+      }
 
       // Use the openLinkEditor method we added to the UnifiedEditor
       if (editorRef.current.openLinkEditor) {
-        console.log("Using openLinkEditor method");
+        console.log("[DEBUG] Using openLinkEditor method");
         try {
           // Open the link editor directly without creating a temporary link first
-          editorRef.current.openLinkEditor();
+          const result = editorRef.current.openLinkEditor();
+          console.log("[DEBUG] openLinkEditor result:", result);
+
+          // Force a custom event to ensure the link editor appears
+          setTimeout(() => {
+            try {
+              const event = new CustomEvent('show-link-editor', {
+                detail: {
+                  source: 'insert-link-button-group'
+                }
+              });
+              document.dispatchEvent(event);
+              console.log("[DEBUG] Dispatched show-link-editor event from group button");
+            } catch (eventError) {
+              console.error("[DEBUG] Error dispatching event:", eventError);
+            }
+          }, 50);
         } catch (error) {
-          console.error("Error opening link editor:", error);
+          console.error("[DEBUG] Error opening link editor:", error);
           toast.error("Could not open link editor. Please try again.");
         }
       } else {
-        console.error("openLinkEditor method not available");
+        console.error("[DEBUG] openLinkEditor method not available");
         toast.error("Link insertion is not available. Please try again later.");
       }
     } else {

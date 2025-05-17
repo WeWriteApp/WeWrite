@@ -11,6 +11,7 @@ import ClientPage from '../pages/[id]/client-page.tsx';
 import { Loader } from '../components/Loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
+import { SmartLoader } from '../components/ui/smart-loader';
 import { use } from 'react';
 
 export default function GlobalIDPage({ params }) {
@@ -67,6 +68,8 @@ export default function GlobalIDPage({ params }) {
 
         if (groupSnapshot.exists()) {
           // Redirect to the group page using direct navigation
+          console.log('Group found, redirecting to group page');
+          // Use direct navigation to avoid scroll issues with sticky headers
           window.location.href = `/group/${id}`;
           return;
         }
@@ -86,7 +89,28 @@ export default function GlobalIDPage({ params }) {
   }, [id, router]);
 
   if (isLoading) {
-    return <Loader />;
+    return (
+      <SmartLoader
+        isLoading={isLoading}
+        message="Determining content type..."
+        timeoutMs={10000}
+        autoRecover={true}
+        onRetry={() => {
+          setIsLoading(true);
+          determineContentType();
+        }}
+        fallbackContent={
+          <div>
+            <p>We're having trouble determining the content type. This could be due to:</p>
+            <ul className="list-disc list-inside text-left mt-2 mb-2">
+              <li>Slow network connection</li>
+              <li>Server issues</li>
+              <li>The content may not exist</li>
+            </ul>
+          </div>
+        }
+      />
+    );
   }
 
   if (contentType === 'page') {
@@ -132,5 +156,23 @@ export default function GlobalIDPage({ params }) {
     );
   }
 
-  return <Loader />;
+  return (
+    <SmartLoader
+      isLoading={true}
+      message="Loading content..."
+      timeoutMs={10000}
+      autoRecover={true}
+      onRetry={() => window.location.reload()}
+      fallbackContent={
+        <div>
+          <p>We're having trouble loading this content. This could be due to:</p>
+          <ul className="list-disc list-inside text-left mt-2 mb-2">
+            <li>Slow network connection</li>
+            <li>Server issues</li>
+            <li>The content may not exist</li>
+          </ul>
+        </div>
+      }
+    />
+  );
 }

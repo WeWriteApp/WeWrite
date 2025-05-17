@@ -14,11 +14,13 @@ import { ActivityFilterProvider } from "./contexts/ActivityFilterContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
+import { RenderControlProvider } from "./providers/RenderControlProvider";
 import { GADebugger } from "./utils/ga-debug";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import AdminFeaturesWrapper from "./components/AdminFeaturesWrapper";
 import FeatureFlagCookieManager from "./components/FeatureFlagCookieManager";
+import { PageTransition } from "./components/ui/page-transition";
 
 
 
@@ -46,48 +48,51 @@ export default function ClientLayout({ children }) {
       enableSystem
       disableTransitionOnChange
     >
-      <AccentColorProvider>
-        <LoggingProvider>
-          <DataProvider>
-            <MultiAccountProvider>
-              <AuthProvider>
-                <NotificationProvider>
-                  <PortfolioProvider>
-                    <RecentPagesProvider>
-                      <ActivityFilterProvider>
-                        <MobileProvider>
-                          <DrawerProvider>
-                            <LineSettingsProvider>
-                      <Drawer />
-                      <div className="flex flex-col min-h-screen bg-background pb-8">
-                        {!isAuthPage && <UsernameWarningBanner />}
-                        {!isAuthPage && <UsernameEnforcementBanner />}
-                        <FeatureFlagCookieManager />
-                        <main className="flex-grow">
-                          <AdminFeaturesWrapper>
-                            {children}
-                          </AdminFeaturesWrapper>
-                        </main>
-                      </div>
-                      {process.env.NODE_ENV === 'development' && (
-                        <>
-                          {/* <GADebugger /> */}
-                          <WindsurfOverlay />
-                        </>
-                      )}
-
-                          </LineSettingsProvider>
-                        </DrawerProvider>
-                      </MobileProvider>
-                    </ActivityFilterProvider>
-                  </RecentPagesProvider>
-                </PortfolioProvider>
-              </NotificationProvider>
-            </AuthProvider>
-          </MultiAccountProvider>
-          </DataProvider>
-        </LoggingProvider>
-      </AccentColorProvider>
+      <RenderControlProvider>
+        <AccentColorProvider>
+          <LoggingProvider>
+            <DataProvider>
+              <MultiAccountProvider>
+                <AuthProvider>
+                  <NotificationProvider>
+                    <PortfolioProvider>
+                      <RecentPagesProvider>
+                        <ActivityFilterProvider>
+                          <MobileProvider>
+                            <DrawerProvider>
+                              <LineSettingsProvider>
+                                <Drawer />
+                                <div className="flex flex-col min-h-screen bg-background pb-8">
+                                  {!isAuthPage && <UsernameWarningBanner />}
+                                  {!isAuthPage && <UsernameEnforcementBanner />}
+                                  <FeatureFlagCookieManager />
+                                  <main className="flex-grow">
+                                    <AdminFeaturesWrapper>
+                                      <PageTransition enableTransitions={!isAuthPage}>
+                                        {children}
+                                      </PageTransition>
+                                    </AdminFeaturesWrapper>
+                                  </main>
+                                </div>
+                                {process.env.NODE_ENV === 'development' && (
+                                  <>
+                                    {/* <GADebugger /> */}
+                                    <WindsurfOverlay />
+                                  </>
+                                )}
+                              </LineSettingsProvider>
+                            </DrawerProvider>
+                          </MobileProvider>
+                        </ActivityFilterProvider>
+                      </RecentPagesProvider>
+                    </PortfolioProvider>
+                  </NotificationProvider>
+                </AuthProvider>
+              </MultiAccountProvider>
+            </DataProvider>
+          </LoggingProvider>
+        </AccentColorProvider>
+      </RenderControlProvider>
     </ThemeProvider>
   );
 }

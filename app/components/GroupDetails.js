@@ -11,8 +11,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { Trash2, Users, FileText, Plus, ChevronLeft, Globe, Lock } from "lucide-react";
 import Link from "next/link";
-import { Switch } from "./ui/switch";
 import { toast } from "./ui/use-toast";
+import VisibilityDropdown from "./VisibilityDropdown";
 import {
   Dialog,
   DialogContent,
@@ -110,23 +110,23 @@ export default function GroupDetails({ group }) {
         </div>
 
         <div className="flex items-center gap-4">
-          {isOwner && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
-                {isPublic ? (
-                  <Globe className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Lock className="h-4 w-4 text-amber-500" />
-                )}
-                <span className="text-sm font-medium">
-                  {isPublic ? "Public" : "Private"}
-                </span>
-                <Switch
-                  checked={isPublic}
-                  onCheckedChange={handleVisibilityToggle}
-                  aria-label="Toggle group visibility"
-                />
-              </div>
+          {/* Visibility dropdown - always visible, but only interactive for owners */}
+          {isOwner ? (
+            <VisibilityDropdown
+              isPublic={isPublic}
+              onVisibilityChange={handleVisibilityToggle}
+              disabled={!isOwner}
+            />
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
+              {isPublic ? (
+                <Globe className="h-4 w-4 text-green-500" />
+              ) : (
+                <Lock className="h-4 w-4 text-amber-500" />
+              )}
+              <span className="text-sm font-medium">
+                {isPublic ? "Public Group" : "Private Group"}
+              </span>
             </div>
           )}
 

@@ -11,6 +11,8 @@ import { db } from "../firebase/database";
 import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
 import { SupporterIcon } from "./SupporterIcon";
 import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
+import PageOwnershipDropdown from "./PageOwnershipDropdown";
+import { useAuth } from "../providers/AuthProvider";
 
 export interface PageHeaderProps {
   title?: string;
@@ -30,14 +32,15 @@ export default function PageHeader({
   username,
   userId,
   isLoading = false,
-  groupId,
-  groupName,
+  groupId: initialGroupId,
+  groupName: initialGroupName,
   // scrollDirection is not used but kept for compatibility
   isPrivate = false,
   tier: initialTier,
   subscriptionStatus: initialStatus,
 }: PageHeaderProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerHeight, setHeaderHeight] = React.useState(0);
@@ -48,6 +51,9 @@ export default function PageHeader({
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
   const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
   const [subscriptionEnabled, setSubscriptionEnabled] = React.useState<boolean>(false);
+  const [groupId, setGroupId] = React.useState<string | null>(initialGroupId || null);
+  const [groupName, setGroupName] = React.useState<string | null>(initialGroupName || null);
+  const [pageId, setPageId] = React.useState<string | null>(null);
 
   // Check if subscription feature is enabled
   React.useEffect(() => {
@@ -112,6 +118,25 @@ export default function PageHeader({
 
     fetchUsername();
   }, [userId, username]);
+
+  // Extract page ID from URL and determine if user can change ownership
+  React.useEffect(() => {
+    // Extract page ID from URL
+    const pathname = window.location.pathname;
+    const pathSegments = pathname.split('/');
+
+    // The page ID is the first segment if it's not empty and not a special route
+    if (pathSegments.length > 1 && pathSegments[1] &&
+        !['user', 'group', 'admin', 'search', 'new', 'settings'].includes(pathSegments[1])) {
+      const extractedPageId = pathSegments[1];
+      setPageId(extractedPageId);
+
+      // Check if the current user can change ownership (is the page owner)
+      if (user && userId && user.uid === userId) {
+        console.log("User can change page ownership");
+      }
+    }
+  }, [user, userId]);
 
   // Calculate and update header height when component mounts or when title/isScrolled changes
   React.useEffect(() => {
@@ -354,12 +379,29 @@ export default function PageHeader({
                   }}
                 >
                   {isLoading ? (
-                    <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading author...</span>
+                    <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
                   ) : (
                     groupId && groupName ? (
-                      <Link href={`/group/${groupId}`} className="hover:underline">
-                        <span data-component-name="PageHeader">in {groupName}</span>
-                      </Link>
+                      <span className="flex items-center gap-1 justify-center mx-auto">
+                        <span className="whitespace-nowrap flex-shrink-0">in</span>
+                        <Link href={`/group/${groupId}`} className="hover:underline overflow-hidden text-ellipsis">
+                          <span data-component-name="PageHeader" data-group-name={groupName}>{groupName}</span>
+                        </Link>
+                        {/* Ownership dropdown for group pages */}
+                        {user && userId && user.uid === userId && pageId && (
+                          <PageOwnershipDropdown
+                            pageId={pageId}
+                            userId={userId}
+                            username={displayUsername}
+                            groupId={groupId}
+                            groupName={groupName}
+                            onOwnershipChange={(newGroupId, newGroupName) => {
+                              setGroupId(newGroupId);
+                              setGroupName(newGroupName);
+                            }}
+                          />
+                        )}
+                      </span>
                     ) : (
                       <span className="flex items-center gap-1 justify-center mx-auto">
                         <span className="whitespace-nowrap flex-shrink-0">by</span>
@@ -370,6 +412,18 @@ export default function PageHeader({
                             <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
                           )}
                         </Link>
+                        {/* Ownership dropdown for personal pages */}
+                        {user && userId && user.uid === userId && pageId && (
+                          <PageOwnershipDropdown
+                            pageId={pageId}
+                            userId={userId}
+                            username={displayUsername}
+                            onOwnershipChange={(newGroupId, newGroupName) => {
+                              setGroupId(newGroupId);
+                              setGroupName(newGroupName);
+                            }}
+                          />
+                        )}
                         {subscriptionEnabled && (
                           <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
                             <div className="cursor-pointer flex-shrink-0 flex items-center">
@@ -393,11 +447,11 @@ export default function PageHeader({
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 onClick={() => {
-                  // Create Twitter share text in the format: "[title]" by [username] on @WeWriteApp [URL]
+                  // Create share text in the format: "[title]" by [username] on @WeWriteApp [URL]
                   // Or "[title]" in [groupName] on @WeWriteApp [URL] for group pages
                   const pageTitle = title || 'WeWrite Page';
                   const pageUrl = window.location.href;
-                  const twitterText = groupId && groupName
+                  const shareText = groupId && groupName
                     ? `"${pageTitle}" in ${groupName} on @WeWriteApp ${pageUrl}`
                     : `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
 
@@ -405,7 +459,7 @@ export default function PageHeader({
                   if (navigator.share) {
                     navigator.share({
                       title: pageTitle,
-                      text: twitterText,
+                      text: shareText,
                       url: pageUrl,
                     }).catch((error) => {
                       // Silent error handling - no toast
@@ -415,7 +469,7 @@ export default function PageHeader({
                     // Create a Twitter share URL as fallback
                     try {
                       // First try to open Twitter share dialog
-                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
+                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
                       window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
                     } catch (error) {
                       console.error('Error opening Twitter share:', error);

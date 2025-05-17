@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // Only enable StrictMode in development to prevent double rendering in production
+  reactStrictMode: process.env.NODE_ENV === 'development',
   typescript: {
     ignoreBuildErrors: true,
   },

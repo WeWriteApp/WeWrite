@@ -10,12 +10,14 @@ import React from 'react';
  * @param {number} props.height - Height of the sparkline
  * @param {string} props.color - Color of the line
  * @param {number} props.strokeWidth - Width of the line
+ * @param {string} props.title - Optional title/tooltip for the sparkline
  */
 export default function SimpleSparkline({
   data = [],
   height = 60,
   color,
-  strokeWidth = 1.5
+  strokeWidth = 1.5,
+  title = "Edit activity in the last 24 hours"
 }) {
   // Use the accent color from CSS variables if no color is provided
   const effectiveColor = color || "hsl(var(--primary))";
@@ -47,7 +49,7 @@ export default function SimpleSparkline({
   ].join(' ');
 
   return (
-    <div className="w-full" style={{ height: `${height}px` }}>
+    <div className="w-full" style={{ height: `${height}px` }} title={title}>
       <svg width="100%" height={height} preserveAspectRatio="none" viewBox={`0 0 ${width} ${height}`}>
         {/* Area under the line with very slight opacity */}
         <polygon

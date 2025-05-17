@@ -4,12 +4,16 @@ import { cn } from "../../lib/utils"
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  React.HTMLAttributes<HTMLTableElement> & { responsive?: boolean }
+>(({ className, responsive = true, ...props }, ref) => (
+  <div className={cn("relative w-full overflow-auto", responsive && "md:overflow-visible")}>
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
+      className={cn(
+        "w-full caption-bottom text-sm",
+        responsive && "md:table-fixed",
+        className
+      )}
       {...props}
     />
   </div>
@@ -53,12 +57,13 @@ TableFooter.displayName = "TableFooter"
 
 const TableRow = React.forwardRef<
   HTMLTableRowElement,
-  React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableRowElement> & { responsive?: boolean }
+>(({ className, responsive = true, ...props }, ref) => (
   <tr
     ref={ref}
     className={cn(
       "border-theme-medium transition-colors hover:bg-accent/5 data-[state=selected]:bg-muted",
+      responsive && "md:table-row sm:block border-b",
       className
     )}
     {...props}
@@ -83,11 +88,19 @@ TableHead.displayName = "TableHead"
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.TdHTMLAttributes<HTMLTableCellElement> & {
+    responsive?: boolean;
+    label?: string;
+  }
+>(({ className, responsive = true, label, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+    className={cn(
+      "p-4 align-middle [&:has([role=checkbox])]:pr-0",
+      responsive && "md:table-cell sm:block sm:text-left",
+      className
+    )}
+    data-label={responsive ? label : undefined}
     {...props}
   />
 ))

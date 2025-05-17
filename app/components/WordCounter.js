@@ -76,7 +76,7 @@ export default function WordCounter({ content }) {
   if (!content) return null;
 
   return (
-    <div className="text-sm text-muted-foreground">
+    <div className="text-sm text-muted-foreground w-full text-center">
       <span>{wordCount} {wordCount === 1 ? 'word' : 'words'}</span>
     </div>
   );

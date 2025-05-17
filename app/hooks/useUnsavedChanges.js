@@ -21,26 +21,16 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
   const [isHandlingNavigation, setIsHandlingNavigation] = useState(false);
 
   // Handle browser back/forward navigation and tab/window close
+  // We're removing the browser's default "Leave Site?" confirmation dialog
+  // since we already have our custom "Leave without saving" warning modal
   useEffect(() => {
-    if (!hasUnsavedChanges) return;
+    // No longer adding the beforeunload event listener
+    // This prevents the browser's default confirmation dialog from appearing
 
-    // Function to handle beforeunload event
-    const handleBeforeUnload = (e) => {
-      if (hasUnsavedChanges) {
-        // Standard way to show a confirmation dialog before page unload
-        e.preventDefault();
-        // This message might not be displayed in some browsers due to security restrictions
-        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
-        return e.returnValue;
-      }
-    };
+    // The custom UnsavedChangesDialog component will handle this instead
 
-    // Add event listener for beforeunload
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // Clean up event listener
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // No cleanup needed since we're not adding the event listener
     };
   }, [hasUnsavedChanges]);
 
@@ -83,15 +73,26 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
 
   // Function to handle "Leave without Saving" action
   const handleLeaveWithoutSaving = useCallback(() => {
+    console.log('[DEBUG] handleLeaveWithoutSaving called, pendingUrl:', pendingUrl);
     setIsHandlingNavigation(true);
     setShowDialog(false);
 
     // If there was a pending navigation, proceed with it
     if (pendingUrl) {
-      router.push(pendingUrl);
+      try {
+        // Use window.location for more reliable navigation
+        window.location.href = pendingUrl;
+      } catch (error) {
+        console.error('[DEBUG] Error navigating with window.location:', error);
+        // Fallback to router.push
+        router.push(pendingUrl);
+      }
     }
 
-    setIsHandlingNavigation(false);
+    // Reset handling state after a short delay to ensure navigation has started
+    setTimeout(() => {
+      setIsHandlingNavigation(false);
+    }, 100);
   }, [pendingUrl, router]);
 
   // Function to close the dialog without taking any action

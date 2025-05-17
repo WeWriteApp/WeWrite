@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "./ui/button";
-import { UserPlus, Search, Loader, MoreHorizontal, Shield, User, Clock, Check, X } from "lucide-react";
+import { UserPlus, Search, Loader, MoreHorizontal, Shield, User, Clock, Check, X, Activity } from "lucide-react";
 import { Input } from "./ui/input";
 import { rtdb } from "../firebase/rtdb";
 import { ref, get, set, update } from "firebase/database";
@@ -9,6 +9,8 @@ import { AuthContext } from "../providers/AuthProvider";
 import { toast } from "./ui/use-toast";
 import { Badge } from "./ui/badge";
 import { PillLink } from "./PillLink";
+import SimpleSparkline from "./SimpleSparkline";
+import { getBatchGroupUserActivityLast24Hours } from "../firebase/userActivity";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +37,7 @@ import {
   TableHeader,
   TableRow
 } from "./ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 export default function GroupMembersTab({ group, isOwner }) {
   const { user } = useContext(AuthContext);
@@ -50,6 +53,8 @@ export default function GroupMembersTab({ group, isOwner }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [memberActivityData, setMemberActivityData] = useState({});
+  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
 
   // Load members from the group
   useEffect(() => {
@@ -126,6 +131,31 @@ export default function GroupMembersTab({ group, isOwner }) {
       setFilteredMembers(members);
     }
   }, [members, searchTerm]);
+
+  // Fetch member activity data
+  useEffect(() => {
+    const fetchMemberActivityData = async () => {
+      if (!members.length || !group.id) return;
+
+      try {
+        setIsLoadingActivity(true);
+
+        // Get all member IDs
+        const memberIds = members.map(member => member.id);
+
+        // Fetch activity data for all members in this group
+        const activityData = await getBatchGroupUserActivityLast24Hours(memberIds, group.id);
+
+        setMemberActivityData(activityData);
+      } catch (err) {
+        console.error("Error fetching member activity data:", err);
+      } finally {
+        setIsLoadingActivity(false);
+      }
+    };
+
+    fetchMemberActivityData();
+  }, [members, group.id]);
 
   // Search for users to add to the group
   const handleUserSearch = async () => {
@@ -326,35 +356,66 @@ export default function GroupMembersTab({ group, isOwner }) {
           <p>No members found</p>
         </div>
       ) : (
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
+        <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100">
+          <Table className="responsive-table">
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Member</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-end gap-1 cursor-help">
+                          <Activity className="h-4 w-4 text-muted-foreground" />
+                          <span>Activity (24h)</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Group-specific activity in the last 24 hours</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredMembers.map(member => (
                 <TableRow key={member.id}>
-                  <TableCell>
+                  <TableCell label="Member">
                     <div>
                       <PillLink href={`/user/${member.id}`}>
                         {member.username || "Unknown User"}
                       </PillLink>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell label="Role">
                     <Badge variant={getRoleBadgeVariant(member.role)}>
                       {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell label="Joined">
                     <div className="flex items-center gap-1 text-sm">
                       <Clock className="h-3 w-3 text-muted-foreground" />
                       <span>{formatDate(member.joinedAt)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell label="Activity (24h)">
+                    <div className="w-24 h-8 ml-auto">
+                      {isLoadingActivity ? (
+                        <div className="flex justify-center items-center h-full">
+                          <Loader className="h-3 w-3 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <SimpleSparkline
+                          data={memberActivityData[member.id]?.hourly || Array(24).fill(0)}
+                          height={32}
+                          strokeWidth={1.5}
+                          title="Member's edit activity in this group in the last 24 hours"
+                        />
+                      )}
                     </div>
                   </TableCell>
                   {isOwner && (

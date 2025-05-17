@@ -79,27 +79,35 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
     }
   };
 
-  // Helper function to check if a page belongs to a private group
-  // and if the current user is a member of that group
+  // Helper function to check if a page belongs to a group
+  // and if the current user has access to it based on group settings
   const checkPageGroupAccess = async (pageData) => {
     try {
-      // If page doesn't belong to a group, it's accessible
-      if (!pageData.groupId) return true;
+      // If page doesn't belong to a group, it's accessible based on its own privacy setting
+      if (!pageData.groupId) {
+        return pageData.isPublic || (user && pageData.userId === user.uid);
+      }
 
       // Get the group data
       const rtdb = getDatabase();
       const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
       const snapshot = await get(groupRef);
 
-      if (!snapshot.exists()) return true; // Group doesn't exist, allow access
+      if (!snapshot.exists()) {
+        // Group doesn't exist, fall back to page's own privacy setting
+        return pageData.isPublic || (user && pageData.userId === user.uid);
+      }
 
       const groupData = snapshot.val();
 
-      // If group is public, allow access
+      // If group is public, all pages in the group are accessible to everyone
       if (groupData.isPublic) return true;
 
-      // If user is not logged in, deny access to private group content
-      if (!user) return false;
+      // For private groups, only members can access
+      if (!user) return false; // Not logged in
+
+      // If user is the page owner, allow access
+      if (pageData.userId === user.uid) return true;
 
       // If user is the group owner, allow access
       if (groupData.owner === user.uid) return true;

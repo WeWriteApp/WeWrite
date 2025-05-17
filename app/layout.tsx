@@ -1,6 +1,7 @@
 import "./globals.css"
 import "./styles/scrollbar-hide.css"
 import "./styles/loader.css"
+import "./styles/responsive-table.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
