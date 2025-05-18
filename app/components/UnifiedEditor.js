@@ -9,6 +9,7 @@ import {
   Range,
   Node,
   Path,
+  Point,
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
@@ -63,6 +64,27 @@ const safeReactEditor = {
       console.error('Error in safeReactEditor.findPath:', error);
     }
     return [0];
+  },
+  // Add safe wrappers for DOM point conversion
+  toDOMPoint: (editor, point) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.toDOMPoint === 'function') {
+        return ReactEditor.toDOMPoint(editor, point);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.toDOMPoint:', error);
+    }
+    return null;
+  },
+  toSlatePoint: (editor, domPoint) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.toSlatePoint === 'function') {
+        return ReactEditor.toSlatePoint(editor, domPoint);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.toSlatePoint:', error);
+    }
+    return null;
   }
 };
 
@@ -78,6 +100,27 @@ const ensureValidContent = (content) => {
     return [createDefaultParagraph()];
   }
   return content;
+};
+
+// Helper function to check if selection is at or contains a link
+Editor.isSelectionAtLink = (editor, linkPath) => {
+  try {
+    if (!editor.selection) return false;
+
+    // Get the range of the link node
+    const linkStart = Editor.start(editor, linkPath);
+    const linkEnd = Editor.end(editor, linkPath);
+    const linkRange = { anchor: linkStart, focus: linkEnd };
+
+    // Check if the current selection overlaps with the link range
+    return Range.includes(linkRange, editor.selection.anchor) ||
+           Range.includes(linkRange, editor.selection.focus) ||
+           Range.includes(editor.selection, linkStart) ||
+           Range.includes(editor.selection, linkEnd);
+  } catch (error) {
+    console.error('Error in isSelectionAtLink:', error);
+    return false;
+  }
 };
 
 /**
@@ -160,6 +203,13 @@ const UnifiedEditor = forwardRef((props, ref) => {
       const isPageLinkType = !isUserLinkType && (url.startsWith('/') || options.pageId);
       const isExternalLinkType = !isUserLinkType && !isPageLinkType;
 
+      // Ensure pageId is properly extracted for page links
+      let pageId = options.pageId;
+      if (isPageLinkType && !pageId && url.startsWith('/pages/')) {
+        const match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+        if (match) pageId = match[1];
+      }
+
       // Create the link node with appropriate properties
       const link = {
         type: 'link',
@@ -167,10 +217,16 @@ const UnifiedEditor = forwardRef((props, ref) => {
         children: [{ text: text || url }],
         // Add additional properties based on link type
         ...(isUserLinkType && { isUser: true, userId: options.userId }),
-        ...(isPageLinkType && { pageId: options.pageId, pageTitle: options.pageTitle }),
+        ...(isPageLinkType && {
+          pageId: pageId || options.pageId,
+          pageTitle: options.pageTitle
+        }),
         ...(isExternalLinkType && { isExternal: true }),
         ...(options.isPublic === false && { isPublic: false })
       };
+
+      // Log the link structure for debugging
+      console.log('Inserting link with structure:', JSON.stringify(link));
 
       if (editor.selection) {
         const [parentNode, parentPath] = Editor.parent(
@@ -370,10 +426,39 @@ const UnifiedEditor = forwardRef((props, ref) => {
         // Get the paragraph index
         let index = 0;
         try {
-          const path = safeReactEditor.findPath(editor, element);
-          index = path[0]; // The first element of the path is the paragraph index
+          // Use the path property if it exists (for better performance)
+          if (element.path && Array.isArray(element.path)) {
+            index = element.path[0];
+          } else {
+            // Otherwise use our safe wrapper for findPath
+            const path = safeReactEditor.findPath(editor, element);
+            if (path && Array.isArray(path)) {
+              index = path[0]; // The first element of the path is the paragraph index
+
+              // Cache the path for future renders
+              element.path = path;
+            }
+          }
         } catch (error) {
           console.error('Error finding paragraph index:', error);
+          // Try to get a reasonable index as fallback
+          try {
+            // Find all paragraph nodes and determine this one's position
+            const nodes = Array.from(
+              Editor.nodes(editor, {
+                at: [],
+                match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'paragraph'
+              })
+            );
+
+            // Find this element in the nodes
+            const nodeIndex = nodes.findIndex(([node]) => node === element);
+            if (nodeIndex !== -1) {
+              index = nodeIndex;
+            }
+          } catch (fallbackError) {
+            console.error('Error in fallback paragraph indexing:', fallbackError);
+          }
         }
 
         return (
@@ -426,6 +511,104 @@ const UnifiedEditor = forwardRef((props, ref) => {
       lastSelectionRef.current = editor.selection;
     }
 
+    // Handle arrow key navigation around links
+    if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && editor.selection) {
+      const { selection } = editor;
+
+      // Only handle collapsed selections (cursor)
+      if (Range.isCollapsed(selection)) {
+        const point = selection.anchor;
+
+        // Handle ArrowRight key - check if we're right before a link
+        if (event.key === 'ArrowRight') {
+          try {
+            // Get the next node in the document
+            const [nextNode, nextPath] = Editor.next(editor, { at: point.path }) || [];
+
+            // If the next node is a link and we're right before it
+            if (nextNode && nextNode.type === 'link') {
+              const nodeStart = Editor.start(editor, nextPath);
+
+              // Check if we're right before the link
+              if (Point.equals(point, nodeStart) || Point.isBefore(point, nodeStart)) {
+                event.preventDefault();
+
+                // Select the entire link instead of jumping over it
+                const nodeEnd = Editor.end(editor, nextPath);
+                Transforms.select(editor, {
+                  anchor: nodeStart,
+                  focus: nodeEnd
+                });
+
+                // Set the link as selected for visual indication
+                try {
+                  const domNode = ReactEditor.toDOMNode(editor, nextNode);
+                  if (domNode) {
+                    // Clear any previously selected links
+                    const linkElements = document.querySelectorAll('[data-selected="true"]');
+                    linkElements.forEach(el => el.setAttribute('data-selected', 'false'));
+
+                    // Mark this link as selected
+                    domNode.setAttribute('data-selected', 'true');
+                  }
+                } catch (err) {
+                  console.error('Error setting link as selected:', err);
+                }
+
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Error handling ArrowRight navigation around link:', error);
+          }
+        }
+
+        // Handle ArrowLeft key - check if we're right after a link
+        if (event.key === 'ArrowLeft') {
+          try {
+            // Get the previous node in the document
+            const [prevNode, prevPath] = Editor.previous(editor, { at: point.path }) || [];
+
+            // If the previous node is a link and we're right after it
+            if (prevNode && prevNode.type === 'link') {
+              const nodeEnd = Editor.end(editor, prevPath);
+
+              // Check if we're right after the link
+              if (Point.equals(point, nodeEnd) || Point.isAfter(point, nodeEnd)) {
+                event.preventDefault();
+
+                // Select the entire link instead of jumping over it
+                const nodeStart = Editor.start(editor, prevPath);
+                Transforms.select(editor, {
+                  anchor: nodeStart,
+                  focus: nodeEnd
+                });
+
+                // Set the link as selected for visual indication
+                try {
+                  const domNode = ReactEditor.toDOMNode(editor, prevNode);
+                  if (domNode) {
+                    // Clear any previously selected links
+                    const linkElements = document.querySelectorAll('[data-selected="true"]');
+                    linkElements.forEach(el => el.setAttribute('data-selected', 'false'));
+
+                    // Mark this link as selected
+                    domNode.setAttribute('data-selected', 'true');
+                  }
+                } catch (err) {
+                  console.error('Error setting link as selected:', err);
+                }
+
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Error handling ArrowLeft navigation around link:', error);
+          }
+        }
+      }
+    }
+
     // Handle @ symbol to trigger link insertion
     if (event.key === '@' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
       // Check if the previous character is a backslash (escape sequence)
@@ -466,53 +649,26 @@ const UnifiedEditor = forwardRef((props, ref) => {
         event.preventDefault();
         console.log("@ key pressed, showing link editor with Pages tab");
 
-        // CRITICAL FIX: Directly set the state to show the link editor
-        // Don't insert the @ symbol when using it as a shortcut
-        console.log('[DEBUG] Setting showLinkEditor to true directly from @ handler');
-        setShowLinkEditor(true);
-        setInitialLinkValues({
-          text: '',
-          pageId: null,
-          pageTitle: '',
-          initialTab: 'page'
-        });
-        setLinkEditorPosition({
-          top: window.innerHeight / 2,
-          left: window.innerWidth / 2,
-        });
+        // Use the openLinkEditor method to ensure consistent behavior with the Insert Link button
+        // This ensures the same modal and behavior is used for both @ symbol and Insert Link button
+        openLinkEditor("page");
 
-        // Then try multiple approaches to ensure the link editor appears
-        setTimeout(() => {
-          // 1. Try setting the state again
-          setShowLinkEditor(true);
-
-          // 2. Directly dispatch the custom event to show the link editor
+        // Get any selected text to use as the initial display text
+        if (editor.selection && !Range.isCollapsed(editor.selection)) {
           try {
-            const event = new CustomEvent('show-link-editor', {
-              detail: {
-                position: {
-                  top: window.innerHeight / 2,
-                  left: window.innerWidth / 2,
-                },
-                initialTab: "page",
-                showLinkEditor: true
-              }
-            });
-            document.dispatchEvent(event);
-            console.log('[DEBUG] Directly dispatched show-link-editor event for @ mention');
-
-            // 3. Force a global event as well
-            window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
-              detail: {
-                showLinkEditor: true
-              }
-            }));
-          } catch (eventError) {
-            console.error('[DEBUG] Error dispatching @ mention event:', eventError);
-            // 4. Fallback to the openLinkEditor method
-            openLinkEditor("page");
+            const fragment = Editor.fragment(editor, editor.selection);
+            const text = fragment.map(n => Node.string(n)).join('\n');
+            if (text) {
+              // Update the initial values with the selected text
+              setInitialLinkValues(prev => ({
+                ...prev,
+                text: text
+              }));
+            }
+          } catch (error) {
+            console.error('Error getting selected text for @ shortcut:', error);
           }
-        }, 100);
+        }
       }
     }
 
@@ -523,14 +679,14 @@ const UnifiedEditor = forwardRef((props, ref) => {
 
     // Handle single-keystroke deletion of links
     if ((event.key === 'Delete' || event.key === 'Backspace') && editor.selection) {
-      const [node, path] = Editor.node(editor, editor.selection);
+      const { selection } = editor;
 
-      // Check if we're at a link or inside a link
+      // Case 1: Check if we're at a link or inside a link
       let linkEntry = null;
       try {
         // Try to find a link node at or above the current selection
         linkEntry = Editor.above(editor, {
-          at: editor.selection,
+          at: selection,
           match: n => n.type === 'link',
         });
       } catch (error) {
@@ -553,6 +709,82 @@ const UnifiedEditor = forwardRef((props, ref) => {
           return;
         } catch (error) {
           console.error('Error removing link node:', error);
+          // If there's an error, let the default behavior happen
+        }
+      }
+
+      // Case 2: Check if cursor is positioned right before a link (for Delete key)
+      if (event.key === 'Delete' && Range.isCollapsed(selection)) {
+        try {
+          const point = selection.anchor;
+          const [nextNode, nextPath] = Editor.next(editor, { at: point.path, match: n => n.type === 'link' }) || [];
+
+          // If the next node is a link and we're right before it
+          if (nextNode && nextNode.type === 'link') {
+            const nodeStart = Editor.start(editor, nextPath);
+
+            // Check if we're right before the link
+            if (Point.equals(point, nodeStart) || Point.isBefore(point, nodeStart)) {
+              event.preventDefault();
+              Transforms.removeNodes(editor, { at: nextPath });
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for link after cursor:', error);
+        }
+      }
+
+      // Case 3: Check if cursor is positioned right after a link (for Backspace key)
+      if (event.key === 'Backspace' && Range.isCollapsed(selection)) {
+        try {
+          const point = selection.anchor;
+          const [prevNode, prevPath] = Editor.previous(editor, { at: point.path, match: n => n.type === 'link' }) || [];
+
+          // If the previous node is a link and we're right after it
+          if (prevNode && prevNode.type === 'link') {
+            const nodeEnd = Editor.end(editor, prevPath);
+
+            // Check if we're right after the link
+            if (Point.equals(point, nodeEnd) || Point.isAfter(point, nodeEnd)) {
+              event.preventDefault();
+              Transforms.removeNodes(editor, { at: prevPath });
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for link before cursor:', error);
+        }
+      }
+    }
+
+    // Handle Enter key to edit links
+    if (event.key === 'Enter' && !event.shiftKey && editor.selection) {
+      // Check if we're at a link or inside a link
+      let linkEntry = null;
+      try {
+        // Try to find a link node at or above the current selection
+        linkEntry = Editor.above(editor, {
+          at: editor.selection,
+          match: n => n.type === 'link',
+        });
+      } catch (error) {
+        console.error('Error finding link node:', error);
+      }
+
+      // If we found a link, open the link editor
+      if (linkEntry) {
+        event.preventDefault(); // Prevent default Enter behavior
+        const [linkNode, linkPath] = linkEntry;
+
+        try {
+          // Open the link editor for this link
+          openLinkEditor(linkNode);
+
+          // Return early since we've handled the event
+          return;
+        } catch (error) {
+          console.error('Error opening link editor:', error);
           // If there's an error, let the default behavior happen
         }
       }
@@ -680,8 +912,11 @@ const UnifiedEditor = forwardRef((props, ref) => {
               position={linkEditorPosition}
               onSelect={(item) => {
                 // Insert the link
+                const url = item.isExternal ? item.url : `/pages/${item.pageId}`;
+                console.log('Inserting link with URL:', url, 'and pageId:', item.pageId);
+
                 insertLink(
-                  item.isExternal ? item.url : `/${item.pageId}`,
+                  url,
                   item.displayText || item.title,
                   {
                     pageId: item.pageId,
@@ -738,6 +973,7 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({ top: 0, left: 0 });
   const [initialLinkValues, setInitialLinkValues] = useState({});
+  const [isSelected, setIsSelected] = useState(false);
 
   // Get the linkEditorRef from the parent UnifiedEditor component
   useEffect(() => {
@@ -746,6 +982,56 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       linkEditorRef.current = window.currentLinkEditorRef;
     }
   }, []);
+
+  // Track when this link is selected
+  useEffect(() => {
+    const checkSelection = () => {
+      try {
+        // Only check if the editor has a selection
+        if (!editor.selection) {
+          setIsSelected(false);
+          return;
+        }
+
+        // Get the path to this link element using our safe wrapper
+        const path = safeReactEditor.findPath(editor, element);
+        if (!path) {
+          setIsSelected(false);
+          return;
+        }
+
+        // Check if the current selection is at or contains this link
+        const isAtLink = Editor.isSelectionAtLink(editor, path);
+
+        // Update the selected state
+        setIsSelected(isAtLink);
+      } catch (error) {
+        // Ignore errors, just don't update the selected state
+        console.error('Error checking link selection:', error);
+        setIsSelected(false);
+      }
+    };
+
+    // Check selection on mount and when selection changes
+    checkSelection();
+
+    // Add a selection change listener
+    const onSelectionChange = () => {
+      checkSelection();
+    };
+
+    // Use a MutationObserver to detect selection changes
+    // This is more reliable than the selectionchange event
+    if (typeof window !== 'undefined') {
+      document.addEventListener('selectionchange', onSelectionChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        document.removeEventListener('selectionchange', onSelectionChange);
+      }
+    };
+  }, [editor, element]);
 
   // Local state for this component
   const [selectedLinkElement, setSelectedLinkElement] = useState(null);
@@ -886,14 +1172,7 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
 
     try {
       // Find the path to this element using the safe wrapper
-      let path;
-      try {
-        path = safeReactEditor.findPath(editor, element);
-      } catch (pathError) {
-        console.warn("Could not find path to link element:", pathError);
-        // We'll still try to open the editor even without a path
-        path = null;
-      }
+      const path = safeReactEditor.findPath(editor, element);
 
       // Store the element and path for the link editor
       setSelectedLinkElement(element);
@@ -901,6 +1180,14 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
 
       // Set initial values for the link editor
       const initialText = element.children && element.children[0] ? element.children[0].text || "" : "";
+
+      // Determine the initial tab based on the link type
+      let initialTab = "page"; // Default to page tab
+      if (isExternalLinkType) {
+        initialTab = "external";
+      } else if (isUserLinkType) {
+        initialTab = "user";
+      }
 
       // Instead of using local state, directly update the parent component's state
       if (typeof window !== 'undefined' && window.currentLinkEditorRef) {
@@ -916,20 +1203,50 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
               text: initialText,
               pageId: element.pageId || null,
               pageTitle: element.pageTitle || initialText,
-              initialTab: "page"
+              initialTab: initialTab
             });
           }
 
           // Update the parent's position
           if (window.currentLinkEditorRef.setLinkEditorPosition) {
-            window.currentLinkEditorRef.setLinkEditorPosition({
-              top: window.innerHeight / 2,
-              left: window.innerWidth / 2,
-            });
+            // Try to position near the link
+            const linkElement = document.querySelector(`[data-page-id="${element.pageId || ''}"][data-link-type="${linkTypeClass}"]`);
+            if (linkElement) {
+              const rect = linkElement.getBoundingClientRect();
+              window.currentLinkEditorRef.setLinkEditorPosition({
+                top: rect.bottom + window.pageYOffset + 5,
+                left: rect.left + window.pageXOffset,
+              });
+            } else {
+              // Fallback to center position
+              window.currentLinkEditorRef.setLinkEditorPosition({
+                top: window.innerHeight / 2,
+                left: window.innerWidth / 2,
+              });
+            }
           }
 
           // Show the link editor in the parent component
           window.currentLinkEditorRef.setShowLinkEditor(true);
+
+          // Dispatch a custom event to ensure the link editor appears
+          try {
+            const event = new CustomEvent('show-link-editor', {
+              detail: {
+                position: window.currentLinkEditorRef.linkEditorPosition,
+                initialValues: {
+                  text: initialText,
+                  pageId: element.pageId || null,
+                  pageTitle: element.pageTitle || initialText,
+                },
+                initialTab: initialTab,
+                showLinkEditor: true
+              }
+            });
+            document.dispatchEvent(event);
+          } catch (eventError) {
+            console.error("Error dispatching custom event:", eventError);
+          }
 
           console.log('[DEBUG] Updated parent component state directly');
         }
@@ -943,7 +1260,9 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
             // Preserve the selection
             const savedSelection = editor.selection;
             // We'll restore it after the link editor is closed
-            linkEditorRef.current.savedSelection = savedSelection;
+            if (linkEditorRef.current) {
+              linkEditorRef.current.savedSelection = savedSelection;
+            }
           } catch (selectionError) {
             console.warn("Could not save selection:", selectionError);
           }
@@ -961,6 +1280,21 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
           pageId: element.pageId || null,
           pageTitle: element.pageTitle || ""
         });
+
+        // Try to dispatch a custom event as a last resort
+        if (typeof document !== 'undefined') {
+          const event = new CustomEvent('show-link-editor', {
+            detail: {
+              showLinkEditor: true,
+              initialValues: {
+                text: element.children?.[0]?.text || "",
+                pageId: element.pageId || null,
+                pageTitle: element.pageTitle || ""
+              }
+            }
+          });
+          document.dispatchEvent(event);
+        }
       } catch (fallbackError) {
         console.error("Error in fallback link handling:", fallbackError);
       }
@@ -988,6 +1322,50 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
           );
         } catch (error) {
           console.error("Error updating existing link:", error);
+          // Try fallback approach - insert a new link
+          try {
+            // Insert a new link at the current selection
+            const link = {
+              type: "link",
+              url: item.url,
+              children: [{ text: displayText }],
+              isExternal: true
+            };
+
+            // Make sure we have a valid selection
+            if (!editor.selection) {
+              // If no selection, position at the end
+              const end = Editor.end(editor, []);
+              Transforms.select(editor, end);
+            }
+
+            // Insert the link
+            Transforms.insertNodes(editor, link);
+          } catch (fallbackError) {
+            console.error("Error in fallback link insertion:", fallbackError);
+          }
+        }
+      } else {
+        // Insert a new link
+        try {
+          const link = {
+            type: "link",
+            url: item.url,
+            children: [{ text: displayText }],
+            isExternal: true
+          };
+
+          // Make sure we have a valid selection
+          if (!editor.selection) {
+            // If no selection, position at the end
+            const end = Editor.end(editor, []);
+            Transforms.select(editor, end);
+          }
+
+          // Insert the link
+          Transforms.insertNodes(editor, link);
+        } catch (error) {
+          console.error("Error inserting new link:", error);
         }
       }
     } else {
@@ -1002,7 +1380,7 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
             editor,
             {
               type: "link",
-              url: `/${item.id}`,
+              url: `/pages/${item.id}`,
               children: [{ text: formattedTitle }],
               pageId: item.id,
               pageTitle: item.title // Store the original page title for reference
@@ -1011,6 +1389,52 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
           );
         } catch (error) {
           console.error("Error updating existing page link:", error);
+          // Try fallback approach - insert a new link
+          try {
+            // Insert a new link at the current selection
+            const link = {
+              type: "link",
+              url: `/pages/${item.id}`,
+              children: [{ text: formattedTitle }],
+              pageId: item.id,
+              pageTitle: item.title
+            };
+
+            // Make sure we have a valid selection
+            if (!editor.selection) {
+              // If no selection, position at the end
+              const end = Editor.end(editor, []);
+              Transforms.select(editor, end);
+            }
+
+            // Insert the link
+            Transforms.insertNodes(editor, link);
+          } catch (fallbackError) {
+            console.error("Error in fallback link insertion:", fallbackError);
+          }
+        }
+      } else {
+        // Insert a new link
+        try {
+          const link = {
+            type: "link",
+            url: `/pages/${item.id}`,
+            children: [{ text: formattedTitle }],
+            pageId: item.id,
+            pageTitle: item.title
+          };
+
+          // Make sure we have a valid selection
+          if (!editor.selection) {
+            // If no selection, position at the end
+            const end = Editor.end(editor, []);
+            Transforms.select(editor, end);
+          }
+
+          // Insert the link
+          Transforms.insertNodes(editor, link);
+        } catch (error) {
+          console.error("Error inserting new page link:", error);
         }
       }
     }
@@ -1022,9 +1446,18 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
 
     // Focus the editor with error handling
     try {
-      ReactEditor.focus(editor);
+      safeReactEditor.focus(editor);
     } catch (error) {
       console.error("Error focusing editor:", error);
+      // Try DOM fallback
+      try {
+        const editorElement = document.querySelector('[data-slate-editor=true]');
+        if (editorElement) {
+          editorElement.focus();
+        }
+      } catch (fallbackError) {
+        console.error("Error in fallback focus:", fallbackError);
+      }
     }
 
     // Hide the dropdown
@@ -1036,11 +1469,12 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       <a
         {...attributes}
         contentEditable={false} // Make the link non-editable
-        className={baseStyles}
+        className={`${baseStyles} ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''}`}
         data-pill-style={pillStyle}
         data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
         data-user-id={isUserLinkType ? (element.userId || '') : undefined}
         data-link-type={linkTypeClass}
+        data-selected={isSelected ? 'true' : 'false'}
         title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
         onClick={handleClick}
       >
@@ -1089,8 +1523,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const [externalUrl, setExternalUrl] = useState("");
   const [showAuthor, setShowAuthor] = useState(false);
   const [hasChanged, setHasChanged] = useState(false);
-  const [isValid, setIsValid] = useState(!!initialPageId); // Valid if editing an existing link
+  const [isValid, setIsValid] = useState(true); // Start as valid to avoid initial error state
   const [validationMessage, setValidationMessage] = useState("");
+  const [formTouched, setFormTouched] = useState(false); // Track if form has been interacted with - only show validation errors after user interaction
 
   // Determine if we're editing an existing link or creating a new one
   const isEditing = !!initialPageId || !!initialText;
@@ -1120,10 +1555,23 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       showAuthor !== initialState.current.showAuthor ||
       activeTab !== initialState.current.activeTab;
     setHasChanged(changed);
+
+    // Mark form as touched when any value changes
+    if (changed) {
+      setFormTouched(true);
+    }
   }, [displayText, pageTitle, selectedPageId, externalUrl, showAuthor, activeTab]);
 
   // Validate the form
   const validateForm = useCallback(() => {
+    // Only validate if the form has been touched
+    if (!formTouched) {
+      // Always return true and don't show validation errors if the form hasn't been touched
+      setIsValid(true);
+      setValidationMessage("");
+      return true;
+    }
+
     if (activeTab === "page") {
       if (!selectedPageId) {
         setIsValid(false);
@@ -1165,17 +1613,21 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     setIsValid(true);
     setValidationMessage("");
     return true;
-  }, [activeTab, selectedPageId, externalUrl, displayText]);
+  }, [activeTab, selectedPageId, externalUrl, displayText, formTouched]);
 
-  // Update validation when form changes
+  // Update validation when form changes, but only if the form has been touched
   useEffect(() => {
-    validateForm();
-  }, [activeTab, selectedPageId, externalUrl, displayText, validateForm]);
+    if (formTouched) {
+      validateForm();
+    }
+  }, [activeTab, selectedPageId, externalUrl, displayText, validateForm, formTouched]);
 
   // Validation helpers for UI
-  const isPageValid = activeTab === 'page' && !!selectedPageId && !!displayText;
-  const isExternalValid = activeTab === 'external' && !!externalUrl && !!displayText;
-  const canSave = hasChanged && isValid && ((activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid));
+  const isPageValid = !formTouched || (activeTab === 'page' && !!selectedPageId && !!displayText);
+  const isExternalValid = !formTouched || (activeTab === 'external' && !!externalUrl && !!displayText);
+  const canSave = hasChanged && (formTouched ? isValid : true) &&
+    ((activeTab === 'page' && (formTouched ? isPageValid : true)) ||
+     (activeTab === 'external' && (formTouched ? isExternalValid : true)));
 
   // Handle close
   const handleClose = () => {
@@ -1216,6 +1668,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   // Handle save for external links
   const handleExternalSubmit = () => {
+    // Mark form as touched when submitting
+    setFormTouched(true);
+
     if (!validateForm()) {
       return;
     }
@@ -1258,6 +1713,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   // Handle save for page links
   const handleSave = (item) => {
+    // Mark form as touched when submitting
+    setFormTouched(true);
+
     if (!validateForm()) {
       return;
     }
@@ -1361,8 +1819,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
-          {/* Display validation message if there's an error */}
-          {validationMessage && (
+          {/* Display validation message if there's an error and form has been touched */}
+          {formTouched && validationMessage && (
             <div className="px-4 pt-2 text-sm text-red-500">
               {validationMessage}
             </div>
@@ -1380,8 +1838,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     value={displayText}
                     onChange={handleDisplayTextChange}
                     placeholder="Link text"
-                    className={`w-full p-2 bg-muted/50 rounded-lg border ${!displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                    className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
                     autoFocus={!initialText}
+                    onFocus={() => setFormTouched(true)}
                   />
                 </div>
 
@@ -1397,18 +1856,21 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                       if (!displayText.trim() || displayText === pageTitle) {
                         setDisplayText(page.title);
                       }
+                      setFormTouched(true);
                     }}
                     placeholder="Search pages..."
                     initialSelectedId={selectedPageId}
                     displayText={pageTitle}
                     preventRedirect={true}
                     onInputChange={(value) => {
+                      setFormTouched(true);
                       if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
                         setActiveTab('external');
                         setExternalUrl(value);
                       }
                     }}
-                    className={!selectedPageId ? 'border-red-500' : ''}
+                    onFocus={() => setFormTouched(true)}
+                    className={formTouched && !selectedPageId ? 'border-red-500' : ''}
                   />
                 </div>
 
@@ -1435,8 +1897,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   value={displayText}
                   onChange={handleDisplayTextChange}
                   placeholder="Link text"
-                  className={`w-full p-2 bg-muted/50 rounded-lg border ${!displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                  className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
                   autoFocus={!initialText}
+                  onFocus={() => setFormTouched(true)}
                 />
               </div>
 
@@ -1448,8 +1911,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   value={externalUrl}
                   onChange={handleExternalUrlChange}
                   placeholder="https://example.com"
-                  className={`w-full p-2 bg-muted/50 rounded-lg border ${!externalUrl ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                  className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !externalUrl ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
                   autoFocus={!!initialText && !externalUrl}
+                  onFocus={() => setFormTouched(true)}
                 />
                 <p className="text-xs text-muted-foreground">
                   {!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://') && externalUrl &&
