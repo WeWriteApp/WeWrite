@@ -142,27 +142,170 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     };
   }, []);
 
-  useEffect(() => {
-    let contents;
-    try {
-      contents = typeof content === "string" ? JSON.parse(content) : content;
-    } catch (e) {
-      console.error("Error parsing content:", e);
-      contents = [];
-    }
-
-    setParsedContents(contents || []);
-
-    // Reset loaded paragraphs and initial load state when content changes
-    setLoadedParagraphs([]);
-    setIsInitialLoad(true);
-  }, [content]);
-
   // Function to handle any post-render tasks (simplified since we no longer need line number alignment)
   const handlePostRender = useCallback(() => {
     // This function is kept as a placeholder for any future post-render tasks
     // Line number synchronization is no longer needed with inline paragraph numbers
   }, []);
+
+  useEffect(() => {
+    // Skip processing if content is null or undefined
+    if (!content) {
+      console.log("TextView: Content is null or undefined, using empty content");
+      setParsedContents([]);
+      setLoadedParagraphs([]);
+      setIsInitialLoad(true);
+      return;
+    }
+
+    let contents;
+    try {
+      // CRITICAL FIX: Add more detailed logging to track content changes
+      console.log("TextView: Content changed, parsing content", {
+        contentType: typeof content,
+        contentLength: content ? (typeof content === 'string' ? content.length : Array.isArray(content) ? content.length : 'unknown') : 0,
+        contentSample: typeof content === 'string' ? content.substring(0, 50) + '...' : 'not a string',
+        timestamp: new Date().toISOString()
+      });
+
+      // Handle different content types
+      if (typeof content === "string") {
+        try {
+          // Check if content is already parsed (double parsing issue)
+          if (content.startsWith('[{"type":"paragraph"') || content.startsWith('[{\\\"type\\\":\\\"paragraph\\\"')) {
+            contents = JSON.parse(content);
+            console.log("TextView: Successfully parsed string content");
+          } else {
+            // Content might be double-stringified, try to parse twice
+            try {
+              const firstParse = JSON.parse(content);
+              if (typeof firstParse === 'string' &&
+                  (firstParse.startsWith('[{"type":"paragraph"') ||
+                   firstParse.startsWith('[{\\\"type\\\":\\\"paragraph\\\"'))) {
+                contents = JSON.parse(firstParse);
+                console.log("TextView: Successfully parsed double-stringified content");
+              } else {
+                contents = firstParse;
+                console.log("TextView: Using first-level parsed content");
+              }
+            } catch (doubleParseError) {
+              console.error("TextView: Error parsing potentially double-stringified content:", doubleParseError);
+              // Fall back to original parsing
+              contents = JSON.parse(content);
+            }
+          }
+        } catch (parseError) {
+          console.error("TextView: Error parsing string content:", parseError);
+          // Create a fallback content structure with the error message
+          contents = [{
+            type: "paragraph",
+            children: [{ text: "Error loading content. Please try refreshing the page." }]
+          }];
+        }
+      } else if (Array.isArray(content)) {
+        // Content is already an array, use it directly
+        contents = content;
+        console.log("TextView: Using array content directly");
+      } else if (content && typeof content === 'object') {
+        // Content is an object, convert to array if needed
+        contents = [content];
+        console.log("TextView: Converted object content to array");
+      } else {
+        // Fallback for null or undefined content
+        contents = [{
+          type: "paragraph",
+          children: [{ text: "No content available." }]
+        }];
+        console.log("TextView: Using fallback empty content");
+      }
+
+      // CRITICAL FIX: Log the parsed content structure for debugging
+      console.log("TextView: Content processed successfully", {
+        parsedContentType: typeof contents,
+        isArray: Array.isArray(contents),
+        length: Array.isArray(contents) ? contents.length : 0,
+        firstItem: Array.isArray(contents) && contents.length > 0 ?
+          JSON.stringify(contents[0]).substring(0, 50) + '...' : 'none'
+      });
+
+      // Validate content structure - ensure each item has type and children
+      if (Array.isArray(contents)) {
+        contents = contents.filter((item, index) => {
+          if (!item || !item.type) {
+            console.warn(`TextView: Filtering out invalid content item at index ${index}`);
+            return false;
+          }
+          return true;
+        });
+      }
+    } catch (e) {
+      console.error("TextView: Unexpected error processing content:", e);
+      // Create a fallback content structure with the error message
+      contents = [{
+        type: "paragraph",
+        children: [{ text: "Error loading content. Please try refreshing the page." }]
+      }];
+    }
+
+    // Always ensure contents is an array
+    if (!Array.isArray(contents)) {
+      contents = contents ? [contents] : [];
+    }
+
+    // Deduplicate content items that might be duplicated in development environment
+    // This is a fix for the local development environment issue
+    if (Array.isArray(contents) && contents.length > 0) {
+      const uniqueItems = [];
+      const seen = new Set();
+
+      contents.forEach(item => {
+        // Create a simple hash of the item to detect duplicates
+        const itemHash = JSON.stringify(item);
+        if (!seen.has(itemHash)) {
+          seen.add(itemHash);
+          uniqueItems.push(item);
+        } else {
+          console.log("TextView: Filtered out duplicate content item");
+        }
+      });
+
+      contents = uniqueItems;
+    }
+
+    // Update state with the processed content
+    setParsedContents(contents);
+
+    // CRITICAL FIX: Immediately load all paragraphs instead of progressive loading
+    if (Array.isArray(contents) && contents.length > 0) {
+      // Create an array with indices for all paragraphs
+      const allParagraphIndices = Array.from({ length: contents.length }, (_, i) => i);
+      setLoadedParagraphs(allParagraphIndices);
+      console.log("TextView: Immediately loading all paragraphs:", allParagraphIndices);
+    } else {
+      setLoadedParagraphs([]);
+    }
+
+    // Set initial load state
+    setIsInitialLoad(true);
+
+    // CRITICAL FIX: Force a re-render to ensure the content is displayed
+    window.requestAnimationFrame(() => {
+      console.log("TextView: Forcing re-render after content update");
+
+      // Mark as complete after a short delay
+      setTimeout(() => {
+        setIsInitialLoad(false);
+
+        // Call onRenderComplete callback if provided
+        if (onRenderComplete && typeof onRenderComplete === 'function') {
+          onRenderComplete();
+        }
+
+        // Handle any post-render tasks
+        handlePostRender();
+      }, 100);
+    });
+  }, [content, handlePostRender, onRenderComplete]);
 
   // Modified loading animation effect to implement progressive loading for both modes
   useEffect(() => {
@@ -175,6 +318,9 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       // Get total number of nodes
       const totalNodes = paragraphNodes.length;
 
+      // Log the total number of paragraphs for debugging
+      console.log("TextView: Total paragraphs to load:", totalNodes);
+
       // Determine which mode we're in to set the appropriate delay
       const isInDenseMode = effectiveMode === LINE_MODES.DENSE;
       const loadingDelay = isInDenseMode
@@ -183,37 +329,26 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
 
       // Progressive loading for both modes
       if (totalNodes > 0) {
-        // Start with the first paragraph
-        setLoadedParagraphs([0]);
+        // CRITICAL FIX: Load all paragraphs at once to ensure proper rendering
+        // Create an array with indices for all paragraphs
+        const allParagraphIndices = Array.from({ length: totalNodes }, (_, i) => i);
+        setLoadedParagraphs(allParagraphIndices);
 
-        // Then progressively add more paragraphs with appropriate delays
-        let currentIndex = 1;
+        // Log the loaded paragraphs for debugging
+        console.log("TextView: Loading all paragraphs at once:", allParagraphIndices);
 
-        const loadNextParagraph = () => {
-          if (currentIndex < totalNodes) {
-            setLoadedParagraphs(prev => [...prev, currentIndex]);
-            currentIndex++;
+        // Mark as complete after a short delay
+        setTimeout(() => {
+          setIsInitialLoad(false);
 
-            // Schedule the next paragraph with the appropriate delay
-            setTimeout(loadNextParagraph, loadingDelay);
-          } else {
-            // All paragraphs loaded, mark as complete
-            setTimeout(() => {
-              setIsInitialLoad(false);
-
-              // Call onRenderComplete callback
-              if (onRenderComplete && typeof onRenderComplete === 'function') {
-                onRenderComplete();
-              }
-
-              // Handle any post-render tasks
-              handlePostRender();
-            }, 100); // Short delay after all paragraphs are loaded
+          // Call onRenderComplete callback
+          if (onRenderComplete && typeof onRenderComplete === 'function') {
+            onRenderComplete();
           }
-        };
 
-        // Start loading paragraphs after a short initial delay
-        setTimeout(loadNextParagraph, loadingDelay);
+          // Handle any post-render tasks
+          handlePostRender();
+        }, 100); // Short delay after all paragraphs are loaded
       } else {
         // If there are no paragraphs, call onRenderComplete immediately
         setIsInitialLoad(false);
@@ -222,7 +357,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
         }
       }
     }
-  }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender, effectiveMode, ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY, ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY]);
+  }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender, effectiveMode]);
 
   const getViewModeStyles = () => {
     // Use the effective mode for styling
@@ -441,7 +576,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                     {/* Only add a space if this isn't the first paragraph */}
                     {index > 0 && ' '}
 
-                    {/* Paragraph number */}
+                    {/* Paragraph number - CRITICAL FIX: Ensure correct paragraph numbering */}
                     <span className="paragraph-number text-xs ml-1">
                       {index + 1}
                     </span>{'\u00A0'}
@@ -631,7 +766,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     >
       {/* Normal mode - paragraph with inline number at beginning */}
       <div className="paragraph-with-number">
-        {/* Paragraph number inline at beginning */}
+        {/* Paragraph number inline at beginning - CRITICAL FIX: Ensure correct paragraph numbering */}
         <span className="paragraph-number-inline select-none">{index + 1}</span>
 
         <p className={`text-left ${TEXT_SIZE} leading-normal ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
