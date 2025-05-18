@@ -49,7 +49,8 @@ const pageTitleCache = new Map();
 
 // Animation constants for consistent behavior across modes
 const ANIMATION_CONSTANTS = {
-  PARAGRAPH_LOADING_DELAY: 30, // ms between each paragraph appearance
+  PARAGRAPH_LOADING_DELAY: 30, // ms between each paragraph appearance in normal mode
+  DENSE_PARAGRAPH_LOADING_DELAY: 15, // ms between each paragraph appearance in dense mode (faster)
   SPRING_STIFFNESS: 500,
   SPRING_DAMPING: 30,
   SPRING_MASS: 1
@@ -58,8 +59,16 @@ const ANIMATION_CONSTANTS = {
 // Function to extract page ID from URL
 const extractPageId = (url) => {
   if (!url) return null;
-  const match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
-  return match ? match[1] : null;
+
+  // Check for /pages/{id} format
+  let match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+  if (match) return match[1];
+
+  // Check for /{id} format (direct page ID)
+  match = url.match(/^\/([a-zA-Z0-9-_]+)$/);
+  if (match) return match[1];
+
+  return null;
 };
 
 // Function to get page title from ID
@@ -155,7 +164,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     // Line number synchronization is no longer needed with inline paragraph numbers
   }, []);
 
-  // Modified loading animation effect to prevent layout shifts
+  // Modified loading animation effect to implement progressive loading for both modes
   useEffect(() => {
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph nodes (WeWrite only supports paragraphs)
@@ -166,32 +175,54 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       // Get total number of nodes
       const totalNodes = paragraphNodes.length;
 
-      // Load all paragraphs at once to prevent layout shifts
-      // This preserves the fade-in animation but avoids staggered loading
-      setLoadedParagraphs(Array.from({ length: totalNodes }, (_, i) => i));
+      // Determine which mode we're in to set the appropriate delay
+      const isInDenseMode = effectiveMode === LINE_MODES.DENSE;
+      const loadingDelay = isInDenseMode
+        ? ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY
+        : ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY;
 
-      // Short delay before marking as complete
-      setTimeout(() => {
-        setIsInitialLoad(false);
+      // Progressive loading for both modes
+      if (totalNodes > 0) {
+        // Start with the first paragraph
+        setLoadedParagraphs([0]);
 
-        // Call onRenderComplete callback
-        if (onRenderComplete && typeof onRenderComplete === 'function') {
-          onRenderComplete();
-        }
+        // Then progressively add more paragraphs with appropriate delays
+        let currentIndex = 1;
 
-        // Handle any post-render tasks
-        handlePostRender();
-      }, 300);
+        const loadNextParagraph = () => {
+          if (currentIndex < totalNodes) {
+            setLoadedParagraphs(prev => [...prev, currentIndex]);
+            currentIndex++;
 
-      // If there are no paragraphs, call onRenderComplete immediately
-      if (totalNodes === 0) {
+            // Schedule the next paragraph with the appropriate delay
+            setTimeout(loadNextParagraph, loadingDelay);
+          } else {
+            // All paragraphs loaded, mark as complete
+            setTimeout(() => {
+              setIsInitialLoad(false);
+
+              // Call onRenderComplete callback
+              if (onRenderComplete && typeof onRenderComplete === 'function') {
+                onRenderComplete();
+              }
+
+              // Handle any post-render tasks
+              handlePostRender();
+            }, 100); // Short delay after all paragraphs are loaded
+          }
+        };
+
+        // Start loading paragraphs after a short initial delay
+        setTimeout(loadNextParagraph, loadingDelay);
+      } else {
+        // If there are no paragraphs, call onRenderComplete immediately
         setIsInitialLoad(false);
         if (onRenderComplete && typeof onRenderComplete === 'function') {
           onRenderComplete();
         }
       }
     }
-  }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender]);
+  }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender, effectiveMode, ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY, ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY]);
 
   const getViewModeStyles = () => {
     // Use the effective mode for styling
@@ -376,6 +407,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
    * - Paragraph numbers are inserted inline within the continuous text
    * - Standard text size (1rem/16px)
    * - Only a small space separates one paragraph from the next
+   * - Progressive loading animations with shorter delays than normal mode
    */
   if (mode === LINE_MODES.DENSE) {
     // For array of nodes (multiple paragraphs)
@@ -390,8 +422,22 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                 // Only process paragraph nodes
                 if (node.type !== nodeTypes.PARAGRAPH) return null;
 
+                // Calculate animation delay for dense mode
+                const animationDelay = ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY / 1000 * index; // Convert ms to seconds for framer-motion
+
                 return (
-                  <React.Fragment key={index}>
+                  <motion.span
+                    key={index}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
+                      damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
+                      mass: ANIMATION_CONSTANTS.SPRING_MASS,
+                      delay: animationDelay // Use dense mode delay
+                    }}
+                  >
                     {/* Only add a space if this isn't the first paragraph */}
                     {index > 0 && ' '}
 
@@ -426,7 +472,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                       }
                       return null;
                     })}
-                  </React.Fragment>
+                  </motion.span>
                 );
               })}
             </p>
@@ -501,7 +547,7 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  */
 const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false }) => {
   // We're now using a simpler approach with inline paragraph numbers
-
+  const { lineMode } = useLineSettings();
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
 
@@ -511,11 +557,14 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
   // Spacing is now handled by paragraph-with-hanging-indent class
   const spacingClass = '';
 
-  // This effect is no longer needed since we're using inline paragraph numbers
-  useEffect(() => {
-    // No-op - keeping the effect as a placeholder in case we need paragraph-specific
-    // functionality in the future
-  }, []);
+  // Determine which mode we're in to set the appropriate animation delay
+  const isInDenseMode = lineMode === LINE_MODES.DENSE;
+
+  // Calculate animation delay based on mode
+  // Dense mode uses a shorter delay for faster loading
+  const animationDelay = isInDenseMode
+    ? ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY / 1000 * index // Convert ms to seconds for framer-motion
+    : 0.05 * index; // Original delay for normal mode
 
   // Handle click to edit
   const handleClick = () => {
@@ -560,8 +609,6 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     return null;
   };
 
-  // No longer needed as paragraph numbers are now in the left margin
-
   // Normal mode with motion animations - staggered entry for paragraphs
   return (
     <motion.div
@@ -575,7 +622,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
         stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
         damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
         mass: ANIMATION_CONSTANTS.SPRING_MASS,
-        delay: 0.05 * index // Stagger the animation based on paragraph index
+        delay: animationDelay // Use the mode-appropriate delay
       }}
       onClick={handleClick}
       onMouseEnter={() => canEdit && setLineHovered(true)}
@@ -602,8 +649,21 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 const LinkNode = ({ node }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const href = node.url || node.href || node.link || '#';
-  const pageId = extractPageId(href);
+
+  // Use pageId from node if available, otherwise extract from href
+  const pageId = node.pageId || extractPageId(href);
+
+  // Determine if this is an external link
   const isExternal = isExternalLink(href);
+
+  // Log link details for debugging
+  console.log('LinkNode rendering with:', {
+    href,
+    pageId,
+    nodePageId: node.pageId,
+    isExternal,
+    nodeStructure: JSON.stringify(node)
+  });
 
   // Extract text content from children array if available
   const getTextFromNode = (node) => {
@@ -624,11 +684,14 @@ const LinkNode = ({ node }) => {
     // Pass the original page title if available in the node
     const originalPageTitle = node.pageTitle || null;
 
+    // Ensure href is properly formatted for internal links
+    const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
+
     return (
       <span className="inline-block">
         <InternalLinkWithTitle
           pageId={pageId}
-          href={href}
+          href={formattedHref}
           displayText={displayText}
           originalPageTitle={originalPageTitle}
         />

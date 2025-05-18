@@ -779,7 +779,10 @@ function SinglePageView({ params }) {
             {/* Backlinks and Related Pages - Always render with fixed height to prevent layout shifts */}
             <div className="w-full px-4">
               {/* What Links Here section */}
-              <BacklinksSection page={page} />
+              <BacklinksSection
+                page={page}
+                linkedPageIds={memoizedLinkedPageIds}
+              />
 
               {/* Related Pages section - Using pre-computed memoized values */}
               <RelatedPages

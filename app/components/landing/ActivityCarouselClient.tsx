@@ -49,7 +49,7 @@ export default function ActivityCarouselClient({
       error={errorMessage}
       emptyMessage="No recent activity to display"
       height={200}
-      scrollSpeed={0.10}
+      scrollSpeed={0.25}
       fullWidth={true}
     >
       {initialActivities && initialActivities.length > 0 && initialActivities.map((activity, index) => (

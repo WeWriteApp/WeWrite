@@ -86,7 +86,7 @@ export default function HeroSection({
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setRotation({ x: 0, y: 0 })}
     >
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-2 sm:px-4 md:px-6 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-12">
           <div
             className={`flex-1 text-center lg:text-left ${fadeInClass}`}
@@ -142,9 +142,9 @@ export default function HeroSection({
             </div>
           </div>
 
-          <div className={`flex-1 perspective-[1000px] ${fadeInClass}`} style={{ animationDelay: '0.2s' }}>
+          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full`} style={{ animationDelay: '0.2s' }}>
             <div
-              className="relative w-full max-w-lg mx-auto transform-gpu transition-transform duration-300"
+              className="relative w-full max-w-[95%] sm:max-w-lg mx-auto transform-gpu transition-transform duration-300"
               style={{
                 transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
                 transformStyle: 'preserve-3d'
@@ -152,13 +152,38 @@ export default function HeroSection({
             >
               <div {...handlers} className="relative w-full h-full">
                 <div className="relative w-full h-full min-h-[420px] flex items-center justify-center">
-                  <AnimatePresence initial={false} custom={slideDirection} mode="wait">
+                  {/* Fixed position navigation arrows that stay in place during transitions */}
+                  <div className="absolute left-2 top-1/2 -translate-y-1/2 z-20">
+                    <button
+                      type="button"
+                      className="bg-background/80 rounded-full p-2 shadow hover:bg-background/90 transition-colors"
+                      onClick={e => { e.stopPropagation(); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
+                      aria-label="Previous image"
+                    >
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                  </div>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
+                    <button
+                      type="button"
+                      className="bg-background/80 rounded-full p-2 shadow hover:bg-background/90 transition-colors"
+                      onClick={e => { e.stopPropagation(); goToIndex((carouselIndex + 1) % heroImages.length); }}
+                      aria-label="Next image"
+                    >
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </div>
+
+                  <AnimatePresence initial={false} custom={slideDirection} mode="sync">
                     <motion.div
                       key={carouselIndex}
-                      initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0 }}
+                      initial={{ x: slideDirection === 'right' ? 300 : -300, opacity: 0.5 }}
                       animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: slideDirection === 'right' ? -300 : 300, opacity: 0 }}
-                      transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                      exit={{ x: slideDirection === 'right' ? -300 : 300, opacity: 0.5 }}
+                      transition={{
+                        x: { type: 'spring', stiffness: 300, damping: 30 },
+                        opacity: { duration: 0.3 }
+                      }}
                       className="group relative block focus:outline-none w-full bg-none border-none p-0"
                       onClick={() => setLightboxOpen(true)}
                       aria-label="Open image lightbox"
@@ -172,30 +197,12 @@ export default function HeroSection({
                           src={heroImages[carouselIndex]}
                           alt={`WeWrite App Interface ${carouselIndex + 1}`}
                           fill
-                          className={`rounded-lg shadow-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105 object-cover`}
+                          className={`rounded-lg shadow-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105 object-contain md:object-cover`}
                           priority
                           loading="eager"
                           sizes="(max-width: 768px) 100vw, 700px"
                         />
                       </div>
-                      {/* Left arrow */}
-                      <button
-                        type="button"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
-                        onClick={e => { e.stopPropagation(); goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length); }}
-                        aria-label="Previous image"
-                      >
-                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" /></svg>
-                      </button>
-                      {/* Right arrow */}
-                      <button
-                        type="button"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 rounded-full p-2 shadow hover:bg-background/90 z-10"
-                        onClick={e => { e.stopPropagation(); goToIndex((carouselIndex + 1) % heroImages.length); }}
-                        aria-label="Next image"
-                      >
-                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg>
-                      </button>
                     </motion.div>
                   </AnimatePresence>
                 </div>

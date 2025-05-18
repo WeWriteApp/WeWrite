@@ -108,9 +108,21 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   };
 
   // Create the URL for this activity
-  const activityUrl = activity.versionId
-    ? `/${activity.pageId}/version/${activity.versionId}`
-    : `/${activity.pageId}`;
+  let activityUrl;
+  if (activity.activityType === "bio_edit") {
+    // Bio edits link to the user profile
+    const userId = activity.pageId.replace("user-bio-", "");
+    activityUrl = `/user/${userId}`;
+  } else if (activity.activityType === "group_about_edit") {
+    // Group about edits link to the group page
+    const groupId = activity.pageId.replace("group-about-", "");
+    activityUrl = `/group/${groupId}`;
+  } else {
+    // Regular page edits
+    activityUrl = activity.versionId
+      ? `/${activity.pageId}/version/${activity.versionId}`
+      : `/${activity.pageId}`;
+  }
 
   return (
     <div

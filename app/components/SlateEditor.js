@@ -44,6 +44,58 @@ const safeReactEditor = {
       console.error('Error in safeReactEditor.isFocused:', error);
     }
     return false;
+  },
+  findPath: (editor, node) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.findPath === 'function') {
+        return ReactEditor.findPath(editor, node);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.findPath:', error);
+    }
+    return [0];
+  },
+  // Add safe wrappers for DOM point conversion
+  toDOMPoint: (editor, point) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.toDOMPoint === 'function') {
+        return ReactEditor.toDOMPoint(editor, point);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.toDOMPoint:', error);
+    }
+    return null;
+  },
+  toSlatePoint: (editor, domPoint) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.toSlatePoint === 'function') {
+        return ReactEditor.toSlatePoint(editor, domPoint);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.toSlatePoint:', error);
+    }
+    return null;
+  }
+};
+
+// Helper function to check if selection is at or contains a link
+Editor.isSelectionAtLink = (editor, linkPath) => {
+  try {
+    if (!editor.selection) return false;
+
+    // Get the range of the link node
+    const linkStart = Editor.start(editor, linkPath);
+    const linkEnd = Editor.end(editor, linkPath);
+    const linkRange = { anchor: linkStart, focus: linkEnd };
+
+    // Check if the current selection overlaps with the link range
+    return Range.includes(linkRange, editor.selection.anchor) ||
+           Range.includes(linkRange, editor.selection.focus) ||
+           Range.includes(editor.selection, linkStart) ||
+           Range.includes(editor.selection, linkEnd);
+  } catch (error) {
+    console.error('Error in isSelectionAtLink:', error);
+    return false;
   }
 };
 import { DataContext } from "../providers/DataProvider";
@@ -1189,8 +1241,8 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     }
   };
 
-  // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
-  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
+  // Allow wrapping for all pill styles to fix premature wrapping issue
+  const textWrapStyle = 'break-words';
 
   // Apply padding based on pill style
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
@@ -1229,7 +1281,7 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
       <InlineChromiumBugfix />
-      <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>
+      <span className="pill-text overflow-hidden break-words inline">
         {children}
       </span>
       {isExternalLinkType || isExternalLink(element.url) ? (
@@ -1595,6 +1647,18 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
         overflow: 'auto' // Enable scrolling for content
       }}
     >
+      <style jsx global>{`
+        /* Ensure placeholder text aligns with actual text */
+        [data-slate-editor] [data-slate-placeholder] {
+          position: absolute;
+          pointer-events: none;
+          display: inline;
+          width: auto;
+          white-space: nowrap;
+          margin-left: 2.5rem; /* Align with text after paragraph number */
+          opacity: 0.5;
+        }
+      `}</style>
       <Editable
         ref={editableRef}
         renderElement={renderElementWithStyles}

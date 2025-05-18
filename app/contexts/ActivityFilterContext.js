@@ -22,9 +22,18 @@ export const ActivityFilterProvider = ({ children }) => {
   // Load saved preference from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedViewMode = localStorage.getItem('activityViewMode');
-      if (savedViewMode) {
-        setViewMode(savedViewMode);
+      try {
+        const savedViewMode = localStorage.getItem('activityViewMode');
+        if (savedViewMode && (savedViewMode === 'all' || savedViewMode === 'following')) {
+          console.log('Loading saved view mode from localStorage:', savedViewMode);
+          setViewMode(savedViewMode);
+        } else {
+          // If invalid or missing value, set default and save it
+          console.log('No valid saved view mode found, defaulting to "all"');
+          localStorage.setItem('activityViewMode', 'all');
+        }
+      } catch (error) {
+        console.error('Error loading view mode from localStorage:', error);
       }
     }
   }, []);
@@ -32,7 +41,12 @@ export const ActivityFilterProvider = ({ children }) => {
   // Save preference to localStorage when it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('activityViewMode', viewMode);
+      try {
+        console.log('Saving view mode to localStorage:', viewMode);
+        localStorage.setItem('activityViewMode', viewMode);
+      } catch (error) {
+        console.error('Error saving view mode to localStorage:', error);
+      }
     }
   }, [viewMode]);
 

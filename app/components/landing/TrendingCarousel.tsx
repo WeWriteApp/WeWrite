@@ -108,7 +108,7 @@ export default function TrendingCarousel({ limit = 10 }) {
       error={error}
       emptyMessage="No trending pages available yet. Check back soon!"
       height={220}
-      scrollSpeed={0.10}
+      scrollSpeed={0.25}
       reverseDirection={true}
       fullWidth={true}
     >

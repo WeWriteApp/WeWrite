@@ -1136,8 +1136,8 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   // Determine the appropriate class based on link type
   const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
 
-  // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
-  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
+  // Allow wrapping for all pill styles to fix premature wrapping issue
+  const textWrapStyle = 'break-words';
 
   // Apply padding based on pill style
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';

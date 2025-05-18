@@ -260,56 +260,125 @@ export const getBatchGroupUserActivityLast24Hours = async (userIds, groupId) => 
 
 export const getBatchUserActivityLast24Hours = async (userIds) => {
   try {
-    if (!userIds || userIds.length === 0) return {};
+    console.log('getBatchUserActivityLast24Hours: Starting with userIds:', userIds);
+    if (!userIds || userIds.length === 0) {
+      console.log('getBatchUserActivityLast24Hours: No userIds provided, returning empty object');
+      return {};
+    }
 
     // Get current date and time
     const now = new Date();
+    console.log('getBatchUserActivityLast24Hours: Current time:', now.toISOString());
 
     // Calculate 24 hours ago
     const twentyFourHoursAgo = new Date(now);
     twentyFourHoursAgo.setHours(now.getHours() - 24);
+    console.log('getBatchUserActivityLast24Hours: 24 hours ago:', twentyFourHoursAgo.toISOString());
 
     // Initialize result object
     const result = {};
     userIds.forEach(userId => {
       result[userId] = { total: 0, hourly: Array(24).fill(0) };
     });
+    console.log('getBatchUserActivityLast24Hours: Initialized result object with empty data for each user');
 
-    // Query for pages edited/created by any of these users in the last 24 hours
-    const pagesQuery = query(
-      collection(db, "pages"),
-      where("userId", "in", userIds.slice(0, 10)), // Firestore limits 'in' queries to 10 values
-      where("lastModified", ">=", twentyFourHoursAgo),
-      orderBy("lastModified", "desc")
-    );
+    // Process users in batches of 10 (Firestore limit for 'in' queries)
+    const batchSize = 10;
+    const batches = [];
 
-    const pagesSnapshot = await getDocs(pagesQuery);
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      batches.push(userIds.slice(i, i + batchSize));
+    }
 
-    // Process each page edit/creation
-    pagesSnapshot.forEach(doc => {
-      const pageData = doc.data();
-      const userId = pageData.userId;
+    console.log(`getBatchUserActivityLast24Hours: Split ${userIds.length} users into ${batches.length} batches`);
 
-      if (userId && pageData.lastModified && result[userId]) {
-        // Convert to Date if it's a Timestamp
-        const lastModified = pageData.lastModified instanceof Timestamp
-          ? pageData.lastModified.toDate()
-          : new Date(pageData.lastModified);
+    // Process each batch
+    for (const batchUserIds of batches) {
+      console.log('getBatchUserActivityLast24Hours: Processing batch with users:', batchUserIds);
 
-        // Only count if it's within the last 24 hours
-        if (lastModified >= twentyFourHoursAgo) {
-          // Calculate hours ago (0-23, where 0 is the most recent hour)
-          const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
+      // Query for pages edited/created by any of these users in the last 24 hours
+      const pagesQuery = query(
+        collection(db, "pages"),
+        where("userId", "in", batchUserIds), // Process one batch at a time
+        where("lastModified", ">=", twentyFourHoursAgo),
+        orderBy("lastModified", "desc")
+      );
 
-          // Make sure the index is within bounds (0-23)
-          if (hoursAgo >= 0 && hoursAgo < 24) {
-            result[userId].hourly[23 - hoursAgo]++;
-            result[userId].total++;
+      const pagesSnapshot = await getDocs(pagesQuery);
+      console.log(`getBatchUserActivityLast24Hours: Found ${pagesSnapshot.size} pages for batch`);
+
+      // Process each page edit/creation
+      pagesSnapshot.forEach(doc => {
+        const pageData = doc.data();
+        const userId = pageData.userId;
+
+        if (userId && pageData.lastModified && result[userId]) {
+          // Convert to Date if it's a Timestamp
+          const lastModified = pageData.lastModified instanceof Timestamp
+            ? pageData.lastModified.toDate()
+            : new Date(pageData.lastModified);
+
+          // Only count if it's within the last 24 hours
+          if (lastModified >= twentyFourHoursAgo) {
+            // Calculate hours ago (0-23, where 0 is the most recent hour)
+            const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
+
+            // Make sure the index is within bounds (0-23)
+            if (hoursAgo >= 0 && hoursAgo < 24) {
+              result[userId].hourly[23 - hoursAgo]++;
+              result[userId].total++;
+            }
           }
         }
-      }
-    });
+      });
+    }
 
+    // Also check versions collection for more detailed edit history
+    console.log('getBatchUserActivityLast24Hours: Checking versions collection for additional activity');
+    for (const userId of userIds) {
+      // Query for pages by this user
+      const userPagesQuery = query(
+        collection(db, "pages"),
+        where("userId", "==", userId),
+        limit(20) // Limit to 20 most recent pages per user to avoid excessive queries
+      );
+
+      const userPagesSnapshot = await getDocs(userPagesQuery);
+
+      // For each page, check versions
+      for (const pageDoc of userPagesSnapshot.docs) {
+        const pageId = pageDoc.id;
+
+        // Query for versions created by this user in the last 24 hours
+        const versionsQuery = query(
+          collection(db, "pages", pageId, "versions"),
+          where("userId", "==", userId),
+          where("createdAt", ">=", twentyFourHoursAgo.toISOString())
+        );
+
+        const versionsSnapshot = await getDocs(versionsQuery);
+
+        // Process each version
+        versionsSnapshot.forEach(versionDoc => {
+          const versionData = versionDoc.data();
+          if (versionData.createdAt) {
+            // Convert ISO string to Date
+            const createdAt = new Date(versionData.createdAt);
+
+            // Calculate hours ago (0-23, where 0 is the most recent hour)
+            const hoursAgo = Math.floor((now - createdAt) / (1000 * 60 * 60));
+
+            // Make sure the index is within bounds (0-23)
+            if (hoursAgo >= 0 && hoursAgo < 24) {
+              result[userId].hourly[23 - hoursAgo]++;
+              result[userId].total++;
+            }
+          }
+        });
+      }
+    }
+
+    console.log('getBatchUserActivityLast24Hours: Completed processing all batches');
     return result;
   } catch (error) {
     console.error("Error getting batch user activity:", error);

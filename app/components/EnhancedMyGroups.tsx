@@ -28,7 +28,12 @@ interface Group {
   userRole?: string; // Added to track the current user's role in the group
 }
 
-export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: string }) {
+interface EnhancedMyGroupsProps {
+  profileUserId?: string;
+  hideHeader?: boolean;
+}
+
+export default function EnhancedMyGroups({ profileUserId, hideHeader = false }: EnhancedMyGroupsProps) {
   const { user } = useContext(AuthContext);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,12 +214,14 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
   if (loading) {
     return (
       <div className="w-full space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            My Groups
-          </h2>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              My Groups
+            </h2>
+          </div>
+        )}
         <div className="flex justify-center items-center py-8">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
@@ -225,23 +232,25 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
   if (groups.length === 0) {
     return (
       <div className="w-full space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            My Groups
-          </h2>
-          <Button variant="outline" asChild>
-            <Link href="/group/new" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Group
-            </Link>
-          </Button>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              My Groups
+            </h2>
+            <Button variant="outline" asChild className="rounded-2xl">
+              <Link href="/group/new" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                New Group
+              </Link>
+            </Button>
+          </div>
+        )}
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-center">You haven't joined any groups yet.</p>
-            <Button variant="outline" className="mt-4" asChild>
+            <Button variant="outline" className="mt-4 rounded-2xl" asChild>
               <Link href="/group/new">Create a Group</Link>
             </Button>
           </CardContent>
@@ -255,20 +264,22 @@ export default function EnhancedMyGroups({ profileUserId }: { profileUserId?: st
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold flex items-center">
-          <Users className="h-5 w-5 mr-2" />
-          My Groups
-        </h2>
-        {!profileUserId && (
-          <Button variant="outline" asChild>
-            <Link href="/group/new" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Group
-            </Link>
-          </Button>
-        )}
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold flex items-center">
+            <Users className="h-5 w-5 mr-2" />
+            My Groups
+          </h2>
+          {!profileUserId && (
+            <Button variant="outline" asChild className="rounded-2xl">
+              <Link href="/group/new" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                New Group
+              </Link>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Desktop view (md and up): Table layout */}
       <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">

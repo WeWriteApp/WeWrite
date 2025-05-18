@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { PillLink } from './PillLink';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from './ui/tooltip';
 
 /**
  * RelatedPages Component
@@ -107,14 +113,45 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
               pageTitleWords.includes(word)
             );
 
-            // Only include pages with at least one exact word match
-            if (exactMatches.length > 0) {
-              // Calculate a simple match count for sorting
-              const matchCount = exactMatches.length;
+            // Calculate base match score from individual word matches
+            let matchScore = exactMatches.length;
 
+            // Check for consecutive word matches (phrases)
+            let maxConsecutiveMatches = 0;
+
+            // Convert title words to string for easier comparison
+            const titleString = titleWords.join(' ');
+            const pageTitleString = pageTitleWords.join(' ');
+
+            // Find the longest matching phrase by checking all possible substrings
+            for (let i = 0; i < titleWords.length - 1; i++) {
+              for (let j = i + 2; j <= titleWords.length; j++) {
+                const phrase = titleWords.slice(i, j).join(' ');
+                // Only consider phrases with at least 2 words
+                if (phrase.split(' ').length >= 2 && pageTitleString.includes(phrase)) {
+                  // Count the number of words in the phrase
+                  const wordCount = phrase.split(' ').length;
+                  if (wordCount > maxConsecutiveMatches) {
+                    maxConsecutiveMatches = wordCount;
+                    console.log(`Found consecutive match: "${phrase}" (${wordCount} words)`);
+                  }
+                }
+              }
+            }
+
+            // Add bonus points for consecutive matches (3x per word)
+            const consecutiveMatchBonus = maxConsecutiveMatches > 1 ? maxConsecutiveMatches * 3 : 0;
+
+            // Calculate total score (individual matches + consecutive bonus)
+            const totalScore = matchScore + consecutiveMatchBonus;
+
+            // Only include pages with at least one match
+            if (totalScore > 0) {
               matchingPages.push({
                 ...pageData,
-                matchCount
+                matchCount: totalScore, // Use the combined score for sorting
+                hasConsecutiveMatches: maxConsecutiveMatches > 1,
+                consecutiveMatchCount: maxConsecutiveMatches
               });
             }
           });
@@ -153,7 +190,19 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
   // The component will maintain the same height regardless of loading state or content
   return (
     <div className="mt-8 pt-6 min-h-[180px]">
-      <h3 className="text-lg font-medium mb-4">Related Pages</h3>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-lg font-medium">Related Pages</h3>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[300px]">
+              <p>Pages that share similar words in their titles, with higher priority given to consecutive matching words. Excludes links that are already mentioned in the page.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       {!mounted || isLoading ? (
         // Loading state - fixed height placeholder

@@ -93,6 +93,9 @@ const EditPage = ({
       return;
     }
 
+    // Store the content we're about to save for debugging
+    console.log("About to save editor content:", JSON.stringify(editorContent));
+
     // Show loading state immediately
     setIsSaving(true);
     setError(null); // Clear any previous errors
@@ -137,8 +140,14 @@ const EditPage = ({
       try {
         console.log('Saving editor content:', editorContent);
 
+        // Make a deep copy of the editor content to prevent any reference issues
+        const editorContentCopy = JSON.parse(JSON.stringify(editorContent));
+
         // Convert the editorState to JSON
-        const editorStateJSON = JSON.stringify(editorContent);
+        const editorStateJSON = JSON.stringify(editorContentCopy);
+
+        // Log the JSON string for debugging
+        console.log('Editor state JSON:', editorStateJSON);
 
         // Check if content has actually changed by comparing with the original content
         let contentChanged = true;

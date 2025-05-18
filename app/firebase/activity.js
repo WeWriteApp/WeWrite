@@ -4,12 +4,14 @@ import {
   query,
   where,
   orderBy,
-  limit,
+  limit as firestoreLimit,
   getDocs,
   doc,
   getDoc
 } from "firebase/firestore";
 import { app } from "./config";
+import { getBioAndAboutActivities } from "./bioActivity";
+import { getDatabase, ref, get } from "firebase/database";
 
 const db = getFirestore(app);
 
@@ -17,9 +19,10 @@ const db = getFirestore(app);
  * Gets recent activity data from Firestore
  *
  * @param {number} limitCount - Maximum number of activities to return
+ * @param {string} currentUserId - The ID of the current user (for privacy filtering)
  * @returns {Promise<Object>} - Object containing activities array and error if any
  */
-export const getRecentActivity = async (limitCount = 30) => {
+export const getRecentActivity = async (limitCount = 30, currentUserId = null) => {
   try {
     console.log('getRecentActivity: Starting with limit', limitCount);
 
@@ -32,7 +35,7 @@ export const getRecentActivity = async (limitCount = 30) => {
       where("isPublic", "==", true),
       orderBy("lastModified", "desc"),
       select(...requiredFields),
-      limit(limitCount * 2)
+      firestoreLimit(limitCount * 2)
     );
 
     let pagesSnapshot;
@@ -164,13 +167,78 @@ export const getRecentActivity = async (limitCount = 30) => {
           return false;
         }
         return true;
+      });
+
+    // Get user's group memberships for privacy filtering
+    let userGroupIds = [];
+    if (currentUserId) {
+      try {
+        const rtdb = getDatabase();
+        const userGroupsRef = ref(rtdb, `users/${currentUserId}/groups`);
+        const userGroupsSnapshot = await get(userGroupsRef);
+
+        if (userGroupsSnapshot.exists()) {
+          userGroupIds = Object.keys(userGroupsSnapshot.val());
+        }
+      } catch (error) {
+        console.error("Error fetching user group memberships:", error);
+      }
+    }
+
+    // Get bio and about page edit activities
+    let bioAndAboutActivities = [];
+    try {
+      bioAndAboutActivities = await getBioAndAboutActivities(limitCount, currentUserId);
+
+      // Transform bio and about activities to match page activity format
+      bioAndAboutActivities = bioAndAboutActivities.map(activity => {
+        if (activity.type === "bio_edit") {
+          return {
+            pageId: `user-bio-${activity.userId}`,
+            pageName: `${activity.username}'s Bio`,
+            userId: activity.editorId,
+            username: activity.editorUsername,
+            timestamp: activity.timestamp?.toDate() || new Date(activity.timestamp),
+            currentContent: activity.content,
+            previousContent: activity.previousContent,
+            isPublic: activity.isPublic,
+            activityType: "bio_edit"
+          };
+        } else if (activity.type === "group_about_edit") {
+          return {
+            pageId: `group-about-${activity.groupId}`,
+            pageName: `${activity.groupName} About Page`,
+            userId: activity.editorId,
+            username: activity.editorUsername,
+            groupId: activity.groupId,
+            groupName: activity.groupName,
+            timestamp: activity.timestamp?.toDate() || new Date(activity.timestamp),
+            currentContent: activity.content,
+            previousContent: activity.previousContent,
+            isPublic: activity.isPublic,
+            activityType: "group_about_edit"
+          };
+        }
+        return null;
+      }).filter(activity => activity !== null);
+    } catch (error) {
+      console.error("Error fetching bio and about activities:", error);
+    }
+
+    // Combine page activities with bio and about activities
+    const allActivities = [...validActivities, ...bioAndAboutActivities]
+      .sort((a, b) => {
+        // Sort by timestamp in descending order (newest first)
+        const timeA = a.timestamp || 0;
+        const timeB = b.timestamp || 0;
+        return timeB - timeA;
       })
       .slice(0, limitCount);
 
-    console.log(`After filtering: ${validActivities.length} valid activities`);
+    console.log(`After combining: ${allActivities.length} total activities`);
 
-    console.log(`getRecentActivity: Returning ${validActivities.length} activities`);
-    return { activities: validActivities };
+    console.log(`getRecentActivity: Returning ${allActivities.length} activities`);
+    return { activities: allActivities };
   } catch (err) {
     console.error("Error fetching recent activity:", err);
     // Return sample data instead of empty array

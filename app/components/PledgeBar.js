@@ -71,12 +71,8 @@ const PledgeBar = () => {
     }
   }, []);
 
-  // Effect to check if subscription feature is enabled
+  // Effect to check if subscription feature is enabled and fetch page data
   useEffect(() => {
-    if (!isSubscriptionEnabled) {
-      return;
-    }
-
     // Only proceed if we have a valid page ID
     if (!pageId) {
       return;
@@ -92,7 +88,11 @@ const PledgeBar = () => {
 
           // Check if the current user is the page owner
           if (user && page.userId === user.uid) {
+            console.log('PledgeBar: Current user is the page owner');
             setIsOwnPage(true);
+          } else {
+            console.log('PledgeBar: Current user is NOT the page owner');
+            setIsOwnPage(false);
           }
         }
       } catch (error) {
@@ -119,16 +119,18 @@ const PledgeBar = () => {
 
   // Effect to fetch user subscription and pledges
   useEffect(() => {
-    if (!isSubscriptionEnabled || !user || !pageId) {
+    if (!user || !pageId) {
       setLoading(false);
       return;
     }
 
     const fetchSubscriptionAndPledge = async () => {
       try {
-        // Get user's subscription
+        // Always get user's subscription regardless of feature flag
+        // This ensures we have the data for both own page stats and other user's pledge bar
         const userSubscription = await getUserSubscription(user.uid);
         setSubscription(userSubscription);
+        console.log('PledgeBar: User subscription status:', userSubscription?.status);
 
         if (userSubscription && userSubscription.status === 'active') {
           // Calculate available funds
@@ -172,7 +174,7 @@ const PledgeBar = () => {
     };
 
     fetchSubscriptionAndPledge();
-  }, [user, pageId, isSubscriptionEnabled]);
+  }, [user, pageId, isSubscriptionEnabled, isOwnPage]);
 
   // Handle pledge amount change via slider
   const handleSliderChange = (value) => {
@@ -410,7 +412,11 @@ const PledgeBar = () => {
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-sm font-medium">Support this page</h3>
-              <p className="text-xs text-muted-foreground mt-1">Log in to allocate funds to this page</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isSubscriptionEnabled
+                  ? "Log in to allocate funds to this page"
+                  : "This feature is still in development. Please support WeWrite on Collective"}
+              </p>
             </div>
             <Button
               size="sm"
@@ -452,7 +458,7 @@ const PledgeBar = () => {
               <p className="text-xs text-muted-foreground mt-1">
                 {isSubscriptionEnabled
                   ? "Activate your subscription to support this page"
-                  : "Support WeWrite to enable this feature"}
+                  : "This feature is still in development. Please support WeWrite on Collective"}
               </p>
             </div>
             <div className="flex gap-2">
@@ -500,25 +506,32 @@ const PledgeBar = () => {
   const handlePledgeInteraction = (pledgeId, change) => {
     // If user is not logged in, show the appropriate modal based on feature flag
     if (!user) {
+      console.log('PledgeBar: User not logged in, showing login modal');
       if (isSubscriptionEnabled) {
         setShowActivationModal(true);
+        setShowSupportUsModal(false);
       } else {
         setShowSupportUsModal(true);
+        setShowActivationModal(false);
       }
       return;
     }
 
     // If user doesn't have an active subscription, show the appropriate modal based on feature flag
     if (!subscription || subscription.status !== 'active') {
+      console.log('PledgeBar: User has no active subscription, showing subscription modal');
       if (isSubscriptionEnabled) {
         setShowActivationModal(true);
+        setShowSupportUsModal(false);
       } else {
         setShowSupportUsModal(true);
+        setShowActivationModal(false);
       }
       return;
     }
 
     // If we have an active subscription, handle the pledge change
+    console.log('PledgeBar: User has active subscription, handling pledge change');
     handlePledgeAmountChange(pledgeId, change);
   };
 
@@ -620,6 +633,7 @@ const PledgeBar = () => {
   const handlePledgeCustomAmount = (pledgeId) => {
     // If subscription feature is disabled, show Support Us modal
     if (!isSubscriptionEnabled) {
+      console.log('PledgeBar: Subscription feature disabled, showing Support Us modal');
       setShowSupportUsModal(true);
       setShowActivationModal(false);
       return;
@@ -627,13 +641,17 @@ const PledgeBar = () => {
 
     // If user is not logged in, show activation modal
     if (!user) {
+      console.log('PledgeBar: User not logged in, showing activation modal');
       setShowActivationModal(true);
+      setShowSupportUsModal(false);
       return;
     }
 
     // If user doesn't have an active subscription, show activation modal
     if (!subscription || subscription.status !== 'active') {
+      console.log('PledgeBar: User has no active subscription, showing activation modal');
       setShowActivationModal(true);
+      setShowSupportUsModal(false);
       return;
     }
 

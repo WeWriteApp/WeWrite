@@ -99,8 +99,8 @@ export const PillLink = forwardRef(({
   // IMPORTANT: This must match the styles in SlateEditor.js LinkComponent to ensure consistent appearance
   // between view mode and edit mode. Any changes here should also be made in SlateEditor.js.
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
-  // Add whitespace-nowrap and truncate for filled and outline modes, but allow wrapping for classic mode
-  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'whitespace-nowrap truncate';
+  // Allow wrapping for all pill styles to fix premature wrapping issue
+  const textWrapStyle = 'break-words';
   const baseStyles = `
     inline-flex items-center
     my-0.5
@@ -132,7 +132,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
+          <span className="pill-text overflow-hidden break-words inline">{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -238,7 +238,7 @@ export const PillLink = forwardRef(({
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       {isGroupLinkType && <Users size={14} className="mr-1 flex-shrink-0" />}
-      <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>{displayTitle}</span>
+      <span className="pill-text overflow-hidden break-words inline">{displayTitle}</span>
       {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );

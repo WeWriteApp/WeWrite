@@ -6,13 +6,16 @@ import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { ClearableInput } from '../components/ui/clearable-input';
-import { Share2, Search } from 'lucide-react';
+import { Share2, Search, Loader2 } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';
+import RecentSearches from '../components/RecentSearches';
+import RecentPages from '../components/RecentPages';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { generateFallbackSearchResults, shouldUseFallbackForTerm } from '../utils/clientSideFallbackSearch';
+import { addRecentSearch } from '../utils/recentSearches';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -22,6 +25,9 @@ export default function SearchPage() {
   const [results, setResults] = useState({ pages: [], users: [], groups: [] });
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef(null);
+  const resultsContainerRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+  const saveSearchTimeoutRef = useRef(null);
 
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
@@ -71,6 +77,9 @@ export default function SearchPage() {
       return;
     }
 
+    // Save scroll position before updating results
+    saveScrollPosition();
+
     setIsLoading(true);
     try {
       // Trim and encode the search term
@@ -86,7 +95,14 @@ export default function SearchPage() {
           users: fallbackResults.users,
           groups: []
         });
+
+        // Save to recent searches when a search is completed
+        saveSearchTerm(trimmedSearchTerm);
+
         setIsLoading(false);
+
+        // Restore scroll position after results update
+        setTimeout(restoreScrollPosition, 0);
         return;
       }
 
@@ -107,7 +123,14 @@ export default function SearchPage() {
           users: fallbackResults.users,
           groups: []
         });
+
+        // Save to recent searches when a search is completed
+        saveSearchTerm(trimmedSearchTerm);
+
         setIsLoading(false);
+
+        // Restore scroll position after results update
+        setTimeout(restoreScrollPosition, 0);
         return;
       }
 
@@ -129,6 +152,9 @@ export default function SearchPage() {
       // Log the titles of the pages found
       if (data.pages && data.pages.length > 0) {
         console.log('Page titles found:', data.pages.map(page => page.title).join(', '));
+
+        // Save to recent searches when results are found
+        saveSearchTerm(trimmedSearchTerm);
       } else {
         console.log('No pages found matching the search term');
 
@@ -142,7 +168,14 @@ export default function SearchPage() {
             pages: fallbackResults.pages,
             users: fallbackResults.users
           });
+
+          // Save to recent searches when fallback results are found
+          saveSearchTerm(trimmedSearchTerm);
+
           setIsLoading(false);
+
+          // Restore scroll position after results update
+          setTimeout(restoreScrollPosition, 0);
           return;
         }
       }
@@ -187,6 +220,9 @@ export default function SearchPage() {
         pages: uniquePages,
         users: uniqueUsers
       });
+
+      // Save to recent searches when a search is completed successfully
+      saveSearchTerm(trimmedSearchTerm);
     } catch (error) {
       console.error('Error searching:', error);
       console.error("Search Error: There was a problem performing your search.");
@@ -201,11 +237,44 @@ export default function SearchPage() {
       });
     } finally {
       setIsLoading(false);
+
+      // Restore scroll position after results update
+      setTimeout(restoreScrollPosition, 0);
     }
   };
 
   // Handle search input changes with debounce for live search
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Save scroll position before updating results
+  const saveScrollPosition = () => {
+    if (resultsContainerRef.current) {
+      scrollPositionRef.current = resultsContainerRef.current.scrollTop;
+    }
+  };
+
+  // Restore scroll position after results update
+  const restoreScrollPosition = () => {
+    if (resultsContainerRef.current && scrollPositionRef.current) {
+      resultsContainerRef.current.scrollTop = scrollPositionRef.current;
+    }
+  };
+
+  // Function to save search term to recent searches with debounce
+  const saveSearchTerm = (term) => {
+    // Clear any existing timeout
+    if (saveSearchTimeoutRef.current) {
+      clearTimeout(saveSearchTimeoutRef.current);
+    }
+
+    // Only save non-empty search terms
+    if (term && term.trim()) {
+      // Set a new timeout to save the search term after 500ms
+      saveSearchTimeoutRef.current = setTimeout(() => {
+        addRecentSearch(term.trim(), user?.uid);
+      }, 500);
+    }
+  };
 
   // Update debounced search term when query changes
   useEffect(() => {
@@ -219,6 +288,9 @@ export default function SearchPage() {
   // Perform search when debounced search term changes
   useEffect(() => {
     if (debouncedSearchTerm !== '') {
+      // Save scroll position before updating results
+      saveScrollPosition();
+
       // Update URL with search query (trimmed)
       const trimmedQuery = debouncedSearchTerm.trim();
       const url = new URL(window.location);
@@ -244,10 +316,16 @@ export default function SearchPage() {
     const trimmedQuery = query.trim();
 
     if (trimmedQuery) {
+      // Save scroll position before updating results
+      saveScrollPosition();
+
       // Update URL with search query (trimmed)
       const url = new URL(window.location);
       url.searchParams.set('q', trimmedQuery);
       window.history.pushState({}, '', url);
+
+      // Explicitly save search term when user presses Enter
+      saveSearchTerm(trimmedQuery);
 
       // Use the trimmed query for search
       performSearch(trimmedQuery);
@@ -356,14 +434,14 @@ export default function SearchPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => window.location.href = '/'}
             className="flex items-center gap-2"
-            aria-label="Go back"
+            aria-label="Go home"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
               <path d="m15 18-6-6 6-6"/>
             </svg>
-            <span className="hidden sm:inline">Back</span>
+            <span className="hidden sm:inline">Home</span>
           </Button>
         </div>
         <div className="flex-1 flex justify-center">
@@ -384,13 +462,21 @@ export default function SearchPage() {
       </div>
 
       <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex gap-2">
+        <div className="flex">
           <ClearableInput
             type="text"
             placeholder="Search for pages, users..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="flex-1"
+            onClear={() => {
+              setQuery('');
+              setResults({ pages: [], users: [], groups: [] });
+              // Remove the q parameter from URL
+              const url = new URL(window.location);
+              url.searchParams.delete('q');
+              window.history.pushState({}, '', url);
+            }}
+            className="w-full"
             ref={searchInputRef}
             autoFocus={true}
             onFocus={() => {
@@ -400,22 +486,56 @@ export default function SearchPage() {
               }
             }}
           />
-          <Button type="submit">Search</Button>
         </div>
       </form>
 
-      {/* Show recommendations when there's no query */}
+      {/* Show empty search state when there's no query */}
       {!query && (
-        <SearchRecommendations
-          onSelect={(recommendation) => {
-            setQuery(recommendation);
-            performSearch(recommendation);
-            // Update URL with search query
-            const url = new URL(window.location);
-            url.searchParams.set('q', recommendation);
-            window.history.pushState({}, '', url);
-          }}
-        />
+        <div className="empty-search-state">
+          {/* Recent Searches */}
+          <RecentSearches
+            userId={user?.uid}
+            onSelect={(searchTerm) => {
+              // Save scroll position before updating results
+              saveScrollPosition();
+
+              setQuery(searchTerm);
+
+              // Explicitly save search term when user clicks on a recent search
+              saveSearchTerm(searchTerm);
+
+              // Update URL with search query
+              const url = new URL(window.location);
+              url.searchParams.set('q', searchTerm);
+              window.history.pushState({}, '', url);
+
+              performSearch(searchTerm);
+            }}
+          />
+
+          {/* Recent Pages */}
+          <RecentPages />
+
+          {/* Search Recommendations */}
+          <SearchRecommendations
+            onSelect={(recommendation) => {
+              // Save scroll position before updating results
+              saveScrollPosition();
+
+              setQuery(recommendation);
+
+              // Explicitly save search term when user clicks on a recommendation
+              saveSearchTerm(recommendation);
+
+              // Update URL with search query
+              const url = new URL(window.location);
+              url.searchParams.set('q', recommendation);
+              window.history.pushState({}, '', url);
+
+              performSearch(recommendation);
+            }}
+          />
+        </div>
       )}
 
       {query && (
@@ -433,9 +553,13 @@ export default function SearchPage() {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-6" ref={resultsContainerRef}>
         {isLoading ? (
           <div className="space-y-4">
+            <div className="flex justify-center items-center py-4">
+              <Loader2 className="h-6 w-6 text-primary animate-spin mr-2" />
+              <span className="text-muted-foreground">Searching...</span>
+            </div>
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="flex items-center space-x-4">
                 <Skeleton className="h-12 w-12 rounded-full" />

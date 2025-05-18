@@ -197,6 +197,19 @@ const TopUsers = () => {
                     console.log('TopUsers: Fetching activity data for users:', userIds);
                     const activityData = await getBatchUserActivityLast24Hours(userIds);
                     console.log('TopUsers: Received activity data:', activityData);
+
+                    // Debug activity data
+                    const activitySummary = {};
+                    Object.keys(activityData).forEach(userId => {
+                      const userData = activityData[userId];
+                      activitySummary[userId] = {
+                        total: userData.total,
+                        hasNonZeroValues: userData.hourly.some(val => val > 0),
+                        hourlySum: userData.hourly.reduce((sum, val) => sum + val, 0)
+                      };
+                    });
+                    console.log('TopUsers: Activity data summary:', activitySummary);
+
                     setUserActivityData(activityData);
                   } catch (activityError) {
                     console.error('TopUsers: Error fetching user activity data:', activityError);

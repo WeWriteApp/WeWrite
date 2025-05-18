@@ -21,6 +21,15 @@ export default function SimpleSparkline({
 }) {
   // Use the accent color from CSS variables if no color is provided
   const effectiveColor = color || "hsl(var(--primary))";
+
+  // Add debugging to check data
+  console.log('SimpleSparkline data:', {
+    dataLength: data?.length || 0,
+    hasData: data && data.length > 0,
+    dataValues: data,
+    hasNonZeroValues: data && data.some(val => val > 0)
+  });
+
   if (!data || data.length === 0) {
     return <div style={{ height: `${height}px` }} className="w-full"></div>;
   }

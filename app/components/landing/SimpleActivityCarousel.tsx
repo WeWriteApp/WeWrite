@@ -31,7 +31,7 @@ export default function SimpleActivityCarousel({ limit = 30 }: { limit?: number 
       error={errorMessage}
       emptyMessage="No recent activity to display"
       height={200}
-      scrollSpeed={0.10}
+      scrollSpeed={0.25}
       fullWidth={true}
     >
       {activities && activities.length > 0 && activities.map((activity, index) => (

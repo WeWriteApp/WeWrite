@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "../DashboardLayout";
 import { createPage } from "../firebase/database";
@@ -13,6 +13,8 @@ import PageEditor from "../components/PageEditor";
 import { Button } from "../components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { createReplyAttribution } from "../utils/linkUtils";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 
 export default function NewPage() {
   const router = useRouter();
@@ -32,6 +34,11 @@ export default function NewPage() {
   const [error, setError] = useState(null);
   const analytics = useWeWriteAnalytics();
   const isReply = searchParams.has('replyTo');
+
+  // Track changes for unsaved changes warning
+  const [hasContentChanged, setHasContentChanged] = useState(false);
+  const [hasTitleChanged, setHasTitleChanged] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Account switcher logic
   useEffect(() => {
@@ -169,31 +176,105 @@ export default function NewPage() {
       if (res) {
         ReactGA.event({ category: "Page", action: "Add new page", label: title });
         analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, { label: title, page_id: res, is_reply: !!isReply });
+
+        // Reset all change tracking states after a successful save
+        setHasContentChanged(false);
+        setHasTitleChanged(false);
+        setHasUnsavedChanges(false);
+
         setIsSaving(false);
         router.push(`/pages/${res}`);
+        return true; // Return true to indicate success for the useUnsavedChanges hook
       } else {
         setIsSaving(false);
+        return false; // Return false to indicate failure for the useUnsavedChanges hook
       }
     } catch (error) {
       setIsSaving(false);
       setError("Failed to create page: " + (error.message || 'Unknown error'));
+      return false; // Return false to indicate failure for the useUnsavedChanges hook
     }
   };
 
+  // Update hasUnsavedChanges whenever content or title changes
+  useEffect(() => {
+    setHasUnsavedChanges(hasContentChanged || hasTitleChanged);
+  }, [hasContentChanged, hasTitleChanged]);
+
+  // Handle content changes
+  const handleContentChange = (content) => {
+    setEditorContent(content);
+
+    // Check if content has changed from the initial content
+    try {
+      const originalContent = initialContent ? JSON.stringify(initialContent) : JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
+      const newContent = JSON.stringify(content);
+
+      setHasContentChanged(originalContent !== newContent);
+    } catch (e) {
+      console.error('Error comparing content:', e);
+      setHasContentChanged(true);
+    }
+  };
+
+  // Handle title changes
+  const handleTitleChange = (newTitle) => {
+    setTitle(newTitle);
+    setHasTitleChanged(newTitle !== "");
+  };
+
+  // Memoized save function for the useUnsavedChanges hook
+  const saveChanges = useCallback(() => {
+    return handleSave(editorContent);
+  }, [editorContent]);
+
+  // Use the unsaved changes hook
+  const {
+    showUnsavedChangesDialog,
+    handleNavigation,
+    handleStayAndSave,
+    handleLeaveWithoutSaving,
+    handleCloseDialog,
+    isHandlingNavigation
+  } = useUnsavedChanges(hasUnsavedChanges, saveChanges);
+
+  // Handle back button with unsaved changes check
   const handleBack = () => {
+    // Get the URL to navigate to
+    let backUrl = '/';
+
     // If replying, go back to the original page if possible
     if (isReply) {
       const replyToId = searchParams.get('replyTo');
       if (replyToId) {
-        router.push(`/pages/${replyToId}`);
-        return;
+        backUrl = `/pages/${replyToId}`;
       }
+    } else if (window.history.length > 1) {
+      // We can't directly use router.back() with the unsaved changes dialog
+      // So we'll just go to the home page if there are unsaved changes
+      backUrl = '/';
     }
-    // Otherwise, go back in history or to home
-    if (window.history.length > 1) {
-      router.back();
+
+    // Check for unsaved changes
+    if (hasUnsavedChanges) {
+      // If there are unsaved changes, show the confirmation dialog
+      handleNavigation(backUrl);
     } else {
-      router.push('/');
+      // If no unsaved changes, just navigate
+      if (isReply) {
+        const replyToId = searchParams.get('replyTo');
+        if (replyToId) {
+          router.push(`/pages/${replyToId}`);
+          return;
+        }
+      }
+
+      // Otherwise, go back in history or to home
+      if (window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/');
+      }
     }
   };
 
@@ -219,9 +300,9 @@ export default function NewPage() {
           <div className="w-full">
             <PageEditor
               title={isReply ? "" : title}
-              setTitle={setTitle}
+              setTitle={handleTitleChange}
               initialContent={initialContent || editorContent}
-              onContentChange={setEditorContent}
+              onContentChange={handleContentChange}
               isPublic={isPublic}
               setIsPublic={setIsPublic}
               location={location}
@@ -236,6 +317,15 @@ export default function NewPage() {
           </div>
         </div>
       </div>
+
+      {/* Unsaved Changes Dialog */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedChangesDialog}
+        onClose={handleCloseDialog}
+        onStayAndSave={handleStayAndSave}
+        onLeaveWithoutSaving={handleLeaveWithoutSaving}
+        isSaving={isSaving || isHandlingNavigation}
+      />
     </DashboardLayout>
   );
 }

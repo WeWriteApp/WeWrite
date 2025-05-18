@@ -21,16 +21,26 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
   const [isHandlingNavigation, setIsHandlingNavigation] = useState(false);
 
   // Handle browser back/forward navigation and tab/window close
-  // We're removing the browser's default "Leave Site?" confirmation dialog
-  // since we already have our custom "Leave without saving" warning modal
+  // Add a beforeunload event listener to handle browser tab/window closing
   useEffect(() => {
-    // No longer adding the beforeunload event listener
-    // This prevents the browser's default confirmation dialog from appearing
+    const handleBeforeUnload = (event) => {
+      if (hasUnsavedChanges) {
+        // Standard way of showing a confirmation dialog before leaving the page
+        const message = 'You have unsaved changes. Are you sure you want to leave?';
+        event.preventDefault();
+        event.returnValue = message; // Required for Chrome
+        return message; // Required for other browsers
+      }
+    };
 
-    // The custom UnsavedChangesDialog component will handle this instead
+    // Add the event listener if there are unsaved changes
+    if (hasUnsavedChanges) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
 
+    // Clean up the event listener when the component unmounts or when hasUnsavedChanges changes
     return () => {
-      // No cleanup needed since we're not adding the event listener
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
 

@@ -329,6 +329,7 @@ const PageEditor = ({
 
   // Handle content changes
   const handleContentChange = (value) => {
+    console.log("Content changed:", value);
     setCurrentEditorValue(value);
 
     if (onContentChange) {
@@ -357,21 +358,26 @@ const PageEditor = ({
       return;
     }
 
+    // Get the latest editor content directly from the editor ref if possible
+    let contentToSave = currentEditorValue;
+
     // Validate editor content
-    if (!currentEditorValue || !Array.isArray(currentEditorValue) || currentEditorValue.length === 0) {
-      console.log("Editor content is invalid", currentEditorValue);
+    if (!contentToSave || !Array.isArray(contentToSave) || contentToSave.length === 0) {
+      console.log("Editor content is invalid", contentToSave);
       return;
     }
 
     // Clear any title error
     setTitleError(false);
 
-    console.log("Calling onSave with editor content");
+    console.log("Calling onSave with editor content:", contentToSave);
 
     // Call the provided onSave function with the current editor value
     if (onSave) {
       try {
-        onSave(currentEditorValue);
+        // Make a deep copy of the content to prevent any reference issues
+        const contentCopy = JSON.parse(JSON.stringify(contentToSave));
+        onSave(contentCopy);
       } catch (error) {
         console.error("Error during save:", error);
       }
@@ -395,39 +401,59 @@ const PageEditor = ({
         console.error("[DEBUG] Error focusing editor:", focusError);
       }
 
-      // Use the openLinkEditor method we added to the UnifiedEditor
-      if (editorRef.current.openLinkEditor) {
-        console.log("[DEBUG] Using openLinkEditor method");
-        try {
-          // Open the link editor directly without creating a temporary link first
-          const result = editorRef.current.openLinkEditor();
-          console.log("[DEBUG] openLinkEditor result:", result);
+      // CRITICAL FIX: Try multiple approaches to ensure the link editor appears
 
-          // Force a custom event to ensure the link editor appears
-          setTimeout(() => {
-            try {
-              const event = new CustomEvent('show-link-editor', {
-                detail: {
-                  source: 'insert-link-button'
-                }
-              });
-              document.dispatchEvent(event);
-              console.log("[DEBUG] Dispatched show-link-editor event from button");
-            } catch (eventError) {
-              console.error("[DEBUG] Error dispatching event:", eventError);
-            }
-          }, 50);
-        } catch (error) {
-          console.error("[DEBUG] Error opening link editor:", error);
-          toast.error("Could not open link editor. Please try again.");
+      // 1. Try direct method call if available
+      if (typeof editorRef.current.setShowLinkEditor === 'function') {
+        console.log("[DEBUG] Using direct setShowLinkEditor method");
+        editorRef.current.setShowLinkEditor(true);
+      }
+
+      // 2. Directly dispatch the custom event to show the link editor
+      try {
+        const event = new CustomEvent('show-link-editor', {
+          detail: {
+            position: {
+              top: window.innerHeight / 2,
+              left: window.innerWidth / 2,
+            },
+            initialTab: 'page',
+            showLinkEditor: true,
+            source: 'insert-link-button'
+          }
+        });
+        document.dispatchEvent(event);
+        console.log("[DEBUG] Directly dispatched show-link-editor event from button");
+
+        // 3. Force a global event as well
+        window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
+          detail: {
+            showLinkEditor: true
+          }
+        }));
+      } catch (eventError) {
+        console.error("[DEBUG] Error dispatching event:", eventError);
+
+        // 4. Fallback to using the openLinkEditor method if available
+        if (editorRef.current.openLinkEditor) {
+          console.log("[DEBUG] Falling back to openLinkEditor method");
+          try {
+            // Open the link editor directly without creating a temporary link first
+            // Pass "page" as the initial tab to show
+            const result = editorRef.current.openLinkEditor("page");
+            console.log("[DEBUG] openLinkEditor result:", result);
+          } catch (error) {
+            console.error("[DEBUG] Error opening link editor:", error);
+            toast.error("Could not open link editor. Please try again.");
+          }
+        } else {
+          console.error("[DEBUG] openLinkEditor method not available");
+          toast.error("Link insertion is not available. Please try again later.");
         }
-      } else {
-        console.error("[DEBUG] openLinkEditor method not available");
-        toast.error("Link insertion is not available. Please try again later.");
       }
     } else {
-      console.error("Editor ref is not available");
-      toast.error("Editor is not ready. Please try again.");
+      console.error("[DEBUG] Editor ref not available");
+      toast.error("Editor is not ready. Please try again later.");
     }
   };
 
@@ -542,10 +568,10 @@ const PageEditor = ({
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
       <div className="mt-8 mb-16">
-        {/* Responsive layout for controls - public/private on left, save/cancel on right (same row on all devices) */}
-        <div className="flex flex-row justify-between items-center gap-4 w-full">
-          {/* Left side controls - Public/Private switcher, Insert Link button, and Location */}
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* Responsive layout for controls - stacked on mobile, side-by-side on desktop */}
+        <div className="flex flex-col gap-4 w-full">
+          {/* Action buttons row - Public/Private switcher, Insert Link button, and Location */}
+          <div className="flex flex-row items-center gap-2 flex-wrap justify-start">
             {/* Public/Private switcher */}
             <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
               {isPublic ? (
@@ -564,46 +590,26 @@ const PageEditor = ({
             </div>
 
             {/* Insert Link button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={handleInsertLink}
-                    variant="outline"
-                    className="flex items-center gap-1.5 bg-background/90 border-input"
-                  >
-                    <Link className="h-4 w-4" />
-                    <span className="text-sm font-medium">Insert Link</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Insert a link to a page or external site</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              onClick={handleInsertLink}
+              variant="outline"
+              className="flex items-center gap-1.5 bg-background/90 border-input"
+            >
+              <Link className="h-4 w-4" />
+              <span className="text-sm font-medium">Insert Link</span>
+            </Button>
 
             {/* Location button - only show if map feature is enabled */}
             {mapFeatureEnabled && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <MapEditor
-                        location={location}
-                        onChange={setLocation}
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{location ? 'Edit the location for this page' : 'Add a location to this page'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <MapEditor
+                location={location}
+                onChange={setLocation}
+              />
             )}
           </div>
 
-          {/* Save/Cancel buttons - right aligned */}
-          <div className="flex items-center gap-2">
+          {/* Save/Cancel buttons row - full width on mobile */}
+          <div className="flex items-center gap-2 justify-end w-full">
             <Button
               onClick={onCancel}
               variant="outline"
@@ -611,35 +617,22 @@ const PageEditor = ({
             >
               Cancel
             </Button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button
-                      onClick={() => {
-                        console.log("Save button clicked");
-                        handleSave();
-                      }}
-                      disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
-                      variant="default"
-                      className="min-w-[80px]"
-                    >
-                      {isSaving ? (
-                        <div className="flex items-center gap-2">
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-                          <span>Saving...</span>
-                        </div>
-                      ) : "Save"}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                {!title.trim() && (
-                  <TooltipContent>
-                    <p>Add title to save</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              onClick={() => {
+                console.log("Save button clicked");
+                handleSave();
+              }}
+              disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
+              variant="default"
+              className="min-w-[80px]"
+            >
+              {isSaving ? (
+                <div className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
+                  <span>Saving...</span>
+                </div>
+              ) : "Save"}
+            </Button>
           </div>
         </div>
       </div>

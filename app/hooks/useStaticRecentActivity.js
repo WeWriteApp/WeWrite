@@ -4,6 +4,7 @@ import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
+import { getRecentActivity } from "../firebase/activity";
 
 /**
  * useStaticRecentActivity - A hook that loads recent activity data only once when the component mounts
@@ -188,186 +189,56 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         }
 
         try {
-          // If filtering by user, get all their pages (public and private if current user matches)
-          if (filterUserId) {
-            if (user && user.uid === filterUserId) {
-              // User is viewing their own profile, show all their pages
-              pagesQuery = query(
-                collection(db, "pages"),
-                where("userId", "==", filterUserId),
-                orderBy("lastModified", "desc"),
-                limit(limitCount * 2)
-              );
-            } else {
-              // User is viewing someone else's profile, only show public pages
-              pagesQuery = query(
-                collection(db, "pages"),
-                where("userId", "==", filterUserId),
-                where("isPublic", "==", true),
-                orderBy("lastModified", "desc"),
-                limit(limitCount * 2)
-              );
-            }
-          } else if (followedOnly && followedPageIds.length > 0) {
-            // Filter by followed pages
-            // For simplicity, we'll limit to the first 10 followed pages
-            const pagesToQuery = followedPageIds.slice(0, 10);
+          // Use getRecentActivity to get activities including bio and about edits
+          const { activities: recentActivities } = await getRecentActivity(
+            limitCount * 2,
+            user ? user.uid : null
+          );
 
-            pagesQuery = query(
-              collection(db, "pages"),
-              where("__name__", "in", pagesToQuery),
-              orderBy("lastModified", "desc"),
-              limit(limitCount * 2)
-            );
-          } else {
-            // No user filter, only show public pages for everyone
-            pagesQuery = query(
-              collection(db, "pages"),
-              where("isPublic", "==", true),
-              orderBy("lastModified", "desc"),
-              limit(limitCount * 2)
-            );
-          }
+          // Process the activities to add subscription info
+          const activitiesWithSubscriptions = await Promise.all(
+            recentActivities.map(async (activity) => {
+              if (!activity.userId) return activity;
 
-          const pagesSnapshot = await getDocs(pagesQuery);
-
-          if (pagesSnapshot.empty) {
-            setActivities([]);
-            setLoading(false);
-            return;
-          }
-
-          // Process each page to get its recent activity
-          const activitiesPromises = pagesSnapshot.docs.map(async (doc) => {
-            const pageData = { id: doc.id, ...doc.data() };
-
-            // Check if the page belongs to a private group and if the user has access
-            const hasAccess = await checkPageGroupAccess(pageData);
-            if (!hasAccess) return null;
-
-            try {
-              // Get the two most recent versions of this page
-              const versions = await getPageVersions(pageData.id, 2);
-
-              if (!versions || versions.length === 0) {
-                // No versions found
-                return null;
-              }
-
-              const currentVersion = versions[0];
-
-              // Handle newly created pages (only one version)
-              if (versions.length === 1) {
-                // If filtering by user, make sure this version was created by that user
-                if (filterUserId && currentVersion.userId !== filterUserId) {
-                  return null;
-                }
-
-                // Get the user who made the edit
-                let username = null;
-                let userId = null;
-                let tier = null;
-                let subscriptionStatus = null;
-
-                // Try to get username from the version data first
-                if (currentVersion.userId) {
-                  userId = currentVersion.userId;
-                  // If we have userId, try to fetch username and subscription info from the database
-                  const userData = await getUsernameById(currentVersion.userId);
-                  username = userData.username;
-                  tier = userData.tier;
-                  subscriptionStatus = userData.subscriptionStatus;
-                }
-
-                // Use page content directly if available, otherwise use version content
-                const content = pageData.content || currentVersion.content || "";
-
+              try {
+                const { tier, subscriptionStatus } = await getUsernameById(activity.userId);
                 return {
-                  pageId: pageData.id,
-                  pageName: pageData.title || "Untitled Page",
-                  timestamp: currentVersion.createdAt,
-                  currentContent: content,
-                  previousContent: "", // Empty string for new pages
-                  username: username,
-                  userId: userId,
-                  isPublic: pageData.isPublic || false,
-                  isNewPage: true, // Flag to indicate this is a new page
-                  tier: tier,
-                  subscriptionStatus: subscriptionStatus
+                  ...activity,
+                  tier,
+                  subscriptionStatus
                 };
+              } catch (error) {
+                console.error("Error adding subscription info to activity:", error);
+                return activity;
               }
-
-              // For pages with multiple versions
-              const previousVersion = versions[1];
-
-              // Skip if we don't have content to compare or if there are no changes
-              if (!currentVersion.content || !previousVersion.content) {
-                return null;
-              }
-
-              // Skip if content is identical
-              if (currentVersion.content === previousVersion.content) {
-                return null;
-              }
-
-              // If filtering by user, make sure this version was created by that user
-              if (filterUserId && currentVersion.userId !== filterUserId) {
-                return null;
-              }
-
-              // Get the user who made the edit
-              let username = null;
-              let userId = null;
-              let tier = null;
-              let subscriptionStatus = null;
-
-              // Try to get username from the version data first
-              if (currentVersion.userId) {
-                userId = currentVersion.userId;
-                // If we have userId, try to fetch username and subscription info from the database
-                const userData = await getUsernameById(currentVersion.userId);
-                username = userData.username;
-                tier = userData.tier;
-                subscriptionStatus = userData.subscriptionStatus;
-              }
-
-              // Use page content directly if available, otherwise use version content
-              const content = pageData.content || currentVersion.content || "";
-
-              return {
-                pageId: pageData.id,
-                pageName: pageData.title || "Untitled Page",
-                timestamp: currentVersion.createdAt,
-                currentContent: content,
-                previousContent: previousVersion.content || "",
-                username: username,
-                userId: userId,
-                isPublic: pageData.isPublic || false,
-                tier: tier,
-                subscriptionStatus: subscriptionStatus
-              };
-            } catch (err) {
-              console.error("Error processing page versions:", err);
-              return null;
-            }
-          });
-
-          // Wait for all promises to resolve
-          const activityResults = await Promise.all(activitiesPromises);
-
-          // Filter out null results and private pages (unless viewing own profile)
-          const validActivities = activityResults
-            .filter(activity => {
-              // Skip null activities
-              if (activity === null) return false;
-
-              // If viewing own profile, show all pages
-              if (user && user.uid === filterUserId) return true;
-
-              // Otherwise only show public pages
-              return activity.isPublic === true;
             })
-            .slice(0, actualLimit);
+          );
+
+          // Filter activities based on the current filters
+          let validActivities = activitiesWithSubscriptions;
+
+          // Apply user filter if specified
+          if (filterUserId) {
+            validActivities = validActivities.filter(activity => {
+              // For bio edits, check if it's the user's bio
+              if (activity.activityType === "bio_edit") {
+                return activity.pageId.includes(filterUserId);
+              }
+              // For regular page edits, check the userId
+              return activity.userId === filterUserId;
+            });
+          }
+
+          // Apply followed filter if specified
+          if (followedOnly && followedPageIds.length > 0) {
+            validActivities = validActivities.filter(activity => {
+              // Only include activities for pages the user follows
+              return followedPageIds.includes(activity.pageId);
+            });
+          }
+
+          // Limit the number of activities
+          validActivities = validActivities.slice(0, actualLimit);
 
 
 

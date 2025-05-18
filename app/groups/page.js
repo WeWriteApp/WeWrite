@@ -48,7 +48,7 @@ export default function GroupsPage() {
   }, [user?.email]);
 
   return (
-    <div className="container mx-auto py-6 max-w-5xl">
+    <div className="container mx-auto py-6 max-w-5xl px-4 md:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link href="/">
@@ -64,20 +64,20 @@ export default function GroupsPage() {
             </p>
           </div>
         </div>
-        <Link href="/group/new">
-          <Button className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            New Group
-          </Button>
-        </Link>
+        <Button
+          className="gap-1.5 rounded-2xl"
+          onClick={() => router.push('/group/new')}
+        >
+          <Plus className="h-4 w-4" />
+          Create New Group
+        </Button>
       </div>
 
       {isLoading ? (
         <GroupsLoadingSkeleton />
       ) : (
-        <EnhancedMyGroups />
+        <EnhancedMyGroups hideHeader={true} />
       )}
-
 
     </div>
   );

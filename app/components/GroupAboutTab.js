@@ -5,6 +5,7 @@ import { Edit, Save, X, Loader, AlertTriangle, History, Link } from "lucide-reac
 import { rtdb } from "../firebase/rtdb";
 import { ref, update, get, push, child } from "firebase/database";
 import { toast } from "./ui/use-toast";
+import { recordGroupAboutEditActivity } from "../firebase/bioActivity";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
@@ -100,6 +101,29 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
         aboutLastEditTime: currentTime
       });
 
+      // Record the group about edit activity for the activity feed
+      if (user) {
+        try {
+          // Get the group's privacy setting
+          const groupSnapshot = await get(groupRef);
+          const isPublic = groupSnapshot.exists() ?
+            (groupSnapshot.val().isPublic === true) : false;
+
+          await recordGroupAboutEditActivity(
+            group.id,
+            user.uid,
+            editorName,
+            aboutContent,
+            originalContent,
+            isPublic
+          );
+          console.log("Group about edit activity recorded successfully");
+        } catch (activityError) {
+          console.error("Error recording group about edit activity:", activityError);
+          // Continue even if activity recording fails
+        }
+      }
+
       setOriginalContent(aboutContent);
       setLastEditor(editorName);
       setLastEditTime(currentTime);
@@ -162,35 +186,55 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
         console.error("[DEBUG] Error focusing editor:", focusError);
       }
 
-      // Use the openLinkEditor method we added to the UnifiedEditor
-      if (editorRef.current.openLinkEditor) {
-        console.log("[DEBUG] Using openLinkEditor method");
-        try {
-          // Open the link editor directly without creating a temporary link first
-          const result = editorRef.current.openLinkEditor();
-          console.log("[DEBUG] openLinkEditor result:", result);
+      // CRITICAL FIX: Try multiple approaches to ensure the link editor appears
 
-          // Force a custom event to ensure the link editor appears
-          setTimeout(() => {
-            try {
-              const event = new CustomEvent('show-link-editor', {
-                detail: {
-                  source: 'insert-link-button-group'
-                }
-              });
-              document.dispatchEvent(event);
-              console.log("[DEBUG] Dispatched show-link-editor event from group button");
-            } catch (eventError) {
-              console.error("[DEBUG] Error dispatching event:", eventError);
-            }
-          }, 50);
-        } catch (error) {
-          console.error("[DEBUG] Error opening link editor:", error);
-          toast.error("Could not open link editor. Please try again.");
+      // 1. Try direct method call if available
+      if (typeof editorRef.current.setShowLinkEditor === 'function') {
+        console.log("[DEBUG] Using direct setShowLinkEditor method");
+        editorRef.current.setShowLinkEditor(true);
+      }
+
+      // 2. Directly dispatch the custom event to show the link editor
+      try {
+        const event = new CustomEvent('show-link-editor', {
+          detail: {
+            position: {
+              top: window.innerHeight / 2,
+              left: window.innerWidth / 2,
+            },
+            initialTab: 'page',
+            showLinkEditor: true,
+            source: 'insert-link-button-group'
+          }
+        });
+        document.dispatchEvent(event);
+        console.log("[DEBUG] Directly dispatched show-link-editor event from group button");
+
+        // 3. Force a global event as well
+        window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
+          detail: {
+            showLinkEditor: true
+          }
+        }));
+      } catch (eventError) {
+        console.error("[DEBUG] Error dispatching event:", eventError);
+
+        // 4. Fallback to using the openLinkEditor method if available
+        if (editorRef.current.openLinkEditor) {
+          console.log("[DEBUG] Falling back to openLinkEditor method");
+          try {
+            // Open the link editor directly without creating a temporary link first
+            // Pass "page" as the initial tab to show
+            const result = editorRef.current.openLinkEditor("page");
+            console.log("[DEBUG] openLinkEditor result:", result);
+          } catch (error) {
+            console.error("[DEBUG] Error opening link editor:", error);
+            toast.error("Could not open link editor. Please try again.");
+          }
+        } else {
+          console.error("[DEBUG] openLinkEditor method not available");
+          toast.error("Link insertion is not available. Please try again later.");
         }
-      } else {
-        console.error("[DEBUG] openLinkEditor method not available");
-        toast.error("Link insertion is not available. Please try again later.");
       }
     } else {
       console.error("Editor ref not available");

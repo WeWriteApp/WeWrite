@@ -24,12 +24,12 @@ const SupportUsModal = ({ isOpen, onClose }) => {
               <Heart className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <DialogTitle className="text-xl text-center w-full">WeWrite is under construction</DialogTitle>
+          <DialogTitle className="text-xl text-center w-full">This feature is still in development</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
           <p className="text-center text-muted-foreground mb-8">
-            A major feature we're working on is the ability to donate directly to writers, please support us so we can continue development. Read about other upcoming features{" "}
+            The subscription feature is still in development. Please support WeWrite on Collective so we can continue building this and other features. Read about other upcoming features{" "}
             <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">
               here
             </Link>.

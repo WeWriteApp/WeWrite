@@ -2,8 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { PillLink } from './PillLink';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from './ui/tooltip';
 
 // Import the database function with dynamic import to avoid SSR issues
 const findBacklinksAsync = async (pageId, limit) => {
@@ -16,11 +22,13 @@ const findBacklinksAsync = async (pageId, limit) => {
  *
  * Displays a list of pages that link to the current page.
  * This is also known as "What Links Here" functionality.
+ * Filters out pages that are already linked in the body of the page.
  *
  * @param {Object} page - The current page object
+ * @param {Array} linkedPageIds - Array of page IDs that are already linked in the page content
  * @param {number} maxPages - Maximum number of backlinks to display (default: 5)
  */
-export default function BacklinksSection({ page, maxPages = 5 }) {
+export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 5 }) {
   const [backlinks, setBacklinks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,8 +43,17 @@ export default function BacklinksSection({ page, maxPages = 5 }) {
 
       try {
         // Use the dynamically imported function to find backlinks
-        const backlinkPages = await findBacklinksAsync(page.id, maxPages);
-        setBacklinks(backlinkPages);
+        const backlinkPages = await findBacklinksAsync(page.id, maxPages * 2);
+
+        // Filter out pages that are already linked in the content
+        const filteredBacklinks = linkedPageIds && linkedPageIds.length > 0
+          ? backlinkPages.filter(backlink => !linkedPageIds.includes(backlink.id))
+          : backlinkPages;
+
+        // Limit to the requested number of pages after filtering
+        const limitedBacklinks = filteredBacklinks.slice(0, maxPages);
+
+        setBacklinks(limitedBacklinks);
       } catch (error) {
         console.error('Error fetching backlinks:', error);
         // Set empty array on error to avoid undefined state
@@ -62,7 +79,10 @@ export default function BacklinksSection({ page, maxPages = 5 }) {
   if (!mounted) {
     return (
       <div className="mt-8 pt-6 min-h-[120px]">
-        <h3 className="text-lg font-medium mb-4">What Links Here</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-medium">What Links Here</h3>
+          <Info className="h-4 w-4 text-muted-foreground" />
+        </div>
         <div className="flex justify-center items-center py-4 min-h-[60px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
@@ -72,7 +92,19 @@ export default function BacklinksSection({ page, maxPages = 5 }) {
 
   return (
     <div className="mt-8 pt-6 min-h-[120px]">
-      <h3 className="text-lg font-medium mb-4">What Links Here</h3>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-lg font-medium">What Links Here</h3>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[300px]">
+              <p>Pages that contain links to this page, excluding links that are already mentioned in the page.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center items-center py-4 min-h-[60px]">

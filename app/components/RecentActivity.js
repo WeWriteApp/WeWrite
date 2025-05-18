@@ -50,9 +50,12 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
   // Override view mode for user profiles and activity page
   useEffect(() => {
     if (isInUserProfile || isActivityPage) {
+      console.log('Overriding view mode to "all" for user profile or activity page');
       setViewMode('all');
+    } else {
+      console.log('Current view mode:', viewMode);
     }
-  }, [isInUserProfile, isActivityPage, setViewMode]);
+  }, [isInUserProfile, isActivityPage, setViewMode, viewMode]);
 
   // Use grid layout in activity page or user profile
   const useGridLayout = isInActivityPage || isInUserProfile;
@@ -115,21 +118,33 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         {user && (
           <div className="flex items-center gap-2 text-sm ml-auto">
             <button
-              onClick={() => setViewMode('all')}
-              className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-muted hover:bg-muted/80'}`}
+              onClick={() => {
+                console.log('Setting view mode to all');
+                setViewMode('all');
+              }}
+              className={`px-3 py-1 rounded-full transition-colors ${
+                viewMode === 'all'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+              aria-pressed={viewMode === 'all'}
             >
               All
             </button>
             <button
-              onClick={() => setViewMode('following')}
+              onClick={() => {
+                console.log('Setting view mode to following');
+                setViewMode('following');
+              }}
               disabled={isLoadingFollows || followedPages.length === 0}
-              className={`px-3 py-1 rounded-full transition-colors ${viewMode === 'following'
-                ? 'bg-primary text-white'
-                : followedPages.length === 0
-                  ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-                  : 'bg-muted hover:bg-muted/80'}`}
+              className={`px-3 py-1 rounded-full transition-colors ${
+                viewMode === 'following'
+                  ? 'bg-primary text-primary-foreground'
+                  : followedPages.length === 0
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
+                    : 'bg-muted hover:bg-muted/80'
+              }`}
+              aria-pressed={viewMode === 'following'}
             >
               Following
             </button>
