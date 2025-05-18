@@ -213,7 +213,8 @@ function SinglePageView({ params }) {
       }
 
       // Shorter timeout for subsequent attempts
-      const timeoutDuration = loadAttempts === 0 ? 20000 : 10000; // 20s first try, 10s for retries
+      // First load should be very quick to prevent blank page on initial load
+      const timeoutDuration = loadAttempts === 0 ? 5000 : 10000; // 5s first try, 10s for retries
 
       loadingTimeoutRef.current = setTimeout(() => {
         console.warn(`SinglePageView: Loading timeout reached (attempt ${loadAttempts + 1}/${maxLoadAttempts}), forcing completion`);
@@ -244,6 +245,11 @@ function SinglePageView({ params }) {
         // Reset the timeout flag and load attempts if we got a successful response
         setLoadingTimedOut(false);
         setLoadAttempts(0);
+
+        // Force a re-render to ensure the page content is displayed
+        window.requestAnimationFrame(() => {
+          console.log("SinglePageView: Forcing re-render after data received");
+        });
 
         if (data.error) {
           setError(data.error);

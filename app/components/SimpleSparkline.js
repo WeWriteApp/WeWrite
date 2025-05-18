@@ -30,11 +30,16 @@ export default function SimpleSparkline({
     hasNonZeroValues: data && data.some(val => val > 0)
   });
 
-  if (!data || data.length === 0) {
+  // Ensure data is valid and has at least one non-zero value
+  if (!data || data.length === 0 || !Array.isArray(data)) {
     return <div style={{ height: `${height}px` }} className="w-full"></div>;
   }
 
-  const maxValue = Math.max(...data, 1); // Ensure we don't divide by zero
+  // If all values are zero, still render a flat line
+  const hasNonZeroValues = data.some(val => val > 0);
+
+  // Use 1 as maxValue if all values are zero to avoid division by zero
+  const maxValue = hasNonZeroValues ? Math.max(...data, 1) : 1;
   const width = 100; // Use percentage for responsive width
   const padding = 5;
   const graphHeight = height - (padding * 2);

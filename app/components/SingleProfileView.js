@@ -189,7 +189,7 @@ const SingleProfileView = ({ profile }) => {
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
-      <div className="p-2">
+      <div>
         {/* Navigation bar */}
         <div className="flex items-center mb-6">
           <div className="flex-1">

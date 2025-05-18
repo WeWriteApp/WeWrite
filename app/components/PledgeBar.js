@@ -411,11 +411,13 @@ const PledgeBar = () => {
         <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-sm font-medium">Support this page</h3>
+              <h3 className="text-sm font-medium">
+                {isSubscriptionEnabled ? "Support this page" : "Under Construction"}
+              </h3>
               <p className="text-xs text-muted-foreground mt-1">
                 {isSubscriptionEnabled
                   ? "Log in to allocate funds to this page"
-                  : "This feature is still in development. Please support WeWrite on Collective"}
+                  : "We are still working on payments functionality. Please support us on Open Collective to help get it built."}
               </p>
             </div>
             <Button
@@ -433,7 +435,7 @@ const PledgeBar = () => {
               className="ml-4"
             >
               <DollarSign className="h-4 w-4 mr-1" />
-              Support
+              Support Us
             </Button>
           </div>
         </div>
@@ -454,44 +456,50 @@ const PledgeBar = () => {
         <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-sm font-medium">Support this page</h3>
+              <h3 className="text-sm font-medium">
+                {isSubscriptionEnabled ? "Support this page" : "Under Construction"}
+              </h3>
               <p className="text-xs text-muted-foreground mt-1">
                 {isSubscriptionEnabled
                   ? "Activate your subscription to support this page"
-                  : "This feature is still in development. Please support WeWrite on Collective"}
+                  : "We are still working on payments functionality. Please support us on Open Collective to help get it built."}
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (isSubscriptionEnabled) {
+            {isSubscriptionEnabled ? (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
                     setShowActivationModal(true);
                     setShowSupportUsModal(false);
-                  } else {
-                    setShowSupportUsModal(true);
-                    setShowActivationModal(false);
-                  }
-                }}
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
+                  }}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setShowActivationModal(true);
+                    setShowSupportUsModal(false);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
               <Button
                 size="sm"
                 onClick={() => {
-                  if (isSubscriptionEnabled) {
-                    setShowActivationModal(true);
-                    setShowSupportUsModal(false);
-                  } else {
-                    setShowSupportUsModal(true);
-                    setShowActivationModal(false);
-                  }
+                  setShowSupportUsModal(true);
+                  setShowActivationModal(false);
                 }}
+                className="ml-4"
               >
-                <Plus className="h-4 w-4" />
+                <DollarSign className="h-4 w-4 mr-1" />
+                Support Us
               </Button>
-            </div>
+            )}
           </div>
         </div>
       </div>

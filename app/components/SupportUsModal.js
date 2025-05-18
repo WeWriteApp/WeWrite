@@ -24,12 +24,12 @@ const SupportUsModal = ({ isOpen, onClose }) => {
               <Heart className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <DialogTitle className="text-xl text-center w-full">This feature is still in development</DialogTitle>
+          <DialogTitle className="text-xl text-center w-full">Under Construction</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
           <p className="text-center text-muted-foreground mb-8">
-            The subscription feature is still in development. Please support WeWrite on Collective so we can continue building this and other features. Read about other upcoming features{" "}
+            We are still working on payments functionality. Please support WeWrite on Open Collective to help get it built. Read about other upcoming features{" "}
             <Link href="/zRNwhNgIEfLFo050nyAT" className="text-primary hover:underline">
               here
             </Link>.
