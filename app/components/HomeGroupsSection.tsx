@@ -34,55 +34,18 @@ export default function HomeGroupsSection() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Check if the groups feature flag is enabled
-  const groupsEnabled = useFeatureFlag('groups', user?.email);
+  // Groups feature is now always enabled for all users
+  const groupsEnabled = true;
 
-  // Log the feature flag status for debugging
+  // Log debug information
   useEffect(() => {
-    console.log('[DEBUG] HomeGroupsSection - Groups feature flag status:', {
-      enabled: groupsEnabled,
-      userEmail: user?.email,
-      userId: user?.uid
-    });
-  }, [groupsEnabled, user?.email, user?.uid]);
-
-  // Enhanced debug logging for groups feature flag
-  useEffect(() => {
-    console.log('[DEBUG] HomeGroupsSection - Groups feature flag:', groupsEnabled);
+    console.log('[DEBUG] HomeGroupsSection - Groups feature is now enabled for all users');
     console.log('[DEBUG] HomeGroupsSection - User:', user?.email);
+    console.log('[DEBUG] HomeGroupsSection - Component will always render');
+  }, [user?.email, user?.uid]);
 
-    // Log additional information about the component state
-    console.log('[DEBUG] HomeGroupsSection - Component will render:', groupsEnabled ? 'YES' : 'NO');
-
-    // Only run the DB check if the feature is enabled
-    if (!groupsEnabled) {
-      return;
-    }
-
-    // Check if the feature flag is enabled in the database directly
-    const checkFeatureFlagInDb = async () => {
-      try {
-        const { doc, getDoc } = await import('firebase/firestore');
-        const { db } = await import('../firebase/database');
-
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - Groups flag value:', flagsData['groups']);
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - Type:', typeof flagsData['groups']);
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - Strict equality (=== true):', flagsData['groups'] === true);
-        } else {
-          console.log('[DEBUG] HomeGroupsSection - Direct DB check - No feature flags document found');
-        }
-      } catch (error) {
-        console.error('[DEBUG] HomeGroupsSection - Error checking feature flag in DB:', error);
-      }
-    };
-
-    checkFeatureFlagInDb();
-  }, [groupsEnabled, user?.email]);
+  // We no longer need to check the database for the feature flag
+  // since groups feature is now always enabled for all users
 
   useEffect(() => {
     if (!user?.uid) {
