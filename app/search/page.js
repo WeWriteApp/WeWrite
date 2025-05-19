@@ -250,13 +250,40 @@ export default function SearchPage() {
   const saveScrollPosition = () => {
     if (resultsContainerRef.current) {
       scrollPositionRef.current = resultsContainerRef.current.scrollTop;
+    } else {
+      // If results container isn't available, save window scroll position
+      scrollPositionRef.current = window.scrollY;
+    }
+    // Also save the document scroll position
+    if (typeof window !== 'undefined') {
+      const documentScrollPosition = {
+        x: window.scrollX || window.pageXOffset,
+        y: window.scrollY || window.pageYOffset
+      };
+      sessionStorage.setItem('searchScrollPosition', JSON.stringify(documentScrollPosition));
     }
   };
 
   // Restore scroll position after results update
   const restoreScrollPosition = () => {
-    if (resultsContainerRef.current && scrollPositionRef.current) {
+    if (resultsContainerRef.current && scrollPositionRef.current !== null) {
       resultsContainerRef.current.scrollTop = scrollPositionRef.current;
+    } else if (scrollPositionRef.current !== null) {
+      // If results container isn't available, restore window scroll position
+      window.scrollTo(0, scrollPositionRef.current);
+    }
+
+    // Also restore the document scroll position if available
+    if (typeof window !== 'undefined') {
+      try {
+        const savedPosition = sessionStorage.getItem('searchScrollPosition');
+        if (savedPosition) {
+          const { x, y } = JSON.parse(savedPosition);
+          window.scrollTo(x, y);
+        }
+      } catch (error) {
+        console.error('Error restoring scroll position:', error);
+      }
     }
   };
 
@@ -275,6 +302,9 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // Track if this is an initial load or a user-initiated search
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   // Perform search when debounced search term changes
   useEffect(() => {
     if (debouncedSearchTerm !== '') {
@@ -286,17 +316,33 @@ export default function SearchPage() {
       const url = new URL(window.location);
 
       if (trimmedQuery) {
+        // Use replaceState instead of pushState to avoid adding to browser history
+        // This prevents back button from cycling through search queries
         url.searchParams.set('q', trimmedQuery);
-        window.history.pushState({}, '', url);
+
+        // Only update URL if this is not the initial load
+        if (!isInitialLoad) {
+          window.history.replaceState({ searchQuery: trimmedQuery }, '', url);
+        }
+
         performSearch(trimmedQuery);
       } else {
         // If query is empty or just whitespace, clear results and URL parameter
         setResults({ pages: [], users: [], groups: [] });
         url.searchParams.delete('q');
-        window.history.pushState({}, '', url);
+
+        // Only update URL if this is not the initial load
+        if (!isInitialLoad) {
+          window.history.replaceState({ searchQuery: '' }, '', url);
+        }
+      }
+
+      // After the first search, mark as no longer initial load
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
       }
     }
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, isInitialLoad]);
 
   // Handle search form submission (for Enter key)
   const handleSearch = (e) => {
@@ -312,7 +358,7 @@ export default function SearchPage() {
       // Update URL with search query (trimmed)
       const url = new URL(window.location);
       url.searchParams.set('q', trimmedQuery);
-      window.history.pushState({}, '', url);
+      window.history.replaceState({ searchQuery: trimmedQuery }, '', url);
 
       // Explicitly save search term when user presses Enter
       saveSearchTerm(trimmedQuery);
@@ -326,8 +372,11 @@ export default function SearchPage() {
       // Remove the q parameter from URL
       const url = new URL(window.location);
       url.searchParams.delete('q');
-      window.history.pushState({}, '', url);
+      window.history.replaceState({ searchQuery: '' }, '', url);
     }
+
+    // Set isInitialLoad to false since this is a user-initiated search
+    setIsInitialLoad(false);
   };
 
   // Share search URL using Web Share API or fallback to clipboard
@@ -464,7 +513,10 @@ export default function SearchPage() {
               // Remove the q parameter from URL
               const url = new URL(window.location);
               url.searchParams.delete('q');
-              window.history.pushState({}, '', url);
+              window.history.replaceState({ searchQuery: '' }, '', url);
+
+              // Set isInitialLoad to false since this is a user-initiated action
+              setIsInitialLoad(false);
             }}
             className="w-full"
             ref={searchInputRef}
@@ -520,9 +572,12 @@ export default function SearchPage() {
               // Update URL with search query
               const url = new URL(window.location);
               url.searchParams.set('q', searchTerm);
-              window.history.pushState({}, '', url);
+              window.history.replaceState({ searchQuery: searchTerm }, '', url);
 
               performSearch(searchTerm);
+
+              // Set isInitialLoad to false since this is a user-initiated search
+              setIsInitialLoad(false);
             }}
           />
 
@@ -540,9 +595,12 @@ export default function SearchPage() {
               // Update URL with search query
               const url = new URL(window.location);
               url.searchParams.set('q', recommendation);
-              window.history.pushState({}, '', url);
+              window.history.replaceState({ searchQuery: recommendation }, '', url);
 
               performSearch(recommendation);
+
+              // Set isInitialLoad to false since this is a user-initiated search
+              setIsInitialLoad(false);
             }}
           />
         </div>

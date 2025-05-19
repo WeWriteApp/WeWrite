@@ -52,7 +52,7 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
     return (
       <div className="relative w-full">
         <Input
-          className={cn("pr-8", className)}
+          className={cn("pr-16", className)} /* Increased padding to accommodate buttons with more space */
           value={value}
           onChange={onChange}
           ref={setRefs}
@@ -62,7 +62,7 @@ const ClearableInput = React.forwardRef<HTMLInputElement, ClearableInputProps>(
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Clear input"
           >
             <X className="h-4 w-4" />

@@ -21,11 +21,13 @@ import dynamic from 'next/dynamic';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 import { openExternalLink } from '../../utils/pwa-detection';
+import { auth } from '../../firebase/config';
 
 // Import simple client-side components instead of server components
 import SimpleActivityCarousel from './SimpleActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import HeroSection from './HeroSection';
+import LandingPageDonationBar from './LandingPageDonationBar';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,6 +35,7 @@ const LandingPage = () => {
   const [isMobileView, setIsMobileView] = useState(false);
   const { setTheme, theme } = useTheme();
   const [pageContents, setPageContents] = useState<Record<string, any>>({});
+  const [user, setUser] = useState<any>(null);
 
   // Analytics hook for tracking
   const analytics = useWeWriteAnalytics();
@@ -118,6 +121,15 @@ const LandingPage = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [isMobileView]);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Always set accent color to blue on landing page mount
   useEffect(() => {
@@ -472,6 +484,9 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Donation Bar for non-logged-in users */}
+      <LandingPageDonationBar isLoggedIn={!!user} />
+
       {/* Desktop Navigation - Always sticky at the top */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md py-3`}>
         <div className="container mx-auto flex justify-between items-center px-6">

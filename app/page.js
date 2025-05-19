@@ -163,27 +163,10 @@ export default function Home() {
             <RecentActivity limit={4} />
           </div>
 
-          {/* 2. My Pages */}
-          <div style={{ minHeight: '300px' }}>
-            <div className="flex items-center justify-between mb-4">
-              <SectionTitle
-                icon={FileText}
-                title="Your Pages"
-              />
-              <Button variant="outline" asChild>
-                <Link href="/new" className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  New page
-                </Link>
-              </Button>
-            </div>
-            <AllPages />
-          </div>
-
-          {/* 3. Groups Section - Only visible when feature flag is enabled */}
+          {/* 2. Groups Section - Only visible when feature flag is enabled */}
           <HomeGroupsSection />
 
-          {/* 4. Trending Pages */}
+          {/* 3. Trending Pages */}
           <div style={{ minHeight: '300px' }}>
             <SectionTitle
               icon={Flame}
@@ -192,7 +175,7 @@ export default function Home() {
             <TrendingPages limit={5} />
           </div>
 
-          {/* 5. Top Users */}
+          {/* 4. Top Users */}
           <div style={{ minHeight: '300px' }}>
             <SectionTitle
               icon={Trophy}
