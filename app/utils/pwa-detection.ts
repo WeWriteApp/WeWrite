@@ -171,3 +171,36 @@ export const openExternalLink = (url: string, analyticsLabel?: string): void => 
     window.location.href = url;
   }
 };
+
+/**
+ * Open an external link in a new tab
+ *
+ * @param url The URL to open
+ * @param analyticsLabel Optional analytics label for tracking
+ */
+export const openExternalLinkInNewTab = (url: string, analyticsLabel?: string): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Track the event if analytics label is provided
+    if (analyticsLabel && typeof getAnalyticsService === 'function') {
+      try {
+        const analyticsService = getAnalyticsService();
+        analyticsService.trackEvent({
+          category: EVENT_CATEGORIES.EXTERNAL_LINK,
+          action: 'click',
+          label: analyticsLabel,
+        });
+      } catch (error) {
+        console.error('Error tracking external link click:', error);
+      }
+    }
+
+    // Open in a new tab
+    window.open(url, '_blank', 'noopener,noreferrer');
+  } catch (error) {
+    console.error('Error opening external link in new tab:', error);
+    // Fallback to changing location directly if window.open fails
+    window.location.href = url;
+  }
+};
