@@ -16,7 +16,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      "fixed bottom-0 right-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
       className
     )}
     {...props}
@@ -29,11 +29,15 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
+        default: "border bg-card text-card-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
         success:
           "success group border-success bg-success text-success-foreground",
+        info:
+          "info group border-primary bg-primary/10 text-foreground",
+        warning:
+          "warning group border-yellow-500 bg-yellow-500/10 text-foreground",
       },
     },
     defaultVariants: {
@@ -79,7 +83,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/70 opacity-100 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-destructive-foreground/70 group-[.destructive]:hover:text-destructive-foreground group-[.success]:text-success-foreground/70 group-[.success]:hover:text-success-foreground",
       className
     )}
     toast-close=""

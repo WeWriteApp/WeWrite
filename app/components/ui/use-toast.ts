@@ -178,11 +178,11 @@ toast.error = (title: string, options?: Omit<ToasterToast, "id" | "title" | "var
 };
 
 toast.info = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
-  return toast({ title, ...options });
+  return toast({ title, variant: "info", ...options });
 };
 
 toast.warning = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
-  return toast({ title, ...options });
+  return toast({ title, variant: "warning", ...options });
 };
 
 toast.dismiss = (toastId?: string) => {

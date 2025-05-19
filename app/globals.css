@@ -172,6 +172,9 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
     /* Focus indicator variables */
     --focus-ring-color: var(--accent-h) var(--accent-s) var(--accent-l);
     --focus-ring-width: 2px;
@@ -215,6 +218,9 @@
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
 
     --border: 217 33% 25%;
     --input: 217 33% 18%;
