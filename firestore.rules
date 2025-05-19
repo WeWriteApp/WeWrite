@@ -53,6 +53,30 @@ service cloud.firestore {
          exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)));
     }
 
+    // Follower privacy rules
+    match /userFollowers/{userId} {
+      // Only allow the user to read their own followers
+      allow read: if request.auth != null && userId == request.auth.uid;
+      // Only allow authenticated users to write
+      allow write: if request.auth != null;
+    }
+
+    match /userFollowing/{userId} {
+      // Only allow the user to read who they're following
+      allow read: if request.auth != null && userId == request.auth.uid;
+      // Only allow authenticated users to write
+      allow write: if request.auth != null;
+    }
+
+    match /follows/{followId} {
+      // Only allow the users involved in the follow relationship to read it
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.followerId ||
+         request.auth.uid == resource.data.followedId);
+      // Only allow authenticated users to write
+      allow write: if request.auth != null;
+    }
+
     // Default rule - allow reading but restrict writing
     match /{document=**} {
       allow read: if true;

@@ -12,6 +12,7 @@ import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
 import { SupporterIcon } from "./SupporterIcon";
 import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 import PageOwnershipDropdown from "./PageOwnershipDropdown";
+import ClickableByline from "./ClickableByline";
 import { useAuth } from "../providers/AuthProvider";
 
 export interface PageHeaderProps {
@@ -384,45 +385,67 @@ export default function PageHeader({
                     groupId && groupName ? (
                       <span className="flex items-center gap-1 justify-center mx-auto">
                         <span className="whitespace-nowrap flex-shrink-0">in</span>
-                        <Link href={`/group/${groupId}`} className="hover:underline overflow-hidden text-ellipsis">
-                          <span data-component-name="PageHeader" data-group-name={groupName}>{groupName}</span>
-                        </Link>
-                        {/* Ownership dropdown for group pages */}
-                        {user && userId && user.uid === userId && pageId && (
-                          <PageOwnershipDropdown
-                            pageId={pageId}
-                            userId={userId}
-                            username={displayUsername}
-                            groupId={groupId}
-                            groupName={groupName}
-                            onOwnershipChange={(newGroupId, newGroupName) => {
-                              setGroupId(newGroupId);
-                              setGroupName(newGroupName);
-                            }}
-                          />
+                        {/* If user can change ownership, use ClickableByline, otherwise use Link */}
+                        {user && userId && user.uid === userId && pageId ? (
+                          <ClickableByline
+                            isLoading={isLoading}
+                            isChanging={false}
+                            dropdown={
+                              <PageOwnershipDropdown
+                                pageId={pageId}
+                                userId={userId}
+                                username={displayUsername}
+                                groupId={groupId}
+                                groupName={groupName}
+                                onOwnershipChange={(newGroupId, newGroupName) => {
+                                  setGroupId(newGroupId);
+                                  setGroupName(newGroupName);
+                                }}
+                              />
+                            }
+                          >
+                            <span data-component-name="PageHeader" data-group-name={groupName} className="overflow-hidden text-ellipsis">{groupName}</span>
+                          </ClickableByline>
+                        ) : (
+                          <Link href={`/group/${groupId}`} className="hover:underline overflow-hidden text-ellipsis">
+                            <span data-component-name="PageHeader" data-group-name={groupName}>{groupName}</span>
+                          </Link>
                         )}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 justify-center mx-auto">
                         <span className="whitespace-nowrap flex-shrink-0">by</span>
-                        <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
-                          {isLoading || !displayUsername ? (
-                            <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
-                          ) : (
-                            <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
-                          )}
-                        </Link>
-                        {/* Ownership dropdown for personal pages */}
-                        {user && userId && user.uid === userId && pageId && (
-                          <PageOwnershipDropdown
-                            pageId={pageId}
-                            userId={userId}
-                            username={displayUsername}
-                            onOwnershipChange={(newGroupId, newGroupName) => {
-                              setGroupId(newGroupId);
-                              setGroupName(newGroupName);
-                            }}
-                          />
+                        {/* If user can change ownership, use ClickableByline, otherwise use Link */}
+                        {user && userId && user.uid === userId && pageId ? (
+                          <ClickableByline
+                            isLoading={isLoading}
+                            isChanging={false}
+                            dropdown={
+                              <PageOwnershipDropdown
+                                pageId={pageId}
+                                userId={userId}
+                                username={displayUsername}
+                                onOwnershipChange={(newGroupId, newGroupName) => {
+                                  setGroupId(newGroupId);
+                                  setGroupName(newGroupName);
+                                }}
+                              />
+                            }
+                          >
+                            {isLoading || !displayUsername ? (
+                              <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
+                            ) : (
+                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
+                            )}
+                          </ClickableByline>
+                        ) : (
+                          <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
+                            {isLoading || !displayUsername ? (
+                              <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
+                            ) : (
+                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
+                            )}
+                          </Link>
                         )}
                         {subscriptionEnabled && (
                           <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>

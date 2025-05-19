@@ -83,7 +83,22 @@ export default function PageHistoryPage({ params }) {
 
         // Convert versions to activity format
         const activityItems = sortedVersions.map((version, index) => {
+          // Use the stored previousContent if available, otherwise fall back to the previous version
           const prevVersion = index < sortedVersions.length - 1 ? sortedVersions[index + 1] : null;
+
+          // Determine the previous content to use for diff generation
+          let previousContent = '';
+
+          // First try to use the stored previousContent from the version itself
+          if (version.previousContent) {
+            previousContent = version.previousContent;
+            console.log(`Using stored previousContent for version ${version.id}`);
+          }
+          // Then try to use the previous version's content
+          else if (prevVersion && prevVersion.content) {
+            previousContent = prevVersion.content;
+            console.log(`Using previous version content for version ${version.id}`);
+          }
 
           return {
             id: version.id || `version-${index}`,
@@ -93,7 +108,7 @@ export default function PageHistoryPage({ params }) {
             username: version.username || 'Anonymous',
             timestamp: version.timestamp,
             currentContent: version.content || '',
-            previousContent: prevVersion?.content || '',
+            previousContent: previousContent,
             isNewPage: index === sortedVersions.length - 1, // Last item is the oldest/first version
             versionId: version.id // Include the version ID for linking to version view
           };

@@ -308,6 +308,8 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
         // Check if the page has content directly (from a save operation)
         if (pageData.content) {
           try {
+            console.log(`Page ${pageId} has direct content, length:`, pageData.content.length);
+
             // Create a version data object from the page content
             const versionData = {
               content: pageData.content,
@@ -315,8 +317,20 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
               userId: pageData.userId || 'unknown'
             };
 
-            // Extract links
-            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+            // Validate content is proper JSON before parsing
+            let parsedContent;
+            try {
+              parsedContent = JSON.parse(versionData.content);
+              console.log(`Successfully parsed content for page ${pageId}, nodes:`,
+                Array.isArray(parsedContent) ? parsedContent.length : 'not an array');
+            } catch (parseError) {
+              console.error(`Error parsing content for page ${pageId}:`, parseError);
+              // If we can't parse the content, try to fix it or use empty content
+              parsedContent = [];
+            }
+
+            // Extract links from the validated parsed content
+            const links = extractLinksFromNodes(parsedContent);
 
             // Send updated page and version data immediately
             onPageUpdate({ pageData, versionData, links });
@@ -436,6 +450,8 @@ export const getPageById = async (pageId, userId = null) => {
         // Check if the page has content directly (from a save operation)
         if (pageData.content) {
           try {
+            console.log(`getPageById: Page ${pageId} has direct content, length:`, pageData.content.length);
+
             // Create a version data object from the page content
             const versionData = {
               content: pageData.content,
@@ -443,8 +459,20 @@ export const getPageById = async (pageId, userId = null) => {
               userId: pageData.userId || 'unknown'
             };
 
-            // Extract links
-            const links = extractLinksFromNodes(JSON.parse(versionData.content));
+            // Validate content is proper JSON before parsing
+            let parsedContent;
+            try {
+              parsedContent = JSON.parse(versionData.content);
+              console.log(`getPageById: Successfully parsed content for page ${pageId}, nodes:`,
+                Array.isArray(parsedContent) ? parsedContent.length : 'not an array');
+            } catch (parseError) {
+              console.error(`getPageById: Error parsing content for page ${pageId}:`, parseError);
+              // If we can't parse the content, try to fix it or use empty content
+              parsedContent = [];
+            }
+
+            // Extract links from the validated parsed content
+            const links = extractLinksFromNodes(parsedContent);
 
             const result = { pageData, versionData, links };
 
@@ -532,10 +560,32 @@ export const getPageVersionById = async (pageId, versionId) => {
       return null;
     }
 
-    // Return version data with ID
+    const versionData = versionSnap.data();
+
+    // If this version has a previousVersionId, fetch the previous version as well
+    let previousVersion = null;
+    if (versionData.previousVersionId) {
+      try {
+        const prevVersionRef = doc(collection(pageRef, "versions"), versionData.previousVersionId);
+        const prevVersionSnap = await getDoc(prevVersionRef);
+
+        if (prevVersionSnap.exists()) {
+          previousVersion = {
+            id: prevVersionSnap.id,
+            ...prevVersionSnap.data()
+          };
+        }
+      } catch (prevError) {
+        console.error("Error fetching previous version:", prevError);
+        // Continue without previous version
+      }
+    }
+
+    // Return version data with ID and previous version if available
     return {
       id: versionSnap.id,
-      ...versionSnap.data()
+      ...versionData,
+      previousVersion
     };
   } catch (error) {
     console.error("Error fetching page version:", error);
@@ -686,6 +736,8 @@ export const saveNewVersion = async (pageId, data) => {
       return null;
     }
 
+    console.log('Content string to save:', contentString.substring(0, 100) + '...');
+
     // Parse content to validate it's proper JSON
     let parsedContent;
     try {
@@ -754,6 +806,10 @@ export const saveNewVersion = async (pageId, data) => {
 
     const pageRef = doc(db, "pages", pageId);
 
+    // Variables to store previous content for diff generation
+    let previousContent = null;
+    let previousVersionId = null;
+
     // If skipIfUnchanged is true, check if content has changed from the most recent version
     if (data.skipIfUnchanged) {
       try {
@@ -762,6 +818,7 @@ export const saveNewVersion = async (pageId, data) => {
         if (pageDoc.exists()) {
           const pageData = pageDoc.data();
           const currentVersionId = pageData.currentVersion;
+          previousVersionId = currentVersionId;
 
           if (currentVersionId) {
             // Get the current version content
@@ -772,10 +829,34 @@ export const saveNewVersion = async (pageId, data) => {
               const versionData = versionDoc.data();
               const currentContent = versionData.content;
 
-              // Compare content
+              // Store previous content for diff generation
+              previousContent = currentContent;
+
+              // Compare content more carefully to avoid blank diffs
               if (currentContent === contentString) {
                 console.log("Content unchanged, skipping version creation");
                 return currentVersionId; // Return existing version ID
+              }
+
+              // Additional check for "empty" changes
+              try {
+                const currentParsed = JSON.parse(currentContent);
+                const newParsed = JSON.parse(contentString);
+
+                // Check if both are arrays and have the same structure
+                if (Array.isArray(currentParsed) && Array.isArray(newParsed)) {
+                  // Check if the only difference is whitespace or empty paragraphs
+                  const currentText = extractTextFromContent(currentParsed);
+                  const newText = extractTextFromContent(newParsed);
+
+                  if (currentText.trim() === newText.trim()) {
+                    console.log("Content effectively unchanged (only whitespace/formatting differences), skipping version creation");
+                    return currentVersionId;
+                  }
+                }
+              } catch (parseError) {
+                console.error("Error comparing parsed content:", parseError);
+                // Continue with version creation if comparison fails
               }
             }
           }
@@ -783,6 +864,29 @@ export const saveNewVersion = async (pageId, data) => {
       } catch (error) {
         console.error("Error checking for content changes:", error);
         // Continue with version creation if check fails
+      }
+    } else {
+      // Even if skipIfUnchanged is false, we still need to get the previous content for diff generation
+      try {
+        const pageDoc = await getDoc(pageRef);
+        if (pageDoc.exists()) {
+          const pageData = pageDoc.data();
+          const currentVersionId = pageData.currentVersion;
+          previousVersionId = currentVersionId;
+
+          if (currentVersionId) {
+            // Get the current version content
+            const versionRef = doc(collection(pageRef, "versions"), currentVersionId);
+            const versionDoc = await getDoc(versionRef);
+
+            if (versionDoc.exists()) {
+              const versionData = versionDoc.data();
+              previousContent = versionData.content;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error getting previous content for diff:", error);
       }
     }
 
@@ -818,18 +922,35 @@ export const saveNewVersion = async (pageId, data) => {
       createdAt: new Date().toISOString(),
       userId: data.userId,
       username: username || "Anonymous",
-      groupId: groupId || null
+      groupId: groupId || null,
+      previousContent: previousContent,
+      previousVersionId: previousVersionId
     };
 
-    // First update the page document directly to ensure content is immediately available
+    // CRITICAL FIX: First update the page document directly to ensure content is immediately available
     // Use the pageRef directly instead of collection/doc name strings
     const updateTime = new Date().toISOString();
-    await setDoc(pageRef, {
-      content: contentString,
-      lastModified: updateTime
-    }, { merge: true });
 
-    console.log("Page document updated with new content");
+    // Log the content being saved for debugging
+    console.log("Saving content to page document", {
+      contentLength: contentString.length,
+      timestamp: updateTime
+    });
+
+    try {
+      // Validate the content one more time before saving
+      JSON.parse(contentString);
+
+      await setDoc(pageRef, {
+        content: contentString,
+        lastModified: updateTime
+      }, { merge: true });
+
+      console.log("Page document updated with new content");
+    } catch (parseError) {
+      console.error("Error validating content before saving:", parseError);
+      // Continue with version creation anyway, but log the error
+    }
 
     // Then create the version
     const versionRef = await addDoc(collection(pageRef, "versions"), versionData);
@@ -844,6 +965,11 @@ export const saveNewVersion = async (pageId, data) => {
       console.log("Recorded user activity for streak tracking");
     }
 
+    // Invalidate cache for this page to ensure fresh data is loaded
+    const cacheKey = generateCacheKey('page', pageId, data.userId || 'public');
+    setCacheItem(cacheKey, null, 0); // Clear the cache
+    console.log(`Cache invalidated for page ${pageId}`);
+
     console.log("Page content updated and new version saved successfully");
     return versionRef.id;
   } catch (e) {
@@ -855,9 +981,27 @@ export const saveNewVersion = async (pageId, data) => {
 export const setCurrentVersion = async (pageId, versionId) => {
   try {
     const pageRef = doc(db, "pages", pageId);
+
+    // Get the page data to check the current user ID
+    const pageDoc = await getDoc(pageRef);
+    let userId = null;
+
+    if (pageDoc.exists()) {
+      const pageData = pageDoc.data();
+      userId = pageData.userId;
+    }
+
+    // Update the current version
     await setDoc(pageRef, { currentVersion: versionId }, { merge: true });
+
+    // Invalidate cache for this page to ensure fresh data is loaded
+    const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+    setCacheItem(cacheKey, null, 0); // Clear the cache
+    console.log(`Cache invalidated for page ${pageId} in setCurrentVersion`);
+
     return true;
   } catch (e) {
+    console.error("Error setting current version:", e);
     return e;
   }
 }
@@ -897,8 +1041,32 @@ export const updateDoc = async (collectionName, docName, data) => {
   try {
     const docRef = doc(db, collectionName, docName);
     await setDoc(docRef, data, { merge: true });
+
+    // If this is a page update, invalidate the cache
+    if (collectionName === "pages") {
+      // Get the user ID from the data or try to get it from the page
+      let userId = data.userId;
+
+      if (!userId) {
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            userId = docSnap.data().userId;
+          }
+        } catch (error) {
+          console.error("Error getting userId for cache invalidation:", error);
+        }
+      }
+
+      // Invalidate cache for this page
+      const cacheKey = generateCacheKey('page', docName, userId || 'public');
+      setCacheItem(cacheKey, null, 0); // Clear the cache
+      console.log(`Cache invalidated for page ${docName} in updateDoc`);
+    }
+
     return docRef;
   } catch (e) {
+    console.error("Error updating document:", e);
     return e;
   }
 }
@@ -970,6 +1138,12 @@ export const updatePage = async (pageId, data) => {
   }
 }
 
+/**
+ * Extract all links from a Slate document
+ *
+ * @param {Array} nodes - The Slate document nodes
+ * @returns {Array} - Array of link objects
+ */
 function extractLinksFromNodes(nodes) {
   let links = [];
 
@@ -993,6 +1167,35 @@ function extractLinksFromNodes(nodes) {
   nodes.forEach(traverse);
 
   return links;
+}
+
+/**
+ * Extract all text from a Slate document
+ *
+ * @param {Array} nodes - The Slate document nodes
+ * @returns {string} - The extracted text
+ */
+function extractTextFromContent(nodes) {
+  let text = '';
+
+  function traverse(node) {
+    // If the node has text, add it to the result
+    if (typeof node.text === 'string') {
+      text += node.text;
+    }
+
+    // Recursively check children if they exist
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach(traverse);
+    }
+  }
+
+  // Start traversal
+  if (Array.isArray(nodes)) {
+    nodes.forEach(traverse);
+  }
+
+  return text;
 }
 
 /**

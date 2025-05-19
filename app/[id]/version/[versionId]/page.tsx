@@ -89,22 +89,57 @@ export default function PageVersionView({ params }: { params: { id: string, vers
 
   // Generate diff content when showDiff changes or when version/currentVersion changes
   useEffect(() => {
-    if (showDiff && version && currentVersion) {
+    if (showDiff && version) {
       try {
         // Parse content
         const versionContent = typeof version.content === 'string'
           ? JSON.parse(version.content)
           : version.content;
 
-        const currentContent = typeof currentVersion.content === 'string'
-          ? JSON.parse(currentVersion.content)
-          : currentVersion.content;
+        // First try to use the stored previousContent if available
+        if (version.previousContent) {
+          console.log('Using stored previousContent for diff generation');
+          const previousContent = typeof version.previousContent === 'string'
+            ? JSON.parse(version.previousContent)
+            : version.previousContent;
 
-        // Generate diff content with added/removed markers
-        const diffResult = generateDiffContent(versionContent, currentContent);
+          // Generate diff content with added/removed markers
+          const diffResult = generateDiffContent(versionContent, previousContent);
 
-        // Set the diff content
-        setDiffContent(diffResult);
+          // Set the diff content
+          setDiffContent(diffResult);
+        }
+        // Then try to use the previousVersion if available
+        else if (version.previousVersion && version.previousVersion.content) {
+          console.log('Using previousVersion content for diff generation');
+          const previousContent = typeof version.previousVersion.content === 'string'
+            ? JSON.parse(version.previousVersion.content)
+            : version.previousVersion.content;
+
+          // Generate diff content with added/removed markers
+          const diffResult = generateDiffContent(versionContent, previousContent);
+
+          // Set the diff content
+          setDiffContent(diffResult);
+        }
+        // Finally fall back to the current version
+        else if (currentVersion) {
+          console.log('Using current version content for diff generation');
+          const currentContent = typeof currentVersion.content === 'string'
+            ? JSON.parse(currentVersion.content)
+            : currentVersion.content;
+
+          // Generate diff content with added/removed markers
+          const diffResult = generateDiffContent(versionContent, currentContent);
+
+          // Set the diff content
+          setDiffContent(diffResult);
+        }
+        else {
+          console.log('No previous content available for diff generation');
+          setDiffContent(null);
+          setShowDiff(false);
+        }
       } catch (err) {
         console.error('Error generating diff:', err);
         setDiffContent(null);
@@ -233,9 +268,9 @@ export default function PageVersionView({ params }: { params: { id: string, vers
             id="diff-mode"
             checked={showDiff}
             onCheckedChange={setShowDiff}
-            disabled={!currentVersion}
+            disabled={!version || (!version.previousContent && !version.previousVersion && !currentVersion)}
           />
-          <Label htmlFor="diff-mode">Show changes from current version</Label>
+          <Label htmlFor="diff-mode">Show changes from previous version</Label>
         </div>
 
         {/* Content */}

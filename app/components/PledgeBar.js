@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { Eye, Users, DollarSign, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { useFeatureFlag } from '../utils/feature-flags';
+import { openExternalLink } from '../utils/pwa-detection';
 import SubscriptionActivationModal from './SubscriptionActivationModal';
 import SupportUsModal from './SupportUsModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
@@ -423,18 +424,11 @@ const PledgeBar = () => {
             <Button
               size="sm"
               onClick={() => {
-                // Show different modal based on subscription feature flag
-                if (isSubscriptionEnabled) {
-                  setShowActivationModal(true);
-                  setShowSupportUsModal(false);
-                } else {
-                  setShowSupportUsModal(true);
-                  setShowActivationModal(false);
-                }
+                // Open OpenCollective link directly
+                openExternalLink('https://opencollective.com/wewrite-app', 'Pledge Bar Support Button');
               }}
               className="ml-4"
             >
-              <DollarSign className="h-4 w-4 mr-1" />
               Support Us
             </Button>
           </div>
@@ -491,12 +485,11 @@ const PledgeBar = () => {
               <Button
                 size="sm"
                 onClick={() => {
-                  setShowSupportUsModal(true);
-                  setShowActivationModal(false);
+                  // Open OpenCollective link directly
+                  openExternalLink('https://opencollective.com/wewrite-app', 'Pledge Bar Support Button (Non-Subscriber)');
                 }}
                 className="ml-4"
               >
-                <DollarSign className="h-4 w-4 mr-1" />
                 Support Us
               </Button>
             )}

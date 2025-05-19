@@ -42,35 +42,34 @@ export default function PageOwnershipDropdown({
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
-  const [open, setOpen] = useState(false);
 
   // Fetch user's groups
   useEffect(() => {
     const fetchUserGroups = async () => {
       if (!userId) return;
-      
+
       try {
         setIsLoading(true);
-        
+
         // Get user's groups from RTDB
         const userGroupsRef = ref(rtdb, `users/${userId}/groups`);
         const userGroupsSnapshot = await get(userGroupsRef);
-        
+
         if (!userGroupsSnapshot.exists()) {
           setGroups([]);
           setIsLoading(false);
           return;
         }
-        
+
         const userGroupIds = Object.keys(userGroupsSnapshot.val());
-        
+
         // Get group details
         const groupsData: Group[] = [];
-        
+
         for (const groupId of userGroupIds) {
           const groupRef = ref(rtdb, `groups/${groupId}`);
           const groupSnapshot = await get(groupRef);
-          
+
           if (groupSnapshot.exists()) {
             const groupData = groupSnapshot.val();
             groupsData.push({
@@ -80,7 +79,7 @@ export default function PageOwnershipDropdown({
             });
           }
         }
-        
+
         setGroups(groupsData);
       } catch (error) {
         console.error('Error fetching user groups:', error);
@@ -93,47 +92,46 @@ export default function PageOwnershipDropdown({
         setIsLoading(false);
       }
     };
-    
+
     fetchUserGroups();
   }, [userId]);
 
   // Handle ownership change
   const handleOwnershipChange = async (newGroupId: string | null) => {
     if (newGroupId === groupId) {
-      setOpen(false);
       return;
     }
-    
+
     try {
       setIsChanging(true);
-      
+
       // Get the new group name if changing to a group
       let newGroupName = null;
       if (newGroupId) {
         const group = groups.find(g => g.id === newGroupId);
         newGroupName = group?.name || null;
       }
-      
+
       // Update the page in Firestore
       await updatePage(pageId, {
         groupId: newGroupId,
         lastModified: new Date().toISOString()
       });
-      
+
       // Call the onOwnershipChange callback if provided
       if (onOwnershipChange) {
         onOwnershipChange(newGroupId, newGroupName);
       }
-      
+
       // Show success toast
       toast({
         title: 'Ownership updated',
-        description: newGroupId 
-          ? `Page moved to "${newGroupName}" group` 
+        description: newGroupId
+          ? `Page moved to "${newGroupName}" group`
           : `Page is now owned by you personally`,
         variant: 'default'
       });
-      
+
     } catch (error) {
       console.error('Error changing page ownership:', error);
       toast({
@@ -143,32 +141,16 @@ export default function PageOwnershipDropdown({
       });
     } finally {
       setIsChanging(false);
-      setOpen(false);
     }
   };
 
+  // Return just the dropdown content, not the full dropdown
+  // The parent component will handle the trigger and dropdown menu
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-auto p-0 font-normal hover:bg-transparent hover:underline focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-          disabled={isLoading || isChanging}
-        >
-          <span className="flex items-center gap-1">
-            {isChanging ? (
-              <Loader className="h-3 w-3 animate-spin" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="center" className="w-56">
-        <DropdownMenuLabel>Page Ownership</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        
+    <>
+      <DropdownMenuLabel>Page Ownership</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+
         {isLoading ? (
           <div className="flex justify-center items-center py-2">
             <Loader className="h-4 w-4 animate-spin mr-2" />
@@ -176,7 +158,7 @@ export default function PageOwnershipDropdown({
           </div>
         ) : (
           <>
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={() => handleOwnershipChange(null)}
               className="gap-2"
               disabled={isChanging}
@@ -185,12 +167,12 @@ export default function PageOwnershipDropdown({
               <span>Personal ({username})</span>
               {!groupId && <Check className="h-4 w-4 ml-auto" />}
             </DropdownMenuItem>
-            
+
             {groups.length > 0 && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Your Groups</DropdownMenuLabel>
-                
+
                 {groups.map(group => (
                   <DropdownMenuItem
                     key={group.id}
@@ -207,7 +189,6 @@ export default function PageOwnershipDropdown({
             )}
           </>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    </>
   );
 }

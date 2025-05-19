@@ -4,15 +4,15 @@ import { Clock, AlertTriangle, Info } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import ActivityCard from "./ActivityCard";
 import { Button } from "./ui/button";
-import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, limit, getDocs, Timestamp, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { getDatabase, ref, get } from "firebase/database";
 
 /**
  * GroupActivityTab Component
- * 
+ *
  * Displays recent activity for pages owned by a specific group
- * 
+ *
  * @param {Object} props
  * @param {Object} props.group - The group object
  * @param {number} props.limit - Maximum number of activities to display (default: 10)
@@ -29,11 +29,11 @@ export default function GroupActivityTab({ group, limit = 10 }) {
       if (!userId) return { username: null };
 
       let username = null;
-      
+
       // Try Firestore first
-      const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", userId)));
-      if (!userDoc.empty) {
-        const userData = userDoc.docs[0].data();
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
         username = userData.username || userData.displayName;
       }
 
@@ -61,69 +61,147 @@ export default function GroupActivityTab({ group, limit = 10 }) {
     const fetchGroupActivity = async () => {
       try {
         setLoading(true);
-        
-        // If no group or no pages, return empty array
-        if (!group || !group.pages || Object.keys(group.pages).length === 0) {
+        console.log("Fetching group activity for group:", group?.id);
+
+        // If no group, return empty array
+        if (!group) {
+          console.log("No group provided");
+          setActivities([]);
+          setLoading(false);
+          return;
+        }
+
+        // Check if group has pages
+        if (!group.pages) {
+          console.log("Group has no pages property");
           setActivities([]);
           setLoading(false);
           return;
         }
 
         // Get all page IDs from the group
-        const pageIds = Object.keys(group.pages);
-        
-        // Query pages collection for these pages
-        const pagesQuery = query(
-          collection(db, "pages"),
-          where("__name__", "in", pageIds),
-          orderBy("lastModified", "desc"),
-          limit(limit * 2) // Fetch more to account for filtering
-        );
+        const pageIds = Object.keys(group.pages || {});
+        console.log(`Found ${pageIds.length} pages in group:`, pageIds);
 
-        const pagesSnapshot = await getDocs(pagesQuery);
-        
-        if (pagesSnapshot.empty) {
+        if (pageIds.length === 0) {
+          console.log("Group has no pages");
           setActivities([]);
           setLoading(false);
           return;
         }
 
-        // Process the pages into activity items
-        const activityPromises = pagesSnapshot.docs.map(async (doc) => {
-          const pageData = doc.data();
-          const pageId = doc.id;
-          
-          // Get username for this page
-          const { username } = await getUsernameById(pageData.userId);
-          
-          return {
-            pageId,
-            pageName: pageData.title || "Untitled",
-            userId: pageData.userId,
-            username: username || "Unknown User",
-            timestamp: pageData.lastModified,
-            isNewPage: false, // We don't have this info directly
-            currentContent: pageData.content,
-            previousContent: null, // We don't have previous content
-            versionId: null, // We don't track version IDs directly
-            isPublic: pageData.isPublic
-          };
-        });
+        // Process pages in batches to avoid Firestore limitations (max 10 items in 'in' query)
+        const batchSize = 10;
+        let allPages = [];
 
-        const activityItems = await Promise.all(activityPromises);
-        
-        // Sort by timestamp (newest first)
-        const sortedActivities = activityItems.sort((a, b) => {
-          const dateA = a.timestamp instanceof Timestamp 
-            ? a.timestamp.toDate() 
-            : new Date(a.timestamp);
-          const dateB = b.timestamp instanceof Timestamp 
-            ? b.timestamp.toDate() 
-            : new Date(b.timestamp);
+        for (let i = 0; i < pageIds.length; i += batchSize) {
+          const batchIds = pageIds.slice(i, i + batchSize);
+          console.log(`Processing batch ${i/batchSize + 1} with ${batchIds.length} pages`);
+
+          try {
+            // Query pages collection for this batch of pages
+            const pagesQuery = query(
+              collection(db, "pages"),
+              where("__name__", "in", batchIds),
+              orderBy("lastModified", "desc")
+            );
+
+            const batchSnapshot = await getDocs(pagesQuery);
+            console.log(`Batch ${i/batchSize + 1} returned ${batchSnapshot.size} pages`);
+
+            // Add pages from this batch to our collection
+            batchSnapshot.forEach(doc => {
+              allPages.push({
+                id: doc.id,
+                ...doc.data()
+              });
+            });
+          } catch (batchErr) {
+            console.error(`Error fetching batch ${i/batchSize + 1}:`, batchErr);
+            // Continue with next batch instead of failing completely
+          }
+        }
+
+        console.log(`Total pages fetched: ${allPages.length}`);
+
+        if (allPages.length === 0) {
+          console.log("No pages found in Firestore for this group");
+          setActivities([]);
+          setLoading(false);
+          return;
+        }
+
+        // Sort all pages by lastModified (newest first)
+        allPages.sort((a, b) => {
+          const dateA = a.lastModified instanceof Timestamp
+            ? a.lastModified.toDate()
+            : new Date(a.lastModified || 0);
+          const dateB = b.lastModified instanceof Timestamp
+            ? b.lastModified.toDate()
+            : new Date(b.lastModified || 0);
           return dateB - dateA;
         });
 
-        setActivities(sortedActivities.slice(0, limit));
+        // Limit to the number we need
+        const limitedPages = allPages.slice(0, limit * 2);
+        console.log(`Limited to ${limitedPages.length} most recent pages`);
+
+        // Process the pages into activity items
+        const activityPromises = limitedPages.map(async (pageData) => {
+          const pageId = pageData.id;
+
+          try {
+            // Get username for this page
+            const { username } = await getUsernameById(pageData.userId);
+
+            // Format the timestamp
+            let timestamp;
+            if (pageData.lastModified instanceof Timestamp) {
+              timestamp = pageData.lastModified.toDate();
+            } else if (typeof pageData.lastModified === 'string') {
+              timestamp = new Date(pageData.lastModified);
+            } else {
+              timestamp = new Date();
+            }
+
+            return {
+              pageId,
+              pageName: pageData.title || "Untitled",
+              userId: pageData.userId,
+              username: username || "Unknown User",
+              timestamp: timestamp,
+              isNewPage: false,
+              currentContent: pageData.content,
+              previousContent: null,
+              versionId: null,
+              isPublic: pageData.isPublic,
+              groupId: group.id,
+              groupName: group.name
+            };
+          } catch (err) {
+            console.error(`Error processing page ${pageId}:`, err);
+            return null;
+          }
+        });
+
+        const activityItems = await Promise.all(activityPromises);
+
+        // Filter out null items (from errors)
+        const validActivityItems = activityItems.filter(item => item !== null);
+        console.log(`Valid activity items: ${validActivityItems.length}`);
+
+        // Sort by timestamp (newest first)
+        const sortedActivities = validActivityItems.sort((a, b) => {
+          const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp || 0);
+          const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp || 0);
+          return dateB - dateA;
+        });
+
+        // Limit to requested number
+        const limitedActivities = sortedActivities.slice(0, limit);
+        console.log(`Final activities count: ${limitedActivities.length}`);
+
+        setActivities(limitedActivities);
       } catch (err) {
         console.error("Error fetching group activity:", err);
         setError("Failed to load group activity. Please try again later.");

@@ -72,29 +72,44 @@ const EditPage = ({
   };
 
   // Handle save action
-  const handleSave = async (editorContent) => {
-    console.log("EditPage handleSave called with content:", editorContent);
+  const handleSave = async (inputContent) => {
+    console.log("EditPage handleSave called with content:", {
+      contentType: typeof inputContent,
+      isArray: Array.isArray(inputContent),
+      length: Array.isArray(inputContent) ? inputContent.length : 0
+    });
 
     if (!user) {
       setError("User not authenticated");
       return;
     }
 
+    // CRITICAL FIX: Make a deep copy of the editor content to prevent reference issues
+    // Use a different variable name to avoid conflicts
+    let safeContent;
+    try {
+      safeContent = JSON.parse(JSON.stringify(inputContent));
+      console.log("Made deep copy of editor content");
+    } catch (e) {
+      console.error("Error making deep copy of editor content:", e);
+      safeContent = inputContent; // Fall back to original content if deep copy fails
+    }
+
     // Ensure we have valid editor content
-    if (!editorContent || !Array.isArray(editorContent) || editorContent.length === 0) {
+    if (!safeContent || !Array.isArray(safeContent) || safeContent.length === 0) {
       setError("Invalid editor content. Please try again.");
-      console.error("Invalid editor content:", editorContent);
+      console.error("Invalid editor content:", safeContent);
       return;
     }
 
     // Check if content is just an empty paragraph - less strict validation
-    if (editorContent.length === 0) {
+    if (safeContent.length === 0) {
       setError("Cannot save empty content");
       return;
     }
 
     // Store the content we're about to save for debugging
-    console.log("About to save editor content:", JSON.stringify(editorContent));
+    console.log("About to save editor content:", JSON.stringify(safeContent));
 
     // Show loading state immediately
     setIsSaving(true);
@@ -138,13 +153,16 @@ const EditPage = ({
       console.log(`Save attempt ${currentAttempt} of ${maxAttempts}`);
 
       try {
-        console.log('Saving editor content:', editorContent);
+        console.log('Saving editor content:', safeContent);
 
-        // Make a deep copy of the editor content to prevent any reference issues
-        const editorContentCopy = JSON.parse(JSON.stringify(editorContent));
+        // CRITICAL FIX: Make another deep copy just to be extra safe
+        const finalContent = JSON.parse(JSON.stringify(safeContent));
 
         // Convert the editorState to JSON
-        const editorStateJSON = JSON.stringify(editorContentCopy);
+        const editorStateJSON = JSON.stringify(finalContent);
+
+        // CRITICAL FIX: Log the JSON string for debugging
+        console.log('Editor state JSON length:', editorStateJSON.length);
 
         // Log the JSON string for debugging
         console.log('Editor state JSON:', editorStateJSON);
@@ -160,6 +178,7 @@ const EditPage = ({
 
             // Compare the stringified content
             contentChanged = originalContent !== editorStateJSON;
+            console.log('Content comparison:', { originalLength: originalContent.length, newLength: editorStateJSON.length, changed: contentChanged });
 
             if (!contentChanged) {
               console.log('Content unchanged, skipping version creation');
@@ -193,12 +212,67 @@ const EditPage = ({
         if (contentChanged) {
           console.log('Content changed, creating new version');
           // Then save the new version
-          result = await saveNewVersion(page.id, {
-            content: editorStateJSON,
-            userId: user.uid,
-            username: user.displayName || user.username,
-            skipIfUnchanged: true
-          });
+          // CRITICAL FIX: Ensure we're passing a valid JSON string
+          // Double-check that editorStateJSON is a valid JSON string
+          try {
+            // Validate that it's a proper JSON string by parsing it
+            const parsedContent = JSON.parse(editorStateJSON);
+            console.log("Content validated before saving:", {
+              isArray: Array.isArray(parsedContent),
+              length: Array.isArray(parsedContent) ? parsedContent.length : 'not an array'
+            });
+
+            // Ensure content is an array
+            if (!Array.isArray(parsedContent)) {
+              console.warn("Content is not an array, converting to array");
+              const fixedContent = Array.isArray(parsedContent) ? parsedContent : [parsedContent];
+              editorStateJSON = JSON.stringify(fixedContent);
+            }
+
+            result = await saveNewVersion(page.id, {
+              content: editorStateJSON,
+              userId: user.uid,
+              username: user.displayName || user.username,
+              skipIfUnchanged: true
+            });
+          } catch (jsonError) {
+            console.error("Error validating JSON before saving:", jsonError);
+            // Try to create a new JSON string as a fallback
+            try {
+              // Ensure finalContent is valid
+              if (!finalContent || !Array.isArray(finalContent)) {
+                console.warn("Final content is invalid, creating default content");
+                finalContent = [{
+                  type: "paragraph",
+                  children: [{ text: "Content could not be saved properly. Please try again." }]
+                }];
+              }
+
+              const fallbackJSON = JSON.stringify(finalContent);
+              console.log("Using fallback JSON string for save:", fallbackJSON.substring(0, 100) + "...");
+
+              result = await saveNewVersion(page.id, {
+                content: fallbackJSON,
+                userId: user.uid,
+                username: user.displayName || user.username,
+                skipIfUnchanged: true
+              });
+            } catch (fallbackError) {
+              console.error("Error with fallback save:", fallbackError);
+              // Last resort - create a minimal valid content structure
+              const emergencyContent = JSON.stringify([{
+                type: "paragraph",
+                children: [{ text: "Content could not be saved properly. Please try again." }]
+              }]);
+
+              result = await saveNewVersion(page.id, {
+                content: emergencyContent,
+                userId: user.uid,
+                username: user.displayName || user.username,
+                skipIfUnchanged: false // Force save in emergency case
+              });
+            }
+          }
           console.log('saveNewVersion result:', result);
         }
 
@@ -228,12 +302,20 @@ const EditPage = ({
           // Show a success toast
           toast.success("Page saved successfully");
 
-          // Use a more reliable approach to ensure UI updates before navigation
-          // First, update the state and let React render the changes
+          // Force a refresh of the page data to ensure the latest content is displayed
+          if (typeof window !== 'undefined') {
+            // Dispatch a custom event to notify that the page has been updated
+            window.dispatchEvent(new CustomEvent('page-updated', {
+              detail: { pageId: page.id }
+            }));
+          }
+
+          // CRITICAL FIX: Ensure content is properly updated in the parent component
+          // before switching to view mode by adding a small delay
           setTimeout(() => {
-            // Then navigate to the page after the UI has updated
-            window.location.href = `/${page.id}`;
-          }, 100);
+            // Update the state to exit edit mode
+            setIsEditing(false);
+          }, 300);
 
           return; // Exit the function on success
         } else {
@@ -250,11 +332,24 @@ const EditPage = ({
         console.error(`Error saving new version on attempt ${currentAttempt}:`, error);
 
         if (currentAttempt >= maxAttempts) {
-          setError("Failed to save: " + (error.message || "Unknown error"));
+          // Provide more specific error messages based on error type
+          let errorMessage = "Failed to save";
+
+          if (error.name === 'ReferenceError') {
+            errorMessage = "Failed to save: Internal error with content processing";
+          } else if (error.name === 'SyntaxError') {
+            errorMessage = "Failed to save: Content format error";
+          } else if (error.message) {
+            errorMessage = "Failed to save: " + error.message;
+          } else {
+            errorMessage = "Failed to save: Unknown error";
+          }
+
+          setError(errorMessage);
           await logError(error, "EditPage.js");
 
           // Show error toast
-          toast.error("Failed to save: " + (error.message || "Unknown error"));
+          toast.error(errorMessage);
 
           // Ensure isSaving is set to false on final error
           setIsSaving(false);
@@ -269,10 +364,10 @@ const EditPage = ({
     // If we get here, all save attempts failed
     if (!saveSuccessful) {
       console.error("All save attempts failed");
-      setError("Failed to save after multiple attempts. Please try again later.");
+      setError("Failed to save after multiple attempts. Please refresh the page and try again.");
 
-      // Show error toast
-      toast.error("Failed to save. Please try again.");
+      // Show error toast with more specific instructions
+      toast.error("Failed to save. Please refresh the page and try again.");
 
       // Remove the loading overlay
       if (typeof window !== 'undefined') {
@@ -288,14 +383,10 @@ const EditPage = ({
   };
 
   const handleCancel = () => {
-    console.log('[DEBUG] EditPage - Cancel button clicked, redirecting to page view:', page.id);
-    setIsEditing(false);
+    console.log('[DEBUG] EditPage - Cancel button clicked, exiting edit mode:', page.id);
 
-    // Navigate to the page view
-    if (page && page.id) {
-      // Use window.location for more reliable navigation
-      window.location.href = `/${page.id}`;
-    }
+    // Simply exit edit mode without reloading the page
+    setIsEditing(false);
   };
 
   // Display error message if provided
@@ -346,16 +437,34 @@ const EditPage = ({
 
   // Handle content changes
   const handleContentChange = (content) => {
-    setEditorContent(content);
+    // CRITICAL FIX: Log the content being received from the editor
+    console.log('EditPage - handleContentChange called with content:', {
+      contentType: typeof content,
+      isArray: Array.isArray(content),
+      length: Array.isArray(content) ? content.length : 0
+    });
+
+    // CRITICAL FIX: Make a deep copy of the content to prevent reference issues
+    let contentCopy;
+    try {
+      contentCopy = JSON.parse(JSON.stringify(content));
+    } catch (e) {
+      console.error('Error making deep copy of content:', e);
+      contentCopy = content; // Fall back to original content if deep copy fails
+    }
+
+    setEditorContent(contentCopy);
 
     // Check if content has changed from the original
     try {
       const originalContent = typeof page.content === 'string'
         ? page.content
         : JSON.stringify(page.content);
-      const newContent = JSON.stringify(content);
+      const newContent = JSON.stringify(contentCopy);
 
-      setHasContentChanged(originalContent !== newContent);
+      const hasChanged = originalContent !== newContent;
+      console.log('Content changed:', hasChanged);
+      setHasContentChanged(hasChanged);
     } catch (e) {
       console.error('Error comparing content:', e);
       setHasContentChanged(true);

@@ -246,12 +246,21 @@ function SinglePageView({ params }) {
         setLoadingTimedOut(false);
         setLoadAttempts(0);
 
+        // Log the received data for debugging
+        console.log("SinglePageView: Data received from listenToPageById", {
+          hasError: !!data.error,
+          hasPageData: !!data.pageData,
+          hasVersionData: !!data.versionData,
+          timestamp: new Date().toISOString()
+        });
+
         // Force a re-render to ensure the page content is displayed
         window.requestAnimationFrame(() => {
           console.log("SinglePageView: Forcing re-render after data received");
         });
 
         if (data.error) {
+          console.error("SinglePageView: Error loading page:", data.error);
           setError(data.error);
           setIsLoading(false);
           return;
@@ -338,22 +347,96 @@ function SinglePageView({ params }) {
         if (data.versionData) {
           try {
             const contentString = data.versionData.content;
-            console.log("Received content update", {
+            console.log("SinglePageView: Received content update", {
               contentLength: contentString ? contentString.length : 0,
               isString: typeof contentString === 'string',
+              contentSample: typeof contentString === 'string' ? contentString.substring(0, 50) + '...' : 'not a string',
               timestamp: new Date().toISOString()
             });
 
-            const parsedContent = typeof contentString === 'string'
-              ? JSON.parse(contentString)
-              : contentString;
+            let parsedContent;
+
+            // Handle different content formats
+            if (typeof contentString === 'string') {
+              try {
+                // Check if content is already parsed (double parsing issue)
+                if (contentString.startsWith('[{"type":"paragraph"') || contentString.startsWith('[{\\\"type\\\":\\\"paragraph\\\"')) {
+                  parsedContent = JSON.parse(contentString);
+                  console.log("SinglePageView: Successfully parsed string content");
+                } else {
+                  // Content might be double-stringified, try to parse twice
+                  try {
+                    const firstParse = JSON.parse(contentString);
+                    if (typeof firstParse === 'string' &&
+                        (firstParse.startsWith('[{"type":"paragraph"') ||
+                         firstParse.startsWith('[{\\\"type\\\":\\\"paragraph\\\"'))) {
+                      parsedContent = JSON.parse(firstParse);
+                      console.log("SinglePageView: Successfully parsed double-stringified content");
+                    } else {
+                      parsedContent = firstParse;
+                      console.log("SinglePageView: Using first-level parsed content");
+                    }
+                  } catch (doubleParseError) {
+                    console.error("SinglePageView: Error parsing potentially double-stringified content:", doubleParseError);
+                    // Fall back to original parsing
+                    parsedContent = JSON.parse(contentString);
+                  }
+                }
+              } catch (parseError) {
+                console.error("SinglePageView: Error parsing string content:", parseError);
+                // Create a fallback content structure with the error message
+                parsedContent = [{
+                  type: "paragraph",
+                  children: [{ text: "Error loading content. Please try refreshing the page." }]
+                }];
+              }
+            } else if (Array.isArray(contentString)) {
+              // Content is already an array, use it directly
+              parsedContent = contentString;
+              console.log("SinglePageView: Using array content directly");
+            } else if (contentString && typeof contentString === 'object') {
+              // Content is an object, convert to array if needed
+              parsedContent = [contentString];
+              console.log("SinglePageView: Converted object content to array");
+            } else {
+              // Fallback for null or undefined content
+              parsedContent = [{
+                type: "paragraph",
+                children: [{ text: "No content available." }]
+              }];
+              console.log("SinglePageView: Using fallback empty content");
+            }
+
+            // Ensure content is an array
+            if (!Array.isArray(parsedContent)) {
+              parsedContent = parsedContent ? [parsedContent] : [];
+            }
+
+            // Deduplicate content items that might be duplicated in development environment
+            if (parsedContent.length > 0) {
+              const uniqueItems = [];
+              const seen = new Set();
+
+              parsedContent.forEach(item => {
+                // Create a simple hash of the item to detect duplicates
+                const itemHash = JSON.stringify(item);
+                if (!seen.has(itemHash)) {
+                  seen.add(itemHash);
+                  uniqueItems.push(item);
+                } else {
+                  console.log("SinglePageView: Filtered out duplicate content item");
+                }
+              });
+
+              parsedContent = uniqueItems;
+            }
 
             // Update editor state without comparing to avoid circular dependencies
-            console.log("Updating editor state with new content");
+            console.log("SinglePageView: Updating editor state with new content, items:", parsedContent.length);
             setEditorState(parsedContent);
             setEditorError(null); // Clear any previous errors
           } catch (error) {
-            console.error("Error parsing content:", error);
+            console.error("SinglePageView: Error processing content:", error);
             setEditorError("There was an error loading the editor. Please try refreshing the page.");
           }
         }
@@ -396,6 +479,139 @@ function SinglePageView({ params }) {
       }
     }
   }, [searchParams, isLoading, page, user, hasGroupAccess]);
+
+  // Listen for page-updated events to refresh the page data
+  useEffect(() => {
+    const handlePageUpdated = (event) => {
+      // Only refresh if this is the page that was updated
+      if (event.detail && event.detail.pageId === params.id) {
+        console.log('Page updated event received, refreshing page data');
+
+        // CRITICAL FIX: Don't set isLoading to true here, as it causes a flash of loading state
+        // when switching from edit to view mode
+        // setIsLoading(true);
+
+        listenToPageById(params.id, (data) => {
+          if (data.error) {
+            setError(data.error);
+          } else {
+            setPage(data.pageData || data);
+
+            // Update editor state with the new content
+            try {
+              // CRITICAL FIX: Prioritize content from versionData which is more reliable
+              const content = data.versionData?.content || data.pageData?.content || data.content;
+              if (content) {
+                console.log('SinglePageView: Updating editor state with content from page-updated event', {
+                  contentLength: content ? (typeof content === 'string' ? content.length : Array.isArray(content) ? content.length : 'unknown') : 0,
+                  contentType: typeof content
+                });
+
+                let parsedContent;
+
+                // Handle different content formats
+                if (typeof content === 'string') {
+                  try {
+                    // Check if content is already parsed (double parsing issue)
+                    if (content.startsWith('[{"type":"paragraph"') || content.startsWith('[{\\\"type\\\":\\\"paragraph\\\"')) {
+                      parsedContent = JSON.parse(content);
+                      console.log("SinglePageView: Successfully parsed string content from event");
+                    } else {
+                      // Content might be double-stringified, try to parse twice
+                      try {
+                        const firstParse = JSON.parse(content);
+                        if (typeof firstParse === 'string' &&
+                            (firstParse.startsWith('[{"type":"paragraph"') ||
+                             firstParse.startsWith('[{\\\"type\\\":\\\"paragraph\\\"'))) {
+                          parsedContent = JSON.parse(firstParse);
+                          console.log("SinglePageView: Successfully parsed double-stringified content from event");
+                        } else {
+                          parsedContent = firstParse;
+                          console.log("SinglePageView: Using first-level parsed content from event");
+                        }
+                      } catch (doubleParseError) {
+                        console.error("SinglePageView: Error parsing potentially double-stringified content from event:", doubleParseError);
+                        // Fall back to original parsing
+                        parsedContent = JSON.parse(content);
+                      }
+                    }
+                  } catch (parseError) {
+                    console.error("SinglePageView: Error parsing string content from event:", parseError);
+                    // Create a fallback content structure with the error message
+                    parsedContent = [{
+                      type: "paragraph",
+                      children: [{ text: "Error loading content. Please try refreshing the page." }]
+                    }];
+                  }
+                } else if (Array.isArray(content)) {
+                  // Content is already an array, use it directly
+                  parsedContent = content;
+                  console.log("SinglePageView: Using array content directly from event");
+                } else if (content && typeof content === 'object') {
+                  // Content is an object, convert to array if needed
+                  parsedContent = [content];
+                  console.log("SinglePageView: Converted object content to array from event");
+                } else {
+                  // Fallback for null or undefined content
+                  parsedContent = [{
+                    type: "paragraph",
+                    children: [{ text: "No content available." }]
+                  }];
+                  console.log("SinglePageView: Using fallback empty content from event");
+                }
+
+                // Ensure content is an array
+                if (!Array.isArray(parsedContent)) {
+                  parsedContent = parsedContent ? [parsedContent] : [];
+                }
+
+                // Deduplicate content items that might be duplicated in development environment
+                if (parsedContent.length > 0) {
+                  const uniqueItems = [];
+                  const seen = new Set();
+
+                  parsedContent.forEach(item => {
+                    // Create a simple hash of the item to detect duplicates
+                    const itemHash = JSON.stringify(item);
+                    if (!seen.has(itemHash)) {
+                      seen.add(itemHash);
+                      uniqueItems.push(item);
+                    } else {
+                      console.log("SinglePageView: Filtered out duplicate content item from event");
+                    }
+                  });
+
+                  parsedContent = uniqueItems;
+                }
+
+                setEditorState(parsedContent);
+
+                // Force a re-render to ensure the content is displayed
+                window.requestAnimationFrame(() => {
+                  console.log("SinglePageView: Forcing re-render after content update from event");
+                });
+              }
+            } catch (error) {
+              console.error('SinglePageView: Error parsing updated content from event:', error);
+            }
+          }
+          // setIsLoading(false);
+        }, user?.uid || null);
+      }
+    };
+
+    // Add event listener
+    if (typeof window !== 'undefined') {
+      window.addEventListener('page-updated', handlePageUpdated);
+    }
+
+    // Clean up
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('page-updated', handlePageUpdated);
+      }
+    };
+  }, [params.id, user]);
 
   useEffect(() => {
     if (page && addRecentPage && Array.isArray(recentPages)) {

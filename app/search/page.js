@@ -6,16 +6,16 @@ import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { ClearableInput } from '../components/ui/clearable-input';
-import { Share2, Search, Loader2 } from 'lucide-react';
+import { Share2, Search, Loader2, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';
-import RecentSearches from '../components/RecentSearches';
+import SavedSearches from '../components/SavedSearches';
 import RecentPages from '../components/RecentPages';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { generateFallbackSearchResults, shouldUseFallbackForTerm } from '../utils/clientSideFallbackSearch';
-import { addRecentSearch } from '../utils/recentSearches';
+import { saveSearchQuery } from '../utils/savedSearches';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -260,20 +260,10 @@ export default function SearchPage() {
     }
   };
 
-  // Function to save search term to recent searches with debounce
+  // Function to save search term (no longer needed for recent searches)
   const saveSearchTerm = (term) => {
-    // Clear any existing timeout
-    if (saveSearchTimeoutRef.current) {
-      clearTimeout(saveSearchTimeoutRef.current);
-    }
-
-    // Only save non-empty search terms
-    if (term && term.trim()) {
-      // Set a new timeout to save the search term after 500ms
-      saveSearchTimeoutRef.current = setTimeout(() => {
-        addRecentSearch(term.trim(), user?.uid);
-      }, 500);
-    }
+    // This function is kept for compatibility but doesn't do anything now
+    // We'll use explicit saveSearchQuery for pinned searches instead
   };
 
   // Update debounced search term when query changes
@@ -462,7 +452,7 @@ export default function SearchPage() {
       </div>
 
       <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex">
+        <div className="flex relative">
           <ClearableInput
             type="text"
             placeholder="Search for pages, users..."
@@ -486,23 +476,46 @@ export default function SearchPage() {
               }
             }}
           />
+          {/* Pin button - only show when there's text in the search field */}
+          {query.trim() && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+              onClick={() => {
+                const trimmedQuery = query.trim();
+                if (trimmedQuery) {
+                  const saved = saveSearchQuery(trimmedQuery, user?.uid);
+                  if (saved) {
+                    toast.success("Search saved");
+                    // Force refresh the saved searches component
+                    const savedSearchesEvent = new Event('savedSearchesUpdated');
+                    window.dispatchEvent(savedSearchesEvent);
+                  } else {
+                    toast.info("This search is already saved");
+                  }
+                }
+              }}
+              title="Save this search"
+            >
+              <Pin className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </form>
 
       {/* Show empty search state when there's no query */}
       {!query && (
         <div className="empty-search-state">
-          {/* Recent Searches */}
-          <RecentSearches
+          {/* Saved Searches */}
+          <SavedSearches
             userId={user?.uid}
             onSelect={(searchTerm) => {
               // Save scroll position before updating results
               saveScrollPosition();
 
               setQuery(searchTerm);
-
-              // Explicitly save search term when user clicks on a recent search
-              saveSearchTerm(searchTerm);
 
               // Update URL with search query
               const url = new URL(window.location);
@@ -523,9 +536,6 @@ export default function SearchPage() {
               saveScrollPosition();
 
               setQuery(recommendation);
-
-              // Explicitly save search term when user clicks on a recommendation
-              saveSearchTerm(recommendation);
 
               // Update URL with search query
               const url = new URL(window.location);

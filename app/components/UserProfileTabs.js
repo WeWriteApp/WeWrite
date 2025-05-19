@@ -88,11 +88,9 @@ export default function UserProfileTabs({ profile }) {
     visibleTabs.push("groups");
   }
 
-  // Add following tab
-  visibleTabs.push("following");
-
-  // Add private tab only for the current user
+  // Add following tab only for the current user (privacy restriction)
   if (isCurrentUser) {
+    visibleTabs.push("following");
     visibleTabs.push("private");
   }
 

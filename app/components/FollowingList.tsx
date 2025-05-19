@@ -51,8 +51,11 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   useEffect(() => {
     if (!userId) return;
 
+    // Privacy restriction: Only load followed users for the current user
+    if (!isCurrentUser) return;
+
     loadFollowedUsers();
-  }, [userId]);
+  }, [userId, isCurrentUser]);
 
   const loadFollowedUsers = async (loadMore = false) => {
     try {

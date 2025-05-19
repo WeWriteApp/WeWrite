@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, lazy, Suspense, useCallback, useMem
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { Check, ArrowRight, Flame, Loader, User } from 'lucide-react';
+import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
@@ -496,36 +496,41 @@ const LandingPage = () => {
               <a
                 href="#activity"
                 onClick={(e) => scrollToSection(e, '#activity')}
-                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Activity className="h-4 w-4" />
                 Recent Activity
               </a>
               <a
                 href="#trending"
                 onClick={(e) => scrollToSection(e, '#trending')}
-                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Flame className="h-4 w-4" />
                 Trending
               </a>
               <a
                 href="#features"
                 onClick={(e) => scrollToSection(e, '#features')}
-                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <FileText className="h-4 w-4" />
                 Roadmap
               </a>
               <a
                 href="#supporters"
                 onClick={(e) => scrollToSection(e, '#supporters')}
-                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Heart className="h-4 w-4" />
                 Support us
               </a>
               <a
                 href="#about"
                 onClick={(e) => scrollToSection(e, '#about')}
-                className={`text-sm font-medium hover:text-primary transition-colors ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Info className="h-4 w-4" />
                 About
               </a>
 
@@ -592,36 +597,41 @@ const LandingPage = () => {
               <a
                 href="#activity"
                 onClick={(e) => scrollToSection(e, '#activity')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'activity' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Activity className="h-3 w-3" />
                 Activity
               </a>
               <a
                 href="#trending"
                 onClick={(e) => scrollToSection(e, '#trending')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'trending' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Flame className="h-3 w-3" />
                 Trending
               </a>
               <a
                 href="#features"
                 onClick={(e) => scrollToSection(e, '#features')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <FileText className="h-3 w-3" />
                 Roadmap
               </a>
               <a
                 href="#supporters"
                 onClick={(e) => scrollToSection(e, '#supporters')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Heart className="h-3 w-3" />
                 Support us
               </a>
               <a
                 href="#about"
                 onClick={(e) => scrollToSection(e, '#about')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
+                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
               >
+                <Info className="h-3 w-3" />
                 About
               </a>
 
@@ -645,7 +655,10 @@ const LandingPage = () => {
         <section id="activity" ref={activityRef} className="py-8 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-8 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Recent Activity</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                <Activity className="h-7 w-7" />
+                Recent Activity
+              </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 See what's happening on WeWrite right now
               </p>
@@ -667,7 +680,10 @@ const LandingPage = () => {
         <section id="trending" ref={trendingRef} className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-8 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Pages</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                <Flame className="h-7 w-7" />
+                Trending Pages
+              </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Discover the most popular content on WeWrite
               </p>
@@ -689,13 +705,16 @@ const LandingPage = () => {
         <section id="features" className="py-16 md:py-20 bg-background">
           <div className="container mx-auto px-6 max-w-6xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Roadmap</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                <FileText className="h-7 w-7" />
+                Roadmap
+              </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
                 Discover what makes WeWrite special and what's coming next.
               </p>
               <Button variant="outline" size="lg" className="gap-2 mx-auto" asChild>
                 <Link href="/zRNwhNgIEfLFo050nyAT">
-                  Read our detailed Roadmap <ArrowRight className="h-4 w-4" />
+                  <FileText className="h-4 w-4" /> Read our detailed Roadmap <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -783,7 +802,10 @@ const LandingPage = () => {
         <section id="supporters" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-6 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Support us</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                <Heart className="h-7 w-7" />
+                Support us
+              </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
                 Special thanks to those who have supported WeWrite while we're still in beta.
               </p>
@@ -792,7 +814,7 @@ const LandingPage = () => {
                 className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Landing Page Support Button')}
               >
-                Support on OpenCollective <ArrowRight className="h-4 w-4" />
+                <Heart className="h-4 w-4" /> Support on OpenCollective <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
 
@@ -819,7 +841,10 @@ const LandingPage = () => {
         <section id="about" className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">About WeWrite</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
+                <Info className="h-7 w-7" />
+                About WeWrite
+              </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Built with modern technologies for the best user experience
               </p>

@@ -846,31 +846,7 @@ const UnifiedEditor = forwardRef((props, ref) => {
 
       {/* Global Link Editor removed to avoid duplicate LinkEditor components */}
 
-      {/* Editor help tooltip */}
-      <div className="absolute top-2 right-2 z-10">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                aria-label="Editor help"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                  <path d="M12 17h.01"/>
-                </svg>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p className="text-sm">
-                <strong>Tip:</strong> Type <code>@</code> to insert a link to a page or user.
-                Use <code>\@</code> to type a literal @ symbol.
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {/* Editor help tooltip removed */}
 
       <Slate
         editor={editor}

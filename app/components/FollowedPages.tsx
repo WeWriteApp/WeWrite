@@ -59,8 +59,15 @@ export default function FollowedPages({
       return;
     }
 
+    // Privacy restriction: Only load followed pages for the current user
+    if (!isCurrentUser) {
+      setLoading(false);
+      setError("This information is private");
+      return;
+    }
+
     loadFollowedPages();
-  }, [userId]);
+  }, [userId, isCurrentUser]);
 
   const loadFollowedPages = async (loadMore = false) => {
     try {
