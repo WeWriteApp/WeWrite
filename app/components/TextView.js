@@ -607,9 +607,12 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                     {/* Only add a space if this isn't the first paragraph */}
                     {index > 0 && ' '}
 
-                    {/* Paragraph number - CRITICAL FIX: Ensure correct paragraph numbering */}
+                    {/* Paragraph number - FIXED: Ensure correct paragraph numbering */}
                     <span className="paragraph-number text-xs ml-1">
-                      {index + 1}
+                      {/* Add data attribute for debugging */}
+                      <span data-paragraph-index={index + 1}>
+                        {index + 1}
+                      </span>
                     </span>{'\u00A0'}
 
                     {/* Paragraph content without any breaks */}
@@ -797,8 +800,8 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     >
       {/* Normal mode - paragraph with inline number at beginning */}
       <div className="paragraph-with-number">
-        {/* Paragraph number inline at beginning - CRITICAL FIX: Ensure correct paragraph numbering */}
-        <span className="paragraph-number-inline select-none">{index + 1}</span>
+        {/* Paragraph number inline at beginning - FIXED: Ensure correct paragraph numbering */}
+        <span className="paragraph-number-inline select-none" data-paragraph-index={index + 1}>{index + 1}</span>
 
         <p className={`text-left ${TEXT_SIZE} leading-normal ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
           {/* Paragraph content */}
@@ -819,9 +822,13 @@ const LinkNode = ({ node }) => {
   // Use pageId from node if available, otherwise extract from href
   const pageId = node.pageId || extractPageId(href);
 
-  // Determine if this is an external link
-  // Check both the isExternal flag and the URL format
-  const isExternal = node.isExternal || node.className === 'external-link' || isExternalLink(href);
+  // Determine if this is an external link - FIXED: More robust external link detection
+  // Check multiple properties to ensure we catch all external links
+  const isExternal =
+    node.isExternal === true ||
+    node.className === 'external-link' ||
+    isExternalLink(href) ||
+    (href && (href.startsWith('http://') || href.startsWith('https://')));
 
   // Log link details for debugging
   console.log('LINK_DEBUG: LinkNode rendering with:', {
@@ -921,9 +928,16 @@ const LinkNode = ({ node }) => {
       setShowExternalLinkModal(true);
     };
 
+    // FIXED: Ensure we have a valid display text for external links
+    // If node has children with text, use that as display text
+    let finalDisplayText = displayText || href;
+    if (node.children && node.children.length > 0 && node.children[0].text) {
+      finalDisplayText = node.children[0].text;
+    }
+
     console.log('LINK_DEBUG: Rendering external link with:', {
       href,
-      displayText,
+      displayText: finalDisplayText,
       isExternal,
       className: node.className
     });
@@ -937,7 +951,7 @@ const LinkNode = ({ node }) => {
             className="external-link"
             onClick={handleExternalLinkClick}
           >
-            {displayText || href}
+            {finalDisplayText}
             <ExternalLink size={14} className="ml-1 inline-block" />
           </PillLink>
         </span>

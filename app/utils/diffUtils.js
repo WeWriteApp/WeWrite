@@ -59,9 +59,15 @@ export function generateDiffContent(currentContent, previousContent) {
           previousChildren: previousParagraph.children.length
         });
 
-        // Check for links in the paragraph
-        const currentLinks = currentParagraph.children.filter(child => child.type === 'link');
-        const previousLinks = previousParagraph.children.filter(child => child.type === 'link');
+        // FIXED: Special handling for links, especially external links
+        // First, identify and process links in both paragraphs
+        const currentLinks = currentParagraph.children.filter(child =>
+          child.type === 'link' || child.isExternal || child.className === 'external-link'
+        );
+
+        const previousLinks = previousParagraph.children.filter(child =>
+          child.type === 'link' || child.isExternal || child.className === 'external-link'
+        );
 
         if (currentLinks.length > 0 || previousLinks.length > 0) {
           console.log(`DIFF_DEBUG: Paragraph ${i} contains links:`, {
@@ -82,12 +88,25 @@ export function generateDiffContent(currentContent, previousContent) {
             });
           }
 
-          // Mark added links
+          // FIXED: Improved link comparison for external links
           currentLinks.forEach(currentLink => {
-            const linkExists = previousLinks.some(prevLink =>
-              prevLink.url === currentLink.url &&
-              extractTextFromChildren(prevLink.children) === extractTextFromChildren(currentLink.children)
-            );
+            // Determine if this is an external link
+            const isExternal =
+              currentLink.isExternal === true ||
+              currentLink.className === 'external-link' ||
+              (currentLink.url && (currentLink.url.startsWith('http://') || currentLink.url.startsWith('https://')));
+
+            // Use different comparison logic for external vs internal links
+            const linkExists = previousLinks.some(prevLink => {
+              // For external links, just compare URLs
+              if (isExternal) {
+                return prevLink.url === currentLink.url;
+              }
+
+              // For internal links, compare both URL and content
+              return prevLink.url === currentLink.url &&
+                extractTextFromChildren(prevLink.children) === extractTextFromChildren(currentLink.children);
+            });
 
             if (!linkExists) {
               console.log('DIFF_DEBUG: Marking link as added:', currentLink.url);
@@ -101,17 +120,36 @@ export function generateDiffContent(currentContent, previousContent) {
             }
           });
 
-          // Add removed links
+          // FIXED: Improved removed link handling for external links
           previousLinks.forEach(prevLink => {
-            const linkExists = currentLinks.some(currentLink =>
-              currentLink.url === prevLink.url &&
-              extractTextFromChildren(currentLink.children) === extractTextFromChildren(prevLink.children)
-            );
+            // Determine if this is an external link
+            const isExternal =
+              prevLink.isExternal === true ||
+              prevLink.className === 'external-link' ||
+              (prevLink.url && (prevLink.url.startsWith('http://') || prevLink.url.startsWith('https://')));
+
+            // Use different comparison logic for external vs internal links
+            const linkExists = currentLinks.some(currentLink => {
+              // For external links, just compare URLs
+              if (isExternal) {
+                return currentLink.url === prevLink.url;
+              }
+
+              // For internal links, compare both URL and content
+              return currentLink.url === prevLink.url &&
+                extractTextFromChildren(currentLink.children) === extractTextFromChildren(prevLink.children);
+            });
 
             if (!linkExists) {
               console.log('DIFF_DEBUG: Adding removed link:', prevLink.url);
               // Create a copy of the link with removed flag
-              const removedLink = { ...prevLink, removed: true };
+              const removedLink = {
+                ...prevLink,
+                removed: true,
+                // Ensure we preserve external link properties
+                isExternal: isExternal,
+                className: prevLink.className || (isExternal ? 'external-link' : undefined)
+              };
               // Also mark the link's children as removed
               if (removedLink.children) {
                 removedLink.children = removedLink.children.map(child => ({
@@ -206,8 +244,8 @@ function extractTextFromChildren(children) {
       return text + child.text;
     }
 
-    // Handle link nodes specifically
-    if (child.type === 'link') {
+    // FIXED: Better handling of link nodes, especially external links
+    if (child.type === 'link' || child.isExternal || child.className === 'external-link') {
       let linkText = '';
 
       // Extract text from link children
@@ -220,8 +258,18 @@ function extractTextFromChildren(children) {
         linkText = child.url;
       }
 
-      // Add special markers to indicate it's a link
-      return text + `[${linkText}]`;
+      // Determine if this is an external link
+      const isExternal =
+        child.isExternal === true ||
+        child.className === 'external-link' ||
+        (child.url && (child.url.startsWith('http://') || child.url.startsWith('https://')));
+
+      // Add special markers to indicate it's a link, with different format for external links
+      if (isExternal) {
+        return text + `[${linkText}→]`; // Arrow indicates external link
+      } else {
+        return text + `[${linkText}]`;
+      }
     }
 
     // Handle other node types with children

@@ -752,7 +752,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
               type: "link",
               url: item.url,
               children: [{ text: displayText }],
-              isExternal: true
+              isExternal: true,
+              className: "external-link" // FIXED: Add className for consistent identification
             },
             { at: selectedLinkPath }
           );
@@ -766,7 +767,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           type: "link",
           url: item.url,
           children: [{ text: displayText }],
-          isExternal: true
+          isExternal: true,
+          className: "external-link" // FIXED: Add className for consistent identification
         };
 
         // Make sure we have a valid selection
@@ -897,7 +899,34 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           </div>
         );
       default:
-        const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
+        // FIXED: More reliable paragraph numbering
+        // Try multiple approaches to get the correct index
+        let defaultIndex = 0;
+
+        try {
+          // First try to get the path from props
+          if (props.element.path) {
+            defaultIndex = props.element.path[0];
+          }
+          // Then try to find the path using ReactEditor
+          else if (ReactEditor.findPath) {
+            const path = ReactEditor.findPath(editor, element);
+            defaultIndex = path[0];
+          }
+          // Finally, try to get the index from the DOM
+          else {
+            const domNode = ReactEditor.toDOMNode(editor, element);
+            if (domNode) {
+              const paragraphs = Array.from(domNode.parentElement.querySelectorAll('.paragraph-with-number'));
+              defaultIndex = paragraphs.indexOf(domNode);
+            }
+          }
+        } catch (error) {
+          console.error("Error determining paragraph index:", error);
+          // Fall back to 0 if all methods fail
+          defaultIndex = 0;
+        }
+
         return (
           <div {...attributes} className="paragraph-with-number py-2.5">
             <span
@@ -1380,10 +1409,18 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
   // Handle save for external links
   const handleExternalSubmit = () => {
     if (isExternalValid) {
+      // FIXED: Ensure external links have proper structure
+      // Add protocol if missing
+      let finalUrl = externalUrl;
+      if (!/^https?:\/\//i.test(finalUrl)) {
+        finalUrl = 'https://' + finalUrl;
+      }
+
       onSelect({
-        url: externalUrl,
-        displayText: displayText,
-        isExternal: true
+        url: finalUrl,
+        displayText: displayText || externalUrl,
+        isExternal: true,
+        type: "external"
       });
     }
   };
