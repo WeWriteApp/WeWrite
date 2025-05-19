@@ -220,13 +220,44 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       }
 
       // CRITICAL FIX: Log the parsed content structure for debugging
-      console.log("TextView: Content processed successfully", {
+      console.log("CONTENT_DEBUG: Content processed successfully", {
         parsedContentType: typeof contents,
         isArray: Array.isArray(contents),
         length: Array.isArray(contents) ? contents.length : 0,
         firstItem: Array.isArray(contents) && contents.length > 0 ?
           JSON.stringify(contents[0]).substring(0, 50) + '...' : 'none'
       });
+
+      // Check for links in the content
+      if (Array.isArray(contents)) {
+        let foundLinks = [];
+
+        // Search for links in the content
+        contents.forEach((node, i) => {
+          if (node.type === 'link') {
+            foundLinks.push({
+              location: `top-level-${i}`,
+              node: JSON.stringify(node)
+            });
+          } else if (node.children && Array.isArray(node.children)) {
+            node.children.forEach((child, j) => {
+              if (child.type === 'link') {
+                foundLinks.push({
+                  location: `paragraph-${i}-child-${j}`,
+                  node: JSON.stringify(child)
+                });
+              }
+            });
+          }
+        });
+
+        // Log any found links
+        if (foundLinks.length > 0) {
+          console.log(`CONTENT_DEBUG: Found ${foundLinks.length} links in content:`, foundLinks);
+        } else {
+          console.log('CONTENT_DEBUG: No links found in content');
+        }
+      }
 
       // Validate content structure - ensure each item has type and children
       if (Array.isArray(contents)) {
@@ -793,25 +824,71 @@ const LinkNode = ({ node }) => {
   const isExternal = node.isExternal || node.className === 'external-link' || isExternalLink(href);
 
   // Log link details for debugging
-  console.log('LinkNode rendering with:', {
+  console.log('LINK_DEBUG: LinkNode rendering with:', {
     href,
     pageId,
     nodePageId: node.pageId,
     isExternal,
     className: node.className,
+    linkId: node.linkId,
+    nodeType: node.type,
     nodeStructure: JSON.stringify(node)
   });
 
+  // Log the node's children
+  if (node.children) {
+    console.log('LINK_DEBUG: Link children:', JSON.stringify(node.children));
+  }
+
+  // Detailed logging of node properties
+  console.log('LINK_DEBUG: Node properties:', Object.keys(node));
+  console.log('LINK_DEBUG: Node children:', node.children ? JSON.stringify(node.children) : 'No children');
+
   // Extract text content from children array if available
   const getTextFromNode = (node) => {
-    if (node.displayText) return node.displayText;
-    if (node.text) return node.text;
-    if (node.content) return node.content;
+    console.log('LINK_DEBUG: Extracting text from node:', node);
+
+    // First check for explicit display text
+    if (node.displayText) {
+      console.log('LINK_DEBUG: Using displayText:', node.displayText);
+      return node.displayText;
+    }
+
+    // Then check for direct text property
+    if (node.text) {
+      console.log('LINK_DEBUG: Using text property:', node.text);
+      return node.text;
+    }
+
+    // Check for content property
+    if (node.content) {
+      console.log('LINK_DEBUG: Using content property:', node.content);
+      return node.content;
+    }
+
     // Check for children array and extract text
     if (node.children && Array.isArray(node.children)) {
-      return node.children.map(child => child.text || '').join('');
+      const childrenText = node.children.map(child => {
+        // Handle text nodes in children
+        if (child.text) return child.text;
+        // Handle nested structures
+        if (child.children) return getTextFromNode(child);
+        return '';
+      }).join('');
+
+      console.log('LINK_DEBUG: Extracted text from children:', childrenText);
+      if (childrenText) return childrenText;
     }
-    return href;
+
+    // For external links, use the URL as fallback
+    if (isExternal && href) {
+      console.log('LINK_DEBUG: Using href as fallback for external link:', href);
+      return href;
+    }
+
+    // Last resort fallback
+    console.log('LINK_DEBUG: No text found, using fallback');
+    return href || 'Link';
   };
 
   const displayText = getTextFromNode(node);
@@ -844,6 +921,13 @@ const LinkNode = ({ node }) => {
       setShowExternalLinkModal(true);
     };
 
+    console.log('LINK_DEBUG: Rendering external link with:', {
+      href,
+      displayText,
+      isExternal,
+      className: node.className
+    });
+
     return (
       <>
         <span className="inline-block">
@@ -853,7 +937,7 @@ const LinkNode = ({ node }) => {
             className="external-link"
             onClick={handleExternalLinkClick}
           >
-            {displayText}
+            {displayText || href}
             <ExternalLink size={14} className="ml-1 inline-block" />
           </PillLink>
         </span>

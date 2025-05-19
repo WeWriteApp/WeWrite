@@ -238,7 +238,19 @@ const UnifiedEditor = forwardRef((props, ref) => {
       };
 
       // Log the link structure for debugging
-      console.log('Inserting link with structure:', JSON.stringify(link));
+      console.log('LINK_DEBUG: Inserting link with structure:', JSON.stringify(link));
+
+      // Log the editor selection state before insertion
+      console.log('Editor selection before insertion:',
+        editor.selection ? {
+          anchor: editor.selection.anchor,
+          focus: editor.selection.focus,
+          isCollapsed: Range.isCollapsed(editor.selection)
+        } : 'No selection');
+
+      // Add a unique identifier to help track this link
+      link.linkId = `link_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('LINK_DEBUG: Added unique linkId:', link.linkId);
 
       if (editor.selection) {
         const [parentNode, parentPath] = Editor.parent(
@@ -248,30 +260,145 @@ const UnifiedEditor = forwardRef((props, ref) => {
 
         if (editor.selection.anchor.offset === editor.selection.focus.offset) {
           // No text is selected, insert the link
-          Transforms.insertNodes(editor, link);
+          console.log('LINK_DEBUG: Inserting link node with no selection');
 
-          // Move cursor to the end of the link
-          Transforms.collapse(editor, { edge: 'end' });
+          try {
+            // Create a paragraph node if needed
+            const [parentNode, parentPath] = Editor.parent(
+              editor,
+              editor.selection.focus.path
+            );
 
-          // Insert a space after the link for better editing experience
-          Transforms.insertText(editor, ' ');
+            console.log('LINK_DEBUG: Parent node type:', parentNode.type);
+
+            // Insert the link node
+            Transforms.insertNodes(editor, link);
+
+            // Get the path to the inserted link
+            const linkEntry = Editor.above(editor, {
+              match: n => n.type === 'link'
+            });
+
+            if (linkEntry) {
+              const [linkNode, linkPath] = linkEntry;
+              console.log('LINK_DEBUG: Found inserted link at path:', linkPath);
+
+              // Create a point after the link
+              const endPoint = Editor.end(editor, linkPath);
+              console.log('LINK_DEBUG: End point after link:', endPoint);
+
+              // Select the point after the link
+              Transforms.select(editor, endPoint);
+              console.log('LINK_DEBUG: Selected end point');
+
+              // Insert a space after the link
+              Transforms.insertText(editor, ' ');
+              console.log('LINK_DEBUG: Inserted space after link');
+            } else {
+              console.log('LINK_DEBUG: Could not find inserted link, using fallback');
+              // Fallback: just move to the end and insert a space
+              Transforms.collapse(editor, { edge: 'end' });
+              Transforms.insertText(editor, ' ');
+            }
+          } catch (error) {
+            console.error('LINK_DEBUG: Error during cursor positioning:', error);
+            // Last resort fallback
+            try {
+              Transforms.collapse(editor, { edge: 'end' });
+              Transforms.insertText(editor, ' ');
+            } catch (fallbackError) {
+              console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
+            }
+          }
         } else {
           // Text is selected, wrap it in a link
-          Transforms.wrapNodes(editor, link, { split: true });
-          Transforms.collapse(editor, { edge: 'end' });
+          console.log('LINK_DEBUG: Wrapping selected text in link');
 
-          // Insert a space after the link for better editing experience
-          Transforms.insertText(editor, ' ');
+          try {
+            // Wrap the selected text in a link
+            Transforms.wrapNodes(editor, link, { split: true });
+
+            // Get the path to the inserted link
+            const linkEntry = Editor.above(editor, {
+              match: n => n.type === 'link'
+            });
+
+            if (linkEntry) {
+              const [linkNode, linkPath] = linkEntry;
+              console.log('LINK_DEBUG: Found wrapped link at path:', linkPath);
+
+              // Create a point after the link
+              const endPoint = Editor.end(editor, linkPath);
+              console.log('LINK_DEBUG: End point after link:', endPoint);
+
+              // Select the point after the link
+              Transforms.select(editor, endPoint);
+              console.log('LINK_DEBUG: Selected end point');
+
+              // Insert a space after the link
+              Transforms.insertText(editor, ' ');
+              console.log('LINK_DEBUG: Inserted space after link');
+            } else {
+              console.log('LINK_DEBUG: Could not find wrapped link, using fallback');
+              // Fallback: just move to the end and insert a space
+              Transforms.collapse(editor, { edge: 'end' });
+              Transforms.insertText(editor, ' ');
+            }
+          } catch (error) {
+            console.error('LINK_DEBUG: Error during cursor positioning after wrap:', error);
+            // Last resort fallback
+            try {
+              Transforms.collapse(editor, { edge: 'end' });
+              Transforms.insertText(editor, ' ');
+            } catch (fallbackError) {
+              console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
+            }
+          }
         }
       } else {
         // No selection, just insert the link at the current position
-        Transforms.insertNodes(editor, link);
+        console.log('LINK_DEBUG: No editor selection, inserting link at default position');
 
-        // Move cursor to the end of the link
-        Transforms.collapse(editor, { edge: 'end' });
+        try {
+          // Insert the link node
+          Transforms.insertNodes(editor, link);
 
-        // Insert a space after the link for better editing experience
-        Transforms.insertText(editor, ' ');
+          // Get the path to the inserted link
+          const linkEntry = Editor.above(editor, {
+            match: n => n.type === 'link'
+          });
+
+          if (linkEntry) {
+            const [linkNode, linkPath] = linkEntry;
+            console.log('LINK_DEBUG: Found inserted link at path:', linkPath);
+
+            // Create a point after the link
+            const endPoint = Editor.end(editor, linkPath);
+            console.log('LINK_DEBUG: End point after link:', endPoint);
+
+            // Select the point after the link
+            Transforms.select(editor, endPoint);
+            console.log('LINK_DEBUG: Selected end point');
+
+            // Insert a space after the link
+            Transforms.insertText(editor, ' ');
+            console.log('LINK_DEBUG: Inserted space after link');
+          } else {
+            console.log('LINK_DEBUG: Could not find inserted link, using fallback');
+            // Fallback: just move to the end and insert a space
+            Transforms.collapse(editor, { edge: 'end' });
+            Transforms.insertText(editor, ' ');
+          }
+        } catch (error) {
+          console.error('LINK_DEBUG: Error during cursor positioning:', error);
+          // Last resort fallback
+          try {
+            Transforms.collapse(editor, { edge: 'end' });
+            Transforms.insertText(editor, ' ');
+          } catch (fallbackError) {
+            console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
+          }
+        }
       }
       return true;
     } catch (error) {
