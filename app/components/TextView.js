@@ -789,7 +789,8 @@ const LinkNode = ({ node }) => {
   const pageId = node.pageId || extractPageId(href);
 
   // Determine if this is an external link
-  const isExternal = isExternalLink(href);
+  // Check both the isExternal flag and the URL format
+  const isExternal = node.isExternal || node.className === 'external-link' || isExternalLink(href);
 
   // Log link details for debugging
   console.log('LinkNode rendering with:', {
@@ -797,6 +798,7 @@ const LinkNode = ({ node }) => {
     pageId,
     nodePageId: node.pageId,
     isExternal,
+    className: node.className,
     nodeStructure: JSON.stringify(node)
   });
 
@@ -836,11 +838,23 @@ const LinkNode = ({ node }) => {
 
   // For external links, use the PillLink component with a modal confirmation
   if (isExternal) {
+    // Handle click on external link
+    const handleExternalLinkClick = (e) => {
+      e.preventDefault();
+      setShowExternalLinkModal(true);
+    };
+
     return (
       <>
         <span className="inline-block">
-          <PillLink href={href} isPublic={true} className="external-link">
+          <PillLink
+            href={href}
+            isPublic={true}
+            className="external-link"
+            onClick={handleExternalLinkClick}
+          >
             {displayText}
+            <ExternalLink size={14} className="ml-1 inline-block" />
           </PillLink>
         </span>
 

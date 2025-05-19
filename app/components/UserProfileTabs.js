@@ -36,7 +36,7 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
         {pageList.map((page) => (
           <div key={page.id} className="flex-none max-w-full">
             <PillLink
-              href={`/pages/${page.id}`}
+              href={`/${page.id}`}
               variant="primary"
               isPublic={page.isPublic}
               className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
@@ -488,7 +488,9 @@ export default function UserProfileTabs({ profile }) {
                 </div>
                 <h3 className="text-lg font-medium mb-2">User Groups</h3>
                 <p className="text-sm text-muted-foreground max-w-md mb-4">
-                  Groups that {isCurrentUser ? "you belong" : `${profile?.username || 'this user'} belongs`} to will appear here.
+                  {isCurrentUser
+                    ? "Groups that you belong to will appear here."
+                    : `Only public groups that ${profile?.username || 'this user'} belongs to will be visible here.`}
                 </p>
                 {isCurrentUser && (
                   <Link href="/groups">

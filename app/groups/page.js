@@ -66,10 +66,12 @@ export default function GroupsPage() {
         </div>
         <Button
           className="gap-1.5 rounded-2xl"
-          onClick={() => router.push('/group/new')}
+          asChild
         >
-          <Plus className="h-4 w-4" />
-          Create New Group
+          <Link href="/group/new">
+            <Plus className="h-4 w-4" />
+            Create New Group
+          </Link>
         </Button>
       </div>
 

@@ -42,6 +42,38 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Inline script to detect and recover from blank pages
+            window.addEventListener('load', function() {
+              // Wait for a reasonable time after load to check if page is blank
+              setTimeout(function() {
+                // Check if the page appears to be blank (minimal content)
+                var hasMinimalContent = document.body.innerHTML.length < 1000;
+                var hasNoVisibleElements = document.querySelectorAll('div, p, h1, h2, h3, button, a').length < 5;
+
+                if (hasMinimalContent || hasNoVisibleElements) {
+                  console.warn('Detected potential blank page, attempting recovery...');
+
+                  // Add a flag to prevent reload loops
+                  var reloadCount = parseInt(localStorage.getItem('blankPageReloadCount') || '0');
+
+                  if (reloadCount < 2) { // Limit to 2 reload attempts
+                    localStorage.setItem('blankPageReloadCount', (reloadCount + 1).toString());
+
+                    // Force reload after a short delay
+                    setTimeout(function() {
+                      window.location.reload(true);
+                    }, 500);
+                  }
+                } else {
+                  // Reset the counter if page loaded successfully
+                  localStorage.setItem('blankPageReloadCount', '0');
+                }
+              }, 3000);
+            });
+          `
+        }} />
       </head>
       <body className={inter.className}>
         <ThemeProvider

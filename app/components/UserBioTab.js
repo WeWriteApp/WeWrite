@@ -260,8 +260,7 @@ export default function UserBioTab({ profile }) {
   return (
     <div className="space-y-4">
       {/* Header with edit button */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">About {profile.username || "this user"}</h2>
+      <div className="flex justify-end items-center">
         {/* Only show Edit button when there is content and not in edit mode */}
         {isProfileOwner && !isEditing && bioContent && (
           <Button

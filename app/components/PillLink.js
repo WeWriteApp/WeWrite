@@ -60,13 +60,17 @@ export const PillLink = forwardRef(({
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
 
-  // PillLink components should never show group attribution
+  // Format byline based on whether the page belongs to a group or user
   let formattedByline = null;
 
-  // Only show byline if it's not related to a group
-  if (byline && isPageLinkType && !groupId) {
-    // For pages without groupId, format as "by [username]"
-    formattedByline = `by ${byline}`;
+  if (byline && isPageLinkType) {
+    if (groupId) {
+      // For pages with groupId, format as "in [groupName]"
+      formattedByline = `in ${byline}`;
+    } else {
+      // For pages without groupId, format as "by [username]"
+      formattedByline = `by ${byline}`;
+    }
   }
 
   // Ensure we have a valid href to prevent errors
@@ -99,8 +103,10 @@ export const PillLink = forwardRef(({
   // IMPORTANT: This must match the styles in SlateEditor.js LinkComponent to ensure consistent appearance
   // between view mode and edit mode. Any changes here should also be made in SlateEditor.js.
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
-  // Allow wrapping for all pill styles to fix premature wrapping issue
-  const textWrapStyle = 'break-words';
+
+  // Only allow wrapping for classic style, truncate for filled and outline styles
+  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'truncate whitespace-nowrap';
+
   const baseStyles = `
     inline-flex items-center
     my-0.5

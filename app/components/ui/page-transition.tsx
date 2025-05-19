@@ -36,17 +36,29 @@ export function PageTransition({
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
-  const [content, setContent] = useState(children);
+  const [content, setContent] = useState<React.ReactNode>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const initialRenderRef = useRef(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const maxLoadingTimeRef = useRef<NodeJS.Timeout | null>(null);
+  const navigationStartTimeRef = useRef<number | null>(null);
 
-  // Handle initial render - don't show loading spinner on first page load
+  // Handle component mount - important for hydration safety
   useEffect(() => {
-    if (initialRenderRef.current) {
-      // On initial render, immediately set content without loading state
-      setContent(children);
-      initialRenderRef.current = false;
+    setIsMounted(true);
+
+    // Set initial content immediately to prevent blank page
+    setContent(children);
+
+    // Mark initial render as complete
+    initialRenderRef.current = false;
+
+    // Record navigation start time for performance tracking
+    navigationStartTimeRef.current = Date.now();
+
+    // Dispatch an event that other components can listen for
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('page-transition-mounted'));
     }
 
     // Cleanup function to clear any pending timers
@@ -62,16 +74,34 @@ export function PageTransition({
 
   // Track route changes to show loading state
   useEffect(() => {
-    // Skip the initial render check
+    // Skip if not mounted yet (prevents hydration issues)
+    if (!isMounted) return;
+
+    // Skip the initial render
     if (initialRenderRef.current) return;
 
     // If the path or search params changed
-    if (pathname !== prevPathname || searchParams.toString() !== new URLSearchParams(window.location.search).toString()) {
+    const currentSearchParams = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).toString()
+      : '';
+
+    if (pathname !== prevPathname || searchParams.toString() !== currentSearchParams) {
       // Start loading state
       setIsLoading(true);
 
+      // Record navigation start time
+      navigationStartTimeRef.current = Date.now();
+
       // Store the previous pathname
       setPrevPathname(pathname);
+
+      // Clear any existing timers
+      if (maxLoadingTimeRef.current) {
+        clearTimeout(maxLoadingTimeRef.current);
+      }
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
 
       // Set a maximum loading time to prevent infinite loading
       maxLoadingTimeRef.current = setTimeout(() => {
@@ -79,6 +109,16 @@ export function PageTransition({
           console.warn('PageTransition: Maximum loading time reached, forcing completion');
           setIsLoading(false);
           setContent(children);
+
+          // Dispatch an event for analytics
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('page-transition-timeout', {
+              detail: {
+                pathname,
+                duration: Date.now() - (navigationStartTimeRef.current || Date.now())
+              }
+            }));
+          }
         }
       }, 3000); // 3 seconds maximum loading time
 
@@ -88,14 +128,29 @@ export function PageTransition({
         // Update content and finish loading
         setContent(children);
         setIsLoading(false);
+
+        // Log navigation performance
+        if (navigationStartTimeRef.current) {
+          const duration = Date.now() - navigationStartTimeRef.current;
+          console.log(`Page transition completed in ${duration}ms`);
+          navigationStartTimeRef.current = null;
+        }
       }, 300); // Short delay for better UX
     } else {
       // If it's not a navigation change, just update the content
-      setContent(children);
+      // Use a small delay to ensure React has time to process updates
+      setTimeout(() => {
+        setContent(children);
+      }, 0);
     }
-  }, [pathname, searchParams, children, prevPathname, isLoading]);
+  }, [pathname, searchParams, children, prevPathname, isLoading, isMounted]);
 
-  // If transitions are disabled, just render the children
+  // If not mounted yet, render a minimal placeholder to prevent blank screen
+  if (!isMounted) {
+    return <div className={cn("min-h-screen bg-background", className)}></div>;
+  }
+
+  // If transitions are disabled, just render the children directly
   if (!enableTransitions) {
     return <>{children}</>;
   }
@@ -115,14 +170,14 @@ export function PageTransition({
       {/* Page content with animation */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={pathname + searchParams.toString()}
+          key={pathname + (searchParams?.toString() || '')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="w-full"
         >
-          {content}
+          {content || children}
         </motion.div>
       </AnimatePresence>
     </div>

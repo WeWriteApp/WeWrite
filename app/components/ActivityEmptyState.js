@@ -24,27 +24,29 @@ export default function ActivityEmptyState({ mode = 'all' }) {
   const isFollowingMode = mode === 'following';
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-        <Search className="h-8 w-8 text-primary" />
+    <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-muted/30 rounded-lg border border-border/40">
+      <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+        <Search className="h-6 w-6 text-primary" />
       </div>
 
-      <h3 className="text-xl font-semibold mb-2">
-        {isFollowingMode ? 'No followed activity' : 'No activity yet'}
+      <h3 className="text-lg font-semibold mb-2">
+        {isFollowingMode ? 'No followed activity' : 'No activity to display'}
       </h3>
 
-      <p className="text-muted-foreground mb-6 max-w-md">
+      <p className="text-muted-foreground mb-4 max-w-md text-sm">
         {isFollowingMode
           ? 'You haven\'t followed any pages yet, or your followed pages don\'t have any recent activity.'
-          : 'Follow pages to see their updates in your activity feed. Discover interesting content by searching for pages.'}
+          : 'Activity will appear here as you and others create and edit pages. Discover content by searching for pages.'}
       </p>
 
       <Button
         onClick={handleSearchClick}
+        variant="outline"
+        size="sm"
         className="flex items-center gap-2"
       >
         <Search className="h-4 w-4" />
-        Search for pages
+        Discover pages
       </Button>
     </div>
   );

@@ -17,6 +17,8 @@ export const DataProvider = ({ children }) => {
   const [forceLoaded, setForceLoaded] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState(null);
   const [recoveryAttempted, setRecoveryAttempted] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const initialRenderRef = useRef(true);
 
   // Use the optimized pages hook, passing in the userId if the user is authenticated
   const {
@@ -32,8 +34,33 @@ export const DataProvider = ({ children }) => {
   // Derive loading state with timeout protection
   const [loading, setLoading] = useState(pagesLoading);
 
+  // Mark hydration as complete after initial render
+  useEffect(() => {
+    // Set hydrated state to true after component mounts
+    setHydrated(true);
+
+    // Listen for page transition events
+    const handlePageTransitionMounted = () => {
+      console.log("DataProvider: Detected page transition mounted event");
+      // Reset recovery state on new page transitions
+      setRecoveryAttempted(false);
+    };
+
+    window.addEventListener('page-transition-mounted', handlePageTransitionMounted);
+
+    return () => {
+      window.removeEventListener('page-transition-mounted', handlePageTransitionMounted);
+    };
+  }, []);
+
   // Update loading state when pagesLoading changes
   useEffect(() => {
+    // Skip if not hydrated yet to prevent client/server mismatch
+    if (!hydrated && initialRenderRef.current) {
+      initialRenderRef.current = false;
+      return;
+    }
+
     // Track when loading starts
     if (pagesLoading && !loadingStartTime) {
       setLoadingStartTime(Date.now());
@@ -216,16 +243,13 @@ export const DataProvider = ({ children }) => {
     }
   }, [user?.uid]);
 
-  // Function to reset loading state and attempt recovery
+  // Function to reset loading state and attempt recovery with enhanced error handling
   const resetLoading = useCallback(() => {
     console.log("DataProvider: Manually resetting loading state");
 
-    // Reset states
-    setForceLoaded(false);
-    setRecoveryAttempted(false);
-    setLoadingStartTime(Date.now()); // Start a new loading timer
-    setLoading(true); // Force loading state to true
-    setErrorVisible(false); // Hide any error messages
+    // First, try to force complete any existing loading state
+    setForceLoaded(true);
+    setLoading(false);
 
     // Clear any existing timeouts
     if (loadingTimeoutRef.current) {
@@ -237,24 +261,41 @@ export const DataProvider = ({ children }) => {
       shortTimeoutRef.current = null;
     }
 
-    // Use the refreshPages function directly instead of dispatching an event
-    if (refreshPages) {
-      refreshPages();
-    } else {
-      // Fallback to the event if refreshPages is not available
-      const refreshEvent = new CustomEvent('force-refresh-pages');
-      window.dispatchEvent(refreshEvent);
+    // Hide any error messages
+    setErrorVisible(false);
+
+    // Dispatch an event that other components can listen for
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('loading-force-completed', {
+        detail: { source: 'DataProvider', reason: 'manual-reset' }
+      }));
     }
 
-    // Set up new timeouts
-    shortTimeoutRef.current = setTimeout(() => {
-      console.warn("DataProvider: Short recovery timeout reached after manual reset");
-      // If still loading, force it to complete
-      if (pagesLoading) {
+    // After a short delay, attempt to refresh data
+    setTimeout(() => {
+      // Reset states to prepare for a fresh data load
+      setForceLoaded(false);
+      setRecoveryAttempted(false);
+      setLoadingStartTime(Date.now()); // Start a new loading timer
+
+      // Use the refreshPages function directly instead of dispatching an event
+      if (refreshPages) {
+        console.log("DataProvider: Attempting data refresh after reset");
+        refreshPages();
+      } else {
+        // Fallback to the event if refreshPages is not available
+        const refreshEvent = new CustomEvent('force-refresh-pages');
+        window.dispatchEvent(refreshEvent);
+      }
+
+      // Set up new timeouts with more aggressive recovery
+      shortTimeoutRef.current = setTimeout(() => {
+        console.warn("DataProvider: Short recovery timeout reached after manual reset");
+        // If still loading, force it to complete
         setForceLoaded(true);
         setLoading(false);
-      }
-    }, 5000);
+      }, 3000); // Reduced from 5000ms to 3000ms for faster recovery
+    }, 100);
   }, [pagesLoading, refreshPages]);
 
   return (

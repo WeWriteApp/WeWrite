@@ -525,14 +525,7 @@ const LandingPage = () => {
                 <Heart className="h-4 w-4" />
                 Support us
               </a>
-              <a
-                href="#about"
-                onClick={(e) => scrollToSection(e, '#about')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Info className="h-4 w-4" />
-                About
-              </a>
+
 
             </nav>
           </div>
@@ -626,14 +619,7 @@ const LandingPage = () => {
                 <Heart className="h-3 w-3" />
                 Support us
               </a>
-              <a
-                href="#about"
-                onClick={(e) => scrollToSection(e, '#about')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'about' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Info className="h-3 w-3" />
-                About
-              </a>
+
 
             </div>
           </div>
@@ -837,41 +823,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* About Section */}
-        <section id="about" className="py-16 md:py-20 bg-muted/30">
-          <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-16 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <Info className="h-7 w-7" />
-                About WeWrite
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Built with modern technologies for the best user experience
-              </p>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              {techStack.map((tech, index) => (
-                <div
-                  key={index}
-                  className={`${fadeInClass}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <Card className="h-full hover:shadow-lg transition-all duration-200">
-                    <CardHeader>
-                      <CardTitle>{tech.title}</CardTitle>
-                      <CardDescription>
-                        {tech.description}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </div>
-              ))}
-            </div>
-
-
-          </div>
-        </section>
 
 
       </main>

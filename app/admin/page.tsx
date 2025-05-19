@@ -594,14 +594,7 @@ export default function AdminPage() {
               {featureFlags.map(flag => (
                 <div
                   key={flag.id}
-                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer relative"
-                  onClick={(e) => {
-                    // Only toggle if not clicking on the switch itself and not loading
-                    if (!isLoading && !(e.target as HTMLElement).closest('.switch-container')) {
-                      console.log(`Clicked on feature flag card: ${flag.id}`);
-                      toggleFeatureFlag(flag.id as FeatureFlag);
-                    }
-                  }}
+                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors relative"
                 >
                   {/* Add a highlight effect when hovering */}
                   <div className="absolute inset-0 border-2 border-primary opacity-0 rounded-lg pointer-events-none transition-opacity hover:opacity-30 group-hover:opacity-100"></div>
@@ -615,18 +608,22 @@ export default function AdminPage() {
                         </span>
                       )}
                     </div>
-                    <div
-                      className="switch-container"
-                      onClick={(e) => {
-                        // Prevent double toggling when clicking directly on the switch
-                        e.stopPropagation();
-                      }}
-                    >
-                      <Switch
-                        checked={flag.enabled}
-                        onCheckedChange={() => toggleFeatureFlag(flag.id as FeatureFlag)}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/admin/features/${flag.id}`)}
                         disabled={isLoading}
-                      />
+                      >
+                        Manage
+                      </Button>
+                      <div className="switch-container">
+                        <Switch
+                          checked={flag.enabled}
+                          onCheckedChange={() => router.push(`/admin/features/${flag.id}`)}
+                          disabled={isLoading}
+                        />
+                      </div>
                     </div>
                   </div>
                   <span className="text-sm text-muted-foreground">{flag.description}</span>

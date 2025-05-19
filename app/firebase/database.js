@@ -1150,11 +1150,25 @@ function extractLinksFromNodes(nodes) {
   function traverse(node) {
     // Check if the node is a link
     if (node.type === 'link' && node.url) {
-      links.push({
+      // Create a link object with all relevant properties
+      const linkObj = {
         url: node.url,
         pageId: node.pageId,
         pageTitle: node.pageTitle
-      });
+      };
+
+      // Add additional properties if they exist
+      if (node.isExternal) linkObj.isExternal = true;
+      if (node.className) linkObj.className = node.className;
+      if (node.isPageLink) linkObj.isPageLink = true;
+      if (node.isUser) linkObj.isUser = true;
+      if (node.userId) linkObj.userId = node.userId;
+
+      // Add the link to the array
+      links.push(linkObj);
+
+      // Log the extracted link for debugging
+      console.log('Extracted link:', linkObj);
     }
 
     // Recursively check children if they exist
@@ -1164,7 +1178,12 @@ function extractLinksFromNodes(nodes) {
   }
 
   // Start traversal
-  nodes.forEach(traverse);
+  if (Array.isArray(nodes)) {
+    nodes.forEach(traverse);
+  } else if (nodes && typeof nodes === 'object') {
+    // Handle case where nodes is a single object
+    traverse(nodes);
+  }
 
   return links;
 }

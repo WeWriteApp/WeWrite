@@ -187,11 +187,20 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
         )}
 
         {!loading && !error && activities.length > 0 && (
-          <div className="space-y-3 w-full">
+          <div
+            className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollBehavior: 'smooth',
+              scrollSnapType: 'x proximity',
+              overscrollBehavior: 'contain'
+            }}
+          >
             {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
-              <div key={`${activity.pageId}-${index}`} className="h-[180px]">
+              <div key={`${activity.pageId}-${index}`} className="min-w-[300px] w-[300px] h-[180px]">
                 <ActivityCard
                   activity={activity}
+                  isCarousel={true}
                   key={`activity-card-${activity.pageId}-${index}`}
                 />
               </div>
@@ -252,6 +261,12 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
                   : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full'
               }`}
+              style={!useGridLayout ? {
+                WebkitOverflowScrolling: 'touch',
+                scrollBehavior: 'smooth',
+                scrollSnapType: 'x proximity',
+                overscrollBehavior: 'contain'
+              } : undefined}
             >
               {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
                 <div key={`${activity.pageId}-${index}`} className={useGridLayout ? "h-[180px]" : "min-w-[300px] w-[300px] h-[180px]"}>

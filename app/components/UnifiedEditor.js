@@ -210,18 +210,30 @@ const UnifiedEditor = forwardRef((props, ref) => {
         if (match) pageId = match[1];
       }
 
+      // Log the link type for debugging
+      console.log('Link type:', { isUserLinkType, isPageLinkType, isExternalLinkType });
+
       // Create the link node with appropriate properties
       const link = {
         type: 'link',
         url,
         children: [{ text: text || url }],
         // Add additional properties based on link type
-        ...(isUserLinkType && { isUser: true, userId: options.userId }),
+        ...(isUserLinkType && {
+          isUser: true,
+          userId: options.userId,
+          className: 'user-link'
+        }),
         ...(isPageLinkType && {
           pageId: pageId || options.pageId,
-          pageTitle: options.pageTitle
+          pageTitle: options.pageTitle,
+          isPageLink: true,
+          className: 'page-link'
         }),
-        ...(isExternalLinkType && { isExternal: true }),
+        ...(isExternalLinkType && {
+          isExternal: true,
+          className: 'external-link'
+        }),
         ...(options.isPublic === false && { isPublic: false })
       };
 
@@ -237,14 +249,29 @@ const UnifiedEditor = forwardRef((props, ref) => {
         if (editor.selection.anchor.offset === editor.selection.focus.offset) {
           // No text is selected, insert the link
           Transforms.insertNodes(editor, link);
+
+          // Move cursor to the end of the link
+          Transforms.collapse(editor, { edge: 'end' });
+
+          // Insert a space after the link for better editing experience
+          Transforms.insertText(editor, ' ');
         } else {
           // Text is selected, wrap it in a link
           Transforms.wrapNodes(editor, link, { split: true });
           Transforms.collapse(editor, { edge: 'end' });
+
+          // Insert a space after the link for better editing experience
+          Transforms.insertText(editor, ' ');
         }
       } else {
         // No selection, just insert the link at the current position
         Transforms.insertNodes(editor, link);
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: 'end' });
+
+        // Insert a space after the link for better editing experience
+        Transforms.insertText(editor, ' ');
       }
       return true;
     } catch (error) {

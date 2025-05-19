@@ -22,6 +22,7 @@ import AdminFeaturesWrapper from "./components/AdminFeaturesWrapper";
 import FeatureFlagCookieManager from "./components/FeatureFlagCookieManager";
 import { PageTransition } from "./components/ui/page-transition";
 import ErrorBoundary from "./components/ErrorBoundary";
+import HydrationSafetyWrapper from "./components/HydrationSafetyWrapper";
 
 
 
@@ -70,9 +71,11 @@ export default function ClientLayout({ children }) {
                                   <main className="flex-grow">
                                     <AdminFeaturesWrapper>
                                       <ErrorBoundary>
-                                        <PageTransition enableTransitions={!isAuthPage}>
-                                          {children}
-                                        </PageTransition>
+                                        <HydrationSafetyWrapper>
+                                          <PageTransition enableTransitions={!isAuthPage}>
+                                            {children}
+                                          </PageTransition>
+                                        </HydrationSafetyWrapper>
                                       </ErrorBoundary>
                                     </AdminFeaturesWrapper>
                                   </main>

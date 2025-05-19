@@ -234,6 +234,11 @@ export function extractTextContent(contentJsonString) {
       return '';
     }
 
+    // Log the content for debugging
+    console.log('Extracting text from content:', typeof contentJsonString === 'string'
+      ? contentJsonString.substring(0, 100) + '...'
+      : 'Object');
+
     // Parse JSON if it's a string
     let content;
     if (typeof contentJsonString === 'string') {
@@ -269,6 +274,16 @@ export function extractTextContent(contentJsonString) {
             text += node;
           } else if (node.text) {
             text += node.text;
+          } else if (node.type === 'link') {
+            // For link nodes, extract text from children and add special markers
+            if (node.children) {
+              const linkText = extractText(node.children);
+              // Add the link text with special markers to indicate it's a link
+              text += `[${linkText}]`;
+            } else if (node.url) {
+              // If no children but has URL, use the URL as text
+              text += `[${node.url}]`;
+            }
           } else if (node.children) {
             text += extractText(node.children);
           } else if (node.content) {
@@ -295,6 +310,16 @@ export function extractTextContent(contentJsonString) {
         nodes.forEach(node => {
           if (node.text) {
             text += node.text;
+          } else if (node.type === 'link' || node.type === 'custom-link') {
+            // For link nodes, extract text from children and add special markers
+            if (node.children) {
+              const linkText = extractText(node.children);
+              // Add the link text with special markers to indicate it's a link
+              text += `[${linkText}]`;
+            } else if (node.url || node.__url) {
+              // If no children but has URL, use the URL as text
+              text += `[${node.url || node.__url}]`;
+            }
           } else if (node.children) {
             text += extractText(node.children);
           }

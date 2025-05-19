@@ -161,19 +161,10 @@ export const openExternalLink = (url: string, analyticsLabel?: string): void => 
       }
     }
 
-    // Check if we're in PWA mode on iOS
-    if (window.navigator.standalone ||
-        // @ts-ignore: This property exists on iOS Safari
-        window.navigator.standalone === true) {
-      // In iOS PWA mode, use location.href to open in default browser
-      window.location.href = url;
-    } else if (isPWA()) {
-      // In other PWA modes, also use location.href for consistent behavior
-      window.location.href = url;
-    } else {
-      // In regular browser mode, use window.open with _blank target
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    // Always use location.href to open external links in the device's default browser
+    // This ensures consistent behavior across all platforms and prevents issues with
+    // the status bar when returning to the app from an external link
+    window.location.href = url;
   } catch (error) {
     console.error('Error opening external link:', error);
     // Fallback to changing location directly if window.open fails

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronRight, Database } from 'lucide-react';
 import { db } from '../firebase/database';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from './ui/use-toast';
@@ -41,6 +42,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     return null;
   }
 
+  const router = useRouter();
   const { toast } = useToast();
   const { resetBannerState } = usePWA();
   const [activeTab, setActiveTab] = useState('users');
@@ -505,8 +507,48 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
               {/* Admin Tools Tab */}
               <TabsContent value="tools" className="space-y-4">
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium">PWA Testing</h3>
+                  {/* Feature Flags Section */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Feature Flags</h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/admin/setup-features')}
+                      >
+                        <Database className="h-4 w-4 mr-1" />
+                        Setup Database
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {featureFlags.map((flag) => (
+                        <div key={flag.id} className="flex items-center justify-between p-4 border rounded-2xl hover:bg-accent/5 transition-colors">
+                          <div className="flex-1">
+                            <div className="font-medium">{flag.name}</div>
+                            <div className="text-sm text-muted-foreground">{flag.description}</div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Switch
+                              checked={flag.enabled}
+                              onCheckedChange={() => toggleFeatureFlag(flag.id)}
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/admin/features/${flag.id}`)}
+                            >
+                              <ChevronRight className="h-4 w-4 mr-1" />
+                              Manage
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* PWA Testing Section */}
+                  <div className="space-y-2 mt-6">
+                    <h3 className="text-lg font-semibold">PWA Testing</h3>
                     <p className="text-sm text-muted-foreground">
                       Test the PWA installation banner by forcing it to appear.
                     </p>
