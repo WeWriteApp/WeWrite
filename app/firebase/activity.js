@@ -7,7 +7,8 @@ import {
   limit as firestoreLimit,
   getDocs,
   doc,
-  getDoc
+  getDoc,
+  select
 } from "firebase/firestore";
 import { app } from "./config";
 import { getBioAndAboutActivities } from "./bioActivity";
@@ -83,7 +84,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
           const historyQuery = query(
             collection(db, "pages", pageId, "history"),
             orderBy("timestamp", "desc"),
-            limit(1)
+            firestoreLimit(1)
           );
 
           const historySnapshot = await getDocs(historyQuery);
