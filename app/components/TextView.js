@@ -228,27 +228,44 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
           JSON.stringify(contents[0]).substring(0, 50) + '...' : 'none'
       });
 
-      // Check for links in the content
+      // IMPROVED: More thorough link detection in content
       if (Array.isArray(contents)) {
         let foundLinks = [];
 
-        // Search for links in the content
-        contents.forEach((node, i) => {
+        // Recursive function to find links at any nesting level
+        const findLinksInNode = (node, path) => {
+          // Check if the node itself is a link
           if (node.type === 'link') {
             foundLinks.push({
-              location: `top-level-${i}`,
+              location: path,
               node: JSON.stringify(node)
             });
-          } else if (node.children && Array.isArray(node.children)) {
-            node.children.forEach((child, j) => {
+          }
+
+          // Check children if they exist
+          if (node.children && Array.isArray(node.children)) {
+            node.children.forEach((child, index) => {
+              const childPath = `${path}-child-${index}`;
+
+              // If child is a link, add it
               if (child.type === 'link') {
                 foundLinks.push({
-                  location: `paragraph-${i}-child-${j}`,
+                  location: childPath,
                   node: JSON.stringify(child)
                 });
               }
+
+              // Recursively check child's children
+              if (child.children && Array.isArray(child.children)) {
+                findLinksInNode(child, childPath);
+              }
             });
           }
+        };
+
+        // Process each top-level node
+        contents.forEach((node, i) => {
+          findLinksInNode(node, `node-${i}`);
         });
 
         // Log any found links
@@ -302,6 +319,8 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
 
       contents = uniqueItems;
     }
+
+    // No protocol link detection needed
 
     // Update state with the processed content
     setParsedContents(contents);
@@ -399,57 +418,13 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     }
   };
 
-  // Handle click to edit
+  // Handle click to edit - WYSIWYG smooth transition
   const handleActiveLine = (index) => {
     setActiveLineIndex(index);
     if (canEdit && setIsEditing) {
-      // Show loading state immediately
-      if (typeof window !== 'undefined') {
-        // Remove any existing loading overlays first
-        const existingOverlay = document.getElementById('edit-loading-overlay');
-        if (existingOverlay) {
-          existingOverlay.remove();
-        }
-
-        // Add a loading overlay
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
-        loadingOverlay.id = 'edit-loading-overlay';
-
-        const spinner = document.createElement('div');
-        spinner.className = 'loader loader-md';
-        loadingOverlay.appendChild(spinner);
-
-        document.body.appendChild(loadingOverlay);
-
-        // Set a timeout to remove the overlay after 10 seconds (failsafe)
-        setTimeout(() => {
-          const overlay = document.getElementById('edit-loading-overlay');
-          if (overlay) {
-            overlay.remove();
-          }
-        }, 10000);
-      }
-
-      // Set editing state immediately
+      // Set editing state immediately without animations or overlays
+      // for a smoother WYSIWYG transition
       setIsEditing(true);
-
-      // Remove loading overlay after a short delay
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          const overlay = document.getElementById('edit-loading-overlay');
-          if (overlay) {
-            overlay.remove();
-          }
-
-          // Show a toast notification to indicate edit mode
-          if (window.toast) {
-            window.toast.info('Entering edit mode');
-          }
-
-          // No need to re-align line numbers since we're using inline paragraph numbers
-        }
-      }, 300);
     }
   };
 
@@ -469,100 +444,72 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   // Enable animateOnNavigation to ensure smooth transitions between pages
   const shouldAnimate = useControlledAnimation(componentId, false, true);
 
-  return (
-    <div className="relative">
-      <motion.div
-        className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
-          isScrolled ? 'pb-16' : ''
-        } ${
-          canEdit ? 'relative' : ''
-        } min-h-screen`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        onClick={() => {
-          if (canEdit && setIsEditing) {
-            // Show loading state immediately
-            if (typeof window !== 'undefined') {
-              // Remove any existing loading overlays first
-              const existingOverlay = document.getElementById('edit-loading-overlay');
-              if (existingOverlay) {
-                existingOverlay.remove();
-              }
-
-              // Add a loading overlay
-              const loadingOverlay = document.createElement('div');
-              loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
-              loadingOverlay.id = 'edit-loading-overlay';
-
-              const spinner = document.createElement('div');
-              spinner.className = 'loader loader-md';
-              loadingOverlay.appendChild(spinner);
-
-              document.body.appendChild(loadingOverlay);
-
-              // Set a timeout to remove the overlay after 10 seconds (failsafe)
-              setTimeout(() => {
-                const overlay = document.getElementById('edit-loading-overlay');
-                if (overlay) {
-                  overlay.remove();
-                }
-              }, 10000);
+  // Wrap the component in an error boundary
+  try {
+    return (
+      <div className="relative">
+        <div
+          className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
+            isScrolled ? 'pb-16' : ''
+          } ${
+            canEdit ? 'relative' : ''
+          } min-h-screen`}
+          onClick={() => {
+            if (canEdit && setIsEditing) {
+              // Set editing state immediately without animations or overlays
+              // for a smoother WYSIWYG transition
+              setIsEditing(true);
             }
+          }}
+          title={canEdit ? "Click anywhere to edit" : ""}
+        >
+          {canEdit && (
+            <div className="absolute top-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 rounded-bl-md">
+              Click to edit
+            </div>
+          )}
 
-            // Set editing state immediately
-            setIsEditing(true);
+          {!parsedContents && !isSearch && (
+            <div className="p-6 text-muted-foreground">No content available</div>
+          )}
 
-            // Remove loading overlay after a short delay
-            setTimeout(() => {
-              if (typeof window !== 'undefined') {
-                const overlay = document.getElementById('edit-loading-overlay');
-                if (overlay) {
-                  overlay.remove();
-                }
-              }
-            }, 300);
-          }
-        }}
-        title={canEdit ? "Click anywhere to edit" : ""}
-      >
-        {canEdit && (
-          <div className="absolute top-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 rounded-bl-md">
-            Click to edit
-          </div>
-        )}
-
-        {!parsedContents && !isSearch && (
-          <div className="p-6 text-muted-foreground">No content available</div>
-        )}
-
-        {parsedContents && (
-          <RenderContent
-            key={renderKey}
-            contents={parsedContents}
-            language={language}
-            loadedParagraphs={loadedParagraphs}
-            effectiveMode={effectiveMode}
-            canEdit={canEdit}
-            activeLineIndex={activeLineIndex}
-            onActiveLine={handleActiveLine}
-            showDiff={showDiff}
-          />
-        )}
-      </motion.div>
-    </div>
-  );
+          {parsedContents && (
+            <RenderContent
+              key={renderKey}
+              contents={parsedContents}
+              language={language}
+              loadedParagraphs={loadedParagraphs}
+              effectiveMode={effectiveMode}
+              canEdit={canEdit}
+              activeLineIndex={activeLineIndex}
+              onActiveLine={handleActiveLine}
+              showDiff={showDiff}
+            />
+          )}
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('Error rendering TextView:', error);
+    return (
+      <div className="p-6 text-muted-foreground">
+        Error loading content. Please try refreshing the page.
+      </div>
+    );
+  }
 };
 
 export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false }) => {
-  // Use the line mode settings
-  const { lineMode } = useLineSettings();
+  // Wrap in try-catch to handle any rendering errors
+  try {
+    // Use the line mode settings
+    const { lineMode } = useLineSettings();
 
-  // Always use the latest lineMode from context to ensure immediate updates
-  // Fall back to effectiveMode only if lineMode is not available
-  const mode = lineMode || effectiveMode || LINE_MODES.NORMAL;
+    // Always use the latest lineMode from context to ensure immediate updates
+    // Fall back to effectiveMode only if lineMode is not available
+    const mode = lineMode || effectiveMode || LINE_MODES.NORMAL;
 
-  if (!contents) return null;
+    if (!contents) return null;
 
   /**
    * DENSE MODE IMPLEMENTATION
@@ -608,18 +555,20 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                     {index > 0 && ' '}
 
                     {/* Paragraph number - FIXED: Ensure correct paragraph numbering */}
-                    <span className="paragraph-number text-xs ml-1">
-                      {/* Add data attribute for debugging */}
-                      <span data-paragraph-index={index + 1}>
-                        {index + 1}
-                      </span>
+                    <span className="paragraph-number text-xs ml-1 select-none" aria-hidden="true" data-paragraph-index={index + 1}>
+                      {index + 1}
                     </span>{'\u00A0'}
 
                     {/* Paragraph content without any breaks */}
                     {node.children && node.children.map((child, childIndex) => {
+
+                      // IMPROVED: More robust link handling in dense mode
                       if (child.type === 'link') {
+                        console.log('LINK_DEBUG: Found link in dense mode:', JSON.stringify(child));
                         return <LinkNode key={childIndex} node={child} />;
-                      } else if (child.text) {
+                      }
+                      // Handle text nodes
+                      else if (child.text) {
                         let className = '';
                         if (child.bold) className += ' font-bold';
                         if (child.italic) className += ' italic';
@@ -637,6 +586,27 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                           <span key={childIndex} className={className || undefined}>
                             {child.text}
                           </span>
+                        );
+                      }
+                      // IMPROVED: Handle other node types that might contain links
+                      else if (child.children && Array.isArray(child.children)) {
+                        console.log('LINK_DEBUG: Found node with children in dense mode:', JSON.stringify(child));
+
+
+
+                        return (
+                          <React.Fragment key={childIndex}>
+                            {child.children.map((grandchild, grandchildIndex) => {
+
+
+                              if (grandchild.type === 'link') {
+                                return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} />;
+                              } else if (grandchild.text) {
+                                return <span key={`${childIndex}-${grandchildIndex}`}>{grandchild.text}</span>;
+                              }
+                              return null;
+                            })}
+                          </React.Fragment>
                         );
                       }
                       return null;
@@ -676,6 +646,15 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 
   // If it's a single node, render it directly
   return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine, showDiff);
+
+  } catch (error) {
+    console.error('Error rendering content:', error);
+    return (
+      <div className="p-6 text-muted-foreground">
+        Error rendering content. Please try refreshing the page.
+      </div>
+    );
+  }
 };
 
 // Render content based on node type
@@ -723,8 +702,8 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
   // Define consistent text size for all modes
   const TEXT_SIZE = "text-base"; // 1rem (16px) for all modes
 
-  // Spacing is now handled by paragraph-with-hanging-indent class
-  const spacingClass = '';
+  // Use the same spacing class as in SlateEditor
+  const spacingClass = 'py-2.5';
 
   // Determine which mode we're in to set the appropriate animation delay
   const isInDenseMode = lineMode === LINE_MODES.DENSE;
@@ -744,7 +723,16 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
   // Helper function to render child nodes
   const renderChild = (child, i) => {
+
+    // Debug log for link nodes
     if (child.type === 'link') {
+
+      console.log('PARAGRAPH_DEBUG: Rendering link in paragraph:', {
+        index: i,
+        linkData: JSON.stringify(child),
+        hasChildren: child.children ? child.children.length : 0,
+        childrenText: child.children && child.children[0] ? child.children[0].text : 'No text in children'
+      });
       return <LinkNode key={i} node={child} />;
     } else if (child.text) {
       let className = '';
@@ -778,32 +766,38 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     return null;
   };
 
-  // Normal mode with motion animations - staggered entry for paragraphs
+  // WYSIWYG mode - consistent with edit mode styling
   return (
     <motion.div
       ref={paragraphRef}
       id={`paragraph-${index + 1}`}
-      className={`group relative ${spacingClass} ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      className={`group relative ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{
-        type: "spring",
-        stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-        damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
-        mass: ANIMATION_CONSTANTS.SPRING_MASS,
-        delay: animationDelay // Use the mode-appropriate delay
+        duration: 0.2,
+        ease: "easeOut"
       }}
       onClick={handleClick}
       onMouseEnter={() => canEdit && setLineHovered(true)}
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Normal mode - paragraph with inline number at beginning */}
-      <div className="paragraph-with-number">
-        {/* Paragraph number inline at beginning - FIXED: Ensure correct paragraph numbering */}
-        <span className="paragraph-number-inline select-none" data-paragraph-index={index + 1}>{index + 1}</span>
+      {/* WYSIWYG mode - paragraph with inline number at beginning - matches edit mode */}
+      <div className="paragraph-with-number py-2.5">
+        {/* Paragraph number inline at beginning - matches edit mode styling */}
+        <span
+          className="paragraph-number-inline select-none"
+          style={{
+            pointerEvents: 'none',
+            top: '0.5rem', /* Fixed position aligned with first line of text */
+            lineHeight: '1.5' /* Match the line height of paragraph text */
+          }}
+          data-paragraph-index={index + 1}
+          aria-hidden="true"
+        >{index + 1}</span>
 
-        <p className={`text-left ${TEXT_SIZE} leading-normal ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
+        <p className={`inline text-left text-base leading-normal ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
           {/* Paragraph content */}
           {node.children && node.children.map((child, i) => renderChild(child, i))}
           {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
@@ -817,6 +811,8 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
 const LinkNode = ({ node }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
+
+  // CRITICAL FIX: More robust URL extraction
   const href = node.url || node.href || node.link || '#';
 
   // Use pageId from node if available, otherwise extract from href
@@ -830,6 +826,15 @@ const LinkNode = ({ node }) => {
     isExternalLink(href) ||
     (href && (href.startsWith('http://') || href.startsWith('https://')));
 
+  // Determine if this is a protocol link
+  const isProtocolLink =
+    node.className?.includes('protocol-link') ||
+    node.isProtocolLink === true ||
+    (node.children?.[0]?.text === "WeWrite as a decentralized open protocol");
+
+  // Create a string representation of the node for additional checks
+  const nodeString = JSON.stringify(node);
+
   // Log link details for debugging
   console.log('LINK_DEBUG: LinkNode rendering with:', {
     href,
@@ -839,7 +844,9 @@ const LinkNode = ({ node }) => {
     className: node.className,
     linkId: node.linkId,
     nodeType: node.type,
-    nodeStructure: JSON.stringify(node)
+    nodeStructure: nodeString.substring(0, 100), // Only log the first 100 chars to avoid huge logs
+    isSpecialLink: !pageId && !isExternal,
+    displayText: node.children?.[0]?.text || 'Unknown'
   });
 
   // Log the node's children
@@ -853,9 +860,41 @@ const LinkNode = ({ node }) => {
 
   // Extract text content from children array if available
   const getTextFromNode = (node) => {
-    console.log('LINK_DEBUG: Extracting text from node:', node);
+    console.log('LINK_DEBUG: Extracting text from node:', JSON.stringify(node, null, 2));
 
-    // First check for explicit display text
+    // CRITICAL FIX: Special handling for links with specific text patterns
+    if (node.children &&
+        Array.isArray(node.children) &&
+        node.children.length > 0) {
+
+      // Check for direct text in any child
+      for (const child of node.children) {
+        if (child.text) {
+          console.log('LINK_DEBUG: Found direct text in child:', child.text);
+          return child.text;
+        }
+      }
+
+      // If no direct text found, check for nested text
+      for (const child of node.children) {
+        if (child.children && Array.isArray(child.children)) {
+          for (const grandchild of child.children) {
+            if (grandchild.text) {
+              console.log('LINK_DEBUG: Found text in grandchild:', grandchild.text);
+              return grandchild.text;
+            }
+          }
+        }
+      }
+    }
+
+    // IMPROVED: Check for pageTitle first as it's the most reliable source for page links
+    if (node.pageTitle) {
+      console.log('LINK_DEBUG: Using pageTitle:', node.pageTitle);
+      return node.pageTitle;
+    }
+
+    // Then check for explicit display text
     if (node.displayText) {
       console.log('LINK_DEBUG: Using displayText:', node.displayText);
       return node.displayText;
@@ -873,18 +912,42 @@ const LinkNode = ({ node }) => {
       return node.content;
     }
 
-    // Check for children array and extract text
-    if (node.children && Array.isArray(node.children)) {
-      const childrenText = node.children.map(child => {
-        // Handle text nodes in children
-        if (child.text) return child.text;
-        // Handle nested structures
-        if (child.children) return getTextFromNode(child);
-        return '';
-      }).join('');
+    // IMPROVED: More robust children text extraction with deep traversal
+    const extractTextFromNode = (node, depth = 0) => {
+      if (!node) return '';
 
-      console.log('LINK_DEBUG: Extracted text from children:', childrenText);
-      if (childrenText) return childrenText;
+      // Maximum depth to prevent infinite recursion
+      if (depth > 5) return '';
+
+      // If it's a text node, return the text
+      if (node.text) return node.text;
+
+      // If it has children, process them
+      if (node.children && Array.isArray(node.children)) {
+        return node.children.map(child => extractTextFromNode(child, depth + 1)).join('');
+      }
+
+      return '';
+    };
+
+    if (node.children && Array.isArray(node.children)) {
+      const extractedText = extractTextFromNode(node);
+      if (extractedText) {
+        console.log('LINK_DEBUG: Extracted text with deep traversal:', extractedText);
+        return extractedText;
+      }
+    }
+
+    // IMPROVED: Check for text in the node's data property
+    if (node.data && typeof node.data === 'object') {
+      if (node.data.text) {
+        console.log('LINK_DEBUG: Using text from data property:', node.data.text);
+        return node.data.text;
+      }
+      if (node.data.displayText) {
+        console.log('LINK_DEBUG: Using displayText from data property:', node.data.displayText);
+        return node.data.displayText;
+      }
     }
 
     // For external links, use the URL as fallback
@@ -893,12 +956,38 @@ const LinkNode = ({ node }) => {
       return href;
     }
 
+    // For page links, try to extract a title from the URL
+    if (pageId) {
+      const pageIdTitle = pageId.replace(/-/g, ' ');
+      console.log('LINK_DEBUG: Using formatted pageId as fallback:', pageIdTitle);
+      return pageIdTitle;
+    }
+
     // Last resort fallback
     console.log('LINK_DEBUG: No text found, using fallback');
     return href || 'Link';
   };
 
-  const displayText = getTextFromNode(node);
+  // IMPROVED: Always ensure we get a valid display text
+  let displayText = getTextFromNode(node);
+
+  // If displayText is empty or undefined, use a fallback
+  if (!displayText) {
+    displayText = node.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
+    console.log('LINK_DEBUG: Using fallback display text:', displayText);
+  }
+
+  // Add a direct debug log to help identify the issue
+  console.log('LINK_DEBUG: Final link details:', {
+    displayText,
+    href,
+    pageId,
+    isExternal,
+    isProtocolLink,
+    nodeType: node.type,
+    nodeChildren: node.children ? node.children.length : 0,
+    hasText: !!displayText
+  });
 
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
@@ -907,6 +996,13 @@ const LinkNode = ({ node }) => {
 
     // Ensure href is properly formatted for internal links
     const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
+
+    console.log('LINK_DEBUG: Rendering internal page link with:', {
+      pageId,
+      formattedHref,
+      displayText,
+      originalPageTitle
+    });
 
     return (
       <span className="inline-block">
@@ -928,11 +1024,18 @@ const LinkNode = ({ node }) => {
       setShowExternalLinkModal(true);
     };
 
-    // FIXED: Ensure we have a valid display text for external links
-    // If node has children with text, use that as display text
-    let finalDisplayText = displayText || href;
-    if (node.children && node.children.length > 0 && node.children[0].text) {
+    // IMPROVED: Ensure we have a valid display text for external links
+    // If displayText is already set from our improved getTextFromNode function, use it
+    let finalDisplayText = displayText;
+
+    // Double-check for text in children as a fallback
+    if (!finalDisplayText && node.children && node.children.length > 0 && node.children[0].text) {
       finalDisplayText = node.children[0].text;
+    }
+
+    // If still no text, use the URL as a last resort
+    if (!finalDisplayText) {
+      finalDisplayText = href;
     }
 
     console.log('LINK_DEBUG: Rendering external link with:', {
@@ -989,10 +1092,49 @@ const LinkNode = ({ node }) => {
     );
   }
 
-  // For other links, use the PillLink component
+
+
+  // For other links (like "Republican Party"), use the PillLink component with special handling
+  // Log the link for debugging
+  console.log('LINK_DEBUG: Rendering special link (not page, not external):', {
+    href,
+    displayText,
+    displayTextType: typeof displayText,
+    node: JSON.stringify(node),
+    nodeChildren: node.children ? JSON.stringify(node.children) : 'No children',
+    nodeChildrenText: node.children && node.children[0] ? node.children[0].text : 'No text in children'
+  });
+
+  // IMPROVED: We already have a valid displayText from our improved getTextFromNode function
+  // But let's add some extra checks to be absolutely sure we have text to display
+
+  // If displayText is empty or undefined, try to get text from children
+  if (!displayText && node.children && Array.isArray(node.children)) {
+    // Try to find any child with text
+    for (const child of node.children) {
+      if (child.text) {
+        displayText = child.text;
+        console.log('LINK_DEBUG: Found text in child for special link:', displayText);
+        break;
+      }
+    }
+  }
+
+  // If still no text, use a generic fallback
+  if (!displayText) {
+    displayText = "Link";
+    console.log('LINK_DEBUG: No text found for special link, using generic fallback');
+  }
+
+  console.log('LINK_DEBUG: Final display text for special link:', displayText);
+
   return (
     <span className="inline-block">
-      <PillLink href={href} isPublic={true} className="inline">
+      <PillLink
+        href={href}
+        isPublic={true}
+        className="inline special-link"
+      >
         {displayText}
       </PillLink>
     </span>
@@ -1003,27 +1145,79 @@ const LinkNode = ({ node }) => {
 const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle }) => {
   const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+
+  // Log the props for debugging
+  console.log('LINK_DEBUG: InternalLinkWithTitle props:', {
+    pageId,
+    href,
+    displayText,
+    originalPageTitle
+  });
 
   useEffect(() => {
     const fetchTitle = async () => {
       setIsLoading(true);
-      const pageTitle = await getPageTitle(pageId);
-      setCurrentTitle(pageTitle);
-      setIsLoading(false);
+      setFetchError(false);
+
+      try {
+        if (!pageId) {
+          console.error('LINK_DEBUG: No pageId provided to InternalLinkWithTitle');
+          setFetchError(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const pageTitle = await getPageTitle(pageId);
+        console.log('LINK_DEBUG: Fetched page title:', pageTitle);
+        setCurrentTitle(pageTitle);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('LINK_DEBUG: Error fetching page title:', error);
+        setFetchError(true);
+        setIsLoading(false);
+      }
     };
 
     fetchTitle();
   }, [pageId]);
 
-  // Determine if displayText was customized or not
-  // If originalPageTitle exists and displayText is different, it was customized
-  const wasCustomized = originalPageTitle && displayText !== originalPageTitle;
+  // IMPROVED: More robust display text selection logic
+  let textToDisplay;
 
-  // If it was customized, use the custom displayText
-  // If not customized, use the current title from the database
-  const textToDisplay = wasCustomized
-    ? displayText
-    : (currentTitle || (isLoading ? <><span className="inline-block w-3 h-3 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1"></span><span className="text-xs">Loading</span></> : 'Page Link'));
+  // First priority: If displayText was explicitly provided and is different from originalPageTitle,
+  // it was customized by the user, so use it
+  if (displayText && originalPageTitle && displayText !== originalPageTitle) {
+    console.log('LINK_DEBUG: Using customized display text:', displayText);
+    textToDisplay = displayText;
+  }
+  // Second priority: If displayText was explicitly provided and there's no originalPageTitle,
+  // use the provided displayText
+  else if (displayText && !originalPageTitle) {
+    console.log('LINK_DEBUG: Using provided display text (no originalPageTitle):', displayText);
+    textToDisplay = displayText;
+  }
+  // Third priority: If we have a currentTitle from the database, use it
+  else if (currentTitle) {
+    console.log('LINK_DEBUG: Using fetched page title:', currentTitle);
+    textToDisplay = currentTitle;
+  }
+  // Fourth priority: If we're still loading, show a loading indicator
+  else if (isLoading) {
+    console.log('LINK_DEBUG: Showing loading indicator');
+    textToDisplay = (
+      <>
+        <span className="inline-block w-3 h-3 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1"></span>
+        <span className="text-xs">Loading</span>
+      </>
+    );
+  }
+  // Fifth priority: If there was an error or we have no other text, use a fallback
+  else {
+    const fallbackText = fetchError ? 'Page Link (Error)' : (originalPageTitle || 'Page Link');
+    console.log('LINK_DEBUG: Using fallback text:', fallbackText);
+    textToDisplay = fallbackText;
+  }
 
   return (
     <PillLink href={href} isPublic={true} className="inline">

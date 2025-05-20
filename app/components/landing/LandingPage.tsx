@@ -90,7 +90,7 @@ const LandingPage = () => {
       setIsScrolled(window.scrollY > 10);
 
       // Determine which section is currently in view
-      const sections = ['activity', 'trending', 'features', 'supporters', 'about'];
+      const sections = ['activity', 'trending', 'features', 'about'];
       const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px, Desktop: 60px
 
       // Find the section that is currently in view
@@ -532,14 +532,7 @@ const LandingPage = () => {
                 <FileText className="h-4 w-4" />
                 Roadmap
               </a>
-              <a
-                href="#supporters"
-                onClick={(e) => scrollToSection(e, '#supporters')}
-                className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Heart className="h-4 w-4" />
-                Support us
-              </a>
+
 
 
             </nav>
@@ -626,14 +619,7 @@ const LandingPage = () => {
                 <FileText className="h-3 w-3" />
                 Roadmap
               </a>
-              <a
-                href="#supporters"
-                onClick={(e) => scrollToSection(e, '#supporters')}
-                className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'supporters' ? 'text-blue-600 font-semibold' : ''}`}
-              >
-                <Heart className="h-3 w-3" />
-                Support us
-              </a>
+
 
 
             </div>
@@ -713,9 +699,9 @@ const LandingPage = () => {
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
                 Discover what makes WeWrite special and what's coming next.
               </p>
-              <Button variant="outline" size="lg" className="gap-2 mx-auto" asChild>
+              <Button variant="default" size="lg" className="gap-2 mx-auto bg-[#1768FF] hover:bg-[#1768FF]/90 text-white" asChild>
                 <Link href="/zRNwhNgIEfLFo050nyAT">
-                  <FileText className="h-4 w-4" /> Read our detailed Roadmap <ArrowRight className="h-4 w-4" />
+                  <FileText className="h-4 w-4" /> View Full Roadmap <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -725,10 +711,10 @@ const LandingPage = () => {
               <div className="flex min-w-max gap-6" style={{ minWidth: '100%' }}>
                 {/* Coming Soon Column */}
                 <div className="flex-1 min-w-[300px]">
-                  <div className="bg-muted/30 rounded-lg p-4 mb-4">
-                    <h3 className="text-xl font-semibold mb-2 text-center">Coming Soon</h3>
+                  <div className="bg-gray-300 dark:bg-gray-700 rounded-lg p-4 mb-4 shadow-sm">
+                    <h3 className="text-xl font-bold mb-0 text-center text-gray-800 dark:text-white">Coming Soon</h3>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {comingSoonFeatures.map((feature, index) => (
                       <div
                         key={index}
@@ -737,10 +723,11 @@ const LandingPage = () => {
                       >
                         <PagePreviewCard
                           title={feature.title}
-                          content={pageContents[feature.pageId]?.body || feature.description}
+                          content=""
                           pageId={feature.pageId}
+                          status="coming-soon"
                           hideStatus={true}
-                          maxContentLength={150}
+                          maxContentLength={0}
                         />
                       </div>
                     ))}
@@ -749,10 +736,10 @@ const LandingPage = () => {
 
                 {/* In Progress Column */}
                 <div className="flex-1 min-w-[300px]">
-                  <div className="bg-amber-500/10 rounded-lg p-4 mb-4">
-                    <h3 className="text-xl font-semibold mb-2 text-center">In Progress</h3>
+                  <div className="bg-amber-300 dark:bg-amber-600 rounded-lg p-4 mb-4 shadow-sm">
+                    <h3 className="text-xl font-bold mb-0 text-center text-amber-800 dark:text-white">In Progress</h3>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {builtFeatures.filter(f => f.status === 'in-progress').map((feature, index) => (
                       <div
                         key={index}
@@ -761,10 +748,11 @@ const LandingPage = () => {
                       >
                         <PagePreviewCard
                           title={feature.title}
-                          content={pageContents[feature.pageId]?.body || feature.description}
+                          content=""
                           pageId={feature.pageId}
+                          status="in-progress"
                           hideStatus={true}
-                          maxContentLength={150}
+                          maxContentLength={0}
                         />
                       </div>
                     ))}
@@ -773,10 +761,10 @@ const LandingPage = () => {
 
                 {/* Available Now Column */}
                 <div className="flex-1 min-w-[300px]">
-                  <div className="bg-green-500/10 rounded-lg p-4 mb-4">
-                    <h3 className="text-xl font-semibold mb-2 text-center">Available Now</h3>
+                  <div className="bg-green-300 dark:bg-green-600 rounded-lg p-4 mb-4 shadow-sm">
+                    <h3 className="text-xl font-bold mb-0 text-center text-green-800 dark:text-white">Available Now</h3>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {builtFeatures.filter(f => f.status === 'done').map((feature, index) => (
                       <div
                         key={index}
@@ -785,53 +773,15 @@ const LandingPage = () => {
                       >
                         <PagePreviewCard
                           title={feature.title}
-                          content={pageContents[feature.pageId]?.body || feature.description}
+                          content=""
                           pageId={feature.pageId}
+                          status="done"
                           hideStatus={true}
-                          maxContentLength={150}
+                          maxContentLength={0}
                         />
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Supporters Section */}
-        <section id="supporters" className="py-16 md:py-20 bg-muted/30">
-          <div className="container mx-auto px-6 max-w-5xl">
-            <div className={`text-center mb-6 ${fadeInClass}`}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
-                <Heart className="h-7 w-7" />
-                Support us
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
-                Special thanks to those who have supported WeWrite while we're still in beta.
-              </p>
-              <Button
-                variant="default"
-                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Landing Page Support Button')}
-              >
-                <Heart className="h-4 w-4" /> Support on OpenCollective <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className={`${fadeInClass} max-w-4xl mx-auto`} style={{ animationDelay: '0.1s' }}>
-              <div
-                onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Landing Page OpenCollective Image')}
-                className="block border border-border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-200 bg-card cursor-pointer"
-              >
-                <div className="p-6">
-                  <Image
-                    src="/images/landing/OpenCollective.png"
-                    alt="WeWrite supporters on Open Collective"
-                    width={1000}
-                    height={300}
-                    className="w-full h-auto rounded-md"
-                  />
                 </div>
               </div>
             </div>

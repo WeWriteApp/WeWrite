@@ -1,12 +1,10 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Card, CardHeader, CardContent, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
+import React, { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { ArrowRight } from 'lucide-react';
-import { PillLink } from '../PillLink';
+import { ChevronRight } from 'lucide-react';
 
 interface PagePreviewCardProps {
   title: string;
@@ -35,47 +33,47 @@ export function PagePreviewCard({
     ? processedContent.substring(0, maxContentLength) + '...'
     : processedContent;
 
-  // Get status badge
-  const getStatusBadge = (status: string) => {
+  // Get card background color based on status
+  const getCardStyleByStatus = (status: string) => {
     switch (status) {
       case 'done':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Available</Badge>;
+        return "bg-green-100 dark:bg-green-800/40 border-green-300 dark:border-green-700 text-green-900 dark:text-green-100";
       case 'in-progress':
-        return <Badge variant="secondary" className="bg-amber-500 hover:bg-amber-600">In Progress</Badge>;
+        return "bg-amber-100 dark:bg-amber-800/40 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100";
       case 'coming-soon':
-        return <Badge variant="outline" className="border-blue-500 text-blue-500">Coming Soon</Badge>;
+        return "bg-gray-100 dark:bg-gray-800/40 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100";
       default:
-        return null;
+        return "";
     }
   };
 
-  const handleCardClick = () => {
-    window.location.href = `/${pageId}`;
-  };
+  // Get the status-specific styles
+  const cardStyles = getCardStyleByStatus(status);
+  const router = useRouter();
+
+  // Handle card click with direct navigation
+  const handleCardClick = useCallback((e) => {
+    e.preventDefault();
+
+    // Use window.location.href with a hash fragment to ensure the destination page loads at the top
+    // The hash fragment #top will be ignored but ensures the page loads at the top
+    window.location.href = `/${pageId}#top`;
+
+    // Prevent any default behavior or event bubbling
+    return false;
+  }, [pageId]);
 
   return (
     <div className="block h-full" onClick={handleCardClick}>
-      <Card className="h-full border border-border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col">
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-start">
-            <CardTitle className="text-lg">
-              <PillLink href={`/${pageId}`}>
-                {title}
-              </PillLink>
+      <Card className={`h-full border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col ${cardStyles}`}>
+        <CardHeader className="pb-4">
+          <div className="flex justify-between items-center">
+            <CardTitle className={`text-lg`}>
+              {title}
             </CardTitle>
-            {!hideStatus && getStatusBadge(status)}
+            <ChevronRight className="h-5 w-5 flex-shrink-0" />
           </div>
         </CardHeader>
-        <CardContent className="flex-grow relative pb-16">
-          <div className="prose prose-sm dark:prose-invert">
-            <p className="whitespace-pre-line">{truncatedContent}</p>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-card via-card/90 to-transparent flex items-end justify-center pb-4">
-            <Button variant="ghost" size="sm" className="gap-1 text-primary relative z-10">
-              Read more <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </CardContent>
       </Card>
     </div>
   );
