@@ -1731,32 +1731,26 @@ export const appendPageReference = async (targetPageId, sourcePageData, userId =
       }
     }
 
-    // Create a reference header to append
+    // Create a reference header to append (without bold formatting)
     const referenceHeader = {
       type: "paragraph",
       children: [
-        { text: "Content from ", bold: true },
+        { text: "Content from " },
         {
           type: "link",
           href: `/pages/${sourcePageData.id}`,
           displayText: sourcePageData.title,
-          children: [{ text: sourcePageData.title, bold: true }]
+          children: [{ text: sourcePageData.title }]
         }
       ]
     };
 
-    // Create a separator line
-    const separatorLine = {
-      type: "paragraph",
-      children: [{ text: "---" }]
-    };
-
-    // Append the reference header, separator, and source content to the target content
+    // Append the reference header and source content to the target content
+    // No separator line and no bold formatting
     const newContent = [
       ...currentContent,
       { type: "paragraph", children: [{ text: "" }] }, // Empty line for spacing
       referenceHeader,
-      separatorLine,
       ...sourceContent
     ];
 
