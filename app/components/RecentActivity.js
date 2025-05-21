@@ -78,13 +78,30 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
   // Use different hooks based on whether we're on the homepage or not
   // For homepage, use the static hook that only loads once
   // For activity page or user profile, use the regular hook with pagination
-  const { activities, loading, error, hasMore, loadingMore, loadMore } = isHomepage
-    ? useHomeRecentActivity(limit, userId, viewMode === 'following')
-    : useRecentActivity(limit, userId, viewMode === 'following');
+  const [localError, setLocalError] = useState(null);
+
+  // CRITICAL FIX: Wrap the hook usage in a try-catch to handle any errors gracefully
+  let activityData = { activities: [], loading: true, error: null, hasMore: false, loadingMore: false, loadMore: () => {} };
+  try {
+    activityData = isHomepage
+      ? useHomeRecentActivity(limit, userId, viewMode === 'following')
+      : useRecentActivity(limit, userId, viewMode === 'following');
+  } catch (err) {
+    console.error("Error using activity hook:", err);
+    setLocalError({
+      message: "There was a problem loading activity data",
+      details: err.message
+    });
+  }
+
+  const { activities = [], loading = false, error = null, hasMore = false, loadingMore = false, loadMore = () => {} } = activityData;
   const { user } = useContext(AuthContext);
   const carouselRef = useRef(null);
   const [followedPages, setFollowedPages] = useState([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(true);
+
+  // Combine errors from hook and local errors
+  const combinedError = error || localError;
 
   // Check if the user is following any pages
   useEffect(() => {
@@ -222,32 +239,32 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
           </>
         )}
 
-        {!loading && error && !user && (
+        {!loading && combinedError && !user && (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
             <Info className="h-4 w-4" />
             <p>Sign in to see recent activity from all pages</p>
           </div>
         )}
 
-        {!loading && error && user && (
+        {!loading && combinedError && user && (
           <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <p>{error.message || "There was a problem fetching recent activity"}</p>
+              <p>{combinedError.message || "There was a problem fetching recent activity"}</p>
             </div>
-            {error.details && (
-              <p className="text-xs opacity-80">{error.details}</p>
+            {combinedError.details && (
+              <p className="text-xs opacity-80">{combinedError.details}</p>
             )}
           </div>
         )}
 
-        {!loading && !error && activities.length === 0 && (
+        {!loading && !combinedError && activities.length === 0 && (
           <div className="py-4">
             <ActivityEmptyState mode={viewMode} />
           </div>
         )}
 
-        {!loading && !error && activities.length > 0 && (
+        {!loading && !combinedError && activities.length > 0 && (
           <div
             className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full"
             style={{
@@ -283,32 +300,32 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
           </div>
         )}
 
-        {!loading && error && !user && (
+        {!loading && combinedError && !user && (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
             <Info className="h-4 w-4" />
             <p>Sign in to see recent activity from all pages</p>
           </div>
         )}
 
-        {!loading && error && user && (
+        {!loading && combinedError && user && (
           <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <p>{error.message || "There was a problem fetching recent activity"}</p>
+              <p>{combinedError.message || "There was a problem fetching recent activity"}</p>
             </div>
-            {error.details && (
-              <p className="text-xs opacity-80">{error.details}</p>
+            {combinedError.details && (
+              <p className="text-xs opacity-80">{combinedError.details}</p>
             )}
           </div>
         )}
 
-        {!loading && !error && activities.length === 0 && (
+        {!loading && !combinedError && activities.length === 0 && (
           <div className="py-4">
             <ActivityEmptyState mode={viewMode} />
           </div>
         )}
 
-        {!loading && !error && activities.length > 0 && (
+        {!loading && !combinedError && activities.length > 0 && (
           <div className="relative w-full">
             {/* Left fade-out gradient - only for non-homepage */}
             {!useGridLayout && !isHomepage && (
@@ -348,7 +365,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         )}
       </div>
 
-      {showViewAll && !loading && !error && activities.length > 0 && !isInActivityPage && (
+      {showViewAll && !loading && !combinedError && activities.length > 0 && !isInActivityPage && (
         <div className="flex justify-center">
           <Button
             variant="outline"
@@ -366,7 +383,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
       )}
 
       {/* Show load more button if there are more activities to load */}
-      {hasMore && !loading && !error && activities.length > 0 && (isInActivityPage || isInUserProfile) && (
+      {hasMore && !loading && !combinedError && activities.length > 0 && (isInActivityPage || isInUserProfile) && (
         <div className="flex justify-center mt-4">
           <Button
             variant="outline"

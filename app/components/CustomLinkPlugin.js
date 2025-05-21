@@ -4,6 +4,7 @@ import { $getSelection, $isRangeSelection, $createTextNode, $getRoot, COMMAND_PR
 
  } from 'lexical';
 import { $createCustomLinkNode } from './CustomLinkNode';
+import { validateLink } from '../utils/linkValidator';
 
 const INSERT_CUSTOM_LINK_COMMAND = 'INSERT_CUSTOM_LINK_COMMAND';
 
@@ -13,16 +14,35 @@ function insertCustomLink(editor, url, text) {
     return;
   }
 
+  // Determine if this is an external link
+  const isExternal = url.startsWith('http://') || url.startsWith('https://');
+
+  // Create a basic link object for validation
+  const basicLink = {
+    type: "link",
+    url: url,
+    children: [{ text: text }],
+    isExternal: isExternal
+  };
+
+  // CRITICAL FIX: Use validateLink to ensure all required properties are present
+  // This ensures backward compatibility with both old and new link formats
+  const validatedLink = validateLink(basicLink);
+
   editor.update(() => {
     // get the current selection
     const selection = $getSelection();
     const nodeSelection = $createNodeSelection();
 
+    // Create the link node with the validated properties
     const linkNode = $createCustomLinkNode(url);
     const textNode = $createTextNode(text);
 
     linkNode.append(textNode);
 
+    // Store the validated properties on the node for later use
+    // This ensures the link will render correctly in view mode
+    linkNode.__validatedProps = validatedLink;
 
     if ($isRangeSelection(selection)) {
       selection.insertNodes([linkNode]);
@@ -30,8 +50,8 @@ function insertCustomLink(editor, url, text) {
       const root = $getRoot();
       const paragraphNode = $createParagraphNode();
       paragraphNode.append(linkNode);
-      
-      root.append(paragraphNode);      
+
+      root.append(paragraphNode);
     }
   });
 }

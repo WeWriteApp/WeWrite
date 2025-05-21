@@ -11,6 +11,18 @@ import {
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
+import { DataContext } from "../providers/DataProvider";
+import { AuthContext } from "../providers/AuthProvider";
+import { withHistory } from "slate-history";
+import TypeaheadSearch from "./TypeaheadSearch";
+import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { usePillStyle } from '../contexts/PillStyleContext';
+import { motion } from "framer-motion";
+import "../styles/shake-animation.css";
+import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
+import { validateLink } from "../utils/linkValidator";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -98,17 +110,6 @@ Editor.isSelectionAtLink = (editor, linkPath) => {
     return false;
   }
 };
-import { DataContext } from "../providers/DataProvider";
-import { AuthContext } from "../providers/AuthProvider";
-import { withHistory } from "slate-history";
-import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
-import { usePillStyle } from '../contexts/PillStyleContext';
-import { motion } from "framer-motion";
-import "../styles/shake-animation.css";
-import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 
 /**
  * SlateEditor Component
@@ -764,15 +765,18 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       if (selectedLinkElement && selectedLinkPath) {
         try {
           // Edit existing link
+          // CRITICAL FIX: Use validateLink to ensure all required properties are present
+          const updatedLink = validateLink({
+            type: "link",
+            url: item.url,
+            children: [{ text: displayText }],
+            isExternal: true,
+            className: "external-link"
+          });
+
           Transforms.setNodes(
             editor,
-            {
-              type: "link",
-              url: item.url,
-              children: [{ text: displayText }],
-              isExternal: true,
-              className: "external-link" // FIXED: Add className for consistent identification
-            },
+            updatedLink,
             { at: selectedLinkPath }
           );
         } catch (error) {
@@ -781,13 +785,14 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         }
       } else {
         // Insert new external link
-        const link = {
+        // CRITICAL FIX: Use validateLink to ensure all required properties are present
+        const link = validateLink({
           type: "link",
           url: item.url,
           children: [{ text: displayText }],
           isExternal: true,
-          className: "external-link" // FIXED: Add className for consistent identification
-        };
+          className: "external-link"
+        });
 
         // Make sure we have a valid selection
         if (!editor.selection) {
@@ -813,14 +818,18 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       if (selectedLinkElement && selectedLinkPath) {
         try {
           // Edit existing link
+          // CRITICAL FIX: Use validateLink to ensure all required properties are present
+          const updatedLink = validateLink({
+            type: "link",
+            url: `/pages/${item.id}`,
+            children: [{ text: formattedTitle }],
+            pageId: item.id,
+            pageTitle: item.title // Store the original page title for reference
+          });
+
           Transforms.setNodes(
             editor,
-            {
-              url: `/pages/${item.id}`,
-              children: [{ text: formattedTitle }],
-              pageId: item.id,
-              pageTitle: item.title // Store the original page title for reference
-            },
+            updatedLink,
             { at: selectedLinkPath }
           );
         } catch (error) {
@@ -828,14 +837,15 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           // Fall through to insert a new link as fallback
         }
       } else {
-        // Insertink
-        const link = {
+        // Insert new link
+        // CRITICAL FIX: Use validateLink to ensure all required properties are present
+        const link = validateLink({
           type: "link",
           url: `/pages/${item.id}`,
           children: [{ text: formattedTitle }],
           pageId: item.id,
           pageTitle: item.title // Store the original page title for reference
-        };
+        });
 
         // Make sure we have a valid selection
         if (!editor.selection) {
@@ -1250,13 +1260,18 @@ const wrapLink = (editor, url, pageId, pageTitle) => {
     text = formatUsername(text);
   }
 
-  const linkElement = {
+  // Create the link element with basic properties
+  const basicLinkElement = {
     type: "link",
     url,
     pageId,
     pageTitle,
     children: isCollapsed ? [{ text }] : [],
   };
+
+  // CRITICAL FIX: Use validateLink to ensure all required properties are present
+  // This ensures backward compatibility with both old and new link formats
+  const linkElement = validateLink(basicLinkElement);
 
   if (isCollapsed) {
     Transforms.insertNodes(editor, linkElement);

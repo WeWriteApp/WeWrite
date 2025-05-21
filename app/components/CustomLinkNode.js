@@ -1,19 +1,35 @@
 import { ElementNode, TextNode } from 'lexical';
+import { validateLink } from '../utils/linkValidator';
 
 class CustomLinkNode extends ElementNode {
   __url;
+  __validatedProps;
 
   static getType() {
     return 'custom-link';
   }
 
   static clone(node) {
-    return new CustomLinkNode(node.__url, node.__key);
+    const clonedNode = new CustomLinkNode(node.__url, node.__key);
+    clonedNode.__validatedProps = node.__validatedProps;
+    return clonedNode;
   }
 
   constructor(url, key) {
     super(key);
     this.__url = url;
+
+    // CRITICAL FIX: Create default validated properties if none provided
+    // This ensures backward compatibility with both old and new link formats
+    if (!this.__validatedProps) {
+      const isExternal = url.startsWith('http://') || url.startsWith('https://');
+      const basicLink = {
+        type: "link",
+        url: url,
+        isExternal: isExternal
+      };
+      this.__validatedProps = validateLink(basicLink);
+    }
   }
 
   createDOM() {
@@ -22,6 +38,17 @@ class CustomLinkNode extends ElementNode {
     a.rel = 'noopener noreferrer';
     a.target = '_blank';
     a.style.color = 'blue';
+
+    // Add data attributes for link type
+    if (this.__validatedProps) {
+      if (this.__validatedProps.isExternal) {
+        a.dataset.linkType = 'external-link';
+      } else if (this.__validatedProps.pageId) {
+        a.dataset.linkType = 'page-link';
+        a.dataset.pageId = this.__validatedProps.pageId;
+      }
+    }
+
     return a;
   }
 
@@ -37,11 +64,15 @@ class CustomLinkNode extends ElementNode {
   }
 
   exportJSON() {
+    // CRITICAL FIX: Include validated properties in the exported JSON
+    // This ensures links created with this node will render correctly in view mode
     return {
       type: 'custom-link',
       url: this.__url,
       children: this.getChildren().map((child) => child.exportJSON()),
       version: 1,
+      // Include all validated properties
+      ...(this.__validatedProps || {})
     };
   }
 }

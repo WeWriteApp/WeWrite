@@ -71,26 +71,19 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
       // Force loading to false after timeout to prevent infinite loading state
       setLoading(false);
 
-      // Try to use cached data even if it's older than our normal threshold
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const cachedData = localStorage.getItem(cacheKey);
-          if (cachedData) {
-            const parsed = JSON.parse(cachedData);
-            console.log("usePages: Using stale cached data as fallback");
-            setPages(parsed.pages || []);
-            setPrivatePages(parsed.privatePages || []);
-            setError("We're having trouble connecting to the server. Showing cached content.");
-            return;
-          }
-        }
-      } catch (fallbackCacheError) {
-        console.error("Error reading from fallback cache:", fallbackCacheError);
+      // CRITICAL FIX: Don't clear existing pages if we already have data
+      // This prevents pages from disappearing after they've loaded
+      if (pages.length === 0) {
+        console.log("usePages: No pages loaded yet, providing empty data as fallback");
+        // Only set empty arrays if we don't have any data yet
+        setPages([]);
+        setPrivatePages([]);
+      } else {
+        console.log("usePages: Keeping existing pages data instead of clearing");
+        // Keep existing data, just update loading state
       }
 
-      // If no cache is available, show empty state with error
-      setPages([]);
-      setPrivatePages([]);
+      // Set error message
       setError("Query execution is taking longer than expected. Please try refreshing the page.");
 
       // Dispatch an event that other components can listen for
@@ -100,7 +93,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         });
         window.dispatchEvent(forceCompleteEvent);
       }
-    }, 5000); // Increased to 5 seconds to give more time for the query
+    }, 5000); // Increased to 5 seconds to give more time for query to complete
 
     try {
       // Define the fields we need to reduce data transfer
@@ -524,39 +517,21 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         console.warn("usePages: Hard timeout reached, forcing completion");
         setLoading(false);
 
-        // Try to use cached data as a fallback
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            const isOwner = currentUserId && userId === currentUserId;
-            const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
-            const cachedData = localStorage.getItem(cacheKey);
-
-            if (cachedData) {
-              const parsed = JSON.parse(cachedData);
-              console.log("usePages: Hard timeout - using cached data as fallback");
-              setPages(parsed.pages || []);
-              setPrivatePages(parsed.privatePages || []);
-              setHasMorePages(parsed.hasMorePages);
-              setHasMorePrivatePages(parsed.hasMorePrivatePages);
-              setError("We're having trouble connecting to the server. Showing cached content.");
-              return;
-            }
-          }
-        } catch (fallbackCacheError) {
-          console.error("Error reading from fallback cache during hard timeout:", fallbackCacheError);
-        }
-
-        // If no cache is available, show empty state
+        // CRITICAL FIX: Don't clear existing pages if we already have data
+        // This prevents pages from disappearing after they've loaded
         if (pages.length === 0) {
-          console.log("usePages: Hard timeout - providing empty data as fallback");
+          console.log("usePages: Hard timeout - no pages loaded yet, providing empty data as fallback");
           setPages([]);
           setPrivatePages([]);
           setHasMorePages(false);
           setHasMorePrivatePages(false);
+        } else {
+          console.log("usePages: Hard timeout - keeping existing pages data instead of clearing");
+          // Keep existing data, just update loading state
         }
 
         // Set a more user-friendly error message
-        setError("We couldn't load your content. You can continue browsing with limited functionality.");
+        setError("We couldn't load all your content. You can continue browsing with the data that was loaded.");
 
         // Dispatch an event that other components can listen for with detailed information
         if (typeof window !== 'undefined') {
@@ -580,7 +555,11 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
           window.dispatchEvent(analyticsEvent);
         }
       }
+<<<<<<< Updated upstream
     }, 10000); // Increased to 10 seconds to give more time for the initial query
+=======
+    }, 10000); // Increased to 10 seconds to give more time for query to complete
+>>>>>>> Stashed changes
 
     const attemptFetch = async () => {
       // Increment fetch attempts

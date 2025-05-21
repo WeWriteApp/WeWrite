@@ -79,6 +79,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
   try {
     console.log('getRecentActivity: Starting with limit', limitCount);
 
+    // FIXED: Removed select() function which was causing errors
     // Query to get recent pages (only public pages)
     const pagesQuery = query(
       collection(db, "pages"),

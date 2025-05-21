@@ -16,6 +16,7 @@ import { Link as LinkIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { validateLink } from '../utils/linkValidator';
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -257,11 +258,20 @@ const BasicSlateEditor = forwardRef(({ initialContent = "", onChange, placeholde
     if (url) {
       const text = prompt('Enter link text:', url);
       if (text) {
-        const link = {
+        // Determine if this is an external link
+        const isExternal = url.startsWith('http://') || url.startsWith('https://');
+
+        // Create a basic link object
+        const basicLink = {
           type: "link",
           url: url,
           children: [{ text: text }],
+          isExternal: isExternal
         };
+
+        // CRITICAL FIX: Use validateLink to ensure all required properties are present
+        // This ensures backward compatibility with both old and new link formats
+        const link = validateLink(basicLink);
 
         // Make sure we have a valid selection
         if (!editor.selection) {

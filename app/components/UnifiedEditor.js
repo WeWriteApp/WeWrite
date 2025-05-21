@@ -19,6 +19,7 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
+import { validateLink } from '../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import TypeaheadSearch from "./TypeaheadSearch";
 
@@ -213,29 +214,32 @@ const UnifiedEditor = forwardRef((props, ref) => {
       // Log the link type for debugging
       console.log('Link type:', { isUserLinkType, isPageLinkType, isExternalLinkType });
 
-      // Create the link node with appropriate properties
-      const link = {
+      // Create the initial link object with basic properties
+      const initialLink = {
         type: 'link',
         url,
         children: [{ text: text || url }],
-        // Add additional properties based on link type
+        // Add type-specific properties
         ...(isUserLinkType && {
           isUser: true,
-          userId: options.userId,
-          className: 'user-link'
+          userId: options.userId
         }),
         ...(isPageLinkType && {
           pageId: pageId || options.pageId,
-          pageTitle: options.pageTitle,
-          isPageLink: true,
-          className: 'page-link'
+          pageTitle: options.pageTitle
         }),
         ...(isExternalLinkType && {
-          isExternal: true,
-          className: 'external-link'
+          isExternal: true
         }),
         ...(options.isPublic === false && { isPublic: false })
       };
+
+      // CRITICAL FIX: Use the validator to ensure all required properties are present
+      // This standardizes link creation and ensures backward compatibility
+      const link = validateLink(initialLink);
+
+      // Log the validated link structure
+      console.log('LINK_DEBUG: Created validated link:', JSON.stringify(link));
 
       // Log the link structure for debugging
       console.log('LINK_DEBUG: Inserting link with structure:', JSON.stringify(link));
@@ -291,21 +295,19 @@ const UnifiedEditor = forwardRef((props, ref) => {
               Transforms.select(editor, endPoint);
               console.log('LINK_DEBUG: Selected end point');
 
-              // Insert a space after the link
-              Transforms.insertText(editor, ' ');
-              console.log('LINK_DEBUG: Inserted space after link');
+              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
+              console.log('LINK_DEBUG: Positioned cursor after link without inserting space');
             } else {
               console.log('LINK_DEBUG: Could not find inserted link, using fallback');
-              // Fallback: just move to the end and insert a space
+              // Fallback: just move to the end without inserting a space
               Transforms.collapse(editor, { edge: 'end' });
-              Transforms.insertText(editor, ' ');
             }
           } catch (error) {
             console.error('LINK_DEBUG: Error during cursor positioning:', error);
             // Last resort fallback
             try {
               Transforms.collapse(editor, { edge: 'end' });
-              Transforms.insertText(editor, ' ');
+              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
             } catch (fallbackError) {
               console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
             }
@@ -335,21 +337,19 @@ const UnifiedEditor = forwardRef((props, ref) => {
               Transforms.select(editor, endPoint);
               console.log('LINK_DEBUG: Selected end point');
 
-              // Insert a space after the link
-              Transforms.insertText(editor, ' ');
-              console.log('LINK_DEBUG: Inserted space after link');
+              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
+              console.log('LINK_DEBUG: Positioned cursor after wrapped link without inserting space');
             } else {
               console.log('LINK_DEBUG: Could not find wrapped link, using fallback');
-              // Fallback: just move to the end and insert a space
+              // Fallback: just move to the end without inserting a space
               Transforms.collapse(editor, { edge: 'end' });
-              Transforms.insertText(editor, ' ');
             }
           } catch (error) {
             console.error('LINK_DEBUG: Error during cursor positioning after wrap:', error);
             // Last resort fallback
             try {
               Transforms.collapse(editor, { edge: 'end' });
-              Transforms.insertText(editor, ' ');
+              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
             } catch (fallbackError) {
               console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
             }
@@ -372,29 +372,27 @@ const UnifiedEditor = forwardRef((props, ref) => {
             const [linkNode, linkPath] = linkEntry;
             console.log('LINK_DEBUG: Found inserted link at path:', linkPath);
 
-            // Create a point after the link
+            // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
+            // Instead, just position the cursor after the link
             const endPoint = Editor.end(editor, linkPath);
             console.log('LINK_DEBUG: End point after link:', endPoint);
 
             // Select the point after the link
             Transforms.select(editor, endPoint);
-            console.log('LINK_DEBUG: Selected end point');
+            console.log('LINK_DEBUG: Selected end point after link');
 
-            // Insert a space after the link
-            Transforms.insertText(editor, ' ');
-            console.log('LINK_DEBUG: Inserted space after link');
+            // Don't insert a space - this was causing the unwanted line wrapping
           } else {
             console.log('LINK_DEBUG: Could not find inserted link, using fallback');
-            // Fallback: just move to the end and insert a space
+            // Fallback: just move to the end without inserting a space
             Transforms.collapse(editor, { edge: 'end' });
-            Transforms.insertText(editor, ' ');
           }
         } catch (error) {
           console.error('LINK_DEBUG: Error during cursor positioning:', error);
           // Last resort fallback
           try {
             Transforms.collapse(editor, { edge: 'end' });
-            Transforms.insertText(editor, ' ');
+            // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
           } catch (fallbackError) {
             console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
           }
@@ -579,39 +577,43 @@ const UnifiedEditor = forwardRef((props, ref) => {
       case 'paragraph':
         // Get the paragraph index
         let index = 0;
-        try {
-          // Use the path property if it exists (for better performance)
-          if (element.path && Array.isArray(element.path)) {
-            index = element.path[0];
-          } else {
-            // Otherwise use our safe wrapper for findPath
-            const path = safeReactEditor.findPath(editor, element);
-            if (path && Array.isArray(path)) {
-              index = path[0]; // The first element of the path is the paragraph index
 
-              // Cache the path for future renders
-              element.path = path;
-            }
+        // CRITICAL FIX: More reliable paragraph numbering
+        try {
+          // First try to get the path directly from the editor
+          const path = ReactEditor.findPath(editor, element);
+          if (path && Array.isArray(path)) {
+            index = path[0]; // The first element of the path is the paragraph index
+
+            // Cache the path for future renders
+            element.path = path;
+
+            // Log successful path finding
+            console.log('Found paragraph index:', index + 1, 'at path:', path);
+          } else {
+            console.warn('Path is invalid:', path);
           }
         } catch (error) {
-          console.error('Error finding paragraph index:', error);
-          // Try to get a reasonable index as fallback
-          try {
-            // Find all paragraph nodes and determine this one's position
-            const nodes = Array.from(
-              Editor.nodes(editor, {
-                at: [],
-                match: n => !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === 'paragraph'
-              })
-            );
+          console.error('Error finding paragraph path:', error);
 
-            // Find this element in the nodes
-            const nodeIndex = nodes.findIndex(([node]) => node === element);
-            if (nodeIndex !== -1) {
-              index = nodeIndex;
+          // Fallback 1: Try to use the cached path if available
+          if (element.path && Array.isArray(element.path)) {
+            index = element.path[0];
+            console.log('Using cached path index:', index + 1);
+          } else {
+            // Fallback 2: Find the element's position in the editor's children
+            try {
+              const nodes = editor.children;
+              if (Array.isArray(nodes)) {
+                const nodeIndex = nodes.findIndex(node => node === element);
+                if (nodeIndex !== -1) {
+                  index = nodeIndex;
+                  console.log('Found index by searching children:', index + 1);
+                }
+              }
+            } catch (fallbackError) {
+              console.error('Error in fallback paragraph indexing:', fallbackError);
             }
-          } catch (fallbackError) {
-            console.error('Error in fallback paragraph indexing:', fallbackError);
           }
         }
 
@@ -856,8 +858,7 @@ const UnifiedEditor = forwardRef((props, ref) => {
           // Remove the entire link node
           Transforms.removeNodes(editor, { at: linkPath });
 
-          // Insert a space to replace the link
-          Transforms.insertText(editor, ' ');
+          // CRITICAL FIX: Don't insert a space to replace the link - this causes unwanted line wrapping
 
           // Return early since we've handled the event
           return;
@@ -1440,14 +1441,18 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       if (selectedLinkElement && selectedLinkPath) {
         try {
           // Edit existing link
+          // CRITICAL FIX: Use the validator to ensure all required properties are present
+          const updatedLink = validateLink({
+            type: "link",
+            url: item.url,
+            children: [{ text: displayText }],
+            isExternal: true
+          });
+
+          // Apply the validated link properties
           Transforms.setNodes(
             editor,
-            {
-              type: "link",
-              url: item.url,
-              children: [{ text: displayText }],
-              isExternal: true
-            },
+            updatedLink,
             { at: selectedLinkPath }
           );
         } catch (error) {
@@ -1455,12 +1460,13 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
           // Try fallback approach - insert a new link
           try {
             // Insert a new link at the current selection
-            const link = {
+            // CRITICAL FIX: Use the validator to ensure all required properties are present
+            const link = validateLink({
               type: "link",
               url: item.url,
               children: [{ text: displayText }],
               isExternal: true
-            };
+            });
 
             // Make sure we have a valid selection
             if (!editor.selection) {
@@ -1478,12 +1484,13 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       } else {
         // Insert a new link
         try {
-          const link = {
+          // CRITICAL FIX: Use the validator to ensure all required properties are present
+          const link = validateLink({
             type: "link",
             url: item.url,
             children: [{ text: displayText }],
             isExternal: true
-          };
+          });
 
           // Make sure we have a valid selection
           if (!editor.selection) {
@@ -1506,15 +1513,19 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       if (selectedLinkElement && selectedLinkPath) {
         try {
           // Edit existing link
+          // CRITICAL FIX: Use the validator to ensure all required properties are present
+          const updatedLink = validateLink({
+            type: "link",
+            url: `/pages/${item.id}`,
+            children: [{ text: formattedTitle }],
+            pageId: item.id,
+            pageTitle: item.title // Store the original page title for reference
+          });
+
+          // Apply the validated link properties
           Transforms.setNodes(
             editor,
-            {
-              type: "link",
-              url: `/pages/${item.id}`,
-              children: [{ text: formattedTitle }],
-              pageId: item.id,
-              pageTitle: item.title // Store the original page title for reference
-            },
+            updatedLink,
             { at: selectedLinkPath }
           );
         } catch (error) {
@@ -1522,13 +1533,14 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
           // Try fallback approach - insert a new link
           try {
             // Insert a new link at the current selection
-            const link = {
+            // CRITICAL FIX: Use the validator to ensure all required properties are present
+            const link = validateLink({
               type: "link",
               url: `/pages/${item.id}`,
               children: [{ text: formattedTitle }],
               pageId: item.id,
               pageTitle: item.title
-            };
+            });
 
             // Make sure we have a valid selection
             if (!editor.selection) {
@@ -1546,13 +1558,14 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
       } else {
         // Insert a new link
         try {
-          const link = {
+          // CRITICAL FIX: Use the validator to ensure all required properties are present
+          const link = validateLink({
             type: "link",
             url: `/pages/${item.id}`,
             children: [{ text: formattedTitle }],
             pageId: item.id,
             pageTitle: item.title
-          };
+          });
 
           // Make sure we have a valid selection
           if (!editor.selection) {

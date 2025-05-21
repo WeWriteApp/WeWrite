@@ -9,6 +9,7 @@ import { LineSettingsProvider, LINE_MODES } from '../contexts/LineSettingsContex
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 import { AuthContext } from "../providers/AuthProvider";
 import { isExternalLink } from "../utils/linkFormatters";
+import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../utils/linkValidator';
 import { Button } from "./ui/button";
 import { ExternalLink } from "lucide-react";
 import Modal from "./ui/modal";
@@ -57,34 +58,9 @@ const ANIMATION_CONSTANTS = {
 };
 
 // Function to extract page ID from URL
+// CRITICAL FIX: Use the standardized utility function from linkValidator.js
 const extractPageId = (url) => {
-  if (!url) return null;
-
-  // Log the URL for debugging
-  console.log('LINK_DEBUG: Extracting page ID from URL:', url);
-
-  // Check for /pages/{id} format
-  let match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
-  if (match) {
-    console.log('LINK_DEBUG: Extracted page ID from /pages/ format:', match[1]);
-    return match[1];
-  }
-
-  // Check for /{id} format (direct page ID)
-  match = url.match(/^\/([a-zA-Z0-9-_]+)$/);
-  if (match) {
-    console.log('LINK_DEBUG: Extracted page ID from direct format:', match[1]);
-    return match[1];
-  }
-
-  // Check for just the ID without any slashes (might be stored directly)
-  if (/^[a-zA-Z0-9-_]+$/.test(url)) {
-    console.log('LINK_DEBUG: URL appears to be a direct ID:', url);
-    return url;
-  }
-
-  console.log('LINK_DEBUG: Could not extract page ID from URL:', url);
-  return null;
+  return extractPageIdFromUrl(url);
 };
 
 // Function to get page title from ID
@@ -733,7 +709,6 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  * - Proper spacing between paragraphs
  */
 const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false }) => {
-  // We're now using a simpler approach with inline paragraph numbers
   const { lineMode } = useLineSettings();
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
@@ -744,15 +719,6 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
   // Use reduced vertical padding for normal mode (approximately 15-20% less)
   const spacingClass = 'py-2';
 
-  // Determine which mode we're in to set the appropriate animation delay
-  const isInDenseMode = lineMode === LINE_MODES.DENSE;
-
-  // Calculate animation delay based on mode
-  // Dense mode uses a shorter delay for faster loading
-  const animationDelay = isInDenseMode
-    ? ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY / 1000 * index // Convert ms to seconds for framer-motion
-    : 0.05 * index; // Original delay for normal mode
-
   // Handle click to edit
   const handleClick = () => {
     if (canEdit && onActiveLine) {
@@ -762,35 +728,12 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
   // Helper function to render child nodes
   const renderChild = (child, i) => {
-
-    // Debug log for link nodes
+    // Handle link nodes
     if (child.type === 'link') {
-      // Enhanced debugging for links
-      console.log(`PARAGRAPH_DEBUG: Rendering link in paragraph ${index + 1} at child index ${i}:`, {
-        index: i,
-        linkData: JSON.stringify(child),
-        hasChildren: child.children ? child.children.length : 0,
-        childrenText: child.children && child.children[0] ? child.children[0].text : 'No text in children',
-        url: child.url,
-        pageId: child.pageId,
-        className: child.className,
-        isExternal: child.isExternal,
-        isPageLink: child.isPageLink
-      });
-
-      // Create a wrapped version of the LinkNode with error handling
-      try {
-        return <LinkNode key={i} node={child} />;
-      } catch (error) {
-        console.error(`PARAGRAPH_DEBUG: Error rendering link in paragraph ${index + 1}:`, error);
-        // Fallback rendering for links that fail to render
-        return (
-          <span key={i} className="text-red-500">
-            [Link Error: {child.children?.[0]?.text || 'Unknown link'}]
-          </span>
-        );
-      }
-    } else if (child.text) {
+      return <LinkNode key={i} node={child} />;
+    }
+    // Handle text nodes
+    else if (child.text) {
       let className = '';
       if (child.bold) className += ' font-bold';
       if (child.italic) className += ' italic';
@@ -819,6 +762,26 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
         </span>
       );
     }
+    // Handle nested nodes
+    else if (child.children && Array.isArray(child.children)) {
+      return (
+        <React.Fragment key={i}>
+          {child.children.map((grandchild, grandchildIndex) => {
+            if (grandchild.type === 'link') {
+              return <LinkNode key={`${i}-${grandchildIndex}`} node={grandchild} />;
+            } else if (grandchild.text) {
+              let className = '';
+              if (grandchild.bold) className += ' font-bold';
+              if (grandchild.italic) className += ' italic';
+              if (grandchild.underline) className += ' underline';
+
+              return <span key={`${i}-${grandchildIndex}`} className={className || undefined}>{grandchild.text}</span>;
+            }
+            return null;
+          })}
+        </React.Fragment>
+      );
+    }
     return null;
   };
 
@@ -839,21 +802,22 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* WYSIWYG mode - paragraph with inline number at beginning - matches edit mode */}
-      <div className={`paragraph-with-number ${spacingClass}`}>
-        {/* Paragraph number inline at beginning - matches edit mode styling */}
+      {/* Paragraph with inline number at beginning */}
+      <div className="paragraph-with-number py-2.5 flex">
+        {/* Paragraph number - fixed width for consistent alignment */}
         <span
-          className="paragraph-number-inline select-none"
+          className="paragraph-number-inline select-none flex-shrink-0 mr-2 text-center"
           style={{
-            pointerEvents: 'none',
-            lineHeight: '1.5' /* Match the line height of paragraph text */
+            width: '1.5rem',
+            display: 'inline-block',
+            textAlign: 'right'
           }}
           data-paragraph-index={index + 1}
           aria-hidden="true"
         >{index + 1}</span>
 
-        <p className={`inline text-left text-base leading-normal ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
-          {/* Paragraph content */}
+        {/* Paragraph content with proper text wrapping */}
+        <p className={`flex-grow text-left text-base leading-normal break-words ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
           {node.children && node.children.map((child, i) => renderChild(child, i))}
           {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
         </p>
@@ -867,114 +831,32 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 const LinkNode = ({ node }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
-  // Log the entire node for debugging
-  console.log('LINK_DEBUG: LinkNode received node:', JSON.stringify(node));
+  // CRITICAL FIX: Use validateLink to standardize the link object
+  // This ensures all required properties are present regardless of which editor created the link
+  const validatedNode = validateLink(node);
 
-  // More robust URL extraction with fallbacks
-  const href = useMemo(() => {
-    // Check all possible properties where URL might be stored
-    const possibleUrls = [
-      node.url,
-      node.href,
-      node.link,
-      node.data?.url,
-      node.data?.href,
-      node.data?.link
-    ].filter(Boolean);
-
-    // If we have a pageId, ensure we have a proper URL for it
-    if (node.pageId && !possibleUrls.some(url => url?.includes(node.pageId))) {
-      return `/pages/${node.pageId}`;
-    }
-
-    // Return the first valid URL or fallback to #
-    return possibleUrls[0] || '#';
-  }, [node]);
-
-  // Use pageId from node if available, otherwise extract from href
-  const pageId = useMemo(() => {
-    // First check if pageId is directly available
-    if (node.pageId) {
-      return node.pageId;
-    }
-
-    // Then try to extract from URL
-    const extractedId = extractPageId(href);
-
-    // Log the extraction process
-    console.log('LINK_DEBUG: PageId extraction:', {
-      directPageId: node.pageId,
-      href: href,
-      extractedFromHref: extractedId,
-      finalPageId: node.pageId || extractedId
-    });
-
-    return extractedId;
-  }, [node, href]);
-
-  // Log the extracted pageId
-  console.log('LINK_DEBUG: Final pageId for link:', pageId);
-
-  // Determine if this is an external link with robust detection
-  const isExternal =
-    node.isExternal === true ||
-    node.className === 'external-link' ||
-    isExternalLink(href) ||
-    (href && (href.startsWith('http://') || href.startsWith('https://')));
+  // Extract properties from the validated node
+  const href = validatedNode.url || '#';
+  const pageId = validatedNode.pageId;
+  const isExternal = validatedNode.isExternal === true;
+  const isPageLink = validatedNode.isPageLink === true;
 
   // Determine if this is a protocol link
   const isProtocolLink =
-    node.className?.includes('protocol-link') ||
-    node.isProtocolLink === true ||
-    (node.children?.[0]?.text === "WeWrite as a decentralized open protocol");
+    validatedNode.className?.includes('protocol-link') ||
+    validatedNode.isProtocolLink === true ||
+    (validatedNode.children?.[0]?.text === "WeWrite as a decentralized open protocol");
 
-  // Extract text content from children array if available
+  // IMPROVED: Extract display text with better fallbacks
   const getTextFromNode = (node) => {
-    // Check for pageTitle first as it's the most reliable source for page links
-    if (node.pageTitle) {
-      return node.pageTitle;
-    }
+    // First try using the standardized utility function
+    const displayText = getLinkDisplayText(validatedNode);
+    if (displayText) return displayText;
 
-    // Then check for explicit display text
-    if (node.displayText) {
-      return node.displayText;
-    }
-
-    // Then check for direct text property
-    if (node.text) {
-      return node.text;
-    }
-
-    // Check for content property
-    if (node.content) {
-      return node.content;
-    }
-
-    // Special handling for links with specific text patterns
-    if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-      // Check for direct text in any child
-      for (const child of node.children) {
-        if (child.text) {
-          return child.text;
-        }
-      }
-
-      // If no direct text found, check for nested text
-      for (const child of node.children) {
-        if (child.children && Array.isArray(child.children)) {
-          for (const grandchild of child.children) {
-            if (grandchild.text) {
-              return grandchild.text;
-            }
-          }
-        }
-      }
-    }
-
-    // More robust children text extraction with deep traversal
+    // Deep traversal to extract text from children
     const extractTextFromNode = (node, depth = 0) => {
       if (!node) return '';
-      if (depth > 5) return ''; // Maximum depth to prevent infinite recursion
+      if (depth > 5) return ''; // Prevent infinite recursion
       if (node.text) return node.text;
       if (node.children && Array.isArray(node.children)) {
         return node.children.map(child => extractTextFromNode(child, depth + 1)).join('');
@@ -982,6 +864,7 @@ const LinkNode = ({ node }) => {
       return '';
     };
 
+<<<<<<< Updated upstream
     if (node.children && Array.isArray(node.children)) {
       const extractedText = extractTextFromNode(node);
       if (extractedText) {
@@ -1004,33 +887,95 @@ const LinkNode = ({ node }) => {
     if (pageId) {
       return pageId.replace(/-/g, ' ');
     }
+=======
+    // Try extracting from children
+    if (validatedNode.children && Array.isArray(validatedNode.children)) {
+      const extractedText = extractTextFromNode(validatedNode);
+      if (extractedText) return extractedText;
+    }
+
+    // Check for text in data property
+    if (validatedNode.data && typeof validatedNode.data === 'object') {
+      if (validatedNode.data.text) return validatedNode.data.text;
+      if (validatedNode.data.displayText) return validatedNode.data.displayText;
+    }
+
+    // Use appropriate fallbacks based on link type
+    if (isExternal && href) return href;
+    if (pageId) return validatedNode.pageTitle || pageId.replace(/-/g, ' ');
+>>>>>>> Stashed changes
 
     // Last resort fallback
     return href || 'Link';
   };
 
+<<<<<<< Updated upstream
   // Always ensure we get a valid display text
   let displayText = getTextFromNode(node);
+=======
+  // Get display text with improved extraction
+  let displayText = getTextFromNode(validatedNode);
+>>>>>>> Stashed changes
 
-  // If displayText is empty or undefined, use a fallback
+  // If displayText is still empty, use appropriate fallbacks
   if (!displayText) {
+<<<<<<< Updated upstream
     displayText = node.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
   }
 
   // For internal links, use the InternalLinkWithTitle component
+=======
+    displayText = validatedNode.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
+  }
+
+  // For protocol links, use a special component
+  if (isProtocolLink) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-block">
+              <PillLink
+                href="/protocol"
+                isPublic={true}
+                className="protocol-link"
+              >
+                {displayText || "WeWrite Protocol"}
+              </PillLink>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Learn about the WeWrite protocol</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // For internal page links, use the InternalLinkWithTitle component
+>>>>>>> Stashed changes
   if (pageId) {
     // Pass the original page title if available in the node
-    const originalPageTitle = node.pageTitle || null;
+    const originalPageTitle = validatedNode.pageTitle || null;
 
     // Ensure href is properly formatted for internal links
     const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
 
+<<<<<<< Updated upstream
+=======
+    // Ensure we have a valid display text for page links
+    let finalDisplayText = displayText;
+    if (!finalDisplayText) {
+      finalDisplayText = validatedNode.pageTitle || `Page: ${pageId}`;
+    }
+
+>>>>>>> Stashed changes
     return (
       <span className="inline-block">
         <InternalLinkWithTitle
           pageId={pageId}
           href={formattedHref}
-          displayText={displayText}
+          displayText={finalDisplayText}
           originalPageTitle={originalPageTitle}
         />
       </span>
@@ -1049,8 +994,8 @@ const LinkNode = ({ node }) => {
     let finalDisplayText = displayText;
 
     // Double-check for text in children as a fallback
-    if (!finalDisplayText && node.children && node.children.length > 0 && node.children[0].text) {
-      finalDisplayText = node.children[0].text;
+    if (!finalDisplayText && validatedNode.children && validatedNode.children.length > 0 && validatedNode.children[0].text) {
+      finalDisplayText = validatedNode.children[0].text;
     }
 
     // If still no text, use the URL as a last resort
@@ -1105,11 +1050,11 @@ const LinkNode = ({ node }) => {
     );
   }
 
-  // For other links (like "Republican Party"), use the PillLink component with special handling
+  // For other links (like special links), use the PillLink component
   // If displayText is empty or undefined, try to get text from children
-  if (!displayText && node.children && Array.isArray(node.children)) {
+  if (!displayText && validatedNode.children && Array.isArray(validatedNode.children)) {
     // Try to find any child with text
-    for (const child of node.children) {
+    for (const child of validatedNode.children) {
       if (child.text) {
         displayText = child.text;
         break;
@@ -1140,35 +1085,18 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
   const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 2;
+  const [isMounted, setIsMounted] = useState(true);
 
-  // Log the props for debugging
-  console.log('LINK_DEBUG: InternalLinkWithTitle props:', {
-    pageId,
-    href,
-    displayText,
-    originalPageTitle
-  });
-
-  // Ensure pageId is valid
-  const validPageId = useMemo(() => {
-    if (!pageId && href) {
-      // Try to extract pageId from href if not provided directly
-      const extractedId = extractPageId(href);
-      console.log('LINK_DEBUG: Extracted pageId from href:', extractedId);
-      return extractedId;
-    }
-    return pageId;
-  }, [pageId, href]);
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // Ensure href is properly formatted
   const formattedHref = useMemo(() => {
     // If we have a valid pageId, always use that to create a consistent href
-    if (validPageId) {
-      const properHref = `/pages/${validPageId}`;
-      console.log('LINK_DEBUG: Created proper href from pageId:', properHref);
-      return properHref;
+    if (pageId) {
+      return `/pages/${pageId}`;
     }
 
     // Fallback handling if no valid pageId
@@ -1182,7 +1110,7 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
     }
 
     return href;
-  }, [href, validPageId]);
+  }, [href, pageId]);
 
   useEffect(() => {
     // Reset states when pageId changes
@@ -1192,53 +1120,21 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
 
     const fetchTitle = async () => {
       try {
-        if (!validPageId) {
-          console.error('LINK_DEBUG: No valid pageId available for InternalLinkWithTitle');
+        if (!pageId) {
           setFetchError(true);
           setIsLoading(false);
           return;
         }
 
-        // Check if we already have this title in the cache
-        if (pageTitleCache.has(validPageId)) {
-          const cachedTitle = pageTitleCache.get(validPageId);
-          console.log('LINK_DEBUG: Using cached page title:', cachedTitle);
-          setCurrentTitle(cachedTitle);
-          setIsLoading(false);
-          return;
-        }
+        // Check cache first to avoid unnecessary API calls
+        const pageTitle = await getPageTitle(pageId);
 
-        console.log(`LINK_DEBUG: Fetching page title for pageId: ${validPageId}`);
-        const pageTitle = await getPageTitle(validPageId);
-
-        if (pageTitle) {
-          console.log('LINK_DEBUG: Successfully fetched page title:', pageTitle);
+        if (isMounted) {
           setCurrentTitle(pageTitle);
-          setIsLoading(false);
-          // Cache the result for future use
-          pageTitleCache.set(validPageId, pageTitle);
-        } else if (retryCount < maxRetries) {
-          // Retry if we didn't get a title and haven't exceeded max retries
-          console.log(`LINK_DEBUG: No title found, retrying (${retryCount + 1}/${maxRetries})`);
-          setRetryCount(prev => prev + 1);
-          // Wait a bit before retrying
-          setTimeout(fetchTitle, 500);
-        } else {
-          // Give up after max retries
-          console.error('LINK_DEBUG: Failed to fetch page title after retries');
-          setFetchError(true);
           setIsLoading(false);
         }
       } catch (error) {
-        console.error('LINK_DEBUG: Error fetching page title:', error);
-
-        if (retryCount < maxRetries) {
-          // Retry on error if we haven't exceeded max retries
-          console.log(`LINK_DEBUG: Error fetching title, retrying (${retryCount + 1}/${maxRetries})`);
-          setRetryCount(prev => prev + 1);
-          // Wait a bit before retrying
-          setTimeout(fetchTitle, 500);
-        } else {
+        if (isMounted) {
           setFetchError(true);
           setIsLoading(false);
         }
@@ -1246,26 +1142,23 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
     };
 
     fetchTitle();
-  }, [validPageId, retryCount]);
+  }, [pageId, isMounted]);
 
-  // Enhanced display text selection logic
+  // Determine what text to display using a clear priority system
   let textToDisplay;
 
   // First priority: If displayText was explicitly provided and is different from originalPageTitle,
   // it was customized by the user, so use it
   if (displayText && originalPageTitle && displayText !== originalPageTitle) {
-    console.log('LINK_DEBUG: Using customized display text:', displayText);
     textToDisplay = displayText;
   }
   // Second priority: If displayText was explicitly provided and there's no originalPageTitle,
   // use the provided displayText
   else if (displayText && !originalPageTitle) {
-    console.log('LINK_DEBUG: Using provided display text (no originalPageTitle):', displayText);
     textToDisplay = displayText;
   }
   // Third priority: If we have a currentTitle from the database, use it
   else if (currentTitle) {
-    console.log('LINK_DEBUG: Using fetched page title:', currentTitle);
     textToDisplay = currentTitle;
   }
   // Fourth priority: If originalPageTitle is available, use it while loading
@@ -1275,7 +1168,6 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
   }
   // Fifth priority: If we're still loading and have no originalPageTitle, show a loading indicator
   else if (isLoading) {
-    console.log('LINK_DEBUG: Showing loading indicator');
     textToDisplay = (
       <>
         <span className="inline-block w-3 h-3 border-2 border-t-transparent border-primary rounded-full animate-spin mr-1"></span>
@@ -1286,7 +1178,6 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
   // Sixth priority: If there was an error or we have no other text, use a fallback
   else {
     const fallbackText = fetchError ? 'Page Link (Error)' : (originalPageTitle || 'Page Link');
-    console.log('LINK_DEBUG: Using fallback text:', fallbackText);
     textToDisplay = fallbackText;
   }
 
@@ -1300,7 +1191,7 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
               href={formattedHref}
               isPublic={true}
               className="inline page-link"
-              data-page-id={validPageId}
+              data-page-id={pageId}
             >
               {textToDisplay}
             </PillLink>
