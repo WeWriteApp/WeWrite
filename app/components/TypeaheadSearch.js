@@ -38,7 +38,9 @@ const TypeaheadSearch = ({
   editableOnly = false, // New prop to filter for editable pages only
   initialSearch = "", // New prop to set initial search value
   displayText = "", // Display text for the link
-  setDisplayText = null // Function to update display text
+  setDisplayText = null, // Function to update display text
+  onInputChange = null, // Function to handle input changes
+  preventRedirect = false // Prevent redirect to search page
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -147,6 +149,9 @@ const TypeaheadSearch = ({
         return;
       }
 
+      // Check if we're in the link editor context
+      const isLinkEditor = !!setDisplayText;
+
       console.log('TypeaheadSearch - Fetching results for:', {
         search,
         searchLength: search?.length,
@@ -155,7 +160,8 @@ const TypeaheadSearch = ({
         userId: userId || user?.uid,
         filterByUserId: userId, // Log if we're filtering by a specific user
         groups: user?.groups,
-        characterCount
+        characterCount,
+        isLinkEditor
       });
 
       setIsSearching(true);
@@ -169,18 +175,24 @@ const TypeaheadSearch = ({
         // Determine if we should filter by a specific user ID
         const isFilteringByUser = !!userId;
 
+        // IMPORTANT FIX: Ensure search term is properly encoded
+        // For link editor context, allow empty search terms to fetch recent pages
+        const searchTerm = isLinkEditor && !search.trim() ? '' : search.trim();
+        const encodedSearch = encodeURIComponent(searchTerm);
+        console.log(`TypeaheadSearch - Encoded search term: "${encodedSearch}" (in ${isLinkEditor ? 'link editor' : 'regular search'})`);
+
         // Construct the API URL based on whether we're filtering by user
         let queryUrl;
         if (isFilteringByUser) {
           // When filtering by user, we want to search only that user's pages
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&filterByUserId=${userId}&groupIds=${groupIds}`;
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodedSearch}&filterByUserId=${userId}&groupIds=${groupIds}`;
         } else {
           // Normal search across all accessible pages
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodeURIComponent(search)}&groupIds=${groupIds}`;
+          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodedSearch}&groupIds=${groupIds}`;
         }
 
         // Only search for users if we're not filtering by a specific user
-        const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodeURIComponent(search)}`;
+        const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodedSearch}`;
 
         console.log('Making API requests to:', {
           queryUrl,
@@ -213,8 +225,13 @@ const TypeaheadSearch = ({
             );
           }
 
+          // IMPORTANT FIX: Add more detailed logging before fetch
+          console.log(`TypeaheadSearch - Starting fetch requests at ${new Date().toISOString()}`);
+
           // Fetch pages and optionally users in parallel using Promise.allSettled to handle partial failures
           const responses = await Promise.allSettled(fetchPromises);
+          console.log(`TypeaheadSearch - Fetch responses received at ${new Date().toISOString()}:`,
+            responses.map(r => ({ status: r.status, ok: r.status === 'fulfilled' ? r.value.ok : false })));
 
           // Extract responses
           const pagesResponse = responses[0];
@@ -225,42 +242,51 @@ const TypeaheadSearch = ({
           // Process page results
           let processedPages = [];
           if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
-            const pagesData = await pagesResponse.value.json();
-            console.log('TypeaheadSearch - Pages API response:', pagesData);
+            try {
+              const pagesData = await pagesResponse.value.json();
+              console.log('TypeaheadSearch - Pages API response:', pagesData);
 
-            // Check if we received an error message
-            if (pagesData.error) {
-              console.error('TypeaheadSearch - Pages API returned error object:', pagesData.error);
-              // Continue processing - we'll still use any pages that were returned
-            }
+              // Check if we received an error message
+              if (pagesData.error) {
+                console.error('TypeaheadSearch - Pages API returned error object:', pagesData.error);
+                // Continue processing - we'll still use any pages that were returned
+              }
 
-            // Process the results with usernames
-            if (pagesData && pagesData.pages) {
-              // Log search term and matching titles for debugging
-              console.log(`TypeaheadSearch - Found ${pagesData.pages.length} pages for "${search}"`);
+              // Process the results with usernames
+              if (pagesData && pagesData.pages) {
+                // Log search term and matching titles for debugging
+                console.log(`TypeaheadSearch - Found ${pagesData.pages.length} pages for "${search}"`);
 
-              if (pagesData.pages.length > 0) {
-                console.log('TypeaheadSearch - Matching page titles:',
-                  pagesData.pages.map(page => page.title).join(', '));
+                if (pagesData.pages.length > 0) {
+                  console.log('TypeaheadSearch - Matching page titles:',
+                    pagesData.pages.map(page => page.title).join(', '));
 
-                // Filter out any fallback/suggested results
-                const realPages = pagesData.pages.filter(page => !page.isFallback);
-                console.log(`TypeaheadSearch - Filtered out ${pagesData.pages.length - realPages.length} fallback results`);
+                  // Filter out any fallback/suggested results
+                  const realPages = pagesData.pages.filter(page => !page.isFallback);
+                  console.log(`TypeaheadSearch - Filtered out ${pagesData.pages.length - realPages.length} fallback results`);
 
-                processedPages = await processPagesWithUsernames(realPages);
+                  processedPages = await processPagesWithUsernames(realPages);
+                } else {
+                  console.log('TypeaheadSearch - No matching pages found');
+                }
               } else {
-                console.log('TypeaheadSearch - No matching pages found');
+                // IMPORTANT FIX: Handle case where pages array is missing
+                console.warn('TypeaheadSearch - Pages API response missing "pages" array:', pagesData);
               }
-            }
 
-            // Log the source of the search results
-            if (pagesData.source) {
-              console.log(`TypeaheadSearch - Results source: ${pagesData.source}`);
+              // Log the source of the search results
+              if (pagesData.source) {
+                console.log(`TypeaheadSearch - Results source: ${pagesData.source}`);
 
-              // If we're using a fallback, let the user know
-              if (pagesData.source.includes('fallback')) {
-                console.log('TypeaheadSearch - Using Firestore fallback search');
+                // If we're using a fallback, let the user know
+                if (pagesData.source.includes('fallback')) {
+                  console.log('TypeaheadSearch - Using Firestore fallback search');
+                }
               }
+            } catch (jsonError) {
+              console.error('TypeaheadSearch - Error parsing pages API response:', jsonError);
+              // Reset processed pages to empty array on error
+              processedPages = [];
             }
           } else {
             console.error('TypeaheadSearch - Pages API request failed:',
@@ -271,18 +297,28 @@ const TypeaheadSearch = ({
           // Process user results
           let users = [];
           if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
-            const usersData = await usersResponse.value.json();
-            console.log('TypeaheadSearch - Users API response:', usersData);
+            try {
+              const usersData = await usersResponse.value.json();
+              console.log('TypeaheadSearch - Users API response:', usersData);
 
-            if (usersData && usersData.users) {
-              // Filter out any fallback/suggested user results
-              users = usersData.users.filter(user => !user.isFallback);
-              console.log(`TypeaheadSearch - Filtered out ${usersData.users.length - users.length} fallback user results`);
+              if (usersData && usersData.users) {
+                // Filter out any fallback/suggested user results
+                users = usersData.users.filter(user => !user.isFallback);
+                console.log(`TypeaheadSearch - Filtered out ${usersData.users.length - users.length} fallback user results`);
+                console.log(`TypeaheadSearch - Found ${users.length} matching users`);
+              } else {
+                // IMPORTANT FIX: Handle case where users array is missing
+                console.warn('TypeaheadSearch - Users API response missing "users" array:', usersData);
+              }
+            } catch (jsonError) {
+              console.error('TypeaheadSearch - Error parsing users API response:', jsonError);
+              // Reset users to empty array on error
+              users = [];
             }
-          } else {
-            console.error('TypeaheadSearch - Users API request failed:',
-              usersResponse.status === 'rejected' ? usersResponse.reason :
-              `HTTP ${usersResponse.value?.status || 'unknown'}`);
+          } else if (usersResponse.status === 'rejected') {
+            console.error('TypeaheadSearch - Users API request rejected:', usersResponse.reason);
+          } else if (usersResponse.value) {
+            console.error('TypeaheadSearch - Users API request failed with status:', usersResponse.value.status);
           }
 
           // Log if no results were found
@@ -317,7 +353,7 @@ const TypeaheadSearch = ({
         setIsSearching(false);
       }
     }, 500),
-    [userId]
+    [userId, setDisplayText]
   );
 
   const resetSearchResults = () => {
@@ -331,20 +367,37 @@ const TypeaheadSearch = ({
   };
 
   useEffect(() => {
+    console.log(`TypeaheadSearch - Search term changed: "${search}"`);
+
     if (!search) {
-      resetSearchResults();
-      return;
-    }
-    if (!user) return;
-
-    // if search less than minimum characters, don't make request
-    if (search.length < characterCount || !search.trim()) {
+      console.log('TypeaheadSearch - Empty search term, resetting results');
       resetSearchResults();
       return;
     }
 
-    fetchResults(search.trim(), user);
-  }, [search, user, fetchResults]);
+    if (!user) {
+      console.log('TypeaheadSearch - No authenticated user, skipping search');
+      return;
+    }
+
+    // IMPORTANT FIX: Always make the request in the link editor context (when setDisplayText is provided)
+    // Otherwise, only search if we have at least the minimum number of characters
+    const isLinkEditor = !!setDisplayText;
+    const hasMinimumChars = search.trim().length >= characterCount;
+
+    if (!hasMinimumChars && !isLinkEditor) {
+      console.log(`TypeaheadSearch - Search term too short (${search.length} chars) and not in link editor, resetting results`);
+      resetSearchResults();
+      return;
+    }
+
+    // In link editor context, always trigger search regardless of search term length
+    // For regular search, only search if we have at least one character
+    if (isLinkEditor || search.trim().length > 0) {
+      console.log(`TypeaheadSearch - Triggering search for: "${search.trim()}" (in ${isLinkEditor ? 'link editor' : 'regular search'})`);
+      fetchResults(search.trim(), user);
+    }
+  }, [search, user, fetchResults, setDisplayText]);
 
   useEffect(() => {
     if (onSelect) {
@@ -358,14 +411,39 @@ const TypeaheadSearch = ({
 
   // Effect to trigger search when initialSearch is provided
   useEffect(() => {
-    if (initialSearch && initialSearch.trim().length >= characterCount && user) {
-      console.log('TypeaheadSearch - Initial search triggered with:', initialSearch);
-      fetchResults(initialSearch.trim(), user);
+    if (initialSearch && user) {
+      console.log(`TypeaheadSearch - Initial search value provided: "${initialSearch}"`);
+
+      // IMPORTANT FIX: Always make the request in the link editor context (when setDisplayText is provided)
+      // Otherwise, only search if we have at least the minimum number of characters
+      const isLinkEditor = !!setDisplayText;
+      const hasMinimumChars = initialSearch.trim().length >= characterCount;
+
+      // In link editor context, always trigger search regardless of search term length
+      if (hasMinimumChars || isLinkEditor) {
+        console.log(`TypeaheadSearch - Initial search triggered with: "${initialSearch.trim()}" (in ${isLinkEditor ? 'link editor' : 'regular search'})`);
+        fetchResults(initialSearch.trim(), user);
+      } else {
+        console.log(`TypeaheadSearch - Initial search term too short (${initialSearch.length} chars) and not in link editor, skipping`);
+      }
     }
-  }, [initialSearch, user, fetchResults]);
+
+    // If we're in the link editor context, always trigger an initial search to populate results
+    // even if initialSearch is empty
+    else if (user && setDisplayText && !initialSearch) {
+      console.log('TypeaheadSearch - No initial search value but in link editor context, triggering empty search to populate results');
+      fetchResults('', user);
+    }
+  }, [initialSearch, user, fetchResults, setDisplayText]);
 
   const handleInputChange = (e) => {
-    setSearch(e.target.value);
+    const value = e.target.value;
+    setSearch(value);
+
+    // If onInputChange prop is provided, call it with the new value
+    if (typeof onInputChange === 'function') {
+      onInputChange(value);
+    }
   };
 
   // Helper function to deduplicate pages by ID
@@ -473,12 +551,14 @@ const TypeaheadSearch = ({
 
       <div
         className={`mt-2 space-y-1 transition-all max-h-[40vh] overflow-y-auto ${
-          search.length >= characterCount
+          // Always show results in link editor context (when setDisplayText is provided)
+          // Otherwise, only show if search term meets minimum length
+          (search.length >= characterCount || !!setDisplayText)
             ? "opacity-100"
             : "opacity-0"
         }`}
       >
-        {isSearching && search.length >= characterCount ? (
+        {isSearching && (search.length >= characterCount || !!setDisplayText) ? (
           <Loader />
         ) : (
           <>
