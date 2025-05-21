@@ -99,14 +99,14 @@ export default function PageHeader({
   React.useEffect(() => {
     const fetchUsername = async () => {
       // Always set a default username first
-      setDisplayUsername(username || "Anonymous");
+      setDisplayUsername(username || "Missing username");
 
       // Then try to fetch the actual username if we have a userId
       if (userId) {
         try {
           console.log("Fetching username for userId:", userId);
           const fetchedUsername = await getUsernameById(userId);
-          if (fetchedUsername && fetchedUsername !== "Anonymous") {
+          if (fetchedUsername && fetchedUsername !== "Anonymous" && fetchedUsername !== "Missing username") {
             setDisplayUsername(fetchedUsername);
             console.log("Username fetched for PageHeader:", fetchedUsername);
           }

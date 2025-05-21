@@ -7,10 +7,10 @@ import TopUsers from "./components/TopUsers";
 import AddUsername from "./components/AddUsername";
 import SearchButton from "./components/SearchButton";
 import LoginBanner from "./components/LoginBanner";
-import RecentActivity from "./components/RecentActivity";
 import TrendingPages from "./components/TrendingPages";
 // Using HomeGroupsSection instead of MyGroups
 import HomeGroupsSection from "./components/HomeGroupsSection";
+import ActivitySection from "./components/ActivitySection";
 
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
@@ -155,13 +155,7 @@ export default function Home() {
           </div>
 
           {/* 1. Recent Activity (moved to top) */}
-          <div style={{ minHeight: '200px' }}>
-            <SectionTitle
-              icon={Clock}
-              title="Recent Activity"
-            />
-            <RecentActivity limit={4} />
-          </div>
+          <ActivitySection />
 
           {/* 2. Groups Section - Only visible when feature flag is enabled */}
           <HomeGroupsSection />

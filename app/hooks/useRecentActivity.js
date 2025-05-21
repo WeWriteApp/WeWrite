@@ -185,6 +185,16 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // Filter activities based on the current filters
           let validActivities = activitiesWithSubscriptions;
 
+          // Filter out activities with missing usernames
+          validActivities = validActivities.filter(activity => {
+            // Skip activities with missing or null usernames
+            if (!activity.username || activity.username === "Missing username" || activity.username === "Anonymous") {
+              console.log(`Filtering out activity with missing username: ${activity.pageId}`);
+              return false;
+            }
+            return true;
+          });
+
           // Apply user filter if specified
           if (filterUserId) {
             validActivities = validActivities.filter(activity => {
@@ -205,8 +215,22 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             });
           }
 
+          // Explicitly sort by timestamp in descending order (newest first)
+          validActivities = validActivities.sort((a, b) => {
+            // Convert timestamps to numbers for comparison
+            const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return timeB - timeA; // Descending order (newest first)
+          });
+
           // Limit the number of activities
           validActivities = validActivities.slice(0, limitCount);
+
+          console.log('Sorted activities by timestamp:', validActivities.map(a => ({
+            pageId: a.pageId,
+            timestamp: a.timestamp,
+            date: a.timestamp ? new Date(a.timestamp).toISOString() : 'none'
+          })));
 
           // Set the activities
           setActivities(validActivities);

@@ -25,7 +25,7 @@ export default function SectionTitle({
   rightContent
 }: SectionTitleProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+    <div className="flex flex-row items-center justify-between gap-2 mb-4">
       <div className="flex items-center gap-2">
         <Icon className="h-5 w-5 text-muted-foreground" />
         <div>

@@ -22,6 +22,7 @@ import {
 } from './ui/dropdown-menu';
 import { getCurrentUsername } from "../utils/userUtils";
 import { generateReplyTitle, createReplyContent, encodeReplyParams } from "../utils/replyUtils";
+import { saveDraftReply, setPendingReplyAction } from "../utils/draftReplyUtils";
 import {
   Dialog,
   DialogContent,
@@ -152,9 +153,59 @@ export function PageActions({
 
   /**
    * Creates a reply to the current page
+   * For non-authenticated users, stores the draft reply and redirects to login
    */
   const handleReply = async () => {
-    // Get the current user's username using our centralized utility
+    // Check if user is authenticated
+    if (!user) {
+      // User is not authenticated, store draft reply and redirect to login
+      try {
+        // Create standardized reply content
+        const replyTitle = generateReplyTitle(page.title);
+        const initialContent = createReplyContent({
+          pageId: page.id,
+          pageTitle: page.title,
+          userId: page.userId,
+          username: page.username,
+          replyType: "standard"
+        });
+
+        // Create the return URL that would be used after authentication
+        const returnUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}`;
+
+        // Save the draft reply to local storage
+        const draftReply = {
+          pageId: page.id,
+          pageTitle: page.title || "Untitled",
+          content: initialContent,
+          returnUrl
+        };
+
+        const saved = saveDraftReply(draftReply);
+
+        if (saved) {
+          // Set the pending reply action
+          setPendingReplyAction({
+            pageId: page.id,
+            returnUrl
+          });
+
+          // Show a toast message
+          toast.success("Your reply has been saved. Please sign in to post it.");
+
+          // Redirect to login page with action parameter
+          router.push(`/auth/login?action=posting_reply&return_to=${encodeURIComponent(returnUrl)}`);
+        } else {
+          toast.error("Failed to save your reply. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error handling guest reply:", error);
+        toast.error("Failed to create reply");
+      }
+      return;
+    }
+
+    // User is authenticated, proceed with normal reply flow
     try {
       // Try to get username from multiple sources
       let username = '';
@@ -185,9 +236,9 @@ export function PageActions({
         }
       }
 
-      // 3. If we still don't have a username, use 'Anonymous'
+      // 3. If we still don't have a username, use 'Missing username'
       if (!username) {
-        username = 'Anonymous';
+        username = 'Missing username';
       }
 
       // Use utility functions to create standardized reply content

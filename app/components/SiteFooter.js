@@ -23,7 +23,7 @@ export default function SiteFooter({ className = "" }) {
   const locationRef = useRef(null);
 
   const madeWithOptions = ["Made with agápē", "Vibe coded"];
-  const locationOptions = ["Made in America", "in New York City", "on Earth"];
+  const locationOptions = ["in America", "in New York City", "on Earth"];
 
   const animateTextChange = (element, newText, callback) => {
     if (!element) return;
@@ -125,7 +125,7 @@ export default function SiteFooter({ className = "" }) {
     },
     {
       href: "/zRNwhNgIEfLFo050nyAT",
-      label: "Roadmap",
+      label: "Feature Roadmap",
       icon: <Map className="h-3 w-3" />,
       external: false
     },

@@ -12,10 +12,10 @@
   display: inline-block;
   min-width: 0.75rem; /* Reduced width for better alignment */
   text-align: right;
-  vertical-align: baseline;
+  vertical-align: top; /* Align with the top of the text */
   opacity: 0.8; /* Slightly increased opacity for better visibility */
   position: relative;
-  top: -0.05em; /* Slight adjustment to align with text */
+  top: 0.5em; /* Center with the first line of text */
   margin-right: 0.25rem; /* Reduced margin for tighter alignment */
   float: none; /* Ensure it flows with text */
 }
@@ -55,6 +55,11 @@
 .paragraph-with-number {
   margin-bottom: 1.25rem; /* Consistent spacing between paragraphs */
   position: relative; /* Needed for proper positioning */
+}
+
+/* Reduced vertical spacing for normal mode paragraphs */
+.normal-mode .paragraph-with-number {
+  margin-bottom: 0.95rem; /* Further reduced by ~24% from 1.25rem */
 }
 
 /* Properly position paragraph numbers inline with text */

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, lazy, Suspense, useCallback, useMem
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '../../components/ui/button';
-import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info } from 'lucide-react';
+import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info, Clock, Wrench } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
@@ -28,6 +28,7 @@ import SimpleActivityCarousel from './SimpleActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import HeroSection from './HeroSection';
 import LandingPageDonationBar from './LandingPageDonationBar';
+import { FilterableFeatureList } from './FilterableFeatureList';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -455,6 +456,8 @@ const LandingPage = () => {
     animate();
   };
 
+  // No longer need roadmap scroll navigation since we're using a filterable list
+
   // Handle platform text click
   const handlePlatformClick = () => {
     if (isAnimatingPlatform) return;
@@ -530,7 +533,7 @@ const LandingPage = () => {
                 className={`text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 <FileText className="h-4 w-4" />
-                Roadmap
+                Feature Roadmap
               </a>
 
 
@@ -617,7 +620,7 @@ const LandingPage = () => {
                 className={`text-xs font-medium transition-colors hover:text-primary px-2 py-1 flex-shrink-0 flex items-center gap-1.5 ${activeSection === 'features' ? 'text-blue-600 font-semibold' : ''}`}
               >
                 <FileText className="h-3 w-3" />
-                Roadmap
+                Feature Roadmap
               </a>
 
 
@@ -689,101 +692,31 @@ const LandingPage = () => {
         </section>
 
         {/* Features Kanban Section */}
-        <section id="features" className="py-16 md:py-20 bg-background">
-          <div className="container mx-auto px-6 max-w-6xl">
+        <section id="features" className="py-16 md:py-20 bg-background overflow-visible">
+          <div className="container mx-auto px-4 sm:px-6 max-w-6xl overflow-visible">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
                 <FileText className="h-7 w-7" />
-                Roadmap
+                Feature Roadmap
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
                 Discover what makes WeWrite special and what's coming next.
               </p>
               <Button variant="default" size="lg" className="gap-2 mx-auto bg-[#1768FF] hover:bg-[#1768FF]/90 text-white" asChild>
                 <Link href="/zRNwhNgIEfLFo050nyAT">
-                  <FileText className="h-4 w-4" /> View Full Roadmap <ArrowRight className="h-4 w-4" />
+                  View Full Feature Roadmap <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
 
-            {/* Kanban layout with horizontal scrolling */}
-            <div className="overflow-x-auto pb-6">
-              <div className="flex min-w-max gap-6" style={{ minWidth: '100%' }}>
-                {/* Coming Soon Column */}
-                <div className="flex-1 min-w-[300px]">
-                  <div className="bg-gray-300 dark:bg-gray-700 rounded-lg p-4 mb-4 shadow-sm">
-                    <h3 className="text-xl font-bold mb-0 text-center text-gray-800 dark:text-white">Coming Soon</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {comingSoonFeatures.map((feature, index) => (
-                      <div
-                        key={index}
-                        className={`${fadeInClass}`}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <PagePreviewCard
-                          title={feature.title}
-                          content=""
-                          pageId={feature.pageId}
-                          status="coming-soon"
-                          hideStatus={true}
-                          maxContentLength={0}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* In Progress Column */}
-                <div className="flex-1 min-w-[300px]">
-                  <div className="bg-amber-300 dark:bg-amber-600 rounded-lg p-4 mb-4 shadow-sm">
-                    <h3 className="text-xl font-bold mb-0 text-center text-amber-800 dark:text-white">In Progress</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {builtFeatures.filter(f => f.status === 'in-progress').map((feature, index) => (
-                      <div
-                        key={index}
-                        className={`${fadeInClass}`}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <PagePreviewCard
-                          title={feature.title}
-                          content=""
-                          pageId={feature.pageId}
-                          status="in-progress"
-                          hideStatus={true}
-                          maxContentLength={0}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Available Now Column */}
-                <div className="flex-1 min-w-[300px]">
-                  <div className="bg-green-300 dark:bg-green-600 rounded-lg p-4 mb-4 shadow-sm">
-                    <h3 className="text-xl font-bold mb-0 text-center text-green-800 dark:text-white">Available Now</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {builtFeatures.filter(f => f.status === 'done').map((feature, index) => (
-                      <div
-                        key={index}
-                        className={`${fadeInClass}`}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                      >
-                        <PagePreviewCard
-                          title={feature.title}
-                          content=""
-                          pageId={feature.pageId}
-                          status="done"
-                          hideStatus={true}
-                          maxContentLength={0}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {/* Filterable Feature List */}
+            <div className="container mx-auto px-4 max-w-5xl filter-chips-parent overflow-visible">
+              <FilterableFeatureList
+                inProgressFeatures={builtFeatures.filter(f => f.status === 'in-progress')}
+                comingSoonFeatures={comingSoonFeatures}
+                availableFeatures={builtFeatures.filter(f => f.status === 'done')}
+                fadeInClass={fadeInClass}
+              />
             </div>
           </div>
         </section>

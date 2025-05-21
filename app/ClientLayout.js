@@ -24,6 +24,10 @@ import { PageTransition } from "./components/ui/page-transition";
 import ErrorBoundary from "./components/ErrorBoundary";
 import HydrationSafetyWrapper from "./components/HydrationSafetyWrapper";
 
+// Dynamically import PendingReplyHandler with no SSR
+const PendingReplyHandler = dynamic(() => import('./components/PendingReplyHandler'), {
+  ssr: false
+});
 
 
 // Dynamically import components with no SSR
@@ -65,6 +69,9 @@ export default function ClientLayout({ children }) {
                               <LineSettingsProvider>
                                 <Drawer />
                                 <div className="flex flex-col min-h-screen bg-background pb-8">
+                                  {/* Handle pending replies after authentication */}
+                                  <PendingReplyHandler />
+
                                   {!isAuthPage && <UsernameWarningBanner />}
                                   {!isAuthPage && <UsernameEnforcementBanner />}
                                   <FeatureFlagCookieManager />

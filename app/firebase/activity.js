@@ -8,13 +8,65 @@ import {
   getDocs,
   doc,
   getDoc,
-  select
+  Timestamp
 } from "firebase/firestore";
 import { app } from "./config";
 import { getBioAndAboutActivities } from "./bioActivity";
-import { getDatabase, ref, get } from "firebase/database";
+// Database imports are used in the commented-out code section
+// Keeping them for when the group membership filtering is re-enabled
+// import { getDatabase, ref, get } from "firebase/database";
 
 const db = getFirestore(app);
+
+/**
+ * Helper function to safely convert various timestamp formats to a JavaScript Date
+ *
+ * @param {any} timestamp - The timestamp to convert (could be Firestore Timestamp, seconds, milliseconds, or Date)
+ * @returns {Date} - JavaScript Date object
+ */
+function convertToDate(timestamp) {
+  if (!timestamp) {
+    return new Date(); // Default to current time if no timestamp provided
+  }
+
+  try {
+    // If it's already a Date object
+    if (timestamp instanceof Date) {
+      return timestamp;
+    }
+
+    // If it's a Firestore Timestamp object with toDate method
+    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+
+    // If it's a Firestore Timestamp-like object with seconds and nanoseconds
+    if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) {
+      return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
+    }
+
+    // If it's a number (seconds or milliseconds since epoch)
+    if (typeof timestamp === 'number') {
+      // If it's seconds (Firestore uses seconds)
+      if (timestamp < 2000000000) { // Arbitrary cutoff for seconds vs milliseconds
+        return new Date(timestamp * 1000);
+      }
+      // If it's milliseconds
+      return new Date(timestamp);
+    }
+
+    // If it's an ISO string or other string format
+    if (typeof timestamp === 'string') {
+      return new Date(timestamp);
+    }
+
+    // If we can't determine the format, return current date
+    return new Date();
+  } catch (error) {
+    console.error("Error converting timestamp:", error, timestamp);
+    return new Date(); // Fallback to current time
+  }
+}
 
 /**
  * Gets recent activity data from Firestore
@@ -27,15 +79,11 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
   try {
     console.log('getRecentActivity: Starting with limit', limitCount);
 
-    // Define only the fields we need to reduce data transfer
-    const requiredFields = ["title", "lastModified", "userId", "username"];
-
     // Query to get recent pages (only public pages)
     const pagesQuery = query(
       collection(db, "pages"),
       where("isPublic", "==", true),
       orderBy("lastModified", "desc"),
-      select(...requiredFields),
       firestoreLimit(limitCount * 2)
     );
 
@@ -100,7 +148,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
               pageName: pageData.title || "Untitled",
               userId: pageData.userId,
               username: username,
-              timestamp: pageData.lastModified?.toDate() || new Date(),
+              timestamp: convertToDate(pageData.lastModified),
               currentContent: pageData.content,
               previousContent: "",
               isPublic: pageData.isPublic
@@ -119,7 +167,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
             username: username,
-            timestamp: historyData.timestamp?.toDate() || new Date(),
+            timestamp: convertToDate(historyData.timestamp),
             currentContent: pageData.content,
             previousContent: historyData.content || "",
             isPublic: pageData.isPublic
@@ -139,7 +187,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
             username: username,
-            timestamp: pageData.lastModified?.toDate() || new Date(),
+            timestamp: convertToDate(pageData.lastModified),
             currentContent: pageData.content,
             previousContent: "",
             isPublic: pageData.isPublic
@@ -170,8 +218,9 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
         return true;
       });
 
-    // Get user's group memberships for privacy filtering
-    let userGroupIds = [];
+    // Note: Group membership filtering is currently disabled but kept for future use
+    // This code is commented out to avoid unused variable warnings
+    /*
     if (currentUserId) {
       try {
         const rtdb = getDatabase();
@@ -179,12 +228,15 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
         const userGroupsSnapshot = await get(userGroupsRef);
 
         if (userGroupsSnapshot.exists()) {
-          userGroupIds = Object.keys(userGroupsSnapshot.val());
+          // Store group IDs for potential future filtering
+          const userGroupIds = Object.keys(userGroupsSnapshot.val());
+          console.log(`User ${currentUserId} is a member of ${userGroupIds.length} groups`);
         }
       } catch (error) {
         console.error("Error fetching user group memberships:", error);
       }
     }
+    */
 
     // Get bio and about page edit activities
     let bioAndAboutActivities = [];
@@ -199,7 +251,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
             pageName: `${activity.username}'s Bio`,
             userId: activity.editorId,
             username: activity.editorUsername,
-            timestamp: activity.timestamp?.toDate() || new Date(activity.timestamp),
+            timestamp: convertToDate(activity.timestamp),
             currentContent: activity.content,
             previousContent: activity.previousContent,
             isPublic: activity.isPublic,
@@ -213,7 +265,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
             username: activity.editorUsername,
             groupId: activity.groupId,
             groupName: activity.groupName,
-            timestamp: activity.timestamp?.toDate() || new Date(activity.timestamp),
+            timestamp: convertToDate(activity.timestamp),
             currentContent: activity.content,
             previousContent: activity.previousContent,
             isPublic: activity.isPublic,

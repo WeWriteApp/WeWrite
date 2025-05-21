@@ -66,12 +66,14 @@ export default function GroupsPage() {
         </div>
         <Button
           className="gap-1.5 rounded-2xl"
-          asChild
+          onClick={() => {
+            console.log('[DEBUG] Groups page - Create New Group button clicked, navigating to /group/new');
+            // Use window.location for more reliable navigation
+            window.location.href = '/group/new';
+          }}
         >
-          <Link href="/group/new">
-            <Plus className="h-4 w-4" />
-            Create New Group
-          </Link>
+          <Plus className="h-4 w-4" />
+          Create New Group
         </Button>
       </div>
 

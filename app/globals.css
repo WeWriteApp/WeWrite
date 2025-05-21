@@ -146,6 +146,7 @@
     --accent-h: 217;
     --accent-s: 91%;
     --accent-l: 60%;
+    --accent-color-rgb: 23, 104, 255; /* Default blue RGB values */
 
     /* Radix Colors - Light Mode */
     --background: 0 0% 100%;
@@ -367,6 +368,159 @@
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
+}
+
+/* Thin scrollbar styling */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Scroll snap utilities */
+.scroll-snap-align-start {
+  scroll-snap-align: start;
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Roadmap scroll navigation buttons */
+#roadmap-scroll-left,
+#roadmap-scroll-right {
+  transition: all 0.2s ease;
+  opacity: 0.9;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+#roadmap-scroll-left:hover,
+#roadmap-scroll-right:hover {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.dark #roadmap-scroll-left,
+.dark #roadmap-scroll-right {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dark #roadmap-scroll-left:hover,
+.dark #roadmap-scroll-right:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Filter chip animations and mobile scrolling */
+@media (max-width: 768px) {
+  /* Full-width scrolling container without masking or fading */
+  .filter-chips-container {
+    position: relative;
+    cursor: grab;
+    margin-left: -24px !important; /* Extend beyond container padding */
+    margin-right: -24px !important; /* Extend beyond container padding */
+    width: 100vw !important; /* Full viewport width */
+    padding-left: 24px !important; /* Start first chip at screen edge */
+    padding-right: 0 !important; /* Allow last chip to extend off-screen */
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scroll-padding: 0; /* Ensure no scroll padding */
+    max-width: none !important; /* Override any max-width constraints */
+    box-sizing: content-box !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  /* Container for the filter chips section */
+  .filter-chips-section {
+    position: relative;
+    overflow: visible !important; /* Allow content to overflow */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure consistent vertical alignment during animations */
+  .filter-chip {
+    display: flex;
+    align-items: center;
+    height: 36px; /* Fixed height to prevent layout shifts */
+  }
+
+  /* Smooth animation for checkmark */
+  .filter-chip-checkmark {
+    transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                margin 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: width, opacity, margin;
+    overflow: hidden;
+  }
+
+  /* Ensure the parent container doesn't clip the filter chips */
+  .filter-chips-parent {
+    overflow: visible !important;
+    position: relative !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Override any container padding that might be causing clipping */
+  .filter-chips-parent.container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Ensure the feature section container doesn't clip */
+  #features .container {
+    overflow: visible !important;
+  }
 }
 
 /* Fade in animation for controlled rendering */

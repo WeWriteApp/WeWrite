@@ -165,22 +165,7 @@ export const Hero = () => {
           >
             <X className="h-7 w-7 text-gray-700" />
           </button>
-          <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
-            onClick={prev}
-            aria-label="Previous image"
-            type="button"
-          >
-            <ChevronLeft className="h-8 w-8 text-gray-700" />
-          </button>
-          <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
-            onClick={next}
-            aria-label="Next image"
-            type="button"
-          >
-            <ChevronRight className="h-8 w-8 text-gray-700" />
-          </button>
+          {/* Navigation arrows removed from lightbox view as requested */}
           <div className="flex-1 flex items-center justify-center w-full max-h-[80vh]">
             <Image
               src={HERO_IMAGES[current]}

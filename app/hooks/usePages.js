@@ -4,8 +4,8 @@ import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDo
 
 // Default limits for page loading
 const DEFAULT_INITIAL_LIMIT = 20; // Default limit for home page
-const USER_PAGE_INITIAL_LIMIT = 300; // Higher limit for user pages (increased from 200)
-const loadMoreLimitCount = 100;
+const USER_PAGE_INITIAL_LIMIT = 50; // Reduced from 300 to improve performance
+const loadMoreLimitCount = 30; // Reduced from 100 to improve performance
 
 const usePages = (userId, includePrivate = true, currentUserId = null, isUserPage = false) => {
   // Use higher limit for user pages, default limit for home page
@@ -21,39 +21,45 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
   const [hasMorePrivatePages, setHasMorePrivatePages] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchInitialPages = () => {
-    let pagesQuery;
-    let querySetupStartTime = Date.now();
-
+  const fetchInitialPages = async () => {
     // Check if the current user is the owner of the pages
     const isOwner = currentUserId && userId === currentUserId;
 
-    try {
-      if (includePrivate && isOwner) {
-        // Get all pages for the user (both public and private) if the current user is the owner
-        pagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
-      } else {
-        // Get only public pages if the current user is not the owner
-        pagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
-      }
+    // Use a cache key based on userId and whether we're including private pages
+    const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
 
-      console.log(`usePages: Query setup took ${Date.now() - querySetupStartTime}ms`);
-    } catch (querySetupError) {
-      console.error("Error setting up Firestore query:", querySetupError);
-      setError("Failed to set up database query. Please try refreshing the page.");
-      setLoading(false);
-      throw querySetupError;
+    // Try to get cached data first
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          const cacheAge = Date.now() - (parsed.timestamp || 0);
+
+          // Use cache if it's less than 5 minutes old
+          if (cacheAge < 5 * 60 * 1000) {
+            console.log("usePages: Using cached data");
+            setPages(parsed.pages || []);
+            setPrivatePages(parsed.privatePages || []);
+            setLastPageKey(parsed.lastPageKey ? { ...parsed.lastPageKey } : null);
+            setLastPrivatePageKey(parsed.lastPrivatePageKey ? { ...parsed.lastPrivatePageKey } : null);
+            setHasMorePages(parsed.hasMorePages);
+            setHasMorePrivatePages(parsed.hasMorePrivatePages);
+
+            // Still set loading to false even when using cached data
+            setLoading(false);
+
+            // Fetch fresh data in the background
+            setTimeout(() => refreshDataInBackground(), 100);
+
+            // Return a no-op unsubscribe function since we're not setting up a listener
+            return () => {};
+          }
+        }
+      }
+    } catch (cacheError) {
+      console.error("Error reading from cache:", cacheError);
+      // Continue with normal fetch if cache fails
     }
 
     setLoading(true);
@@ -65,13 +71,26 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
       // Force loading to false after timeout to prevent infinite loading state
       setLoading(false);
 
-      // Instead of just setting an error, provide empty data as a fallback
-      if (pages.length === 0) {
-        console.log("usePages: Providing empty data as fallback");
-        setPages([]);
-        setPrivatePages([]);
+      // Try to use cached data even if it's older than our normal threshold
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const cachedData = localStorage.getItem(cacheKey);
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            console.log("usePages: Using stale cached data as fallback");
+            setPages(parsed.pages || []);
+            setPrivatePages(parsed.privatePages || []);
+            setError("We're having trouble connecting to the server. Showing cached content.");
+            return;
+          }
+        }
+      } catch (fallbackCacheError) {
+        console.error("Error reading from fallback cache:", fallbackCacheError);
       }
 
+      // If no cache is available, show empty state with error
+      setPages([]);
+      setPrivatePages([]);
       setError("Query execution is taking longer than expected. Please try refreshing the page.");
 
       // Dispatch an event that other components can listen for
@@ -81,101 +100,224 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         });
         window.dispatchEvent(forceCompleteEvent);
       }
-    }, 3000); // Reduced to 3 seconds for faster recovery
+    }, 5000); // Increased to 5 seconds to give more time for the query
 
     try {
-      const unsubscribe = onSnapshot(pagesQuery, (snapshot) => {
-        // Clear the query timeout since we got a response
-        clearTimeout(queryTimeoutId);
+      // Define the fields we need to reduce data transfer
+      const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
-        try {
-          const pagesArray = [];
-          const privateArray = [];
+      // Use separate queries for public and private pages to improve performance
+      let publicPagesQuery;
+      let privatePagesQuery = null;
 
-          console.log(`usePages: Received snapshot with ${snapshot.docs.length} documents`);
+      // Query for public pages
+      publicPagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('isPublic', '==', true),
+        orderBy('lastModified', 'desc'),
+        limit(initialLimitCount)
+      );
 
-          snapshot.forEach((doc) => {
-            try {
-              const pageData = { id: doc.id, ...doc.data() };
+      // Only query for private pages if the current user is the owner
+      if (includePrivate && isOwner) {
+        privatePagesQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', false),
+          orderBy('lastModified', 'desc'),
+          limit(initialLimitCount)
+        );
+      }
 
-              // Only include private pages if the current user is the owner
-              if (pageData.isPublic) {
-                pagesArray.push(pageData);
-              } else if (isOwner) {
-                privateArray.push(pageData);
-              }
-            } catch (docError) {
-              console.error(`Error processing document ${doc.id}:`, docError);
-              // Continue processing other documents
-            }
-          });
+      // Execute the queries
+      const publicPagesPromise = getDocs(publicPagesQuery);
+      const privatePagesPromise = privatePagesQuery ? getDocs(privatePagesQuery) : Promise.resolve(null);
 
-          setPages(pagesArray);
-          setPrivatePages(privateArray);
+      // Wait for both queries to complete
+      const [publicSnapshot, privateSnapshot] = await Promise.all([
+        publicPagesPromise,
+        privatePagesPromise
+      ]);
 
-          if (pagesArray.length < initialLimitCount) {
-            setHasMorePages(false);
-          } else {
-            setHasMorePages(true);
-          }
-
-          if (privateArray.length < initialLimitCount) {
-            setHasMorePrivatePages(false);
-          } else {
-            setHasMorePrivatePages(true);
-          }
-
-          // Set the last document keys for pagination
-          const publicDocs = snapshot.docs.filter(doc => {
-            try {
-              return doc.data().isPublic;
-            } catch (e) {
-              console.error(`Error checking if doc ${doc.id} is public:`, e);
-              return false;
-            }
-          });
-
-          const privateDocs = snapshot.docs.filter(doc => {
-            try {
-              return !doc.data().isPublic;
-            } catch (e) {
-              console.error(`Error checking if doc ${doc.id} is private:`, e);
-              return false;
-            }
-          });
-
-          if (publicDocs.length > 0) {
-            setLastPageKey(publicDocs[publicDocs.length - 1]);
-          }
-
-          if (privateDocs.length > 0 && isOwner) {
-            setLastPrivatePageKey(privateDocs[privateDocs.length - 1]);
-          }
-
-          setLoading(false);
-        } catch (processingError) {
-          console.error("Error processing snapshot data:", processingError);
-          setError("Failed to process page data. Please try refreshing the page.");
-          setLoading(false);
-        }
-      }, (err) => {
-        // Clear the query timeout since we got an error response
-        clearTimeout(queryTimeoutId);
-
-        console.error("Error fetching pages:", err);
-        setError("Failed to load pages. Please try again later.");
-        setLoading(false);
-      });
-
-      return unsubscribe;
-    } catch (snapshotError) {
-      // Clear the query timeout if we fail to set up the snapshot
+      // Clear the timeout since we got a response
       clearTimeout(queryTimeoutId);
 
-      console.error("Error setting up snapshot listener:", snapshotError);
-      setError("Failed to set up data listener. Please try refreshing the page.");
+      // Process public pages
+      const pagesArray = [];
+      publicSnapshot.forEach((doc) => {
+        try {
+          const pageData = { id: doc.id, ...doc.data() };
+          pagesArray.push(pageData);
+        } catch (docError) {
+          console.error(`Error processing public document ${doc.id}:`, docError);
+        }
+      });
+
+      // Process private pages if available
+      const privateArray = [];
+      if (privateSnapshot) {
+        privateSnapshot.forEach((doc) => {
+          try {
+            const pageData = { id: doc.id, ...doc.data() };
+            privateArray.push(pageData);
+          } catch (docError) {
+            console.error(`Error processing private document ${doc.id}:`, docError);
+          }
+        });
+      }
+
+      // Update state with the results
+      setPages(pagesArray);
+      setPrivatePages(privateArray);
+
+      // Set pagination flags
+      setHasMorePages(pagesArray.length >= initialLimitCount);
+      setHasMorePrivatePages(privateArray.length >= initialLimitCount);
+
+      // Set the last document keys for pagination
+      if (publicSnapshot.docs.length > 0) {
+        setLastPageKey(publicSnapshot.docs[publicSnapshot.docs.length - 1]);
+      }
+
+      if (privateSnapshot && privateSnapshot.docs.length > 0) {
+        setLastPrivatePageKey(privateSnapshot.docs[privateSnapshot.docs.length - 1]);
+      }
+
+      // Cache the results for future use
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const cacheData = {
+            pages: pagesArray,
+            privatePages: privateArray,
+            lastPageKey: publicSnapshot.docs.length > 0 ? { id: publicSnapshot.docs[publicSnapshot.docs.length - 1].id } : null,
+            lastPrivatePageKey: privateSnapshot && privateSnapshot.docs.length > 0 ?
+              { id: privateSnapshot.docs[privateSnapshot.docs.length - 1].id } : null,
+            hasMorePages: pagesArray.length >= initialLimitCount,
+            hasMorePrivatePages: privateArray.length >= initialLimitCount,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        }
+      } catch (cacheError) {
+        console.error("Error writing to cache:", cacheError);
+        // Continue even if caching fails
+      }
+
       setLoading(false);
-      throw snapshotError;
+
+      // Return a no-op unsubscribe function since we're not setting up a listener
+      return () => {};
+    } catch (error) {
+      // Clear the timeout if we encounter an error
+      clearTimeout(queryTimeoutId);
+
+      console.error("Error fetching pages:", error);
+      setError("Failed to load pages. Please try again later.");
+      setLoading(false);
+
+      // Return a no-op unsubscribe function
+      return () => {};
+    }
+  };
+
+  // Function to refresh data in the background without showing loading state
+  const refreshDataInBackground = async () => {
+    try {
+      // This is a simplified version of fetchInitialPages that doesn't update loading state
+      const isOwner = currentUserId && userId === currentUserId;
+
+      // Define queries similar to fetchInitialPages
+      let publicPagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('isPublic', '==', true),
+        orderBy('lastModified', 'desc'),
+        limit(initialLimitCount)
+      );
+
+      let privatePagesQuery = null;
+      if (includePrivate && isOwner) {
+        privatePagesQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', false),
+          orderBy('lastModified', 'desc'),
+          limit(initialLimitCount)
+        );
+      }
+
+      // Execute the queries
+      const publicPagesPromise = getDocs(publicPagesQuery);
+      const privatePagesPromise = privatePagesQuery ? getDocs(privatePagesQuery) : Promise.resolve(null);
+
+      const [publicSnapshot, privateSnapshot] = await Promise.all([
+        publicPagesPromise,
+        privatePagesPromise
+      ]);
+
+      // Process results and update state
+      const pagesArray = [];
+      publicSnapshot.forEach((doc) => {
+        try {
+          const pageData = { id: doc.id, ...doc.data() };
+          pagesArray.push(pageData);
+        } catch (docError) {
+          console.error(`Error processing public document ${doc.id}:`, docError);
+        }
+      });
+
+      const privateArray = [];
+      if (privateSnapshot) {
+        privateSnapshot.forEach((doc) => {
+          try {
+            const pageData = { id: doc.id, ...doc.data() };
+            privateArray.push(pageData);
+          } catch (docError) {
+            console.error(`Error processing private document ${doc.id}:`, docError);
+          }
+        });
+      }
+
+      // Update state with fresh data
+      setPages(pagesArray);
+      setPrivatePages(privateArray);
+
+      // Update pagination state
+      setHasMorePages(pagesArray.length >= initialLimitCount);
+      setHasMorePrivatePages(privateArray.length >= initialLimitCount);
+
+      // Update last keys for pagination
+      if (publicSnapshot.docs.length > 0) {
+        setLastPageKey(publicSnapshot.docs[publicSnapshot.docs.length - 1]);
+      }
+
+      if (privateSnapshot && privateSnapshot.docs.length > 0) {
+        setLastPrivatePageKey(privateSnapshot.docs[privateSnapshot.docs.length - 1]);
+      }
+
+      // Update cache with fresh data
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
+          const cacheData = {
+            pages: pagesArray,
+            privatePages: privateArray,
+            lastPageKey: publicSnapshot.docs.length > 0 ? { id: publicSnapshot.docs[publicSnapshot.docs.length - 1].id } : null,
+            lastPrivatePageKey: privateSnapshot && privateSnapshot.docs.length > 0 ?
+              { id: privateSnapshot.docs[privateSnapshot.docs.length - 1].id } : null,
+            hasMorePages: pagesArray.length >= initialLimitCount,
+            hasMorePrivatePages: privateArray.length >= initialLimitCount,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+        }
+      } catch (cacheError) {
+        console.error("Error updating cache:", cacheError);
+      }
+    } catch (error) {
+      console.error("Error refreshing data in background:", error);
+      // Don't update error state for background refreshes
     }
   };
 
@@ -190,51 +332,74 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
       // Check if the current user is the owner of the pages
       const isOwner = currentUserId && userId === currentUserId;
 
-      let moreQuery;
-      if (includePrivate && isOwner) {
-        // Get public pages for the user
-        moreQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          startAfter(lastPageKey),
-          limit(loadMoreLimitCount)
-        );
-      } else {
-        // Get only public pages if the current user is not the owner
-        moreQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          startAfter(lastPageKey),
-          limit(loadMoreLimitCount)
-        );
-      }
+      // Define the fields we need to reduce data transfer
+      const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
+
+      // Query for more public pages
+      const moreQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('isPublic', '==', true),
+        orderBy('lastModified', 'desc'),
+        startAfter(lastPageKey),
+        limit(loadMoreLimitCount)
+      );
 
       setIsMoreLoading(true);
 
+      // Set up a timeout to detect stalled queries
+      const timeoutId = setTimeout(() => {
+        console.warn("usePages: Load more query taking too long, may be stalled");
+        setIsMoreLoading(false);
+        setError("Failed to load more pages. Please try again later.");
+      }, 5000);
+
       const snapshot = await getDocs(moreQuery);
+      clearTimeout(timeoutId);
+
       const newPagesArray = [];
 
       snapshot.forEach((doc) => {
-        const pageData = { id: doc.id, ...doc.data() };
-        if (pageData.isPublic) {
+        try {
+          const pageData = { id: doc.id, ...doc.data() };
           newPagesArray.push(pageData);
+        } catch (docError) {
+          console.error(`Error processing document ${doc.id}:`, docError);
         }
       });
 
       setPages((prevPages) => [...prevPages, ...newPagesArray]);
 
-      if (snapshot.docs.length < loadMoreLimitCount) {
-        setHasMorePages(false);
-      }
+      // Update pagination state
+      setHasMorePages(snapshot.docs.length >= loadMoreLimitCount);
 
+      // Update last key for pagination
       if (snapshot.docs.length > 0) {
         setLastPageKey(snapshot.docs[snapshot.docs.length - 1]);
       } else {
         setHasMorePages(false);
+      }
+
+      // Update cache with the new combined data
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
+          const cachedData = localStorage.getItem(cacheKey);
+
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            const updatedCache = {
+              ...parsed,
+              pages: [...(parsed.pages || []), ...newPagesArray],
+              lastPageKey: snapshot.docs.length > 0 ? { id: snapshot.docs[snapshot.docs.length - 1].id } : parsed.lastPageKey,
+              hasMorePages: snapshot.docs.length >= loadMoreLimitCount,
+              timestamp: Date.now()
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(updatedCache));
+          }
+        }
+      } catch (cacheError) {
+        console.error("Error updating cache after loading more pages:", cacheError);
       }
 
       setIsMoreLoading(false);
@@ -262,7 +427,10 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         throw new Error("No more private pages to load");
       }
 
-      // Only fetch private pages if the current user is the owner
+      // Define the fields we need to reduce data transfer
+      const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
+
+      // Query for more private pages
       const moreQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -274,26 +442,59 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
 
       setIsMorePrivateLoading(true);
 
+      // Set up a timeout to detect stalled queries
+      const timeoutId = setTimeout(() => {
+        console.warn("usePages: Load more private query taking too long, may be stalled");
+        setIsMorePrivateLoading(false);
+        setError("Failed to load more private pages. Please try again later.");
+      }, 5000);
+
       const snapshot = await getDocs(moreQuery);
+      clearTimeout(timeoutId);
+
       const newPrivateArray = [];
 
       snapshot.forEach((doc) => {
-        const pageData = { id: doc.id, ...doc.data() };
-        if (!pageData.isPublic) {
+        try {
+          const pageData = { id: doc.id, ...doc.data() };
           newPrivateArray.push(pageData);
+        } catch (docError) {
+          console.error(`Error processing private document ${doc.id}:`, docError);
         }
       });
 
       setPrivatePages((prevPages) => [...prevPages, ...newPrivateArray]);
 
-      if (snapshot.docs.length < loadMoreLimitCount) {
-        setHasMorePrivatePages(false);
-      }
+      // Update pagination state
+      setHasMorePrivatePages(snapshot.docs.length >= loadMoreLimitCount);
 
+      // Update last key for pagination
       if (snapshot.docs.length > 0) {
         setLastPrivatePageKey(snapshot.docs[snapshot.docs.length - 1]);
       } else {
         setHasMorePrivatePages(false);
+      }
+
+      // Update cache with the new combined data
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
+          const cachedData = localStorage.getItem(cacheKey);
+
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            const updatedCache = {
+              ...parsed,
+              privatePages: [...(parsed.privatePages || []), ...newPrivateArray],
+              lastPrivatePageKey: snapshot.docs.length > 0 ? { id: snapshot.docs[snapshot.docs.length - 1].id } : parsed.lastPrivatePageKey,
+              hasMorePrivatePages: snapshot.docs.length >= loadMoreLimitCount,
+              timestamp: Date.now()
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(updatedCache));
+          }
+        }
+      } catch (cacheError) {
+        console.error("Error updating cache after loading more private pages:", cacheError);
       }
 
       setIsMorePrivateLoading(false);
@@ -323,7 +524,29 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         console.warn("usePages: Hard timeout reached, forcing completion");
         setLoading(false);
 
-        // Provide empty data as a fallback
+        // Try to use cached data as a fallback
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            const isOwner = currentUserId && userId === currentUserId;
+            const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
+            const cachedData = localStorage.getItem(cacheKey);
+
+            if (cachedData) {
+              const parsed = JSON.parse(cachedData);
+              console.log("usePages: Hard timeout - using cached data as fallback");
+              setPages(parsed.pages || []);
+              setPrivatePages(parsed.privatePages || []);
+              setHasMorePages(parsed.hasMorePages);
+              setHasMorePrivatePages(parsed.hasMorePrivatePages);
+              setError("We're having trouble connecting to the server. Showing cached content.");
+              return;
+            }
+          }
+        } catch (fallbackCacheError) {
+          console.error("Error reading from fallback cache during hard timeout:", fallbackCacheError);
+        }
+
+        // If no cache is available, show empty state
         if (pages.length === 0) {
           console.log("usePages: Hard timeout - providing empty data as fallback");
           setPages([]);
@@ -357,9 +580,9 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
           window.dispatchEvent(analyticsEvent);
         }
       }
-    }, 8000); // Reduced from 15 to 8 seconds for faster recovery
+    }, 10000); // Increased to 10 seconds to give more time for the initial query
 
-    const attemptFetch = () => {
+    const attemptFetch = async () => {
       // Increment fetch attempts
       fetchAttemptsRef.current += 1;
       lastFetchTimeRef.current = Date.now();
@@ -367,19 +590,20 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
       console.log(`usePages: Fetching pages for user ${userId}, attempt ${fetchAttemptsRef.current}`);
 
       try {
-        // Clean up any existing subscription
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
-        }
+        // Execute the fetch function (now returns a no-op unsubscribe)
+        unsubscribe = await fetchInitialPages();
 
-        // Set up new subscription
-        unsubscribe = fetchInitialPages();
-
-        // Reset fetch attempts on successful setup
+        // Reset fetch attempts on successful fetch
         fetchAttemptsRef.current = 0;
+
+        // Clear the hard timeout since we've successfully loaded data
+        if (hardTimeoutId) {
+          clearTimeout(hardTimeoutId);
+          hardTimeoutId = null;
+        }
       } catch (err) {
-        console.error("usePages: Error setting up page listener:", err);
-        setError("Failed to set up page listener. Please try refreshing the page.");
+        console.error("usePages: Error fetching pages:", err);
+        setError("Failed to load pages. Please try refreshing the page.");
         setLoading(false);
 
         // If we haven't exceeded max attempts, try again after a delay
@@ -404,6 +628,12 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
     } else {
       console.log("usePages: No userId provided, skipping page fetch");
       setLoading(false);
+
+      // Clear the hard timeout since we're not loading anything
+      if (hardTimeoutId) {
+        clearTimeout(hardTimeoutId);
+        hardTimeoutId = null;
+      }
     }
 
     // Add listener for force-refresh event
@@ -454,7 +684,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
         console.error("usePages: Error during cleanup:", err);
       }
     };
-  }, [userId]);
+  }, [userId, currentUserId, initialLimitCount, includePrivate]);
 
   return {
     pages,

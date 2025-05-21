@@ -35,19 +35,45 @@ export default function ActivityEmptyState({ mode = 'all' }) {
 
       <p className="text-muted-foreground mb-4 max-w-md text-sm">
         {isFollowingMode
-          ? 'You haven\'t followed any pages yet, or your followed pages don\'t have any recent activity.'
+          ? 'You haven\'t followed any pages yet, or your followed pages don\'t have any recent activity. Follow pages to see their updates here.'
           : 'Activity will appear here as you and others create and edit pages. Discover content by searching for pages.'}
       </p>
 
-      <Button
-        onClick={handleSearchClick}
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-2"
-      >
-        <Search className="h-4 w-4" />
-        Discover pages
-      </Button>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button
+          onClick={handleSearchClick}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <Search className="h-4 w-4" />
+          Discover pages
+        </Button>
+
+        {isFollowingMode && (
+          <Button
+            onClick={() => {
+              // Find the filter dropdown button and click it
+              const filterButton = document.querySelector('[aria-label^="Filter activity"]');
+              if (filterButton) {
+                filterButton.click();
+
+                // Find and click the "All" option
+                setTimeout(() => {
+                  const allOption = document.querySelector('[class*="dropdown-menu"] [class*="dropdown-menu-item"]:first-child');
+                  if (allOption) {
+                    allOption.click();
+                  }
+                }, 100);
+              }
+            }}
+            variant="default"
+            size="sm"
+          >
+            View all activity
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

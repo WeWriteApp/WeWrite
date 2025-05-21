@@ -9,7 +9,12 @@ let bigquery = null;
 
 // Only try to initialize BigQuery if we have credentials
 const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
-if (credentialsEnvVar) {
+
+// In development environment, don't try to use BigQuery to avoid connection errors
+if (process.env.NODE_ENV === 'development') {
+  console.log('Running in development mode - skipping BigQuery initialization');
+  // Leave bigquery as null to use Firestore fallback
+} else if (credentialsEnvVar) {
   try {
     console.log('Attempting to initialize BigQuery with credentials');
 
@@ -618,14 +623,35 @@ export async function GET(request) {
     // Test BigQuery connection first
     const isConnected = await testBigQueryConnection();
     if (!isConnected) {
-      console.log('BigQuery connection failed, returning empty results');
-      return NextResponse.json({
-        pages: [],
-        users: [],
-        error: {
-          type: "bigquery_connection_failed",
-          details: "Failed to connect to BigQuery"
+      console.log('BigQuery connection failed, falling back to Firestore');
+
+      // Search for pages in Firestore
+      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
+
+      // Search for users if we have a search term
+      let users = [];
+      if (searchTerm && searchTerm.trim().length > 1) {
+        try {
+          const { searchUsers } = await import('../../firebase/database');
+          users = await searchUsers(searchTerm, 5);
+          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
+
+          // Format users for the response
+          users = users.map(user => ({
+            id: user.id,
+            username: user.username || "Anonymous",
+            photoURL: user.photoURL || null,
+            type: 'user'
+          }));
+        } catch (userError) {
+          console.error('Error searching for users:', userError);
         }
+      }
+
+      return NextResponse.json({
+        pages,
+        users,
+        source: "firestore_fallback_after_bigquery_connection_failed"
       }, { status: 200 });
     }
 

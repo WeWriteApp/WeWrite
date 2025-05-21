@@ -60,11 +60,11 @@ const SingleProfileView = ({ profile }) => {
   // Fetch username if not provided
   useEffect(() => {
     const fetchUsername = async () => {
-      if (profile.uid && (!profile.username || profile.username === 'Anonymous')) {
+      if (profile.uid && (!profile.username || profile.username === 'Anonymous' || profile.username === 'Missing username')) {
         try {
           const { getUsernameById } = await import('../utils/userUtils');
           const fetchedUsername = await getUsernameById(profile.uid);
-          if (fetchedUsername && fetchedUsername !== 'Anonymous') {
+          if (fetchedUsername && fetchedUsername !== 'Anonymous' && fetchedUsername !== 'Missing username') {
             setUsername(fetchedUsername);
             console.log(`Fetched username for profile: ${fetchedUsername}`);
           }

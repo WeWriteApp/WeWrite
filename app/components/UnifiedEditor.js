@@ -985,10 +985,10 @@ const UnifiedEditor = forwardRef((props, ref) => {
           display: inline-block;
           min-width: 0.75rem;
           text-align: right;
-          vertical-align: baseline;
+          vertical-align: top;
           opacity: 0.8;
           position: relative;
-          top: -0.05em;
+          top: 0.5em;
           color: var(--muted-foreground);
           font-size: 0.75rem;
           user-select: none;

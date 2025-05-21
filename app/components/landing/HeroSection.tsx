@@ -250,34 +250,7 @@ export default function HeroSection({
             </svg>
           </button>
 
-          {/* Navigation buttons */}
-          <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
-            onClick={(e) => {
-              e.stopPropagation();
-              goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length);
-            }}
-            aria-label="Previous image"
-            type="button"
-          >
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-
-          <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-white/80 hover:bg-white rounded-full p-2 shadow"
-            onClick={(e) => {
-              e.stopPropagation();
-              goToIndex((carouselIndex + 1) % heroImages.length);
-            }}
-            aria-label="Next image"
-            type="button"
-          >
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          {/* Navigation buttons removed from lightbox view as requested */}
 
           {/* Main image */}
           <div

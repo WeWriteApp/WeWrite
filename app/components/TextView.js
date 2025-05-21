@@ -60,14 +60,30 @@ const ANIMATION_CONSTANTS = {
 const extractPageId = (url) => {
   if (!url) return null;
 
+  // Log the URL for debugging
+  console.log('LINK_DEBUG: Extracting page ID from URL:', url);
+
   // Check for /pages/{id} format
   let match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
-  if (match) return match[1];
+  if (match) {
+    console.log('LINK_DEBUG: Extracted page ID from /pages/ format:', match[1]);
+    return match[1];
+  }
 
   // Check for /{id} format (direct page ID)
   match = url.match(/^\/([a-zA-Z0-9-_]+)$/);
-  if (match) return match[1];
+  if (match) {
+    console.log('LINK_DEBUG: Extracted page ID from direct format:', match[1]);
+    return match[1];
+  }
 
+  // Check for just the ID without any slashes (might be stored directly)
+  if (/^[a-zA-Z0-9-_]+$/.test(url)) {
+    console.log('LINK_DEBUG: URL appears to be a direct ID:', url);
+    return url;
+  }
+
+  console.log('LINK_DEBUG: Could not extract page ID from URL:', url);
   return null;
 };
 
@@ -555,7 +571,16 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                     {index > 0 && ' '}
 
                     {/* Paragraph number - FIXED: Ensure correct paragraph numbering */}
-                    <span className="paragraph-number text-xs ml-1 select-none" aria-hidden="true" data-paragraph-index={index + 1}>
+                    <span
+                      className="paragraph-number text-xs ml-1 select-none"
+                      style={{
+                        verticalAlign: 'top',
+                        position: 'relative',
+                        top: '0.5em'
+                      }}
+                      aria-hidden="true"
+                      data-paragraph-index={index + 1}
+                    >
                       {index + 1}
                     </span>{'\u00A0'}
 
@@ -661,6 +686,20 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false) => {
   if (!node) return null;
 
+  // Add special debugging for paragraph 2 (index 1)
+  if (index === 1) {
+    console.log(`PARAGRAPH_DEBUG: Rendering paragraph 2 (index ${index}):`, JSON.stringify(node));
+
+    // Check if this paragraph has any link children
+    if (node.children) {
+      node.children.forEach((child, childIndex) => {
+        if (child.type === 'link') {
+          console.log(`PARAGRAPH_DEBUG: Found link in paragraph 2 at child index ${childIndex}:`, JSON.stringify(child));
+        }
+      });
+    }
+  }
+
   // Only use ParagraphNode for normal mode
   if (mode === LINE_MODES.NORMAL) {
     // WeWrite only supports paragraph nodes
@@ -702,8 +741,8 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
   // Define consistent text size for all modes
   const TEXT_SIZE = "text-base"; // 1rem (16px) for all modes
 
-  // Use the same spacing class as in SlateEditor
-  const spacingClass = 'py-2.5';
+  // Use reduced vertical padding for normal mode (approximately 15-20% less)
+  const spacingClass = 'py-2';
 
   // Determine which mode we're in to set the appropriate animation delay
   const isInDenseMode = lineMode === LINE_MODES.DENSE;
@@ -726,14 +765,31 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
     // Debug log for link nodes
     if (child.type === 'link') {
-
-      console.log('PARAGRAPH_DEBUG: Rendering link in paragraph:', {
+      // Enhanced debugging for links
+      console.log(`PARAGRAPH_DEBUG: Rendering link in paragraph ${index + 1} at child index ${i}:`, {
         index: i,
         linkData: JSON.stringify(child),
         hasChildren: child.children ? child.children.length : 0,
-        childrenText: child.children && child.children[0] ? child.children[0].text : 'No text in children'
+        childrenText: child.children && child.children[0] ? child.children[0].text : 'No text in children',
+        url: child.url,
+        pageId: child.pageId,
+        className: child.className,
+        isExternal: child.isExternal,
+        isPageLink: child.isPageLink
       });
-      return <LinkNode key={i} node={child} />;
+
+      // Create a wrapped version of the LinkNode with error handling
+      try {
+        return <LinkNode key={i} node={child} />;
+      } catch (error) {
+        console.error(`PARAGRAPH_DEBUG: Error rendering link in paragraph ${index + 1}:`, error);
+        // Fallback rendering for links that fail to render
+        return (
+          <span key={i} className="text-red-500">
+            [Link Error: {child.children?.[0]?.text || 'Unknown link'}]
+          </span>
+        );
+      }
     } else if (child.text) {
       let className = '';
       if (child.bold) className += ' font-bold';
@@ -784,13 +840,12 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
       title={canEdit ? "Click to edit" : ""}
     >
       {/* WYSIWYG mode - paragraph with inline number at beginning - matches edit mode */}
-      <div className="paragraph-with-number py-2.5">
+      <div className={`paragraph-with-number ${spacingClass}`}>
         {/* Paragraph number inline at beginning - matches edit mode styling */}
         <span
           className="paragraph-number-inline select-none"
           style={{
             pointerEvents: 'none',
-            top: '0.5rem', /* Fixed position aligned with first line of text */
             lineHeight: '1.5' /* Match the line height of paragraph text */
           }}
           data-paragraph-index={index + 1}
@@ -812,14 +867,55 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 const LinkNode = ({ node }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
-  // CRITICAL FIX: More robust URL extraction
-  const href = node.url || node.href || node.link || '#';
+  // Log the entire node for debugging
+  console.log('LINK_DEBUG: LinkNode received node:', JSON.stringify(node));
+
+  // More robust URL extraction with fallbacks
+  const href = useMemo(() => {
+    // Check all possible properties where URL might be stored
+    const possibleUrls = [
+      node.url,
+      node.href,
+      node.link,
+      node.data?.url,
+      node.data?.href,
+      node.data?.link
+    ].filter(Boolean);
+
+    // If we have a pageId, ensure we have a proper URL for it
+    if (node.pageId && !possibleUrls.some(url => url?.includes(node.pageId))) {
+      return `/pages/${node.pageId}`;
+    }
+
+    // Return the first valid URL or fallback to #
+    return possibleUrls[0] || '#';
+  }, [node]);
 
   // Use pageId from node if available, otherwise extract from href
-  const pageId = node.pageId || extractPageId(href);
+  const pageId = useMemo(() => {
+    // First check if pageId is directly available
+    if (node.pageId) {
+      return node.pageId;
+    }
 
-  // Determine if this is an external link - FIXED: More robust external link detection
-  // Check multiple properties to ensure we catch all external links
+    // Then try to extract from URL
+    const extractedId = extractPageId(href);
+
+    // Log the extraction process
+    console.log('LINK_DEBUG: PageId extraction:', {
+      directPageId: node.pageId,
+      href: href,
+      extractedFromHref: extractedId,
+      finalPageId: node.pageId || extractedId
+    });
+
+    return extractedId;
+  }, [node, href]);
+
+  // Log the extracted pageId
+  console.log('LINK_DEBUG: Final pageId for link:', pageId);
+
+  // Determine if this is an external link with robust detection
   const isExternal =
     node.isExternal === true ||
     node.className === 'external-link' ||
@@ -832,45 +928,33 @@ const LinkNode = ({ node }) => {
     node.isProtocolLink === true ||
     (node.children?.[0]?.text === "WeWrite as a decentralized open protocol");
 
-  // Create a string representation of the node for additional checks
-  const nodeString = JSON.stringify(node);
-
-  // Log link details for debugging
-  console.log('LINK_DEBUG: LinkNode rendering with:', {
-    href,
-    pageId,
-    nodePageId: node.pageId,
-    isExternal,
-    className: node.className,
-    linkId: node.linkId,
-    nodeType: node.type,
-    nodeStructure: nodeString.substring(0, 100), // Only log the first 100 chars to avoid huge logs
-    isSpecialLink: !pageId && !isExternal,
-    displayText: node.children?.[0]?.text || 'Unknown'
-  });
-
-  // Log the node's children
-  if (node.children) {
-    console.log('LINK_DEBUG: Link children:', JSON.stringify(node.children));
-  }
-
-  // Detailed logging of node properties
-  console.log('LINK_DEBUG: Node properties:', Object.keys(node));
-  console.log('LINK_DEBUG: Node children:', node.children ? JSON.stringify(node.children) : 'No children');
-
   // Extract text content from children array if available
   const getTextFromNode = (node) => {
-    console.log('LINK_DEBUG: Extracting text from node:', JSON.stringify(node, null, 2));
+    // Check for pageTitle first as it's the most reliable source for page links
+    if (node.pageTitle) {
+      return node.pageTitle;
+    }
 
-    // CRITICAL FIX: Special handling for links with specific text patterns
-    if (node.children &&
-        Array.isArray(node.children) &&
-        node.children.length > 0) {
+    // Then check for explicit display text
+    if (node.displayText) {
+      return node.displayText;
+    }
 
+    // Then check for direct text property
+    if (node.text) {
+      return node.text;
+    }
+
+    // Check for content property
+    if (node.content) {
+      return node.content;
+    }
+
+    // Special handling for links with specific text patterns
+    if (node.children && Array.isArray(node.children) && node.children.length > 0) {
       // Check for direct text in any child
       for (const child of node.children) {
         if (child.text) {
-          console.log('LINK_DEBUG: Found direct text in child:', child.text);
           return child.text;
         }
       }
@@ -880,7 +964,6 @@ const LinkNode = ({ node }) => {
         if (child.children && Array.isArray(child.children)) {
           for (const grandchild of child.children) {
             if (grandchild.text) {
-              console.log('LINK_DEBUG: Found text in grandchild:', grandchild.text);
               return grandchild.text;
             }
           }
@@ -888,106 +971,51 @@ const LinkNode = ({ node }) => {
       }
     }
 
-    // IMPROVED: Check for pageTitle first as it's the most reliable source for page links
-    if (node.pageTitle) {
-      console.log('LINK_DEBUG: Using pageTitle:', node.pageTitle);
-      return node.pageTitle;
-    }
-
-    // Then check for explicit display text
-    if (node.displayText) {
-      console.log('LINK_DEBUG: Using displayText:', node.displayText);
-      return node.displayText;
-    }
-
-    // Then check for direct text property
-    if (node.text) {
-      console.log('LINK_DEBUG: Using text property:', node.text);
-      return node.text;
-    }
-
-    // Check for content property
-    if (node.content) {
-      console.log('LINK_DEBUG: Using content property:', node.content);
-      return node.content;
-    }
-
-    // IMPROVED: More robust children text extraction with deep traversal
+    // More robust children text extraction with deep traversal
     const extractTextFromNode = (node, depth = 0) => {
       if (!node) return '';
-
-      // Maximum depth to prevent infinite recursion
-      if (depth > 5) return '';
-
-      // If it's a text node, return the text
+      if (depth > 5) return ''; // Maximum depth to prevent infinite recursion
       if (node.text) return node.text;
-
-      // If it has children, process them
       if (node.children && Array.isArray(node.children)) {
         return node.children.map(child => extractTextFromNode(child, depth + 1)).join('');
       }
-
       return '';
     };
 
     if (node.children && Array.isArray(node.children)) {
       const extractedText = extractTextFromNode(node);
       if (extractedText) {
-        console.log('LINK_DEBUG: Extracted text with deep traversal:', extractedText);
         return extractedText;
       }
     }
 
-    // IMPROVED: Check for text in the node's data property
+    // Check for text in the node's data property
     if (node.data && typeof node.data === 'object') {
-      if (node.data.text) {
-        console.log('LINK_DEBUG: Using text from data property:', node.data.text);
-        return node.data.text;
-      }
-      if (node.data.displayText) {
-        console.log('LINK_DEBUG: Using displayText from data property:', node.data.displayText);
-        return node.data.displayText;
-      }
+      if (node.data.text) return node.data.text;
+      if (node.data.displayText) return node.data.displayText;
     }
 
     // For external links, use the URL as fallback
     if (isExternal && href) {
-      console.log('LINK_DEBUG: Using href as fallback for external link:', href);
       return href;
     }
 
     // For page links, try to extract a title from the URL
     if (pageId) {
-      const pageIdTitle = pageId.replace(/-/g, ' ');
-      console.log('LINK_DEBUG: Using formatted pageId as fallback:', pageIdTitle);
-      return pageIdTitle;
+      return pageId.replace(/-/g, ' ');
     }
 
     // Last resort fallback
-    console.log('LINK_DEBUG: No text found, using fallback');
     return href || 'Link';
   };
 
-  // IMPROVED: Always ensure we get a valid display text
+  // Always ensure we get a valid display text
   let displayText = getTextFromNode(node);
 
   // If displayText is empty or undefined, use a fallback
   if (!displayText) {
     displayText = node.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
-    console.log('LINK_DEBUG: Using fallback display text:', displayText);
   }
-
-  // Add a direct debug log to help identify the issue
-  console.log('LINK_DEBUG: Final link details:', {
-    displayText,
-    href,
-    pageId,
-    isExternal,
-    isProtocolLink,
-    nodeType: node.type,
-    nodeChildren: node.children ? node.children.length : 0,
-    hasText: !!displayText
-  });
 
   // For internal links, use the InternalLinkWithTitle component
   if (pageId) {
@@ -996,13 +1024,6 @@ const LinkNode = ({ node }) => {
 
     // Ensure href is properly formatted for internal links
     const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
-
-    console.log('LINK_DEBUG: Rendering internal page link with:', {
-      pageId,
-      formattedHref,
-      displayText,
-      originalPageTitle
-    });
 
     return (
       <span className="inline-block">
@@ -1024,8 +1045,7 @@ const LinkNode = ({ node }) => {
       setShowExternalLinkModal(true);
     };
 
-    // IMPROVED: Ensure we have a valid display text for external links
-    // If displayText is already set from our improved getTextFromNode function, use it
+    // Ensure we have a valid display text for external links
     let finalDisplayText = displayText;
 
     // Double-check for text in children as a fallback
@@ -1037,13 +1057,6 @@ const LinkNode = ({ node }) => {
     if (!finalDisplayText) {
       finalDisplayText = href;
     }
-
-    console.log('LINK_DEBUG: Rendering external link with:', {
-      href,
-      displayText: finalDisplayText,
-      isExternal,
-      className: node.className
-    });
 
     return (
       <>
@@ -1092,29 +1105,13 @@ const LinkNode = ({ node }) => {
     );
   }
 
-
-
   // For other links (like "Republican Party"), use the PillLink component with special handling
-  // Log the link for debugging
-  console.log('LINK_DEBUG: Rendering special link (not page, not external):', {
-    href,
-    displayText,
-    displayTextType: typeof displayText,
-    node: JSON.stringify(node),
-    nodeChildren: node.children ? JSON.stringify(node.children) : 'No children',
-    nodeChildrenText: node.children && node.children[0] ? node.children[0].text : 'No text in children'
-  });
-
-  // IMPROVED: We already have a valid displayText from our improved getTextFromNode function
-  // But let's add some extra checks to be absolutely sure we have text to display
-
   // If displayText is empty or undefined, try to get text from children
   if (!displayText && node.children && Array.isArray(node.children)) {
     // Try to find any child with text
     for (const child of node.children) {
       if (child.text) {
         displayText = child.text;
-        console.log('LINK_DEBUG: Found text in child for special link:', displayText);
         break;
       }
     }
@@ -1123,10 +1120,7 @@ const LinkNode = ({ node }) => {
   // If still no text, use a generic fallback
   if (!displayText) {
     displayText = "Link";
-    console.log('LINK_DEBUG: No text found for special link, using generic fallback');
   }
-
-  console.log('LINK_DEBUG: Final display text for special link:', displayText);
 
   return (
     <span className="inline-block">
@@ -1146,6 +1140,8 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
   const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 2;
 
   // Log the props for debugging
   console.log('LINK_DEBUG: InternalLinkWithTitle props:', {
@@ -1155,34 +1151,104 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
     originalPageTitle
   });
 
-  useEffect(() => {
-    const fetchTitle = async () => {
-      setIsLoading(true);
-      setFetchError(false);
+  // Ensure pageId is valid
+  const validPageId = useMemo(() => {
+    if (!pageId && href) {
+      // Try to extract pageId from href if not provided directly
+      const extractedId = extractPageId(href);
+      console.log('LINK_DEBUG: Extracted pageId from href:', extractedId);
+      return extractedId;
+    }
+    return pageId;
+  }, [pageId, href]);
 
+  // Ensure href is properly formatted
+  const formattedHref = useMemo(() => {
+    // If we have a valid pageId, always use that to create a consistent href
+    if (validPageId) {
+      const properHref = `/pages/${validPageId}`;
+      console.log('LINK_DEBUG: Created proper href from pageId:', properHref);
+      return properHref;
+    }
+
+    // Fallback handling if no valid pageId
+    if (!href || href === '#') {
+      return '#';
+    }
+
+    // If href doesn't start with /, add it
+    if (href && !href.startsWith('/')) {
+      return `/${href}`;
+    }
+
+    return href;
+  }, [href, validPageId]);
+
+  useEffect(() => {
+    // Reset states when pageId changes
+    setIsLoading(true);
+    setFetchError(false);
+    setCurrentTitle(null);
+
+    const fetchTitle = async () => {
       try {
-        if (!pageId) {
-          console.error('LINK_DEBUG: No pageId provided to InternalLinkWithTitle');
+        if (!validPageId) {
+          console.error('LINK_DEBUG: No valid pageId available for InternalLinkWithTitle');
           setFetchError(true);
           setIsLoading(false);
           return;
         }
 
-        const pageTitle = await getPageTitle(pageId);
-        console.log('LINK_DEBUG: Fetched page title:', pageTitle);
-        setCurrentTitle(pageTitle);
-        setIsLoading(false);
+        // Check if we already have this title in the cache
+        if (pageTitleCache.has(validPageId)) {
+          const cachedTitle = pageTitleCache.get(validPageId);
+          console.log('LINK_DEBUG: Using cached page title:', cachedTitle);
+          setCurrentTitle(cachedTitle);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log(`LINK_DEBUG: Fetching page title for pageId: ${validPageId}`);
+        const pageTitle = await getPageTitle(validPageId);
+
+        if (pageTitle) {
+          console.log('LINK_DEBUG: Successfully fetched page title:', pageTitle);
+          setCurrentTitle(pageTitle);
+          setIsLoading(false);
+          // Cache the result for future use
+          pageTitleCache.set(validPageId, pageTitle);
+        } else if (retryCount < maxRetries) {
+          // Retry if we didn't get a title and haven't exceeded max retries
+          console.log(`LINK_DEBUG: No title found, retrying (${retryCount + 1}/${maxRetries})`);
+          setRetryCount(prev => prev + 1);
+          // Wait a bit before retrying
+          setTimeout(fetchTitle, 500);
+        } else {
+          // Give up after max retries
+          console.error('LINK_DEBUG: Failed to fetch page title after retries');
+          setFetchError(true);
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error('LINK_DEBUG: Error fetching page title:', error);
-        setFetchError(true);
-        setIsLoading(false);
+
+        if (retryCount < maxRetries) {
+          // Retry on error if we haven't exceeded max retries
+          console.log(`LINK_DEBUG: Error fetching title, retrying (${retryCount + 1}/${maxRetries})`);
+          setRetryCount(prev => prev + 1);
+          // Wait a bit before retrying
+          setTimeout(fetchTitle, 500);
+        } else {
+          setFetchError(true);
+          setIsLoading(false);
+        }
       }
     };
 
     fetchTitle();
-  }, [pageId]);
+  }, [validPageId, retryCount]);
 
-  // IMPROVED: More robust display text selection logic
+  // Enhanced display text selection logic
   let textToDisplay;
 
   // First priority: If displayText was explicitly provided and is different from originalPageTitle,
@@ -1202,7 +1268,12 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
     console.log('LINK_DEBUG: Using fetched page title:', currentTitle);
     textToDisplay = currentTitle;
   }
-  // Fourth priority: If we're still loading, show a loading indicator
+  // Fourth priority: If originalPageTitle is available, use it while loading
+  else if (originalPageTitle && isLoading) {
+    console.log('LINK_DEBUG: Using originalPageTitle while loading:', originalPageTitle);
+    textToDisplay = originalPageTitle;
+  }
+  // Fifth priority: If we're still loading and have no originalPageTitle, show a loading indicator
   else if (isLoading) {
     console.log('LINK_DEBUG: Showing loading indicator');
     textToDisplay = (
@@ -1212,17 +1283,34 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
       </>
     );
   }
-  // Fifth priority: If there was an error or we have no other text, use a fallback
+  // Sixth priority: If there was an error or we have no other text, use a fallback
   else {
     const fallbackText = fetchError ? 'Page Link (Error)' : (originalPageTitle || 'Page Link');
     console.log('LINK_DEBUG: Using fallback text:', fallbackText);
     textToDisplay = fallbackText;
   }
 
+  // Use TooltipProvider to show the full title on hover
   return (
-    <PillLink href={href} isPublic={true} className="inline">
-      {textToDisplay}
-    </PillLink>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-block">
+            <PillLink
+              href={formattedHref}
+              isPublic={true}
+              className="inline page-link"
+              data-page-id={validPageId}
+            >
+              {textToDisplay}
+            </PillLink>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{currentTitle || originalPageTitle || displayText || 'Page Link'}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

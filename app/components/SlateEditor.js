@@ -388,6 +388,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         // Update local state
         setLineCount(newValue.length);
 
+        // Update paragraph indices to ensure correct numbering
+        updateParagraphIndices(newValue);
+
         // Store the current selection
         const currentSelection = editor.selection;
 
@@ -407,6 +410,21 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       }
     } catch (error) {
       console.error('Error in onChange handler:', error);
+    }
+  };
+
+  // Function to update paragraph indices
+  const updateParagraphIndices = (value) => {
+    try {
+      // Iterate through the value array and update path property for each element
+      value.forEach((node, index) => {
+        if (node.type === 'paragraph' || !node.type) {
+          // Add or update the path property
+          node.path = [index];
+        }
+      });
+    } catch (error) {
+      console.error('Error updating paragraph indices:', error);
     }
   };
 
@@ -875,12 +893,46 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       case "link":
         return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
       case "paragraph":
-        const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
+        // Improved paragraph index calculation
+        let index;
+        try {
+          // First try to get the path from element.path if it exists
+          if (props.element.path) {
+            index = props.element.path[0];
+          }
+          // Then try to use ReactEditor.findPath safely
+          else {
+            try {
+              const path = ReactEditor.findPath(editor, element);
+              index = path[0];
+            } catch (pathError) {
+              console.error("Error finding path:", pathError);
+
+              // Fallback: Try to determine index from DOM position
+              try {
+                const domNode = ReactEditor.toDOMNode(editor, element);
+                if (domNode) {
+                  const paragraphs = Array.from(
+                    domNode.parentElement.querySelectorAll('.paragraph-with-number')
+                  );
+                  index = paragraphs.indexOf(domNode);
+                  if (index === -1) index = 0; // Default to 0 if not found
+                }
+              } catch (domError) {
+                console.error("Error finding DOM node:", domError);
+                index = 0; // Default to 0 if all methods fail
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error calculating paragraph index:", error);
+          index = 0; // Default to 0 if all methods fail
+        }
 
         // Attribution paragraphs - no special styling, just regular paragraph
         if (isAttributionParagraph) {
           return (
-            <div {...attributes} className="paragraph-with-number py-2.5">
+            <div {...attributes} className="paragraph-with-number py-2" data-paragraph-index={index}>
               <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
                 {index + 1}
               </span>
@@ -889,9 +941,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           );
         }
 
-        // Regular paragraph styling
+        // Regular paragraph styling with reduced vertical padding (py-2 instead of py-2.5)
         return (
-          <div {...attributes} className="paragraph-with-number py-2.5">
+          <div {...attributes} className="paragraph-with-number py-2" data-paragraph-index={index}>
             <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
               {index + 1}
             </span>
@@ -899,36 +951,44 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           </div>
         );
       default:
-        // FIXED: More reliable paragraph numbering
-        // Try multiple approaches to get the correct index
-        let defaultIndex = 0;
-
+        // Improved paragraph index calculation - same as paragraph case
+        let defaultIndex;
         try {
-          // First try to get the path from props
+          // First try to get the path from element.path if it exists
           if (props.element.path) {
             defaultIndex = props.element.path[0];
           }
-          // Then try to find the path using ReactEditor
-          else if (ReactEditor.findPath) {
-            const path = ReactEditor.findPath(editor, element);
-            defaultIndex = path[0];
-          }
-          // Finally, try to get the index from the DOM
+          // Then try to use ReactEditor.findPath safely
           else {
-            const domNode = ReactEditor.toDOMNode(editor, element);
-            if (domNode) {
-              const paragraphs = Array.from(domNode.parentElement.querySelectorAll('.paragraph-with-number'));
-              defaultIndex = paragraphs.indexOf(domNode);
+            try {
+              const path = ReactEditor.findPath(editor, element);
+              defaultIndex = path[0];
+            } catch (pathError) {
+              console.error("Error finding path:", pathError);
+
+              // Fallback: Try to determine index from DOM position
+              try {
+                const domNode = ReactEditor.toDOMNode(editor, element);
+                if (domNode) {
+                  const paragraphs = Array.from(
+                    domNode.parentElement.querySelectorAll('.paragraph-with-number')
+                  );
+                  defaultIndex = paragraphs.indexOf(domNode);
+                  if (defaultIndex === -1) defaultIndex = 0; // Default to 0 if not found
+                }
+              } catch (domError) {
+                console.error("Error finding DOM node:", domError);
+                defaultIndex = 0; // Default to 0 if all methods fail
+              }
             }
           }
         } catch (error) {
-          console.error("Error determining paragraph index:", error);
-          // Fall back to 0 if all methods fail
-          defaultIndex = 0;
+          console.error("Error calculating paragraph index:", error);
+          defaultIndex = 0; // Default to 0 if all methods fail
         }
 
         return (
-          <div {...attributes} className="paragraph-with-number py-2.5">
+          <div {...attributes} className="paragraph-with-number py-2" data-paragraph-index={defaultIndex}>
             <span
               className="paragraph-number-inline select-none"
               style={{ pointerEvents: 'none' }}
@@ -1646,7 +1706,7 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
   const getLineModeStyles = () => {
     switch(lineMode) {
       case LINE_MODES.NORMAL:
-        return 'space-y-4'; // Traditional document style with proper paragraph spacing
+        return 'space-y-2.5'; // Further reduced spacing for normal mode
       case LINE_MODES.DENSE:
         return 'space-y-0'; // Bible verse style with minimal spacing between paragraphs
       default:
@@ -1689,11 +1749,33 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
         [data-slate-editor] [data-slate-placeholder] {
           position: absolute;
           pointer-events: none;
-          display: inline;
+          display: inline-block;
           width: auto;
           white-space: nowrap;
-          margin-left: 2.5rem; /* Align with text after paragraph number */
-          opacity: 0.5;
+          margin-left: 1.75rem; /* Align with text after paragraph number */
+          opacity: 0.6;
+          font-size: 1rem; /* Match text size */
+          line-height: 1.5; /* Match line height */
+          top: 0.75rem; /* Adjust vertical position to match text */
+          color: var(--muted-foreground); /* Match text color */
+          font-family: inherit; /* Ensure font matches */
+          transform: translateY(-0.25rem); /* Fine-tune vertical alignment */
+        }
+
+        /* Style for the first paragraph number to ensure alignment with placeholder */
+        [data-slate-editor] .paragraph-with-number:first-child .paragraph-number-inline {
+          min-width: 1rem;
+          margin-right: 0.5rem;
+          text-align: right;
+          vertical-align: top;
+          position: relative;
+          top: 0.5em;
+        }
+
+        /* Ensure consistent styling for all paragraph numbers */
+        [data-slate-editor] .paragraph-number-inline {
+          min-width: 1rem;
+          margin-right: 0.5rem;
         }
       `}</style>
       <Editable
@@ -1710,6 +1792,7 @@ const EditorContent = React.forwardRef(({ editor, handleKeyDown, renderElement }
             handleKeyDown(event, activeEditor);
           }
         }}
+        className="text-base leading-normal" // Match text styling
         // Add onFocus handler to preserve selection
         onFocus={() => {
           // If there's no selection, try to restore the last known selection

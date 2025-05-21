@@ -14,19 +14,17 @@ import VisibilityDropdown from "../../components/VisibilityDropdown";
 export default function Page() {
   const { user } = useContext(AuthContext);
   const router = useRouter();
-  const groupsEnabled = useFeatureFlag('groups', user?.email);
+  // Groups feature is now always enabled for all users
+  const groupsEnabled = true;
   const [newGroup, setNewGroup] = useState({
     name: "",
     isPublic: true,
   });
 
-  // Check if groups feature is enabled
+  // Log for debugging
   useEffect(() => {
-    if (!groupsEnabled) {
-      console.log('[DEBUG] New group page - Feature disabled, redirecting to home');
-      router.push('/');
-    }
-  }, [groupsEnabled, router]);
+    console.log('[DEBUG] New group page - Groups feature is now enabled for all users');
+  }, []);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [isSearching, setIsSearching] = useState(false);

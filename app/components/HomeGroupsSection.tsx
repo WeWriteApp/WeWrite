@@ -224,8 +224,15 @@ export default function HomeGroupsSection() {
           <div className="text-muted-foreground p-4 text-center">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
             <p className="mb-4">You haven't joined any groups yet.</p>
-            <Button variant="outline" asChild>
-              <Link href="/group/new">Create a Group</Link>
+            <Button
+              variant="outline"
+              onClick={() => {
+                console.log('[DEBUG] HomeGroupsSection - Create a Group button clicked, navigating to /group/new');
+                // Use window.location for more reliable navigation
+                window.location.href = '/group/new';
+              }}
+            >
+              Create a Group
             </Button>
           </div>
         </div>
@@ -243,11 +250,17 @@ export default function HomeGroupsSection() {
           icon={Users}
           title="Your Groups"
         />
-        <Button variant="outline" asChild>
-          <Link href="/group/new" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Group
-          </Link>
+        <Button
+          variant="outline"
+          onClick={() => {
+            console.log('[DEBUG] HomeGroupsSection - New Group button clicked, navigating to /group/new');
+            // Use window.location for more reliable navigation
+            window.location.href = '/group/new';
+          }}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          New Group
         </Button>
       </div>
 

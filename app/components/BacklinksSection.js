@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PillLink } from './PillLink';
 import { Loader2, Info } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -17,6 +17,59 @@ const findBacklinksAsync = async (pageId, limit) => {
   return findBacklinks(pageId, limit);
 };
 
+// Local storage key for caching "no backlinks" state
+const NO_BACKLINKS_CACHE_KEY = 'wewrite_no_backlinks_cache';
+const MAX_RETRIES = 3; // Maximum number of consecutive empty results before stopping
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+/**
+ * Get cached "no backlinks" state for a page
+ * @param {string} pageId - The page ID to check
+ * @returns {boolean} - Whether the page has no backlinks (cached)
+ */
+const getNoBacklinksCache = (pageId) => {
+  try {
+    const cacheJson = localStorage.getItem(NO_BACKLINKS_CACHE_KEY);
+    if (!cacheJson) return false;
+
+    const cache = JSON.parse(cacheJson);
+    const entry = cache[pageId];
+
+    if (!entry) return false;
+
+    // Check if the cache entry is still valid
+    if (Date.now() - entry.timestamp > CACHE_EXPIRY) {
+      return false;
+    }
+
+    return entry.hasNoBacklinks;
+  } catch (error) {
+    console.error('Error reading no-backlinks cache:', error);
+    return false;
+  }
+};
+
+/**
+ * Set cached "no backlinks" state for a page
+ * @param {string} pageId - The page ID to cache
+ * @param {boolean} hasNoBacklinks - Whether the page has no backlinks
+ */
+const setNoBacklinksCache = (pageId, hasNoBacklinks) => {
+  try {
+    const cacheJson = localStorage.getItem(NO_BACKLINKS_CACHE_KEY);
+    const cache = cacheJson ? JSON.parse(cacheJson) : {};
+
+    cache[pageId] = {
+      hasNoBacklinks,
+      timestamp: Date.now()
+    };
+
+    localStorage.setItem(NO_BACKLINKS_CACHE_KEY, JSON.stringify(cache));
+  } catch (error) {
+    console.error('Error setting no-backlinks cache:', error);
+  }
+};
+
 /**
  * BacklinksSection Component
  *
@@ -31,12 +84,37 @@ const findBacklinksAsync = async (pageId, limit) => {
 export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 5 }) {
   const [backlinks, setBacklinks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [maxRetriesReached, setMaxRetriesReached] = useState(false);
+  const emptyResultsCount = useRef(0);
+  const pageIdRef = useRef(null);
 
   useEffect(() => {
     const fetchBacklinks = async () => {
       setIsLoading(true);
 
       if (!page || !page.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Reset retry counter when page ID changes
+      if (pageIdRef.current !== page.id) {
+        pageIdRef.current = page.id;
+        emptyResultsCount.current = 0;
+        setMaxRetriesReached(false);
+      }
+
+      // Check if we've already determined this page has no backlinks (from cache)
+      if (getNoBacklinksCache(page.id)) {
+        console.log(`Using cached "no backlinks" state for page ${page.id}`);
+        setBacklinks([]);
+        setIsLoading(false);
+        setMaxRetriesReached(true);
+        return;
+      }
+
+      // If we've already reached max retries, don't fetch again
+      if (maxRetriesReached) {
         setIsLoading(false);
         return;
       }
@@ -54,17 +132,41 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         const limitedBacklinks = filteredBacklinks.slice(0, maxPages);
 
         setBacklinks(limitedBacklinks);
+
+        // Handle empty results tracking
+        if (limitedBacklinks.length === 0) {
+          emptyResultsCount.current += 1;
+          console.log(`No backlinks found for page ${page.id} (attempt ${emptyResultsCount.current}/${MAX_RETRIES})`);
+
+          // If we've reached max retries, stop trying and cache the result
+          if (emptyResultsCount.current >= MAX_RETRIES) {
+            console.log(`Max retries reached for page ${page.id}, stopping backlinks fetch attempts`);
+            setMaxRetriesReached(true);
+            setNoBacklinksCache(page.id, true);
+          }
+        } else {
+          // Reset counter if we found backlinks
+          emptyResultsCount.current = 0;
+          setNoBacklinksCache(page.id, false);
+        }
       } catch (error) {
         console.error('Error fetching backlinks:', error);
         // Set empty array on error to avoid undefined state
         setBacklinks([]);
+
+        // Count errors as empty results for retry limiting
+        emptyResultsCount.current += 1;
+        if (emptyResultsCount.current >= MAX_RETRIES) {
+          setMaxRetriesReached(true);
+          setNoBacklinksCache(page.id, true);
+        }
       }
 
       setIsLoading(false);
     };
 
     fetchBacklinks();
-  }, [page, maxPages]);
+  }, [page, maxPages, linkedPageIds, maxRetriesReached]);
 
   // Add mounted state to prevent hydration issues
   const [mounted, setMounted] = useState(false);
@@ -106,7 +208,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         </TooltipProvider>
       </div>
 
-      {isLoading ? (
+      {isLoading && !maxRetriesReached ? (
         <div className="flex justify-center items-center py-4 min-h-[60px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>

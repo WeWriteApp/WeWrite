@@ -165,7 +165,7 @@ export function AccountSwitcher() {
         className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-neutral-alpha-2 dark:hover:bg-accent transition-colors overflow-hidden"
       >
         <div className="flex flex-col items-start min-w-0 flex-1 mr-2">
-          <span className="font-medium truncate w-full">{user?.username || 'Anonymous'}</span>
+          <span className="font-medium truncate w-full">{user?.username || 'Missing username'}</span>
           <span className="text-sm text-muted-foreground truncate w-full">{user?.email || 'Not signed in'}</span>
         </div>
         <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />

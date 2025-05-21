@@ -122,63 +122,13 @@ export function middleware(request) {
     }
   }
 
-  // For groups paths, check if the user is an admin (since groups feature is admin-only)
+  // For groups paths, allow access for all authenticated users
   if (isGroupsPath) {
-    // Get the user email from cookies
-    const userEmail = request.cookies.get("user_email")?.value;
-    const isAdmin = isAdminServer(userEmail);
-
-    // Check if the groups feature flag is enabled in cookies (set by client-side code)
-    const groupsFeatureEnabled = request.cookies.get("feature_groups")?.value === "true";
-
-    // Log all cookies for debugging
+    // Log for debugging
     console.log(`[DEBUG] Middleware - Groups path detected: ${path}`);
-    console.log(`[DEBUG] Middleware - User email: ${userEmail || 'unknown'}`);
-    console.log(`[DEBUG] Middleware - Is admin: ${isAdmin}`);
-    console.log(`[DEBUG] Middleware - Groups feature enabled: ${groupsFeatureEnabled}`);
+    console.log(`[DEBUG] Middleware - Groups feature is now enabled for all users`);
 
-    // Log cookies safely without using entries()
-    const cookieNames = ['session', 'user_email', 'feature_groups'];
-    const cookieValues = {};
-    cookieNames.forEach(name => {
-      const cookie = request.cookies.get(name);
-      cookieValues[name] = cookie ? cookie.value : undefined;
-    });
-    console.log(`[DEBUG] Middleware - Cookies:`, cookieValues);
-
-    // Extract email from session token if user_email cookie is missing
-    let extractedEmail = userEmail;
-    if (!extractedEmail && request.cookies.get("session")?.value) {
-      try {
-        // Try to extract email from JWT token
-        const token = request.cookies.get("session").value;
-        // Check if it's a JWT token (starts with eyJ)
-        if (token && token.startsWith('eyJ')) {
-          // Get the payload part (second part of the token)
-          const payload = token.split('.')[1];
-          // Decode the base64 payload
-          const decodedPayload = Buffer.from(payload, 'base64').toString();
-          // Parse the JSON payload
-          const parsedPayload = JSON.parse(decodedPayload);
-          // Extract the email
-          extractedEmail = parsedPayload.email;
-          console.log(`[DEBUG] Middleware - Extracted email from token: ${extractedEmail}`);
-        }
-      } catch (error) {
-        console.error('[DEBUG] Middleware - Error extracting email from token:', error);
-      }
-    }
-
-    // Re-check admin status with extracted email
-    const isAdminWithExtractedEmail = extractedEmail === "jamiegray2234@gmail.com";
-    console.log(`[DEBUG] Middleware - Admin check with extracted email: ${isAdminWithExtractedEmail}`);
-
-    // Temporarily bypass the feature flag check to fix navigation issues
-    // We'll still log the values for debugging purposes
-    console.log(`[DEBUG] Groups access check - User: ${extractedEmail || userEmail || 'unknown'}, Admin: ${isAdmin || isAdminWithExtractedEmail}, Feature enabled: ${groupsFeatureEnabled}`);
-
-    // Always set the feature flag cookie to true for groups paths to ensure navigation works
-    console.log(`[DEBUG] Middleware - Setting feature_groups cookie to true for groups path`);
+    // Always set the feature flag cookie to true for groups paths
     const response = NextResponse.next();
     response.cookies.set("feature_groups", "true", {
       path: "/",
@@ -187,52 +137,7 @@ export function middleware(request) {
       sameSite: "lax"
     });
 
-    // Also set the user_email cookie if it's missing
-    if (!userEmail && extractedEmail) {
-      console.log(`[DEBUG] Middleware - Setting user_email cookie to ${extractedEmail}`);
-      response.cookies.set("user_email", extractedEmail, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        httpOnly: false,
-        sameSite: "lax"
-      });
-    }
-
     return response;
-
-    // Original code (commented out for now)
-    // if ((!isAdmin && !isAdminWithExtractedEmail) || !groupsFeatureEnabled) {
-    //   console.log(`[DEBUG] Groups access denied - User: ${extractedEmail || userEmail || 'unknown'}, Admin: ${isAdmin || isAdminWithExtractedEmail}, Feature enabled: ${groupsFeatureEnabled}`);
-    //
-    //   // Set the feature flag cookie to true for admin users
-    //   if ((isAdmin || isAdminWithExtractedEmail) && !groupsFeatureEnabled) {
-    //     console.log(`[DEBUG] Middleware - Setting feature_groups cookie to true for admin user`);
-    //     const response = NextResponse.redirect(new URL("/", request.url));
-    //     response.cookies.set("feature_groups", "true", {
-    //       path: "/",
-    //       maxAge: 60 * 60 * 24 * 7, // 7 days
-    //       httpOnly: false,
-    //       sameSite: "lax"
-    //     });
-    //
-    //     // Also set the user_email cookie if it's missing
-    //     if (!userEmail && extractedEmail) {
-    //       console.log(`[DEBUG] Middleware - Setting user_email cookie to ${extractedEmail}`);
-    //       response.cookies.set("user_email", extractedEmail, {
-    //         path: "/",
-    //         maxAge: 60 * 60 * 24 * 7, // 7 days
-    //         httpOnly: false,
-    //         sameSite: "lax"
-    //       });
-    //     }
-    //
-    //     return response;
-    //   }
-    //
-    //   return NextResponse.redirect(new URL("/", request.url));
-    // }
-
-    console.log(`[DEBUG] Groups access granted - User: ${extractedEmail || userEmail}, Admin: ${isAdmin || isAdminWithExtractedEmail}, Feature enabled: ${groupsFeatureEnabled}, Path: ${path}`);
   }
 
   return NextResponse.next();

@@ -183,7 +183,7 @@ export function SimpleAccountSwitcher() {
             >
               <div className="flex flex-col items-start min-w-0 flex-1 mr-2 text-left">
                 <span className="font-medium truncate w-full text-left">
-                  {isLoading ? 'Switching...' : (user?.username || user?.displayName || 'Anonymous')}
+                  {isLoading ? 'Switching...' : (user?.username || user?.displayName || 'Missing username')}
                 </span>
                 <span className="text-sm text-muted-foreground truncate w-full text-left">
                   {user?.email || 'Not signed in'}

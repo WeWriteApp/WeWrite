@@ -35,19 +35,10 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
   console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
 
   try {
-    // For the 'groups' flag, only allow admin users regardless of database setting
+    // For the 'groups' flag, always return true to enable for all users
     if (flag === 'groups') {
-      const isUserAdmin = isAdmin(userEmail);
-      console.log(`[DEBUG] GROUPS FLAG CHECK - User is admin: ${isUserAdmin}`);
-
-      // If user is not an admin, always return false for groups feature
-      if (!isUserAdmin) {
-        console.log(`[DEBUG] GROUPS FLAG CHECK - Non-admin user, disabling groups feature`);
-        return false;
-      }
-
-      // For admin users, continue to check the database setting
-      console.log(`[DEBUG] GROUPS FLAG CHECK - Admin user, checking database setting`);
+      console.log(`[DEBUG] GROUPS FLAG CHECK - Groups feature is now enabled for all users`);
+      return true;
     }
 
     // Check the database for the feature flag setting

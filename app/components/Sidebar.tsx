@@ -28,15 +28,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const { user } = useContext(AuthContext)
 
-  // Use the improved useFeatureFlag hook to check if groups feature is enabled
-  const groupsEnabled = useFeatureFlag('groups', user?.email)
+  // Groups feature is now always enabled for all users
+  const groupsEnabled = true;
 
   // Debug logging for groups feature flag in sidebar
   useEffect(() => {
-    console.log('[DEBUG] Sidebar - Groups feature flag:', groupsEnabled);
+    console.log('[DEBUG] Sidebar - Groups feature is now enabled for all users');
     console.log('[DEBUG] Sidebar - User:', user?.email);
-    console.log('[DEBUG] Sidebar - Groups navigation item will be visible:', groupsEnabled ? 'YES' : 'NO');
-  }, [groupsEnabled, user?.email])
+    console.log('[DEBUG] Sidebar - Groups navigation item will always be visible');
+  }, [user?.email])
 
   // Reset to main menu when sidebar closes
   useEffect(() => {
@@ -208,32 +208,23 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
               </button>
 
-              {/* Groups navigation item - only visible when feature flag is enabled */}
-              {groupsEnabled && (
-                <Link href="/groups" passHref>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      console.log('[DEBUG] Sidebar - Groups button clicked, navigating to /groups');
-                      // Use window.location for more reliable navigation
-                      window.location.href = '/groups';
-                    }}
-                    className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-                  >
-                    <div className="flex items-center">
-                      <Users className="h-5 w-5 mr-2" />
-                      <span>Groups</span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                </Link>
-              )}
-              {/* Debug element to show when groups feature is disabled */}
-              {!groupsEnabled && process.env.NODE_ENV === 'development' && (
-                <div className="hidden">
-                  <span className="text-xs text-red-500">Groups feature is disabled</span>
+              {/* Groups navigation item - now always visible for all users */}
+              <button
+                onClick={() => {
+                  console.log('[DEBUG] Sidebar - Groups button clicked, navigating to /groups');
+                  // Close the sidebar first
+                  onClose();
+                  // Use window.location for more reliable navigation
+                  window.location.href = '/groups';
+                }}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+              >
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  <span>Groups</span>
                 </div>
-              )}
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </button>
 
               <button
                 onClick={() => navigateToSection('appearance')}

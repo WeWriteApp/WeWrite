@@ -205,7 +205,7 @@ export async function GET(request) {
 // Helper function to get username from Firestore or RTDB
 async function getUsernameById(db, rtdb, userId) {
   try {
-    if (!userId) return "Anonymous";
+    if (!userId) return "Missing username";
 
     let username = null;
 

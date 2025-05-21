@@ -231,6 +231,7 @@ const TypeaheadSearch = ({
             // Check if we received an error message
             if (pagesData.error) {
               console.error('TypeaheadSearch - Pages API returned error object:', pagesData.error);
+              // Continue processing - we'll still use any pages that were returned
             }
 
             // Process the results with usernames
@@ -249,6 +250,16 @@ const TypeaheadSearch = ({
                 processedPages = await processPagesWithUsernames(realPages);
               } else {
                 console.log('TypeaheadSearch - No matching pages found');
+              }
+            }
+
+            // Log the source of the search results
+            if (pagesData.source) {
+              console.log(`TypeaheadSearch - Results source: ${pagesData.source}`);
+
+              // If we're using a fallback, let the user know
+              if (pagesData.source.includes('fallback')) {
+                console.log('TypeaheadSearch - Using Firestore fallback search');
               }
             }
           } else {

@@ -97,7 +97,7 @@ export function AccountSwitcherNew() {
       >
         <div className="flex flex-col items-start min-w-0 flex-1 mr-2">
           <span className="font-medium truncate w-full">
-            {isLoading ? 'Switching...' : (user?.username || user?.displayName || 'Anonymous')}
+            {isLoading ? 'Switching...' : (user?.username || user?.displayName || 'Missing username')}
           </span>
           <span className="text-sm text-muted-foreground truncate w-full">
             {user?.email || 'Not signed in'}

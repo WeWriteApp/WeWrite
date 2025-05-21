@@ -63,17 +63,38 @@ export function PagePreviewCard({
     return false;
   }, [pageId]);
 
+  // Get status badge
+  const getStatusBadge = () => {
+    if (hideStatus) return null;
+
+    switch (status) {
+      case 'done':
+        return <Badge variant="default" className="bg-green-500 text-white">Available Now</Badge>;
+      case 'in-progress':
+        return <Badge variant="default" className="bg-amber-500 text-white">In Progress</Badge>;
+      case 'coming-soon':
+        return <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700">Coming Soon</Badge>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="block h-full" onClick={handleCardClick}>
-      <Card className={`h-full border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col ${cardStyles}`}>
-        <CardHeader className="pb-4">
-          <div className="flex justify-between items-center">
-            <CardTitle className={`text-lg`}>
+      <Card className={`h-full border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col ${cardStyles} scroll-snap-align-start`}>
+        <div className="p-3 sm:p-4">
+          <div className="flex justify-between items-center mb-2">
+            <CardTitle className="text-base sm:text-lg mb-0 pr-2 line-clamp-2">
               {title}
             </CardTitle>
             <ChevronRight className="h-5 w-5 flex-shrink-0" />
           </div>
-        </CardHeader>
+          {!hideStatus && (
+            <div className="mt-1">
+              {getStatusBadge()}
+            </div>
+          )}
+        </div>
       </Card>
     </div>
   );

@@ -123,7 +123,7 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="mt-auto pt-4 border-t-only" data-component-name="Sidebar">
           {user && (
             <div className="px-4 pb-2 text-sm text-muted-foreground">
-              Signed in as <span className="font-medium text-foreground">{user.username || user.email || 'Anonymous'}</span>
+              Signed in as <span className="font-medium text-foreground">{user.username || user.email || 'Missing username'}</span>
             </div>
           )}
           <Button

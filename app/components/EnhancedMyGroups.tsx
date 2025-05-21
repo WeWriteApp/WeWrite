@@ -238,11 +238,17 @@ export default function EnhancedMyGroups({ profileUserId, hideHeader = false }: 
               <Users className="h-5 w-5 mr-2" />
               My Groups
             </h2>
-            <Button variant="outline" asChild className="rounded-2xl">
-              <Link href="/group/new" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New Group
-              </Link>
+            <Button
+              variant="outline"
+              className="rounded-2xl flex items-center gap-2"
+              onClick={() => {
+                console.log('[DEBUG] EnhancedMyGroups - New Group button clicked, navigating to /group/new');
+                // Use window.location for more reliable navigation
+                window.location.href = '/group/new';
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New Group
             </Button>
           </div>
         )}
@@ -250,8 +256,16 @@ export default function EnhancedMyGroups({ profileUserId, hideHeader = false }: 
           <CardContent className="flex flex-col items-center justify-center py-8">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground text-center">You haven't joined any groups yet.</p>
-            <Button variant="outline" className="mt-4 rounded-2xl" asChild>
-              <Link href="/group/new">Create a Group</Link>
+            <Button
+              variant="outline"
+              className="mt-4 rounded-2xl"
+              onClick={() => {
+                console.log('[DEBUG] EnhancedMyGroups - Create a Group button clicked, navigating to /group/new');
+                // Use window.location for more reliable navigation
+                window.location.href = '/group/new';
+              }}
+            >
+              Create a Group
             </Button>
           </CardContent>
         </Card>
@@ -271,11 +285,17 @@ export default function EnhancedMyGroups({ profileUserId, hideHeader = false }: 
             My Groups
           </h2>
           {!profileUserId && (
-            <Button variant="outline" asChild className="rounded-2xl">
-              <Link href="/group/new" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New Group
-              </Link>
+            <Button
+              variant="outline"
+              className="rounded-2xl flex items-center gap-2"
+              onClick={() => {
+                console.log('[DEBUG] EnhancedMyGroups - New Group button clicked, navigating to /group/new');
+                // Use window.location for more reliable navigation
+                window.location.href = '/group/new';
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New Group
             </Button>
           )}
         </div>

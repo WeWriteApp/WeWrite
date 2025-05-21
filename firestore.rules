@@ -53,6 +53,14 @@ service cloud.firestore {
          exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)));
     }
 
+    // Page views - allow public read access for trending pages
+    match /pageViews/{viewId} {
+      // Allow reading by anyone
+      allow read: if true;
+      // Only allow authenticated users to write
+      allow write: if request.auth != null;
+    }
+
     // Follower privacy rules
     match /userFollowers/{userId} {
       // Only allow the user to read their own followers

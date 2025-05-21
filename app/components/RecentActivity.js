@@ -1,8 +1,8 @@
 "use client";
-import React, { useRef, useContext, useEffect, useState } from "react";
+import React, { useRef, useContext, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import Link from "next/link";
-import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info } from "lucide-react";
+import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info, Filter, Check } from "lucide-react";
 import useRecentActivity from "../hooks/useRecentActivity";
 import useHomeRecentActivity from "../hooks/useHomeRecentActivity";
 import ActivityCard from "./ActivityCard";
@@ -11,6 +11,18 @@ import { Button } from "./ui/button";
 import { PulseLoader } from "react-spinners";
 import { AuthContext } from "../providers/AuthProvider";
 import { getFollowedPages } from "../firebase/follows";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 const ActivitySkeleton = () => {
   return (
@@ -37,8 +49,9 @@ const ActivitySkeleton = () => {
  * @param {boolean} showViewAll - Whether to show the "View all activity" button (default: true)
  * @param {boolean} isActivityPage - Whether this component is being rendered on the activity page (default: false)
  * @param {string} userId - Optional user ID to filter activities by (default: null)
+ * @param {boolean} renderFilterInHeader - Whether to render the filter button in the component or externally (default: false)
  */
-const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false, userId = null }) => {
+const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPage = false, userId = null, renderFilterInHeader = false }, ref) => {
   // Determine if we're on the activity page by checking props or using pathname
   const isInActivityPage = isActivityPage || typeof window !== "undefined" && window.location.pathname === "/activity";
   // Also check if we're in a user profile (determined by having userId passed and not being in activity page)
@@ -84,11 +97,14 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     const fetchFollowedPages = async () => {
       try {
         setIsLoadingFollows(true);
+        console.log(`Fetching followed pages for user ${user.uid}`);
         const pages = await getFollowedPages(user.uid);
+        console.log(`User ${user.uid} follows ${pages.length} pages`);
         setFollowedPages(pages);
 
         // If user has no followed pages and we're in following mode, switch to all
         if (pages.length === 0 && viewMode === 'following') {
+          console.log('User has no followed pages, switching to "all" view mode');
           setViewMode('all');
         }
       } catch (error) {
@@ -99,7 +115,7 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     };
 
     fetchFollowedPages();
-  }, [user, viewMode]);
+  }, [user, viewMode, setViewMode]);
 
   // Scroll functions removed as the buttons have been removed
 
@@ -109,48 +125,93 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
     initialRenderRef.current = false;
   }, []);
 
+  // Function to render the filter dropdown button
+  const renderFilterDropdown = () => {
+    if (!user) return null;
+
+    return (
+      <div className="ml-auto">
+        <TooltipProvider>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`gap-2 h-8 px-3 rounded-full hover:bg-muted/80 transition-colors ${
+                      viewMode === 'following' ? 'border-primary text-primary' : ''
+                    }`}
+                    aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : 'Following'}`}
+                  >
+                    <Filter className="h-4 w-4" />
+                    <span className="sr-only md:not-sr-only md:inline-block">
+                      {viewMode === 'all' ? 'All' : 'Following'}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>Filter activity feed</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                onClick={() => {
+                  console.log('Setting view mode to all');
+                  setViewMode('all');
+                }}
+                className="flex items-center justify-between cursor-pointer"
+              >
+                <span>All</span>
+                {viewMode === 'all' && <Check className="h-4 w-4 ml-2" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (followedPages.length > 0) {
+                    console.log('Setting view mode to following');
+                    setViewMode('following');
+                  }
+                }}
+                disabled={isLoadingFollows || followedPages.length === 0}
+                className={`flex items-center justify-between cursor-pointer ${
+                  followedPages.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <div className="flex flex-col">
+                  <span>Following</span>
+                  {isLoadingFollows ? (
+                    <span className="text-xs text-muted-foreground">Loading...</span>
+                  ) : followedPages.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">No followed pages</span>
+                  ) : null}
+                </div>
+                {viewMode === 'following' && !isLoadingFollows && <Check className="h-4 w-4 ml-2" />}
+                {isLoadingFollows && (
+                  <div className="h-4 w-4 ml-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TooltipProvider>
+      </div>
+    );
+  };
+
+  // Expose the filter dropdown to the parent component via ref
+  useImperativeHandle(ref, () => ({
+    FilterDropdown: renderFilterDropdown
+  }));
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        {/* Title is now provided by SectionTitle in the parent component */}
-
-        {/* View mode switch - only show when user is logged in */}
-        {user && (
-          <div className="flex items-center gap-2 text-sm ml-auto">
-            <button
-              onClick={() => {
-                console.log('Setting view mode to all');
-                setViewMode('all');
-              }}
-              className={`px-3 py-1 rounded-full transition-colors ${
-                viewMode === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
-              aria-pressed={viewMode === 'all'}
-            >
-              All
-            </button>
-            <button
-              onClick={() => {
-                console.log('Setting view mode to following');
-                setViewMode('following');
-              }}
-              disabled={isLoadingFollows || followedPages.length === 0}
-              className={`px-3 py-1 rounded-full transition-colors ${
-                viewMode === 'following'
-                  ? 'bg-primary text-primary-foreground'
-                  : followedPages.length === 0
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-                    : 'bg-muted hover:bg-muted/80'
-              }`}
-              aria-pressed={viewMode === 'following'}
-            >
-              Following
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Only render the filter dropdown inside the component if renderFilterInHeader is false */}
+      {!renderFilterInHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {/* Title is now provided by SectionTitle in the parent component */}
+          {renderFilterDropdown()}
+        </div>
+      )}
 
       {/* Mobile view: always vertical stack */}
       <div className="md:hidden space-y-3">
@@ -324,6 +385,6 @@ const RecentActivity = ({ limit = 8, showViewAll = true, isActivityPage = false,
       )}
     </div>
   );
-};
+});
 
 export default RecentActivity;

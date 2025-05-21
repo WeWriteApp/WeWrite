@@ -34,15 +34,23 @@ export default function PageViewCounter({ pageId }) {
 
         // If we don't have hourly data but we have a page, get the total views
         if (data.total === 0) {
-          const totalViews = await getPageTotalViews(pageId);
-          setViewData({ total: totalViews, hourly: Array(24).fill(0) });
+          try {
+            const totalViews = await getPageTotalViews(pageId);
+            setViewData({ total: totalViews, hourly: Array(24).fill(0) });
+          } catch (totalViewsError) {
+            console.error("Error fetching total views:", totalViewsError);
+            // Use a fallback value of 0 views
+            setViewData({ total: 0, hourly: Array(24).fill(0) });
+          }
         } else {
           setViewData(data);
         }
       } catch (error) {
         console.error("Error fetching view data:", error);
-        // Reset the flag if there was an error so we can try again
-        dataFetched.current = false;
+        // Use a fallback value of 0 views with empty hourly data
+        setViewData({ total: 0, hourly: Array(24).fill(0) });
+        // Mark as fetched anyway to prevent constant retries
+        dataFetched.current = true;
       } finally {
         setIsLoading(false);
       }

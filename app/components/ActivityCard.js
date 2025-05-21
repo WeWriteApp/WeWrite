@@ -164,7 +164,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                 {/* Don't make user links clickable for sample data */}
                 {activity.isSample ? (
                   <span className="text-primary">
-                    {activity.username || "anonymous"}
+                    {activity.username || "Missing username"}
                   </span>
                 ) : (
                   <span className="text-primary">
@@ -173,7 +173,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
                       className="hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {activity.username || "anonymous"}
+                      {activity.username || "Missing username"}
                     </Link>
                     {subscriptionEnabled && (
                       <SupporterIcon
