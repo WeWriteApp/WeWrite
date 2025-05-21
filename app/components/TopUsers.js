@@ -1,10 +1,9 @@
 "use client";
 import { useState, useEffect, useContext, useCallback, useRef } from "react";
-import Image from "next/image";
 import { AuthContext } from "../providers/AuthProvider";
-import { collection, getDocs, Timestamp, query, limit, getDoc, doc, startAfter, orderBy } from "firebase/firestore";
-import { ref, onValue, get } from "firebase/database";
-import { Trophy, Clock, ChevronRight, Info, AlertTriangle, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
+import { collection, getDocs, query, limit, getDoc, doc } from "firebase/firestore";
+import { ref, get } from "firebase/database";
+import { Info, AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { rtdb } from "../firebase/rtdb";
@@ -20,39 +19,7 @@ import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtil
 import { trackQueryPerformance } from "../utils/queryMonitor";
 import { ShimmerEffect } from "./ui/skeleton";
 
-const UserListSkeleton = () => {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
-          <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right">
-            <div className="flex items-center justify-end gap-1">
-              Pages
-              <ChevronDown className="h-4 w-4 text-muted-foreground/50" />
-            </div>
-          </TableHead>
-          <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right">Activity (24h)</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {[...Array(8)].map((_, i) => (
-          <TableRow key={i} className="animate-in fade-in-0" style={{ animationDelay: `${i * 50}ms` }}>
-            <TableCell className="py-3 px-4">
-              <ShimmerEffect className="inline-flex px-3 py-1.5 items-center gap-1 whitespace-nowrap rounded-[12px] border-[1.5px] border-muted/50 w-32 h-8" />
-            </TableCell>
-            <TableCell className="py-3 px-4 text-right">
-              <ShimmerEffect className="h-4 w-8 rounded ml-auto" />
-            </TableCell>
-            <TableCell className="py-3 px-4 text-right">
-              <ShimmerEffect className="w-24 h-8 rounded ml-auto" />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-};
+// UserListSkeleton component removed as it's no longer needed
 
 const TopUsers = () => {
   // Core state
@@ -66,15 +33,14 @@ const TopUsers = () => {
   const [userActivityData, setUserActivityData] = useState({});
 
   // Pagination state
-  const [pageSize, setPageSize] = useState(8);
+  const [pageSize] = useState(8); // Used in fetchUsersAndPages options
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [lastVisible, setLastVisible] = useState(null);
+  const [lastVisible] = useState(null); // Used in loadMoreUsers
 
   // Caching and performance state
   const [isFreshData, setIsFreshData] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [loadTime, setLoadTime] = useState(null);
 
@@ -136,7 +102,6 @@ const TopUsers = () => {
       // Update state with cached data
       setAllTimeUsers(cachedData.users);
       setUserActivityData(cachedData.activityData || {});
-      setLastUpdated(cachedData.timestamp);
       setIsFreshData(false);
       setLoading(false);
 
@@ -168,7 +133,6 @@ const TopUsers = () => {
       .then(() => {
         console.log('TopUsers: Background refresh completed');
         setIsFreshData(true);
-        setLastUpdated(Date.now());
       })
       .catch(err => {
         console.error('TopUsers: Background refresh failed:', err);
@@ -199,8 +163,8 @@ const TopUsers = () => {
       useCachedData = true,
       isBackgroundFetch = false,
       page = 1,
-      size = pageSize,
-      startAfterDoc = null
+      size = pageSize
+      // startAfterDoc removed as it's not used
     } = options;
 
     // If this is the initial load and not a background fetch, check cache first
@@ -386,7 +350,6 @@ const TopUsers = () => {
           setHasMore(startIndex + size < totalCount);
           setLoading(false);
           setLoadTime(timeElapsed);
-          setLastUpdated(Date.now());
           setIsFreshData(true);
         }
 
@@ -449,78 +412,99 @@ const TopUsers = () => {
   }, [fetchUsersAndPages]);
 
   return (
-    <div className="space-y-4">
-      {/* All-time leaderboard */}
-      <div className="space-y-4">
-
-        <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
-          {/* Performance metrics (only in development) */}
-          {process.env.NODE_ENV === 'development' && loadTime && (
-            <div className="bg-muted/30 px-3 py-1 text-xs text-muted-foreground border-b border-border/30">
-              <span>Load time: {loadTime.toFixed(2)}ms</span>
-              {' | '}
-              <span>Users: {totalUsers}</span>
-              {' | '}
-              <span>Cache: {isFreshData ? 'Fresh data' : 'From cache'}</span>
-            </div>
-          )}
-
-          {loading && (
-            <UserListSkeleton />
-          )}
-
-          {!loading && error && !user && (
-            <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
-              <Info className="h-4 w-4 flex-shrink-0" />
-              <p>Sign in to see the leaderboard</p>
-            </div>
-          )}
-
-          {!loading && error && user && (
-            <div className="p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
-              <div className="flex gap-2 items-start">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">There was a problem loading the leaderboard</p>
-                  {errorDetails && <p className="mt-1 text-xs opacity-80">{errorDetails}</p>}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={refreshData}
-                    className="mt-2"
-                  >
-                    Try again
-                  </Button>
-                </div>
+    <>
+      {/* Desktop view container */}
+      <div className="hidden md:block space-y-4">
+        {/* All-time leaderboard */}
+        <div className="space-y-4">
+          <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+            {/* Performance metrics (only in development) */}
+            {process.env.NODE_ENV === 'development' && loadTime && (
+              <div className="bg-muted/30 px-3 py-1 text-xs text-muted-foreground border-b border-border/30">
+                <span>Load time: {loadTime.toFixed(2)}ms</span>
+                {' | '}
+                <span>Users: {totalUsers}</span>
+                {' | '}
+                <span>Cache: {isFreshData ? 'Fresh data' : 'From cache'}</span>
               </div>
-            </div>
-          )}
+            )}
 
-          {!loading && !error && allTimeUsers.length === 0 && (
-            <div className="p-4 text-sm text-muted-foreground text-center">
-              <p>No supporters yet. Be the first to support a writer!</p>
-            </div>
-          )}
-
-          {!loading && !error && allTimeUsers.length > 0 && (
-            <>
-              {/* Desktop view (md and larger): Table layout */}
+            {loading && (
               <div className="hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Username</TableHead>
-                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right cursor-pointer" onClick={toggleSortDirection}>
-                        <div className="flex items-center justify-end gap-1">
-                          <span className="mt-0.5">Pages</span>
-                          {sortDirection === "desc" ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronUp className="h-4 w-4" />
-                          )}
-                        </div>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-left w-1/2">Username</TableHead>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap w-1/4" style={{ textAlign: "center" }}>
+                        Pages
                       </TableHead>
-                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right">Activity (24h)</TableHead>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right w-1/4">Activity (24h)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...Array(8)].map((_, i) => (
+                      <TableRow key={i} className="animate-in fade-in-0" style={{ animationDelay: `${i * 50}ms` }}>
+                        <TableCell className="py-3 px-4 text-left w-1/2">
+                          <ShimmerEffect className="inline-flex px-3 py-1.5 items-center gap-1 whitespace-nowrap rounded-[12px] border-[1.5px] border-muted/50 w-32 h-8" />
+                        </TableCell>
+                        <TableCell className="py-3 px-4 w-1/4" style={{ textAlign: "center" }}>
+                          <div className="flex justify-center">
+                            <ShimmerEffect className="h-4 w-8 rounded" />
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right w-1/4">
+                          <ShimmerEffect className="w-24 h-8 rounded ml-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {!loading && error && !user && (
+              <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
+                <Info className="h-4 w-4 flex-shrink-0" />
+                <p>Sign in to see the leaderboard</p>
+              </div>
+            )}
+
+            {!loading && error && user && (
+              <div className="p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                <div className="flex gap-2 items-start">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">There was a problem loading the leaderboard</p>
+                    {errorDetails && <p className="mt-1 text-xs opacity-80">{errorDetails}</p>}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshData}
+                      className="mt-2"
+                    >
+                      Try again
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!loading && !error && allTimeUsers.length === 0 && (
+              <div className="p-4 text-sm text-muted-foreground text-center">
+                <p>No supporters yet. Be the first to support a writer!</p>
+              </div>
+            )}
+
+            {!loading && !error && allTimeUsers.length > 0 && (
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-left w-1/2">Username</TableHead>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap cursor-pointer w-1/4" style={{ textAlign: "center" }} onClick={toggleSortDirection}>
+                        Pages {sortDirection === "desc" ? "↓" : "↑"}
+                      </TableHead>
+                      <TableHead className="py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap text-right w-1/4">Activity (24h)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -530,7 +514,7 @@ const TopUsers = () => {
                         className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
                         onClick={() => window.location.href = `/user/${user.id}`}
                       >
-                        <TableCell className="py-3 px-4">
+                        <TableCell className="py-3 px-4 text-left w-1/2">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -557,8 +541,10 @@ const TopUsers = () => {
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
-                        <TableCell className="py-3 px-4 text-right font-medium">{user.pageCount}</TableCell>
-                        <TableCell className="py-3 px-4 text-right">
+                        <TableCell className="py-3 px-4 font-medium w-1/4" style={{ textAlign: "center" }}>
+                          {user.pageCount}
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right w-1/4">
                           <div className="w-24 h-8 ml-auto">
                             <SimpleSparkline
                               data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
@@ -593,89 +579,147 @@ const TopUsers = () => {
                     </Button>
                   </div>
                 )}
-
-                {/* Removed data freshness indicator and user count */}
               </div>
+            )}
+          </div>
 
-              {/* Mobile view (smaller than md): Card grid layout - removed container wrapper */}
-              <div className="md:hidden grid grid-cols-1 gap-4 p-4">
-                {sortedUsers.map((user) => (
-                  <div
-                    key={user.id}
-                    onClick={() => window.location.href = `/user/${user.id}`}
-                    style={{ cursor: 'pointer' }}
-                    className="flex items-center justify-between p-4 bg-background hover:bg-muted/30 transition-colors rounded-xl"
-                  >
-                    <div className="flex items-center gap-3">
-                      <PillLink
-                        href={`/user/${user.id}`}
-                        variant="primary"
-                        onClick={(e) => e.stopPropagation()} // Prevent double navigation
-                      >
-                        <span className="flex items-center gap-1">
-                          {user.username || "Unknown User"}
-                          {subscriptionEnabled && (
-                            <SupporterIcon
-                              tier={user.tier}
-                              status={user.subscriptionStatus}
-                              size="sm"
-                            />
-                          )}
-                        </span>
-                      </PillLink>
-
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span className="font-medium">{user.pageCount}</span>
-                        <span className="text-xs">pages</span>
-                      </div>
-                    </div>
-
-                    <div className="w-24 h-10">
-                      <SimpleSparkline
-                        data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
-                        height={40}
-                        strokeWidth={1.5}
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                {/* Mobile pagination */}
-                {hasMore && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={loadMoreUsers}
-                    disabled={loading || !hasMore}
-                    className="w-full mt-2"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center">
-                        <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
-                        Loading...
-                      </span>
-                    ) : (
-                      <span>Load more users</span>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </>
+          {/* View All button - desktop only */}
+          {!loading && !error && allTimeUsers.length > 0 && (
+            <div className="hidden md:flex justify-center mt-4">
+              <Link href="/users">
+                <Button variant="outline">
+                  View all users
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
-
-        {/* View All button */}
-        {!loading && !error && allTimeUsers.length > 0 && (
-          <div className="flex justify-center mt-4">
-            <Link href="/users">
-              <Button variant="outline">
-                View all users
-              </Button>
-            </Link>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Mobile loading skeleton - direct children without container */}
+      {loading && [...Array(8)].map((_, i) => (
+        <div
+          key={i}
+          className="md:hidden flex items-center justify-between p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-4"
+          style={{ animationDelay: `${i * 50}ms` }}
+        >
+          <div className="flex items-center gap-3">
+            <ShimmerEffect className="inline-flex px-3 py-1.5 items-center gap-1 whitespace-nowrap rounded-[12px] border-[1.5px] border-muted/50 w-32 h-8" />
+            <div className="flex items-center gap-1">
+              <ShimmerEffect className="h-4 w-8 rounded" />
+            </div>
+          </div>
+          <ShimmerEffect className="w-24 h-10 rounded" />
+        </div>
+      ))}
+
+      {/* Mobile error states */}
+      {!loading && error && !user && (
+        <div className="md:hidden flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-2xl mb-4">
+          <Info className="h-4 w-4 flex-shrink-0" />
+          <p>Sign in to see the leaderboard</p>
+        </div>
+      )}
+
+      {!loading && error && user && (
+        <div className="md:hidden p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-2xl mb-4">
+          <div className="flex gap-2 items-start">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">There was a problem loading the leaderboard</p>
+              {errorDetails && <p className="mt-1 text-xs opacity-80">{errorDetails}</p>}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshData}
+                className="mt-2"
+              >
+                Try again
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && allTimeUsers.length === 0 && (
+        <div className="md:hidden p-4 text-sm text-muted-foreground text-center rounded-2xl border border-theme-medium mb-4">
+          <p>No supporters yet. Be the first to support a writer!</p>
+        </div>
+      )}
+
+      {/* Mobile view cards - direct children without container */}
+      {!loading && !error && allTimeUsers.length > 0 && sortedUsers.map((user) => (
+        <div
+          key={user.id}
+          onClick={() => window.location.href = `/user/${user.id}`}
+          className="md:hidden flex items-center justify-between p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-4"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <PillLink
+              href={`/user/${user.id}`}
+              variant="primary"
+              onClick={(e) => e.stopPropagation()} // Prevent double navigation
+              className="max-w-[150px] truncate"
+            >
+              <span className="flex items-center gap-1">
+                {user.username || "Unknown User"}
+                {subscriptionEnabled && (
+                  <SupporterIcon
+                    tier={user.tier}
+                    status={user.subscriptionStatus}
+                    size="sm"
+                  />
+                )}
+              </span>
+            </PillLink>
+
+            <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap flex-shrink-0">
+              <span className="font-medium">{user.pageCount}</span>
+              <span className="text-xs">pages</span>
+            </div>
+          </div>
+
+          <div className="w-24 h-10 flex-shrink-0">
+            <SimpleSparkline
+              data={userActivityData[user.id]?.hourly || Array(24).fill(0)}
+              height={40}
+              strokeWidth={1.5}
+            />
+          </div>
+        </div>
+      ))}
+
+      {/* Mobile pagination - direct child without container */}
+      {!loading && !error && allTimeUsers.length > 0 && hasMore && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadMoreUsers}
+          disabled={loading || !hasMore}
+          className="md:hidden w-full mb-4 rounded-2xl border border-theme-medium shadow-md hover:shadow-lg transition-shadow"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center">
+              <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
+              Loading...
+            </span>
+          ) : (
+            <span>Load more users</span>
+          )}
+        </Button>
+      )}
+
+      {/* Mobile View All button */}
+      {!loading && !error && allTimeUsers.length > 0 && (
+        <div className="md:hidden flex justify-center mb-4">
+          <Link href="/users">
+            <Button variant="outline" className="rounded-2xl border border-theme-medium shadow-md hover:shadow-lg transition-shadow">
+              View all users
+            </Button>
+          </Link>
+        </div>
+      )}
+    </>
   );
 };
 

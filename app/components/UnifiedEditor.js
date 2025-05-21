@@ -19,6 +19,7 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
+import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";
 import { validateLink } from '../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import TypeaheadSearch from "./TypeaheadSearch";
@@ -145,8 +146,39 @@ const UnifiedEditor = forwardRef((props, ref) => {
     contentType = "wiki",
     onKeyDown
   } = props;
-  // Create editor instance
-  const [editor] = useState(() => withHistory(withReact(createEditor())));
+  // Create editor instance with custom normalizer
+  const [editor] = useState(() => {
+    // Create the base editor
+    const baseEditor = withHistory(withReact(createEditor()));
+
+    // Store the original normalizeNode function
+    const originalNormalizeNode = baseEditor.normalizeNode;
+
+    // Add custom normalizer to update paragraph indices
+    baseEditor.normalizeNode = entry => {
+      // First run the original normalizer
+      originalNormalizeNode(entry);
+
+      // Then update paragraph indices after every normalization
+      if (baseEditor.children) {
+        try {
+          // Create a new array with updated paragraph indices
+          const updatedChildren = updateParagraphIndices(baseEditor.children);
+
+          // Only update if there are changes
+          if (updatedChildren !== baseEditor.children) {
+            // Replace the entire children array with the updated one
+            baseEditor.children = updatedChildren;
+          }
+        } catch (error) {
+          console.error("Error updating paragraph indices in normalizer:", error);
+        }
+      }
+    };
+
+    return baseEditor;
+  });
+
   const [editorValue, setEditorValue] = useState(ensureValidContent(initialContent));
   const [selection, setSelection] = useState(null);
   const editableRef = useRef(null);
@@ -160,19 +192,57 @@ const UnifiedEditor = forwardRef((props, ref) => {
   // Track if we've already set up the editor
   const isInitializedRef = useRef(false);
 
+  // Function to force update paragraph indices
+  const forceUpdateParagraphIndices = useCallback(() => {
+    try {
+      if (editor && editor.children) {
+        // Create a new array with updated paragraph indices
+        const updatedChildren = updateParagraphIndices(editor.children);
+
+        // Update the editor's children directly
+        editor.children = updatedChildren;
+
+        // Also update the state
+        setEditorValue([...updatedChildren]);
+
+        console.log("Paragraph indices force updated");
+        return true;
+      }
+    } catch (error) {
+      console.error("Error force updating paragraph indices:", error);
+    }
+    return false;
+  }, [editor]);
+
   // Initialize editor with content
   useEffect(() => {
     if (!isInitializedRef.current && initialContent) {
       const validContent = ensureValidContent(initialContent);
+
+      // Update the editor value with valid content
       setEditorValue(validContent);
+
+      // Force update paragraph indices after initialization
+      setTimeout(() => {
+        forceUpdateParagraphIndices();
+      }, 50);
+
       isInitializedRef.current = true;
     }
-  }, [initialContent]);
+  }, [initialContent, forceUpdateParagraphIndices]);
 
-  // We no longer need to synchronize line numbers since we're using inline paragraph numbers
+  // Force update paragraph indices periodically to ensure they stay in sync
   useEffect(() => {
-    // No-op - keeping the effect as a placeholder in case we need to add initialization logic in the future
-  }, []);
+    // Set up an interval to update paragraph indices every 2 seconds
+    const intervalId = setInterval(() => {
+      if (editor && editor.children) {
+        forceUpdateParagraphIndices();
+      }
+    }, 2000);
+
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, [editor, forceUpdateParagraphIndices]);
 
   // Share the linkEditorRef with child components via window
   useEffect(() => {
@@ -554,6 +624,12 @@ const UnifiedEditor = forwardRef((props, ref) => {
   // We no longer need to synchronize line numbers with editor content
   // since we're using inline paragraph numbers
 
+  // Function to update paragraph indices
+  const handleParagraphIndices = useCallback((value) => {
+    // Use the utility function from slate-path-fix.js
+    return updateParagraphIndices(value);
+  }, []);
+
   // Handle editor changes
   const handleEditorChange = useCallback((value) => {
     // Store the current selection to prevent cursor jumps
@@ -561,13 +637,31 @@ const UnifiedEditor = forwardRef((props, ref) => {
       lastSelectionRef.current = editor.selection;
     }
 
-    setEditorValue(value);
+    try {
+      // Create a new value with updated paragraph indices
+      const updatedValue = handleParagraphIndices(value);
 
-    // Call the onChange callback if provided
-    if (onChange) {
-      onChange(value);
+      // Update the editor value with the new indices
+      setEditorValue(updatedValue);
+
+      // Also update the editor's children directly to ensure consistency
+      if (editor.children !== updatedValue) {
+        editor.children = updatedValue;
+      }
+
+      // Call the onChange callback if provided
+      if (onChange) {
+        onChange(updatedValue);
+      }
+    } catch (error) {
+      console.error("Error in handleEditorChange:", error);
+      // Fall back to just updating the state without indices
+      setEditorValue(value);
+      if (onChange) {
+        onChange(value);
+      }
     }
-  }, [editor, onChange]);
+  }, [editor, onChange, handleParagraphIndices]);
 
   // Render a paragraph element or link
   const renderElement = useCallback(({ attributes, children, element }) => {
@@ -578,44 +672,8 @@ const UnifiedEditor = forwardRef((props, ref) => {
         // Get the paragraph index
         let index = 0;
 
-        // CRITICAL FIX: More reliable paragraph numbering
-        try {
-          // First try to get the path directly from the editor
-          const path = ReactEditor.findPath(editor, element);
-          if (path && Array.isArray(path)) {
-            index = path[0]; // The first element of the path is the paragraph index
-
-            // Cache the path for future renders
-            element.path = path;
-
-            // Log successful path finding
-            console.log('Found paragraph index:', index + 1, 'at path:', path);
-          } else {
-            console.warn('Path is invalid:', path);
-          }
-        } catch (error) {
-          console.error('Error finding paragraph path:', error);
-
-          // Fallback 1: Try to use the cached path if available
-          if (element.path && Array.isArray(element.path)) {
-            index = element.path[0];
-            console.log('Using cached path index:', index + 1);
-          } else {
-            // Fallback 2: Find the element's position in the editor's children
-            try {
-              const nodes = editor.children;
-              if (Array.isArray(nodes)) {
-                const nodeIndex = nodes.findIndex(node => node === element);
-                if (nodeIndex !== -1) {
-                  index = nodeIndex;
-                  console.log('Found index by searching children:', index + 1);
-                }
-              }
-            } catch (fallbackError) {
-              console.error('Error in fallback paragraph indexing:', fallbackError);
-            }
-          }
-        }
+        // Use our utility function to get the paragraph index
+        index = getParagraphIndex(element, editor);
 
         return (
           <div {...attributes} className="paragraph-with-number">
@@ -665,6 +723,14 @@ const UnifiedEditor = forwardRef((props, ref) => {
     // Store the current selection before any key event
     if (editor.selection) {
       lastSelectionRef.current = editor.selection;
+    }
+
+    // Force update paragraph indices after key operations that might change structure
+    if (event.key === 'Enter' || event.key === 'Backspace' || event.key === 'Delete') {
+      // Use setTimeout to ensure the operation completes first
+      setTimeout(() => {
+        forceUpdateParagraphIndices();
+      }, 0);
     }
 
     // Handle arrow key navigation around links
@@ -944,7 +1010,7 @@ const UnifiedEditor = forwardRef((props, ref) => {
         }
       }
     }
-  }, [editor, openLinkEditor, props.onKeyDown]);
+  }, [editor, openLinkEditor, props.onKeyDown, forceUpdateParagraphIndices]);
 
   // We no longer need to calculate line numbers for the editor content
   // since we're using inline paragraph numbers
@@ -1962,31 +2028,10 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto">
-          {/* Display validation message if there's an error and form has been touched */}
-          {formTouched && validationMessage && (
-            <div className="px-4 pt-2 text-sm text-red-500">
-              {validationMessage}
-            </div>
-          )}
 
           {activeTab === 'page' ? (
             <div className="p-4">
               <div>
-                {/* Display text input */}
-                <div className="space-y-2 mb-4">
-                  <h2 className="text-sm font-medium">Link text</h2>
-                  <input
-                    ref={displayTextRef}
-                    type="text"
-                    value={displayText}
-                    onChange={handleDisplayTextChange}
-                    placeholder="Link text"
-                    className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
-                    autoFocus={!initialText}
-                    onFocus={() => setFormTouched(true)}
-                  />
-                </div>
-
                 {/* Page search */}
                 <div className="space-y-2">
                   <h2 className="text-sm font-medium">Search for a page</h2>
@@ -2003,8 +2048,19 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     }}
                     placeholder="Search pages..."
                     initialSelectedId={selectedPageId}
-                    displayText={pageTitle}
+                    displayText={displayText}
+                    setDisplayText={setDisplayText}
                     preventRedirect={true}
+                    onInputChange={(value) => {
+                      // If the input looks like a URL, switch to external tab
+                      if (value && (value.startsWith('http://') || value.startsWith('https://') ||
+                          value.startsWith('www.') || value.includes('.com') ||
+                          value.includes('.org') || value.includes('.net') ||
+                          value.includes('.io'))) {
+                        setActiveTab('external');
+                        setExternalUrl(value);
+                      }
+                    }}
                     onInputChange={(value) => {
                       setFormTouched(true);
                       if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
@@ -2032,20 +2088,6 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
             </div>
           ) : (
             <div className="p-4 space-y-4">
-              <div className="space-y-2">
-                <h2 className="text-sm font-medium">Link text</h2>
-                <input
-                  ref={displayTextRef}
-                  type="text"
-                  value={displayText}
-                  onChange={handleDisplayTextChange}
-                  placeholder="Link text"
-                  className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !displayText.trim() ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
-                  autoFocus={!initialText}
-                  onFocus={() => setFormTouched(true)}
-                />
-              </div>
-
               <div className="space-y-2">
                 <h2 className="text-sm font-medium">URL</h2>
                 <input

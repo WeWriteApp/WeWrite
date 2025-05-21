@@ -17,6 +17,7 @@ import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useLineSettings, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { validateLink } from '../utils/linkValidator';
+import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -173,6 +174,9 @@ const BasicSlateEditor = forwardRef(({ initialContent = "", onChange, placeholde
         // Update local state
         setLineCount(newValue.length);
 
+        // Update paragraph indices to ensure correct numbering
+        updateParagraphIndices(newValue);
+
         // Store the current selection
         const currentSelection = editor.selection;
 
@@ -306,7 +310,9 @@ const BasicSlateEditor = forwardRef(({ initialContent = "", onChange, placeholde
           </a>
         );
       case "paragraph":
-        const index = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
+        // Use our utility function to get the paragraph index
+        const index = getParagraphIndex(element, editor);
+
         return (
           <div {...attributes} className="paragraph-with-number py-2">
             <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>
@@ -316,7 +322,8 @@ const BasicSlateEditor = forwardRef(({ initialContent = "", onChange, placeholde
           </div>
         );
       default:
-        const defaultIndex = props.element.path ? props.element.path[0] : ReactEditor.findPath(editor, element)[0];
+        // Use our utility function to get the paragraph index
+        const defaultIndex = getParagraphIndex(element, editor);
         return (
           <div {...attributes} className="paragraph-with-number py-2">
             <span className="paragraph-number-inline select-none" style={{ pointerEvents: 'none' }}>

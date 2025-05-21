@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { PillLink } from "./PillLink";
 import { formatRelativeTime } from "../utils/formatRelativeTime";
-import { generateSimpleDiff, generateTextDiff } from "../utils/generateTextDiff";
+import { generateSimpleDiff, generateTextDiff, extractTextContent } from "../utils/generateTextDiff";
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -74,18 +74,27 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     activity.previousContent !== '[]' &&
     activity.previousContent !== '{}';
 
-  const { added, removed } = hasValidContent ? generateSimpleDiff(
-    activity.currentContent,
-    activity.previousContent
-  ) : { added: 0, removed: 0 };
-
-  const textDiff = hasValidContent ? generateTextDiff(
-    activity.currentContent,
-    activity.previousContent
-  ) : null;
-
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;
+
+  // Calculate diffs differently for new pages vs edited pages
+  let added = 0;
+  let removed = 0;
+  let textDiff = null;
+
+  if (isNewPage && hasValidContent) {
+    // For new pages, count all content as added
+    const contentLength = extractTextContent(activity.currentContent).length;
+    added = contentLength;
+    removed = 0;
+    textDiff = generateTextDiff(activity.currentContent, null);
+  } else if (hasValidContent) {
+    // For edited pages, calculate the diff normally
+    const diffResult = generateSimpleDiff(activity.currentContent, activity.previousContent);
+    added = diffResult.added;
+    removed = diffResult.removed;
+    textDiff = generateTextDiff(activity.currentContent, activity.previousContent);
+  }
 
   // Handle card click to navigate to the page
   const handleCardClick = (e) => {
@@ -127,10 +136,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full wewrite-card border-0 shadow-none cursor-pointer no-underline",
-        isCarousel ? "h-[180px]" : "h-[180px]", // Fixed height for all cards
+        "w-full border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card",
+        "h-[200px]", // Standardized fixed height for all cards
         "flex flex-col",
-        compactLayout ? "p-4" : "p-4" // Consistent padding
+        "p-4" // Consistent padding
       )}
       style={{ transform: 'none' }}
       onClick={handleCardClick}
@@ -206,8 +215,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
       {/* Content section with flex-grow to fill remaining space */}
       <div className="flex flex-col flex-grow mt-3 justify-between">
-        {/* Text diff preview with fixed height */}
-        <div className="relative flex-grow min-w-0 h-[60px] overflow-hidden">
+        {/* Text diff preview */}
+        <div className="relative min-w-0 h-[70px] overflow-hidden">
           {textDiff && textDiff.preview ? (
             <div className="text-xs overflow-hidden h-full">
               {/* Text content */}
@@ -236,8 +245,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
           )}
         </div>
 
-        {/* Footer with character count stats */}
-        <div className="flex-shrink-0 text-xs font-medium flex items-center justify-end mt-2">
+        {/* Character count stats positioned at the bottom of the card with proper padding */}
+        <div className="flex-shrink-0 text-xs font-medium flex items-center pb-2 pt-2 px-1 border-t border-border/20 mt-auto">
           {added > 0 ? (
             <TooltipProvider>
               <Tooltip>
@@ -263,7 +272,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </Tooltip>
             </TooltipProvider>
           ) : null}
-          {added === 0 && removed === 0 && (
+          {added === 0 && removed === 0 && !isNewPage && (
             <span className="text-muted-foreground">No changes</span>
           )}
         </div>

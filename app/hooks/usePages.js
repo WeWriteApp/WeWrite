@@ -555,11 +555,7 @@ const usePages = (userId, includePrivate = true, currentUserId = null, isUserPag
           window.dispatchEvent(analyticsEvent);
         }
       }
-<<<<<<< Updated upstream
-    }, 10000); // Increased to 10 seconds to give more time for the initial query
-=======
     }, 10000); // Increased to 10 seconds to give more time for query to complete
->>>>>>> Stashed changes
 
     const attemptFetch = async () => {
       // Increment fetch attempts

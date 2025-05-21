@@ -348,7 +348,7 @@ export default function HomeGroupsSection() {
         {displayGroups.map((group) => (
           <div
             key={group.id}
-            className="group block bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+            className="group block bg-card border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all"
             onClick={(e) => {
               e.preventDefault();
               // Use direct navigation to avoid scroll issues with sticky headers

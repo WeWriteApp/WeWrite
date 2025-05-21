@@ -50,10 +50,16 @@ export const ActivityFilterProvider = ({ children }) => {
     }
   }, [viewMode]);
 
+  // Wrap setViewMode to add logging
+  const setViewModeWithLogging = (newMode) => {
+    console.log(`ActivityFilterContext: Changing viewMode from "${viewMode}" to "${newMode}"`);
+    setViewMode(newMode);
+  };
+
   // Value to be provided by the context
   const value = {
     viewMode,
-    setViewMode,
+    setViewMode: setViewModeWithLogging,
   };
 
   return (

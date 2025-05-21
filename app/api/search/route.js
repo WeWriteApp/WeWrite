@@ -91,6 +91,49 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
   try {
     console.log(`Using Firestore fallback for page search with term: "${searchTerm}"`);
 
+    // IMPORTANT FIX: Handle empty search terms
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      console.log('Empty search term provided to Firestore fallback, fetching recent pages');
+
+      // For empty search terms, return recent pages instead of empty results
+      // This is especially useful for the link editor context
+      try {
+        // Import Firestore modules dynamically
+        const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+        const { db } = await import('../../firebase/database');
+
+        // Get user's own recent pages
+        const recentPagesQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId || 'anonymous'),
+          orderBy('lastModified', 'desc'),
+          limit(10)
+        );
+
+        const recentPagesSnapshot = await getDocs(recentPagesQuery);
+        console.log(`Found ${recentPagesSnapshot.size} recent pages for empty search term`);
+
+        const recentPages = [];
+        recentPagesSnapshot.forEach(doc => {
+          const data = doc.data();
+          recentPages.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            isOwned: true,
+            isEditable: true,
+            userId: data.userId,
+            lastModified: data.lastModified,
+            type: 'user'
+          });
+        });
+
+        return recentPages;
+      } catch (error) {
+        console.error('Error fetching recent pages:', error);
+        return [];
+      }
+    }
+
     // Import Firestore modules dynamically
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
     const { db } = await import('../../firebase/database');
@@ -99,6 +142,15 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     // Format search term for case-insensitive search
     const searchTermLower = searchTerm.toLowerCase().trim();
     console.log(`Normalized search term: "${searchTermLower}"`);
+
+    // IMPORTANT FIX: Log more details about the search
+    console.log('Firestore search details:', {
+      searchTermLower,
+      searchTermLength: searchTermLower.length,
+      userId,
+      filterByUserId,
+      groupIds: groupIds.length
+    });
 
     // For multi-word searches, split into individual words
     const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
@@ -551,6 +603,18 @@ export async function GET(request) {
 
     console.log(`Search API called with searchTerm: "${searchTerm}", userId: ${userId}, filterByUserId: ${filterByUserId}`);
     console.log(`SEARCH API USING FIXED MULTI-WORD SEARCH LOGIC`);
+
+    // IMPORTANT FIX: Log more details about the search request
+    console.log('Search API request details:', {
+      searchTerm,
+      searchTermLength: searchTerm.length,
+      searchTermTrimmed: searchTerm.trim(),
+      searchTermTrimmedLength: searchTerm.trim().length,
+      userId,
+      filterByUserId,
+      groupIds,
+      url: request.url
+    });
 
     // For unauthenticated users, return only public content
     if (!userId) {

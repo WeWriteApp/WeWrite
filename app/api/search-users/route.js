@@ -13,7 +13,18 @@ export async function GET(request) {
     const searchTerm = searchParams.get("searchTerm");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")) : 10;
 
+    // IMPORTANT FIX: Log more details about the search request
+    console.log('Search Users API request details:', {
+      searchTerm,
+      searchTermLength: searchTerm ? searchTerm.length : 0,
+      searchTermTrimmed: searchTerm ? searchTerm.trim() : '',
+      searchTermTrimmedLength: searchTerm ? searchTerm.trim().length : 0,
+      limit,
+      url: request.url
+    });
+
     if (!searchTerm || searchTerm.trim().length < 1) {
+      console.log('Empty or too short search term provided to search-users API, returning empty results');
       return NextResponse.json(
         {
           users: [],

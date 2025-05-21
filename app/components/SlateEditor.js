@@ -17,6 +17,7 @@ import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
 import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";
 import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
 import { motion } from "framer-motion";
@@ -390,7 +391,7 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
         setLineCount(newValue.length);
 
         // Update paragraph indices to ensure correct numbering
-        updateParagraphIndices(newValue);
+        handleParagraphIndices(newValue);
 
         // Store the current selection
         const currentSelection = editor.selection;
@@ -415,18 +416,9 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   // Function to update paragraph indices
-  const updateParagraphIndices = (value) => {
-    try {
-      // Iterate through the value array and update path property for each element
-      value.forEach((node, index) => {
-        if (node.type === 'paragraph' || !node.type) {
-          // Add or update the path property
-          node.path = [index];
-        }
-      });
-    } catch (error) {
-      console.error('Error updating paragraph indices:', error);
-    }
+  const handleParagraphIndices = (value) => {
+    // Use the utility function from slate-path-fix.js
+    return updateParagraphIndices(value);
   };
 
   const handleKeyDown = (event, editor) => {
@@ -903,41 +895,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
       case "link":
         return <LinkComponent {...props} openLinkEditor={openLinkEditor} />;
       case "paragraph":
-        // Improved paragraph index calculation
-        let index;
-        try {
-          // First try to get the path from element.path if it exists
-          if (props.element.path) {
-            index = props.element.path[0];
-          }
-          // Then try to use ReactEditor.findPath safely
-          else {
-            try {
-              const path = ReactEditor.findPath(editor, element);
-              index = path[0];
-            } catch (pathError) {
-              console.error("Error finding path:", pathError);
-
-              // Fallback: Try to determine index from DOM position
-              try {
-                const domNode = ReactEditor.toDOMNode(editor, element);
-                if (domNode) {
-                  const paragraphs = Array.from(
-                    domNode.parentElement.querySelectorAll('.paragraph-with-number')
-                  );
-                  index = paragraphs.indexOf(domNode);
-                  if (index === -1) index = 0; // Default to 0 if not found
-                }
-              } catch (domError) {
-                console.error("Error finding DOM node:", domError);
-                index = 0; // Default to 0 if all methods fail
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error calculating paragraph index:", error);
-          index = 0; // Default to 0 if all methods fail
-        }
+        // Use our utility function to get the paragraph index
+        const index = getParagraphIndex(element, editor);
 
         // Attribution paragraphs - no special styling, just regular paragraph
         if (isAttributionParagraph) {
@@ -961,41 +920,8 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
           </div>
         );
       default:
-        // Improved paragraph index calculation - same as paragraph case
-        let defaultIndex;
-        try {
-          // First try to get the path from element.path if it exists
-          if (props.element.path) {
-            defaultIndex = props.element.path[0];
-          }
-          // Then try to use ReactEditor.findPath safely
-          else {
-            try {
-              const path = ReactEditor.findPath(editor, element);
-              defaultIndex = path[0];
-            } catch (pathError) {
-              console.error("Error finding path:", pathError);
-
-              // Fallback: Try to determine index from DOM position
-              try {
-                const domNode = ReactEditor.toDOMNode(editor, element);
-                if (domNode) {
-                  const paragraphs = Array.from(
-                    domNode.parentElement.querySelectorAll('.paragraph-with-number')
-                  );
-                  defaultIndex = paragraphs.indexOf(domNode);
-                  if (defaultIndex === -1) defaultIndex = 0; // Default to 0 if not found
-                }
-              } catch (domError) {
-                console.error("Error finding DOM node:", domError);
-                defaultIndex = 0; // Default to 0 if all methods fail
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error calculating paragraph index:", error);
-          defaultIndex = 0; // Default to 0 if all methods fail
-        }
+        // Use our utility function to get the paragraph index
+        const defaultIndex = getParagraphIndex(element, editor);
 
         return (
           <div {...attributes} className="paragraph-with-number py-2" data-paragraph-index={defaultIndex}>
@@ -1593,17 +1519,6 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
               </div>
             ) : (
               <div className="p-4 space-y-4">
-                <div className="space-y-2">
-                  <h2 className="text-sm font-medium">Text</h2>
-                  <input
-                    type="text"
-                    value={displayText}
-                    onChange={handleDisplayTextChange}
-                    placeholder="Link text"
-                    className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <h2 className="text-sm font-medium">URL</h2>
                   <input

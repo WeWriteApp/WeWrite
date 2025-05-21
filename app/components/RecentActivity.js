@@ -26,7 +26,7 @@ import {
 
 const ActivitySkeleton = () => {
   return (
-    <div className="p-3 border border-border/40 rounded-lg animate-pulse w-full md:max-w-[400px]">
+    <div className="p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 animate-pulse w-full h-[200px] flex flex-col justify-between">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <div className="h-6 w-24 bg-muted rounded"></div>
@@ -34,8 +34,8 @@ const ActivitySkeleton = () => {
         </div>
         <div className="h-4 w-16 bg-muted rounded"></div>
       </div>
-      <div className="h-16 bg-muted rounded mt-2"></div>
-      <div className="h-6 w-16 bg-muted rounded mt-2 ml-auto"></div>
+      <div className="h-[70px] bg-muted rounded"></div>
+      <div className="h-6 w-16 bg-muted rounded mt-auto border-t border-border/20 pt-2"></div>
     </div>
   );
 };
@@ -126,6 +126,11 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         }
       } catch (error) {
         console.error('Error fetching followed pages:', error);
+        // If there's an error fetching followed pages and we're in following mode, switch to all
+        if (viewMode === 'following') {
+          console.log('Error fetching followed pages, switching to "all" view mode');
+          setViewMode('all');
+        }
       } finally {
         setIsLoadingFollows(false);
       }
@@ -185,14 +190,18 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  if (followedPages.length > 0) {
+                  if (!isLoadingFollows && followedPages.length > 0) {
                     console.log('Setting view mode to following');
                     setViewMode('following');
+                  } else if (isLoadingFollows) {
+                    console.log('Cannot switch to following mode while loading follows');
+                  } else {
+                    console.log('Cannot switch to following mode with no followed pages');
                   }
                 }}
                 disabled={isLoadingFollows || followedPages.length === 0}
                 className={`flex items-center justify-between cursor-pointer ${
-                  followedPages.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  followedPages.length === 0 || isLoadingFollows ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
                 <div className="flex flex-col">
@@ -201,7 +210,9 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
                     <span className="text-xs text-muted-foreground">Loading...</span>
                   ) : followedPages.length === 0 ? (
                     <span className="text-xs text-muted-foreground">No followed pages</span>
-                  ) : null}
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{followedPages.length} pages</span>
+                  )}
                 </div>
                 {viewMode === 'following' && !isLoadingFollows && <Check className="h-4 w-4 ml-2" />}
                 {isLoadingFollows && (
@@ -231,12 +242,12 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
       )}
 
       {/* Mobile view: always vertical stack */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden w-full">
         {loading && (
-          <>
+          <div className="space-y-3">
             <ActivitySkeleton />
             <ActivitySkeleton />
-          </>
+          </div>
         )}
 
         {!loading && combinedError && !user && (
@@ -265,20 +276,12 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         )}
 
         {!loading && !combinedError && activities.length > 0 && (
-          <div
-            className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              scrollBehavior: 'smooth',
-              scrollSnapType: 'x proximity',
-              overscrollBehavior: 'contain'
-            }}
-          >
+          <div className="grid grid-cols-1 gap-4 w-full">
             {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
-              <div key={`${activity.pageId}-${index}`} className="min-w-[300px] w-[300px] h-[180px]">
+              <div key={`${activity.pageId}-${index}`} className="h-[200px]">
                 <ActivityCard
                   activity={activity}
-                  isCarousel={true}
+                  isCarousel={false}
                   key={`activity-card-${activity.pageId}-${index}`}
                 />
               </div>
@@ -326,40 +329,33 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         )}
 
         {!loading && !combinedError && activities.length > 0 && (
-          <div className="relative w-full">
-            {/* Left fade-out gradient - only for non-homepage */}
-            {!useGridLayout && !isHomepage && (
-              <div className="absolute left-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none"></div>
-            )}
-
-            <div
-              ref={useGridLayout ? null : carouselRef}
-              className={`${
-                useGridLayout
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'
-                  : 'flex gap-3 overflow-x-auto pb-2 hide-scrollbar w-full'
-              }`}
-              style={!useGridLayout ? {
-                WebkitOverflowScrolling: 'touch',
-                scrollBehavior: 'smooth',
-                scrollSnapType: 'x proximity',
-                overscrollBehavior: 'contain'
-              } : undefined}
-            >
-              {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
-                <div key={`${activity.pageId}-${index}`} className={useGridLayout ? "h-[180px]" : "min-w-[300px] w-[300px] h-[180px]"}>
-                  <ActivityCard
-                    activity={activity}
-                    isCarousel={!useGridLayout}
-                    key={`activity-card-desktop-${activity.pageId}-${index}`}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Right fade-out gradient - only for non-homepage */}
-            {!useGridLayout && !isHomepage && (
-              <div className="absolute right-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none"></div>
+          <div className="w-full">
+            {isHomepage ? (
+              // For homepage, use a grid layout instead of carousel
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
+                  <div key={`${activity.pageId}-${index}`} className="h-[200px]">
+                    <ActivityCard
+                      activity={activity}
+                      isCarousel={false}
+                      key={`activity-card-desktop-${activity.pageId}-${index}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // For activity page & user profile, keep the existing grid layout
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activities.slice(0, activities.length).map((activity, index) => (
+                  <div key={`${activity.pageId}-${index}`} className="h-[200px]">
+                    <ActivityCard
+                      activity={activity}
+                      isCarousel={false}
+                      key={`activity-card-desktop-${activity.pageId}-${index}`}
+                    />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

@@ -7,7 +7,7 @@ export default function ActivitySkeleton({ count = 3 }) {
   return (
     <div className="space-y-3">
       {Array(count).fill(0).map((_, index) => (
-        <div key={index} className="bg-card border border-border/40 rounded-2xl p-4 shadow-sm h-[180px]">
+        <div key={index} className="bg-card border border-theme-medium rounded-2xl p-4 shadow-md dark:bg-card/90 h-[200px]">
           <div className="flex flex-col h-full justify-between">
             <div className="flex items-center gap-2">
               <Skeleton className="h-10 w-10 rounded-full" />

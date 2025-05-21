@@ -178,6 +178,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             isFetchingRef.current = false;
             return;
           }
+
+          // Ensure we have at least one page ID to query
+          if (followedPageIds.length > 0) {
+            console.log('Using followed pages for query:', followedPageIds.slice(0, 10));
+          }
         } catch (err) {
           console.error('Error fetching followed pages:', err);
           // Return empty results on error in following mode
@@ -219,13 +224,14 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           console.log(`Querying for followed pages: ${followedPageIds.slice(0, 10).join(', ')}`);
 
           // For simplicity, we'll limit to the first 10 followed pages
+          // Firestore "in" queries are limited to 10 items
           const pagesToQuery = followedPageIds.slice(0, 10);
 
+          // IMPORTANT FIX: We can't use orderBy with "in" queries on document ID
+          // So we need to fetch the pages first, then sort them in memory
           pagesQuery = query(
             collection(db, "pages"),
-            where("__name__", "in", pagesToQuery),
-            orderBy("lastModified", "desc"),
-            limit(limitRef.current * 2)
+            where("__name__", "in", pagesToQuery)
           );
         } else {
           // No user filter, only show public pages for everyone
@@ -249,8 +255,25 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
         console.log(`Found ${pagesSnapshot.size} pages matching the query`);
 
+        // For followed pages, we need to sort the results manually since we can't use orderBy with "in" queries
+        let pageDocs = pagesSnapshot.docs;
+        if (followedOnlyRef.current && followedPageIds.length > 0) {
+          // Sort by lastModified in descending order (newest first)
+          pageDocs = pageDocs.sort((a, b) => {
+            const aData = a.data();
+            const bData = b.data();
+            const aTime = aData.lastModified ? new Date(aData.lastModified).getTime() : 0;
+            const bTime = bData.lastModified ? new Date(bData.lastModified).getTime() : 0;
+            return bTime - aTime; // Descending order
+          });
+
+          // Limit to the same number we would have gotten with the limit() query
+          pageDocs = pageDocs.slice(0, limitRef.current * 2);
+          console.log(`Sorted followed pages by lastModified, using ${pageDocs.length} pages`);
+        }
+
         // Process each page to get its recent activity
-        const activitiesPromises = pagesSnapshot.docs.map(async (doc) => {
+        const activitiesPromises = pageDocs.map(async (doc) => {
           const pageData = { id: doc.id, ...doc.data() };
 
           // Check if the page belongs to a private group and if the user has access
@@ -429,11 +452,13 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
   useEffect(() => {
     // Fetch data
+    console.log(`useHomeRecentActivity effect triggered with followedOnly=${followedOnly}`);
     fetchRecentActivity();
 
     // Cleanup function
     return () => {
       // If component unmounts while fetching, mark as not fetching
+      console.log('useHomeRecentActivity cleanup - marking as not fetching');
       isFetchingRef.current = false;
     };
   }, [followedOnly]); // Re-run when followedOnly changes

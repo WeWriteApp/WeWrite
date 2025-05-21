@@ -246,7 +246,7 @@ export default function PageList({
           {displayPages.map((page) => (
             <Link key={page.id} href={`/${page.id}`} className={cn(
               interactiveCard("h-full"),
-              "shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:shadow-lg transition-all duration-200"
+              "transition-all duration-200"
             )}>
               <div className="flex items-center gap-3">
                 <div className={cn(

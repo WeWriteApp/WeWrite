@@ -864,30 +864,6 @@ const LinkNode = ({ node }) => {
       return '';
     };
 
-<<<<<<< Updated upstream
-    if (node.children && Array.isArray(node.children)) {
-      const extractedText = extractTextFromNode(node);
-      if (extractedText) {
-        return extractedText;
-      }
-    }
-
-    // Check for text in the node's data property
-    if (node.data && typeof node.data === 'object') {
-      if (node.data.text) return node.data.text;
-      if (node.data.displayText) return node.data.displayText;
-    }
-
-    // For external links, use the URL as fallback
-    if (isExternal && href) {
-      return href;
-    }
-
-    // For page links, try to extract a title from the URL
-    if (pageId) {
-      return pageId.replace(/-/g, ' ');
-    }
-=======
     // Try extracting from children
     if (validatedNode.children && Array.isArray(validatedNode.children)) {
       const extractedText = extractTextFromNode(validatedNode);
@@ -903,28 +879,16 @@ const LinkNode = ({ node }) => {
     // Use appropriate fallbacks based on link type
     if (isExternal && href) return href;
     if (pageId) return validatedNode.pageTitle || pageId.replace(/-/g, ' ');
->>>>>>> Stashed changes
 
     // Last resort fallback
     return href || 'Link';
   };
 
-<<<<<<< Updated upstream
-  // Always ensure we get a valid display text
-  let displayText = getTextFromNode(node);
-=======
   // Get display text with improved extraction
   let displayText = getTextFromNode(validatedNode);
->>>>>>> Stashed changes
 
   // If displayText is still empty, use appropriate fallbacks
   if (!displayText) {
-<<<<<<< Updated upstream
-    displayText = node.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
-  }
-
-  // For internal links, use the InternalLinkWithTitle component
-=======
     displayText = validatedNode.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
   }
 
@@ -953,7 +917,6 @@ const LinkNode = ({ node }) => {
   }
 
   // For internal page links, use the InternalLinkWithTitle component
->>>>>>> Stashed changes
   if (pageId) {
     // Pass the original page title if available in the node
     const originalPageTitle = validatedNode.pageTitle || null;
@@ -961,15 +924,11 @@ const LinkNode = ({ node }) => {
     // Ensure href is properly formatted for internal links
     const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
 
-<<<<<<< Updated upstream
-=======
     // Ensure we have a valid display text for page links
     let finalDisplayText = displayText;
     if (!finalDisplayText) {
       finalDisplayText = validatedNode.pageTitle || `Page: ${pageId}`;
     }
-
->>>>>>> Stashed changes
     return (
       <span className="inline-block">
         <InternalLinkWithTitle
