@@ -100,12 +100,12 @@ export const PillLink = forwardRef(({
   // No inline style needed, we'll use CSS classes from getPillStyleClasses()
 
   // Base styles for all pill links
-  // IMPORTANT: This must match the styles in SlateEditor.js LinkComponent to ensure consistent appearance
-  // between view mode and edit mode. Any changes here should also be made in SlateEditor.js.
+  // IMPORTANT: This must match the styles in ReplyEditor.js LinkComponent to ensure consistent appearance
+  // between view mode and edit mode. Any changes here should also be made in ReplyEditor.js.
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
 
-  // Only allow wrapping for classic style, truncate for filled and outline styles
-  const textWrapStyle = pillStyle === 'classic' ? 'break-words' : 'truncate whitespace-nowrap';
+  // Always use truncation to prevent wrapping below paragraph numbers
+  const textWrapStyle = 'truncate whitespace-nowrap max-w-xs';
 
   const baseStyles = `
     inline-flex items-center
@@ -138,7 +138,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className="pill-text overflow-hidden break-words inline">{displayTitle}</span>
+          <span className="pill-text truncate max-w-xs">{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -244,7 +244,7 @@ export const PillLink = forwardRef(({
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       {isGroupLinkType && <Users size={14} className="mr-1 flex-shrink-0" />}
-      <span className="pill-text overflow-hidden break-words inline">{displayTitle}</span>
+      <span className="pill-text truncate max-w-xs">{displayTitle}</span>
       {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );

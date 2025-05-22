@@ -58,7 +58,7 @@ export default function RootLayout({
                   // Add a flag to prevent reload loops
                   var reloadCount = parseInt(localStorage.getItem('blankPageReloadCount') || '0');
 
-                  if (reloadCount < 2) { // Limit to 2 reload attempts
+                  if (reloadCount < 1) { // Limit to 1 reload attempt to prevent loops
                     localStorage.setItem('blankPageReloadCount', (reloadCount + 1).toString());
 
                     // Force reload after a short delay

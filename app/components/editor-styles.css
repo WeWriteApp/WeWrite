@@ -4,7 +4,7 @@
  *
  * IMPORTANT: To ensure consistent link appearance between edit and view modes:
  * 1. Do NOT use !important flags to override these styles
- * 2. Both SlateEditor.js and PillLink.js must use the same styling approach
+ * 2. Both ReplyEditor.js and PillLink.js must use the same styling approach
  * 3. Always respect the user's pill style preference from PillStyleContext
  */
 
@@ -92,18 +92,22 @@ a[data-pill-style="classic"].external-link:hover {
   vertical-align: middle !important;
 }
 
-/* Fix for pill links wrapping prematurely */
+/* Fix for pill links wrapping prematurely - use truncation instead */
 .pill-text {
-  display: inline;
-  word-break: break-word;
-  white-space: normal;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18rem; /* Limit width to prevent wrapping below paragraph numbers */
 }
 
-/* Ensure pill links only wrap when they reach the container edge */
+/* Ensure pill links truncate instead of wrapping */
 a.slate-pill-link,
 a.page-link,
 a.user-link,
 a.external-link {
-  white-space: normal !important;
-  word-break: break-word !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: calc(100% - 2rem) !important; /* Account for paragraph number width */
 }

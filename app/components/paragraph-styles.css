@@ -10,14 +10,15 @@
 .paragraph-number-inline {
   @apply text-muted-foreground text-xs select-none;
   display: inline-block;
-  min-width: 0.75rem; /* Reduced width for better alignment */
+  min-width: 1.5rem; /* Fixed width for consistent alignment */
   text-align: right;
-  vertical-align: top; /* Align with the top of the text */
+  vertical-align: baseline; /* Align with the baseline of the text */
   opacity: 0.8; /* Slightly increased opacity for better visibility */
   position: relative;
-  top: 0.5em; /* Center with the first line of text */
-  margin-right: 0.25rem; /* Reduced margin for tighter alignment */
+  top: 0; /* Remove vertical offset for proper alignment */
+  margin-right: 0.5rem; /* Consistent margin for proper spacing */
   float: none; /* Ensure it flows with text */
+  line-height: 1.5; /* Match the line height of paragraph text */
 }
 
 /* Dark mode specific styling for paragraph numbers */

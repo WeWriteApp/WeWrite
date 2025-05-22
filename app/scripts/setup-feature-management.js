@@ -27,7 +27,8 @@ export async function setupFeatureManagement() {
         username_management: false,
         map_view: false,
         calendar_view: false,
-        groups: true // Groups is now enabled by default
+        groups: true, // Groups is now enabled by default
+        link_functionality: true // Link functionality enabled by default
       });
     }
 
@@ -66,6 +67,11 @@ export async function setupFeatureManagement() {
           createdAt: now,
           lastModified: now,
           description: 'Enable groups functionality and UI'
+        },
+        link_functionality: {
+          createdAt: now,
+          lastModified: now,
+          description: 'Enable link creation and editing in page editors'
         }
       };
 

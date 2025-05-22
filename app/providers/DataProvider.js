@@ -5,6 +5,7 @@ import { auth } from "../firebase/config";
 import { useAuth } from "./AuthProvider";
 import Cookies from 'js-cookie';
 
+
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
@@ -91,34 +92,21 @@ export const DataProvider = ({ children }) => {
         }
       }, 5000); // 5 seconds timeout for first recovery attempt
 
-      // Set a longer timeout to force loading to complete after 10 seconds
+      // Set a longer timeout to force loading to complete after 15 seconds
       loadingTimeoutRef.current = setTimeout(() => {
         console.warn("DataProvider: Loading timeout reached, forcing completion");
         setForceLoaded(true);
         setLoading(false);
 
-        // If we've been loading for more than 15 seconds, try to recover by reloading
-        const loadingDuration = Date.now() - (loadingStartTime || Date.now());
-        if (loadingDuration > 15000 && typeof window !== 'undefined') {
-          // Check if we've already tried reloading
-          const reloadAttempts = parseInt(localStorage.getItem('dataProviderReloadAttempts') || '0');
-          if (reloadAttempts < 2) { // Limit to 2 reload attempts
-            console.warn("DataProvider: Loading stalled for too long, attempting page reload");
-            localStorage.setItem('dataProviderReloadAttempts', (reloadAttempts + 1).toString());
-
-            // Add a small delay before reloading
-            setTimeout(() => {
-              window.location.reload();
-            }, 500);
-          } else {
-            console.warn("DataProvider: Max reload attempts reached, forcing into a usable state");
-            // Reset the counter after 5 minutes
-            setTimeout(() => {
-              localStorage.setItem('dataProviderReloadAttempts', '0');
-            }, 5 * 60 * 1000);
+        // Dispatch an event that other components can listen for
+        const timeoutEvent = new CustomEvent('data-provider-timeout', {
+          detail: {
+            loadingDuration: Date.now() - (loadingStartTime || Date.now()),
+            reason: 'timeout'
           }
-        }
-      }, 10000); // 10 seconds timeout (reduced from 15)
+        });
+        window.dispatchEvent(timeoutEvent);
+      }, 15000); // 15 seconds timeout - increased for better stability
     } else {
       // Clear the timeouts if loading completes naturally
       if (loadingTimeoutRef.current) {
@@ -134,10 +122,8 @@ export const DataProvider = ({ children }) => {
       if (!pagesLoading) {
         setLoadingStartTime(null);
 
-        // Reset reload attempts counter on successful load
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('dataProviderReloadAttempts', '0');
-        }
+        // Reset recovery state on successful load
+        setRecoveryAttempted(false);
       }
     }
 
@@ -156,15 +142,30 @@ export const DataProvider = ({ children }) => {
 
   // Add enhanced debugging
   useEffect(() => {
-    console.log("DataProvider state:", {
+    const debugInfo = {
       hasUser: !!user,
       userId: user?.uid,
+      username: user?.username,
       isAuthenticated,
       authState: auth.currentUser ? 'Firebase auth active' : 'No Firebase auth',
       cookieAuth: Cookies.get('authState') || 'No auth cookie',
       pagesLoaded: pages?.length || 0,
-      isLoading: loading
-    });
+      isLoading: loading,
+      forceLoaded,
+      recoveryAttempted
+    };
+
+    console.log("DataProvider state:", debugInfo);
+
+    // Enhanced logging for user "surya" to help debug the infinite refresh issue
+    if (user?.username === 'surya' || user?.email?.includes('surya')) {
+      console.log("SURYA DEBUG: DataProvider state", {
+        ...debugInfo,
+        timestamp: new Date().toISOString(),
+        loadingStartTime,
+        pagesError: error
+      });
+    }
 
     // Force a re-render if user is authenticated but pages aren't loading
     if (isAuthenticated && user?.uid && pages && !pages.length && !loading) {
@@ -331,10 +332,10 @@ export const DataProvider = ({ children }) => {
               <p className="text-sm font-medium">{error}</p>
               <div className="mt-2 flex space-x-2">
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={resetLoading}
                   className="text-xs px-2 py-1 rounded bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
                 >
-                  Refresh
+                  Retry
                 </button>
                 <button
                   onClick={() => setErrorVisible(false)}

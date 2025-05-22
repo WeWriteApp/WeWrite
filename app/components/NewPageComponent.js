@@ -1,7 +1,7 @@
 "use client";
 
 import { useContext, useEffect, useState } from "react";
-import SlateEditor from "./SlateEditor";
+import ReplyEditor from "./ReplyEditor";
 import { createPage } from "../firebase/database";
 import DashboardLayout from "../DashboardLayout";
 import { AuthContext } from "../providers/AuthProvider";
@@ -77,10 +77,10 @@ const NewPageComponent = ({ forcedUser }) => {
  *    - Parsing and decoding the initialContent from URL parameters
  *    - Fetching the original page content when replying
  *    - Updating the blockquote with a summary of the original content
- *    - Ensuring proper initialization of the SlateEditor with the reply content
+ *    - Ensuring proper initialization of the ReplyEditor with the reply content
  * 3. Saving the new page to the database
  *
- * The component works closely with the SlateEditor component, which prioritizes
+ * The component works closely with the ReplyEditor component, which prioritizes
  * initialContent over initialEditorState to ensure replies are properly formatted.
  *
  * @param {Object} Page - The page object containing title and visibility settings
@@ -298,7 +298,7 @@ const Form = ({ Page, setPage, isReply }) => {
         <div>
           <label htmlFor="content" className="block text-sm font-medium text-foreground mb-1">Content</label>
           <div className="min-h-[300px] border border-input rounded-md bg-background">
-            <SlateEditor setEditorState={setEditorState} initialContent={initialContent} />
+            <ReplyEditor setEditorState={setEditorState} initialContent={initialContent} />
           </div>
         </div>
 

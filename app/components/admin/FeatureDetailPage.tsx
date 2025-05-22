@@ -16,7 +16,9 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  Filter
+  Filter,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -35,6 +37,7 @@ import { db } from '../../firebase/database';
 import { useToast } from '../ui/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
+import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 
 // Define the feature interface
 interface Feature {
@@ -91,12 +94,67 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
   const [batchActionDialogOpen, setBatchActionDialogOpen] = useState(false);
   const [batchActionEnabled, setBatchActionEnabled] = useState(true);
 
+  // Use centralized feature flags hook for state validation
+  const {
+    featureFlags: centralFeatureFlags,
+    validateState,
+    getFeatureFlag,
+    isLoading: centralLoading
+  } = useFeatureFlags();
+
+  const [stateValidationWarning, setStateValidationWarning] = useState<string | null>(null);
+
   // Format the feature name for display
   const formatFeatureName = (id: string): string => {
     return feature.name || id.split('_').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
+
+  // Validate state consistency between local and central state
+  useEffect(() => {
+    const checkStateConsistency = async () => {
+      if (centralLoading) return;
+
+      try {
+        // Get the current feature from central state
+        const centralFeature = getFeatureFlag(feature.id);
+
+        if (centralFeature) {
+          // Check if local state matches central state
+          if (globalEnabled !== centralFeature.enabled) {
+            console.log(`[FeatureDetailPage] State mismatch detected for ${feature.id}:`);
+            console.log(`  Local state: ${globalEnabled}`);
+            console.log(`  Central state: ${centralFeature.enabled}`);
+
+            setStateValidationWarning(
+              `State inconsistency detected: This page shows "${globalEnabled ? 'enabled' : 'disabled'}" but the main dashboard shows "${centralFeature.enabled ? 'enabled' : 'disabled'}". Please refresh the page to sync the latest state.`
+            );
+
+            // Auto-sync to central state
+            setGlobalEnabled(centralFeature.enabled);
+          } else {
+            // States match, clear any warning
+            setStateValidationWarning(null);
+          }
+        } else {
+          setStateValidationWarning(
+            `Feature "${feature.id}" not found in central state. This may indicate a configuration issue.`
+          );
+        }
+
+        // Also validate against database state
+        const isStateValid = await validateState();
+        if (!isStateValid) {
+          console.log(`[FeatureDetailPage] Database state validation failed for ${feature.id}`);
+        }
+      } catch (error) {
+        console.error('[FeatureDetailPage] Error validating state:', error);
+      }
+    };
+
+    checkStateConsistency();
+  }, [feature.id, globalEnabled, centralFeatureFlags, centralLoading, getFeatureFlag, validateState]);
 
   // Check if the current user has this feature enabled
   useEffect(() => {
@@ -672,6 +730,45 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
           )}
         </div>
       </div>
+
+      {/* State Validation Warning */}
+      {stateValidationWarning && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+                  State Synchronization Warning
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                  {stateValidationWarning}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.reload()}
+                    className="border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh Page
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStateValidationWarning(null)}
+                    className="border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/20"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs for different sections */}
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">

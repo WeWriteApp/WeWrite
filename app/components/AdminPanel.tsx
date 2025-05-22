@@ -91,6 +91,13 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       description: 'Enable groups functionality and UI',
       enabled: false,
       adminOnly: false
+    },
+    {
+      id: 'link_functionality',
+      name: 'Link Functionality',
+      description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
+      enabled: true,
+      adminOnly: false
     }
   ]);
 

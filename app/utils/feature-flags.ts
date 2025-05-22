@@ -8,7 +8,8 @@ export type FeatureFlag =
   | 'username_management'
   | 'map_view'
   | 'calendar_view'
-  | 'groups';
+  | 'groups'
+  | 'link_functionality';
 
 // Define admin user IDs
 const ADMIN_USER_IDS = [

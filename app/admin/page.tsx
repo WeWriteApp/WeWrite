@@ -6,14 +6,15 @@ import { useAuth } from '../providers/AuthProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Switch } from '../components/ui/switch';
+
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '../firebase/database';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
 import { FeatureFlag, isAdmin } from '../utils/feature-flags';
 import { usePWA } from '../providers/PWAProvider';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import Link from 'next/link';
 
 interface User {
@@ -80,6 +81,13 @@ export default function AdminPage() {
       name: 'Groups',
       description: 'Enable groups functionality and UI',
       enabled: false,
+      adminOnly: false
+    },
+    {
+      id: 'link_functionality',
+      name: 'Link Functionality',
+      description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
+      enabled: true,
       adminOnly: false
     }
   ]);
@@ -560,45 +568,15 @@ export default function AdminPage() {
             </div>
           ) : (
             <>
-              {/* Status indicator */}
-              <div className="mb-6 p-4 rounded-lg border border-border bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">Feature Status</h3>
-                    <p className="text-sm text-muted-foreground">Current status of all feature flags</p>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium">
-                      {featureFlags.every(flag => flag.enabled) ? (
-                        <span className="text-green-600 dark:text-green-400 flex items-center">
-                          <Check className="h-4 w-4 mr-1" />
-                          All Enabled
-                        </span>
-                      ) : featureFlags.every(flag => !flag.enabled) ? (
-                        <span className="text-red-600 dark:text-red-400 flex items-center">
-                          <X className="h-4 w-4 mr-1" />
-                          All Disabled
-                        </span>
-                      ) : (
-                        <span className="text-amber-600 dark:text-amber-400 flex items-center">
-                          <X className="h-4 w-4 mr-1" />
-                          Mixed Status
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {featureFlags.map(flag => (
                 <div
                   key={flag.id}
-                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors relative"
+                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors relative cursor-pointer"
+                  onClick={() => router.push(`/admin/features/${flag.id}`)}
                 >
-                  {/* Add a highlight effect when hovering */}
-                  <div className="absolute inset-0 border-2 border-primary opacity-0 rounded-lg pointer-events-none transition-opacity hover:opacity-30 group-hover:opacity-100"></div>
-
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{flag.name}</span>
@@ -609,39 +587,23 @@ export default function AdminPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/admin/features/${flag.id}`)}
-                        disabled={isLoading}
-                      >
-                        Manage
-                      </Button>
-                      <div className="switch-container">
-                        <Switch
-                          checked={flag.enabled}
-                          onCheckedChange={() => router.push(`/admin/features/${flag.id}`)}
-                          disabled={isLoading}
-                        />
-                      </div>
+                      <span className="text-xs font-medium">
+                        {flag.enabled ? (
+                          <span className="text-green-600 dark:text-green-400 flex items-center">
+                            <Check className="h-3 w-3 mr-1" />
+                            Enabled
+                          </span>
+                        ) : (
+                          <span className="text-red-600 dark:text-red-400 flex items-center">
+                            <X className="h-3 w-3 mr-1" />
+                            Disabled
+                          </span>
+                        )}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
                   <span className="text-sm text-muted-foreground">{flag.description}</span>
-                  <div className="mt-2">
-                    <span className="text-xs font-medium">
-                      {flag.enabled ? (
-                        <span className="text-green-600 dark:text-green-400 flex items-center">
-                          <Check className="h-3 w-3 mr-1" />
-                          Enabled
-                        </span>
-                      ) : (
-                        <span className="text-red-600 dark:text-red-400 flex items-center">
-                          <X className="h-3 w-3 mr-1" />
-                          Disabled
-                        </span>
-                      )}
-                    </span>
-                  </div>
                 </div>
               ))}
               </div>

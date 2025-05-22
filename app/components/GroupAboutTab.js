@@ -13,14 +13,22 @@ import { AuthContext } from "../providers/AuthProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import EmptyContentState from "./EmptyContentState";
 import { GroupAboutSkeleton } from "./ui/page-skeleton";
+import { useFeatureFlag } from "../utils/feature-flags";
+import DisabledLinkModal from "./DisabledLinkModal";
 
 // Import the unified editor dynamically to avoid SSR issues
-const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
+const Editor = dynamic(() => import("./Editor"), { ssr: false });
 
 export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
   // Check if the user is a member of the group
   const { user } = useContext(AuthContext);
   const [canEdit, setCanEdit] = useState(propCanEdit);
+
+  // Check if link functionality is enabled
+  const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
+
+  // State for disabled link modal
+  const [showDisabledLinkModal, setShowDisabledLinkModal] = useState(false);
 
   // Check if the user is a member of the group
   useEffect(() => {
@@ -175,6 +183,13 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
 
   // Handle inserting a link
   const handleInsertLink = () => {
+    // Check if link functionality is enabled
+    if (!linkFunctionalityEnabled) {
+      console.log('[DEBUG] Link functionality is disabled, showing modal');
+      setShowDisabledLinkModal(true);
+      return;
+    }
+
     if (editorRef.current) {
       console.log("[DEBUG] Editor ref exists, attempting to open link editor");
 
@@ -335,14 +350,17 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
                     <Button
                       onClick={handleInsertLink}
                       variant="outline"
-                      className="flex items-center gap-1.5 bg-background/90 border-input"
+                      className={`flex items-center gap-1.5 bg-background/90 border-input ${
+                        !linkFunctionalityEnabled ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      disabled={!linkFunctionalityEnabled}
                     >
                       <Link className="h-4 w-4" />
                       <span className="text-sm font-medium">Insert Link</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Insert a link to a page or external site</p>
+                    <p>{linkFunctionalityEnabled ? 'Insert a link to a page or external site' : 'Link functionality is temporarily disabled'}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -355,7 +373,7 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
 
             {/* Editor */}
             <div className="min-h-[300px]">
-              <UnifiedEditor
+              <Editor
                 ref={editorRef}
                 initialContent={aboutContent}
                 onChange={handleContentChange}
@@ -437,6 +455,12 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
         onStayAndSave={handleStayAndSave}
         onLeaveWithoutSaving={handleLeaveWithoutSaving}
         isSaving={isLoading || isHandlingNavigation}
+      />
+
+      {/* Disabled Link Modal */}
+      <DisabledLinkModal
+        isOpen={showDisabledLinkModal}
+        onClose={() => setShowDisabledLinkModal(false)}
       />
     </div>
   );

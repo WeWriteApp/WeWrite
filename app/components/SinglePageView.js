@@ -28,7 +28,7 @@ const BacklinksSection = dynamic(() => import("./BacklinksSection"), { ssr: fals
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "./ui/button";
-import { EditorContent } from "./SlateEditor";
+import { EditorContent } from "./ReplyEditor";
 import TextView from "./TextView";
 import { PageLoader } from "./ui/page-loader";
 import { SmartLoader } from "./ui/smart-loader";

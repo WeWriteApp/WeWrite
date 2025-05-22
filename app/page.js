@@ -60,45 +60,25 @@ export default function Home() {
     resetLoading();
   }, [resetLoading]);
 
-  // Check authentication state
+  // Check authentication state - simplified to prevent infinite loops
   useEffect(() => {
-    const checkAuth = async () => {
-      // First check cookies for auth state
-      const isAuthenticated = document.cookie.includes('authenticated=true');
-      const persistedAuthState = localStorage.getItem('authState');
+    console.log("Home page auth check:", {
+      authLoading,
+      user: !!user,
+      dataLoading,
+      recoveryAttempted
+    });
 
-      console.log("Home page auth check:", {
-        authLoading,
-        user: !!user,
-        cookieAuth: isAuthenticated,
-        persistedAuth: persistedAuthState === 'authenticated',
-        dataLoading,
-        recoveryAttempted
-      });
+    // If auth is still loading, wait
+    if (authLoading) return;
 
-      // If auth is still loading, wait
-      if (authLoading) return;
+    // If user is authenticated, show dashboard
+    if (user) {
+      setShowLanding(false);
+    }
 
-      // If we have a cookie or localStorage indicating auth, but no user yet,
-      // wait a bit longer as Firebase might still be initializing
-      if ((isAuthenticated || persistedAuthState === 'authenticated') && !user) {
-        console.log("Auth indicators found but user not loaded yet, waiting...");
-        // Don't redirect immediately, give a chance for auth to complete
-        return;
-      }
-
-      // If user is authenticated, show dashboard
-      if (user) {
-        setShowLanding(false);
-      }
-    };
-
-    checkAuth();
-
-    // Set up a timer to check again in case of race conditions
-    const timer = setTimeout(checkAuth, 1000);
-    return () => clearTimeout(timer);
-  }, [user, authLoading, router, dataLoading, recoveryAttempted]);
+    // No recursive timer - let the dependency array handle re-runs
+  }, [user, authLoading]);
 
   // Display a loading state while checking authentication
   if (authLoading) {

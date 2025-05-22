@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { Button } from '../components/ui/button';
 
 // Import the unified editor dynamically to avoid SSR issues
-const UnifiedEditor = dynamic(() => import("../components/UnifiedEditor"), { ssr: false });
+const Editor = dynamic(() => import("../components/Editor"), { ssr: false });
 
 export default function EditorTestPage() {
   const [content, setContent] = useState('');
@@ -23,7 +23,7 @@ export default function EditorTestPage() {
   return (
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6">Editor Cursor Position Test</h1>
-      
+
       <div className="space-y-6">
         <div className="border border-border rounded-lg p-4">
           <h2 className="text-xl font-semibold mb-4">Editor</h2>
@@ -31,9 +31,9 @@ export default function EditorTestPage() {
             Test the cursor positioning by clicking in different parts of the editor and typing.
             The cursor should stay where you place it and not jump to line 2.
           </p>
-          
+
           <div className="border border-border rounded-lg p-4 mb-4">
-            <UnifiedEditor
+            <Editor
               ref={editorRef}
               initialContent={[
                 {
@@ -54,12 +54,12 @@ export default function EditorTestPage() {
               contentType="wiki"
             />
           </div>
-          
+
           <Button onClick={focusEditor}>
             Focus Editor
           </Button>
         </div>
-        
+
         <div className="bg-muted p-4 rounded-lg">
           <h3 className="text-sm font-medium mb-2">Current Content:</h3>
           <pre className="text-xs overflow-auto max-h-60 p-2 bg-background rounded border">

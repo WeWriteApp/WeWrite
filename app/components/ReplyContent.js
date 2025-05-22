@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import SlateEditor from './SlateEditor';
+import ReplyEditor from './ReplyEditor';
 import { prepareReplyContent, validateReplyContent } from '../utils/replyManager';
 // Note: We're using the centralized styles from editor-styles.css
-// which is imported by SlateEditor
+// which is imported by ReplyEditor
 
 /**
  * ReplyContent Component
@@ -138,7 +138,7 @@ export default function ReplyContent({
           white-space: nowrap !important;
         }
       ` }} />
-      <SlateEditor
+      <ReplyEditor
         initialContent={content}
         onContentChange={handleContentChange}
         onSave={onSave}

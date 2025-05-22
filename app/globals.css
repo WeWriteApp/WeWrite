@@ -774,6 +774,22 @@ body {
   white-space: nowrap;
 }
 
+/* Ensure pill links truncate properly and don't wrap below paragraph numbers */
+.pill-text {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18rem; /* Limit width to prevent wrapping below paragraph numbers */
+}
+
+/* Ensure pill links stay on the same line as paragraph numbers */
+.paragraph-with-number a {
+  display: inline-flex !important;
+  align-items: center;
+  max-width: calc(100% - 2rem); /* Account for paragraph number width */
+}
+
 /* Ensure proper text contrast in pill links */
 .bg-primary {
   color: #ffffff !important; /* Force white text for all primary backgrounds */

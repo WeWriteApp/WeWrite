@@ -122,6 +122,55 @@ export const checkPageAccess = async (pageData, userId) => {
   };
 };
 
+// Utility function to get user's group memberships efficiently
+export const getUserGroupMemberships = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const userGroupsRef = ref(rtdb, `users/${userId}/groups`);
+    const userGroupsSnapshot = await get(userGroupsRef);
+
+    if (!userGroupsSnapshot.exists()) {
+      return [];
+    }
+
+    const userGroups = userGroupsSnapshot.val();
+    return Object.keys(userGroups);
+  } catch (error) {
+    console.error("Error getting user group memberships:", error);
+    return [];
+  }
+};
+
+// Utility function to get group data for multiple groups efficiently
+export const getGroupsData = async (groupIds) => {
+  if (!groupIds || groupIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const groupsData = {};
+
+    // Fetch all groups in parallel
+    const groupPromises = groupIds.map(async (groupId) => {
+      const groupRef = ref(rtdb, `groups/${groupId}`);
+      const groupSnapshot = await get(groupRef);
+
+      if (groupSnapshot.exists()) {
+        groupsData[groupId] = groupSnapshot.val();
+      }
+    });
+
+    await Promise.all(groupPromises);
+    return groupsData;
+  } catch (error) {
+    console.error("Error getting groups data:", error);
+    return {};
+  }
+};
+
 export const createDoc = async (collectionName, data) => {
   try {
     const docRef = await addDoc(collection(db, collectionName), data);

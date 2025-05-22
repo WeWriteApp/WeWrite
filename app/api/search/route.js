@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
-import { searchUsers } from "../../firebase/database";
+import { searchUsers, getUserGroupMemberships, getGroupsData } from "../../firebase/database";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -91,42 +91,75 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
   try {
     console.log(`Using Firestore fallback for page search with term: "${searchTerm}"`);
 
+    // Get user's group memberships for access control
+    const userGroupIds = userId ? await getUserGroupMemberships(userId) : [];
+    const groupsData = userGroupIds.length > 0 ? await getGroupsData(userGroupIds) : {};
+
+    console.log(`User ${userId} is member of ${userGroupIds.length} groups`);
+
     // IMPORTANT FIX: Handle empty search terms
     if (!searchTerm || searchTerm.trim().length === 0) {
-      console.log('Empty search term provided to Firestore fallback, fetching recent pages');
+      console.log('Empty search term provided to Firestore fallback, fetching recent accessible pages');
 
-      // For empty search terms, return recent pages instead of empty results
-      // This is especially useful for the link editor context
+      // For empty search terms, return recent accessible pages instead of empty results
       try {
         // Import Firestore modules dynamically
         const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
         const { db } = await import('../../firebase/database');
 
-        // Get user's own recent pages
-        const recentPagesQuery = query(
+        const recentPages = [];
+
+        // Get user's own recent pages (always accessible)
+        if (userId) {
+          const userPagesQuery = query(
+            collection(db, 'pages'),
+            where('userId', '==', userId),
+            orderBy('lastModified', 'desc'),
+            limit(10)
+          );
+
+          const userPagesSnapshot = await getDocs(userPagesQuery);
+          userPagesSnapshot.forEach(doc => {
+            const data = doc.data();
+            recentPages.push({
+              id: doc.id,
+              title: data.title || 'Untitled',
+              isOwned: true,
+              isEditable: true,
+              userId: data.userId,
+              lastModified: data.lastModified,
+              type: 'user'
+            });
+          });
+        }
+
+        // Get recent public pages (accessible to everyone)
+        const publicPagesQuery = query(
           collection(db, 'pages'),
-          where('userId', '==', userId || 'anonymous'),
+          where('isPublic', '==', true),
+          where('groupId', '==', null), // Only standalone public pages
           orderBy('lastModified', 'desc'),
-          limit(10)
+          limit(5)
         );
 
-        const recentPagesSnapshot = await getDocs(recentPagesQuery);
-        console.log(`Found ${recentPagesSnapshot.size} recent pages for empty search term`);
-
-        const recentPages = [];
-        recentPagesSnapshot.forEach(doc => {
+        const publicPagesSnapshot = await getDocs(publicPagesQuery);
+        publicPagesSnapshot.forEach(doc => {
           const data = doc.data();
-          recentPages.push({
-            id: doc.id,
-            title: data.title || 'Untitled',
-            isOwned: true,
-            isEditable: true,
-            userId: data.userId,
-            lastModified: data.lastModified,
-            type: 'user'
-          });
+          // Skip user's own pages (already included above)
+          if (data.userId !== userId) {
+            recentPages.push({
+              id: doc.id,
+              title: data.title || 'Untitled',
+              isOwned: false,
+              isEditable: false,
+              userId: data.userId,
+              lastModified: data.lastModified,
+              type: 'public'
+            });
+          }
         });
 
+        console.log(`Found ${recentPages.length} recent accessible pages for empty search term`);
         return recentPages;
       } catch (error) {
         console.error('Error fetching recent pages:', error);
@@ -149,7 +182,8 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       searchTermLength: searchTermLower.length,
       userId,
       filterByUserId,
-      groupIds: groupIds.length
+      groupIds: groupIds.length,
+      userGroupIds: userGroupIds.length
     });
 
     // For multi-word searches, split into individual words
@@ -169,6 +203,34 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // Initialize results array
     const allResults = [];
+
+    // Helper function to check if user has access to a page
+    const hasPageAccess = (pageData) => {
+      // User always has access to their own pages
+      if (userId && pageData.userId === userId) {
+        return true;
+      }
+
+      // If page belongs to a group, check group access
+      if (pageData.groupId) {
+        const groupData = groupsData[pageData.groupId];
+        if (!groupData) {
+          // Group doesn't exist, deny access
+          return false;
+        }
+
+        // If group is public, everyone has access
+        if (groupData.isPublic) {
+          return true;
+        }
+
+        // If group is private, only members have access
+        return userId && userGroupIds.includes(pageData.groupId);
+      }
+
+      // For pages not in groups, only public pages are accessible to non-owners
+      return pageData.isPublic;
+    };
 
     // STEP 1: Get user's own pages
     console.log(`Getting pages for user: ${isFilteringByUser ? filterByUserId : userId}`);
@@ -341,12 +403,18 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       const publicPagesSnapshot = await getDocs(publicPagesQuery);
       console.log(`Found ${publicPagesSnapshot.size} public pages before filtering`);
 
-      // Process public pages
+      // Process public pages with access control
       publicPagesSnapshot.forEach(doc => {
         const data = doc.data();
 
         // Skip user's own pages (already included above)
         if (data.userId === userId) {
+          return;
+        }
+
+        // Apply access control filtering
+        if (!hasPageAccess(data)) {
+          console.log(`Access denied to page ${doc.id} for user ${userId}`);
           return;
         }
 
@@ -515,9 +583,16 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         const groupPagesSnapshot = await getDocs(groupPagesQuery);
         console.log(`Found ${groupPagesSnapshot.size} group pages before filtering`);
 
-        // Process group pages
+        // Process group pages with access control
         groupPagesSnapshot.forEach(doc => {
           const data = doc.data();
+
+          // Apply access control filtering
+          if (!hasPageAccess(data)) {
+            console.log(`Access denied to group page ${doc.id} for user ${userId}`);
+            return;
+          }
+
           const pageTitle = data.title || 'Untitled';
           const normalizedTitle = pageTitle.toLowerCase();
           const titleWords = normalizedTitle.split(/\s+/);
@@ -973,6 +1048,18 @@ export async function GET(request) {
     // Check if we're filtering by a specific user ID
     const isFilteringByUser = !!filterByUserId;
 
+    // Get user's group memberships for access control in BigQuery
+    const userGroupIds = userId ? await getUserGroupMemberships(userId) : [];
+    console.log(`BigQuery search - User ${userId} is member of groups: ${JSON.stringify(userGroupIds)}`);
+
+    // Get group data to determine which groups are public
+    const allGroupIds = [...new Set([...groupIds, ...userGroupIds])];
+    const groupsData = allGroupIds.length > 0 ? await getGroupsData(allGroupIds) : {};
+
+    // Filter for public groups that the user can access
+    const publicGroupIds = Object.keys(groupsData).filter(groupId => groupsData[groupId].isPublic);
+    console.log(`Public groups accessible to user: ${JSON.stringify(publicGroupIds)}`);
+
     // Build the search conditions
     let searchCondition = `
             LOWER(title) LIKE @searchTerm
@@ -1033,7 +1120,7 @@ export async function GET(request) {
         ORDER BY lastModified DESC
         LIMIT ${isFilteringByUser ? '20' : '10'}
       ),
-      ${groupIds.length > 0 ? `
+      ${userGroupIds.length > 0 ? `
       group_pages AS (
         SELECT
           document_id,
@@ -1043,7 +1130,7 @@ export async function GET(request) {
           'group' as page_type,
           groupId
         FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE groupId IN UNNEST(@groupIds)
+        WHERE groupId IN UNNEST(@userGroupIds)
           AND (
             ${searchCondition}
           )
@@ -1056,12 +1143,21 @@ export async function GET(request) {
           title,
           userId,
           lastModified,
-          'public' as page_type,
-          NULL as groupId
+          isPublic,
+          groupId,
+          'public' as page_type
         FROM \`wewrite-ccd82.pages_indexes.pages\`
         WHERE userId != @userId
           AND (
             ${searchCondition}
+          )
+          AND (
+            -- Include public pages not in any group
+            (isPublic = true AND groupId IS NULL)
+            -- Include pages from public groups (both public and private pages in public groups are accessible)
+            ${publicGroupIds.length > 0 ? `
+            OR groupId IN UNNEST(@publicGroupIds)
+            ` : ''}
           )
           ${groupIds.length > 0 ? `AND document_id NOT IN (
             SELECT document_id
@@ -1073,7 +1169,7 @@ export async function GET(request) {
       )
 
       SELECT * FROM user_pages
-      ${groupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
+      ${userGroupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
       ${!isFilteringByUser ? 'UNION ALL SELECT * FROM public_pages' : ''}
     `;
 
@@ -1082,6 +1178,8 @@ export async function GET(request) {
       userId: userId,
       ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
       ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
+      ...(userGroupIds.length > 0 ? { userGroupIds: userGroupIds } : {}),
+      ...(publicGroupIds.length > 0 ? { publicGroupIds: publicGroupIds } : {}),
       searchTerm: searchTermFormatted,
       wordStartPattern: wordStartPattern,
       partialWordPattern: partialWordPattern,
@@ -1092,6 +1190,8 @@ export async function GET(request) {
       userId: "STRING",
       ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
       ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
+      ...(userGroupIds.length > 0 ? { userGroupIds: ['STRING'] } : {}),
+      ...(publicGroupIds.length > 0 ? { publicGroupIds: ['STRING'] } : {}),
       searchTerm: "STRING",
       wordStartPattern: "STRING",
       partialWordPattern: "STRING",

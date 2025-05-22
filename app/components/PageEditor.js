@@ -3,8 +3,8 @@ import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
 import dynamic from "next/dynamic";
 
-// Import the unified editor dynamically to avoid SSR issues
-const UnifiedEditor = dynamic(() => import("./UnifiedEditor"), { ssr: false });
+// Import the main editor dynamically to avoid SSR issues
+const Editor = dynamic(() => import("./Editor"), { ssr: false });
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Globe, Lock, Link, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
@@ -19,6 +19,7 @@ import MapEditor from "./MapEditor";
 
 import { toast } from "./ui/use-toast";
 import { useFeatureFlag } from "../utils/feature-flags";
+import DisabledLinkModal from "./DisabledLinkModal";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -89,6 +90,12 @@ const PageEditor = ({
 
   // Check if map feature is enabled
   const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
+
+  // Check if link functionality is enabled
+  const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
+
+  // State for disabled link modal
+  const [showDisabledLinkModal, setShowDisabledLinkModal] = useState(false);
 
   // Use keyboard shortcuts
   useKeyboardShortcuts({
@@ -390,6 +397,13 @@ const PageEditor = ({
   const handleInsertLink = () => {
     console.log("[DEBUG] Insert link button clicked");
 
+    // Check if link functionality is enabled
+    if (!linkFunctionalityEnabled) {
+      console.log("[DEBUG] Link functionality is disabled, showing modal");
+      setShowDisabledLinkModal(true);
+      return;
+    }
+
     if (editorRef.current) {
       console.log("[DEBUG] Editor ref exists, attempting to open link editor");
 
@@ -558,7 +572,7 @@ const PageEditor = ({
       {/* Add separator line between title and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
-      <UnifiedEditor
+      <Editor
         ref={editorRef}
         initialContent={currentEditorValue}
         onChange={handleContentChange}
@@ -593,7 +607,10 @@ const PageEditor = ({
             <Button
               onClick={handleInsertLink}
               variant="outline"
-              className="flex items-center gap-1.5 bg-background/90 border-input"
+              className={`flex items-center gap-1.5 bg-background/90 border-input ${
+                !linkFunctionalityEnabled ? 'opacity-60 cursor-pointer' : ''
+              }`}
+              title={!linkFunctionalityEnabled ? 'Link functionality is temporarily disabled' : 'Insert Link'}
             >
               <Link className="h-4 w-4" />
               <span className="text-sm font-medium">Insert Link</span>
@@ -643,6 +660,12 @@ const PageEditor = ({
           <p className="text-destructive font-medium">{error}</p>
         </div>
       )}
+
+      {/* Disabled Link Modal */}
+      <DisabledLinkModal
+        isOpen={showDisabledLinkModal}
+        onClose={() => setShowDisabledLinkModal(false)}
+      />
     </div>
   );
 };

@@ -141,27 +141,14 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
               // Force complete after clearing data
               forceComplete();
             }
-            // Third attempt: Try to reload the page
-            else if (recoveryAttemptsRef.current === 3 && typeof window !== 'undefined') {
-              // Add a flag to localStorage to prevent reload loops
-              const reloadCount = parseInt(localStorage.getItem('loadingTimeoutReloadCount') || '0');
-              if (reloadCount < 2) { // Limit to 2 reload attempts
-                console.warn('useLoadingTimeout: Attempting page reload as recovery measure');
-                localStorage.setItem('loadingTimeoutReloadCount', (reloadCount + 1).toString());
+            // Third attempt: Force complete and stop recovery attempts
+            else if (recoveryAttemptsRef.current >= 3) {
+              console.warn('useLoadingTimeout: Max recovery attempts reached, forcing completion');
+              forceComplete();
 
-                // Add a small delay before reloading
-                setTimeout(() => {
-                  window.location.reload();
-                }, 500);
-              } else {
-                console.warn('useLoadingTimeout: Max reload attempts reached, forcing into a usable state');
-                forceComplete();
-
-                // Reset the counter after 5 minutes
-                setTimeout(() => {
-                  localStorage.setItem('loadingTimeoutReloadCount', '0');
-                }, 5 * 60 * 1000);
-              }
+              // Stop further recovery attempts
+              clearInterval(intervalRef.current);
+              intervalRef.current = null;
             }
           }
         }
@@ -185,11 +172,6 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
       setElapsedTime(0);
       recoveryAttemptsRef.current = 0;
       lastRecoveryTimeRef.current = 0;
-
-      // Reset reload counter on successful load
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('loadingTimeoutReloadCount', '0');
-      }
     }
   }, [isLoading, startTime, timeoutMs, isTimedOut, onTimeout, autoRecover]);
 

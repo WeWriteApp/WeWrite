@@ -187,6 +187,17 @@ export const AuthProvider = ({ children }) => {
             // Log the user data for debugging
             console.log("User data from Firestore:", userData);
 
+            // Enhanced logging for user "surya" to help debug the infinite refresh issue
+            if (userData.username === 'surya' || user.email?.includes('surya')) {
+              console.log("SURYA DEBUG: User authentication successful", {
+                uid: user.uid,
+                email: user.email,
+                username: userData.username,
+                userData: userData,
+                timestamp: new Date().toISOString()
+              });
+            }
+
             // Set user info in Google Analytics
             setAnalyticsUserInfo({
               uid: user.uid,
@@ -315,7 +326,10 @@ export const AuthProvider = ({ children }) => {
 
   // Check if we have a valid user session cookie even if Firebase auth is not logged in
   useEffect(() => {
-    // Always check for session cookie on mount and when auth state changes
+    // Only run this check if we don't have a user and auth loading is complete
+    if (user || loading) return;
+
+    // Check for session cookie on mount and when auth state changes
     const userSessionCookie = Cookies.get('userSession');
     const isAuthenticatedCookie = Cookies.get('authenticated') === 'true' || Cookies.get('wewrite_authenticated') === 'true';
     const wewriteUserId = Cookies.get('wewrite_user_id');
@@ -334,7 +348,7 @@ export const AuthProvider = ({ children }) => {
     };
     console.log('Auth debug info:', debugInfo);
 
-    if ((!user || user.isSessionUser) && isAuthenticatedCookie) {
+    if (isAuthenticatedCookie) {
       try {
         let sessionData;
 

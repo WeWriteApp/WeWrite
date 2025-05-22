@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import SlateEditor from './SlateEditor';
+import ReplyEditor from './ReplyEditor';
 import { ReactEditor } from 'slate-react';
 import { Transforms } from 'slate';
 import { useSearchParams } from 'next/navigation';
@@ -25,11 +25,11 @@ const safeReactEditor = {
 /**
  * TestReplyEditor Component
  *
- * A simplified test component that directly provides hardcoded content to the SlateEditor
+ * A simplified test component that directly provides hardcoded content to the ReplyEditor
  * to verify that it can properly display pre-filled content with links.
  */
 export default function TestReplyEditor({ setEditorState }) {
-  // Reference to the SlateEditor component
+  // Reference to the ReplyEditor component
   const editorRef = useRef(null);
 
   // Flag to track if we've positioned the cursor
@@ -302,7 +302,7 @@ export default function TestReplyEditor({ setEditorState }) {
   }
 
   return (
-    <SlateEditor
+    <ReplyEditor
       ref={forwardRef}
       initialContent={replyContent}
       onContentChange={handleChange}

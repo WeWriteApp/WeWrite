@@ -67,8 +67,22 @@ export const searchPagesClientSide = (searchTerm, currentUserId) => {
 
   // Filter pages that match the search term
   const matchingPages = mockPages.filter(page => {
-    // Only include public pages or pages owned by the current user
-    if (!page.isPublic && page.userId !== currentUserId) {
+    // Apply access control filtering
+    // 1. User always has access to their own pages
+    if (page.userId === currentUserId) {
+      return true;
+    }
+
+    // 2. For pages in groups, check group access
+    if (page.groupId) {
+      // This is a simplified check - in a real implementation,
+      // we would need to check if the group is public or if the user is a member
+      // For now, we'll assume group pages are not accessible in client-side search
+      return false;
+    }
+
+    // 3. For pages not in groups, only public pages are accessible
+    if (!page.isPublic) {
       return false;
     }
 

@@ -23,6 +23,8 @@ import FeatureFlagCookieManager from "./components/FeatureFlagCookieManager";
 import { PageTransition } from "./components/ui/page-transition";
 import ErrorBoundary from "./components/ErrorBoundary";
 import HydrationSafetyWrapper from "./components/HydrationSafetyWrapper";
+import { useEffect } from "react";
+import { initReloadProtection, getReloadStatus } from "./utils/reload-protection";
 
 // Dynamically import PendingReplyHandler with no SSR
 const PendingReplyHandler = dynamic(() => import('./components/PendingReplyHandler'), {
@@ -43,9 +45,25 @@ const UsernameEnforcementBanner = dynamic(() => import('./components/UsernameEnf
   ssr: false
 });
 
+
+
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
+
+  // Initialize reload protection to prevent infinite refresh loops
+  useEffect(() => {
+    initReloadProtection();
+
+    // Log reload status for debugging
+    const status = getReloadStatus();
+    console.log('Reload protection status:', status);
+
+    // Enhanced logging for potential infinite loop detection
+    if (status.potentialLoop) {
+      console.warn('Reload protection: Potential infinite loop detected!', status);
+    }
+  }, []);
 
   return (
     <ThemeProvider

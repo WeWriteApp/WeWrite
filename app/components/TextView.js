@@ -822,12 +822,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
       <div className="paragraph-with-number py-2.5 flex">
         {/* Paragraph number - fixed width for consistent alignment */}
         <span
-          className="paragraph-number-inline select-none flex-shrink-0 mr-2 text-center"
-          style={{
-            width: '1.5rem',
-            display: 'inline-block',
-            textAlign: 'right'
-          }}
+          className="paragraph-number-inline select-none flex-shrink-0"
           data-paragraph-index={index + 1}
           aria-hidden="true"
         >{index + 1}</span>
@@ -1087,7 +1082,7 @@ const LinkNode = ({ node }) => {
             onClick={handleExternalLinkClick}
           >
             {finalDisplayText}
-            <ExternalLink size={14} className="ml-1 inline-block" />
+            {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
           </PillLink>
         </span>
 
