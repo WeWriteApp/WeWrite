@@ -1,10 +1,96 @@
 /**
- * Generates a detailed text diff between two content strings
- * This extracts actual text content and provides context around changes
+ * Consolidated text diff utility with accurate character counting and visual diff generation
+ * This file contains all diff-related functionality in one place
+ */
+
+/**
+ * Finds the Longest Common Subsequence between two strings
+ * This is used to determine what characters were actually changed
+ * @param {string} str1 - First string
+ * @param {string} str2 - Second string
+ * @returns {string} The longest common subsequence
+ */
+function longestCommonSubsequence(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+
+  // Create a 2D array to store LCS lengths
+  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+
+  // Fill the dp array
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  // Reconstruct the LCS
+  let lcs = '';
+  let i = m, j = n;
+
+  while (i > 0 && j > 0) {
+    if (str1[i - 1] === str2[j - 1]) {
+      lcs = str1[i - 1] + lcs;
+      i--;
+      j--;
+    } else if (dp[i - 1][j] > dp[i][j - 1]) {
+      i--;
+    } else {
+      j--;
+    }
+  }
+
+  return lcs;
+}
+
+/**
+ * Calculates character-level diff using Myers' algorithm (simplified)
+ * This properly tracks additions and deletions separately
+ * @param {string} oldText - Previous text content
+ * @param {string} newText - Current text content
+ * @returns {Object} Object with added and removed character counts
+ */
+export function calculateCharacterDiff(oldText, newText) {
+  if (!oldText && !newText) {
+    return { added: 0, removed: 0 };
+  }
+
+  if (!oldText) {
+    return { added: newText.length, removed: 0 };
+  }
+
+  if (!newText) {
+    return { added: 0, removed: oldText.length };
+  }
+
+  // Use a simplified diff algorithm based on Longest Common Subsequence (LCS)
+  const lcs = longestCommonSubsequence(oldText, newText);
+
+  // Calculate additions and deletions
+  const added = newText.length - lcs.length;
+  const removed = oldText.length - lcs.length;
+
+  // Debug logging for troubleshooting
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Character diff: "${oldText}" -> "${newText}"`);
+    console.log(`LCS: "${lcs}" (length: ${lcs.length})`);
+    console.log(`Result: +${added} -${removed}`);
+  }
+
+  return { added, removed };
+}
+
+/**
+ * Generates a detailed text diff between two content strings with enhanced preview
+ * This extracts actual text content and provides context around changes, showing both additions and deletions
  *
  * @param {string} currentContent - Current content JSON string
  * @param {string} previousContent - Previous content JSON string
- * @returns {Object} Object with diff details including text preview
+ * @returns {Object} Object with diff details including enhanced text preview
  */
 export function generateTextDiff(currentContent, previousContent) {
   // Default return value for error cases
@@ -29,18 +115,19 @@ export function generateTextDiff(currentContent, previousContent) {
       }
 
       // For new pages, show the first part of content as added text
-      const previewText = currentText.substring(0, Math.min(50, currentText.length));
-      const remainingText = currentText.length > 50 ? currentText.substring(50, Math.min(70, currentText.length)) : "";
+      const previewText = currentText.substring(0, Math.min(150, currentText.length));
+      const remainingText = currentText.length > 150 ? currentText.substring(150, Math.min(200, currentText.length)) : "";
 
       return {
         added: currentText.length,
         removed: 0,
         preview: {
           beforeContext: "",
-          highlightedText: previewText,
+          addedText: previewText,
+          removedText: "",
           afterContext: remainingText,
-          isNew: true,
-          isRemoved: false
+          hasAdditions: true,
+          hasRemovals: false
         }
       };
     }
@@ -56,98 +143,114 @@ export function generateTextDiff(currentContent, previousContent) {
       return defaultReturn;
     }
 
-    // Find the first difference
-    let diffIndex = findFirstDifferenceIndex(previousText, currentText);
+    // Use accurate character diff calculation
+    const charDiff = calculateCharacterDiff(previousText, currentText);
 
-    // If texts are identical
-    if (diffIndex === -1) {
-      return { added: 0, removed: 0, preview: null };
-    }
-
-    // Get more context - start 40 chars before diff if possible
-    const contextStart = Math.max(0, diffIndex - 40);
-
-    // Determine if it's an addition or removal
-    const isAddition = currentText.length > previousText.length;
-    const isRemoval = currentText.length < previousText.length;
-
-    let preview = null;
-
-    if (isAddition) {
-      // Find a common point after the addition
-      const commonAfterIndex = findCommonPointAfterDiff(previousText, currentText, diffIndex);
-      const addedText = currentText.substring(diffIndex, commonAfterIndex);
-
-      if (!addedText || addedText.trim() === '') {
-        return { added: currentText.length - previousText.length, removed: 0, preview: null };
-      }
-
-      // Get more context before and after
-      const beforeContext = currentText.substring(contextStart, diffIndex);
-      const afterContext = currentText.substring(commonAfterIndex, commonAfterIndex + 40);
-
-      preview = {
-        beforeContext,
-        highlightedText: addedText.length > 80 ? addedText.substring(0, 80) + '...' : addedText,
-        afterContext,
-        isNew: true,
-        isRemoved: false
-      };
-    } else if (isRemoval) {
-      // Find a common point after the removal
-      const commonAfterIndex = findCommonPointAfterDiff(currentText, previousText, diffIndex);
-      const removedText = previousText.substring(diffIndex, commonAfterIndex);
-
-      if (!removedText || removedText.trim() === '') {
-        return { added: 0, removed: previousText.length - currentText.length, preview: null };
-      }
-
-      // Get more context before and after
-      const beforeContext = currentText.substring(contextStart, diffIndex);
-      const afterContext = currentText.substring(diffIndex, diffIndex + 40);
-
-      preview = {
-        beforeContext,
-        highlightedText: removedText.length > 80 ? removedText.substring(0, 80) + '...' : removedText,
-        afterContext,
-        isNew: false,
-        isRemoved: true
-      };
-    } else {
-      // Changed text (same length but different content)
-      // Show more context around the change
-      const changedText = currentText.substring(diffIndex, diffIndex + 30);
-
-      if (!changedText || changedText.trim() === '') {
-        return { added: 0, removed: 0, preview: null };
-      }
-
-      preview = {
-        beforeContext: currentText.substring(contextStart, diffIndex),
-        highlightedText: changedText,
-        afterContext: currentText.substring(diffIndex + 30, diffIndex + 70),
-        isNew: true,
-        isRemoved: false
-      };
-    }
-
-    // Ensure we're not showing empty context
-    if (!preview.highlightedText || preview.highlightedText.trim() === '') {
-      return {
-        added: isAddition ? currentText.length - previousText.length : 0,
-        removed: isRemoval ? previousText.length - currentText.length : 0,
-        preview: null
-      };
-    }
+    // Generate enhanced diff preview that shows both additions and deletions
+    const diffPreview = generateEnhancedDiffPreview(previousText, currentText);
 
     return {
-      added: isAddition ? currentText.length - previousText.length : 0,
-      removed: isRemoval ? previousText.length - currentText.length : 0,
-      preview
+      added: charDiff.added,
+      removed: charDiff.removed,
+      preview: diffPreview
     };
   } catch (error) {
     console.error("Error generating text diff:", error);
     return defaultReturn;
+  }
+}
+
+/**
+ * Generates an enhanced diff preview that shows both additions and deletions
+ * @param {string} oldText - Previous text content
+ * @param {string} newText - Current text content
+ * @returns {Object|null} Enhanced diff preview object or null if no meaningful diff
+ */
+function generateEnhancedDiffPreview(oldText, newText) {
+  try {
+    // Find the first and last difference points
+    const firstDiff = findFirstDifferenceIndex(oldText, newText);
+    if (firstDiff === -1) {
+      return null; // No differences
+    }
+
+    const lastDiffOld = findLastDifferenceIndex(oldText, newText);
+    const lastDiffNew = findLastDifferenceIndex(newText, oldText);
+
+    // Calculate context boundaries with more generous context (up to 3 lines)
+    const contextStart = Math.max(0, firstDiff - 120); // ~3 lines of context before
+    const contextEndOld = Math.min(oldText.length, lastDiffOld + 120); // ~3 lines of context after
+    const contextEndNew = Math.min(newText.length, lastDiffNew + 120);
+
+    // Extract the different sections
+    const beforeContext = oldText.substring(contextStart, firstDiff);
+
+    // For the changed section, we need to be more sophisticated
+    const oldChangedSection = oldText.substring(firstDiff, lastDiffOld);
+    const newChangedSection = newText.substring(firstDiff, lastDiffNew);
+
+    // Get after context from the new text
+    const afterContext = newText.substring(lastDiffNew, contextEndNew);
+
+    // Determine what was added and removed
+    let addedText = "";
+    let removedText = "";
+    let hasAdditions = false;
+    let hasRemovals = false;
+
+    if (newText.length > oldText.length) {
+      // Net addition
+      addedText = newChangedSection;
+      hasAdditions = true;
+
+      // Check if there were also removals within the change
+      if (oldChangedSection.length > 0) {
+        removedText = oldChangedSection;
+        hasRemovals = true;
+      }
+    } else if (oldText.length > newText.length) {
+      // Net removal
+      removedText = oldChangedSection;
+      hasRemovals = true;
+
+      // Check if there were also additions within the change
+      if (newChangedSection.length > 0) {
+        addedText = newChangedSection;
+        hasAdditions = true;
+      }
+    } else {
+      // Same length but different content (replacement)
+      addedText = newChangedSection;
+      removedText = oldChangedSection;
+      hasAdditions = true;
+      hasRemovals = true;
+    }
+
+    // Truncate if too long but preserve readability
+    const maxLength = 100;
+    if (addedText.length > maxLength) {
+      addedText = addedText.substring(0, maxLength) + '...';
+    }
+    if (removedText.length > maxLength) {
+      removedText = removedText.substring(0, maxLength) + '...';
+    }
+
+    // Ensure we have meaningful content to show
+    if (!addedText.trim() && !removedText.trim()) {
+      return null;
+    }
+
+    return {
+      beforeContext: beforeContext.length > 80 ? '...' + beforeContext.substring(beforeContext.length - 80) : beforeContext,
+      addedText,
+      removedText,
+      afterContext: afterContext.length > 80 ? afterContext.substring(0, 80) + '...' : afterContext,
+      hasAdditions,
+      hasRemovals
+    };
+  } catch (error) {
+    console.error("Error generating enhanced diff preview:", error);
+    return null;
   }
 }
 
@@ -174,6 +277,35 @@ function findFirstDifferenceIndex(str1, str2) {
   } catch (error) {
     console.error("Error finding first difference:", error);
     return -1;
+  }
+}
+
+/**
+ * Find the index of the last difference between two strings (searching backwards)
+ */
+function findLastDifferenceIndex(str1, str2) {
+  try {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const minLength = Math.min(len1, len2);
+
+    // Search backwards from the end
+    for (let i = 1; i <= minLength; i++) {
+      if (str1[len1 - i] !== str2[len2 - i]) {
+        return len1 - i + 1; // Return the position after the last matching character
+      }
+    }
+
+    // If one string is a suffix of the other, return the appropriate position
+    if (len1 !== len2) {
+      return Math.max(len1, len2) - minLength;
+    }
+
+    // Strings are identical
+    return len1;
+  } catch (error) {
+    console.error("Error finding last difference:", error);
+    return str1.length;
   }
 }
 
@@ -364,19 +496,27 @@ export function extractTextContent(contentJsonString) {
 }
 
 // Export the simple diff function for backward compatibility
+// Now uses the accurate character diff algorithm
 export function generateSimpleDiff(currentContent, previousContent) {
   try {
-    if (!currentContent || !previousContent) {
+    if (!currentContent && !previousContent) {
       return { added: 0, removed: 0 };
     }
 
+    if (!previousContent) {
+      const currentText = extractTextContent(currentContent);
+      return { added: currentText.length, removed: 0 };
+    }
+
+    if (!currentContent) {
+      const previousText = extractTextContent(previousContent);
+      return { added: 0, removed: previousText.length };
+    }
+
+    // Use the new accurate diff algorithm with existing text extraction
     const currentText = extractTextContent(currentContent);
     const previousText = extractTextContent(previousContent);
-
-    return {
-      added: Math.max(0, currentText.length - previousText.length),
-      removed: Math.max(0, previousText.length - currentText.length)
-    };
+    return calculateCharacterDiff(previousText, currentText);
   } catch (error) {
     console.error("Error generating simple diff:", error);
     return { added: 0, removed: 0 };

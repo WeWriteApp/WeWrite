@@ -84,79 +84,6 @@ const TopUsers = () => {
     }
   });
 
-  // Check cache and load data if available
-  const checkCache = useCallback(() => {
-    const cacheKey = generateCacheKey(CACHE_KEY, user?.uid || 'anonymous');
-    const cachedData = getCacheItem(cacheKey);
-
-    if (cachedData) {
-      console.log('TopUsers: Using cached data', {
-        timestamp: new Date(cachedData.timestamp).toISOString(),
-        userCount: cachedData.users.length,
-        activityDataCount: Object.keys(cachedData.activityData || {}).length
-      });
-
-      // Store in ref for comparison with fresh data
-      cachedDataRef.current = cachedData;
-
-      // Update state with cached data
-      setAllTimeUsers(cachedData.users);
-      setUserActivityData(cachedData.activityData || {});
-      setIsFreshData(false);
-      setLoading(false);
-
-      // Calculate how old the data is
-      const dataAge = Date.now() - cachedData.timestamp;
-      console.log(`TopUsers: Cached data is ${Math.round(dataAge / 1000 / 60)} minutes old`);
-
-      // If data is older than half the TTL, trigger a background refresh
-      if (dataAge > CACHE_TTL / 2) {
-        console.log('TopUsers: Cached data is getting stale, refreshing in background');
-        refreshDataInBackground();
-      }
-
-      return true;
-    }
-
-    return false;
-  }, [user?.uid]);
-
-  // Refresh data in background without blocking UI
-  const refreshDataInBackground = useCallback(() => {
-    if (isBackgroundRefreshing) return;
-
-    setIsBackgroundRefreshing(true);
-    console.log('TopUsers: Starting background refresh');
-
-    // Fetch fresh data
-    fetchFreshData()
-      .then(() => {
-        console.log('TopUsers: Background refresh completed');
-        setIsFreshData(true);
-      })
-      .catch(err => {
-        console.error('TopUsers: Background refresh failed:', err);
-      })
-      .finally(() => {
-        setIsBackgroundRefreshing(false);
-      });
-  }, [isBackgroundRefreshing]);
-
-  // Fetch fresh data and update cache
-  const fetchFreshData = useCallback(async () => {
-    console.log('TopUsers: Fetching fresh data');
-    fetchStartTimeRef.current = performance.now();
-
-    try {
-      // We'll implement the optimized data fetching here in the next step
-      // For now, this is a placeholder
-      return fetchUsersAndPages();
-    } catch (err) {
-      console.error('TopUsers: Error fetching fresh data:', err);
-      throw err;
-    }
-  }, [user]);
-
   // Optimized function to fetch users and pages with pagination
   const fetchUsersAndPages = useCallback(async (options = {}) => {
     const {
@@ -169,8 +96,19 @@ const TopUsers = () => {
 
     // If this is the initial load and not a background fetch, check cache first
     if (useCachedData && !isBackgroundFetch && page === 1) {
-      const hasCachedData = checkCache();
-      if (hasCachedData) {
+      // Check cache directly without triggering background refresh to prevent recursion
+      const cacheKey = generateCacheKey(CACHE_KEY, user?.uid || 'anonymous');
+      const cachedData = getCacheItem(cacheKey);
+
+      if (cachedData) {
+        console.log('TopUsers: Using cached data in fetchUsersAndPages');
+
+        // Update state with cached data
+        setAllTimeUsers(cachedData.users);
+        setUserActivityData(cachedData.activityData || {});
+        setIsFreshData(false);
+        setLoading(false);
+
         return; // Use cached data instead of fetching
       }
     }
@@ -382,7 +320,65 @@ const TopUsers = () => {
 
       throw err;
     }
-  }, [user, pageSize, checkCache, subscriptionEnabled]);
+  }, [user, pageSize, subscriptionEnabled]);
+
+  // Check cache and load data if available
+  const checkCache = useCallback(() => {
+    const cacheKey = generateCacheKey(CACHE_KEY, user?.uid || 'anonymous');
+    const cachedData = getCacheItem(cacheKey);
+
+    if (cachedData) {
+      console.log('TopUsers: Using cached data', {
+        timestamp: new Date(cachedData.timestamp).toISOString(),
+        userCount: cachedData.users.length,
+        activityDataCount: Object.keys(cachedData.activityData || {}).length
+      });
+
+      // Store in ref for comparison with fresh data
+      cachedDataRef.current = cachedData;
+
+      // Update state with cached data
+      setAllTimeUsers(cachedData.users);
+      setUserActivityData(cachedData.activityData || {});
+      setIsFreshData(false);
+      setLoading(false);
+
+      // Calculate how old the data is
+      const dataAge = Date.now() - cachedData.timestamp;
+      console.log(`TopUsers: Cached data is ${Math.round(dataAge / 1000 / 60)} minutes old`);
+
+      // Store the data age in a ref so we can check it later
+      if (dataAge > CACHE_TTL / 2) {
+        console.log('TopUsers: Cached data is getting stale, will refresh in background');
+        // Set a flag to trigger background refresh after component mounts
+        setTimeout(() => {
+          if (!isBackgroundRefreshing) {
+            setIsBackgroundRefreshing(true);
+            console.log('TopUsers: Starting background refresh');
+
+            fetchUsersAndPages({
+              useCachedData: false,
+              isBackgroundFetch: true
+            })
+              .then(() => {
+                console.log('TopUsers: Background refresh completed');
+                setIsFreshData(true);
+              })
+              .catch(err => {
+                console.error('TopUsers: Background refresh failed:', err);
+              })
+              .finally(() => {
+                setIsBackgroundRefreshing(false);
+              });
+          }
+        }, 100);
+      }
+
+      return true;
+    }
+
+    return false;
+  }, [user?.uid, isBackgroundRefreshing, fetchUsersAndPages]);
 
   // Load more users (pagination)
   const loadMoreUsers = useCallback(() => {

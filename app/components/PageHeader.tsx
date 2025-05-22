@@ -7,6 +7,7 @@ import { Loader, ChevronLeft, Share2, Lock, MoreHorizontal, Pencil, Plus, Messag
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/database";
+import dynamic from 'next/dynamic';
 
 import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
 import { SupporterIcon } from "./SupporterIcon";
@@ -14,6 +15,7 @@ import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 import PageOwnershipDropdown from "./PageOwnershipDropdown";
 import ClickableByline from "./ClickableByline";
 import { useAuth } from "../providers/AuthProvider";
+import { handleAddToPage, handleReply, handleShare } from "../utils/pageActionHandlers";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,6 +23,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "./ui/dropdown-menu";
+
+// Dynamically import AddToPageButton to avoid SSR issues
+const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
+  ssr: false,
+  loading: () => null
+});
 
 export interface PageHeaderProps {
   title?: string;
@@ -33,6 +41,8 @@ export interface PageHeaderProps {
   isPrivate?: boolean;
   tier?: string;
   subscriptionStatus?: string;
+  isEditing?: boolean;
+  setIsEditing?: (value: boolean) => void;
 }
 
 export default function PageHeader({
@@ -46,6 +56,8 @@ export default function PageHeader({
   isPrivate = false,
   tier: initialTier,
   subscriptionStatus: initialStatus,
+  isEditing = false,
+  setIsEditing,
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -63,6 +75,7 @@ export default function PageHeader({
   const [groupName, setGroupName] = React.useState<string | null>(initialGroupName || null);
   const [pageId, setPageId] = React.useState<string | null>(null);
   const [hasGroupAccess, setHasGroupAccess] = React.useState<boolean>(false);
+  const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
 
   // Function to determine if the current user can edit the page
   const canEdit = React.useMemo(() => {
@@ -307,6 +320,37 @@ export default function PageHeader({
     };
   }, [isScrolled]);
 
+  // Create page object for handlers
+  const pageObject = React.useMemo(() => {
+    if (!pageId) return null;
+
+    return {
+      id: pageId,
+      title: title || "Untitled",
+      userId: userId,
+      username: displayUsername
+    };
+  }, [pageId, title, userId, displayUsername]);
+
+  // Handler functions using shared utilities
+  const handleAddToPageClick = () => {
+    if (pageObject) {
+      handleAddToPage(pageObject, setIsAddToPageOpen);
+    }
+  };
+
+  const handleReplyClick = async () => {
+    if (pageObject) {
+      await handleReply(pageObject, user, router);
+    }
+  };
+
+  const handleShareClick = () => {
+    if (pageObject) {
+      handleShare(pageObject, title);
+    }
+  };
+
   // Function to handle back button click
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -516,9 +560,9 @@ export default function PageHeader({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className={`text-foreground transition-opacity duration-120 rounded-2xl ${
+                    className={`text-foreground transition-opacity duration-120 ${
                       isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                     }`}
                     title="Page actions"
@@ -528,60 +572,22 @@ export default function PageHeader({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   {/* Edit option - only visible if user can edit */}
-                  {canEdit && (
+                  {canEdit && setIsEditing && (
                     <DropdownMenuItem
                       className="gap-2"
                       onClick={() => {
-                        if (pageId) {
-                          router.push(`/${pageId}/edit`);
-                        }
+                        setIsEditing(!isEditing);
                       }}
                     >
                       <Pencil className="h-4 w-4" />
-                      <span>Edit</span>
+                      <span>{isEditing ? "Cancel" : "Edit"}</span>
                     </DropdownMenuItem>
                   )}
 
                   {/* Share option - always visible */}
                   <DropdownMenuItem
                     className="gap-2"
-                    onClick={() => {
-                      // Create share text in the format: "[title]" by [username] on @WeWriteApp [URL]
-                      // Or "[title]" in [groupName] on @WeWriteApp [URL] for group pages
-                      const pageTitle = title || 'WeWrite Page';
-                      const pageUrl = window.location.href;
-                      const shareText = groupId && groupName
-                        ? `"${pageTitle}" in ${groupName} on @WeWriteApp ${pageUrl}`
-                        : `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
-
-                      // Check if the Web Share API is available
-                      if (navigator.share) {
-                        navigator.share({
-                          title: pageTitle,
-                          text: shareText,
-                          url: pageUrl,
-                        }).catch((error) => {
-                          // Silent error handling - no toast
-                          console.error('Error sharing:', error);
-                        });
-                      } else {
-                        // Create a Twitter share URL as fallback
-                        try {
-                          // First try to open Twitter share dialog
-                          const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-                          window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
-                        } catch (error) {
-                          console.error('Error opening Twitter share:', error);
-
-                          // If that fails, copy the URL to clipboard
-                          try {
-                            navigator.clipboard.writeText(pageUrl);
-                          } catch (clipboardError) {
-                            console.error('Error copying link:', clipboardError);
-                          }
-                        }
-                      }
-                    }}
+                    onClick={handleShareClick}
                   >
                     <Share2 className="h-4 w-4" />
                     <span>Share</span>
@@ -590,11 +596,7 @@ export default function PageHeader({
                   {/* Add to Page option - always visible */}
                   <DropdownMenuItem
                     className="gap-2"
-                    onClick={() => {
-                      // Implementation for Add to Page functionality
-                      console.log("Add to Page clicked");
-                      // This would typically open a modal or navigate to a page
-                    }}
+                    onClick={handleAddToPageClick}
                   >
                     <Plus className="h-4 w-4" />
                     <span>Add to Page</span>
@@ -603,13 +605,7 @@ export default function PageHeader({
                   {/* Reply option - always visible */}
                   <DropdownMenuItem
                     className="gap-2"
-                    onClick={() => {
-                      // Implementation for Reply functionality
-                      console.log("Reply clicked");
-                      if (pageId) {
-                        router.push(`/new?replyTo=${pageId}&page=${encodeURIComponent(title || "Untitled")}`);
-                      }
-                    }}
+                    onClick={handleReplyClick}
                   >
                     <MessageSquare className="h-4 w-4" />
                     <span>Reply</span>
@@ -627,6 +623,16 @@ export default function PageHeader({
       </header>
       {/* Add spacer to prevent content from being hidden under the fixed header */}
       <div ref={spacerRef} style={{ height: headerHeight + 'px' }} />
+
+      {/* Add to Page Modal - shared with bottom button functionality */}
+      {pageObject && (
+        <AddToPageButton
+          page={pageObject}
+          isOpen={isAddToPageOpen}
+          setIsOpen={setIsAddToPageOpen}
+          hideButton={true}
+        />
+      )}
     </>
   );
 }

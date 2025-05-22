@@ -10,12 +10,23 @@ import { appendPageReference } from '../firebase/database';
 import { toast } from './ui/use-toast';
 import { useRouter } from 'next/navigation';
 
-const AddToPageButton = ({ page, className = "" }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const AddToPageButton = ({
+  page,
+  className = "",
+  isOpen: externalIsOpen,
+  setIsOpen: externalSetIsOpen,
+  hideButton = false
+}) => {
+  // Use external state if provided, otherwise use internal state
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
   const { user } = useContext(AuthContext);
   const router = useRouter();
+
+  // Determine which state to use
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalSetIsOpen || setInternalIsOpen;
 
   const handleAddToPage = async (selected) => {
     if (!selected || !page) return;
@@ -69,25 +80,27 @@ const AddToPageButton = ({ page, className = "" }) => {
 
   return (
     <>
-      <Button
-        variant="default"
-        size="lg"
-        className={`gap-2 w-full md:w-auto rounded-2xl font-medium ${className}`}
-        onClick={() => setIsOpen(true)}
-        disabled={isAdding}
-      >
-        {isAdding ? (
-          <>
-            <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
-            <span>Adding...</span>
-          </>
-        ) : (
-          <>
-            <Plus className="h-5 w-5" />
-            <span>Add to Page</span>
-          </>
-        )}
-      </Button>
+      {!hideButton && (
+        <Button
+          variant="default"
+          size="lg"
+          className={`gap-2 w-full md:w-auto rounded-2xl font-medium ${className}`}
+          onClick={() => setIsOpen(true)}
+          disabled={isAdding}
+        >
+          {isAdding ? (
+            <>
+              <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+              <span>Adding...</span>
+            </>
+          ) : (
+            <>
+              <Plus className="h-5 w-5" />
+              <span>Add to Page</span>
+            </>
+          )}
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">

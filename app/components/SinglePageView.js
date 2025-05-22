@@ -950,6 +950,8 @@ function SinglePageView({ params }) {
         groupName={groupName}
         scrollDirection={scrollDirection}
         isPrivate={!isPublic}
+        isEditing={isEditing}
+        setIsEditing={setIsEditing}
       />
       <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
         {isEditing ? (

@@ -12,6 +12,7 @@ import { SupporterIcon } from "./SupporterIcon";
 import { format } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import DiffPreview, { DiffStats } from "./DiffPreview";
 
 /**
  * ActivityCard component displays a single activity card
@@ -215,66 +216,22 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
       {/* Content section with flex-grow to fill remaining space */}
       <div className="flex flex-col flex-grow mt-3 justify-between">
-        {/* Text diff preview */}
+        {/* Enhanced text diff preview showing both additions and deletions */}
         <div className="relative min-w-0 h-[70px] overflow-hidden">
-          {textDiff && textDiff.preview ? (
-            <div className="text-xs overflow-hidden h-full">
-              {/* Text content */}
-              <div className="overflow-x-hidden text-ellipsis line-clamp-3">
-                <span className="text-muted-foreground dark:text-slate-300">...</span>
-                <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.beforeContext}</span>
-                {textDiff.preview.isNew ? (
-                  <span className="bg-green-50 dark:bg-green-900/40 text-green-500 dark:text-green-300 px-0.5 rounded">
-                    {textDiff.preview.highlightedText}
-                  </span>
-                ) : textDiff.preview.isRemoved ? (
-                  <span className="bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 px-0.5 rounded line-through">
-                    {textDiff.preview.highlightedText}
-                  </span>
-                ) : (
-                  <span className="dark:text-white">{textDiff.preview.highlightedText}</span>
-                )}
-                <span className="text-muted-foreground dark:text-slate-300">{textDiff.preview.afterContext}</span>
-                <span className="text-muted-foreground dark:text-slate-300">...</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-xs text-muted-foreground h-full flex items-center">
-              {isNewPage ? "New page created" : "Page edited"}
-            </div>
-          )}
+          <DiffPreview
+            textDiff={textDiff}
+            isNewPage={isNewPage}
+          />
         </div>
 
         {/* Character count stats positioned at the bottom of the card with proper padding */}
-        <div className="flex-shrink-0 text-xs font-medium flex items-center pb-2 pt-2 px-1 border-t border-border/20 mt-auto">
-          {added > 0 ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-green-600 dark:text-green-400">+{added}</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{added} characters added to page</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-          {added > 0 && removed > 0 ? <span className="mx-1">•</span> : null}
-          {removed > 0 ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-red-600 dark:text-red-400">-{removed}</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{removed} characters deleted from page</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-          {added === 0 && removed === 0 && !isNewPage && (
-            <span className="text-muted-foreground">No changes</span>
-          )}
+        <div className="flex-shrink-0 pb-2 pt-2 px-1 border-t border-border/20 mt-auto">
+          <DiffStats
+            added={added}
+            removed={removed}
+            isNewPage={isNewPage}
+            showTooltips={true}
+          />
         </div>
       </div>
     </div>
