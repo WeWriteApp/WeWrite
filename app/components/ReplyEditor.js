@@ -1456,8 +1456,8 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     }
   };
 
-  // Allow wrapping for all pill styles to fix premature wrapping issue
-  const textWrapStyle = 'break-words';
+  // Allow text to display fully, only truncate when necessary
+  const textWrapStyle = 'whitespace-nowrap';
 
   // Apply padding based on pill style
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
@@ -1471,7 +1471,6 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     text-sm font-medium
     rounded-lg
     transition-colors
-    max-w-full
     ${textWrapStyle}
     ${classicPadding}
     ${getPillStyleClasses()}
@@ -1480,6 +1479,12 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     slate-pill-link
     text-indent-0
     float-none
+    align-baseline
+    leading-tight
+    w-fit
+    min-w-fit
+    max-w-none
+    flex-none
   `.trim().replace(/\s+/g, ' ');
 
   return (
@@ -1495,14 +1500,12 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       data-link-type={linkTypeClass}
       title={validatedElement.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
-      <InlineChromiumBugfix />
-      <span className="pill-text overflow-hidden break-words inline">
+      <span className="pill-text">
         {children}
       </span>
       {isExternalLinkType || isExternalLink(validatedElement.url) ? (
         <ExternalLink size={14} className="ml-1 flex-shrink-0" />
       ) : null}
-      <InlineChromiumBugfix />
     </a>
   );
 });

@@ -20,14 +20,16 @@ export const createPageLink = ({
   pageTitle = "Untitled",
   url = null
 }) => {
+  const title = pageTitle || "Untitled";
   return {
     type: "link",
     url: url || `/pages/${pageId}`,
     pageId,
-    pageTitle: pageTitle || "Untitled",
+    pageTitle: title,
+    originalPageTitle: title, // CRITICAL FIX: Include originalPageTitle for immediate display
     className: "page-link",
     isPageLink: true,
-    children: [{ text: pageTitle || "Untitled" }]
+    children: [{ text: title }]
   };
 };
 
@@ -103,13 +105,16 @@ export const createReplyAttribution = ({
   // Create the user link with explicit username
   const userLink = createUserLink({ userId, username: displayUsername });
 
+  // Create the page link with originalPageTitle for immediate display
+  const pageLink = createPageLink({ pageId, pageTitle });
+
   return {
     type: "paragraph",
     isAttribution: true, // Add a flag to identify this as an attribution paragraph
     attributionType: "reply", // Specify the type of attribution
     children: [
       { text: "Replying to " },
-      createPageLink({ pageId, pageTitle }),
+      pageLink,
       { text: " by " },
       userLink
     ]

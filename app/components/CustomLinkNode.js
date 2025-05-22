@@ -80,6 +80,11 @@ class CustomLinkNode extends ElementNode {
       ...(this.__validatedProps || {})
     };
 
+    // CRITICAL FIX: Preserve originalPageTitle if available
+    if (this.__validatedProps?.pageTitle && !basicLink.originalPageTitle) {
+      basicLink.originalPageTitle = this.__validatedProps.pageTitle;
+    }
+
     // CRITICAL FIX: Ensure we have at least one child with text
     if (!childrenJSON || childrenJSON.length === 0) {
       // Create a default text node if none exists

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
-import { ClearableInput } from '../components/ui/clearable-input';
-import { Share2, Search, Loader2, Pin } from 'lucide-react';
+import { Input } from '../components/ui/input';
+import { Share2, Search, Loader2, Pin, X } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
@@ -59,8 +59,14 @@ export default function SearchPage() {
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
 
+  // Track if we've initialized from URL to prevent refresh loops
+  const [hasInitializedFromURL, setHasInitializedFromURL] = useState(false);
+
   // Initialize query from URL parameters and perform initial search
   useEffect(() => {
+    // Only run this effect once on initial load to prevent refresh loops
+    if (hasInitializedFromURL) return;
+
     const q = searchParams.get('q');
 
     // Only set query and perform search if q parameter exists and is not empty after trimming
@@ -76,7 +82,9 @@ export default function SearchPage() {
       // If no query parameter, perform an empty search to show recent or popular content
       performSearch('');
     }
-  }, [searchParams]);
+
+    setHasInitializedFromURL(true);
+  }, [searchParams, hasInitializedFromURL]);
 
   // Focus the search input when the page loads
   useEffect(() => {
@@ -294,44 +302,24 @@ export default function SearchPage() {
   // Handle search input changes with debounce for live search
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  // Save scroll position before updating results
+  // Save scroll position before updating results (optimized to reduce calls)
   const saveScrollPosition = () => {
+    // Only save scroll position when actually needed (during search operations)
     if (resultsContainerRef.current) {
       scrollPositionRef.current = resultsContainerRef.current.scrollTop;
     } else {
       // If results container isn't available, save window scroll position
       scrollPositionRef.current = window.scrollY;
     }
-    // Also save the document scroll position
-    if (typeof window !== 'undefined') {
-      const documentScrollPosition = {
-        x: window.scrollX || window.pageXOffset,
-        y: window.scrollY || window.pageYOffset
-      };
-      sessionStorage.setItem('searchScrollPosition', JSON.stringify(documentScrollPosition));
-    }
   };
 
-  // Restore scroll position after results update
+  // Restore scroll position after results update (optimized)
   const restoreScrollPosition = () => {
     if (resultsContainerRef.current && scrollPositionRef.current !== null) {
       resultsContainerRef.current.scrollTop = scrollPositionRef.current;
     } else if (scrollPositionRef.current !== null) {
       // If results container isn't available, restore window scroll position
       window.scrollTo(0, scrollPositionRef.current);
-    }
-
-    // Also restore the document scroll position if available
-    if (typeof window !== 'undefined') {
-      try {
-        const savedPosition = sessionStorage.getItem('searchScrollPosition');
-        if (savedPosition) {
-          const { x, y } = JSON.parse(savedPosition);
-          window.scrollTo(x, y);
-        }
-      } catch (error) {
-        console.error('Error restoring scroll position:', error);
-      }
     }
   };
 
@@ -350,19 +338,28 @@ export default function SearchPage() {
       if (searchTerm.trim()) {
         performSearch(searchTerm.trim());
 
-        // Update URL without page reload
+        // Update URL without triggering the searchParams effect
+        // Use a flag to prevent the URL change from triggering a refresh
         const url = new URL(window.location);
         url.searchParams.set('q', searchTerm.trim());
-        window.history.replaceState({ searchQuery: searchTerm.trim() }, '', url);
+
+        // Use replaceState to avoid triggering navigation events
+        window.history.replaceState({
+          searchQuery: searchTerm.trim(),
+          isUserInitiated: true
+        }, '', url);
       } else {
         setResults({ pages: [], users: [], groups: [] });
 
         // Remove the q parameter from URL
         const url = new URL(window.location);
         url.searchParams.delete('q');
-        window.history.replaceState({ searchQuery: '' }, '', url);
+        window.history.replaceState({
+          searchQuery: '',
+          isUserInitiated: true
+        }, '', url);
       }
-    }, 500); // 500ms debounce delay
+    }, 300); // Reduced debounce delay for better responsiveness
 
     return () => {
       // Clean up the debounced function
@@ -375,19 +372,17 @@ export default function SearchPage() {
   // Track if this is an initial load or a user-initiated search
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Handle query changes
-  const handleQueryChange = (e) => {
+  // Handle query changes (memoized to prevent unnecessary re-renders)
+  const handleQueryChange = useCallback((e) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
 
-    // Save scroll position before updating results
-    saveScrollPosition();
-
     // Only trigger debounced search if this is not the initial load
-    if (!isInitialLoad) {
+    if (!isInitialLoad && hasInitializedFromURL) {
+      // Don't save scroll position for every keystroke - only when actually searching
       debouncedSearch.current(newQuery);
     }
-  };
+  }, [isInitialLoad, hasInitializedFromURL]);
 
   // Effect to handle initial search from URL
   useEffect(() => {
@@ -564,45 +559,57 @@ export default function SearchPage() {
       </div>
 
       <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex relative">
-          <ClearableInput
+        <div className="relative">
+          <Input
+            ref={searchInputRef}
             type="text"
             placeholder="Search for pages, users..."
             value={query}
             onChange={handleQueryChange}
-            onClear={() => {
-              setQuery('');
-              setResults({ pages: [], users: [], groups: [] });
-              // Remove the q parameter from URL
-              const url = new URL(window.location);
-              url.searchParams.delete('q');
-              window.history.replaceState({ searchQuery: '' }, '', url);
-
-              // Set isInitialLoad to false since this is a user-initiated action
-              setIsInitialLoad(false);
-
-              // Focus the input after clearing
-              if (searchInputRef.current) {
-                searchInputRef.current.focus();
-              }
-            }}
-            className="w-full"
-            ref={searchInputRef}
+            className="w-full pr-20"
+            autoComplete="off"
             autoFocus={true}
-            onFocus={() => {
-              // For mobile devices, try to open the keyboard
-              if (typeof window !== 'undefined' && 'ontouchstart' in window) {
-                searchInputRef.current?.click();
-              }
-            }}
           />
+
+          {/* Search icon */}
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <Search className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          {/* Clear button - only show when there's text in the search field */}
+          {query.trim() && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setResults({ pages: [], users: [], groups: [] });
+                // Remove the q parameter from URL
+                const url = new URL(window.location);
+                url.searchParams.delete('q');
+                window.history.replaceState({ searchQuery: '' }, '', url);
+
+                // Set isInitialLoad to false since this is a user-initiated action
+                setIsInitialLoad(false);
+
+                // Focus the input after clearing
+                if (searchInputRef.current) {
+                  searchInputRef.current.focus();
+                }
+              }}
+              className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
           {/* Pin button - only show when there's text in the search field */}
           {query.trim() && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+              className="absolute right-16 top-1/2 -translate-y-1/2 h-8 w-8"
               onClick={() => {
                 const trimmedQuery = query.trim();
                 if (trimmedQuery) {

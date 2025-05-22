@@ -752,10 +752,8 @@ body {
   color: inherit; /* Keep the text color unchanged */
 }
 
-/* Pill link text truncation - only truncates when necessary */
+/* Pill link text - allow full display unless container constrains */
 .pill-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
 }
 
@@ -768,26 +766,24 @@ body {
 }
 
 .truncate-link > div {
-  max-width: 200px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Ensure pill links truncate properly and don't wrap below paragraph numbers */
+/* Allow pill links to display full text when space permits */
 .pill-text {
   display: inline-block;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 18rem; /* Limit width to prevent wrapping below paragraph numbers */
+  max-width: 100%; /* Use available space, let container control width */
 }
 
 /* Ensure pill links stay on the same line as paragraph numbers */
 .paragraph-with-number a {
   display: inline-flex !important;
   align-items: center;
-  max-width: calc(100% - 2rem); /* Account for paragraph number width */
+  max-width: calc(100% - 3rem); /* Account for paragraph number width with more generous space */
 }
 
 /* Ensure proper text contrast in pill links */

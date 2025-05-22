@@ -40,7 +40,11 @@ const TypeaheadSearch = ({
   displayText = "", // Display text for the link
   setDisplayText = null, // Function to update display text
   onInputChange = null, // Function to handle input changes
-  preventRedirect = false // Prevent redirect to search page
+  preventRedirect = false, // Prevent redirect to search page
+  searchPageMode = false, // New prop for search page mode
+  onSearchPageSelect = null, // Callback for search page selections
+  className = "", // Additional CSS classes
+  showClearButton = false // Show clear button for search page mode
 }) => {
   const [search, setSearch] = useState(initialSearch);
   const authContext = useContext(AuthContext);
@@ -433,6 +437,18 @@ const TypeaheadSearch = ({
     }
   };
 
+  const handleClear = () => {
+    setSearch('');
+    resetSearchResults();
+    if (onInputChange) {
+      // Create a synthetic event for clearing
+      const syntheticEvent = {
+        target: { value: '' }
+      };
+      onInputChange(syntheticEvent);
+    }
+  };
+
   // Helper function to deduplicate pages by ID
   const deduplicatePages = (allPages) => {
     const uniquePages = new Map();
@@ -515,16 +531,29 @@ const TypeaheadSearch = ({
               })()}
             </div>
           ) : (
-            <Input
-              id="search-input"
-              type="text"
-              placeholder={placeholder}
-              value={search}
-              onChange={handleInputChange}
-              onFocus={() => setShowResults && setShowResults(true)}
-              className="w-full pr-10"
-              autoComplete="off"
-            />
+            <>
+              <Input
+                id="search-input"
+                type="text"
+                placeholder={placeholder}
+                value={search}
+                onChange={handleInputChange}
+                onFocus={() => setShowResults && setShowResults(true)}
+                className={`w-full ${showClearButton && search ? 'pr-20' : 'pr-10'} ${className}`}
+                autoComplete="off"
+              />
+              {/* Clear button for search page mode */}
+              {showClearButton && search && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </>
           )}
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             {isSearching ? (
@@ -539,11 +568,12 @@ const TypeaheadSearch = ({
       <div
         className={`mt-2 space-y-1 transition-all max-h-[40vh] overflow-y-auto ${
           // Always show results in link editor context (when setDisplayText is provided)
+          // In search page mode, show results when there's a search term
           // Otherwise, only show if search term meets minimum length
-          (search.length >= characterCount || !!setDisplayText)
+          (search.length >= characterCount || !!setDisplayText || (searchPageMode && search.length > 0))
             ? "opacity-100"
             : "opacity-0"
-        }`}
+        } ${searchPageMode ? 'bg-background border border-border rounded-lg shadow-lg absolute z-50 w-full' : ''}`}
       >
         {isSearching && (search.length >= characterCount || !!setDisplayText) ? (
           <Loader />
@@ -559,12 +589,16 @@ const TypeaheadSearch = ({
                       user={user}
                       search={search}
                       onSelect={onSelect}
+                      searchPageMode={searchPageMode}
+                      onSearchPageSelect={onSearchPageSelect}
                       key={user.id}
                     />
                   ) : (
                     <UserItemLink
                       user={user}
                       search={search}
+                      searchPageMode={searchPageMode}
+                      onSearchPageSelect={onSearchPageSelect}
                       key={user.id}
                     />
                   )
@@ -603,12 +637,16 @@ const TypeaheadSearch = ({
                                   isSelected={selectedId === page.id}
                                   setSearch={setSearch}
                                   setSelectedId={setSelectedId}
+                                  searchPageMode={searchPageMode}
+                                  onSearchPageSelect={onSearchPageSelect}
                                   key={page.id}
                                 />
                               ) : (
                                 <SingleItemLink
                                   page={page}
                                   search={search}
+                                  searchPageMode={searchPageMode}
+                                  onSearchPageSelect={onSearchPageSelect}
                                   key={page.id}
                                 />
                               )
@@ -633,12 +671,16 @@ const TypeaheadSearch = ({
                                   isSelected={selectedId === page.id}
                                   setSearch={setSearch}
                                   setSelectedId={setSelectedId}
+                                  searchPageMode={searchPageMode}
+                                  onSearchPageSelect={onSearchPageSelect}
                                   key={page.id}
                                 />
                               ) : (
                                 <SingleItemLink
                                   page={page}
                                   search={search}
+                                  searchPageMode={searchPageMode}
+                                  onSearchPageSelect={onSearchPageSelect}
                                   key={page.id}
                                 />
                               )
@@ -663,12 +705,16 @@ const TypeaheadSearch = ({
                                   isSelected={selectedId === page.id}
                                   setSearch={setSearch}
                                   setSelectedId={setSelectedId}
+                                  searchPageMode={searchPageMode}
+                                  onSearchPageSelect={onSearchPageSelect}
                                   key={page.id}
                                 />
                               ) : (
                                 <SingleItemLink
                                   page={page}
                                   search={search}
+                                  searchPageMode={searchPageMode}
+                                  onSearchPageSelect={onSearchPageSelect}
                                   key={page.id}
                                 />
                               )
@@ -755,9 +801,18 @@ const TypeaheadSearch = ({
   );
 };
 
-const SingleItemLink = ({ page, search }) => {
+const SingleItemLink = ({ page, search, searchPageMode = false, onSearchPageSelect = null }) => {
+  const handleClick = () => {
+    if (searchPageMode && onSearchPageSelect) {
+      onSearchPageSelect(page);
+    }
+  };
+
   return (
-    <div className="flex items-center w-full overflow-hidden my-1">
+    <div
+      className={`flex items-center w-full overflow-hidden my-1 ${searchPageMode ? 'px-3 py-2 hover:bg-accent/50 rounded-md cursor-pointer' : ''}`}
+      onClick={searchPageMode ? handleClick : undefined}
+    >
       <PillLink
         href={`/${page.id}`}
         key={page.id}
@@ -775,20 +830,24 @@ const SingleItemLink = ({ page, search }) => {
   );
 };
 
-const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId, onSelect }) => {
+const SingleItemButton = ({ page, search, isSelected = false, setSearch, setSelectedId, onSelect, searchPageMode = false, onSearchPageSelect = null }) => {
   // Ensure we have a valid username to display (handle NULL values properly)
   const displayName = page.username && page.username !== 'NULL'
     ? page.username
     : 'Anonymous';
 
   const handleClick = () => {
-    setSelectedId(page.id);
-    // Call onSelect with the page data
-    if (onSelect) {
-      onSelect({
-        ...page,
-        displayText: page.title
-      });
+    if (searchPageMode && onSearchPageSelect) {
+      onSearchPageSelect(page);
+    } else {
+      setSelectedId(page.id);
+      // Call onSelect with the page data
+      if (onSelect) {
+        onSelect({
+          ...page,
+          displayText: page.title
+        });
+      }
     }
   };
 
@@ -839,9 +898,18 @@ const highlightText = (text, searchTerm) => {
 };
 
 // User item components
-const UserItemLink = ({ user, search }) => {
+const UserItemLink = ({ user, search, searchPageMode = false, onSearchPageSelect = null }) => {
+  const handleClick = () => {
+    if (searchPageMode && onSearchPageSelect) {
+      onSearchPageSelect({ ...user, type: 'user' });
+    }
+  };
+
   return (
-    <div className="flex items-center w-full overflow-hidden my-1 px-3 py-1.5 hover:bg-accent/50 rounded-md">
+    <div
+      className={`flex items-center w-full overflow-hidden my-1 px-3 py-1.5 hover:bg-accent/50 rounded-md ${searchPageMode ? 'cursor-pointer' : ''}`}
+      onClick={searchPageMode ? handleClick : undefined}
+    >
       <PillLink
         href={`/user/${user.id}`}
         key={user.id}
@@ -856,16 +924,24 @@ const UserItemLink = ({ user, search }) => {
   );
 };
 
-const UserItemButton = ({ user, search, onSelect }) => {
+const UserItemButton = ({ user, search, onSelect, searchPageMode = false, onSearchPageSelect = null }) => {
+  const handleClick = () => {
+    if (searchPageMode && onSearchPageSelect) {
+      onSearchPageSelect({ ...user, type: 'user' });
+    } else if (onSelect) {
+      onSelect({
+        id: user.id,
+        title: user.username,
+        type: 'user',
+        url: `/user/${user.id}`
+      });
+    }
+  };
+
   return (
     <div className="flex items-center w-full overflow-hidden my-1">
       <button
-        onClick={() => onSelect({
-          id: user.id,
-          title: user.username,
-          type: 'user',
-          url: `/user/${user.id}`
-        })}
+        onClick={handleClick}
         className="inline-flex px-3 py-1.5 items-center whitespace-nowrap text-sm font-medium rounded-[12px] bg-blue-500 text-white border-[1.5px] border-blue-600 hover:bg-blue-600 hover:border-blue-700 transition-colors flex-shrink-0"
       >
         {highlightText(user.username, search)}

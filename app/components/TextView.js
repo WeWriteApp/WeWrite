@@ -959,47 +959,65 @@ const LinkNode = ({ node }) => {
 
   // IMPROVED: Extract display text with better fallbacks
   const getTextFromNode = (node) => {
-    // First try using the standardized utility function
-    const displayText = getLinkDisplayText(validatedNode);
-    if (displayText) return displayText;
+    // CRITICAL FIX: Try multiple approaches to extract text
 
-    // Deep traversal to extract text from children
-    const extractTextFromNode = (node, depth = 0) => {
-      if (!node) return '';
-      if (depth > 5) return ''; // Prevent infinite recursion
-      if (node.text) return node.text;
-      if (node.children && Array.isArray(node.children)) {
-        return node.children.map(child => extractTextFromNode(child, depth + 1)).join('');
+    // 1. Check for explicit displayText property
+    if (node.displayText && node.displayText !== 'Link') {
+      return node.displayText;
+    }
+
+    // 2. Check for text in children array
+    if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+      // Try to find the first child with text
+      for (const child of node.children) {
+        if (child && child.text && child.text.trim()) {
+          return child.text;
+        }
       }
-      return '';
-    };
-
-    // Try extracting from children
-    if (validatedNode.children && Array.isArray(validatedNode.children)) {
-      const extractedText = extractTextFromNode(validatedNode);
-      if (extractedText) return extractedText;
     }
 
-    // Check for text in data property
-    if (validatedNode.data && typeof validatedNode.data === 'object') {
-      if (validatedNode.data.text) return validatedNode.data.text;
-      if (validatedNode.data.displayText) return validatedNode.data.displayText;
+    // 3. Check for pageTitle (for page links)
+    if (node.pageTitle && node.pageTitle !== 'Link') {
+      return node.pageTitle;
     }
 
-    // Use appropriate fallbacks based on link type
+    // 4. Check for originalPageTitle
+    if (node.originalPageTitle && node.originalPageTitle !== 'Link') {
+      return node.originalPageTitle;
+    }
+
+    // 5. Use the standardized utility function as fallback
+    const utilityText = getLinkDisplayText(node);
+    if (utilityText && utilityText !== 'Link') {
+      return utilityText;
+    }
+
+    // 6. Check for text in data property
+    if (node.data && typeof node.data === 'object') {
+      if (node.data.text && node.data.text.trim()) return node.data.text;
+      if (node.data.displayText && node.data.displayText.trim()) return node.data.displayText;
+    }
+
+    // 7. Use appropriate fallbacks based on link type
     if (isExternal && href) return href;
-    if (pageId) return validatedNode.pageTitle || pageId.replace(/-/g, ' ');
+    if (pageId) return pageId.replace(/-/g, ' ');
 
     // Last resort fallback
-    return href || 'Link';
+    return null; // Return null so we can handle it explicitly
   };
 
   // Get display text with improved extraction
   let displayText = getTextFromNode(validatedNode);
 
-  // If displayText is still empty, use appropriate fallbacks
+  // If displayText is still empty or null, use appropriate fallbacks
   if (!displayText) {
-    displayText = validatedNode.pageTitle || (pageId ? `Page: ${pageId}` : (isExternal ? href : 'Link'));
+    if (pageId) {
+      displayText = validatedNode.pageTitle || validatedNode.originalPageTitle || `Page: ${pageId}`;
+    } else if (isExternal) {
+      displayText = href;
+    } else {
+      displayText = 'Link';
+    }
   }
 
   // For protocol links, use a special component
@@ -1028,8 +1046,14 @@ const LinkNode = ({ node }) => {
 
   // For internal page links, use the InternalLinkWithTitle component
   if (pageId) {
-    // Pass the original page title if available in the node
-    const originalPageTitle = validatedNode.pageTitle || null;
+    console.log('RENDERING_PAGE_LINK:', { pageId, displayText, validatedNode });
+
+    // CRITICAL FIX: Extract original page title from multiple possible sources
+    const originalPageTitle = validatedNode.pageTitle ||
+                              validatedNode.originalPageTitle ||
+                              validatedNode.data?.pageTitle ||
+                              validatedNode.data?.originalPageTitle ||
+                              null;
 
     // Ensure href is properly formatted for internal links
     const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
@@ -1037,8 +1061,9 @@ const LinkNode = ({ node }) => {
     // Ensure we have a valid display text for page links
     let finalDisplayText = displayText;
     if (!finalDisplayText) {
-      finalDisplayText = validatedNode.pageTitle || `Page: ${pageId}`;
+      finalDisplayText = originalPageTitle || `TEST PAGE LINK: ${pageId}`;
     }
+
     return (
       <span className="inline-block">
         <InternalLinkWithTitle
@@ -1152,7 +1177,7 @@ const LinkNode = ({ node }) => {
 // Component for internal links that fetches and displays page titles
 const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle }) => {
   const [currentTitle, setCurrentTitle] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Start with false, only set to true when actually fetching
   const [fetchError, setFetchError] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
 
@@ -1183,7 +1208,6 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
 
   useEffect(() => {
     // Reset states when pageId changes
-    setIsLoading(true);
     setFetchError(false);
     setCurrentTitle(null);
 
@@ -1193,6 +1217,11 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
           setFetchError(true);
           setIsLoading(false);
           return;
+        }
+
+        // Only show loading if we don't have originalPageTitle
+        if (!originalPageTitle) {
+          setIsLoading(true);
         }
 
         // Check cache first to avoid unnecessary API calls
@@ -1210,32 +1239,30 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
       }
     };
 
-    fetchTitle();
-  }, [pageId, isMounted]);
+    // Only fetch if we don't have originalPageTitle or if we want to update the cache
+    // But prioritize showing originalPageTitle immediately
+    if (pageId) {
+      fetchTitle();
+    }
+  }, [pageId, isMounted, originalPageTitle]);
 
   // Determine what text to display using a clear priority system
   let textToDisplay;
 
-  // First priority: If displayText was explicitly provided and is different from originalPageTitle,
-  // it was customized by the user, so use it
-  if (displayText && originalPageTitle && displayText !== originalPageTitle) {
+  // CRITICAL FIX: Always prioritize displayText if it exists and is not empty
+  // The displayText comes from the link's children and represents what the user actually typed
+  if (displayText && displayText.trim() && displayText !== 'Link' && displayText !== 'Page Link') {
     textToDisplay = displayText;
   }
-  // Second priority: If displayText was explicitly provided and there's no originalPageTitle,
-  // use the provided displayText
-  else if (displayText && !originalPageTitle) {
-    textToDisplay = displayText;
-  }
-  // Third priority: If we have a currentTitle from the database, use it
-  else if (currentTitle) {
+  // If we have a currentTitle from the database (updated page title), use it
+  else if (currentTitle && currentTitle.trim()) {
     textToDisplay = currentTitle;
   }
-  // Fourth priority: If originalPageTitle is available, use it while loading
-  else if (originalPageTitle && isLoading) {
-    console.log('LINK_DEBUG: Using originalPageTitle while loading:', originalPageTitle);
+  // If originalPageTitle is available, use it (original page title)
+  else if (originalPageTitle && originalPageTitle.trim()) {
     textToDisplay = originalPageTitle;
   }
-  // Fifth priority: If we're still loading and have no originalPageTitle, show a loading indicator
+  // If we're loading and have no other text, show a loading indicator
   else if (isLoading) {
     textToDisplay = (
       <>
@@ -1244,13 +1271,12 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
       </>
     );
   }
-  // Sixth priority: If there was an error or we have no other text, use a fallback
+  // If there was an error or we have no other text, use a fallback
   else {
-    const fallbackText = fetchError ? 'Page Link (Error)' : (originalPageTitle || 'Page Link');
+    const fallbackText = fetchError ? 'Page Link (Error)' : (pageId ? `Page: ${pageId}` : 'Page Link');
     textToDisplay = fallbackText;
   }
 
-  // Use TooltipProvider to show the full title on hover
   return (
     <TooltipProvider>
       <Tooltip>

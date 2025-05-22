@@ -308,7 +308,9 @@ const EditorComponent = forwardRef((props, ref) => {
         }),
         ...(isPageLinkType && {
           pageId: pageId || options.pageId,
-          pageTitle: options.pageTitle
+          pageTitle: options.pageTitle,
+          originalPageTitle: options.originalPageTitle || options.pageTitle, // Store original page title
+          isCustomText: options.isCustomText || false // Flag to indicate if text is custom
         }),
         ...(isExternalLinkType && {
           isExternal: true
@@ -1040,15 +1042,21 @@ const EditorComponent = forwardRef((props, ref) => {
       <style jsx global>{`
         /* Ensure pill links in the editor match the site's appearance */
         .unified-editor .slate-pill-link {
-          display: inline-flex;
-          align-items: center;
+          display: inline-flex !important;
+          align-items: center !important;
           margin: 0.125rem 0;
           font-size: 0.875rem;
           font-weight: 500;
           border-radius: 0.5rem;
           transition: all 0.2s ease;
-          max-width: 100%;
           cursor: pointer;
+          vertical-align: baseline !important;
+          line-height: 1.2 !important;
+          text-decoration: none !important;
+          width: auto !important;
+          min-width: auto !important;
+          max-width: none !important;
+          flex-shrink: 0 !important;
         }
 
         /* Ensure proper spacing around links */
@@ -1056,14 +1064,55 @@ const EditorComponent = forwardRef((props, ref) => {
           margin-left: 0.25rem;
         }
 
-        /* Ensure proper text truncation */
+        /* Ensure proper text display within pill links */
         .unified-editor .slate-pill-link .pill-text {
-          overflow: hidden;
+          overflow: visible !important;
+          text-overflow: clip !important;
+          white-space: nowrap !important;
+          line-height: inherit;
+          color: inherit !important;
+          display: inline-block !important;
+          width: auto !important;
+          min-width: auto !important;
+          max-width: none !important;
+          flex-shrink: 0 !important;
         }
 
         /* Ensure proper icon alignment */
         .unified-editor .slate-pill-link svg {
           flex-shrink: 0;
+        }
+
+        /* Force proper rendering in all browsers */
+        .unified-editor .slate-pill-link {
+          -webkit-box-sizing: border-box !important;
+          -moz-box-sizing: border-box !important;
+          box-sizing: border-box !important;
+          min-height: 1.5rem !important;
+          contain: layout style !important;
+        }
+
+        /* Ensure text content is properly contained */
+        .unified-editor .slate-pill-link > * {
+          box-sizing: border-box;
+        }
+
+        /* Remove any width constraints that might interfere with auto-sizing */
+        .unified-editor .slate-pill-link {
+          width: fit-content !important;
+          min-width: fit-content !important;
+          height: auto !important;
+          position: relative !important;
+          flex: none !important;
+        }
+
+        /* Ensure pill text takes only the space it needs */
+        .unified-editor .slate-pill-link .pill-text {
+          width: fit-content !important;
+          min-width: fit-content !important;
+          display: inline !important;
+          position: relative !important;
+          flex: none !important;
         }
 
         /* Inline paragraph number styling for editor */
@@ -1358,8 +1407,8 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   // Determine the appropriate class based on link type
   const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
 
-  // Allow wrapping for all pill styles to fix premature wrapping issue
-  const textWrapStyle = 'break-words';
+  // Allow text to display fully, only truncate when necessary
+  const textWrapStyle = 'whitespace-nowrap';
 
   // Apply padding based on pill style
   const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
@@ -1371,7 +1420,6 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
     text-sm font-medium
     rounded-lg
     transition-colors
-    max-w-full
     ${textWrapStyle}
     ${classicPadding}
     ${getPillStyleClasses()}
@@ -1380,6 +1428,12 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
     slate-pill-link
     text-indent-0
     float-none
+    align-baseline
+    leading-tight
+    w-fit
+    min-w-fit
+    max-w-none
+    flex-none
   `.trim().replace(/\s+/g, ' ');
 
   /**
@@ -1712,15 +1766,13 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
         title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
         onClick={handleClick}
       >
-        <InlineChromiumBugfix />
         {element.isPublic === false && <Lock size={14} className="mr-1 flex-shrink-0" />}
-        <span className={`pill-text overflow-hidden ${pillStyle === 'classic' ? 'break-words' : 'truncate'}`}>
+        <span className="pill-text">
           {children}
         </span>
         {isExternalLinkType && (
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
         )}
-        <InlineChromiumBugfix />
       </a>
 
       {/* LinkEditor is now handled by the parent component */}

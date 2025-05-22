@@ -87,10 +87,15 @@ export function validateLink(linkData) {
       link.url = link.href || '#';
     }
 
-    // CRITICAL FIX: Ensure displayText is set
+    // CRITICAL FIX: Ensure displayText is set and preserve originalPageTitle
     if (!link.displayText) {
       // Try to extract displayText from various properties
       link.displayText = link.text || link.pageTitle || 'Link';
+    }
+
+    // CRITICAL FIX: Preserve originalPageTitle for immediate display
+    if (link.pageTitle && !link.originalPageTitle) {
+      link.originalPageTitle = link.pageTitle;
     }
 
     // CRITICAL FIX: Ensure children array exists and has proper structure
@@ -148,6 +153,11 @@ export function validateLink(linkData) {
           link.pageId = match[1];
         }
       }
+
+      // CRITICAL FIX: Preserve originalPageTitle for page links
+      if (link.pageTitle && !link.originalPageTitle) {
+        link.originalPageTitle = link.pageTitle;
+      }
     } else if (isExternalLink) {
       link.isExternal = true;
       if (!link.className) link.className = 'external-link';
@@ -186,6 +196,10 @@ export function validateLink(linkData) {
       if (!link.displayText) {
         if (isPageLink && link.pageTitle) {
           link.displayText = link.pageTitle;
+          // Also preserve as originalPageTitle if not already set
+          if (!link.originalPageTitle) {
+            link.originalPageTitle = link.pageTitle;
+          }
         } else if (isUserLink && link.username) {
           link.displayText = link.username;
         } else if (link.url) {
@@ -204,11 +218,14 @@ export function validateLink(linkData) {
     return link;
   } catch (error) {
     // Create a minimal valid link as fallback with a unique ID
+    const fallbackDisplayText = linkData?.displayText || linkData?.pageTitle || linkData?.children?.[0]?.text || 'Link (Error)';
     return {
       type: 'link',
       url: linkData?.url || '#',
-      children: [{ text: linkData?.displayText || linkData?.children?.[0]?.text || 'Link (Error)' }],
-      displayText: linkData?.displayText || linkData?.children?.[0]?.text || 'Link (Error)',
+      children: [{ text: fallbackDisplayText }],
+      displayText: fallbackDisplayText,
+      originalPageTitle: linkData?.pageTitle || linkData?.originalPageTitle || null,
+      pageId: linkData?.pageId || null,
       className: 'error-link',
       linkVersion: 3,
       isError: true,

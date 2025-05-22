@@ -29,6 +29,9 @@
   padding-left: 0 !important; /* Prevent padding inheritance from paragraph */
   display: inline-flex !important; /* Ensure proper display */
   float: none !important; /* Prevent float inheritance */
+  align-items: center !important; /* Ensure proper vertical alignment */
+  vertical-align: baseline !important; /* Ensure proper baseline alignment */
+  line-height: 1.2 !important; /* Ensure consistent line height */
 }
 
 /* Add @ symbol before user links */
@@ -92,22 +95,54 @@ a[data-pill-style="classic"].external-link:hover {
   vertical-align: middle !important;
 }
 
-/* Fix for pill links wrapping prematurely - use truncation instead */
+/* Allow pill links to display full text when space permits */
 .pill-text {
-  display: inline-block;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: inline;
   white-space: nowrap;
-  max-width: 18rem; /* Limit width to prevent wrapping below paragraph numbers */
+  width: fit-content;
+  min-width: fit-content;
+  max-width: none; /* Remove width constraints */
+  overflow: visible; /* Ensure text is not clipped */
+  text-overflow: clip; /* Don't add ellipsis unless necessary */
+  line-height: inherit; /* Inherit line height from parent */
+  flex: none; /* Prevent flex from affecting size */
 }
 
-/* Ensure pill links truncate instead of wrapping */
+/* Ensure pill links stay inline and use available space efficiently */
 a.slate-pill-link,
 a.page-link,
 a.user-link,
 a.external-link {
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-width: calc(100% - 2rem) !important; /* Account for paragraph number width */
+  box-sizing: border-box !important;
+  min-height: 1.5rem !important; /* Ensure minimum height for pill appearance */
+  width: fit-content !important;
+  min-width: fit-content !important;
+  max-width: none !important;
+  flex: none !important;
+}
+
+/* Ensure pill links have proper containment */
+a.slate-pill-link *,
+a.page-link *,
+a.user-link *,
+a.external-link * {
+  box-sizing: border-box;
+}
+
+/* Force proper pill link rendering */
+a.slate-pill-link,
+a.page-link,
+a.user-link,
+a.external-link {
+  position: relative !important;
+  z-index: 1 !important;
+  isolation: isolate !important;
+}
+
+/* Ensure pill text content is always visible */
+.pill-text {
+  position: relative !important;
+  z-index: 2 !important;
+  pointer-events: none !important; /* Allow clicks to pass through to parent link */
 }
