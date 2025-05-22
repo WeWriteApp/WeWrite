@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, forwardRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, ExternalLink, Trash2, Users } from "lucide-react";
+import { Lock, ExternalLink, Users } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
 import { useAuth } from "../providers/AuthProvider";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../utils/linkFormatters";

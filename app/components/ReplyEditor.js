@@ -1,27 +1,19 @@
-import { Switch } from "./ui/switch";
-import React, { useState, useContext, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect } from "react";
 import {
   createEditor,
   Transforms,
   Editor,
   Element as SlateElement,
-  Path,
   Range,
   Node,
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
-import { ReactEditor } from "slate-react";
-import { DataContext } from "../providers/DataProvider";
-import { AuthContext } from "../providers/AuthProvider";
 import { withHistory } from "slate-history";
 import TypeaheadSearch from "./TypeaheadSearch";
-import { Search, X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";
-import { useLineSettings, LINE_MODES, LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
+import { updateParagraphIndices } from "../utils/slate-path-fix";
+import { useLineSettings, LINE_MODES } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
-import { motion } from "framer-motion";
-import "../styles/shake-animation.css";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import { validateLink } from "../utils/linkValidator";
 
@@ -1377,28 +1369,8 @@ const unwrapLink = (editor) => {
   });
 };
 
-// Wrap with forwardRef to fix the "Function components cannot be given refs" error
-const InlineChromiumBugfix = forwardRef((_, ref) => (
-  <span
-    ref={ref}
-    contentEditable={false}
-    style={{
-      display: "inline-block",
-      width: 0,
-      height: 0,
-      lineHeight: 0,
-    }}
-  >
-    {String.fromCodePoint(160) /* Non-breaking space */}
-  </span>
-));
-
-// Add display name for debugging
-InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
-
 const LinkComponent = forwardRef(({ attributes, children, element, openLinkEditor }, ref) => {
   const editor = useSlate();
-  const { lineMode } = useLineSettings();
 
   // Use PillStyle context to get the current pill style
   const { pillStyle, getPillStyleClasses } = usePillStyle();

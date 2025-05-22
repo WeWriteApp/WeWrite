@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo, useContext } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
 import {
   createEditor,
   Transforms,
@@ -9,20 +9,17 @@ import {
   Range,
   Node,
   Path,
-  Point,
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
 import { withHistory } from "slate-history";
-import { Link as LinkIcon, ExternalLink, Lock } from "lucide-react";
-import { Button } from "./ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { useLineSettings, LineSettingsProvider } from '../contexts/LineSettingsContext';
+import { ExternalLink } from "lucide-react";
+import { useLineSettings } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { AuthContext } from '../providers/AuthProvider';
 import DisabledLinkModal from './DisabledLinkModal';
-import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";
+import { updateParagraphIndices } from "../utils/slate-path-fix";
 import { validateLink } from '../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import TypeaheadSearch from "./TypeaheadSearch";
@@ -1038,84 +1035,19 @@ const EditorComponent = forwardRef((props, ref) => {
 
   return (
     <div className="unified-editor relative rounded-lg bg-background">
-      {/* Add custom CSS for pill links and paragraph numbers in the editor */}
+      {/* Editor-specific styles */}
       <style jsx global>{`
-        /* Ensure pill links in the editor match the site's appearance */
-        .unified-editor .slate-pill-link {
-          display: inline-flex !important;
-          align-items: center !important;
-          margin: 0.125rem 0;
-          font-size: 0.875rem;
-          font-weight: 500;
-          border-radius: 0.5rem;
-          transition: all 0.2s ease;
-          cursor: pointer;
-          vertical-align: baseline !important;
-          line-height: 1.2 !important;
-          text-decoration: none !important;
-          width: auto !important;
-          min-width: auto !important;
-          max-width: none !important;
-          flex-shrink: 0 !important;
-        }
-
-        /* Ensure proper spacing around links */
+        /* Pill link spacing in editor */
         .unified-editor .slate-pill-link + .slate-pill-link {
           margin-left: 0.25rem;
         }
 
-        /* Ensure proper text display within pill links */
-        .unified-editor .slate-pill-link .pill-text {
-          overflow: visible !important;
-          text-overflow: clip !important;
-          white-space: nowrap !important;
-          line-height: inherit;
-          color: inherit !important;
-          display: inline-block !important;
-          width: auto !important;
-          min-width: auto !important;
-          max-width: none !important;
-          flex-shrink: 0 !important;
-        }
-
-        /* Ensure proper icon alignment */
+        /* Icon alignment in pill links */
         .unified-editor .slate-pill-link svg {
           flex-shrink: 0;
         }
 
-        /* Force proper rendering in all browsers */
-        .unified-editor .slate-pill-link {
-          -webkit-box-sizing: border-box !important;
-          -moz-box-sizing: border-box !important;
-          box-sizing: border-box !important;
-          min-height: 1.5rem !important;
-          contain: layout style !important;
-        }
-
-        /* Ensure text content is properly contained */
-        .unified-editor .slate-pill-link > * {
-          box-sizing: border-box;
-        }
-
-        /* Remove any width constraints that might interfere with auto-sizing */
-        .unified-editor .slate-pill-link {
-          width: fit-content !important;
-          min-width: fit-content !important;
-          height: auto !important;
-          position: relative !important;
-          flex: none !important;
-        }
-
-        /* Ensure pill text takes only the space it needs */
-        .unified-editor .slate-pill-link .pill-text {
-          width: fit-content !important;
-          min-width: fit-content !important;
-          display: inline !important;
-          position: relative !important;
-          flex: none !important;
-        }
-
-        /* Inline paragraph number styling for editor */
+        /* Paragraph number styling */
         .unified-editor .paragraph-number-inline {
           display: inline-block;
           min-width: 0.75rem;
@@ -1215,25 +1147,6 @@ const EditorComponent = forwardRef((props, ref) => {
 });
 
 EditorComponent.displayName = 'Editor';
-
-// Wrap with forwardRef to fix the "Function components cannot be given refs" error
-const InlineChromiumBugfix = forwardRef((_, ref) => (
-  <span
-    ref={ref}
-    contentEditable={false}
-    style={{
-      display: "inline-block",
-      width: 0,
-      height: 0,
-      lineHeight: 0,
-    }}
-  >
-    {String.fromCodePoint(160) /* Non-breaking space */}
-  </span>
-));
-
-// Add display name for debugging
-InlineChromiumBugfix.displayName = 'InlineChromiumBugfix';
 
 // Link Component that matches the PillLink styling
 const LinkComponent = ({ attributes, children, element, editor }) => {
