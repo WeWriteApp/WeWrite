@@ -13,17 +13,29 @@ function insertLink(editor, url, text) {
   // Determine if this is an external link
   const isExternal = url.startsWith('http://') || url.startsWith('https://');
 
+  // Extract pageId from URL if it's a page link
+  let pageId = null;
+  if (url.includes('/pages/')) {
+    const match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+    if (match) {
+      pageId = match[1];
+    }
+  }
+
   // Create a basic link object for validation
   const basicLink = {
     type: "link",
     url: url,
     children: [{ text: text }],
-    isExternal: isExternal
+    isExternal: isExternal,
+    pageId: pageId,
+    displayText: text
   };
 
   // CRITICAL FIX: Use validateLink to ensure all required properties are present
   // This ensures backward compatibility with both old and new link formats
   const validatedLink = validateLink(basicLink);
+  console.log('InsertLinkCommand: Validated link:', JSON.stringify(validatedLink));
 
   editor.update(() => {
     const selection = $getSelection();
@@ -40,7 +52,13 @@ function insertLink(editor, url, text) {
       // but we can add custom attributes that will be serialized
       Object.entries(validatedLink).forEach(([key, value]) => {
         if (key !== 'children' && key !== 'type' && key !== 'url') {
-          linkNode.setTextContent(key, JSON.stringify(value));
+          try {
+            // For objects and arrays, stringify them
+            const valueToStore = typeof value === 'object' ? JSON.stringify(value) : value;
+            linkNode.setTextContent(key, String(valueToStore));
+          } catch (error) {
+            console.error('Error storing property on link node:', key, error);
+          }
         }
       });
 

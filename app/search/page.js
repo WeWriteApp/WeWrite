@@ -17,6 +17,33 @@ import { useFeatureFlag } from '../utils/feature-flags';
 import { generateFallbackSearchResults, shouldUseFallbackForTerm } from '../utils/clientSideFallbackSearch';
 import { saveSearchQuery } from '../utils/savedSearches';
 
+// Debounce utility function
+function debounce(func, wait, immediate = false) {
+  let timeout;
+
+  const debounced = function(...args) {
+    const context = this;
+
+    const later = function() {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+
+    const callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+
+    if (callNow) func.apply(context, args);
+  };
+
+  debounced.cancel = function() {
+    clearTimeout(timeout);
+    timeout = null;
+  };
+
+  return debounced;
+}
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const { user } = useContext(AuthContext);
@@ -79,6 +106,14 @@ export default function SearchPage() {
 
     // Save scroll position before updating results
     saveScrollPosition();
+
+    // Save cursor position and selection
+    const inputElement = searchInputRef.current;
+    const cursorPosition = inputElement ? {
+      selectionStart: inputElement.selectionStart,
+      selectionEnd: inputElement.selectionEnd,
+      hasFocus: document.activeElement === inputElement
+    } : null;
 
     setIsLoading(true);
     try {
@@ -240,6 +275,19 @@ export default function SearchPage() {
 
       // Restore scroll position after results update
       setTimeout(restoreScrollPosition, 0);
+
+      // Restore cursor position and focus
+      setTimeout(() => {
+        if (cursorPosition && searchInputRef.current) {
+          if (cursorPosition.hasFocus) {
+            searchInputRef.current.focus();
+          }
+          searchInputRef.current.setSelectionRange(
+            cursorPosition.selectionStart,
+            cursorPosition.selectionEnd
+          );
+        }
+      }, 0);
     }
   };
 
@@ -293,60 +341,70 @@ export default function SearchPage() {
     // We'll use explicit saveSearchQuery for pinned searches instead
   };
 
-  // Update debounced search term when query changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(query);
-    }, 300); // 300ms debounce delay
+  // Create a debounced search function with 500ms delay
+  const debouncedSearch = useRef(null);
 
-    return () => clearTimeout(timer);
-  }, [query]);
+  // Initialize the debounced search function
+  useEffect(() => {
+    debouncedSearch.current = debounce((searchTerm) => {
+      if (searchTerm.trim()) {
+        performSearch(searchTerm.trim());
+
+        // Update URL without page reload
+        const url = new URL(window.location);
+        url.searchParams.set('q', searchTerm.trim());
+        window.history.replaceState({ searchQuery: searchTerm.trim() }, '', url);
+      } else {
+        setResults({ pages: [], users: [], groups: [] });
+
+        // Remove the q parameter from URL
+        const url = new URL(window.location);
+        url.searchParams.delete('q');
+        window.history.replaceState({ searchQuery: '' }, '', url);
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => {
+      // Clean up the debounced function
+      if (debouncedSearch.current && debouncedSearch.current.cancel) {
+        debouncedSearch.current.cancel();
+      }
+    };
+  }, []);
 
   // Track if this is an initial load or a user-initiated search
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Perform search when debounced search term changes
-  useEffect(() => {
-    if (debouncedSearchTerm !== '') {
-      // Save scroll position before updating results
-      saveScrollPosition();
+  // Handle query changes
+  const handleQueryChange = (e) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
 
-      // Update URL with search query (trimmed)
-      const trimmedQuery = debouncedSearchTerm.trim();
-      const url = new URL(window.location);
+    // Save scroll position before updating results
+    saveScrollPosition();
 
-      if (trimmedQuery) {
-        // Use replaceState instead of pushState to avoid adding to browser history
-        // This prevents back button from cycling through search queries
-        url.searchParams.set('q', trimmedQuery);
-
-        // Only update URL if this is not the initial load
-        if (!isInitialLoad) {
-          window.history.replaceState({ searchQuery: trimmedQuery }, '', url);
-        }
-
-        performSearch(trimmedQuery);
-      } else {
-        // If query is empty or just whitespace, clear results and URL parameter
-        setResults({ pages: [], users: [], groups: [] });
-        url.searchParams.delete('q');
-
-        // Only update URL if this is not the initial load
-        if (!isInitialLoad) {
-          window.history.replaceState({ searchQuery: '' }, '', url);
-        }
-      }
-
-      // After the first search, mark as no longer initial load
-      if (isInitialLoad) {
-        setIsInitialLoad(false);
-      }
+    // Only trigger debounced search if this is not the initial load
+    if (!isInitialLoad) {
+      debouncedSearch.current(newQuery);
     }
-  }, [debouncedSearchTerm, isInitialLoad]);
+  };
+
+  // Effect to handle initial search from URL
+  useEffect(() => {
+    if (isInitialLoad && query) {
+      performSearch(query.trim());
+      setIsInitialLoad(false);
+    }
+  }, [isInitialLoad, query]);
 
   // Handle search form submission (for Enter key)
   const handleSearch = (e) => {
     e.preventDefault();
+
+    // Cancel any pending debounced search
+    if (debouncedSearch.current && debouncedSearch.current.cancel) {
+      debouncedSearch.current.cancel();
+    }
 
     // Immediately perform search without waiting for debounce
     const trimmedQuery = query.trim();
@@ -377,6 +435,11 @@ export default function SearchPage() {
 
     // Set isInitialLoad to false since this is a user-initiated search
     setIsInitialLoad(false);
+
+    // Keep focus on the search input
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   };
 
   // Share search URL using Web Share API or fallback to clipboard
@@ -506,7 +569,7 @@ export default function SearchPage() {
             type="text"
             placeholder="Search for pages, users..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             onClear={() => {
               setQuery('');
               setResults({ pages: [], users: [], groups: [] });
@@ -517,6 +580,11 @@ export default function SearchPage() {
 
               // Set isInitialLoad to false since this is a user-initiated action
               setIsInitialLoad(false);
+
+              // Focus the input after clearing
+              if (searchInputRef.current) {
+                searchInputRef.current.focus();
+              }
             }}
             className="w-full"
             ref={searchInputRef}

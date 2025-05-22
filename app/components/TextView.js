@@ -566,7 +566,12 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                       // IMPROVED: More robust link handling in dense mode
                       if (child.type === 'link') {
                         console.log('LINK_DEBUG: Found link in dense mode:', JSON.stringify(child));
-                        return <LinkNode key={childIndex} node={child} />;
+                        try {
+                          return <LinkNode key={childIndex} node={child} />;
+                        } catch (error) {
+                          console.error('LINK_RENDER_ERROR: Error rendering link in dense mode:', error);
+                          return <span key={childIndex} className="text-red-500">[Link Error]</span>;
+                        }
                       }
                       // Handle text nodes
                       else if (child.text) {
@@ -601,7 +606,12 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 
 
                               if (grandchild.type === 'link') {
-                                return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} />;
+                                try {
+                                  return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} />;
+                                } catch (error) {
+                                  console.error('LINK_RENDER_ERROR: Error rendering link in grandchild:', error);
+                                  return <span key={`${childIndex}-${grandchildIndex}`} className="text-red-500">[Link Error]</span>;
+                                }
                               } else if (grandchild.text) {
                                 return <span key={`${childIndex}-${grandchildIndex}`}>{grandchild.text}</span>;
                               }
@@ -728,9 +738,15 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
   // Helper function to render child nodes
   const renderChild = (child, i) => {
-    // Handle link nodes
+    // Handle link nodes with error handling
     if (child.type === 'link') {
-      return <LinkNode key={i} node={child} />;
+      try {
+        console.log('PARAGRAPH_LINK_DEBUG: Rendering link in paragraph:', JSON.stringify(child));
+        return <LinkNode key={i} node={child} />;
+      } catch (error) {
+        console.error('PARAGRAPH_LINK_ERROR: Error rendering link in paragraph:', error);
+        return <span key={i} className="text-red-500">[Link Error]</span>;
+      }
     }
     // Handle text nodes
     else if (child.text) {
@@ -831,9 +847,108 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 const LinkNode = ({ node }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
-  // CRITICAL FIX: Use validateLink to standardize the link object
-  // This ensures all required properties are present regardless of which editor created the link
-  const validatedNode = validateLink(node);
+  // Add more robust error handling for invalid link nodes
+  if (!node || typeof node !== 'object') {
+    console.error('LINK_RENDER_ERROR: Invalid link node:', node);
+    return <span className="text-red-500">[Invalid Link]</span>;
+  }
+
+  // Debug log to help diagnose link rendering issues
+  console.log('LINK_RENDER_DEBUG: Rendering link node:', JSON.stringify(node));
+
+  // MAJOR FIX: Completely rewritten link validation for view mode
+  // This ensures links created with any version of the editor will render correctly
+  let validatedNode;
+  try {
+    // First try to validate the node directly
+    validatedNode = validateLink(node);
+
+    // If validation failed or returned null, try to extract a link object from the node
+    if (!validatedNode && node.children) {
+      // Look for link objects in children
+      for (const child of node.children) {
+        if (child && child.type === 'link') {
+          console.log('LINK_RENDER_DEBUG: Found link in children, extracting:', JSON.stringify(child));
+          validatedNode = validateLink(child);
+          if (validatedNode) break;
+        }
+      }
+    }
+
+    // If we still don't have a valid node but have a URL, create a minimal valid link
+    if (!validatedNode && node.url) {
+      console.log('LINK_RENDER_DEBUG: Creating minimal valid link from URL:', node.url);
+      validatedNode = validateLink({
+        type: 'link',
+        url: node.url,
+        children: [{ text: node.displayText || node.children?.[0]?.text || node.url }],
+        id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      });
+    }
+
+    // If still no valid node, check if this is a nested structure
+    if (!validatedNode && node.link && typeof node.link === 'object') {
+      console.log('LINK_RENDER_DEBUG: Found nested link object, extracting:', JSON.stringify(node.link));
+      validatedNode = validateLink(node.link);
+    }
+
+    // Check for data property that might contain link information
+    if (!validatedNode && node.data && typeof node.data === 'object') {
+      if (node.data.url || node.data.href || node.data.pageId) {
+        console.log('LINK_RENDER_DEBUG: Found link data in data property:', JSON.stringify(node.data));
+        validatedNode = validateLink({
+          ...node.data,
+          type: 'link',
+          children: [{ text: node.data.displayText || node.data.text || 'Link' }],
+          id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        });
+      }
+    }
+
+    console.log('LINK_RENDER_DEBUG: After validation:', JSON.stringify(validatedNode));
+
+    // If still no valid node, create a fallback
+    if (!validatedNode) {
+      // Create a minimal valid link as fallback with a unique ID
+      validatedNode = {
+        type: 'link',
+        url: node.url || '#',
+        children: [{ text: node.displayText || node.children?.[0]?.text || 'Link (Error)' }],
+        displayText: node.displayText || node.children?.[0]?.text || 'Link (Error)',
+        className: 'error-link',
+        isError: true,
+        id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      };
+    }
+
+    // CRITICAL FIX: Ensure the validated node has a unique ID
+    if (!validatedNode.id) {
+      validatedNode.id = `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // CRITICAL FIX: Ensure the validated node has proper children structure
+    if (!validatedNode.children || !Array.isArray(validatedNode.children) || validatedNode.children.length === 0) {
+      validatedNode.children = [{ text: validatedNode.displayText || 'Link' }];
+    }
+  } catch (error) {
+    console.error('LINK_RENDER_ERROR: Error during link validation:', error);
+    // Create a minimal valid link as fallback with a unique ID
+    validatedNode = {
+      type: 'link',
+      url: node.url || '#',
+      children: [{ text: node.displayText || node.children?.[0]?.text || 'Link (Error)' }],
+      displayText: node.displayText || node.children?.[0]?.text || 'Link (Error)',
+      className: 'error-link',
+      isError: true,
+      id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+  }
+
+  // If validation failed or returned null, show an error
+  if (!validatedNode) {
+    console.error('LINK_RENDER_ERROR: Link validation failed for node:', node);
+    return <span className="text-red-500">[Invalid Link]</span>;
+  }
 
   // Extract properties from the validated node
   const href = validatedNode.url || '#';

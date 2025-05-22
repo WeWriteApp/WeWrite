@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Loader, ChevronLeft, Share2, Lock } from "lucide-react";
+import { Loader, ChevronLeft, Share2, Lock, MoreHorizontal, Pencil, Plus, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/database";
@@ -14,6 +14,13 @@ import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
 import PageOwnershipDropdown from "./PageOwnershipDropdown";
 import ClickableByline from "./ClickableByline";
 import { useAuth } from "../providers/AuthProvider";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from "./ui/dropdown-menu";
 
 export interface PageHeaderProps {
   title?: string;
@@ -55,6 +62,20 @@ export default function PageHeader({
   const [groupId, setGroupId] = React.useState<string | null>(initialGroupId || null);
   const [groupName, setGroupName] = React.useState<string | null>(initialGroupName || null);
   const [pageId, setPageId] = React.useState<string | null>(null);
+  const [hasGroupAccess, setHasGroupAccess] = React.useState<boolean>(false);
+
+  // Function to determine if the current user can edit the page
+  const canEdit = React.useMemo(() => {
+    if (!user) return false;
+
+    // User is the page owner
+    if (userId && user.uid === userId) return true;
+
+    // Page belongs to a group and user is a member of that group
+    if (groupId && hasGroupAccess) return true;
+
+    return false;
+  }, [user, userId, groupId, hasGroupAccess]);
 
   // Check if subscription feature is enabled
   React.useEffect(() => {
@@ -138,6 +159,35 @@ export default function PageHeader({
       }
     }
   }, [user, userId]);
+
+  // Check if user has access to the group
+  React.useEffect(() => {
+    if (!groupId || !user) {
+      setHasGroupAccess(false);
+      return;
+    }
+
+    const checkGroupAccess = async () => {
+      try {
+        const groupRef = doc(db, 'groups', groupId);
+        const groupDoc = await getDoc(groupRef);
+
+        if (groupDoc.exists()) {
+          const groupData = groupDoc.data();
+          // Check if the user is a member of the group
+          const isMember = user.uid && groupData.members && groupData.members[user.uid];
+          setHasGroupAccess(!!isMember);
+        } else {
+          setHasGroupAccess(false);
+        }
+      } catch (error) {
+        console.error('Error checking group access:', error);
+        setHasGroupAccess(false);
+      }
+    };
+
+    checkGroupAccess();
+  }, [groupId, user]);
 
   // Calculate and update header height when component mounts or when title/isScrolled changes
   React.useEffect(() => {
@@ -461,55 +511,111 @@ export default function PageHeader({
               </div>
             </div>
 
-            {/* Right Side - Share Button (only visible when not scrolled) */}
+            {/* Right Side - Action Menu (only visible when not scrolled) */}
             <div className="flex items-center">
-              <Button
-                variant="outline"
-                size="icon"
-                className={`text-foreground transition-opacity duration-120 ${
-                  isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
-                }`}
-                onClick={() => {
-                  // Create share text in the format: "[title]" by [username] on @WeWriteApp [URL]
-                  // Or "[title]" in [groupName] on @WeWriteApp [URL] for group pages
-                  const pageTitle = title || 'WeWrite Page';
-                  const pageUrl = window.location.href;
-                  const shareText = groupId && groupName
-                    ? `"${pageTitle}" in ${groupName} on @WeWriteApp ${pageUrl}`
-                    : `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`text-foreground transition-opacity duration-120 rounded-2xl ${
+                      isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+                    }`}
+                    title="Page actions"
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {/* Edit option - only visible if user can edit */}
+                  {canEdit && (
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={() => {
+                        if (pageId) {
+                          router.push(`/${pageId}/edit`);
+                        }
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span>Edit</span>
+                    </DropdownMenuItem>
+                  )}
 
-                  // Check if the Web Share API is available
-                  if (navigator.share) {
-                    navigator.share({
-                      title: pageTitle,
-                      text: shareText,
-                      url: pageUrl,
-                    }).catch((error) => {
-                      // Silent error handling - no toast
-                      console.error('Error sharing:', error);
-                    });
-                  } else {
-                    // Create a Twitter share URL as fallback
-                    try {
-                      // First try to open Twitter share dialog
-                      const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-                      window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
-                    } catch (error) {
-                      console.error('Error opening Twitter share:', error);
+                  {/* Share option - always visible */}
+                  <DropdownMenuItem
+                    className="gap-2"
+                    onClick={() => {
+                      // Create share text in the format: "[title]" by [username] on @WeWriteApp [URL]
+                      // Or "[title]" in [groupName] on @WeWriteApp [URL] for group pages
+                      const pageTitle = title || 'WeWrite Page';
+                      const pageUrl = window.location.href;
+                      const shareText = groupId && groupName
+                        ? `"${pageTitle}" in ${groupName} on @WeWriteApp ${pageUrl}`
+                        : `"${pageTitle}" by ${displayUsername} on @WeWriteApp ${pageUrl}`;
 
-                      // If that fails, copy the URL to clipboard
-                      try {
-                        navigator.clipboard.writeText(pageUrl);
-                      } catch (clipboardError) {
-                        console.error('Error copying link:', clipboardError);
+                      // Check if the Web Share API is available
+                      if (navigator.share) {
+                        navigator.share({
+                          title: pageTitle,
+                          text: shareText,
+                          url: pageUrl,
+                        }).catch((error) => {
+                          // Silent error handling - no toast
+                          console.error('Error sharing:', error);
+                        });
+                      } else {
+                        // Create a Twitter share URL as fallback
+                        try {
+                          // First try to open Twitter share dialog
+                          const twitterShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                          window.open(twitterShareUrl, '_blank', 'noopener,noreferrer');
+                        } catch (error) {
+                          console.error('Error opening Twitter share:', error);
+
+                          // If that fails, copy the URL to clipboard
+                          try {
+                            navigator.clipboard.writeText(pageUrl);
+                          } catch (clipboardError) {
+                            console.error('Error copying link:', clipboardError);
+                          }
+                        }
                       }
-                    }
-                  }
-                }}
-                title="Share"
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
+                    }}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span>Share</span>
+                  </DropdownMenuItem>
+
+                  {/* Add to Page option - always visible */}
+                  <DropdownMenuItem
+                    className="gap-2"
+                    onClick={() => {
+                      // Implementation for Add to Page functionality
+                      console.log("Add to Page clicked");
+                      // This would typically open a modal or navigate to a page
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add to Page</span>
+                  </DropdownMenuItem>
+
+                  {/* Reply option - always visible */}
+                  <DropdownMenuItem
+                    className="gap-2"
+                    onClick={() => {
+                      // Implementation for Reply functionality
+                      console.log("Reply clicked");
+                      if (pageId) {
+                        router.push(`/new?replyTo=${pageId}&page=${encodeURIComponent(title || "Untitled")}`);
+                      }
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Reply</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           {/* Scroll Progress Bar */}

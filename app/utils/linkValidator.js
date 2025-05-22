@@ -34,64 +34,187 @@
 export function validateLink(linkData) {
   if (!linkData) return null;
 
-  // Create a copy to avoid modifying the original
-  const link = { ...linkData };
-
-  // Ensure type is set
-  if (!link.type) {
-    link.type = 'link';
-  }
-
-  // Extract pageId from URL if not provided
-  if (!link.pageId && link.url && link.url.includes('/pages/')) {
-    const match = link.url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
-    if (match) {
-      link.pageId = match[1];
+  // Add more robust error handling
+  try {
+    // Create a deep copy to avoid modifying the original
+    let link;
+    try {
+      link = JSON.parse(JSON.stringify(linkData));
+    } catch (copyError) {
+      // Use shallow copy as fallback
+      link = { ...linkData };
     }
-  }
 
-  // Determine link type based on available properties
-  const isUserLink = link.isUser || link.userId || (link.url && link.url.startsWith('/user/'));
-  const isPageLink = link.isPageLink || link.pageId || (link.url && (link.url.startsWith('/pages/') || link.url.match(/^\/[a-zA-Z0-9-_]+$/)));
-  const isExternalLink = link.isExternal || (!isUserLink && !isPageLink && link.url && (link.url.startsWith('http://') || link.url.startsWith('https://')));
+    // CRITICAL FIX: Ensure type is set
+    if (!link.type) {
+      link.type = 'link';
+    }
 
-  // Set missing properties based on link type
-  if (isUserLink) {
-    link.isUser = true;
-    if (!link.className) link.className = 'user-link';
-  } else if (isPageLink) {
-    link.isPageLink = true;
-    if (!link.className) link.className = 'page-link';
-  } else if (isExternalLink) {
-    link.isExternal = true;
-    if (!link.className) link.className = 'external-link';
-  }
+    // CRITICAL FIX: Handle malformed links that might be nested objects
+    // Sometimes links can be nested inside other objects due to serialization issues
+    if (link.link && typeof link.link === 'object') {
+      // Merge the nested link properties with the parent
+      Object.assign(link, link.link);
+      // Remove the nested link to avoid duplication
+      delete link.link;
+    }
 
-  // Ensure children array exists
-  if (!link.children || !Array.isArray(link.children) || link.children.length === 0) {
-    // Create default text from available properties
-    let text = '';
-    if (isPageLink && link.pageTitle) {
-      text = link.pageTitle;
-    } else if (isUserLink && link.username) {
-      text = link.username;
-    } else if (link.displayText) {
-      text = link.displayText;
-    } else if (link.url) {
-      text = link.url;
+    // CRITICAL FIX: Ensure the link has a unique ID
+    // This helps React with keying and prevents rendering issues
+    if (!link.id) {
+      link.id = `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // CRITICAL FIX: Ensure children array exists and has at least one text node
+    if (!link.children || !Array.isArray(link.children) || link.children.length === 0) {
+      // Create a default text node if none exists
+      const displayText = link.displayText || link.text || (link.pageTitle ? link.pageTitle : 'Link');
+      link.children = [{ text: displayText }];
+    }
+
+    // CRITICAL FIX: Handle links that might be in a data property
+    if (link.data && typeof link.data === 'object') {
+      // Check if data contains link properties
+      if (link.data.url || link.data.href || link.data.pageId || link.data.displayText) {
+        // Merge the data properties with the parent
+        Object.assign(link, link.data);
+      }
+    }
+
+    // CRITICAL FIX: Ensure URL is set
+    if (!link.url) {
+      // Try to extract URL from href or other properties
+      link.url = link.href || '#';
+    }
+
+    // CRITICAL FIX: Ensure displayText is set
+    if (!link.displayText) {
+      // Try to extract displayText from various properties
+      link.displayText = link.text || link.pageTitle || 'Link';
+    }
+
+    // CRITICAL FIX: Ensure children array exists and has proper structure
+    if (!link.children || !Array.isArray(link.children) || link.children.length === 0) {
+      // Create a default child with text from displayText or a fallback
+      const text = link.displayText || link.text || link.pageTitle || 'Link';
+      link.children = [{ text }];
     } else {
-      text = 'Link';
+      // Ensure each child has a text property
+      link.children = link.children.map(child => {
+        if (!child) {
+          return { text: link.displayText || 'Link' };
+        }
+        if (typeof child === 'string') {
+          return { text: child };
+        }
+        if (!child.text && typeof child === 'object') {
+          return { ...child, text: link.displayText || 'Link' };
+        }
+        return child;
+      }).filter(Boolean); // Remove any null/undefined children
+
+      // If we ended up with an empty array after filtering, add a default child
+      if (link.children.length === 0) {
+        link.children = [{ text: link.displayText || 'Link' }];
+      }
     }
 
-    link.children = [{ text }];
-  }
+    // Extract pageId from URL if not provided
+    if (!link.pageId && link.url && link.url.includes('/pages/')) {
+      const match = link.url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+      if (match) {
+        link.pageId = match[1];
+      }
+    }
 
-  // Add version tracking for future compatibility
-  if (!link.linkVersion) {
-    link.linkVersion = 2;
-  }
+    // Determine link type based on available properties
+    const isUserLink = link.isUser || link.userId || (link.url && link.url.startsWith('/user/'));
+    const isPageLink = link.isPageLink || link.pageId || (link.url && (link.url.startsWith('/pages/') || link.url.match(/^\/[a-zA-Z0-9-_]+$/)));
+    const isExternalLink = link.isExternal || (!isUserLink && !isPageLink && link.url && (link.url.startsWith('http://') || link.url.startsWith('https://')));
 
-  return link;
+    // Set missing properties based on link type
+    if (isUserLink) {
+      link.isUser = true;
+      if (!link.className) link.className = 'user-link';
+    } else if (isPageLink) {
+      link.isPageLink = true;
+      if (!link.className) link.className = 'page-link';
+
+      // CRITICAL FIX: Ensure pageId is always set for page links
+      if (!link.pageId && link.url) {
+        // Try to extract pageId from URL again with a more flexible pattern
+        const match = link.url.match(/\/pages\/([a-zA-Z0-9-_]+)/) || link.url.match(/\/([a-zA-Z0-9-_]+)$/);
+        if (match) {
+          link.pageId = match[1];
+        }
+      }
+    } else if (isExternalLink) {
+      link.isExternal = true;
+      if (!link.className) link.className = 'external-link';
+    }
+
+    // Ensure children array exists
+    if (!link.children || !Array.isArray(link.children) || link.children.length === 0) {
+      // Create default text from available properties
+      let text = '';
+      if (isPageLink && link.pageTitle) {
+        text = link.pageTitle;
+      } else if (isUserLink && link.username) {
+        text = link.username;
+      } else if (link.displayText) {
+        text = link.displayText;
+      } else if (link.url) {
+        text = link.url;
+      } else {
+        text = 'Link';
+      }
+
+      link.children = [{ text }];
+    }
+
+    // CRITICAL FIX: Ensure displayText is set for compatibility with both renderers
+    if (!link.displayText) {
+      // Try to extract display text from children
+      if (link.children && Array.isArray(link.children) && link.children.length > 0) {
+        const firstChild = link.children[0];
+        if (firstChild.text) {
+          link.displayText = firstChild.text;
+        }
+      }
+
+      // If still no display text, use pageTitle or a fallback
+      if (!link.displayText) {
+        if (isPageLink && link.pageTitle) {
+          link.displayText = link.pageTitle;
+        } else if (isUserLink && link.username) {
+          link.displayText = link.username;
+        } else if (link.url) {
+          link.displayText = link.url;
+        } else {
+          link.displayText = 'Link';
+        }
+      }
+    }
+
+    // Add version tracking for future compatibility
+    if (!link.linkVersion) {
+      link.linkVersion = 3; // Increment version to indicate the new format
+    }
+
+    return link;
+  } catch (error) {
+    // Create a minimal valid link as fallback with a unique ID
+    return {
+      type: 'link',
+      url: linkData?.url || '#',
+      children: [{ text: linkData?.displayText || linkData?.children?.[0]?.text || 'Link (Error)' }],
+      displayText: linkData?.displayText || linkData?.children?.[0]?.text || 'Link (Error)',
+      className: 'error-link',
+      linkVersion: 3,
+      isError: true,
+      id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    };
+  }
 }
 
 /**

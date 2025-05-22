@@ -11,6 +11,7 @@ import PageEditor from "./PageEditor";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { toast } from "./ui/use-toast";
+import { validateLink } from "../utils/linkValidator";
 
 const EditPage = ({
   isEditing,
@@ -88,11 +89,89 @@ const EditPage = ({
     // Use a different variable name to avoid conflicts
     let safeContent;
     try {
-      safeContent = JSON.parse(JSON.stringify(inputContent));
-      console.log("Made deep copy of editor content");
-    } catch (e) {
-      console.error("Error making deep copy of editor content:", e);
-      safeContent = inputContent; // Fall back to original content if deep copy fails
+      // MAJOR FIX: Completely rewritten content processing to ensure links are properly saved
+      // This addresses issues with links disappearing in view mode
+
+      // First, ensure we're working with an array
+      const contentArray = Array.isArray(inputContent) ? inputContent : [inputContent];
+
+      // Process the content to ensure all links are properly validated before saving
+      const processedContent = contentArray.map(node => {
+        // Skip null or undefined nodes
+        if (!node) return node;
+
+        // Process each node to ensure links are properly validated
+        if (node.type === 'paragraph' && node.children) {
+          // Process children to validate any links
+          const processedChildren = node.children.map(child => {
+            // Skip null or undefined children
+            if (!child) return child;
+
+            if (child.type === 'link') {
+              // Validate the link to ensure all required properties are present
+              try {
+                console.log('EditPage: Processing link before save:', JSON.stringify(child));
+
+                // CRITICAL FIX: Ensure link has all required properties
+                // This is especially important for links to render correctly in view mode
+                const validatedLink = validateLink(child);
+
+                // CRITICAL FIX: Ensure the link has a unique ID to prevent React key issues
+                if (!validatedLink.id) {
+                  validatedLink.id = `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                }
+
+                // CRITICAL FIX: Ensure the link has proper children structure
+                if (!validatedLink.children || !Array.isArray(validatedLink.children) || validatedLink.children.length === 0) {
+                  validatedLink.children = [{ text: validatedLink.displayText || 'Link' }];
+                }
+
+                // Log the validated link for debugging
+                console.log('EditPage: Validated link for save:', JSON.stringify(validatedLink));
+                return validatedLink;
+              } catch (linkError) {
+                console.error('EditPage - Error validating link:', linkError);
+                // Create a minimal valid link as fallback
+                return {
+                  type: 'link',
+                  url: child.url || '#',
+                  children: [{ text: child.displayText || child.children?.[0]?.text || 'Link (Error)' }],
+                  displayText: child.displayText || child.children?.[0]?.text || 'Link (Error)',
+                  className: 'error-link',
+                  linkVersion: 2,
+                  isError: true,
+                  id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                };
+              }
+            }
+            return child;
+          }).filter(Boolean); // Remove any null/undefined children
+
+          // Return the node with processed children
+          return { ...node, children: processedChildren };
+        }
+        return node;
+      }).filter(Boolean); // Remove any null/undefined nodes
+
+      // CRITICAL FIX: Make a deep copy to avoid reference issues
+      // Use a more robust method to ensure deep copying works correctly
+      safeContent = JSON.parse(JSON.stringify(processedContent));
+
+      // Verify the content structure after processing
+      console.log('EditPage: Content structure after processing:',
+        Array.isArray(safeContent) ? `Array with ${safeContent.length} items` : typeof safeContent);
+    } catch (error) {
+      console.error('Error processing content:', error);
+      // Fallback to the original content with basic validation
+      try {
+        // Try to at least ensure we have a valid array
+        const fallbackContent = Array.isArray(inputContent) ? inputContent : [inputContent];
+        safeContent = JSON.parse(JSON.stringify(fallbackContent));
+      } catch (fallbackError) {
+        console.error('Critical error in content processing fallback:', fallbackError);
+        // Last resort fallback - create a minimal valid content structure
+        safeContent = [{ type: 'paragraph', children: [{ text: 'Content could not be processed properly.' }] }];
+      }
     }
 
     // Ensure we have valid editor content

@@ -13,31 +13,21 @@ export async function GET(request) {
     const searchTerm = searchParams.get("searchTerm");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")) : 10;
 
-    // IMPORTANT FIX: Log more details about the search request
-    console.log('Search Users API request details:', {
-      searchTerm,
-      searchTermLength: searchTerm ? searchTerm.length : 0,
-      searchTermTrimmed: searchTerm ? searchTerm.trim() : '',
-      searchTermTrimmedLength: searchTerm ? searchTerm.trim().length : 0,
-      limit,
-      url: request.url
+    // Reduce logging to essential information only
+    console.log('Search Users API request:', {
+      searchTerm: searchTerm || '',
+      limit
     });
 
+    // CRITICAL FIX: Return empty results with 200 status instead of 400 error
+    // This prevents the API error from breaking the link insertion flow
     if (!searchTerm || searchTerm.trim().length < 1) {
-      console.log('Empty or too short search term provided to search-users API, returning empty results');
-      return NextResponse.json(
-        {
-          users: [],
-          message: "searchTerm must be at least 1 character"
-        },
-        { status: 400 }
-      );
+      console.log('Empty search term, returning empty results with 200 status');
+      return NextResponse.json({ users: [] }, { status: 200 });
     }
 
     // Search for users
-    console.log(`API: Searching for users with query "${searchTerm}"`);
     const users = await searchUsers(searchTerm, limit);
-    console.log('API: Raw user search results:', users);
 
     // Format the users for the response
     const formattedUsers = users.map(user => ({
@@ -47,11 +37,10 @@ export async function GET(request) {
       type: 'user' // Add a type field to distinguish from pages
     }));
 
-    console.log(`API: Found ${formattedUsers.length} users matching query "${searchTerm}"`);
+    console.log(`Found ${formattedUsers.length} users matching "${searchTerm}"`);
 
     // Apply scoring to sort results
     const sortedUsers = sortSearchResultsByScore(formattedUsers, searchTerm);
-    console.log('API: Sorted user results:', sortedUsers);
 
     // Return formatted results
     return NextResponse.json({ users: sortedUsers }, { status: 200 });
@@ -60,8 +49,7 @@ export async function GET(request) {
     return NextResponse.json({
       users: [],
       error: {
-        message: error.message,
-        details: error.stack
+        message: error.message
       }
     }, { status: 500 });
   }

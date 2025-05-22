@@ -145,24 +145,15 @@ const TypeaheadSearch = ({
   const fetchResults = useCallback(
     debounce(async (search, user) => {
       if (!user && !userId) {
-        console.log('TypeaheadSearch - No user or userId provided, skipping search');
+        // Skip search if no user context is available
         return;
       }
 
       // Check if we're in the link editor context
       const isLinkEditor = !!setDisplayText;
 
-      console.log('TypeaheadSearch - Fetching results for:', {
-        search,
-        searchLength: search?.length,
-        searchTrimmed: search?.trim(),
-        searchTrimmedLength: search?.trim()?.length,
-        userId: userId || user?.uid,
-        filterByUserId: userId, // Log if we're filtering by a specific user
-        groups: user?.groups,
-        characterCount,
-        isLinkEditor
-      });
+      // Minimal logging to reduce console noise
+      console.log('TypeaheadSearch - Searching:', search);
 
       setIsSearching(true);
       try {
@@ -203,9 +194,8 @@ const TypeaheadSearch = ({
 
         // Add timeout to prevent infinite loading
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout (increased from 10s)
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-        // Add more comprehensive error handling for fetch
         try {
           // Determine which requests to make based on filtering
           const fetchPromises = [
@@ -216,26 +206,33 @@ const TypeaheadSearch = ({
           ];
 
           // Only fetch users if we're not filtering by a specific user
+          // CRITICAL FIX: Add error handling for user search
           if (!isFilteringByUser && userSearchUrl) {
-            fetchPromises.push(
-              fetch(userSearchUrl, {
-                signal: controller.signal,
-                cache: 'no-store' // Prevent caching of search results
-              })
-            );
+            try {
+              fetchPromises.push(
+                fetch(userSearchUrl, {
+                  signal: controller.signal,
+                  cache: 'no-store' // Prevent caching of search results
+                })
+              );
+            } catch (userFetchError) {
+              console.warn('Error setting up user search fetch:', userFetchError);
+              // Provide a mock successful response with empty users array
+              fetchPromises.push(Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({ users: [] })
+              }));
+            }
           }
-
-          // IMPORTANT FIX: Add more detailed logging before fetch
-          console.log(`TypeaheadSearch - Starting fetch requests at ${new Date().toISOString()}`);
 
           // Fetch pages and optionally users in parallel using Promise.allSettled to handle partial failures
           const responses = await Promise.allSettled(fetchPromises);
-          console.log(`TypeaheadSearch - Fetch responses received at ${new Date().toISOString()}:`,
-            responses.map(r => ({ status: r.status, ok: r.status === 'fulfilled' ? r.value.ok : false })));
 
           // Extract responses
           const pagesResponse = responses[0];
-          const usersResponse = isFilteringByUser ? { status: 'fulfilled', value: { ok: true, json: () => Promise.resolve({ users: [] }) } } : responses[1];
+          const usersResponse = isFilteringByUser ?
+            { status: 'fulfilled', value: { ok: true, json: () => Promise.resolve({ users: [] }) } } :
+            responses[1];
 
           clearTimeout(timeoutId);
 
@@ -294,36 +291,34 @@ const TypeaheadSearch = ({
               `HTTP ${pagesResponse.value?.status || 'unknown'}`);
           }
 
-          // Process user results
+          // Process user results with improved error handling
           let users = [];
-          if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
+          if (usersResponse.status === 'fulfilled' && usersResponse.value && usersResponse.value.ok) {
             try {
               const usersData = await usersResponse.value.json();
-              console.log('TypeaheadSearch - Users API response:', usersData);
 
-              if (usersData && usersData.users) {
+              // CRITICAL FIX: Handle missing users array gracefully
+              if (usersData && Array.isArray(usersData.users)) {
                 // Filter out any fallback/suggested user results
                 users = usersData.users.filter(user => !user.isFallback);
-                console.log(`TypeaheadSearch - Filtered out ${usersData.users.length - users.length} fallback user results`);
-                console.log(`TypeaheadSearch - Found ${users.length} matching users`);
+                console.log(`Found ${users.length} matching users`);
               } else {
-                // IMPORTANT FIX: Handle case where users array is missing
-                console.warn('TypeaheadSearch - Users API response missing "users" array:', usersData);
+                // If users array is missing, use an empty array
+                console.log('No users array in response, using empty array');
               }
             } catch (jsonError) {
-              console.error('TypeaheadSearch - Error parsing users API response:', jsonError);
+              console.warn('Error parsing users response:', jsonError.message);
               // Reset users to empty array on error
               users = [];
             }
-          } else if (usersResponse.status === 'rejected') {
-            console.error('TypeaheadSearch - Users API request rejected:', usersResponse.reason);
-          } else if (usersResponse.value) {
-            console.error('TypeaheadSearch - Users API request failed with status:', usersResponse.value.status);
+          } else {
+            // Handle rejected or failed responses silently
+            console.log('User search unavailable, continuing with pages only');
           }
 
-          // Log if no results were found
-          if (processedPages.length === 0 && users.length === 0 && search) {
-            console.log(`TypeaheadSearch - No results found for search term: ${search}`);
+          // Only log when no results are found in both pages and users
+          if (processedPages.length === 0 && users.length === 0 && search && search.trim().length > 0) {
+            console.log(`No results found for: ${search}`);
           }
 
           // Set the pages state with categorized results
@@ -367,26 +362,26 @@ const TypeaheadSearch = ({
   };
 
   useEffect(() => {
-    console.log(`TypeaheadSearch - Search term changed: "${search}"`);
+    // Determine if we're in the link editor context
+    const isLinkEditor = !!setDisplayText;
 
     if (!search) {
-      console.log('TypeaheadSearch - Empty search term, resetting results');
+      // Reset results for empty search term
       resetSearchResults();
       return;
     }
 
-    if (!user) {
-      console.log('TypeaheadSearch - No authenticated user, skipping search');
+    if (!user && !userId) {
+      // Skip search if no user context is available
       return;
     }
 
-    // IMPORTANT FIX: Always make the request in the link editor context (when setDisplayText is provided)
+    // CRITICAL FIX: Always make the request in the link editor context
     // Otherwise, only search if we have at least the minimum number of characters
-    const isLinkEditor = !!setDisplayText;
     const hasMinimumChars = search.trim().length >= characterCount;
 
     if (!hasMinimumChars && !isLinkEditor) {
-      console.log(`TypeaheadSearch - Search term too short (${search.length} chars) and not in link editor, resetting results`);
+      // Skip search for short terms outside link editor
       resetSearchResults();
       return;
     }
@@ -394,10 +389,9 @@ const TypeaheadSearch = ({
     // In link editor context, always trigger search regardless of search term length
     // For regular search, only search if we have at least one character
     if (isLinkEditor || search.trim().length > 0) {
-      console.log(`TypeaheadSearch - Triggering search for: "${search.trim()}" (in ${isLinkEditor ? 'link editor' : 'regular search'})`);
       fetchResults(search.trim(), user);
     }
-  }, [search, user, fetchResults, setDisplayText]);
+  }, [search, user, userId, fetchResults, setDisplayText, resetSearchResults, characterCount]);
 
   useEffect(() => {
     if (onSelect) {
@@ -411,30 +405,23 @@ const TypeaheadSearch = ({
 
   // Effect to trigger search when initialSearch is provided
   useEffect(() => {
-    if (initialSearch && user) {
-      console.log(`TypeaheadSearch - Initial search value provided: "${initialSearch}"`);
+    // Determine if we're in the link editor context
+    const isLinkEditor = !!setDisplayText;
 
-      // IMPORTANT FIX: Always make the request in the link editor context (when setDisplayText is provided)
-      // Otherwise, only search if we have at least the minimum number of characters
-      const isLinkEditor = !!setDisplayText;
-      const hasMinimumChars = initialSearch.trim().length >= characterCount;
-
-      // In link editor context, always trigger search regardless of search term length
-      if (hasMinimumChars || isLinkEditor) {
-        console.log(`TypeaheadSearch - Initial search triggered with: "${initialSearch.trim()}" (in ${isLinkEditor ? 'link editor' : 'regular search'})`);
+    if (user || userId) {
+      // CRITICAL FIX: In link editor context, always perform a search
+      // This ensures we have results available immediately
+      if (isLinkEditor) {
+        // Use initialSearch if provided, otherwise empty string
+        const searchTerm = initialSearch ? initialSearch.trim() : '';
+        fetchResults(searchTerm, user);
+      }
+      // For regular search, only search if initialSearch meets minimum length
+      else if (initialSearch && initialSearch.trim().length >= characterCount) {
         fetchResults(initialSearch.trim(), user);
-      } else {
-        console.log(`TypeaheadSearch - Initial search term too short (${initialSearch.length} chars) and not in link editor, skipping`);
       }
     }
-
-    // If we're in the link editor context, always trigger an initial search to populate results
-    // even if initialSearch is empty
-    else if (user && setDisplayText && !initialSearch) {
-      console.log('TypeaheadSearch - No initial search value but in link editor context, triggering empty search to populate results');
-      fetchResults('', user);
-    }
-  }, [initialSearch, user, fetchResults, setDisplayText]);
+  }, [initialSearch, user, userId, fetchResults, setDisplayText, characterCount]);
 
   const handleInputChange = (e) => {
     const value = e.target.value;

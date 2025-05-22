@@ -750,20 +750,26 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
   };
 
   const handleSelection = (item) => {
-    // Check if this is an external link
-    if (item.isExternal) {
-      const displayText = item.displayText || item.url;
+    // CRITICAL FIX: Improved link insertion with better error handling
+    if (!item) {
+      console.warn('SlateEditor: Received null item in handleSelection');
+      return;
+    }
 
-      if (selectedLinkElement && selectedLinkPath) {
-        try {
+    try {
+      // Check if this is an external link
+      if (item.isExternal) {
+        const displayText = item.displayText || item.url;
+
+        if (selectedLinkElement && selectedLinkPath) {
           // Edit existing link
-          // CRITICAL FIX: Use validateLink to ensure all required properties are present
           const updatedLink = validateLink({
             type: "link",
             url: item.url,
             children: [{ text: displayText }],
             isExternal: true,
-            className: "external-link"
+            className: "external-link",
+            linkVersion: 3 // Ensure we're using the latest link format
           });
 
           Transforms.setNodes(
@@ -771,52 +777,47 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             updatedLink,
             { at: selectedLinkPath }
           );
-        } catch (error) {
-          console.error("Error updating existing link:", error);
-          // Fall through to insert a new link as fallback
+        } else {
+          // Insert new external link
+          const link = validateLink({
+            type: "link",
+            url: item.url,
+            children: [{ text: displayText }],
+            isExternal: true,
+            className: "external-link",
+            linkVersion: 3 // Ensure we're using the latest link format
+          });
+
+          // Ensure we have a valid selection
+          if (!editor.selection) {
+            const end = Editor.end(editor, []);
+            Transforms.select(editor, end);
+          }
+
+          // Simple insertion at current selection
+          Transforms.insertNodes(editor, link);
+
+          // Move cursor to the end of the link
+          Transforms.collapse(editor, { edge: "end" });
+
+          // Add a space after the link for better editing experience
+          Transforms.insertText(editor, " ");
         }
       } else {
-        // Insert new external link
-        // CRITICAL FIX: Use validateLink to ensure all required properties are present
-        const link = validateLink({
-          type: "link",
-          url: item.url,
-          children: [{ text: displayText }],
-          isExternal: true,
-          className: "external-link"
-        });
+        // This is a page link
+        const formattedTitle = formatPageTitle(item.displayText || item.title || "Untitled");
 
-        // Make sure we have a valid selection
-        if (!editor.selection) {
-          // If no selection, place cursor at the end of the document
-          const end = Editor.end(editor, []);
-          Transforms.select(editor, end);
-        }
-
-        // Insert the link node
-        Transforms.insertNodes(editor, link, { at: editor.selection });
-
-        // Move cursor to the end of the link
-        Transforms.collapse(editor, { edge: "end" });
-
-        // Insert a space after the link for better editing experience
-        Transforms.insertText(editor, " ");
-      }
-    } else {
-      // Handle internal page links
-      // Format the title to ensure it never has @ symbols for page links
-      const formattedTitle = formatPageTitle(item.displayText || item.title);
-
-      if (selectedLinkElement && selectedLinkPath) {
-        try {
+        if (selectedLinkElement && selectedLinkPath) {
           // Edit existing link
-          // CRITICAL FIX: Use validateLink to ensure all required properties are present
           const updatedLink = validateLink({
             type: "link",
             url: `/pages/${item.id}`,
             children: [{ text: formattedTitle }],
             pageId: item.id,
-            pageTitle: item.title // Store the original page title for reference
+            pageTitle: item.title,
+            isPageLink: true,
+            className: "page-link",
+            linkVersion: 3 // Ensure we're using the latest link format
           });
 
           Transforms.setNodes(
@@ -824,57 +825,93 @@ const SlateEditor = forwardRef(({ initialEditorState = null, initialContent = nu
             updatedLink,
             { at: selectedLinkPath }
           );
-        } catch (error) {
-          console.error("Error updating existing page link:", error);
-          // Fall through to insert a new link as fallback
+        } else {
+          // Insert new page link
+          const link = validateLink({
+            type: "link",
+            url: `/pages/${item.id}`,
+            children: [{ text: formattedTitle }],
+            pageId: item.id,
+            pageTitle: item.title,
+            isPageLink: true,
+            className: "page-link",
+            linkVersion: 3 // Ensure we're using the latest link format
+          });
+
+          // CRITICAL FIX: Ensure we have a valid selection with better error handling
+          try {
+            if (!editor.selection) {
+              const end = Editor.end(editor, []);
+              Transforms.select(editor, end);
+            }
+
+            // Simple insertion at current selection
+            Transforms.insertNodes(editor, link);
+
+          // Move cursor to the end of the link
+          Transforms.collapse(editor, { edge: "end" });
+
+          // Add a space after the link for better editing experience
+          Transforms.insertText(editor, " ");
+          } catch (insertError) {
+            console.error("Error inserting page link:", insertError);
+
+            // Fallback insertion at the end of the document
+            try {
+              const end = Editor.end(editor, []);
+              Transforms.select(editor, end);
+              Transforms.insertNodes(editor, link);
+              Transforms.insertText(editor, " ");
+            } catch (fallbackError) {
+              console.error("Fallback insertion failed:", fallbackError);
+            }
+          }
         }
-      } else {
-        // Insert new link
-        // CRITICAL FIX: Use validateLink to ensure all required properties are present
-        const link = validateLink({
-          type: "link",
-          url: `/pages/${item.id}`,
-          children: [{ text: formattedTitle }],
-          pageId: item.id,
-          pageTitle: item.title // Store the original page title for reference
-        });
+      }
 
-        // Make sure we have a valid selection
-        if (!editor.selection) {
-          // If no selection, place cursor at the end of the document
-          const end = Editor.end(editor, []);
-          Transforms.select(editor, end);
+      // Force editor to update
+      if (typeof editor.onChange === 'function') {
+        editor.onChange();
+      }
+
+      // Reset link editor state
+      setSelectedLinkElement(null);
+      setSelectedLinkPath(null);
+      setInitialLinkValues({});
+
+      // Focus the editor
+      try {
+        if (ReactEditor && typeof ReactEditor.focus === 'function') {
+          ReactEditor.focus(editor);
         }
-
-        // Insert the link node
-        Transforms.insertNodes(editor, link, { at: editor.selection });
-
-        // Move cursor to the end of the link
-        Transforms.collapse(editor, { edge: "end" });
-
-        // Insert a space after the link for better editing experience
-        Transforms.insertText(editor, " ");
+      } catch (focusError) {
+        console.error("Error focusing editor:", focusError);
       }
-    }
 
-    // Reset link editor state
-    setSelectedLinkElement(null);
-    setSelectedLinkPath(null);
-    setInitialLinkValues({});
-
-    // Focus the editor with error handling
-    try {
-      if (ReactEditor && typeof ReactEditor.focus === 'function') {
-        ReactEditor.focus(editor);
-      } else {
-        console.warn("ReactEditor.focus is not available");
-      }
+      // Close the link editor
+      setShowLinkEditor(false);
     } catch (error) {
-      console.error("Error focusing editor:", error);
-    }
+      console.error("Error in link insertion:", error);
 
-    // Hide the dropdown
-    setShowLinkEditor(false);
+      // Fallback for critical errors
+      try {
+        // Create a simple text node as fallback
+        const textNode = {
+          text: item.isExternal
+            ? (item.displayText || item.url)
+            : (item.title || "Untitled")
+        };
+
+        // Insert as plain text
+        Transforms.insertText(editor, textNode.text);
+
+        // Close the link editor
+        setShowLinkEditor(false);
+      } catch (fallbackError) {
+        console.error("Critical error in fallback:", fallbackError);
+        setShowLinkEditor(false);
+      }
+    }
   };
 
   const renderElement = (props) => {
@@ -1169,6 +1206,10 @@ const wrapLink = (editor, url, pageId, pageTitle) => {
   const { selection } = editor;
   const isCollapsed = selection && Range.isCollapsed(selection);
 
+  // CRITICAL FIX: Save the current selection before any transformations
+  const currentSelection = editor.selection;
+  console.log('Current selection before link wrapping:', JSON.stringify(currentSelection));
+
   // Determine the display text
   let text = url;
 
@@ -1199,11 +1240,133 @@ const wrapLink = (editor, url, pageId, pageTitle) => {
   // This ensures backward compatibility with both old and new link formats
   const linkElement = validateLink(basicLinkElement);
 
-  if (isCollapsed) {
-    Transforms.insertNodes(editor, linkElement);
-  } else {
-    Transforms.wrapNodes(editor, linkElement, { split: true });
-    Transforms.collapse(editor, { edge: "end" });
+  // MAJOR FIX: Completely rewritten link insertion logic to fix positioning issues
+  try {
+    // Store the current selection state before any transformations
+    // This is critical for accurate insertion
+    const originalSelection = editor.selection ? { ...editor.selection } : null;
+
+    // Log the original selection for debugging
+    console.log('wrapLink - Original selection:', JSON.stringify(originalSelection));
+
+    if (!originalSelection) {
+      // If no selection, place cursor at the end of the document
+      const end = Editor.end(editor, []);
+      Transforms.select(editor, end);
+      console.log('wrapLink - No selection, placing cursor at end of document');
+    }
+
+    // Get the current paragraph path AFTER ensuring we have a selection
+    const [paragraphNode, paragraphPath] = Editor.above(editor, {
+      match: n => n.type === 'paragraph',
+    }) || [null, null];
+
+    console.log('wrapLink - Current paragraph path:', JSON.stringify(paragraphPath));
+    console.log('wrapLink - Current selection after paragraph check:', JSON.stringify(editor.selection));
+
+    // CRITICAL FIX: Save the exact point where the cursor is
+    // This is the key to inserting at the correct position
+    const insertionPoint = editor.selection ? { ...editor.selection.anchor } : null;
+    console.log('wrapLink - Insertion point:', JSON.stringify(insertionPoint));
+
+    if (isCollapsed) {
+      // For collapsed selection (cursor), insert the link node
+
+      // CRITICAL FIX: Use the exact insertion point for precise positioning
+      if (insertionPoint && paragraphPath) {
+        // Create a point-specific selection at the exact cursor position
+        const preciseSelection = {
+          anchor: insertionPoint,
+          focus: insertionPoint
+        };
+
+        console.log('wrapLink - Precise selection for insertion:', JSON.stringify(preciseSelection));
+
+        // First select the exact point to ensure correct insertion
+        Transforms.select(editor, preciseSelection);
+
+        // Now insert the link at the precise position
+        Transforms.insertNodes(editor, linkElement, {
+          at: preciseSelection,
+          select: true // Select the inserted node
+        });
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: "end" });
+
+        // Insert a space after the link only if we're not at the end of the paragraph
+        const currentPoint = editor.selection ? editor.selection.focus : null;
+        if (currentPoint) {
+          const endPoint = Editor.end(editor, paragraphPath);
+          const isAtEnd = endPoint.offset === currentPoint.offset;
+          if (!isAtEnd) {
+            Transforms.insertText(editor, " ");
+          }
+        }
+      } else {
+        // Fallback if we don't have precise position information
+        console.log('wrapLink - Using fallback insertion without precise position');
+        Transforms.insertNodes(editor, linkElement, { select: true });
+        Transforms.collapse(editor, { edge: "end" });
+      }
+    } else {
+      // For non-collapsed selection (text selected), wrap the selection with the link
+
+      // CRITICAL FIX: Ensure we're wrapping the exact selection
+      if (originalSelection && paragraphPath) {
+        console.log('wrapLink - Wrapping selection:', JSON.stringify(originalSelection));
+
+        // First ensure the original selection is active
+        Transforms.select(editor, originalSelection);
+
+        // Now wrap the selected text with the link
+        Transforms.wrapNodes(editor, linkElement, {
+          at: originalSelection,
+          split: true,
+          select: true
+        });
+
+        // Move cursor to the end of the link
+        Transforms.collapse(editor, { edge: "end" });
+
+        // Insert a space after the link only if we're not at the end of the paragraph
+        const currentPoint = editor.selection ? editor.selection.focus : null;
+        if (currentPoint) {
+          const endPoint = Editor.end(editor, paragraphPath);
+          const isAtEnd = endPoint.offset === currentPoint.offset;
+          if (!isAtEnd) {
+            Transforms.insertText(editor, " ");
+          }
+        }
+      } else {
+        // Fallback if we don't have precise selection information
+        console.log('wrapLink - Using fallback wrapping without precise selection');
+        Transforms.wrapNodes(editor, linkElement, { split: true, select: true });
+        Transforms.collapse(editor, { edge: "end" });
+      }
+    }
+
+    // CRITICAL FIX: Ensure the editor is properly updated after link insertion
+    // This forces a re-render of the editor with the updated content
+    if (typeof editor.onChange === 'function') {
+      editor.onChange();
+      console.log('wrapLink - Triggered onChange to update editor state');
+    }
+
+  } catch (error) {
+    console.error('Error in wrapLink:', error);
+    // Simplified fallback with better error handling
+    try {
+      if (isCollapsed) {
+        Transforms.insertNodes(editor, linkElement, { select: true });
+      } else {
+        Transforms.wrapNodes(editor, linkElement, { split: true, select: true });
+      }
+      Transforms.collapse(editor, { edge: "end" });
+      console.log('wrapLink - Used simplified fallback after error');
+    } catch (fallbackError) {
+      console.error('Critical error in wrapLink fallback:', fallbackError);
+    }
   }
 };
 
@@ -1240,10 +1403,32 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
   // Use PillStyle context to get the current pill style
   const { pillStyle, getPillStyleClasses } = usePillStyle();
 
+  // MAJOR FIX: Completely rewritten link validation for edit mode
+  // This ensures links are rendered correctly in both edit and view modes
+  // and fixes issues with links disappearing or appearing in the wrong position
+
+  // First, create a deep copy of the element to avoid modifying the original
+  let elementCopy;
+  try {
+    elementCopy = JSON.parse(JSON.stringify(element));
+  } catch (copyError) {
+    console.error('LinkComponent: Error creating deep copy, using shallow copy:', copyError);
+    elementCopy = { ...element };
+  }
+
+  // Now validate the link to ensure all required properties are present
+  const validatedElement = validateLink(elementCopy);
+  console.log('LinkComponent: Validated element:', JSON.stringify(validatedElement));
+
+  // CRITICAL FIX: Ensure the link has a unique ID
+  if (!validatedElement.id) {
+    validatedElement.id = `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   // Use our utility functions to determine link type
-  const isUserLinkType = isUserLink(element.url) || element.isUser || element.className === 'user-link';
-  const isPageLinkType = isPageLink(element.url) || element.pageId || element.className === 'page-link';
-  const isExternalLinkType = isExternalLink(element.url) || element.isExternal || element.className === 'external-link';
+  const isUserLinkType = isUserLink(validatedElement.url) || validatedElement.isUser || validatedElement.className === 'user-link';
+  const isPageLinkType = isPageLink(validatedElement.url) || validatedElement.pageId || validatedElement.className === 'page-link';
+  const isExternalLinkType = isExternalLink(validatedElement.url) || validatedElement.isExternal || validatedElement.className === 'external-link';
 
   // Determine the appropriate class based on link type
   const linkTypeClass = isUserLinkType ? 'user-link' : isPageLinkType ? 'page-link' : 'external-link';
@@ -1305,16 +1490,16 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
       contentEditable={false} // Make the link non-editable
       className={baseStyles}
       data-pill-style={pillStyle}
-      data-page-id={isPageLinkType ? (element.pageId || '') : undefined}
-      data-user-id={isUserLinkType ? (element.userId || '') : undefined}
+      data-page-id={isPageLinkType ? (validatedElement.pageId || '') : undefined}
+      data-user-id={isUserLinkType ? (validatedElement.userId || '') : undefined}
       data-link-type={linkTypeClass}
-      title={element.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
+      title={validatedElement.children?.[0]?.text || ''} // Add title attribute for hover tooltip on truncated text
     >
       <InlineChromiumBugfix />
       <span className="pill-text overflow-hidden break-words inline">
         {children}
       </span>
-      {isExternalLinkType || isExternalLink(element.url) ? (
+      {isExternalLinkType || isExternalLink(validatedElement.url) ? (
         <ExternalLink size={14} className="ml-1 flex-shrink-0" />
       ) : null}
       <InlineChromiumBugfix />
@@ -1333,85 +1518,75 @@ const isLinkActive = (editor) => {
 };
 
 const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "" }) => {
-  const [displayText, setDisplayText] = useState(initialText);
-  const [pageTitle, setPageTitle] = useState(initialPageTitle); // Store the original page title
-
-  // Determine the initial active tab based on whether we have a pageId
-  // If initialPageId exists, it's an internal link, so set tab to "page"
-  // Otherwise, default to "page" for new links
-  const [activeTab, setActiveTab] = useState(initialPageId ? "page" : "page");
-
+  // CRITICAL FIX: Improved state management with better defaults
+  const [displayText, setDisplayText] = useState(initialText || initialPageTitle || "");
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
+  const [pageTitle, setPageTitle] = useState(initialPageTitle || "");
   const [externalUrl, setExternalUrl] = useState("");
-  const [showAuthor, setShowAuthor] = useState(false);
-  const [hasChanged, setHasChanged] = useState(false);
-  // Determine if we're editing an existing link or creating a new one
+  // CRITICAL FIX: Always default to page tab for consistency
+  const [activeTab, setActiveTab] = useState("page");
+
+  // Determine if we're editing an existing link
   const isEditing = !!initialPageId || !!initialText;
 
-  // Track initial state for change detection
-  const initialState = React.useRef({
-    displayText: initialText,
-    pageTitle: initialPageTitle,
-    selectedPageId: initialPageId,
-    externalUrl: "",
-    showAuthor: false,
-    activeTab: initialPageId ? "page" : "page"
-  });
-
-  // Initialize the component when editing an existing link
-  useEffect(() => {
-    // If we're editing an existing internal link (has pageId), make sure we're on the page tab
-    if (initialPageId) {
-      setActiveTab("page");
-      setSelectedPageId(initialPageId);
-
-      // If we have a custom display text (different from the page title), preserve it
-      if (initialText && initialPageTitle && initialText !== initialPageTitle) {
-        setDisplayText(initialText); // Keep the custom display text
-      } else if (initialPageTitle) {
-        setDisplayText(initialPageTitle); // Use the page title as display text
-      }
-    }
-  }, [initialPageId, initialPageTitle, initialText]);
-
-  // Enable save if any field changes
-  useEffect(() => {
-    const changed =
-      displayText !== initialState.current.displayText ||
-      pageTitle !== initialState.current.pageTitle ||
-      selectedPageId !== initialState.current.selectedPageId ||
-      externalUrl !== initialState.current.externalUrl ||
-      showAuthor !== initialState.current.showAuthor ||
-      activeTab !== initialState.current.activeTab;
-    setHasChanged(changed);
-  }, [displayText, pageTitle, selectedPageId, externalUrl, showAuthor, activeTab]);
-
-  // Validation helpers
+  // Validation helpers with improved error handling
   const isPageValid = activeTab === 'page' && !!selectedPageId;
-  const isExternalValid = activeTab === 'external' && externalUrl && (externalUrl.startsWith('http://') || externalUrl.startsWith('https://'));
-  const canSave = hasChanged && ((activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid));
+  const isExternalValid = activeTab === 'external' && !!externalUrl && externalUrl.trim().length > 0;
+  const canSave = (activeTab === 'page' && isPageValid) || (activeTab === 'external' && isExternalValid);
 
+  // Handle close
   const handleClose = () => {
     setShowLinkEditor(false);
+  };
+
+  // Handle page selection with improved error handling
+  const handlePageSelect = (page) => {
+    if (!page) {
+      console.warn('LinkEditor: Received null page in handlePageSelect');
+      return;
+    }
+
+    try {
+      // Set page ID and title
+      setSelectedPageId(page.id);
+      setPageTitle(page.title || 'Untitled Page');
+
+      // Only update display text if it's empty or matches the previous page title
+      // This preserves custom display text entered by the user
+      if (!displayText || displayText === pageTitle) {
+        setDisplayText(page.title || 'Untitled Page');
+      }
+    } catch (error) {
+      console.error('LinkEditor: Error in handlePageSelect:', error);
+      // Fallback with safe values
+      setSelectedPageId(page.id || null);
+      setPageTitle(page.title || 'Untitled Page');
+      if (!displayText) {
+        setDisplayText(page.title || 'Untitled Page');
+      }
+    }
   };
 
   // Handle external URL changes
   const handleExternalUrlChange = (e) => {
     setExternalUrl(e.target.value);
-    setHasChanged(true);
   };
 
-  // Handle display text changes
-  const handleDisplayTextChange = (e) => {
-    setDisplayText(e.target.value);
-    setHasChanged(true);
+  // Handle save for page links
+  const handlePageSave = () => {
+    if (isPageValid) {
+      onSelect({
+        id: selectedPageId,
+        title: pageTitle,
+        displayText: displayText
+      });
+    }
   };
 
   // Handle save for external links
-  const handleExternalSubmit = () => {
+  const handleExternalSave = () => {
     if (isExternalValid) {
-      // FIXED: Ensure external links have proper structure
-      // Add protocol if missing
+      // Ensure URL has protocol
       let finalUrl = externalUrl;
       if (!/^https?:\/\//i.test(finalUrl)) {
         finalUrl = 'https://' + finalUrl;
@@ -1420,19 +1595,23 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
       onSelect({
         url: finalUrl,
         displayText: displayText || externalUrl,
-        isExternal: true,
-        type: "external"
+        isExternal: true
       });
     }
   };
 
-  // Handle save for page links
-  const handleSave = (item) => {
-    if (canSave) {
-      onSelect({
-        ...item,
-        showAuthor
-      });
+  // Handle URL input that looks like an external link
+  const handleUrlLikeInput = (value) => {
+    if (value && (
+      value.startsWith('http://') ||
+      value.startsWith('https://') ||
+      value.startsWith('www.') ||
+      value.includes('.com') ||
+      value.includes('.org') ||
+      value.includes('.net')
+    )) {
+      setActiveTab('external');
+      setExternalUrl(value);
     }
   };
 
@@ -1443,12 +1622,13 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
         className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[999] dark:bg-black/50"
         onClick={handleClose}
       />
+
       {/* Modal */}
       <div
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] bg-background rounded-xl shadow-xl z-[1000] border border-border flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - fixed at top */}
+        {/* Header */}
         <div className="p-4 flex items-center justify-between border-b border-border">
           <h2 className="text-base font-medium flex items-center gap-2">
             <LinkIcon className="h-4 w-4" />
@@ -1463,101 +1643,85 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
           </button>
         </div>
 
-          {/* Tabs */}
-          <div className="px-4 border-b border-border">
-            <div className="flex">
-              <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'page'
+        {/* Tabs */}
+        <div className="px-4 border-b border-border">
+          <div className="flex">
+            <button
+              className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${
+                activeTab === 'page'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setActiveTab('page')}
-              >
-                <FileText className="h-4 w-4" />
-                WeWrite Page
-              </button>
-              <button
-                className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${activeTab === 'external'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('page')}
+            >
+              <FileText className="h-4 w-4" />
+              WeWrite Page
+            </button>
+            <button
+              className={`px-4 py-2 text-sm font-medium border-b-2 flex items-center gap-1.5 ${
+                activeTab === 'external'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setActiveTab('external')}
-              >
-                <Globe className="h-4 w-4" />
-                External link
-              </button>
-            </div>
-          </div>
-
-          {/* Scrollable content area */}
-          <div className="flex-1 overflow-y-auto">
-            {activeTab === 'page' ? (
-              <div className="p-4">
-                <div>
-                  <TypeaheadSearch
-                    onSelect={(page) => {
-                      setSelectedPageId(page.id);
-                      setPageTitle(page.title);
-                      setDisplayText(page.title);
-                    }}
-                    placeholder="Search pages..."
-                    initialSelectedId={selectedPageId}
-                    displayText={displayText}
-                    setDisplayText={setDisplayText}
-                    preventRedirect={true}
-                    onInputChange={(value) => {
-                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
-                        setActiveTab('external');
-                        setExternalUrl(value);
-                      }
-                    }}
-                  />
-                  {/* Show Author Switch */}
-                  <div className="flex items-center gap-2 mt-4 mb-4">
-                    <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch" />
-                    <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 space-y-4">
-                <div className="space-y-2">
-                  <h2 className="text-sm font-medium">URL</h2>
-                  <input
-                    type="url"
-                    value={externalUrl}
-                    onChange={handleExternalUrlChange}
-                    placeholder="https://example.com"
-                    className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
-                  />
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Switch checked={showAuthor} onCheckedChange={setShowAuthor} id="show-author-switch-ext" />
-                  <label htmlFor="show-author-switch-ext" className="text-sm font-medium select-none">Show author</label>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sticky footer with button */}
-          <div className="p-4 border-t border-border">
-            {activeTab === 'page' ? (
-              <button
-                onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
-                disabled={!canSave}
-                className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isEditing ? 'Save changes' : 'Insert link'}
-              </button>
-            ) : (
-              <button
-                onClick={handleExternalSubmit}
-                disabled={!canSave}
-                className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isEditing ? 'Save changes' : 'Add External Link'}
-              </button>
-            )}
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('external')}
+            >
+              <Globe className="h-4 w-4" />
+              External link
+            </button>
           </div>
         </div>
+
+        {/* Content area */}
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'page' ? (
+            <div className="p-4">
+              <TypeaheadSearch
+                onSelect={handlePageSelect}
+                placeholder="Search pages..."
+                initialSelectedId={selectedPageId}
+                displayText={displayText}
+                setDisplayText={setDisplayText}
+                preventRedirect={true}
+                onInputChange={handleUrlLikeInput}
+              />
+            </div>
+          ) : (
+            <div className="p-4">
+              <div className="space-y-2">
+                <h2 className="text-sm font-medium">URL</h2>
+                <input
+                  type="url"
+                  value={externalUrl}
+                  onChange={handleExternalUrlChange}
+                  placeholder="https://example.com"
+                  className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer with button */}
+        <div className="p-4 border-t border-border">
+          {activeTab === 'page' ? (
+            <button
+              onClick={handlePageSave}
+              disabled={!isPageValid}
+              className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isEditing ? 'Save changes' : 'Insert link'}
+            </button>
+          ) : (
+            <button
+              onClick={handleExternalSave}
+              disabled={!isExternalValid}
+              className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isEditing ? 'Save changes' : 'Add External Link'}
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 };
