@@ -355,7 +355,7 @@ const TypeaheadSearch = ({
     [userId, setDisplayText]
   );
 
-  const resetSearchResults = () => {
+  const resetSearchResults = useCallback(() => {
     setPages({
       userPages: [],
       groupPages: [],
@@ -363,7 +363,7 @@ const TypeaheadSearch = ({
       users: []
     });
     setIsSearching(false);
-  };
+  }, []);
 
   useEffect(() => {
     // Determine if we're in the link editor context
@@ -450,7 +450,7 @@ const TypeaheadSearch = ({
   };
 
   // Helper function to deduplicate pages by ID
-  const deduplicatePages = (allPages) => {
+  const deduplicatePages = useCallback((allPages) => {
     const uniquePages = new Map();
 
     // Process pages in order of priority: user pages first, then group pages, then public pages
@@ -462,13 +462,13 @@ const TypeaheadSearch = ({
     });
 
     return Array.from(uniquePages.values());
-  };
+  }, []);
 
   // Get all unique pages across all categories
-  const getAllUniquePages = () => {
+  const getAllUniquePages = useCallback(() => {
     const allPages = [...pages.userPages, ...pages.groupPages, ...pages.publicPages];
     return deduplicatePages(allPages);
-  };
+  }, [pages.userPages, pages.groupPages, pages.publicPages, deduplicatePages]);
 
   // Update display text when a page is selected
   useEffect(() => {
@@ -479,7 +479,7 @@ const TypeaheadSearch = ({
         setDisplayText(selectedPage.title);
       }
     }
-  }, [selectedId, pages, setDisplayText, displayText]);
+  }, [selectedId, getAllUniquePages, setDisplayText, displayText]);
 
   if (!user) return null;
   return (
@@ -796,7 +796,6 @@ const TypeaheadSearch = ({
           {getAllUniquePages().find(page => page.id === selectedId)?.title} selected
         </div>
       )}
-    </div>
     </div>
   );
 };
