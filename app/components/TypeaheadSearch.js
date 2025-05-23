@@ -1,15 +1,17 @@
 'use client';
 
-import React from 'react';
+import SearchResults from './SearchResults';
 
-// Minimal placeholder component to allow testing of search API
+/**
+ * TypeaheadSearch Component (Deprecated)
+ *
+ * This component has been renamed to SearchResults for better clarity.
+ * This wrapper maintains backward compatibility while we transition.
+ *
+ * @deprecated Use SearchResults component instead
+ */
 const TypeaheadSearch = (props) => {
-  return (
-    <div className="p-4 border border-gray-300 rounded">
-      <p>TypeaheadSearch component temporarily disabled for testing</p>
-      <p>Props: {JSON.stringify(Object.keys(props))}</p>
-    </div>
-  );
+  return <SearchResults {...props} />;
 };
 
 export default TypeaheadSearch;

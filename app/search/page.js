@@ -14,7 +14,7 @@ import SearchRecommendations from '../components/SearchRecommendations';
 import SavedSearches from '../components/SavedSearches';
 import RecentPages from '../components/RecentPages';
 import { useFeatureFlag } from '../utils/feature-flags';
-import { generateFallbackSearchResults, shouldUseFallbackForTerm } from '../utils/clientSideFallbackSearch';
+
 import { saveSearchQuery } from '../utils/savedSearches';
 
 // Debounce utility function
@@ -54,8 +54,6 @@ export default function SearchPage() {
   const [results, setResults] = useState({ pages: [], users: [], groups: [] });
   const [isLoading, setIsLoading] = useState(false);
   const searchInputRef = useRef(null);
-  const resultsContainerRef = useRef(null);
-  const scrollPositionRef = useRef(0);
 
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
@@ -114,75 +112,24 @@ export default function SearchPage() {
       return;
     }
 
-    // Save scroll position before updating results
-    saveScrollPosition();
-
-    // Save cursor position and selection
-    const inputElement = searchInputRef.current;
-    const cursorPosition = inputElement ? {
-      selectionStart: inputElement.selectionStart,
-      selectionEnd: inputElement.selectionEnd,
-      hasFocus: document.activeElement === inputElement
-    } : null;
-
-    // Only set loading if we don't already have results for this search term
-    // This prevents flickering when typing quickly
     const trimmedSearchTerm = searchTerm.trim();
-    if (query !== trimmedSearchTerm) {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
+
     try {
-
-      // For unauthenticated users or as a fallback
+      // For unauthenticated users, show empty results
       if (!user) {
-        console.log(`User not authenticated, using fallback search for: "${trimmedSearchTerm}"`);
-        const fallbackResults = generateFallbackSearchResults(trimmedSearchTerm);
-
-        setResults({
-          pages: fallbackResults.pages,
-          users: fallbackResults.users,
-          groups: []
-        });
-
-        // Save to recent searches when a search is completed
-        saveSearchTerm(trimmedSearchTerm);
-
+        console.log(`User not authenticated, showing empty results for: "${trimmedSearchTerm}"`);
+        setResults({ pages: [], users: [], groups: [] });
         setIsLoading(false);
-
-        // Restore scroll position after results update
-        setTimeout(restoreScrollPosition, 0);
         return;
       }
 
-      // For authenticated users, proceed with normal search
+      // For authenticated users, proceed with API search
       let groupIds = [];
       if (user.groups) {
         groupIds = Object.keys(user.groups);
       }
 
-      // Check if we should use fallback search immediately for certain terms
-      if (shouldUseFallbackForTerm(trimmedSearchTerm)) {
-        console.log(`Using immediate fallback search for important term: "${trimmedSearchTerm}"`);
-        const fallbackResults = generateFallbackSearchResults(trimmedSearchTerm, user.uid);
-        console.log(`Fallback search found ${fallbackResults.pages.length} pages and ${fallbackResults.users.length} users`);
-
-        setResults({
-          pages: fallbackResults.pages,
-          users: fallbackResults.users,
-          groups: []
-        });
-
-        // Save to recent searches when a search is completed
-        saveSearchTerm(trimmedSearchTerm);
-
-        setIsLoading(false);
-
-        // Restore scroll position after results update
-        setTimeout(restoreScrollPosition, 0);
-        return;
-      }
-
-      // Proceed with normal API search
       const queryUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${groupIds}&useScoring=true`;
       console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
 
@@ -190,56 +137,15 @@ export default function SearchPage() {
 
       if (!response.ok) {
         console.error('Search API returned error:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Search API error details:', errorText);
         throw new Error(`Search API error: ${response.status} - ${response.statusText}`);
       }
 
       const data = await response.json();
       console.log(`Search results for "${trimmedSearchTerm}":`, data);
       console.log(`Found ${data.pages?.length || 0} pages and ${data.users?.length || 0} users`);
-      console.log('Search API response source:', data.source);
 
-      // Log detailed information about the search results
-      if (data.pages && data.pages.length > 0) {
-        console.log('Pages found:', data.pages.map(p => ({ id: p.id, title: p.title, userId: p.userId })));
-      }
-      if (data.users && data.users.length > 0) {
-        console.log('Users found:', data.users.map(u => ({ id: u.id, username: u.username })));
-      }
       if (data.error) {
         console.warn('Search API returned error:', data.error);
-      }
-
-      // Log the titles of the pages found
-      if (data.pages && data.pages.length > 0) {
-        console.log('Page titles found:', data.pages.map(page => page.title).join(', '));
-
-        // Save to recent searches when results are found
-        saveSearchTerm(trimmedSearchTerm);
-      } else {
-        console.log('No pages found matching the search term');
-
-        // If no results from API, use fallback search
-        console.log(`Using fallback search for "${trimmedSearchTerm}" due to no API results`);
-        const fallbackResults = generateFallbackSearchResults(trimmedSearchTerm, user.uid);
-        console.log(`Fallback search found ${fallbackResults.pages.length} pages and ${fallbackResults.users.length} users`);
-
-        if (fallbackResults.pages.length > 0 || fallbackResults.users.length > 0) {
-          setResults({
-            pages: fallbackResults.pages,
-            users: fallbackResults.users
-          });
-
-          // Save to recent searches when fallback results are found
-          saveSearchTerm(trimmedSearchTerm);
-
-          setIsLoading(false);
-
-          // Restore scroll position after results update
-          setTimeout(restoreScrollPosition, 0);
-          return;
-        }
       }
 
       // Process the results to ensure usernames are properly set
@@ -275,46 +181,21 @@ export default function SearchPage() {
         new Map((data.users || []).map(user => [user.id, user])).values()
       );
 
-      console.log(`Deduplication: ${processedPages.length} pages → ${uniquePages.length} unique pages`);
-      console.log(`Deduplication: ${(data.users || []).length} users → ${uniqueUsers.length} unique users`);
+      console.log(`Found ${uniquePages.length} unique pages and ${uniqueUsers.length} unique users`);
 
       setResults({
         pages: uniquePages,
-        users: uniqueUsers
+        users: uniqueUsers,
+        groups: [] // Groups will be added when groups feature is fully implemented
       });
 
       // Save to recent searches when a search is completed successfully
       saveSearchTerm(trimmedSearchTerm);
     } catch (error) {
       console.error('Error searching:', error);
-      console.error("Search Error: There was a problem performing your search.");
-
-      // On error, use fallback search
-      console.log(`Using fallback search for "${searchTerm}" due to API error`);
-      const fallbackResults = generateFallbackSearchResults(searchTerm, user?.uid);
-
-      setResults({
-        pages: fallbackResults.pages,
-        users: fallbackResults.users
-      });
+      setResults({ pages: [], users: [], groups: [] });
     } finally {
       setIsLoading(false);
-
-      // Restore scroll position after results update
-      setTimeout(restoreScrollPosition, 0);
-
-      // Restore cursor position and focus
-      setTimeout(() => {
-        if (cursorPosition && searchInputRef.current) {
-          if (cursorPosition.hasFocus) {
-            searchInputRef.current.focus();
-          }
-          searchInputRef.current.setSelectionRange(
-            cursorPosition.selectionStart,
-            cursorPosition.selectionEnd
-          );
-        }
-      }, 0);
     }
   };
 
@@ -322,31 +203,13 @@ export default function SearchPage() {
 
 
 
-  // Save scroll position before updating results (optimized to reduce calls)
-  const saveScrollPosition = () => {
-    // Only save scroll position when actually needed (during search operations)
-    if (resultsContainerRef.current) {
-      scrollPositionRef.current = resultsContainerRef.current.scrollTop;
-    } else {
-      // If results container isn't available, save window scroll position
-      scrollPositionRef.current = window.scrollY;
+  // Function to save search term (simplified)
+  const saveSearchTerm = (searchTerm) => {
+    // Save to recent searches when a search is completed
+    if (searchTerm && searchTerm.trim()) {
+      console.log(`Saving search term: "${searchTerm}"`);
+      // This could be expanded to save to localStorage or user preferences
     }
-  };
-
-  // Restore scroll position after results update (optimized)
-  const restoreScrollPosition = () => {
-    if (resultsContainerRef.current && scrollPositionRef.current !== null) {
-      resultsContainerRef.current.scrollTop = scrollPositionRef.current;
-    } else if (scrollPositionRef.current !== null) {
-      // If results container isn't available, restore window scroll position
-      window.scrollTo(0, scrollPositionRef.current);
-    }
-  };
-
-  // Function to save search term (no longer needed for recent searches)
-  const saveSearchTerm = () => {
-    // This function is kept for compatibility but doesn't do anything now
-    // We'll use explicit saveSearchQuery for pinned searches instead
   };
 
   // Create a debounced search function with 400ms delay
@@ -356,16 +219,12 @@ export default function SearchPage() {
   useEffect(() => {
     debouncedSearch.current = debounce((searchTerm) => {
       if (searchTerm.trim()) {
-        // Call performSearch directly without dependency issues
         performSearchInternal(searchTerm.trim());
 
-        // Update URL without triggering navigation
+        // Update URL
         const url = new URL(window.location);
         url.searchParams.set('q', searchTerm.trim());
-        window.history.replaceState({
-          searchQuery: searchTerm.trim(),
-          isUserInitiated: true
-        }, '', url);
+        window.history.replaceState({}, '', url);
       } else {
         setResults({ pages: [], users: [], groups: [] });
         setIsLoading(false);
@@ -373,49 +232,34 @@ export default function SearchPage() {
         // Remove the q parameter from URL
         const url = new URL(window.location);
         url.searchParams.delete('q');
-        window.history.replaceState({
-          searchQuery: '',
-          isUserInitiated: true
-        }, '', url);
+        window.history.replaceState({}, '', url);
       }
     }, 400);
 
     return () => {
-      // Clean up the debounced function
       if (debouncedSearch.current && debouncedSearch.current.cancel) {
         debouncedSearch.current.cancel();
       }
     };
-  }, []); // Remove performSearch dependency to prevent recreation
+  }, []);
 
   // Track if this is an initial load or a user-initiated search
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Handle query changes (simplified to prevent re-renders and page reloads)
+  // Handle query changes
   const handleQueryChange = useCallback((e) => {
     const newQuery = e.target.value;
-
-    // Preserve cursor position
-    const cursorPosition = e.target.selectionStart;
-
     setQuery(newQuery);
 
-    // Cancel any pending debounced search to prevent stale requests
+    // Cancel any pending debounced search
     if (debouncedSearch.current && debouncedSearch.current.cancel) {
       debouncedSearch.current.cancel();
     }
 
-    // Always trigger debounced search after initialization
+    // Trigger debounced search
     if (hasInitializedFromURL && debouncedSearch.current) {
       debouncedSearch.current(newQuery);
     }
-
-    // Restore cursor position after state update
-    setTimeout(() => {
-      if (searchInputRef.current && document.activeElement === searchInputRef.current) {
-        searchInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
-      }
-    }, 0);
   }, [hasInitializedFromURL]);
 
   // Effect to handle initial search from URL
@@ -435,40 +279,25 @@ export default function SearchPage() {
       debouncedSearch.current.cancel();
     }
 
-    // Immediately perform search without waiting for debounce
     const trimmedQuery = query.trim();
 
     if (trimmedQuery) {
-      // Save scroll position before updating results
-      saveScrollPosition();
-
-      // Update URL with search query (trimmed)
+      // Update URL
       const url = new URL(window.location);
       url.searchParams.set('q', trimmedQuery);
-      window.history.replaceState({ searchQuery: trimmedQuery }, '', url);
+      window.history.replaceState({}, '', url);
 
-      // Explicitly save search term when user presses Enter
-      saveSearchTerm(trimmedQuery);
-
-      // Use the trimmed query for search
+      // Perform search immediately
       performSearchInternal(trimmedQuery);
     } else {
-      // If query is empty or just whitespace, clear results and URL parameter
+      // Clear results and URL parameter
       setResults({ pages: [], users: [], groups: [] });
-
-      // Remove the q parameter from URL
       const url = new URL(window.location);
       url.searchParams.delete('q');
-      window.history.replaceState({ searchQuery: '' }, '', url);
+      window.history.replaceState({}, '', url);
     }
 
-    // Set isInitialLoad to false since this is a user-initiated search
     setIsInitialLoad(false);
-
-    // Keep focus on the search input
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   };
 
   // Share search URL using Web Share API or fallback to clipboard
@@ -693,19 +522,14 @@ export default function SearchPage() {
           <SavedSearches
             userId={user?.uid}
             onSelect={(searchTerm) => {
-              // Save scroll position before updating results
-              saveScrollPosition();
-
               setQuery(searchTerm);
 
               // Update URL with search query
               const url = new URL(window.location);
               url.searchParams.set('q', searchTerm);
-              window.history.replaceState({ searchQuery: searchTerm }, '', url);
+              window.history.replaceState({}, '', url);
 
               performSearchInternal(searchTerm);
-
-              // Set isInitialLoad to false since this is a user-initiated search
               setIsInitialLoad(false);
             }}
           />
@@ -716,68 +540,86 @@ export default function SearchPage() {
           {/* Search Recommendations */}
           <SearchRecommendations
             onSelect={(recommendation) => {
-              // Save scroll position before updating results
-              saveScrollPosition();
-
               setQuery(recommendation);
 
               // Update URL with search query
               const url = new URL(window.location);
               url.searchParams.set('q', recommendation);
-              window.history.replaceState({ searchQuery: recommendation }, '', url);
+              window.history.replaceState({}, '', url);
 
               performSearchInternal(recommendation);
-
-              // Set isInitialLoad to false since this is a user-initiated search
               setIsInitialLoad(false);
             }}
           />
         </div>
       )}
 
+      {/* Search Results */}
       {query && (
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
             {isLoading
               ? "Searching..."
-              : `Found ${totalResults} results for "${query}"`}
+              : `Found ${(results.pages?.length || 0) + (results.users?.length || 0)} results for "${query}"`}
           </p>
-          {!isLoading && combinedResults.length > 0 && combinedResults[0].isFallback && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Showing suggested results. Create a page with this title to add it to the database.
-            </p>
-          )}
         </div>
       )}
 
-      <div className="space-y-6" ref={resultsContainerRef}>
-        {/* Main Results Display */}
-        {!isLoading && combinedResults.length > 0 && (
-          <div className="space-y-2 mt-8">
-            <h3 className="text-lg font-semibold mb-4">All Results</h3>
-            {combinedResults.map(result => (
-              <div key={`${result.type}-${result.id}`} className="flex items-center">
+      <div className="space-y-6">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
+        {/* Users Results */}
+        {!isLoading && results.users && results.users.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold mb-4">Users</h3>
+            {results.users.map(user => (
+              <div key={`user-${user.id}`} className="flex items-center">
                 <div className="flex-none max-w-[60%]">
-                  <PillLink href={result.url} className="max-w-full">
-                    {result.displayName}
+                  <PillLink href={`/user/${user.id}`} className="max-w-full">
+                    @{user.username}
                   </PillLink>
                 </div>
                 <span className="text-xs text-muted-foreground ml-2 truncate">
-                  {result.type === 'user' ? (
-                    `${result.username} - User${result.isFallback ? ' (Suggested)' : ''}`
-                  ) : result.type === 'group' && groupsEnabled ? (
-                    `${result.displayName} - Group${result.isFallback ? ' (Suggested)' : ''}`
-                  ) : (
-                    `by ${result.username || "Missing username"}${result.isFallback ? ' (Suggested)' : ''}`
-                  )}
+                  User
                 </span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Create page option when no results */}
-        {!isLoading && combinedResults.length === 0 && query && query.trim() && (
+        {/* Pages Results */}
+        {!isLoading && results.pages && results.pages.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold mb-4">Pages</h3>
+            {results.pages.map(page => (
+              <div key={`page-${page.id}`} className="flex items-center">
+                <div className="flex-none max-w-[60%]">
+                  <PillLink
+                    href={`/${page.id}`}
+                    isPublic={page.isPublic}
+                    isOwned={page.userId === user?.uid}
+                    className="max-w-full"
+                  >
+                    {page.title}
+                  </PillLink>
+                </div>
+                <span className="text-xs text-muted-foreground ml-2 truncate">
+                  by {page.username || "Missing username"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* No Results */}
+        {!isLoading && query && query.trim() &&
+         (!results.pages || results.pages.length === 0) &&
+         (!results.users || results.users.length === 0) && (
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
             <Button asChild>
