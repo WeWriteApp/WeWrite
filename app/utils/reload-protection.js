@@ -1,6 +1,6 @@
 /**
  * Global Reload Protection Utility
- * 
+ *
  * This module provides a centralized way to prevent infinite refresh loops
  * by tracking and limiting page reloads across the entire application.
  */
@@ -16,7 +16,7 @@ function getReloadData() {
   try {
     const data = localStorage.getItem(RELOAD_PROTECTION_KEY);
     if (!data) return { count: 0, firstReload: 0 };
-    
+
     const parsed = JSON.parse(data);
     return {
       count: parsed.count || 0,
@@ -48,19 +48,19 @@ function setReloadData(count, firstReload) {
 export function canReload() {
   const now = Date.now();
   const data = getReloadData();
-  
+
   // Reset counter if enough time has passed
   if (data.firstReload && (now - data.firstReload) > RESET_TIME_MS) {
     setReloadData(0, 0);
     return true;
   }
-  
+
   // Check if we've exceeded the limit
   if (data.count >= MAX_RELOADS_PER_SESSION) {
     console.warn('Reload protection: Maximum reloads reached for this session');
     return false;
   }
-  
+
   return true;
 }
 
@@ -70,14 +70,14 @@ export function canReload() {
 export function recordReload() {
   const now = Date.now();
   const data = getReloadData();
-  
+
   const newCount = data.count + 1;
   const firstReload = data.firstReload || now;
-  
+
   setReloadData(newCount, firstReload);
-  
+
   console.log(`Reload protection: Recorded reload ${newCount}/${MAX_RELOADS_PER_SESSION}`);
-  
+
   return newCount;
 }
 
@@ -99,23 +99,23 @@ export function resetReloadProtection() {
 export function safeReload(reason = 'unknown') {
   if (!canReload()) {
     console.error(`Reload protection: Blocked reload attempt (reason: ${reason})`);
-    
+
     // Show user-friendly message
     if (typeof window !== 'undefined') {
       alert('Multiple page reloads detected. Please wait a few minutes before trying again, or contact support if the issue persists.');
     }
-    
+
     return false;
   }
-  
+
   recordReload();
   console.log(`Reload protection: Allowing reload (reason: ${reason})`);
-  
+
   // Use a small delay to ensure logging completes
   setTimeout(() => {
     window.location.reload();
   }, 100);
-  
+
   return true;
 }
 
@@ -124,23 +124,41 @@ export function safeReload(reason = 'unknown') {
  */
 export function initReloadProtection() {
   if (typeof window === 'undefined') return;
-  
+
   try {
-    // Override window.location.reload to add protection
-    const originalReload = window.location.reload;
-    
-    window.location.reload = function(forcedReload) {
-      console.log('Reload protection: Intercepted reload attempt');
-      
-      if (!canReload()) {
-        console.error('Reload protection: Blocked reload attempt');
-        return;
+    // Instead of overriding window.location.reload (which is read-only),
+    // we'll use event listeners to detect and prevent reloads
+
+    // Listen for beforeunload events to detect reload attempts
+    window.addEventListener('beforeunload', function(event) {
+      // Check if this is a reload (not navigation to a different page)
+      const isReload = event.target === window.document;
+
+      if (isReload && !canReload()) {
+        console.log('Reload protection: Blocked reload attempt via beforeunload');
+        event.preventDefault();
+        event.returnValue = 'Multiple page reloads detected. Please wait before trying again.';
+        return 'Multiple page reloads detected. Please wait before trying again.';
       }
-      
-      recordReload();
-      originalReload.call(this, forcedReload);
-    };
-    
+
+      if (isReload) {
+        recordReload();
+      }
+    });
+
+    // Listen for keyboard shortcuts (Ctrl+R, F5, etc.)
+    window.addEventListener('keydown', function(event) {
+      // F5 or Ctrl+R
+      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+        if (!canReload()) {
+          console.log('Reload protection: Blocked reload attempt via keyboard');
+          event.preventDefault();
+          alert('Multiple page reloads detected. Please wait a few minutes before trying again.');
+          return false;
+        }
+      }
+    });
+
     console.log('Reload protection: Initialized successfully');
   } catch (error) {
     console.error('Error initializing reload protection:', error);
@@ -153,12 +171,12 @@ export function initReloadProtection() {
 export function detectPotentialLoop() {
   const data = getReloadData();
   const now = Date.now();
-  
+
   // If we've had multiple reloads in a short time, it might be a loop
   if (data.count >= 2 && data.firstReload && (now - data.firstReload) < 2 * 60 * 1000) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -168,7 +186,7 @@ export function detectPotentialLoop() {
 export function getReloadStatus() {
   const data = getReloadData();
   const now = Date.now();
-  
+
   return {
     count: data.count,
     maxReloads: MAX_RELOADS_PER_SESSION,

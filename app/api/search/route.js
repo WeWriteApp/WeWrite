@@ -244,8 +244,25 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     const userPagesSnapshot = await getDocs(userPagesQuery);
     console.log(`Found ${userPagesSnapshot.size} user pages before filtering`);
 
+    // Log some sample page titles to understand what's in the database
+    if (userPagesSnapshot.size > 0) {
+      console.log('Sample user page titles:');
+      let sampleCount = 0;
+      userPagesSnapshot.forEach(doc => {
+        if (sampleCount < 5) {
+          const data = doc.data();
+          console.log(`  - "${data.title || 'Untitled'}" (ID: ${doc.id})`);
+          sampleCount++;
+        }
+      });
+    } else {
+      console.log('No user pages found in database for user:', isFilteringByUser ? filterByUserId : userId);
+    }
+
     // Process user's pages
+    let userPagesProcessed = 0;
     userPagesSnapshot.forEach(doc => {
+      userPagesProcessed++;
       const data = doc.data();
       const pageTitle = data.title || 'Untitled';
       const normalizedTitle = pageTitle.toLowerCase();
@@ -265,41 +282,27 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         return;
       }
 
-      // For multi-word searches, use our improved containsAllSearchWords function
+      // For multi-word searches, try both strict (all words) and flexible (any word) matching
       if (hasMultipleWords) {
-        console.log(`Checking if user page "${pageTitle}" contains all words in "${searchTermLower}"`);
+        console.log(`Checking if user page "${pageTitle}" contains words from "${searchTermLower}"`);
 
-        // First check the title
+        // First try strict matching (all words must be present)
         const titleMatchResult = containsAllSearchWords(pageTitle, searchTermLower);
 
         // Then check the content if available
         let contentMatchResult = { match: false, type: 'none' };
         if (data.content && Array.isArray(data.content)) {
-          // Extract text from content (Slate structure)
-          let contentText = '';
           try {
-            // Use our utility function to extract text from Slate content
-            contentText = extractTextFromSlateContent(data.content);
-            console.log(`Extracted content text (first 100 chars): "${contentText.substring(0, 100)}..."`);
-
-            // Check if content contains the search term
+            const contentText = extractTextFromSlateContent(data.content);
             contentMatchResult = containsAllSearchWords(contentText, searchTermLower);
           } catch (error) {
             console.error('Error extracting text from content:', error);
           }
         }
 
-        // Use the best match between title and content
-        const matchResult = titleMatchResult.match || contentMatchResult.match
-          ? {
-              match: true,
-              // Prioritize title matches over content matches
-              type: titleMatchResult.match ? titleMatchResult.type : `content_${contentMatchResult.type}`
-            }
-          : { match: false, type: 'none' };
-
-        if (matchResult.match) {
-          console.log(`✅ User page match (${matchResult.type}): "${pageTitle}" matches "${searchTermLower}"`);
+        // Check for strict match first (all words)
+        if (titleMatchResult.match || contentMatchResult.match) {
+          console.log(`✅ User page strict match: "${pageTitle}" contains all words in "${searchTermLower}"`);
           allResults.push({
             id: doc.id,
             title: pageTitle,
@@ -308,16 +311,42 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             userId: data.userId,
             lastModified: data.lastModified,
             type: 'user',
-            matchType: matchResult.type,
-            containsAllSearchWords: true,
-            matchLocation: matchResult.type.startsWith('content_') ? 'content' : 'title'
+            matchType: titleMatchResult.match ? titleMatchResult.type : `content_${contentMatchResult.type}`,
+            matchScore: 100, // Highest score for exact matches
+            matchLocation: titleMatchResult.match ? 'title' : 'content'
           });
-          return; // Only return if we found a match
-        } else {
-          console.log(`❌ User page "${pageTitle}" does not match "${searchTermLower}"`);
+          return;
         }
-        // Continue checking other criteria if we didn't find a match
-        console.log(`Continuing with other search criteria for user page "${pageTitle}"`);
+
+        // If no strict match, try flexible matching (any word)
+        const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+        let foundAnyWord = false;
+        let matchScore = 0;
+
+        for (const word of searchWords) {
+          if (normalizedTitle.includes(word)) {
+            foundAnyWord = true;
+            matchScore += 50; // Points for each word found
+            console.log(`✅ Found word "${word}" in title "${pageTitle}"`);
+          }
+        }
+
+        if (foundAnyWord) {
+          console.log(`✅ User page partial match: "${pageTitle}" contains some words from "${searchTermLower}"`);
+          allResults.push({
+            id: doc.id,
+            title: pageTitle,
+            isOwned: true,
+            isEditable: true,
+            userId: data.userId,
+            lastModified: data.lastModified,
+            type: 'user',
+            matchType: 'partial_word_match',
+            matchScore: matchScore,
+            matchLocation: 'title'
+          });
+          return;
+        }
       }
 
       // For single-word searches, check if title includes the search term
@@ -330,9 +359,37 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           isEditable: true,
           userId: data.userId,
           lastModified: data.lastModified,
-          type: 'user'
+          type: 'user',
+          matchType: 'title_contains',
+          matchScore: 90,
+          matchLocation: 'title'
         });
         return;
+      }
+
+      // For single-word searches, also check content
+      if (data.content && Array.isArray(data.content)) {
+        try {
+          const contentText = extractTextFromSlateContent(data.content);
+          if (contentText.toLowerCase().includes(searchTermLower)) {
+            console.log(`User page match (content): "${pageTitle}" content contains "${searchTermLower}"`);
+            allResults.push({
+              id: doc.id,
+              title: pageTitle,
+              isOwned: true,
+              isEditable: true,
+              userId: data.userId,
+              lastModified: data.lastModified,
+              type: 'user',
+              matchType: 'content_contains',
+              matchScore: 80,
+              matchLocation: 'content'
+            });
+            return;
+          }
+        } catch (error) {
+          console.error('Error extracting text from content for single-word search:', error);
+        }
       }
 
       // Check if any word in the title contains the search term
@@ -348,27 +405,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             userId: data.userId,
             lastModified: data.lastModified,
             type: 'user',
-            matchQuality: 'partialWord'
+            matchType: 'partial_word',
+            matchScore: 75,
+            matchLocation: 'title'
           });
           return;
         }
-      }
-
-      // Additional check: See if the search term is part of the title as a whole
-      // This helps with cases where the search term might span multiple words
-      if (normalizedTitle.includes(searchTermLower)) {
-        console.log(`User page match (title contains): "${pageTitle}" contains "${searchTermLower}" as a substring`);
-        allResults.push({
-          id: doc.id,
-          title: pageTitle,
-          isOwned: true,
-          isEditable: true,
-          userId: data.userId,
-          lastModified: data.lastModified,
-          type: 'user',
-          matchQuality: 'titleContains'
-        });
-        return;
       }
 
       // Check if any word in the title starts with the search term
@@ -383,12 +425,16 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             userId: data.userId,
             lastModified: data.lastModified,
             type: 'user',
-            matchQuality: 'wordStartsWith'
+            matchType: 'word_start',
+            matchScore: 85,
+            matchLocation: 'title'
           });
           return;
         }
       }
     });
+
+    console.log(`Processed ${userPagesProcessed} user pages, found ${allResults.filter(r => r.type === 'user').length} matching results`);
 
     // STEP 2: Get public pages if not filtering by user
     if (!isFilteringByUser) {
@@ -402,6 +448,21 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
       const publicPagesSnapshot = await getDocs(publicPagesQuery);
       console.log(`Found ${publicPagesSnapshot.size} public pages before filtering`);
+
+      // Log some sample public page titles
+      if (publicPagesSnapshot.size > 0) {
+        console.log('Sample public page titles:');
+        let sampleCount = 0;
+        publicPagesSnapshot.forEach(doc => {
+          if (sampleCount < 5) {
+            const data = doc.data();
+            console.log(`  - "${data.title || 'Untitled'}" (ID: ${doc.id}, userId: ${data.userId})`);
+            sampleCount++;
+          }
+        });
+      } else {
+        console.log('No public pages found in database');
+      }
 
       // Process public pages with access control
       publicPagesSnapshot.forEach(doc => {
@@ -436,41 +497,27 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           return;
         }
 
-        // For multi-word searches, use our improved containsAllSearchWords function
+        // For multi-word searches, try both strict (all words) and flexible (any word) matching
         if (hasMultipleWords) {
-          console.log(`Checking if public page "${pageTitle}" contains all words in "${searchTermLower}"`);
+          console.log(`Checking if public page "${pageTitle}" contains words from "${searchTermLower}"`);
 
-          // First check the title
+          // First try strict matching (all words must be present)
           const titleMatchResult = containsAllSearchWords(pageTitle, searchTermLower);
 
           // Then check the content if available
           let contentMatchResult = { match: false, type: 'none' };
           if (data.content && Array.isArray(data.content)) {
-            // Extract text from content (Slate structure)
-            let contentText = '';
             try {
-              // Use our utility function to extract text from Slate content
-              contentText = extractTextFromSlateContent(data.content);
-              console.log(`Extracted content text (first 100 chars): "${contentText.substring(0, 100)}..."`);
-
-              // Check if content contains the search term
+              const contentText = extractTextFromSlateContent(data.content);
               contentMatchResult = containsAllSearchWords(contentText, searchTermLower);
             } catch (error) {
               console.error('Error extracting text from content:', error);
             }
           }
 
-          // Use the best match between title and content
-          const matchResult = titleMatchResult.match || contentMatchResult.match
-            ? {
-                match: true,
-                // Prioritize title matches over content matches
-                type: titleMatchResult.match ? titleMatchResult.type : `content_${contentMatchResult.type}`
-              }
-            : { match: false, type: 'none' };
-
-          if (matchResult.match) {
-            console.log(`✅ Public page match (${matchResult.type}): "${pageTitle}" matches "${searchTermLower}"`);
+          // Check for strict match first (all words)
+          if (titleMatchResult.match || contentMatchResult.match) {
+            console.log(`✅ Public page strict match: "${pageTitle}" contains all words in "${searchTermLower}"`);
             allResults.push({
               id: doc.id,
               title: pageTitle,
@@ -479,16 +526,42 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
               userId: data.userId,
               lastModified: data.lastModified,
               type: 'public',
-              matchType: matchResult.type,
-              containsAllSearchWords: true,
-              matchLocation: matchResult.type.startsWith('content_') ? 'content' : 'title'
+              matchType: titleMatchResult.match ? titleMatchResult.type : `content_${contentMatchResult.type}`,
+              matchScore: 100, // Highest score for exact matches
+              matchLocation: titleMatchResult.match ? 'title' : 'content'
             });
-            return; // Only return if we found a match
-          } else {
-            console.log(`❌ Public page "${pageTitle}" does not match "${searchTermLower}"`);
+            return;
           }
-          // Continue checking other criteria if we didn't find a match
-          console.log(`Continuing with other search criteria for public page "${pageTitle}"`);
+
+          // If no strict match, try flexible matching (any word)
+          const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+          let foundAnyWord = false;
+          let matchScore = 0;
+
+          for (const word of searchWords) {
+            if (normalizedTitle.includes(word)) {
+              foundAnyWord = true;
+              matchScore += 50; // Points for each word found
+              console.log(`✅ Found word "${word}" in title "${pageTitle}"`);
+            }
+          }
+
+          if (foundAnyWord) {
+            console.log(`✅ Public page partial match: "${pageTitle}" contains some words from "${searchTermLower}"`);
+            allResults.push({
+              id: doc.id,
+              title: pageTitle,
+              isOwned: false,
+              isEditable: false,
+              userId: data.userId,
+              lastModified: data.lastModified,
+              type: 'public',
+              matchType: 'partial_word_match',
+              matchScore: matchScore,
+              matchLocation: 'title'
+            });
+            return;
+          }
         }
 
         // For single-word searches, check if title includes the search term
@@ -501,9 +574,37 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             isEditable: false,
             userId: data.userId,
             lastModified: data.lastModified,
-            type: 'public'
+            type: 'public',
+            matchType: 'title_contains',
+            matchScore: 90,
+            matchLocation: 'title'
           });
           return;
+        }
+
+        // For single-word searches, also check content
+        if (data.content && Array.isArray(data.content)) {
+          try {
+            const contentText = extractTextFromSlateContent(data.content);
+            if (contentText.toLowerCase().includes(searchTermLower)) {
+              console.log(`Public page match (content): "${pageTitle}" content contains "${searchTermLower}"`);
+              allResults.push({
+                id: doc.id,
+                title: pageTitle,
+                isOwned: false,
+                isEditable: false,
+                userId: data.userId,
+                lastModified: data.lastModified,
+                type: 'public',
+                matchType: 'content_contains',
+                matchScore: 80,
+                matchLocation: 'content'
+              });
+              return;
+            }
+          } catch (error) {
+            console.error('Error extracting text from content for single-word search:', error);
+          }
         }
 
         // Check if any word in the title contains the search term
@@ -519,27 +620,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
               userId: data.userId,
               lastModified: data.lastModified,
               type: 'public',
-              matchQuality: 'partialWord'
+              matchType: 'partial_word',
+              matchScore: 75,
+              matchLocation: 'title'
             });
             return;
           }
-        }
-
-        // Additional check: See if the search term is part of the title as a whole
-        // This helps with cases where the search term might span multiple words
-        if (normalizedTitle.includes(searchTermLower)) {
-          console.log(`Public page match (title contains): "${pageTitle}" contains "${searchTermLower}" as a substring`);
-          allResults.push({
-            id: doc.id,
-            title: pageTitle,
-            isOwned: false,
-            isEditable: false,
-            userId: data.userId,
-            lastModified: data.lastModified,
-            type: 'public',
-            matchQuality: 'titleContains'
-          });
-          return;
         }
 
         // Check if any word in the title starts with the search term
@@ -554,7 +640,9 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
               userId: data.userId,
               lastModified: data.lastModified,
               type: 'public',
-              matchQuality: 'wordStartsWith'
+              matchType: 'word_start',
+              matchScore: 85,
+              matchLocation: 'title'
             });
             return;
           }
@@ -612,41 +700,27 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             return;
           }
 
-          // For multi-word searches, use our improved containsAllSearchWords function
+          // For multi-word searches, try both strict (all words) and flexible (any word) matching
           if (hasMultipleWords) {
-            console.log(`Checking if group page "${pageTitle}" contains all words in "${searchTermLower}"`);
+            console.log(`Checking if group page "${pageTitle}" contains words from "${searchTermLower}"`);
 
-            // First check the title
+            // First try strict matching (all words must be present)
             const titleMatchResult = containsAllSearchWords(pageTitle, searchTermLower);
 
             // Then check the content if available
             let contentMatchResult = { match: false, type: 'none' };
             if (data.content && Array.isArray(data.content)) {
-              // Extract text from content (Slate structure)
-              let contentText = '';
               try {
-                // Use our utility function to extract text from Slate content
-                contentText = extractTextFromSlateContent(data.content);
-                console.log(`Extracted content text (first 100 chars): "${contentText.substring(0, 100)}..."`);
-
-                // Check if content contains the search term
+                const contentText = extractTextFromSlateContent(data.content);
                 contentMatchResult = containsAllSearchWords(contentText, searchTermLower);
               } catch (error) {
                 console.error('Error extracting text from content:', error);
               }
             }
 
-            // Use the best match between title and content
-            const matchResult = titleMatchResult.match || contentMatchResult.match
-              ? {
-                  match: true,
-                  // Prioritize title matches over content matches
-                  type: titleMatchResult.match ? titleMatchResult.type : `content_${contentMatchResult.type}`
-                }
-              : { match: false, type: 'none' };
-
-            if (matchResult.match) {
-              console.log(`✅ Group page match (${matchResult.type}): "${pageTitle}" matches "${searchTermLower}"`);
+            // Check for strict match first (all words)
+            if (titleMatchResult.match || contentMatchResult.match) {
+              console.log(`✅ Group page strict match: "${pageTitle}" contains all words in "${searchTermLower}"`);
               allResults.push({
                 id: doc.id,
                 title: pageTitle,
@@ -656,16 +730,43 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
                 groupId: data.groupId,
                 lastModified: data.lastModified,
                 type: 'group',
-                matchType: matchResult.type,
-                containsAllSearchWords: true,
-                matchLocation: matchResult.type.startsWith('content_') ? 'content' : 'title'
+                matchType: titleMatchResult.match ? titleMatchResult.type : `content_${contentMatchResult.type}`,
+                matchScore: 100, // Highest score for exact matches
+                matchLocation: titleMatchResult.match ? 'title' : 'content'
               });
-              return; // Only return if we found a match
-            } else {
-              console.log(`❌ Group page "${pageTitle}" does not match "${searchTermLower}"`);
+              return;
             }
-            // Continue checking other criteria if we didn't find a match
-            console.log(`Continuing with other search criteria for group page "${pageTitle}"`);
+
+            // If no strict match, try flexible matching (any word)
+            const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
+            let foundAnyWord = false;
+            let matchScore = 0;
+
+            for (const word of searchWords) {
+              if (normalizedTitle.includes(word)) {
+                foundAnyWord = true;
+                matchScore += 50; // Points for each word found
+                console.log(`✅ Found word "${word}" in title "${pageTitle}"`);
+              }
+            }
+
+            if (foundAnyWord) {
+              console.log(`✅ Group page partial match: "${pageTitle}" contains some words from "${searchTermLower}"`);
+              allResults.push({
+                id: doc.id,
+                title: pageTitle,
+                isOwned: data.userId === userId,
+                isEditable: true,
+                userId: data.userId,
+                groupId: data.groupId,
+                lastModified: data.lastModified,
+                type: 'group',
+                matchType: 'partial_word_match',
+                matchScore: matchScore,
+                matchLocation: 'title'
+              });
+              return;
+            }
           }
 
           // For single-word searches, check if title includes the search term
@@ -679,9 +780,38 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
               userId: data.userId,
               groupId: data.groupId,
               lastModified: data.lastModified,
-              type: 'group'
+              type: 'group',
+              matchType: 'title_contains',
+              matchScore: 90,
+              matchLocation: 'title'
             });
             return;
+          }
+
+          // For single-word searches, also check content
+          if (data.content && Array.isArray(data.content)) {
+            try {
+              const contentText = extractTextFromSlateContent(data.content);
+              if (contentText.toLowerCase().includes(searchTermLower)) {
+                console.log(`Group page match (content): "${pageTitle}" content contains "${searchTermLower}"`);
+                allResults.push({
+                  id: doc.id,
+                  title: pageTitle,
+                  isOwned: data.userId === userId,
+                  isEditable: true,
+                  userId: data.userId,
+                  groupId: data.groupId,
+                  lastModified: data.lastModified,
+                  type: 'group',
+                  matchType: 'content_contains',
+                  matchScore: 80,
+                  matchLocation: 'content'
+                });
+                return;
+              }
+            } catch (error) {
+              console.error('Error extracting text from content for single-word search:', error);
+            }
           }
 
           // Check if any word in the title contains the search term
@@ -698,28 +828,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
                 groupId: data.groupId,
                 lastModified: data.lastModified,
                 type: 'group',
-                matchQuality: 'partialWord'
+                matchType: 'partial_word',
+                matchScore: 75,
+                matchLocation: 'title'
               });
               return;
             }
-          }
-
-          // Additional check: See if the search term is part of the title as a whole
-          // This helps with cases where the search term might span multiple words
-          if (normalizedTitle.includes(searchTermLower)) {
-            console.log(`Group page match (title contains): "${pageTitle}" contains "${searchTermLower}" as a substring`);
-            allResults.push({
-              id: doc.id,
-              title: pageTitle,
-              isOwned: data.userId === userId,
-              isEditable: true,
-              userId: data.userId,
-              groupId: data.groupId,
-              lastModified: data.lastModified,
-              type: 'group',
-              matchQuality: 'titleContains'
-            });
-            return;
           }
 
           // Check if any word in the title starts with the search term
@@ -735,7 +849,9 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
                 groupId: data.groupId,
                 lastModified: data.lastModified,
                 type: 'group',
-                matchQuality: 'wordStartsWith'
+                matchType: 'word_start',
+                matchScore: 85,
+                matchLocation: 'title'
               });
               return;
             }
@@ -788,217 +904,33 @@ export async function GET(request) {
       userId,
       filterByUserId,
       groupIds,
-      url: request.url
+      url: request.url,
+      timestamp: new Date().toISOString()
     });
+
+    // Additional validation
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      console.log('Empty search term provided, returning empty results');
+      return NextResponse.json({
+        pages: [],
+        users: [],
+        source: "empty_search_term"
+      }, { status: 200 });
+    }
+
+    // CRITICAL FIX: Always use Firestore fallback for better reliability
+    // BigQuery can be unreliable in production, so prioritize Firestore
+    console.log('Using Firestore search for better reliability');
 
     // For unauthenticated users, return only public content
     if (!userId) {
       console.log('No userId provided, returning only public content');
 
-      // Search for public pages in Firestore
-      const publicPages = await searchPagesInFirestore(null, searchTerm, [], null);
+      try {
+        // Search for public pages in Firestore
+        const publicPages = await searchPagesInFirestore(null, searchTerm, [], null);
 
-      // Search for users if we have a search term
-      let users = [];
-      if (searchTerm && searchTerm.trim().length > 1) {
-        try {
-          const { searchUsers } = await import('../../firebase/database');
-          users = await searchUsers(searchTerm, 5);
-          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
-
-          // Format users for the response
-          users = users.map(user => ({
-            id: user.id,
-            username: user.username || "Anonymous",
-            photoURL: user.photoURL || null,
-            type: 'user'
-          }));
-        } catch (userError) {
-          console.error('Error searching for users:', userError);
-        }
-      }
-
-      return NextResponse.json({
-        pages: publicPages,
-        users,
-        source: "unauthenticated_search"
-      }, { status: 200 });
-    }
-
-    // If BigQuery is not initialized, use Firestore fallback
-    if (!bigquery) {
-      console.log('BigQuery client not initialized, using Firestore fallback');
-
-      // Search for pages in Firestore
-      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
-
-      // Search for users if we have a search term
-      let users = [];
-      if (searchTerm && searchTerm.trim().length > 1) {
-        try {
-          const { searchUsers } = await import('../../firebase/database');
-          users = await searchUsers(searchTerm, 5);
-          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
-
-          // Format users for the response
-          users = users.map(user => ({
-            id: user.id,
-            username: user.username || "Anonymous",
-            photoURL: user.photoURL || null,
-            type: 'user'
-          }));
-        } catch (userError) {
-          console.error('Error searching for users:', userError);
-        }
-      }
-
-      return NextResponse.json({
-        pages,
-        users,
-        source: "firestore_fallback"
-      }, { status: 200 });
-    }
-
-    // Test BigQuery connection first
-    const isConnected = await testBigQueryConnection();
-    if (!isConnected) {
-      console.log('BigQuery connection failed, falling back to Firestore');
-
-      // Search for pages in Firestore
-      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
-
-      // Search for users if we have a search term
-      let users = [];
-      if (searchTerm && searchTerm.trim().length > 1) {
-        try {
-          const { searchUsers } = await import('../../firebase/database');
-          users = await searchUsers(searchTerm, 5);
-          console.log(`Found ${users.length} users matching query "${searchTerm}"`);
-
-          // Format users for the response
-          users = users.map(user => ({
-            id: user.id,
-            username: user.username || "Anonymous",
-            photoURL: user.photoURL || null,
-            type: 'user'
-          }));
-        } catch (userError) {
-          console.error('Error searching for users:', userError);
-        }
-      }
-
-      return NextResponse.json({
-        pages,
-        users,
-        source: "firestore_fallback_after_bigquery_connection_failed"
-      }, { status: 200 });
-    }
-
-    // Ensure searchTerm is properly handled if not provided
-    // Use % wildcards to match any characters before and after the search term
-    // This ensures we match partial words like "book" in "notebook"
-    const searchTermLower = searchTerm.toLowerCase().trim();
-
-    // For multi-word searches, split into individual words
-    const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
-    const hasMultipleWords = searchWords.length > 1;
-
-    // Create more flexible patterns for matching
-    // 1. Standard pattern with wildcards on both sides for substring matching
-    const searchTermFormatted = searchTermLower ? `%${searchTermLower}%` : "%";
-
-    // 2. Pattern for matching at the beginning of words (helps with "book" matching "books")
-    const wordStartPattern = searchTermLower ? `% ${searchTermLower}%` : "%";
-
-    // 3. Pattern for matching partial words (helps with "book" in "notebook")
-    // Use a more aggressive partial word pattern to ensure we catch all relevant matches
-    const partialWordPattern = searchTermLower.length > 1
-      ? `%${searchTermLower}%`
-      : searchTermFormatted;
-
-    // 4. Add a pattern specifically for matching words that contain the search term
-    const wordContainsPattern = searchTermLower ? `% %${searchTermLower}% %` : "%";
-
-    // 4. For multi-word searches, create patterns for each word
-    let wordPatterns = [];
-    if (hasMultipleWords && searchWords.length > 0) {
-      // Create patterns for each individual word
-      wordPatterns = searchWords.map(word => `%${word}%`);
-      console.log(`Created word patterns for multi-word search: ${JSON.stringify(wordPatterns)}`);
-    }
-
-    console.log(`BigQuery search patterns: standard="${searchTermFormatted}", wordStart="${wordStartPattern}", partial="${partialWordPattern}"`);
-    console.log(`Multi-word search: ${hasMultipleWords}, words=${JSON.stringify(searchWords)}`);
-
-
-    console.log(`BigQuery search term formatted as: "${searchTermFormatted}" for original term: "${searchTerm}"`);
-
-    // First try a direct search to see if we get any results
-    try {
-      // Build the test query
-      let testQuery = `
-        SELECT COUNT(*) as count
-        FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE LOWER(title) LIKE @searchTerm
-          OR LOWER(title) LIKE @wordStartPattern
-          OR LOWER(title) LIKE @partialWordPattern
-          OR LOWER(title) LIKE @wordContainsPattern
-          OR LOWER(content) LIKE @searchTerm
-          OR LOWER(content) LIKE @wordStartPattern
-      `;
-
-      // Add conditions for multi-word searches
-      const params = {
-        searchTerm: searchTermFormatted,
-        wordStartPattern: wordStartPattern,
-        partialWordPattern: partialWordPattern,
-        wordContainsPattern: wordContainsPattern
-      };
-
-      const types = {
-        searchTerm: "STRING",
-        wordStartPattern: "STRING",
-        partialWordPattern: "STRING",
-        wordContainsPattern: "STRING"
-      };
-
-      // For multi-word searches, add conditions to check for each word
-      if (hasMultipleWords && wordPatterns.length > 0) {
-        // Add a condition to check if title contains all words
-        let multiWordCondition = "\n          OR (";
-
-        wordPatterns.forEach((pattern, index) => {
-          const paramName = `wordPattern${index}`;
-          multiWordCondition += `\n            LOWER(title) LIKE @${paramName}`;
-          if (index < wordPatterns.length - 1) {
-            multiWordCondition += " AND";
-          }
-
-          // Add parameter
-          params[paramName] = pattern;
-          types[paramName] = "STRING";
-        });
-
-        multiWordCondition += "\n          )";
-        testQuery += multiWordCondition;
-
-        console.log("Added multi-word condition to test query:", multiWordCondition);
-      }
-
-      const [testResult] = await bigquery.query({
-        query: testQuery,
-        params: params,
-        types: types
-      });
-
-      console.log(`BigQuery test query found ${testResult[0].count} matches for "${searchTermFormatted}"`);
-
-      // If no results found with BigQuery, fall back to Firestore
-      if (testResult[0].count === 0) {
-        console.log('No results found in BigQuery, falling back to Firestore');
-        const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
-
-        // Also search for users
+        // Search for users if we have a search term
         let users = [];
         if (searchTerm && searchTerm.trim().length > 1) {
           try {
@@ -1015,269 +947,40 @@ export async function GET(request) {
             }));
           } catch (userError) {
             console.error('Error searching for users:', userError);
+            users = []; // Ensure users is always an array
           }
         }
 
         return NextResponse.json({
-          pages,
-          users,
-          source: "firestore_fallback_after_bigquery_zero_results"
+          pages: publicPages || [],
+          users: users || [],
+          source: "unauthenticated_search"
         }, { status: 200 });
-      }
-    } catch (testError) {
-      console.error('Error running BigQuery test query:', testError);
-      // Continue with normal query flow
-    }
-
-
-    if (!userId) {
-      return NextResponse.json(
-        {
+      } catch (error) {
+        console.error('Error in unauthenticated search:', error);
+        return NextResponse.json({
           pages: [],
           users: [],
-          message: "userId is required"
-        },
-        { status: 400 }
-      );
+          error: 'Search temporarily unavailable',
+          source: "unauthenticated_search_error"
+        }, { status: 200 }); // Return 200 to prevent breaking the UI
+      }
     }
 
-    // searchTermFormatted is already defined above
-
-    // Skip verification query to reduce BigQuery costs
-
-    // Check if we're filtering by a specific user ID
-    const isFilteringByUser = !!filterByUserId;
-
-    // Get user's group memberships for access control in BigQuery
-    const userGroupIds = userId ? await getUserGroupMemberships(userId) : [];
-    console.log(`BigQuery search - User ${userId} is member of groups: ${JSON.stringify(userGroupIds)}`);
-
-    // Get group data to determine which groups are public
-    const allGroupIds = [...new Set([...groupIds, ...userGroupIds])];
-    const groupsData = allGroupIds.length > 0 ? await getGroupsData(allGroupIds) : {};
-
-    // Filter for public groups that the user can access
-    const publicGroupIds = Object.keys(groupsData).filter(groupId => groupsData[groupId].isPublic);
-    console.log(`Public groups accessible to user: ${JSON.stringify(publicGroupIds)}`);
-
-    // Build the search conditions
-    let searchCondition = `
-            LOWER(title) LIKE @searchTerm
-            OR LOWER(title) LIKE @wordStartPattern
-            OR LOWER(title) LIKE @partialWordPattern
-            OR LOWER(title) LIKE @wordContainsPattern
-            OR LOWER(content) LIKE @searchTerm
-            OR LOWER(content) LIKE @wordStartPattern
-          `;
-
-    // Add multi-word search condition if applicable
-    if (hasMultipleWords && wordPatterns.length > 0) {
-      let multiWordCondition = "OR (";
-
-      // First check for all words in title
-      multiWordCondition += "\n              (";
-      wordPatterns.forEach((pattern, index) => {
-        const paramName = `wordPattern${index}`;
-        multiWordCondition += `LOWER(title) LIKE @${paramName}`;
-        if (index < wordPatterns.length - 1) {
-          multiWordCondition += " AND ";
-        }
-      });
-      multiWordCondition += ")";
-
-      // Then check for all words in content
-      multiWordCondition += "\n              OR (";
-      wordPatterns.forEach((pattern, index) => {
-        const paramName = `wordPattern${index}`;
-        multiWordCondition += `LOWER(content) LIKE @${paramName}`;
-        if (index < wordPatterns.length - 1) {
-          multiWordCondition += " AND ";
-        }
-      });
-      multiWordCondition += ")";
-
-      multiWordCondition += "\n            )";
-      searchCondition += multiWordCondition;
-
-      console.log("Added multi-word condition to combined query:", multiWordCondition);
-    }
-
-    // Use a single combined query to reduce BigQuery costs
-    const combinedQuery = `
-      WITH user_pages AS (
-        SELECT
-          document_id,
-          title,
-          userId,
-          lastModified,
-          'user' as page_type,
-          NULL as groupId
-        FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE userId = ${isFilteringByUser ? '@filterByUserId' : '@userId'}
-          AND (
-            ${searchCondition}
-          )
-        ORDER BY lastModified DESC
-        LIMIT ${isFilteringByUser ? '20' : '10'}
-      ),
-      ${userGroupIds.length > 0 ? `
-      group_pages AS (
-        SELECT
-          document_id,
-          title,
-          userId,
-          lastModified,
-          'group' as page_type,
-          groupId
-        FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE groupId IN UNNEST(@userGroupIds)
-          AND (
-            ${searchCondition}
-          )
-        ORDER BY lastModified DESC
-        LIMIT 5
-      ),` : ''}
-      public_pages AS (
-        SELECT
-          document_id,
-          title,
-          userId,
-          lastModified,
-          isPublic,
-          groupId,
-          'public' as page_type
-        FROM \`wewrite-ccd82.pages_indexes.pages\`
-        WHERE userId != @userId
-          AND (
-            ${searchCondition}
-          )
-          AND (
-            -- Include public pages not in any group
-            (isPublic = true AND groupId IS NULL)
-            -- Include pages from public groups (both public and private pages in public groups are accessible)
-            ${publicGroupIds.length > 0 ? `
-            OR groupId IN UNNEST(@publicGroupIds)
-            ` : ''}
-          )
-          ${groupIds.length > 0 ? `AND document_id NOT IN (
-            SELECT document_id
-            FROM \`wewrite-ccd82.pages_indexes.pages\`
-            WHERE groupId IN UNNEST(@groupIds)
-          )` : ''}
-        ORDER BY lastModified DESC
-        LIMIT 10
-      )
-
-      SELECT * FROM user_pages
-      ${userGroupIds.length > 0 && !isFilteringByUser ? 'UNION ALL SELECT * FROM group_pages' : ''}
-      ${!isFilteringByUser ? 'UNION ALL SELECT * FROM public_pages' : ''}
-    `;
-
-    // Prepare query parameters
-    const queryParams = {
-      userId: userId,
-      ...(isFilteringByUser ? { filterByUserId: filterByUserId } : {}),
-      ...(groupIds.length > 0 ? { groupIds: groupIds } : {}),
-      ...(userGroupIds.length > 0 ? { userGroupIds: userGroupIds } : {}),
-      ...(publicGroupIds.length > 0 ? { publicGroupIds: publicGroupIds } : {}),
-      searchTerm: searchTermFormatted,
-      wordStartPattern: wordStartPattern,
-      partialWordPattern: partialWordPattern,
-      wordContainsPattern: wordContainsPattern
-    };
-
-    const queryTypes = {
-      userId: "STRING",
-      ...(isFilteringByUser ? { filterByUserId: "STRING" } : {}),
-      ...(groupIds.length > 0 ? { groupIds: ['STRING'] } : {}),
-      ...(userGroupIds.length > 0 ? { userGroupIds: ['STRING'] } : {}),
-      ...(publicGroupIds.length > 0 ? { publicGroupIds: ['STRING'] } : {}),
-      searchTerm: "STRING",
-      wordStartPattern: "STRING",
-      partialWordPattern: "STRING",
-      wordContainsPattern: "STRING"
-    };
-
-    // Add word pattern parameters for multi-word searches
-    if (hasMultipleWords && wordPatterns.length > 0) {
-      wordPatterns.forEach((pattern, index) => {
-        const paramName = `wordPattern${index}`;
-        queryParams[paramName] = pattern;
-        queryTypes[paramName] = "STRING";
-      });
-    }
-
-    // Execute combined query
-    const [combinedResults] = await bigquery.query({
-      query: combinedQuery,
-      params: queryParams,
-      types: queryTypes,
-    }).catch(error => {
-      console.error("Error executing combined query:", error);
-      throw error;
-    });
-
-    console.log('Combined query results count:', combinedResults?.length || 0);
-
-    // Separate results by type
-    const userRows = combinedResults.filter(row => row.page_type === 'user') || [];
-    const groupRows = groupIds.length > 0 ? combinedResults.filter(row => row.page_type === 'group') || [] : [];
-    const publicRows = combinedResults.filter(row => row.page_type === 'public') || [];
-
+    // For authenticated users, use Firestore search directly
     try {
-      const pages = [];
+      console.log(`Starting Firestore search for authenticated user ${userId}`);
 
-      // Add user pages to results
-      if (userRows && userRows.length > 0) {
-        userRows.forEach(row => {
-          pages.push({
-            id: row.document_id,
-            title: row.title,
-            isOwned: true, // User owns this page
-            isEditable: true, // User can edit this page since they own it
-            userId: row.userId,
-            lastModified: row.lastModified,
-            type: 'user'
-          });
-        });
-      }
+      // Search for pages in Firestore
+      const pages = await searchPagesInFirestore(userId, searchTerm, groupIds, filterByUserId);
+      console.log(`Firestore page search completed. Found ${pages?.length || 0} pages`);
 
-      // Add group pages to results
-      if (groupRows && groupRows.length > 0) {
-        groupRows.forEach(row => {
-          pages.push({
-            id: row.document_id,
-            title: row.title,
-            groupId: row.groupId,
-            isOwned: row.userId === userId, // If user is the creator of the page
-            isEditable: true, // User can edit this page since they're in the group
-            userId: row.userId,
-            lastModified: row.lastModified,
-            type: 'group'
-          });
-        });
-      }
-
-      // Add public pages to results
-      if (publicRows && publicRows.length > 0) {
-        publicRows.forEach(row => {
-          pages.push({
-            id: row.document_id,
-            title: row.title,
-            isOwned: row.userId === userId, // If user is the creator of the page
-            isEditable: row.userId === userId, // Only the creator can edit public pages
-            userId: row.userId,
-            lastModified: row.lastModified,
-            type: 'public'
-          });
-        });
-      }
-
-      // Also search for users if we have a search term
+      // Search for users if we have a search term
       let users = [];
       if (searchTerm && searchTerm.trim().length > 1) {
         try {
-          // Search for users with the same search term
+          console.log(`Starting user search for term "${searchTerm}"`);
+          const { searchUsers } = await import('../../firebase/database');
           users = await searchUsers(searchTerm, 5);
           console.log(`Found ${users.length} users matching query "${searchTerm}"`);
 
@@ -1286,44 +989,50 @@ export async function GET(request) {
             id: user.id,
             username: user.username || "Anonymous",
             photoURL: user.photoURL || null,
-            type: 'user' // Add a type field to distinguish from pages
+            type: 'user'
           }));
         } catch (userError) {
           console.error('Error searching for users:', userError);
+          users = []; // Ensure users is always an array
         }
       }
 
-      console.log('Final processed results:', {
-        pagesCount: pages.length,
-        usersCount: users.length,
-        pages,
-        users,
-        searchTerm,
-        searchTermFormatted
+      const response = {
+        pages: pages || [],
+        users: users || [],
+        source: "firestore_primary",
+        searchTerm: searchTerm,
+        userId: userId,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log(`Search API returning response:`, {
+        pagesCount: response.pages.length,
+        usersCount: response.users.length,
+        source: response.source,
+        searchTerm: response.searchTerm
       });
 
-      // Return formatted results including users
-      return NextResponse.json({ pages, users }, { status: 200 });
+      return NextResponse.json(response, { status: 200 });
     } catch (error) {
-      console.error('Error processing query results:', error);
+      console.error('Error in authenticated search:', error);
+      console.error('Error stack:', error.stack);
       return NextResponse.json({
         pages: [],
         users: [],
-        error: {
-          message: error.message,
-          details: error.stack
-        }
-      }, { status: 200 });
+        error: 'Search temporarily unavailable',
+        source: "authenticated_search_error",
+        errorMessage: error.message
+      }, { status: 200 }); // Return 200 to prevent breaking the UI
     }
+
   } catch (error) {
-    console.error('Error querying BigQuery:', error);
+    console.error('Unexpected error in search API:', error);
     return NextResponse.json({
       pages: [],
       users: [],
-      error: {
-        message: error.message,
-        details: error.stack
-      }
-    }, { status: 200 });
+      error: 'Search temporarily unavailable',
+      source: "unexpected_error"
+    }, { status: 200 }); // Return 200 to prevent breaking the UI
   }
 }

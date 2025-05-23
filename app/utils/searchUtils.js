@@ -371,21 +371,32 @@ export const sortSearchResultsByScore = (results, searchTerm) => {
   // Pre-process results to add search-related properties
   const processedResults = [...results].map(result => {
     const title = result.title || result.name || '';
-    const score = calculateMatchScore(title, searchTerm);
-    const wordMatchResult = containsAllSearchWords(title, searchTerm);
+
+    // Use existing matchScore if available (from flexible matching), otherwise calculate
+    const score = result.matchScore !== undefined ? result.matchScore : calculateMatchScore(title, searchTerm);
+
+    // Use existing matchType if available, otherwise determine from word matching
+    let matchType = result.matchType;
+    let containsAllWords = result.containsAllSearchWords;
+
+    if (!matchType) {
+      const wordMatchResult = containsAllSearchWords(title, searchTerm);
+      matchType = wordMatchResult.type;
+      containsAllWords = wordMatchResult.match;
+    }
 
     // Add search properties to the result object
     result.matchScore = score;
-    result.matchType = wordMatchResult.type;
-    result.containsAllSearchWords = wordMatchResult.match;
+    result.matchType = matchType;
+    result.containsAllSearchWords = containsAllWords;
 
     // Add debug info
     result._searchDebug = {
       title,
       searchTerm,
       score,
-      matchType: wordMatchResult.type,
-      containsAllWords: wordMatchResult.match,
+      matchType: matchType,
+      containsAllWords: containsAllWords,
       searchWords
     };
 
@@ -404,22 +415,23 @@ export const sortSearchResultsByScore = (results, searchTerm) => {
       'word_start': 5,
       'prefix_match': 6,
       'partial_word': 7,
-      'all_words': 8,
+      'partial_word_match': 8, // New flexible matching type
+      'all_words': 9,
       // Content matches are lower priority than title matches
-      'content_sequential_exact': 9,
-      'content_sequential_exact_words': 10,
-      'content_sequential_partial_words': 11,
-      'content_sequential_text': 12,
-      'content_sequential_words': 13,
-      'content_word_start': 14,
-      'content_prefix_match': 15,
-      'content_partial_word': 16,
-      'content_all_words': 17,
-      'none': 18
+      'content_sequential_exact': 10,
+      'content_sequential_exact_words': 11,
+      'content_sequential_partial_words': 12,
+      'content_sequential_text': 13,
+      'content_sequential_words': 14,
+      'content_word_start': 15,
+      'content_prefix_match': 16,
+      'content_partial_word': 17,
+      'content_all_words': 18,
+      'none': 19
     };
 
-    const aTypeOrder = matchTypeOrder[a.matchType] || 18; // Default to 'none' if type not found
-    const bTypeOrder = matchTypeOrder[b.matchType] || 18;
+    const aTypeOrder = matchTypeOrder[a.matchType] || 19; // Default to 'none' if type not found
+    const bTypeOrder = matchTypeOrder[b.matchType] || 19;
 
     if (aTypeOrder !== bTypeOrder) {
       return aTypeOrder - bTypeOrder;

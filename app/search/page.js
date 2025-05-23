@@ -6,7 +6,7 @@ import { AuthContext } from '../providers/AuthProvider';
 import { PillLink } from '../components/PillLink';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Share2, Search, Loader2, Pin, X } from 'lucide-react';
+import { Share2, Search, Pin, X } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import { Skeleton } from '../components/ui/skeleton';
 import Link from 'next/link';
@@ -44,6 +44,8 @@ function debounce(func, wait, immediate = false) {
   return debounced;
 }
 
+
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const { user } = useContext(AuthContext);
@@ -54,37 +56,35 @@ export default function SearchPage() {
   const searchInputRef = useRef(null);
   const resultsContainerRef = useRef(null);
   const scrollPositionRef = useRef(0);
-  const saveSearchTimeoutRef = useRef(null);
 
   // Check if Groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
 
   // Track if we've initialized from URL to prevent refresh loops
   const [hasInitializedFromURL, setHasInitializedFromURL] = useState(false);
+  const initializedRef = useRef(false);
 
   // Initialize query from URL parameters and perform initial search
   useEffect(() => {
     // Only run this effect once on initial load to prevent refresh loops
-    if (hasInitializedFromURL) return;
+    if (initializedRef.current) return;
 
     const q = searchParams.get('q');
 
     // Only set query and perform search if q parameter exists and is not empty after trimming
     if (q && q.trim()) {
       setQuery(q);
-      performSearch(q.trim());
+      // Don't call performSearch here - let the debounced search handle it
     } else if (q === '') {
       // If q parameter exists but is empty, remove it from URL
       const url = new URL(window.location);
       url.searchParams.delete('q');
-      window.history.pushState({}, '', url);
-    } else {
-      // If no query parameter, perform an empty search to show recent or popular content
-      performSearch('');
+      window.history.replaceState({}, '', url);
     }
 
+    initializedRef.current = true;
     setHasInitializedFromURL(true);
-  }, [searchParams, hasInitializedFromURL]);
+  }, []); // Remove searchParams dependency to prevent re-initialization
 
   // Focus the search input when the page loads
   useEffect(() => {
@@ -103,8 +103,10 @@ export default function SearchPage() {
     return () => clearTimeout(focusTimer);
   }, []);
 
-  // Perform search when query changes
-  const performSearch = async (searchTerm) => {
+
+
+  // Internal search function that doesn't depend on external state
+  const performSearchInternal = async (searchTerm) => {
     // Don't search if the search term is empty or just whitespace
     if (!searchTerm || !searchTerm.trim()) {
       setResults({ pages: [], users: [], groups: [] });
@@ -123,10 +125,13 @@ export default function SearchPage() {
       hasFocus: document.activeElement === inputElement
     } : null;
 
-    setIsLoading(true);
+    // Only set loading if we don't already have results for this search term
+    // This prevents flickering when typing quickly
+    const trimmedSearchTerm = searchTerm.trim();
+    if (query !== trimmedSearchTerm) {
+      setIsLoading(true);
+    }
     try {
-      // Trim and encode the search term
-      const trimmedSearchTerm = searchTerm.trim();
 
       // For unauthenticated users or as a fallback
       if (!user) {
@@ -184,13 +189,27 @@ export default function SearchPage() {
       const response = await fetch(queryUrl);
 
       if (!response.ok) {
-        console.error('Search API returned error:', response.status);
-        throw new Error(`Search API error: ${response.status}`);
+        console.error('Search API returned error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Search API error details:', errorText);
+        throw new Error(`Search API error: ${response.status} - ${response.statusText}`);
       }
 
       const data = await response.json();
       console.log(`Search results for "${trimmedSearchTerm}":`, data);
       console.log(`Found ${data.pages?.length || 0} pages and ${data.users?.length || 0} users`);
+      console.log('Search API response source:', data.source);
+
+      // Log detailed information about the search results
+      if (data.pages && data.pages.length > 0) {
+        console.log('Pages found:', data.pages.map(p => ({ id: p.id, title: p.title, userId: p.userId })));
+      }
+      if (data.users && data.users.length > 0) {
+        console.log('Users found:', data.users.map(u => ({ id: u.id, username: u.username })));
+      }
+      if (data.error) {
+        console.warn('Search API returned error:', data.error);
+      }
 
       // Log the titles of the pages found
       if (data.pages && data.pages.length > 0) {
@@ -299,8 +318,9 @@ export default function SearchPage() {
     }
   };
 
-  // Handle search input changes with debounce for live search
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+
+
 
   // Save scroll position before updating results (optimized to reduce calls)
   const saveScrollPosition = () => {
@@ -324,32 +344,31 @@ export default function SearchPage() {
   };
 
   // Function to save search term (no longer needed for recent searches)
-  const saveSearchTerm = (term) => {
+  const saveSearchTerm = () => {
     // This function is kept for compatibility but doesn't do anything now
     // We'll use explicit saveSearchQuery for pinned searches instead
   };
 
-  // Create a debounced search function with 500ms delay
+  // Create a debounced search function with 400ms delay
   const debouncedSearch = useRef(null);
 
-  // Initialize the debounced search function
+  // Initialize the debounced search function once
   useEffect(() => {
     debouncedSearch.current = debounce((searchTerm) => {
       if (searchTerm.trim()) {
-        performSearch(searchTerm.trim());
+        // Call performSearch directly without dependency issues
+        performSearchInternal(searchTerm.trim());
 
-        // Update URL without triggering the searchParams effect
-        // Use a flag to prevent the URL change from triggering a refresh
+        // Update URL without triggering navigation
         const url = new URL(window.location);
         url.searchParams.set('q', searchTerm.trim());
-
-        // Use replaceState to avoid triggering navigation events
         window.history.replaceState({
           searchQuery: searchTerm.trim(),
           isUserInitiated: true
         }, '', url);
       } else {
         setResults({ pages: [], users: [], groups: [] });
+        setIsLoading(false);
 
         // Remove the q parameter from URL
         const url = new URL(window.location);
@@ -359,7 +378,7 @@ export default function SearchPage() {
           isUserInitiated: true
         }, '', url);
       }
-    }, 300); // Reduced debounce delay for better responsiveness
+    }, 400);
 
     return () => {
       // Clean up the debounced function
@@ -367,30 +386,45 @@ export default function SearchPage() {
         debouncedSearch.current.cancel();
       }
     };
-  }, []);
+  }, []); // Remove performSearch dependency to prevent recreation
 
   // Track if this is an initial load or a user-initiated search
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Handle query changes (memoized to prevent unnecessary re-renders)
+  // Handle query changes (simplified to prevent re-renders and page reloads)
   const handleQueryChange = useCallback((e) => {
     const newQuery = e.target.value;
+
+    // Preserve cursor position
+    const cursorPosition = e.target.selectionStart;
+
     setQuery(newQuery);
 
-    // Only trigger debounced search if this is not the initial load
-    if (!isInitialLoad && hasInitializedFromURL) {
-      // Don't save scroll position for every keystroke - only when actually searching
+    // Cancel any pending debounced search to prevent stale requests
+    if (debouncedSearch.current && debouncedSearch.current.cancel) {
+      debouncedSearch.current.cancel();
+    }
+
+    // Always trigger debounced search after initialization
+    if (hasInitializedFromURL && debouncedSearch.current) {
       debouncedSearch.current(newQuery);
     }
-  }, [isInitialLoad, hasInitializedFromURL]);
+
+    // Restore cursor position after state update
+    setTimeout(() => {
+      if (searchInputRef.current && document.activeElement === searchInputRef.current) {
+        searchInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }, 0);
+  }, [hasInitializedFromURL]);
 
   // Effect to handle initial search from URL
   useEffect(() => {
-    if (isInitialLoad && query) {
-      performSearch(query.trim());
+    if (hasInitializedFromURL && query && isInitialLoad) {
+      performSearchInternal(query.trim());
       setIsInitialLoad(false);
     }
-  }, [isInitialLoad, query]);
+  }, [hasInitializedFromURL, query, isInitialLoad]);
 
   // Handle search form submission (for Enter key)
   const handleSearch = (e) => {
@@ -417,7 +451,7 @@ export default function SearchPage() {
       saveSearchTerm(trimmedQuery);
 
       // Use the trimmed query for search
-      performSearch(trimmedQuery);
+      performSearchInternal(trimmedQuery);
     } else {
       // If query is empty or just whitespace, clear results and URL parameter
       setResults({ pages: [], users: [], groups: [] });
@@ -476,25 +510,37 @@ export default function SearchPage() {
     navigator.clipboard.writeText(textToCopy)
       .then(() => {
         console.log("Link copied to clipboard");
-        toast.success("Search URL copied to clipboard");
+        toast({
+          title: "Link copied",
+          description: "Search URL copied to clipboard",
+        });
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);
-        toast.error("Could not copy the URL to clipboard");
+        toast({
+          title: "Copy failed",
+          description: "Could not copy the URL to clipboard",
+          variant: "destructive",
+        });
       });
   };
 
   // Combine all results into a single array for display
   const combineResults = () => {
+    // Add null/undefined checks for results
+    if (!results) {
+      return [];
+    }
+
     // Create a combined array of all results
     let combined = [
-      ...results.users.map(user => ({
+      ...(results.users || []).map(user => ({
         ...user,
         type: 'user',
         displayName: user.username,
         url: `/user/${user.id}`
       })),
-      ...results.pages.map(page => ({
+      ...(results.pages || []).map(page => ({
         ...page,
         type: 'page',
         displayName: page.title,
@@ -521,8 +567,8 @@ export default function SearchPage() {
   };
 
   const combinedResults = combineResults();
-  const totalResults = results.pages.length + results.users.length +
-    (groupsEnabled && results.groups ? results.groups.length : 0);
+  const totalResults = (results.pages?.length || 0) + (results.users?.length || 0) +
+    (groupsEnabled && results.groups ? (results.groups.length || 0) : 0);
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -531,14 +577,16 @@ export default function SearchPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.location.href = '/'}
+            asChild
             className="flex items-center gap-2"
             aria-label="Go home"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-              <path d="m15 18-6-6 6-6"/>
-            </svg>
-            <span className="hidden sm:inline">Home</span>
+            <Link href="/">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+              <span className="hidden sm:inline">Home</span>
+            </Link>
           </Button>
         </div>
         <div className="flex-1 flex justify-center">
@@ -615,12 +663,18 @@ export default function SearchPage() {
                 if (trimmedQuery) {
                   const saved = saveSearchQuery(trimmedQuery, user?.uid);
                   if (saved) {
-                    toast.success("Search saved");
+                    toast({
+                      title: "Search saved",
+                      description: "Your search has been saved to pinned searches.",
+                    });
                     // Force refresh the saved searches component
                     const savedSearchesEvent = new Event('savedSearchesUpdated');
                     window.dispatchEvent(savedSearchesEvent);
                   } else {
-                    toast.info("This search is already saved");
+                    toast({
+                      title: "Already saved",
+                      description: "This search is already in your pinned searches.",
+                    });
                   }
                 }
               }}
@@ -649,7 +703,7 @@ export default function SearchPage() {
               url.searchParams.set('q', searchTerm);
               window.history.replaceState({ searchQuery: searchTerm }, '', url);
 
-              performSearch(searchTerm);
+              performSearchInternal(searchTerm);
 
               // Set isInitialLoad to false since this is a user-initiated search
               setIsInitialLoad(false);
@@ -672,7 +726,7 @@ export default function SearchPage() {
               url.searchParams.set('q', recommendation);
               window.history.replaceState({ searchQuery: recommendation }, '', url);
 
-              performSearch(recommendation);
+              performSearchInternal(recommendation);
 
               // Set isInitialLoad to false since this is a user-initiated search
               setIsInitialLoad(false);
@@ -697,64 +751,41 @@ export default function SearchPage() {
       )}
 
       <div className="space-y-6" ref={resultsContainerRef}>
-        {isLoading ? (
-          <div className="space-y-4">
-            <div className="flex justify-center items-center py-4">
-              <Loader2 className="h-6 w-6 text-primary animate-spin mr-2" />
-              <span className="text-muted-foreground">Searching...</span>
-            </div>
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="flex items-center space-x-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-[250px]" />
-                  <Skeleton className="h-4 w-[200px]" />
+        {/* Main Results Display */}
+        {!isLoading && combinedResults.length > 0 && (
+          <div className="space-y-2 mt-8">
+            <h3 className="text-lg font-semibold mb-4">All Results</h3>
+            {combinedResults.map(result => (
+              <div key={`${result.type}-${result.id}`} className="flex items-center">
+                <div className="flex-none max-w-[60%]">
+                  <PillLink href={result.url} className="max-w-full">
+                    {result.displayName}
+                  </PillLink>
                 </div>
+                <span className="text-xs text-muted-foreground ml-2 truncate">
+                  {result.type === 'user' ? (
+                    `${result.username} - User${result.isFallback ? ' (Suggested)' : ''}`
+                  ) : result.type === 'group' && groupsEnabled ? (
+                    `${result.displayName} - Group${result.isFallback ? ' (Suggested)' : ''}`
+                  ) : (
+                    `by ${result.username || "Missing username"}${result.isFallback ? ' (Suggested)' : ''}`
+                  )}
+                </span>
               </div>
             ))}
           </div>
-        ) : (
-          <>
-            {combinedResults.length > 0 ? (
-              <div className="space-y-2">
-                {combinedResults.map(result => (
-                  <div key={`${result.type}-${result.id}`} className="flex items-center">
-                    <div className="flex-none max-w-[60%]">
-                      <PillLink href={result.url} className="max-w-full">
-                        {result.displayName}
-                      </PillLink>
-                    </div>
-                    <span className="text-xs text-muted-foreground ml-2 truncate">
-                      {result.type === 'user' ? (
-                        `${result.username} - User${result.isFallback ? ' (Suggested)' : ''}`
-                      ) : result.type === 'group' && groupsEnabled ? (
-                        `${result.displayName} - Group${result.isFallback ? ' (Suggested)' : ''}`
-                      ) : (
-                        `by ${result.username || "Missing username"}${result.isFallback ? ' (Suggested)' : ''}`
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                {query && query.trim() ? (
-                  <>
-                    <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
-                    <Button asChild>
-                      <Link href={`/new?title=${encodeURIComponent(query.trim())}`}>
-                        Create "{query.trim()}" page
-                      </Link>
-                    </Button>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground">
-                    Enter a search term to find pages and users
-                  </p>
-                )}
-              </div>
-            )}
-          </>
+        )}
+
+        {/* Create page option when no results */}
+        {!isLoading && combinedResults.length === 0 && query && query.trim() && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
+            <Button asChild>
+              <Link href={`/new?title=${encodeURIComponent(query.trim())}`}>
+                Create "{query.trim()}" page
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
     </div>

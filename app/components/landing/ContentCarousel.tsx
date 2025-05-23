@@ -288,8 +288,8 @@ export default function ContentCarousel({
 
   // Determine container classes based on fullWidth prop
   const containerClasses = fullWidth
-    ? "relative overflow-hidden py-4 w-[100vw] -ml-[50vw] left-[50%] right-[50%] mr-[50vw]"
-    : "relative w-full overflow-hidden py-4";
+    ? "relative overflow-visible py-8 w-[100vw] -ml-[50vw] left-[50%] right-[50%] mr-[50vw]"
+    : "relative w-full overflow-visible py-8";
 
   // Add event handlers for manual scrolling - only for actual user interaction, not hover
   const handleScroll = () => {

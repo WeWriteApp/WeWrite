@@ -46,13 +46,24 @@ export async function getServerTrendingData(limitCount = 10) {
       // Get views from yesterday, but only count hours that have already passed today
       // This gives us a rolling 24-hour window
       const currentHour = now.getHours();
-      const relevantHours = data.hourly?.slice(currentHour + 1) || [];
-      const viewsFromYesterday = relevantHours.reduce((sum, views) => sum + (views || 0), 0);
+
+      // Calculate views from yesterday (only hours after current hour)
+      let viewsFromYesterday = 0;
+      const yesterdayHourlyViews = [];
+
+      for (let hour = currentHour + 1; hour < 24; hour++) {
+        const hourViews = data.hours?.[hour] || 0;
+        viewsFromYesterday += hourViews;
+        yesterdayHourlyViews.push(hourViews);
+      }
+
+      // Fill remaining hours with zeros for today's hours
+      const hourlyViews = [...yesterdayHourlyViews, ...Array(currentHour + 1).fill(0)];
 
       pageViewsMap.set(pageId, {
         id: pageId,
         views: viewsFromYesterday,
-        hourlyViews: [...(data.hourly?.slice(currentHour + 1) || []), ...Array(currentHour + 1).fill(0)]
+        hourlyViews: hourlyViews
       });
     });
 
@@ -64,8 +75,16 @@ export async function getServerTrendingData(limitCount = 10) {
       if (!pageId) return;
 
       const currentHour = now.getHours();
-      const relevantHours = data.hourly?.slice(0, currentHour + 1) || [];
-      const viewsFromToday = relevantHours.reduce((sum, views) => sum + (views || 0), 0);
+
+      // Calculate views from today (only hours up to current hour)
+      let viewsFromToday = 0;
+      const todayHourlyViews = [];
+
+      for (let hour = 0; hour <= currentHour; hour++) {
+        const hourViews = data.hours?.[hour] || 0;
+        viewsFromToday += hourViews;
+        todayHourlyViews.push(hourViews);
+      }
 
       if (pageViewsMap.has(pageId)) {
         // Update existing entry
@@ -73,8 +92,10 @@ export async function getServerTrendingData(limitCount = 10) {
         const updatedHourlyViews = [...existingData.hourlyViews];
 
         // Update the hourly views for today's hours
+        // Today's hours go at the end of the array (after yesterday's remaining hours)
+        const yesterdayHoursCount = 24 - (currentHour + 1);
         for (let i = 0; i <= currentHour; i++) {
-          updatedHourlyViews[i + (24 - (currentHour + 1))] = data.hourly?.[i] || 0;
+          updatedHourlyViews[yesterdayHoursCount + i] = data.hours?.[i] || 0;
         }
 
         pageViewsMap.set(pageId, {
@@ -85,8 +106,10 @@ export async function getServerTrendingData(limitCount = 10) {
       } else {
         // Create new entry
         const hourlyViews = Array(24).fill(0);
+        // Today's hours start at position (24 - (currentHour + 1))
+        const startPosition = 24 - (currentHour + 1);
         for (let i = 0; i <= currentHour; i++) {
-          hourlyViews[i + (24 - (currentHour + 1))] = data.hourly?.[i] || 0;
+          hourlyViews[startPosition + i] = data.hours?.[i] || 0;
         }
 
         pageViewsMap.set(pageId, {

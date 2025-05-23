@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useContext } from "react";
 import {
   createEditor,
   Transforms,

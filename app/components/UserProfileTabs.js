@@ -358,15 +358,17 @@ export default function UserProfileTabs({ profile }) {
                 </TabsTrigger>
               )}
 
-              {/* Following tab */}
-              <TabsTrigger
-                value="following"
-                data-value="following"
-                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-              >
-                <Heart className="h-4 w-4" />
-                <span>Following</span>
-              </TabsTrigger>
+              {/* Following tab - only for current user */}
+              {isCurrentUser && (
+                <TabsTrigger
+                  value="following"
+                  data-value="following"
+                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+                >
+                  <Heart className="h-4 w-4" />
+                  <span>Following</span>
+                </TabsTrigger>
+              )}
 
               {/* Private tab - only for current user */}
               {isCurrentUser && (
@@ -461,16 +463,18 @@ export default function UserProfileTabs({ profile }) {
             )}
           </TabsContent>
 
-          <TabsContent
-            value="following"
-            className={`mt-0 transition-all duration-300 ${
-              activeTab === "following"
-                ? "block"
-                : "hidden"
-            }`}
-          >
-            <FollowingTabContent userId={profile?.uid} isCurrentUser={isCurrentUser} />
-          </TabsContent>
+          {isCurrentUser && (
+            <TabsContent
+              value="following"
+              className={`mt-0 transition-all duration-300 ${
+                activeTab === "following"
+                  ? "block"
+                  : "hidden"
+              }`}
+            >
+              <FollowingTabContent userId={profile?.uid} isCurrentUser={isCurrentUser} />
+            </TabsContent>
+          )}
 
           {/* Groups tab content - only shown if feature is enabled */}
           {groupsEnabled && (

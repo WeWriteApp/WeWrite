@@ -642,7 +642,7 @@ const LandingPage = () => {
         />
 
         {/* Recent Activity Carousel - Lazy loaded */}
-        <section id="activity" ref={activityRef} className="py-8 bg-muted/30">
+        <section id="activity" ref={activityRef} className="py-16 md:py-20 bg-muted/30">
           <div className="container mx-auto px-6 max-w-5xl">
             <div className={`text-center mb-8 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
@@ -721,8 +721,8 @@ const LandingPage = () => {
           </div>
         </section>
 
-
-
+        {/* Bottom spacing for footer visibility */}
+        <div className="pb-32 md:pb-24"></div>
 
       </main>
     </div>

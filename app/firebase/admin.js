@@ -10,32 +10,44 @@ export const initAdmin = () => {
     try {
       // For development environment, use a service account or default credentials
       if (process.env.NODE_ENV === 'development') {
-        // For local development, we'll use a simple implementation
-        // that allows API routes to work without throwing errors
+        // For local development, try to use the service account from environment variables
         try {
-          const serviceAccount = {
-            type: 'service_account',
-            project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
-            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'dev-key-id',
-            private_key: process.env.FIREBASE_PRIVATE_KEY ?
-              process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') :
-              'dummy-key',
-            client_email: process.env.FIREBASE_CLIENT_EMAIL || 'dummy@example.com',
-            client_id: process.env.FIREBASE_CLIENT_ID || 'dummy-client-id',
-            auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-            token_uri: 'https://oauth2.googleapis.com/token',
-            auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-            client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/dummy'
-          };
+          // Check if we have the Google Cloud key JSON in environment
+          if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+            const serviceAccount = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
 
-          app = admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
-          });
+            app = admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount),
+              databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
+            });
+            console.log('Firebase Admin initialized with Google Cloud service account');
+          } else {
+            // Fallback to individual environment variables
+            const serviceAccount = {
+              type: 'service_account',
+              project_id: process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82',
+              private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'dev-key-id',
+              private_key: process.env.FIREBASE_PRIVATE_KEY ?
+                process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') :
+                'dummy-key',
+              client_email: process.env.FIREBASE_CLIENT_EMAIL || 'dummy@example.com',
+              client_id: process.env.FIREBASE_CLIENT_ID || 'dummy-client-id',
+              auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+              token_uri: 'https://oauth2.googleapis.com/token',
+              auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+              client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/dummy'
+            };
+
+            app = admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount),
+              databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
+            });
+            console.log('Firebase Admin initialized with individual environment variables');
+          }
         } catch (e) {
           console.warn('Using fallback Firebase Admin initialization for development:', e.message);
           app = admin.initializeApp({
-            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82'
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82'
           });
         }
       } else {

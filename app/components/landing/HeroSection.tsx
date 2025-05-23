@@ -81,7 +81,7 @@ export default function HeroSection({
 
   return (
     <section
-      className="py-16 md:py-20 relative overflow-hidden"
+      className="pt-24 md:pt-28 pb-16 md:pb-20 relative overflow-hidden"
       ref={heroSectionRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setRotation({ x: 0, y: 0 })}

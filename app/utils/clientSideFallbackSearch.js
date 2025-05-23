@@ -3,29 +3,44 @@
  * This provides a fallback when the server-side search returns no results
  */
 
-// Empty arrays for fallback search
-const samplePageTitles = [];
-const sampleUsernames = [];
+// Sample data for fallback search - these will be suggested when no real results are found
+const samplePageTitles = [
+  'Getting Started',
+  'Documentation',
+  'User Guide',
+  'FAQ',
+  'Help',
+  'About',
+  'Contact',
+  'Privacy Policy',
+  'Terms of Service',
+  'Tutorial'
+];
+
+const sampleUsernames = [
+  'admin',
+  'support',
+  'help'
+];
 
 /**
  * Generate a fallback search result for a given search term
- * We no longer provide fallback results to ensure only real content is shown
+ * Temporarily disabled to focus on fixing real search results
  * @param {string} searchTerm - The search term to match against
  * @param {string} userId - The current user's ID
- * @returns {Object} - Empty object with empty pages and users arrays
+ * @returns {Object} - Empty object to force real search results only
  */
 export function generateFallbackSearchResults(searchTerm, userId) {
-  // Always return empty arrays
+  console.log(`Fallback search called for "${searchTerm}" but returning empty results to focus on real data`);
   return { pages: [], users: [] };
 }
 
 /**
  * Check if a search term should trigger the fallback search
- * We no longer use fallback search to ensure only real content is shown
+ * Temporarily disabled to focus on fixing real search results
  * @param {string} searchTerm - The search term to check
- * @returns {boolean} - Always returns false
+ * @returns {boolean} - Always returns false to disable fallback
  */
 export function shouldUseFallbackForTerm(searchTerm) {
-  // Always return false to disable fallback search
-  return false;
+  return false; // Disabled to focus on real search results
 }

@@ -133,50 +133,8 @@ export function FilterableFeatureList({
     setTimeout(adjustContainerWidth, 100);
     setTimeout(adjustContainerWidth, 500); // Additional delay for safety
 
-    // Add touch event listeners for better mobile scrolling experience
-    let isScrolling = false;
-    let startX: number;
-    let scrollLeft: number;
-
-    const startDrag = (e: TouchEvent | MouseEvent) => {
-      isScrolling = true;
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      startX = clientX;
-      scrollLeft = (filterChipsContainer as HTMLElement).scrollLeft;
-
-      // Add grabbing cursor
-      (filterChipsContainer as HTMLElement).style.cursor = 'grabbing';
-    };
-
-    const endDrag = () => {
-      isScrolling = false;
-      // Reset cursor
-      (filterChipsContainer as HTMLElement).style.cursor = 'grab';
-    };
-
-    const drag = (e: TouchEvent | MouseEvent) => {
-      if (!isScrolling) return;
-
-      // Don't prevent default to allow native scrolling behavior
-      // This is important for iOS momentum scrolling
-
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      const x = clientX;
-      const walk = (x - startX) * 1.5; // Scroll speed multiplier
-
-      (filterChipsContainer as HTMLElement).scrollLeft = scrollLeft - walk;
-    };
-
-    // Add event listeners
-    filterChipsContainer.addEventListener('touchstart', startDrag as EventListener);
-    filterChipsContainer.addEventListener('touchend', endDrag);
-    filterChipsContainer.addEventListener('touchmove', drag as EventListener);
-
     // Clean up event listeners
     return () => {
-      filterChipsContainer.removeEventListener('touchstart', startDrag as EventListener);
-      filterChipsContainer.removeEventListener('touchend', endDrag);
-      filterChipsContainer.removeEventListener('touchmove', drag as EventListener);
       window.removeEventListener('resize', adjustContainerWidth);
     };
   }, []);
@@ -205,7 +163,7 @@ export function FilterableFeatureList({
       {/* Filter controls */}
       <div className="mb-8 filter-chips-section">
         {/* Horizontal scrollable container for mobile - edge to edge */}
-        <div className="filter-chips-container flex md:flex-wrap md:justify-center gap-3 overflow-x-auto pb-2 scrollbar-hide md:scrollbar-thin md:scrollbar-thumb-gray-300 md:dark:scrollbar-thumb-gray-600 md:scrollbar-track-transparent scroll-smooth">
+        <div className="filter-chips-container flex md:flex-wrap md:justify-center gap-3 overflow-x-auto pb-2 scrollbar-hide md:scrollbar-thin md:scrollbar-thumb-gray-300 md:dark:scrollbar-thumb-gray-600 md:scrollbar-track-transparent">
           {/* Direct container for chips without extra wrapping div */}
           <Button
             variant={filters.inProgress ? "default" : "outline"}
