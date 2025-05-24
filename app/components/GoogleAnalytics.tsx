@@ -69,9 +69,13 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
     setInitialized(true);
   };
 
-  const handleScriptError = () => {
-    console.error('Failed to load Google Analytics script');
-    setError('Script load failed');
+  const handleScriptError = (error: any) => {
+    console.warn('Failed to load Google Analytics script (likely blocked by ad blocker):', error);
+    // Don't set error state for script loading failures as they're often due to ad blockers
+    // setError('Script load failed');
+
+    // Instead, just log and continue gracefully
+    console.log('Continuing without Google Analytics due to script loading failure');
   };
 
   return (

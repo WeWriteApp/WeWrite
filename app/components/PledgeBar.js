@@ -14,6 +14,7 @@ import SubscriptionActivationModal from './SubscriptionActivationModal';
 import SupportUsModal from './SupportUsModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { CustomAmountModal } from './CustomAmountModal';
+import RegistrationCallToAction from './RegistrationCallToAction';
 import '../styles/pledge-bar-animations.css';
 
 const PledgeBar = () => {
@@ -399,42 +400,10 @@ const PledgeBar = () => {
     );
   }
 
-  // Helper function to render the pledge bar for logged out users
+  // Helper function to render the call-to-action for logged out users
   function renderLoggedOutPledgeBar() {
-    return (
-      <div
-        data-pledge-bar
-        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
-        } ${animateEntry ? 'spring-and-pulse' : ''}`}
-        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
-      >
-        <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h3 className="text-sm font-medium">
-                {isSubscriptionEnabled ? "Support this page" : "Under Construction"}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {isSubscriptionEnabled
-                  ? "Log in to allocate funds to this page"
-                  : "We are still working on payments functionality. Please support us on Open Collective to help get it built."}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => {
-                // Open OpenCollective link directly
-                openExternalLink('https://opencollective.com/wewrite-app', 'Pledge Bar Support Button');
-              }}
-              className="ml-4"
-            >
-              Support Us
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    // Use the new RegistrationCallToAction component instead of "under construction" message
+    return <RegistrationCallToAction />;
   }
 
   // Helper function to render the pledge bar for users without an active subscription

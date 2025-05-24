@@ -51,18 +51,23 @@ export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
 
-  // Initialize reload protection to prevent infinite refresh loops
+  // Initialize reload protection only for specific scenarios
+  // Disabled global reload protection to prevent unwanted navigation warnings
   useEffect(() => {
-    initReloadProtection();
+    // Only initialize reload protection in development or when specifically needed
+    if (process.env.NODE_ENV === 'development') {
+      // Log reload status for debugging without initializing protection
+      const status = getReloadStatus();
+      console.log('Reload protection status (monitoring only):', status);
 
-    // Log reload status for debugging
-    const status = getReloadStatus();
-    console.log('Reload protection status:', status);
-
-    // Enhanced logging for potential infinite loop detection
-    if (status.potentialLoop) {
-      console.warn('Reload protection: Potential infinite loop detected!', status);
+      // Enhanced logging for potential infinite loop detection
+      if (status.potentialLoop) {
+        console.warn('Reload protection: Potential infinite loop detected!', status);
+      }
     }
+
+    // Note: Global reload protection disabled to prevent unwanted beforeunload warnings
+    // Individual pages can still use reload protection if needed
   }, []);
 
   return (

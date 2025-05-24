@@ -36,12 +36,14 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
           setAnalyticsInitialized(true);
           setAnalyticsInstance(analytics);
         } else {
-          console.warn('Firebase Analytics initialized but returned null - might be blocked by browser');
-          setAnalyticsError('Firebase Analytics returned null');
+          console.warn('Firebase Analytics initialized but returned null - might be blocked by browser or ad blocker');
+          // Don't set error state for analytics blocking as it's common and expected
+          // setAnalyticsError('Firebase Analytics returned null');
         }
       } catch (error) {
-        console.error('Failed to initialize Firebase Analytics:', error);
-        setAnalyticsError(`${error}`);
+        console.warn('Failed to initialize Firebase Analytics (likely blocked by ad blocker):', error);
+        // Don't set error state for analytics failures as they're often due to ad blockers
+        // setAnalyticsError(`${error}`);
       }
     };
 

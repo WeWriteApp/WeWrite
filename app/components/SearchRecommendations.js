@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { PillLink } from './PillLink';
 
 /**
@@ -11,7 +11,7 @@ import { PillLink } from './PillLink';
  * @param {Object} props
  * @param {Function} props.onSelect - Function to call when a recommendation is selected
  */
-export default function SearchRecommendations({ onSelect }) {
+const SearchRecommendations = React.memo(function SearchRecommendations({ onSelect }) {
   // Single list of search suggestions
   const recommendations = [
     { id: 'interesting', label: 'Interesting pages' },
@@ -76,4 +76,8 @@ export default function SearchRecommendations({ onSelect }) {
       </div>
     </div>
   );
-}
+});
+
+SearchRecommendations.displayName = 'SearchRecommendations';
+
+export default SearchRecommendations;

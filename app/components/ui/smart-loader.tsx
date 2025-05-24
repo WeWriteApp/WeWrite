@@ -44,14 +44,14 @@ interface SmartLoaderProps {
 export function SmartLoader({
   isLoading,
   message = "Loading...",
-  timeoutMs = 15000,
+  timeoutMs = 20000, // Increased from 15s to 20s for better stability
   fullScreen = true,
   className,
   onRetry,
   fallbackContent,
   children,
-  autoRecover = true,
-  initialLoadTimeoutMs = 5000 // Default to 5 seconds for initial load
+  autoRecover = false, // Disabled by default to maintain stability
+  initialLoadTimeoutMs = 8000 // Increased from 5s to 8s for initial load
 }: SmartLoaderProps) {
   const [loadStartTime] = useState(Date.now());
   const [loadingTime, setLoadingTime] = useState(0);
@@ -137,24 +137,25 @@ export function SmartLoader({
 
   // Add a safety mechanism to force-complete loading after a maximum time
   // This prevents users from getting stuck in loading states
-  useEffect(() => {
-    if (!isLoading) return;
+  // Disabled to prevent infinite reload loops
+  // useEffect(() => {
+  //   if (!isLoading) return;
 
-    // Set a hard maximum loading time (30 seconds)
-    const hardMaxTimeout = setTimeout(() => {
-      if (isLoading) {
-        console.warn('SmartLoader: Hard maximum loading time reached, forcing completion');
-        forceComplete();
+  //   // Set a hard maximum loading time (30 seconds)
+  //   const hardMaxTimeout = setTimeout(() => {
+  //     if (isLoading) {
+  //       console.warn('SmartLoader: Hard maximum loading time reached, forcing completion');
+  //       forceComplete();
 
-        // If there's an onRetry function, call it to attempt to load content
-        if (onRetry && typeof onRetry === 'function') {
-          onRetry();
-        }
-      }
-    }, 30000); // 30 seconds absolute maximum
+  //       // If there's an onRetry function, call it to attempt to load content
+  //       if (onRetry && typeof onRetry === 'function') {
+  //         onRetry();
+  //       }
+  //     }
+  //   }, 30000); // 30 seconds absolute maximum
 
-    return () => clearTimeout(hardMaxTimeout);
-  }, [isLoading, forceComplete, onRetry]);
+  //   return () => clearTimeout(hardMaxTimeout);
+  // }, [isLoading, forceComplete, onRetry]);
 
   // If not loading, render children
   if (!isLoading) {

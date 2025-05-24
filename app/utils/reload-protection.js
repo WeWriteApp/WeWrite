@@ -6,7 +6,7 @@
  */
 
 const RELOAD_PROTECTION_KEY = 'wewrite_reload_protection';
-const MAX_RELOADS_PER_SESSION = 3;
+const MAX_RELOADS_PER_SESSION = 2; // Reduced from 3 to 2
 const RESET_TIME_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
@@ -97,6 +97,22 @@ export function resetReloadProtection() {
  * Safe reload function that respects protection limits
  */
 export function safeReload(reason = 'unknown') {
+  // First check circuit breaker
+  try {
+    const { pageReloadBreaker } = require('./circuit-breaker');
+    if (!pageReloadBreaker.canExecute()) {
+      console.error(`Circuit breaker: Blocked reload attempt (reason: ${reason})`);
+
+      if (typeof window !== 'undefined') {
+        alert('Too many reload attempts detected. The page reload function has been temporarily disabled to prevent infinite loops. Please wait a few minutes or contact support if the issue persists.');
+      }
+
+      return false;
+    }
+  } catch (error) {
+    console.warn('Circuit breaker not available, falling back to basic protection:', error);
+  }
+
   if (!canReload()) {
     console.error(`Reload protection: Blocked reload attempt (reason: ${reason})`);
 
@@ -110,6 +126,14 @@ export function safeReload(reason = 'unknown') {
 
   recordReload();
   console.log(`Reload protection: Allowing reload (reason: ${reason})`);
+
+  // Record failure in circuit breaker (since we're reloading due to an issue)
+  try {
+    const { pageReloadBreaker } = require('./circuit-breaker');
+    pageReloadBreaker.recordFailure();
+  } catch (error) {
+    console.warn('Could not record failure in circuit breaker:', error);
+  }
 
   // Use a small delay to ensure logging completes
   setTimeout(() => {
@@ -130,18 +154,30 @@ export function initReloadProtection() {
     // we'll use event listeners to detect and prevent reloads
 
     // Listen for beforeunload events to detect reload attempts
+    // IMPORTANT: Only prevent actual reloads, not navigation to other pages
     window.addEventListener('beforeunload', function(event) {
       // Check if this is a reload (not navigation to a different page)
+      // We can detect reloads by checking if the navigation is to the same URL
+      const currentUrl = window.location.href;
       const isReload = event.target === window.document;
 
-      if (isReload && !canReload()) {
+      // Additional check: only intervene if we're actually reloading the same page
+      // and not navigating to a different page
+      const isActualReload = isReload && (
+        // Check if this is triggered by F5, Ctrl+R, or browser reload button
+        event.type === 'beforeunload' &&
+        // Don't interfere with normal navigation
+        !event.defaultPrevented
+      );
+
+      if (isActualReload && !canReload()) {
         console.log('Reload protection: Blocked reload attempt via beforeunload');
         event.preventDefault();
         event.returnValue = 'Multiple page reloads detected. Please wait before trying again.';
         return 'Multiple page reloads detected. Please wait before trying again.';
       }
 
-      if (isReload) {
+      if (isActualReload) {
         recordReload();
       }
     });

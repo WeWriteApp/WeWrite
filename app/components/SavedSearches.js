@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Pin, X, Trash2 } from 'lucide-react';
 import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from '../utils/savedSearches';
 import { Button } from './ui/button';
@@ -15,20 +15,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
  * @param {Function} props.onSelect - Function to call when a search is selected
  * @param {string} props.userId - User ID for personalized saved searches
  */
-export default function SavedSearches({ onSelect, userId = null }) {
+const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = null }) {
   const [savedSearches, setSavedSearches] = useState([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(null);
   const [deleteSearchTerm, setDeleteSearchTerm] = useState('');
 
+  // Function to load saved searches
+  const loadSavedSearches = () => {
+    const searches = getSavedSearches(userId);
+    setSavedSearches(searches);
+  };
+
   // Load saved searches on mount and when updated
   useEffect(() => {
-    // Function to load saved searches
-    const loadSavedSearches = () => {
-      const searches = getSavedSearches(userId);
-      setSavedSearches(searches);
-    };
-
     // Load saved searches initially
     loadSavedSearches();
 
@@ -158,4 +158,8 @@ export default function SavedSearches({ onSelect, userId = null }) {
       </Dialog>
     </div>
   );
-}
+});
+
+SavedSearches.displayName = 'SavedSearches';
+
+export default SavedSearches;

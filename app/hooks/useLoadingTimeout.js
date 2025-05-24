@@ -27,10 +27,11 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
   const isInitialPageLoadRef = useRef(true);
   const checkIntervalRef = useRef(null);
 
-  // Track recovery attempts
+  // Track recovery attempts - reduced to prevent infinite loops
   const recoveryAttemptsRef = useRef(0);
-  const maxRecoveryAttempts = 3; // Increased from 2 to 3
+  const maxRecoveryAttempts = 1; // Reduced from 3 to 1 to prevent infinite loops
   const lastRecoveryTimeRef = useRef(0);
+  const hasRecoveredRef = useRef(false); // Track if we've already recovered
 
   // Check if this is the initial page load
   useEffect(() => {
@@ -50,13 +51,14 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
           clearInterval(checkIntervalRef.current);
         }
 
-        checkIntervalRef.current = setInterval(() => {
-          // Check if we're still loading after 5 seconds
-          if (isLoading && Date.now() - startTime > 5000) {
-            console.warn('useLoadingTimeout: Initial page load taking too long, attempting recovery');
-            forceComplete();
-          }
-        }, 1000);
+        // Disable aggressive initial page load recovery to prevent infinite loops
+        // checkIntervalRef.current = setInterval(() => {
+        //   // Check if we're still loading after 5 seconds
+        //   if (isLoading && Date.now() - startTime > 5000) {
+        //     console.warn('useLoadingTimeout: Initial page load taking too long, attempting recovery');
+        //     forceComplete();
+        //   }
+        // }, 1000);
 
         return () => {
           if (checkIntervalRef.current) {
@@ -104,52 +106,27 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
         }
 
         // Auto-recovery: If loading has been going on for too long, try recovery steps
-        // Use more aggressive timeouts for initial page loads
-        const recoveryThreshold = isInitialPageLoadRef.current ? timeoutMs * 0.8 : timeoutMs * 1.5;
+        // Use more conservative timeouts to prevent infinite loops
+        const recoveryThreshold = timeoutMs * 2; // Increased threshold to be less aggressive
 
-        if (autoRecover && elapsed >= recoveryThreshold) {
-          // Only attempt recovery if we haven't tried too recently
-          // Use shorter intervals for initial page loads
-          const minTimeBetweenRecoveries = isInitialPageLoadRef.current ? 2000 : 5000;
+        if (autoRecover && elapsed >= recoveryThreshold && !hasRecoveredRef.current) {
+          // Only attempt recovery once per loading session
+          const minTimeBetweenRecoveries = 10000; // Increased to 10 seconds minimum
           const timeSinceLastRecovery = currentTime - lastRecoveryTimeRef.current;
 
-          if (timeSinceLastRecovery >= minTimeBetweenRecoveries) {
+          if (timeSinceLastRecovery >= minTimeBetweenRecoveries && recoveryAttemptsRef.current < maxRecoveryAttempts) {
             lastRecoveryTimeRef.current = currentTime;
             recoveryAttemptsRef.current += 1;
+            hasRecoveredRef.current = true; // Mark that we've attempted recovery
 
-            console.warn(`useLoadingTimeout: Loading stalled for ${elapsed}ms, attempting recovery (attempt ${recoveryAttemptsRef.current}/${maxRecoveryAttempts})`);
+            console.warn(`useLoadingTimeout: Loading stalled for ${elapsed}ms, attempting single recovery (attempt ${recoveryAttemptsRef.current}/${maxRecoveryAttempts})`);
 
-            // First attempt: Just force complete the loading state
-            if (recoveryAttemptsRef.current === 1) {
-              forceComplete();
-            }
-            // Second attempt: Try to clear any cached data that might be causing issues
-            else if (recoveryAttemptsRef.current === 2) {
-              console.warn('useLoadingTimeout: Second recovery attempt, clearing session data');
+            // Only attempt: Just force complete the loading state
+            forceComplete();
 
-              // Clear any session-specific data that might be causing the issue
-              if (typeof window !== 'undefined') {
-                // Clear specific session storage items that might be related to loading state
-                sessionStorage.removeItem('lastPageLoad');
-                sessionStorage.removeItem('renderedComponents');
-
-                // Dispatch a custom event that components can listen for to reset their state
-                const resetEvent = new CustomEvent('force-reset-loading-state');
-                window.dispatchEvent(resetEvent);
-              }
-
-              // Force complete after clearing data
-              forceComplete();
-            }
-            // Third attempt: Force complete and stop recovery attempts
-            else if (recoveryAttemptsRef.current >= 3) {
-              console.warn('useLoadingTimeout: Max recovery attempts reached, forcing completion');
-              forceComplete();
-
-              // Stop further recovery attempts
-              clearInterval(intervalRef.current);
-              intervalRef.current = null;
-            }
+            // Stop further recovery attempts
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
           }
         }
       }, 1000);
@@ -172,6 +149,7 @@ export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null
       setElapsedTime(0);
       recoveryAttemptsRef.current = 0;
       lastRecoveryTimeRef.current = 0;
+      hasRecoveredRef.current = false; // Reset recovery flag
     }
   }, [isLoading, startTime, timeoutMs, isTimedOut, onTimeout, autoRecover]);
 

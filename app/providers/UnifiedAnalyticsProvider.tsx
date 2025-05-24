@@ -192,9 +192,13 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
     if (isDev) console.log('Google Analytics script loaded successfully');
   };
 
-  const handleGAScriptError = () => {
-    console.error('Failed to load Google Analytics script');
-    setError('GA script failed to load');
+  const handleGAScriptError = (error: any) => {
+    console.warn('Failed to load Google Analytics script (likely blocked by ad blocker):', error);
+    // Don't set error state for script loading failures as they're often due to ad blockers
+    // setError('GA script failed to load');
+
+    // Instead, just log and continue gracefully
+    if (isDev) console.log('Continuing without Google Analytics due to script loading failure');
   };
 
   /**

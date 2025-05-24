@@ -13,6 +13,7 @@ import GAProvider from "./providers/GAProvider"
 import { AnalyticsProvider } from "./providers/AnalyticsProvider"
 import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
+import ErrorBoundary from "./components/ErrorBoundary"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
 
@@ -44,8 +45,38 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <script dangerouslySetInnerHTML={{
           __html: `
-            // Inline script to detect and recover from blank pages
+            // Enhanced script to detect and recover from blank pages and script failures
             window.addEventListener('load', function() {
+              // Track script loading failures
+              window.scriptFailures = window.scriptFailures || [];
+
+              // Override console.error to catch script loading failures
+              var originalError = console.error;
+              console.error = function() {
+                var args = Array.prototype.slice.call(arguments);
+                var message = args.join(' ');
+
+                // Check for common script loading failure patterns
+                if (message.includes('ERR_BLOCKED_BY_CLIENT') ||
+                    message.includes('Failed to load') ||
+                    message.includes('script error') ||
+                    message.includes('googleapis') ||
+                    message.includes('vercel') ||
+                    message.includes('gtag')) {
+                  window.scriptFailures.push({
+                    message: message,
+                    timestamp: Date.now()
+                  });
+
+                  // Don't let script failures cause page reloads
+                  console.warn('Script loading failure detected but continuing gracefully:', message);
+                  return;
+                }
+
+                // Call original console.error for other errors
+                originalError.apply(console, arguments);
+              };
+
               // Wait for a reasonable time after load to check if page is blank
               setTimeout(function() {
                 // Check if the page appears to be blank (minimal content)
@@ -76,34 +107,50 @@ export default function RootLayout({
         }} />
       </head>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <AppProvider>
-              <DataProvider>
-                <AnalyticsProvider>
-                  <GAProvider>
-                    <ToastProvider>
-                      <PillStyleProvider>
-                        <PWAProvider>
-                          <ClientLayout>
-                            {children}
-                          </ClientLayout>
-                          <Analytics debug={process.env.NODE_ENV === 'development'} />
-                          <SpeedInsights />
-                        </PWAProvider>
-                      </PillStyleProvider>
-                    </ToastProvider>
-                  </GAProvider>
-                </AnalyticsProvider>
-              </DataProvider>
-            </AppProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary name="root" resetOnPropsChange={true}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ErrorBoundary name="auth" resetOnPropsChange={true}>
+              <AuthProvider>
+                <ErrorBoundary name="app" resetOnPropsChange={true}>
+                  <AppProvider>
+                    <ErrorBoundary name="data" resetOnPropsChange={true}>
+                      <DataProvider>
+                        <ErrorBoundary name="analytics" resetOnPropsChange={false}>
+                          <AnalyticsProvider>
+                            <GAProvider>
+                              <ToastProvider>
+                                <PillStyleProvider>
+                                  <PWAProvider>
+                                    <ErrorBoundary name="layout" resetOnPropsChange={true}>
+                                      <ClientLayout>
+                                        {children}
+                                      </ClientLayout>
+                                    </ErrorBoundary>
+                                    <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
+                                      <Analytics debug={process.env.NODE_ENV === 'development'} />
+                                    </ErrorBoundary>
+                                    <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
+                                      <SpeedInsights />
+                                    </ErrorBoundary>
+                                  </PWAProvider>
+                                </PillStyleProvider>
+                              </ToastProvider>
+                            </GAProvider>
+                          </AnalyticsProvider>
+                        </ErrorBoundary>
+                      </DataProvider>
+                    </ErrorBoundary>
+                  </AppProvider>
+                </ErrorBoundary>
+              </AuthProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

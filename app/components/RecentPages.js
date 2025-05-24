@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Clock, FileText } from 'lucide-react';
 import { getRecentlyViewedPageIds } from '../utils/recentSearches';
 import { getDocById } from '../firebase/database';
@@ -10,68 +10,69 @@ import { Skeleton } from './ui/skeleton';
 
 /**
  * RecentPages Component
- * 
+ *
  * Displays a list of recently viewed pages
  */
-export default function RecentPages() {
+const RecentPages = React.memo(function RecentPages() {
   const [recentPages, setRecentPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useContext(AuthContext);
 
-  // Load recent pages on mount
-  useEffect(() => {
-    const fetchRecentPages = async () => {
-      setLoading(true);
-      try {
-        // Get recent page IDs from localStorage
-        const pageIds = getRecentlyViewedPageIds();
-        
-        if (!pageIds.length) {
-          setRecentPages([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Limit to 5 most recent pages
-        const limitedIds = pageIds.slice(0, 5);
-        
-        // Fetch page data for each ID
-        const pagesPromises = limitedIds.map(async (id) => {
-          try {
-            const page = await getDocById('pages', id);
-            if (!page) return null;
-            
-            // Only include pages the user has access to
-            if (!page.isPublic && (!user || page.userId !== user.uid)) {
-              return null;
-            }
-            
-            return {
-              id,
-              title: page.title || 'Untitled',
-              isPublic: page.isPublic,
-              userId: page.userId
-            };
-          } catch (error) {
-            console.error(`Error fetching page ${id}:`, error);
+  // Function to fetch recent pages
+  const fetchRecentPages = async () => {
+    setLoading(true);
+    try {
+      // Get recent page IDs from localStorage
+      const pageIds = getRecentlyViewedPageIds();
+
+      if (!pageIds.length) {
+        setRecentPages([]);
+        setLoading(false);
+        return;
+      }
+
+      // Limit to 5 most recent pages
+      const limitedIds = pageIds.slice(0, 5);
+
+      // Fetch page data for each ID
+      const pagesPromises = limitedIds.map(async (id) => {
+        try {
+          const page = await getDocById('pages', id);
+          if (!page) return null;
+
+          // Only include pages the user has access to
+          if (!page.isPublic && (!user || page.userId !== user.uid)) {
             return null;
           }
-        });
-        
-        const pagesResults = await Promise.all(pagesPromises);
-        
-        // Filter out null results
-        const validPages = pagesResults.filter(page => page !== null);
-        
-        setRecentPages(validPages);
-      } catch (error) {
-        console.error("Error fetching recent pages:", error);
-        setRecentPages([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
+
+          return {
+            id,
+            title: page.title || 'Untitled',
+            isPublic: page.isPublic,
+            userId: page.userId
+          };
+        } catch (error) {
+          console.error(`Error fetching page ${id}:`, error);
+          return null;
+        }
+      });
+
+      const pagesResults = await Promise.all(pagesPromises);
+
+      // Filter out null results
+      const validPages = pagesResults.filter(page => page !== null);
+
+      setRecentPages(validPages);
+    } catch (error) {
+      console.error("Error fetching recent pages:", error);
+      setRecentPages([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load recent pages on mount
+  useEffect(() => {
     fetchRecentPages();
   }, [user]);
 
@@ -113,4 +114,8 @@ export default function RecentPages() {
       </div>
     </div>
   );
-}
+});
+
+RecentPages.displayName = 'RecentPages';
+
+export default RecentPages;

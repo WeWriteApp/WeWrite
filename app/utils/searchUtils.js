@@ -3,48 +3,57 @@
  *
  * @param {string} title - The title of the item
  * @param {string} searchTerm - The search term
+ * @param {boolean} isContentMatch - Whether this is a content match (vs title match)
  * @returns {number} - A score between 0 and 100, where 100 is a perfect match
  */
-export const calculateMatchScore = (title, searchTerm) => {
+export const calculateMatchScore = (title, searchTerm, isContentMatch = false) => {
   if (!title || !searchTerm) return 0;
 
   const normalizedTitle = title.toLowerCase();
   const normalizedSearchTerm = searchTerm.toLowerCase().trim();
 
+  // Helper function to apply content match penalty
+  const applyContentPenalty = (score) => {
+    if (isContentMatch && score > 0) {
+      return Math.max(score - 40, 5);
+    }
+    return score;
+  };
+
   // Check for exact match (case insensitive)
   if (normalizedTitle === normalizedSearchTerm) {
-    return 100;
+    return applyContentPenalty(100);
   }
 
   // Check if title starts with the search term
   if (normalizedTitle.startsWith(normalizedSearchTerm)) {
-    return 95;
+    return applyContentPenalty(95);
   }
 
   // Check for sequential word matches (highest priority for multi-word searches)
   // This helps with cases like "research topics" matching "research"
   if (normalizedTitle.includes(normalizedSearchTerm)) {
     // Give a very high score for sequential word matches
-    return 92;
+    return applyContentPenalty(92);
   }
 
   // Check if the search term appears at the beginning of the title
   // This helps with cases like "research" matching "research topics"
   if (normalizedTitle.startsWith(normalizedSearchTerm + ' ')) {
-    return 90;
+    return applyContentPenalty(90);
   }
 
   // Check if any word in the title starts with the search term
   const titleWords = normalizedTitle.split(/\s+/);
   for (const word of titleWords) {
     if (word.startsWith(normalizedSearchTerm)) {
-      return 85;
+      return applyContentPenalty(85);
     }
   }
 
   // Check if title contains the search term as a whole word
   if (titleWords.includes(normalizedSearchTerm)) {
-    return 80;
+    return applyContentPenalty(80);
   }
 
   // Check for fuzzy matches - this helps with cases like "road" matching "roadmap"
@@ -52,7 +61,7 @@ export const calculateMatchScore = (title, searchTerm) => {
   for (const word of titleWords) {
     if (word.includes(normalizedSearchTerm)) {
       // Give a higher score for partial word matches to improve results for terms like "book"
-      return 78;
+      return applyContentPenalty(78);
     }
   }
 
@@ -60,7 +69,7 @@ export const calculateMatchScore = (title, searchTerm) => {
   // This helps with cases like "roadmap" matching "road"
   for (const word of titleWords) {
     if (normalizedSearchTerm.includes(word) && word.length > 2) {
-      return 72;
+      return applyContentPenalty(72);
     }
   }
 
@@ -90,7 +99,7 @@ export const calculateMatchScore = (title, searchTerm) => {
     // If we found a sequence of matches, give a high score based on the length of the sequence
     if (maxSequentialMatches > 0) {
       const sequenceScore = 70 + (maxSequentialMatches / searchTermWords.length) * 20;
-      return Math.min(90, sequenceScore); // Cap at 90 to keep below exact matches
+      return applyContentPenalty(Math.min(90, sequenceScore)); // Cap at 90 to keep below exact matches
     }
 
     // Count how many search term words are found in the title (non-sequential)
@@ -103,12 +112,12 @@ export const calculateMatchScore = (title, searchTerm) => {
 
     // If all words are found, give a high score
     if (matchedWords === searchTermWords.length) {
-      return 75; // All words found but not in exact order
+      return applyContentPenalty(75); // All words found but not in exact order
     }
 
     // If some words are found, give a proportional score
     if (matchedWords > 0) {
-      return 60 + (matchedWords / searchTermWords.length) * 10;
+      return applyContentPenalty(60 + (matchedWords / searchTermWords.length) * 10);
     }
   }
 
@@ -130,7 +139,7 @@ export const calculateMatchScore = (title, searchTerm) => {
         // If we matched at least 2 characters, give a score based on match percentage
         if (matchLength >= 2) {
           const matchPercentage = matchLength / normalizedSearchTerm.length;
-          return 55 + (matchPercentage * 15); // Score between 55-70 based on match percentage
+          return applyContentPenalty(55 + (matchPercentage * 15)); // Score between 55-70 based on match percentage
         }
       }
     }
@@ -139,7 +148,7 @@ export const calculateMatchScore = (title, searchTerm) => {
   // Check if any word in the title contains the search term
   for (const word of titleWords) {
     if (word.includes(normalizedSearchTerm)) {
-      return 60;
+      return applyContentPenalty(60);
     }
   }
 
@@ -171,7 +180,9 @@ export const calculateMatchScore = (title, searchTerm) => {
   const percentageMatch = (matchCount / normalizedSearchTerm.length) * 100;
 
   // Scale the percentage to a range of 0-50
-  return Math.min(50, percentageMatch * 0.5);
+  const finalScore = Math.min(50, percentageMatch * 0.5);
+
+  return applyContentPenalty(finalScore);
 };
 
 /**
@@ -186,9 +197,10 @@ export const calculateMatchScore = (title, searchTerm) => {
  *
  * @param {string} title - The title to check
  * @param {string} searchTerm - The search term
+ * @param {boolean} isContentMatch - Whether this is a content match (vs title match)
  * @returns {Object} - Result object with match status and match type
  */
-export const containsAllSearchWords = (title, searchTerm) => {
+export const containsAllSearchWords = (title, searchTerm, isContentMatch = false) => {
   if (!title || !searchTerm) return { match: false, type: 'none' };
 
   const normalizedTitle = title.toLowerCase();
@@ -199,10 +211,15 @@ export const containsAllSearchWords = (title, searchTerm) => {
   // Log for debugging
   console.log(`Checking if "${title}" contains all words in "${searchTerm}". Search words: ${JSON.stringify(searchWords)}`);
 
+  // Helper function to get match type with content prefix if needed
+  const getMatchType = (baseType) => {
+    return isContentMatch ? `content_${baseType}` : baseType;
+  };
+
   // First priority: Check for exact sequential match of the entire search term
   if (normalizedTitle.includes(normalizedSearchTerm)) {
     console.log(`✅ SEQUENTIAL MATCH: "${title}" contains the exact phrase "${searchTerm}"`);
-    return { match: true, type: 'sequential_exact' };
+    return { match: true, type: getMatchType('sequential_exact') };
   }
 
   // Special case for single-word search terms: Check if any word in the title starts with the search term
@@ -211,7 +228,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
     for (const titleWord of titleWords) {
       if (titleWord.startsWith(searchWords[0])) {
         console.log(`✅ WORD START MATCH: "${titleWord}" in "${title}" starts with "${searchWords[0]}"`);
-        return { match: true, type: 'word_start' };
+        return { match: true, type: getMatchType('word_start') };
       }
     }
   }
@@ -223,7 +240,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
     for (const titleWord of titleWords) {
       if (titleWord.includes(searchWords[0])) {
         console.log(`✅ PARTIAL WORD MATCH: "${titleWord}" in "${title}" contains "${searchWords[0]}"`);
-        return { match: true, type: 'partial_word' };
+        return { match: true, type: getMatchType('partial_word') };
       }
     }
 
@@ -232,7 +249,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
     for (const titleWord of titleWords) {
       if (titleWord.startsWith(searchWords[0])) {
         console.log(`✅ PREFIX MATCH: "${titleWord}" in "${title}" starts with "${searchWords[0]}"`);
-        return { match: true, type: 'prefix_match' };
+        return { match: true, type: getMatchType('prefix_match') };
       }
     }
   } else {
@@ -253,7 +270,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
 
     if (allWordsFoundInSequence) {
       console.log(`✅ SEQUENTIAL TEXT MATCH: "${title}" contains all words in "${searchTerm}" in sequence`);
-      return { match: true, type: 'sequential_text' };
+      return { match: true, type: getMatchType('sequential_text') };
     }
 
     // Check for sequential matches where each search word matches a complete title word
@@ -268,7 +285,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
       }
       if (exactSequentialMatch) {
         console.log(`✅ EXACT SEQUENTIAL WORD MATCH: "${title}" contains the exact words "${searchWords.join(' ')}" in sequence`);
-        return { match: true, type: 'sequential_exact_words' };
+        return { match: true, type: getMatchType('sequential_exact_words') };
       }
 
       // Then check for partial sequential matches (where words start with search terms)
@@ -282,7 +299,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
       }
       if (partialSequentialMatch) {
         console.log(`✅ PARTIAL SEQUENTIAL WORD MATCH: "${title}" contains words starting with "${searchWords.join(' ')}" in sequence`);
-        return { match: true, type: 'sequential_partial_words' };
+        return { match: true, type: getMatchType('sequential_partial_words') };
       }
 
       // Finally check for inclusive sequential matches (where title words contain search words or vice versa)
@@ -296,7 +313,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
       }
       if (inclusiveSequentialMatch) {
         console.log(`✅ INCLUSIVE SEQUENTIAL WORD MATCH: "${title}" contains the words "${searchWords.join(' ')}" in sequence`);
-        return { match: true, type: 'sequential_words' };
+        return { match: true, type: getMatchType('sequential_words') };
       }
     }
   }
@@ -323,7 +340,7 @@ export const containsAllSearchWords = (title, searchTerm) => {
 
   if (allWordsFound) {
     console.log(`✅ ALL WORDS MATCH: "${title}" contains all words in "${searchTerm}" but not in sequence`);
-    return { match: true, type: 'all_words' };
+    return { match: true, type: getMatchType('all_words') };
   }
 
   console.log(`❌ NO MATCH: "${title}" does not contain all words in "${searchTerm}"`);
@@ -372,15 +389,22 @@ export const sortSearchResultsByScore = (results, searchTerm) => {
   const processedResults = [...results].map(result => {
     const title = result.title || result.name || '';
 
+    // Determine if this is a content match based on existing matchType or result properties
+    const isContentMatch = result.isContentMatch ||
+                          (result.matchType && result.matchType.startsWith('content_')) ||
+                          false;
+
     // Use existing matchScore if available (from flexible matching), otherwise calculate
-    const score = result.matchScore !== undefined ? result.matchScore : calculateMatchScore(title, searchTerm);
+    const score = result.matchScore !== undefined ?
+                  result.matchScore :
+                  calculateMatchScore(title, searchTerm, isContentMatch);
 
     // Use existing matchType if available, otherwise determine from word matching
     let matchType = result.matchType;
     let containsAllWords = result.containsAllSearchWords;
 
     if (!matchType) {
-      const wordMatchResult = containsAllSearchWords(title, searchTerm);
+      const wordMatchResult = containsAllSearchWords(title, searchTerm, isContentMatch);
       matchType = wordMatchResult.type;
       containsAllWords = wordMatchResult.match;
     }
