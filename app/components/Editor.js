@@ -19,7 +19,7 @@ import { usePillStyle } from '../contexts/PillStyleContext';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { AuthContext } from '../providers/AuthProvider';
 import DisabledLinkModal from './DisabledLinkModal';
-import { updateParagraphIndices } from "../utils/slate-path-fix";
+import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";
 import { validateLink } from '../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import TypeaheadSearch from "./TypeaheadSearch";
