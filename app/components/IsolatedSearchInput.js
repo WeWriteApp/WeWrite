@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Search, X, Pin } from 'lucide-react';
-import RenderTracker from './RenderTracker';
+
 
 /**
  * IsolatedSearchInput Component
@@ -81,10 +81,10 @@ const IsolatedSearchInput = ({
   // Handle input changes - optimized for maximum performance
   const handleInputChange = useCallback((e) => {
     const newValue = e.target.value;
-    
+
     // Update input value immediately for responsive UI
     setInputValue(newValue);
-    
+
     // Debounce the search callback
     debouncedSearch(newValue);
   }, [debouncedSearch]);
@@ -141,17 +141,6 @@ const IsolatedSearchInput = ({
 
   return (
     <form onSubmit={handleSubmit} className="mb-8">
-      {/* Development render tracking */}
-      <RenderTracker
-        name="IsolatedSearchInput"
-        props={{
-          inputValue,
-          hasOnSearch: !!onSearch,
-          hasOnClear: !!onClear,
-          hasOnSave: !!onSave,
-          hasOnSubmit: !!onSubmit
-        }}
-      />
       <div className="relative">
         <Input
           ref={searchInputRef}

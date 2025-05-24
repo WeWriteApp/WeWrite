@@ -4,25 +4,26 @@ import React, { useMemo } from 'react';
 import { Button } from './ui/button';
 import Link from 'next/link';
 import { PillLink } from './PillLink';
+import PerformanceMonitor from './PerformanceMonitor';
 
 /**
  * SearchResultsDisplay Component
- * 
+ *
  * A memoized component that displays search results without causing
  * re-renders of the parent search page.
- * 
+ *
  * @param {string} query - Current search query
  * @param {Object} results - Search results object with pages, users, groups
  * @param {boolean} isLoading - Loading state
  * @param {boolean} groupsEnabled - Whether groups feature is enabled
- * @param {Object} user - Current user object
+ * @param {string} userId - Current user ID (extracted from user object)
  */
 const SearchResultsDisplay = React.memo(({
   query,
   results,
   isLoading,
   groupsEnabled,
-  user
+  userId
 }) => {
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
@@ -66,7 +67,7 @@ const SearchResultsDisplay = React.memo(({
 
   // Memoize total results count
   const totalResults = useMemo(() => {
-    return (results?.pages?.length || 0) + 
+    return (results?.pages?.length || 0) +
            (results?.users?.length || 0) +
            (groupsEnabled && results?.groups ? (results.groups.length || 0) : 0);
   }, [results, groupsEnabled]);
@@ -78,6 +79,17 @@ const SearchResultsDisplay = React.memo(({
 
   return (
     <>
+      {/* Performance monitoring - only active in development */}
+      <PerformanceMonitor
+        name="SearchResultsDisplay"
+        data={{
+          query,
+          isLoading,
+          groupsEnabled,
+          userId,
+          resultsCount: totalResults
+        }}
+      />
       {/* Search Results Summary */}
       <div className="mb-4">
         <p className="text-sm text-muted-foreground">
@@ -124,7 +136,7 @@ const SearchResultsDisplay = React.memo(({
                   <PillLink
                     href={`/${page.id}`}
                     isPublic={page.isPublic}
-                    isOwned={page.userId === user?.uid}
+                    isOwned={page.userId === userId}
                     className="max-w-full"
                   >
                     {page.title}
@@ -173,6 +185,16 @@ const SearchResultsDisplay = React.memo(({
         )}
       </div>
     </>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent unnecessary re-renders
+  return (
+    prevProps.query === nextProps.query &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.groupsEnabled === nextProps.groupsEnabled &&
+    prevProps.userId === nextProps.userId &&
+    // Deep comparison for results object
+    JSON.stringify(prevProps.results) === JSON.stringify(nextProps.results)
   );
 });
 

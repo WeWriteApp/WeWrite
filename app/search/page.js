@@ -14,10 +14,10 @@ import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { saveSearchQuery } from '../utils/savedSearches';
 
 // Import the new separated components
-import SearchInput from '../components/SearchInput';
-import IsolatedSearchInput from '../components/IsolatedSearchInput';
+import OptimizedSearchInput from '../components/OptimizedSearchInput';
 import SearchResultsDisplay from '../components/SearchResultsDisplay';
-import RenderTracker from '../components/RenderTracker';
+import PerformanceMonitor from '../components/PerformanceMonitor';
+
 
 // Debounce utility function
 function debounce(func, wait, immediate = false) {
@@ -299,10 +299,10 @@ export default function SearchPage() {
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
-      {/* Development render tracking */}
-      <RenderTracker
+      {/* Performance monitoring - only active in development */}
+      <PerformanceMonitor
         name="SearchPage"
-        props={{
+        data={{
           currentQuery,
           isLoading,
           resultsCount: (results?.pages?.length || 0) + (results?.users?.length || 0),
@@ -346,7 +346,7 @@ export default function SearchPage() {
       </div>
 
       {/* Search Input Component - Optimized for Performance */}
-      <SearchInput
+      <OptimizedSearchInput
         initialValue={initialQuery}
         onSearch={handleSearch}
         onClear={handleClear}
@@ -365,7 +365,7 @@ export default function SearchPage() {
         results={results}
         isLoading={isLoading}
         groupsEnabled={groupsEnabled}
-        user={user}
+        userId={userId}
       />
     </div>
   );

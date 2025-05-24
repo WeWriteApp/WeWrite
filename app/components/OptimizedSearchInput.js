@@ -4,20 +4,21 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Search, X, Pin } from 'lucide-react';
-
+import PerformanceMonitor from './PerformanceMonitor';
 
 /**
- * SearchInput Component
+ * OptimizedSearchInput Component
  *
- * A high-performance search input component that maintains focus and cursor position
- * while providing debounced search functionality. Optimized to prevent
- * unnecessary re-renders that cause focus loss during typing.
+ * A highly optimized search input component that prevents all unnecessary re-renders.
+ * This component is completely isolated from parent state changes and only re-renders
+ * when its own internal state changes.
  *
- * Key Performance Features:
+ * Key optimizations:
  * - Isolated internal state management
- * - Stable callback references
- * - Optimized re-render prevention
- * - Debounced search with smart caching
+ * - Stable callback references with useCallback
+ * - React.memo with custom comparison function
+ * - Debounced search to prevent excessive API calls
+ * - No external dependencies that could cause re-renders
  *
  * @param {string} initialValue - Initial search value
  * @param {Function} onSearch - Callback for search with debouncing
@@ -27,7 +28,7 @@ import { Search, X, Pin } from 'lucide-react';
  * @param {boolean} autoFocus - Whether to auto-focus the input
  * @param {string} placeholder - Input placeholder text
  */
-const SearchInput = ({
+const OptimizedSearchInput = ({
   initialValue = '',
   onSearch,
   onClear,
@@ -36,32 +37,14 @@ const SearchInput = ({
   autoFocus = true,
   placeholder = "Search for pages, users..."
 }) => {
-  // Internal state - isolated from parent re-renders
+  // Internal state - completely isolated from parent
   const [inputValue, setInputValue] = useState(initialValue);
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
   const lastSearchValue = useRef('');
   const isInitialized = useRef(false);
 
-  // Focus the search input when the component mounts
-  useEffect(() => {
-    if (autoFocus) {
-      const focusTimer = setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-
-          // For mobile devices, try to open the keyboard
-          if (typeof window !== 'undefined' && 'ontouchstart' in window) {
-            searchInputRef.current.click();
-          }
-        }
-      }, 100);
-
-      return () => clearTimeout(focusTimer);
-    }
-  }, [autoFocus]);
-
-  // Initialize input value only once to prevent re-render loops
+  // Initialize input value only once
   useEffect(() => {
     if (!isInitialized.current && initialValue) {
       setInputValue(initialValue);
@@ -69,7 +52,20 @@ const SearchInput = ({
     }
   }, [initialValue]);
 
-  // Debounced search function with smart caching to prevent duplicate calls
+  // Auto-focus effect
+  useEffect(() => {
+    if (autoFocus && searchInputRef.current) {
+      // Small delay to ensure the component is fully mounted
+      const timer = setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
+
+  // Stable debounced search function
   const debouncedSearch = useCallback((value) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -84,14 +80,14 @@ const SearchInput = ({
     }, 300);
   }, [onSearch]);
 
-  // Handle input changes - optimized to prevent re-renders
+  // Handle input changes - optimized for maximum performance
   const handleInputChange = useCallback((e) => {
     const newValue = e.target.value;
 
     // Update input value immediately for responsive UI
     setInputValue(newValue);
 
-    // Debounce the search callback to prevent excessive API calls
+    // Debounce the search callback
     debouncedSearch(newValue);
   }, [debouncedSearch]);
 
@@ -112,7 +108,7 @@ const SearchInput = ({
   // Handle clear button
   const handleClear = useCallback(() => {
     setInputValue('');
-    lastSearchValue.current = ''; // Reset search cache
+    lastSearchValue.current = '';
 
     // Cancel any pending debounced search
     if (debounceTimeoutRef.current) {
@@ -122,18 +118,12 @@ const SearchInput = ({
     if (onClear) {
       onClear();
     }
-
-    // Focus the input after clearing
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
   }, [onClear]);
 
   // Handle save button
   const handleSave = useCallback(() => {
-    const trimmedValue = inputValue.trim();
-    if (trimmedValue && onSave) {
-      onSave(trimmedValue);
+    if (onSave && inputValue.trim()) {
+      onSave(inputValue.trim());
     }
   }, [inputValue, onSave]);
 
@@ -148,6 +138,17 @@ const SearchInput = ({
 
   return (
     <form onSubmit={handleSubmit} className="mb-8">
+      {/* Performance monitoring - only active in development */}
+      <PerformanceMonitor
+        name="OptimizedSearchInput"
+        data={{
+          inputValue,
+          hasOnSearch: !!onSearch,
+          hasOnClear: !!onClear,
+          hasOnSave: !!onSave,
+          hasOnSubmit: !!onSubmit
+        }}
+      />
       <div className="relative">
         <Input
           ref={searchInputRef}
@@ -194,15 +195,18 @@ const SearchInput = ({
   );
 };
 
-SearchInput.displayName = 'SearchInput';
+OptimizedSearchInput.displayName = 'OptimizedSearchInput';
 
 // Custom comparison function to prevent unnecessary re-renders
-// Only re-render if props that actually matter have changed
+// This is the most important part for preventing re-renders
 const areEqual = (prevProps, nextProps) => {
+  // Only re-render if these specific props change
   return (
     prevProps.initialValue === nextProps.initialValue &&
     prevProps.autoFocus === nextProps.autoFocus &&
     prevProps.placeholder === nextProps.placeholder &&
+    // For callback functions, we check if they're the same reference
+    // This is why it's important that parent components use useCallback
     prevProps.onSearch === nextProps.onSearch &&
     prevProps.onClear === nextProps.onClear &&
     prevProps.onSave === nextProps.onSave &&
@@ -210,4 +214,4 @@ const areEqual = (prevProps, nextProps) => {
   );
 };
 
-export default React.memo(SearchInput, areEqual);
+export default React.memo(OptimizedSearchInput, areEqual);
