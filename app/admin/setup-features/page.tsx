@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '../../providers/AuthProvider';
-import { isAdmin } from '../../utils/feature-flags';
+import { isAdmin } from '../../utils/feature-flags.ts';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { ArrowLeft, Shield, Database, RefreshCw } from 'lucide-react';
@@ -17,7 +17,7 @@ export default function SetupFeaturesPage() {
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  
+
   // Check if user is admin
   useEffect(() => {
     if (!authLoading && user) {
@@ -28,12 +28,12 @@ export default function SetupFeaturesPage() {
       router.push('/auth/login?redirect=/admin/setup-features');
     }
   }, [user, authLoading, router]);
-  
+
   const runSetup = async () => {
     setIsRunning(true);
     try {
       const result = await setupFeatureManagement();
-      
+
       if (result.success) {
         toast({
           title: 'Setup Complete',
@@ -59,7 +59,7 @@ export default function SetupFeaturesPage() {
       setIsRunning(false);
     }
   };
-  
+
   if (authLoading || (user && !isAdmin(user.email))) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -67,7 +67,7 @@ export default function SetupFeaturesPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto p-6 max-w-3xl">
       <div className="mb-6">
@@ -78,7 +78,7 @@ export default function SetupFeaturesPage() {
           </Button>
         </Link>
       </div>
-      
+
       <Card className="rounded-2xl border-theme-medium">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export default function SetupFeaturesPage() {
               <li>Set up the database structure for feature history tracking</li>
             </ul>
           </div>
-          
+
           <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-xl">
             <p className="text-sm text-amber-800 dark:text-amber-300">
               This is a one-time setup process. You only need to run this once to initialize the database structure.
@@ -110,8 +110,8 @@ export default function SetupFeaturesPage() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button 
-            onClick={runSetup} 
+          <Button
+            onClick={runSetup}
             disabled={isRunning || isComplete}
             className="w-full"
           >
@@ -128,11 +128,11 @@ export default function SetupFeaturesPage() {
           </Button>
         </CardFooter>
       </Card>
-      
+
       {isComplete && (
         <div className="mt-6 text-center">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => router.push('/admin/tools')}
           >
             Return to Admin Panel

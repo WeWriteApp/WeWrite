@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { AuthContext } from '../../../providers/AuthProvider';
 import { useContext } from 'react';
-import { isAdmin } from '../../../utils/feature-flags';
+import { isAdmin } from '../../../utils/feature-flags.ts';
 import { PageLoader } from '../../../components/ui/page-loader';
 import FeatureDetailPage from '../../../components/admin/FeatureDetailPage';
 import { doc, getDoc } from 'firebase/firestore';
@@ -20,7 +20,7 @@ export default function FeatureDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [featureData, setFeatureData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const featureId = params?.id as string;
 
   // Check if user is admin
@@ -38,29 +38,29 @@ export default function FeatureDetail() {
   useEffect(() => {
     const fetchFeatureData = async () => {
       if (!featureId || !user) return;
-      
+
       try {
         setIsLoading(true);
-        
+
         // Get feature flags from Firestore
         const featureFlagsRef = doc(db, 'config', 'featureFlags');
         const featureFlagsDoc = await getDoc(featureFlagsRef);
-        
+
         // Get feature metadata
         const featureMetaRef = doc(db, 'config', 'featureMetadata');
         const featureMetaDoc = await getDoc(featureMetaRef);
-        
+
         if (featureFlagsDoc.exists()) {
           const flagsData = featureFlagsDoc.data();
           const metaData = featureMetaDoc.exists() ? featureMetaDoc.data() : {};
-          
+
           // Get the specific feature metadata
           const featureMeta = metaData[featureId] || {
             createdAt: new Date().toISOString(),
             lastModified: new Date().toISOString(),
             description: 'No description available'
           };
-          
+
           setFeatureData({
             id: featureId,
             enabled: flagsData[featureId] === true,
@@ -76,7 +76,7 @@ export default function FeatureDetail() {
         setIsLoading(false);
       }
     };
-    
+
     fetchFeatureData();
   }, [featureId, user]);
 

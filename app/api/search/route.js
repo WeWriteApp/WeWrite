@@ -211,7 +211,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         collection(db, 'pages'),
         where('userId', '==', filterByUserId || userId),
         orderBy('lastModified', 'desc'),
-        limit(2000) // Increased limit for search to include older pages
+        limit(2000) // Search through 2000 most recent pages to include older content
       );
 
       const userPagesSnapshot = await getDocs(userPagesQuery);
@@ -250,7 +250,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         collection(db, 'pages'),
         where('isPublic', '==', true),
         orderBy('lastModified', 'desc'),
-        limit(100)
+        limit(2000) // ✅ FIXED: Increased limit to match user pages for consistent search depth
       );
 
       const publicPagesSnapshot = await getDocs(publicPagesQuery);

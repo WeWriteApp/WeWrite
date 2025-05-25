@@ -33,9 +33,36 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     lastModified: new Date().toISOString()
   },
   {
-    id: 'subscriptions',
-    name: 'Subscriptions',
-    description: 'Enable subscription and pledge functionality for supporting creators.',
+    id: 'subscription_management',
+    name: 'Subscription Management',
+    description: 'Enable subscription functionality and UI for managing user subscriptions.',
+    enabled: false,
+    adminOnly: true,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  },
+  {
+    id: 'username_management',
+    name: 'Username Management',
+    description: 'Allow admins to manage user usernames and handle username-related operations.',
+    enabled: false,
+    adminOnly: true,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  },
+  {
+    id: 'map_view',
+    name: 'Map View',
+    description: 'Enable map view for pages with location data and geographic visualization.',
+    enabled: false,
+    adminOnly: false,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  },
+  {
+    id: 'calendar_view',
+    name: 'Calendar View',
+    description: 'Enable calendar view for activity tracking and temporal organization.',
     enabled: false,
     adminOnly: false,
     createdAt: new Date().toISOString(),

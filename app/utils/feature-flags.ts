@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 // Define feature flag types
 export type FeatureFlag =
@@ -9,6 +9,7 @@ export type FeatureFlag =
   | 'map_view'
   | 'calendar_view'
   | 'groups'
+  | 'notifications'
   | 'link_functionality';
 
 // Define admin user IDs
@@ -98,22 +99,26 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
 export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): boolean => {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
 
+  // Memoize the flag and userEmail to prevent unnecessary effect re-runs
+  const memoizedFlag = useMemo(() => flag, [flag]);
+  const memoizedUserEmail = useMemo(() => userEmail, [userEmail]);
+
   useEffect(() => {
     // Initial check
     const checkFeatureFlag = async () => {
       try {
-        console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
-        const enabled = await isFeatureEnabled(flag, userEmail);
-        console.log(`[DEBUG] useFeatureFlag hook for ${flag}, user ${userEmail || 'unknown'}: ${enabled}`);
+        console.log(`[DEBUG] Checking feature flag ${memoizedFlag} for user ${memoizedUserEmail || 'unknown'}`);
+        const enabled = await isFeatureEnabled(memoizedFlag, memoizedUserEmail);
+        console.log(`[DEBUG] useFeatureFlag hook for ${memoizedFlag}, user ${memoizedUserEmail || 'unknown'}: ${enabled}`);
 
         // Enhanced debugging for groups flag
-        if (flag === 'groups') {
+        if (memoizedFlag === 'groups') {
           console.log(`[DEBUG] GROUPS FLAG HOOK - Setting state to:`, enabled);
         }
 
         setIsEnabled(enabled);
       } catch (error) {
-        console.error(`[DEBUG] Error in useFeatureFlag for ${flag}:`, error);
+        console.error(`[DEBUG] Error in useFeatureFlag for ${memoizedFlag}:`, error);
         // Default all features to OFF on error for consistency
         setIsEnabled(false);
       }
@@ -130,18 +135,29 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
         const featureFlagsRef = doc(db, 'config', 'featureFlags');
 
         // Return the unsubscribe function
+        let lastUpdate = 0;
+        const THROTTLE_MS = 1000; // Throttle updates to max once per second
+
         return onSnapshot(featureFlagsRef, (snapshot) => {
+          const now = Date.now();
+
+          // Throttle updates to prevent excessive re-renders
+          if (now - lastUpdate < THROTTLE_MS) {
+            return;
+          }
+          lastUpdate = now;
+
           if (snapshot.exists()) {
             const flagsData = snapshot.data();
-            const isEnabledInDb = flagsData[flag] === true;
+            const isEnabledInDb = flagsData[memoizedFlag] === true;
 
             // Enhanced debugging for groups flag
-            if (flag === 'groups') {
-              console.log(`[DEBUG] GROUPS FLAG LISTENER - Raw value in database:`, flagsData[flag]);
+            if (memoizedFlag === 'groups') {
+              console.log(`[DEBUG] GROUPS FLAG LISTENER - Raw value in database:`, flagsData[memoizedFlag]);
               console.log(`[DEBUG] GROUPS FLAG LISTENER - Evaluated to:`, isEnabledInDb);
             }
 
-            console.log(`Feature flag ${flag} changed in database: ${isEnabledInDb}`);
+            console.log(`Feature flag ${memoizedFlag} changed in database: ${isEnabledInDb}`);
             setIsEnabled(isEnabledInDb);
           } else {
             // If document doesn't exist, default all features to disabled for consistency
@@ -149,7 +165,7 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
           }
         });
       } catch (error) {
-        console.error(`Error setting up listener for feature flag ${flag}:`, error);
+        console.error(`Error setting up listener for feature flag ${memoizedFlag}:`, error);
         return null;
       }
     };
@@ -163,7 +179,7 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
         if (unsubscribe) unsubscribe();
       });
     };
-  }, [flag, userEmail]);
+  }, [memoizedFlag, memoizedUserEmail]);
 
   return isEnabled;
 };

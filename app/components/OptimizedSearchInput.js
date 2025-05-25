@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Search, X, Pin } from 'lucide-react';
-import PerformanceMonitor from './PerformanceMonitor';
 
 /**
  * OptimizedSearchInput Component
@@ -138,17 +137,6 @@ const OptimizedSearchInput = ({
 
   return (
     <form onSubmit={handleSubmit} className="mb-8">
-      {/* Performance monitoring - only active in development */}
-      <PerformanceMonitor
-        name="OptimizedSearchInput"
-        data={{
-          inputValue,
-          hasOnSearch: !!onSearch,
-          hasOnClear: !!onClear,
-          hasOnSave: !!onSave,
-          hasOnSubmit: !!onSubmit
-        }}
-      />
       <div className="relative">
         <Input
           ref={searchInputRef}

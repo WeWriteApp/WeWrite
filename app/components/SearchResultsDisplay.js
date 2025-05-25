@@ -188,14 +188,23 @@ const SearchResultsDisplay = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function to prevent unnecessary re-renders
-  return (
-    prevProps.query === nextProps.query &&
-    prevProps.isLoading === nextProps.isLoading &&
-    prevProps.groupsEnabled === nextProps.groupsEnabled &&
-    prevProps.userId === nextProps.userId &&
-    // Deep comparison for results object
-    JSON.stringify(prevProps.results) === JSON.stringify(nextProps.results)
-  );
+  // Only re-render if essential props change
+  if (prevProps.query !== nextProps.query) return false;
+  if (prevProps.isLoading !== nextProps.isLoading) return false;
+  if (prevProps.groupsEnabled !== nextProps.groupsEnabled) return false;
+  if (prevProps.userId !== nextProps.userId) return false;
+
+  // Shallow comparison for results object to improve performance
+  if (!prevProps.results && !nextProps.results) return true;
+  if (!prevProps.results || !nextProps.results) return false;
+
+  // Compare array lengths first (fast check)
+  if ((prevProps.results.pages?.length || 0) !== (nextProps.results.pages?.length || 0)) return false;
+  if ((prevProps.results.users?.length || 0) !== (nextProps.results.users?.length || 0)) return false;
+  if ((prevProps.results.groups?.length || 0) !== (nextProps.results.groups?.length || 0)) return false;
+
+  // If lengths are the same, do a deeper comparison only if needed
+  return JSON.stringify(prevProps.results) === JSON.stringify(nextProps.results);
 });
 
 SearchResultsDisplay.displayName = 'SearchResultsDisplay';

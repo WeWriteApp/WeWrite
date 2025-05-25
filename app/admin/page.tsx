@@ -12,9 +12,10 @@ import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphon
 import { db } from '../firebase/database';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
-import { FeatureFlag, isAdmin } from '../utils/feature-flags';
+import { FeatureFlag, isAdmin } from '../utils/feature-flags.ts';
 import { usePWA } from '../providers/PWAProvider';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import SyncFeatureFlagsButton from '../components/SyncFeatureFlagsButton';
 import Link from 'next/link';
 
 interface User {
@@ -50,43 +51,50 @@ export default function AdminPage() {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
     {
       id: 'subscription_management',
-      name: 'Subscription',
-      description: 'Enable subscription functionality and UI',
+      name: 'Subscription Management',
+      description: 'Enable subscription functionality and UI for managing user subscriptions',
       enabled: false,
       adminOnly: true
     },
     {
       id: 'username_management',
       name: 'Username Management',
-      description: 'Allow admins to manage user usernames',
+      description: 'Allow admins to manage user usernames and handle username-related operations',
       enabled: false,
       adminOnly: true
     },
     {
       id: 'map_view',
       name: 'Map View',
-      description: 'Enable map view for pages with location data',
+      description: 'Enable map view for pages with location data and geographic visualization',
       enabled: false,
       adminOnly: false
     },
     {
       id: 'calendar_view',
       name: 'Calendar View',
-      description: 'Enable calendar view for activity tracking',
+      description: 'Enable calendar view for activity tracking and temporal organization',
       enabled: false,
       adminOnly: false
     },
     {
       id: 'groups',
       name: 'Groups',
-      description: 'Enable groups functionality and UI',
+      description: 'Enable group functionality for organizing pages and collaboration',
+      enabled: true,
+      adminOnly: false
+    },
+    {
+      id: 'notifications',
+      name: 'Notifications',
+      description: 'Enable in-app notifications for follows, page links, and other activities',
       enabled: false,
       adminOnly: false
     },
     {
       id: 'link_functionality',
       name: 'Link Functionality',
-      description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
+      description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt',
       enabled: true,
       adminOnly: false
     }
@@ -761,44 +769,16 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Feature Flags Fix Tool */}
+            {/* Feature Flags Sync Tool */}
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Feature Flags Fix</h3>
+                <h3 className="font-medium">Feature Flags Sync</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
-                Fix feature flags in the database by removing invalid flags and ensuring all valid flags are present.
+                Synchronize feature flags in the database by removing invalid flags and ensuring all valid flags are present with correct metadata.
               </span>
-              <div className="mt-2 space-y-2">
-                {/* Import the FixFeatureFlagsButton component */}
-                {(() => {
-                  try {
-                    const FixFeatureFlagsButton = require('../components/ui/button').Button;
-                    return (
-                      <FixFeatureFlagsButton
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 w-full"
-                        onClick={() => {
-                          // Implement feature flag fix functionality directly here
-                          console.log('Feature flag fix functionality moved to admin page');
-                          // Show toast notification
-                          toast({
-                            title: 'Feature Flags',
-                            description: 'Feature flags fix functionality has been integrated into the admin panel',
-                            variant: 'default'
-                          });
-                        }}
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        Fix Feature Flags
-                      </FixFeatureFlagsButton>
-                    );
-                  } catch (error) {
-                    console.error('Error rendering FixFeatureFlagsButton:', error);
-                    return null;
-                  }
-                })()}
+              <div className="mt-2">
+                <SyncFeatureFlagsButton />
               </div>
             </div>
 

@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 import PWAInstallationCard from '../components/PWAInstallationCard';
-import { useFeatureFlag, isAdmin } from '../utils/feature-flags';
+import { useFeatureFlag, isAdmin } from '../utils/feature-flags.ts';
 
 
 export default function AccountPage() {

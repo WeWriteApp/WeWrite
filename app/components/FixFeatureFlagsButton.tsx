@@ -14,7 +14,9 @@ const validFeatureFlags: FeatureFlag[] = [
   'username_management',
   'map_view',
   'calendar_view',
-  'groups'
+  'groups',
+  'notifications',
+  'link_functionality'
 ];
 
 export default function FixFeatureFlagsButton() {
@@ -33,10 +35,10 @@ export default function FixFeatureFlagsButton() {
       if (featureFlagsDoc.exists()) {
         const flagsData = featureFlagsDoc.data();
         console.log('[DEBUG] Current feature flags in database:', flagsData);
-        
+
         // Create a new object with only valid flags
         const validFlags: Record<string, boolean> = {};
-        
+
         // Copy only valid flags
         validFeatureFlags.forEach(flag => {
           if (flag in flagsData) {
@@ -47,32 +49,32 @@ export default function FixFeatureFlagsButton() {
             console.log(`[DEBUG] Adding missing flag '${flag}' as disabled`);
           }
         });
-        
+
         // Check for invalid flags
         Object.keys(flagsData).forEach(flag => {
           if (!validFeatureFlags.includes(flag as FeatureFlag)) {
             console.log(`[DEBUG] Removing invalid flag '${flag}' from database`);
           }
         });
-        
+
         // Update the database with only valid flags
         await setDoc(featureFlagsRef, validFlags);
         console.log('[DEBUG] Updated feature flags in database:', validFlags);
-        
+
         // Verify the update
         const updatedDoc = await getDoc(featureFlagsRef);
         if (updatedDoc.exists()) {
           const updatedData = updatedDoc.data();
           console.log('[DEBUG] Verified feature flags in database:', updatedData);
-          
+
           // Check if all valid flags are present
           const allFlagsPresent = validFeatureFlags.every(flag => flag in updatedData);
           console.log(`[DEBUG] All valid flags present: ${allFlagsPresent}`);
-          
+
           // Check if any invalid flags are present
           const invalidFlagsPresent = Object.keys(updatedData).some(flag => !validFeatureFlags.includes(flag as FeatureFlag));
           console.log(`[DEBUG] Invalid flags present: ${invalidFlagsPresent}`);
-          
+
           if (allFlagsPresent && !invalidFlagsPresent) {
             console.log('[DEBUG] SUCCESS: Feature flags have been fixed successfully');
             toast({
@@ -91,16 +93,16 @@ export default function FixFeatureFlagsButton() {
         }
       } else {
         console.log('[DEBUG] No feature flags document found in database, creating it');
-        
+
         // Create a new document with all valid flags disabled
         const initialFlags: Record<string, boolean> = {};
         validFeatureFlags.forEach(flag => {
           initialFlags[flag] = false;
         });
-        
+
         await setDoc(featureFlagsRef, initialFlags);
         console.log('[DEBUG] Created feature flags document with all flags disabled:', initialFlags);
-        
+
         // Verify the creation
         const createdDoc = await getDoc(featureFlagsRef);
         if (createdDoc.exists()) {

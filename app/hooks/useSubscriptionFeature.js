@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/database';
-import { isAdmin } from '../utils/feature-flags';
+import { isAdmin } from '../utils/feature-flags.ts';
 
 /**
  * Hook to check if the subscription feature is enabled

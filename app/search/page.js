@@ -1,20 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { AuthContext } from '../providers/AuthProvider';
 import { Button } from '../components/ui/button';
-import { Share2 } from 'lucide-react';
+import { Input } from '../components/ui/input';
+import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import SearchRecommendations from '../components/SearchRecommendations';
 import SavedSearches from '../components/SavedSearches';
 import RecentPages from '../components/RecentPages';
-import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { saveSearchQuery } from '../utils/savedSearches';
+import { useSearchState } from '../hooks/useSearchState';
 
 // Import the new separated components
-import OptimizedSearchInput from '../components/OptimizedSearchInput';
 import SearchResultsDisplay from '../components/SearchResultsDisplay';
 import PerformanceMonitor from '../components/PerformanceMonitor';
 
@@ -48,109 +47,195 @@ function debounce(func, wait, immediate = false) {
 
 
 
-export default function SearchPage() {
-  const searchParams = useSearchParams();
+// Completely isolated search input that doesn't cause parent re-renders
+const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
+  const [inputValue, setInputValue] = useState(initialValue || '');
+  const [currentQuery, setCurrentQuery] = useState('');
+  const searchInputRef = useRef(null);
+  const debounceTimeoutRef = useRef(null);
+  const lastSearchValue = useRef('');
+  const lastSyncedQuery = useRef('');
+
+  // Auto-focus effect
+  useEffect(() => {
+    if (autoFocus && searchInputRef.current) {
+      const timer = setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
+
+  // URL synchronization effect
+  useEffect(() => {
+    if (currentQuery !== lastSyncedQuery.current) {
+      lastSyncedQuery.current = currentQuery;
+
+      const url = new URL(window.location);
+      if (currentQuery && currentQuery.trim()) {
+        url.searchParams.set('q', currentQuery.trim());
+      } else {
+        url.searchParams.delete('q');
+      }
+
+      window.history.replaceState({}, '', url);
+    }
+  }, [currentQuery]);
+
+  // Debounced search function
+  const debouncedSearch = useCallback((value) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (value !== lastSearchValue.current && onSearch) {
+        lastSearchValue.current = value;
+        setCurrentQuery(value);
+        onSearch(value);
+      }
+    }, 300);
+  }, [onSearch]);
+
+  // Handle input changes
+  const handleInputChange = useCallback((e) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    debouncedSearch(newValue);
+  }, [debouncedSearch]);
+
+  // Handle form submission
+  const handleSubmit = useCallback((e) => {
+    e.preventDefault();
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    if (onSubmit) {
+      setCurrentQuery(inputValue);
+      onSubmit(inputValue);
+    }
+  }, [inputValue, onSubmit]);
+
+  // Handle clear button
+  const handleClear = useCallback(() => {
+    setInputValue('');
+    setCurrentQuery('');
+    lastSearchValue.current = '';
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    if (onClear) {
+      onClear();
+    }
+  }, [onClear]);
+
+  // Handle save button
+  const handleSave = useCallback(() => {
+    if (onSave && inputValue.trim()) {
+      onSave(inputValue.trim());
+    }
+  }, [inputValue, onSave]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-8">
+      <div className="relative">
+        <Input
+          ref={searchInputRef}
+          type="text"
+          placeholder={placeholder}
+          value={inputValue}
+          onChange={handleInputChange}
+          className="w-full pr-20"
+          autoComplete="off"
+        />
+
+        {/* Search icon */}
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <Search className="h-5 w-5 text-muted-foreground" />
+        </div>
+
+        {/* Clear button */}
+        {inputValue.trim() && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+
+        {/* Pin button */}
+        {inputValue.trim() && onSave && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-16 top-1/2 -translate-y-1/2 h-8 w-8"
+            onClick={handleSave}
+            title="Save this search"
+          >
+            <Pin className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </form>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.initialValue === nextProps.initialValue &&
+    prevProps.autoFocus === nextProps.autoFocus &&
+    prevProps.placeholder === nextProps.placeholder &&
+    prevProps.onSearch === nextProps.onSearch &&
+    prevProps.onClear === nextProps.onClear &&
+    prevProps.onSave === nextProps.onSave &&
+    prevProps.onSubmit === nextProps.onSubmit
+  );
+});
+
+IsolatedSearchInput.displayName = 'IsolatedSearchInput';
+
+// Memoize the entire SearchPage component to prevent unnecessary re-renders
+const SearchPage = React.memo(() => {
   const { user } = useContext(AuthContext);
 
-  // Simplified state management
-  const [currentQuery, setCurrentQuery] = useState('');
-  const [results, setResults] = useState({ pages: [], users: [], groups: [] });
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Memoize user data to prevent unnecessary re-renders
+  // Memoize user data to prevent unnecessary re-renders - with deep comparison
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
   const userEmail = useMemo(() => user?.email || null, [user?.email]);
   const userGroups = useMemo(() => user?.groups ? Object.keys(user.groups) : [], [user?.groups]);
 
-  // Check if Groups feature is enabled
-  const groupsEnabled = useFeatureFlag('groups', userEmail);
+  // Use isolated search state to prevent re-renders
+  const { currentQuery, results, isLoading, performSearch, clearSearch } = useSearchState(userId, userGroups);
 
-  // Initialize query from URL parameters - memoized to prevent SearchInput re-renders
+  // Groups feature is always enabled (per memories) - no need for feature flag listener
+  const groupsEnabled = true;
+
+  // Get initial query from URL only once on mount
   const initialQuery = useMemo(() => {
-    const q = searchParams.get('q');
-    return q && q.trim() ? q.trim() : '';
-  }, [searchParams]);
-
-
-
-  // Memoized search function to prevent callback recreation
-  const performSearch = useCallback(async (searchTerm) => {
-    if (!searchTerm || !searchTerm.trim()) {
-      setResults({ pages: [], users: [], groups: [] });
-      setIsLoading(false);
-      setCurrentQuery('');
-      return;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const q = urlParams.get('q');
+      return q && q.trim() ? q.trim() : '';
     }
+    return '';
+  }, []); // Empty dependency array - only run once
 
-    const trimmedSearchTerm = searchTerm.trim();
-    setIsLoading(true);
-    setCurrentQuery(trimmedSearchTerm);
 
-    try {
-      if (!userId) {
-        console.log(`User not authenticated, showing empty results for: "${trimmedSearchTerm}"`);
-        setResults({ pages: [], users: [], groups: [] });
-        setIsLoading(false);
-        return;
-      }
 
-      const queryUrl = `/api/search?userId=${userId}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${userGroups}&useScoring=true`;
-      console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
 
-      const response = await fetch(queryUrl);
-
-      if (!response.ok) {
-        console.error('Search API returned error:', response.status, response.statusText);
-        throw new Error(`Search API error: ${response.status} - ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log(`Search results for "${trimmedSearchTerm}":`, data);
-
-      if (data.error) {
-        console.warn('Search API returned error:', data.error);
-      }
-
-      // Process the results to ensure usernames are properly set
-      const processedPages = await Promise.all((data.pages || []).map(async (page) => {
-        if (!page.username || page.username === "Anonymous" || page.username === "NULL") {
-          try {
-            const { getUsernameById } = await import('../utils/userUtils');
-            if (page.userId) {
-              const username = await getUsernameById(page.userId);
-              return {
-                ...page,
-                username: username || "Missing username"
-              };
-            }
-          } catch (error) {
-            console.error('Error fetching username:', error);
-          }
-        }
-        return page;
-      }));
-
-      // Deduplicate results
-      const uniquePages = Array.from(
-        new Map(processedPages.map(page => [page.id, page])).values()
-      );
-      const uniqueUsers = Array.from(
-        new Map((data.users || []).map(user => [user.id, user])).values()
-      );
-
-      setResults({
-        pages: uniquePages,
-        users: uniqueUsers,
-        groups: []
-      });
-
-    } catch (error) {
-      console.error('Error searching:', error);
-      setResults({ pages: [], users: [], groups: [] });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId, userGroups]); // Use memoized userGroups instead of user?.groups
 
 
 
@@ -163,27 +248,16 @@ export default function SearchPage() {
     }
   }, [initialQuery, performSearch]); // Add performSearch dependency
 
-  // Memoized callback functions for SearchInput component with proper dependencies
+  // Memoized callback functions for SearchInput component - NO URL UPDATES HERE
   const handleSearch = useCallback((searchTerm) => {
     performSearch(searchTerm);
-
-    // Update URL
-    if (searchTerm && searchTerm.trim()) {
-      const url = new URL(window.location);
-      url.searchParams.set('q', searchTerm.trim());
-      window.history.replaceState({}, '', url);
-    }
-  }, [performSearch]); // Add performSearch dependency
+    // URL updates are handled by URLSynchronizer component
+  }, [performSearch]);
 
   const handleClear = useCallback(() => {
-    setResults({ pages: [], users: [], groups: [] });
-    setCurrentQuery('');
-
-    // Remove the q parameter from URL
-    const url = new URL(window.location);
-    url.searchParams.delete('q');
-    window.history.replaceState({}, '', url);
-  }, []); // No dependencies needed for this function
+    clearSearch();
+    // URL updates are handled by URLSynchronizer component
+  }, [clearSearch]);
 
   const handleSave = useCallback((searchTerm) => {
     if (!userId || !searchTerm) return;
@@ -207,18 +281,8 @@ export default function SearchPage() {
 
   const handleSubmit = useCallback((searchTerm) => {
     performSearch(searchTerm);
-
-    // Update URL
-    if (searchTerm && searchTerm.trim()) {
-      const url = new URL(window.location);
-      url.searchParams.set('q', searchTerm.trim());
-      window.history.replaceState({}, '', url);
-    } else {
-      const url = new URL(window.location);
-      url.searchParams.delete('q');
-      window.history.replaceState({}, '', url);
-    }
-  }, [performSearch]); // Add performSearch dependency
+    // URL updates are handled by URLSynchronizer component
+  }, [performSearch]);
 
   // Memoized helper function to copy to clipboard with toast notification
   const copyToClipboard = useCallback((textToCopy) => {
@@ -303,11 +367,13 @@ export default function SearchPage() {
       <PerformanceMonitor
         name="SearchPage"
         data={{
+          userId,
+          userEmail,
           currentQuery,
           isLoading,
-          resultsCount: (results?.pages?.length || 0) + (results?.users?.length || 0),
-          userId,
-          groupsEnabled
+          groupsEnabled,
+          initialQuery,
+          hasResults: !!(results?.pages?.length || results?.users?.length)
         }}
       />
 
@@ -345,8 +411,8 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Search Input Component - Optimized for Performance */}
-      <OptimizedSearchInput
+      {/* Search Input Component - Completely Isolated */}
+      <IsolatedSearchInput
         initialValue={initialQuery}
         onSearch={handleSearch}
         onClear={handleClear}
@@ -369,4 +435,8 @@ export default function SearchPage() {
       />
     </div>
   );
-}
+});
+
+SearchPage.displayName = 'SearchPage';
+
+export default SearchPage;
