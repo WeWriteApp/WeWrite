@@ -1,23 +1,16 @@
 "use client";
 
 import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
+import { Modal } from "./ui/modal";
 import { Button } from "./ui/button";
 import { Save, X } from "lucide-react";
 
 /**
  * UnsavedChangesDialog Component
- * 
+ *
  * A reusable dialog component that shows a confirmation when a user attempts to
  * navigate away from a page with unsaved changes.
- * 
+ *
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether the dialog is open
  * @param {Function} props.onClose - Function to call when the dialog is closed
@@ -37,18 +30,35 @@ export default function UnsavedChangesDialog({
   description = "You have unsaved changes. What would you like to do?"
 }) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex justify-end gap-2 mt-4">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="sm:max-w-[425px]"
+      showCloseButton={false}
+    >
+      <div className="flex flex-col items-center gap-4 p-6">
+        {/* Icon */}
+        <div className="p-3 rounded-full bg-amber-100 dark:bg-amber-900/30">
+          <Save className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+        </div>
+
+        {/* Title */}
+        <h2 className="text-lg font-semibold text-center">
+          {title}
+        </h2>
+
+        {/* Description */}
+        <p className="text-sm text-muted-foreground text-center">
+          {description}
+        </p>
+
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-3 w-full mt-4">
           <Button
             variant="outline"
             onClick={onLeaveWithoutSaving}
-            className="gap-1"
             disabled={isSaving}
+            className="flex-1 gap-2"
           >
             <X className="h-4 w-4" />
             Leave without Saving
@@ -56,14 +66,18 @@ export default function UnsavedChangesDialog({
           <Button
             variant="default"
             onClick={onStayAndSave}
-            className="gap-1"
             disabled={isSaving}
+            className="flex-1 gap-2"
           >
-            <Save className="h-4 w-4" />
+            {isSaving ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             {isSaving ? "Saving..." : "Stay and Save"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
   );
 }

@@ -13,6 +13,8 @@ import { Trash2, Users, FileText, Plus, ChevronLeft, Globe, Lock } from "lucide-
 import Link from "next/link";
 import { toast } from "./ui/use-toast";
 import VisibilityDropdown from "./VisibilityDropdown";
+import { useConfirmation } from '../hooks/useConfirmation';
+import ConfirmationModal from './ConfirmationModal';
 import {
   Dialog,
   DialogContent,
@@ -243,9 +245,19 @@ export default function GroupDetails({ group }) {
 
 const DeleteGroupButton = ({ group }) => {
   const router = useRouter();
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
 
-  const handleDelete = () => {
-    if (confirm("Are you sure you want to delete this group? All pages will remain but will no longer be associated with this group.")) {
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: 'Delete Group',
+      message: 'Are you sure you want to delete this group? All pages will remain but will no longer be associated with this group.',
+      confirmText: 'Delete Group',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+      icon: 'delete'
+    });
+
+    if (confirmed) {
       const groupRef = ref(rtdb, `groups/${group.id}`);
       set(groupRef, null);
       router.push("/");
@@ -253,13 +265,29 @@ const DeleteGroupButton = ({ group }) => {
   };
 
   return (
-    <Button
-      variant="destructive"
-      onClick={handleDelete}
-      className="flex items-center gap-2"
-    >
-      <Trash2 className="h-4 w-4" />
-      Delete Group
-    </Button>
+    <>
+      <Button
+        variant="destructive"
+        onClick={handleDelete}
+        className="flex items-center gap-2"
+      >
+        <Trash2 className="h-4 w-4" />
+        Delete Group
+      </Button>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        isLoading={confirmationState.isLoading}
+        icon={confirmationState.icon}
+      />
+    </>
   );
 };

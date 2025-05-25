@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { SupporterIcon } from './SupporterIcon';
 import { useSubscriptionFeature } from '../hooks/useSubscriptionFeature';
 import SubscriptionComingSoonModal from './SubscriptionComingSoonModal';
+import { useConfirmation } from '../hooks/useConfirmation';
+import ConfirmationModal from './ConfirmationModal';
 
 import { createPortalSession } from '../services/stripeService';
 
@@ -23,6 +25,9 @@ export default function SubscriptionManagement() {
   const [success, setSuccess] = useState(null);
   const { isEnabled: isSubscriptionEnabled, showComingSoonModal, setShowComingSoonModal } =
     useSubscriptionFeature(user?.email);
+
+  // Use confirmation modal hook
+  const { confirmationState, confirmCancelSubscription, closeConfirmation } = useConfirmation();
 
   // Helper function to clean up subscription data
   const cleanupSubscriptionData = async (userId) => {
@@ -130,8 +135,9 @@ export default function SubscriptionManagement() {
   const handleCancelSubscription = async () => {
     if (!user) return;
 
-    // Show confirmation dialog
-    if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your supporter badge.')) {
+    // Show confirmation dialog using our custom modal
+    const confirmed = await confirmCancelSubscription();
+    if (!confirmed) {
       return;
     }
 
@@ -585,6 +591,20 @@ export default function SubscriptionManagement() {
           Subscriptions are processed securely through Stripe.
         </p>
       </CardFooter>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        isLoading={confirmationState.isLoading}
+        icon={confirmationState.icon}
+      />
     </Card>
   );
 }

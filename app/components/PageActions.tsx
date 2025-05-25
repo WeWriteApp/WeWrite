@@ -38,6 +38,8 @@ import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
 import FollowButton from './FollowButton';
+import { useConfirmation } from '../hooks/useConfirmation';
+import ConfirmationModal from './ConfirmationModal';
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
@@ -104,6 +106,9 @@ export function PageActions({
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
   const [currentLineMode, setCurrentLineMode] = useState(lineMode);
 
+  // Use confirmation modal hook
+  const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
+
   // Ensure the switch reflects the current mode from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -139,7 +144,8 @@ export function PageActions({
    * Handles page deletion with confirmation
    */
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this page? This action cannot be undone.")) {
+    const confirmed = await confirmDelete("this page");
+    if (confirmed) {
       try {
         await deletePage(page.id);
         toast.success("Page deleted successfully");
@@ -366,6 +372,20 @@ export function PageActions({
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        isLoading={confirmationState.isLoading}
+        icon={confirmationState.icon}
+      />
     </div>
   );
 }
