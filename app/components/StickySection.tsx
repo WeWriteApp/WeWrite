@@ -48,7 +48,13 @@ function determineActiveSection(): string | null {
 
   // Find all sections and determine which one should be active
   const sections = document.querySelectorAll('[data-section]');
-  const sectionData: Array<{id: string, top: number, bottom: number, headerTop: number}> = [];
+  const sectionData: Array<{
+    id: string,
+    top: number,
+    bottom: number,
+    originalHeaderTop: number,
+    isCurrentlySticky: boolean
+  }> = [];
 
   // Collect all section data and sort by position
   for (const section of sections) {
@@ -62,14 +68,26 @@ function determineActiveSection(): string | null {
 
     // Find the header element within this section
     const headerElement = sectionElement.querySelector(`#${sectionId}-header`);
-    const headerRect = headerElement ? headerElement.getBoundingClientRect() : null;
-    const headerTop = headerRect ? headerRect.top + scrollY : sectionTop;
+    const isCurrentlySticky = headerElement ? headerElement.classList.contains('section-header-sticky') : false;
+
+    // Calculate the original header position (where it should be when not sticky)
+    // If it's currently sticky, we need to estimate its original position
+    let originalHeaderTop: number;
+    if (isCurrentlySticky) {
+      // When sticky, the header's original position would be at the section top
+      originalHeaderTop = sectionTop;
+    } else {
+      // When not sticky, use its current position
+      const headerRect = headerElement ? headerElement.getBoundingClientRect() : null;
+      originalHeaderTop = headerRect ? headerRect.top + scrollY : sectionTop;
+    }
 
     sectionData.push({
       id: sectionId,
       top: sectionTop,
       bottom: sectionBottom,
-      headerTop: headerTop
+      originalHeaderTop: originalHeaderTop,
+      isCurrentlySticky: isCurrentlySticky
     });
   }
 
@@ -78,45 +96,36 @@ function determineActiveSection(): string | null {
 
   let activeSection: string | null = null;
   const viewportTop = scrollY + mainHeaderHeight; // Account for main header space
+  const headerBuffer = 10; // Increased buffer for more stable transitions
 
-  // IMPROVED LOGIC: Find the section that should be active based on current viewport position
-  // This handles both downward and upward scrolling correctly
+  // FIXED LOGIC: Proper handling of header restoration and sticky states
   for (let i = 0; i < sectionData.length; i++) {
     const section = sectionData[i];
     const nextSection = sectionData[i + 1];
 
-    // Check if we're currently within this section's content area
-    const isInSectionContent = scrollY >= section.top && scrollY < section.bottom;
+    // Key insight: A section should be sticky if we've scrolled past its original header position
+    // AND we haven't reached the next section's header position
+    const isPastOriginalHeader = viewportTop >= (section.originalHeaderTop + headerBuffer);
+    const isBeforeNextSection = !nextSection || viewportTop < (nextSection.originalHeaderTop + headerBuffer);
 
-    // Check if we've scrolled past this section's header (with small buffer for smooth transitions)
-    const headerBuffer = 5; // Small buffer to prevent flickering
-    const isPastHeader = viewportTop >= (section.headerTop - headerBuffer);
+    // Additional check: ensure we're still within reasonable bounds of this section
+    const isWithinSectionBounds = scrollY < section.bottom;
 
-    // Check if we're before the next section's header (or this is the last section)
-    const isBeforeNextHeader = !nextSection || viewportTop < (nextSection.headerTop - headerBuffer);
+    // RESTORATION LOGIC: If we're back at or above the original header position, don't make it sticky
+    const isAtOrAboveOriginalPosition = scrollY <= (section.originalHeaderTop - headerBuffer);
 
-    // A section should be active if we're in its territory and have passed its header
-    if (isInSectionContent && isPastHeader) {
+    if (isPastOriginalHeader && isBeforeNextSection && isWithinSectionBounds && !isAtOrAboveOriginalPosition) {
       activeSection = section.id;
       // Debug logging (only in development)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] Active section: ${section.id} (in content, past header)`);
-      }
-    } else if (isPastHeader && isBeforeNextHeader) {
-      // This handles the case where we're past a section's header but before the next one
-      // This is crucial for upward scrolling scenarios
-      const distanceFromSectionStart = Math.abs(scrollY - section.top);
-      const distanceFromNextSection = nextSection ? Math.abs(scrollY - nextSection.top) : Infinity;
-
-      // Choose the section we're closest to
-      if (distanceFromSectionStart <= distanceFromNextSection) {
-        activeSection = section.id;
-        // Debug logging (only in development)
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[StickySection] Active section: ${section.id} (between sections, closer to this one)`);
-        }
+        console.log(`[StickySection] Active section: ${section.id} (past original header, within bounds)`);
       }
     }
+  }
+
+  // Debug logging for restoration cases
+  if (process.env.NODE_ENV === 'development' && activeSection === null) {
+    console.log(`[StickySection] No active section - likely at original positions or top of page`);
   }
 
   return activeSection;
@@ -293,12 +302,22 @@ export default function StickySection({
     const placeholderElement = placeholderRef.current;
     const shouldBeSticky = isActiveStickySection;
 
+    // Debug logging for state transitions
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[StickySection] ${sectionId} - shouldBeSticky: ${shouldBeSticky}, isSticky: ${isSticky}`);
+    }
+
     if (shouldBeSticky && !isSticky) {
       // Becoming sticky - prevent layout shift by adding placeholder
       if (placeholderElement) {
         const headerRect = headerElement.getBoundingClientRect();
         placeholderElement.style.height = `${headerRect.height}px`;
         placeholderElement.style.display = 'block';
+
+        // Debug logging
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[StickySection] ${sectionId} - Adding placeholder with height: ${headerRect.height}px`);
+        }
       }
 
       // Position sticky header at the top of the viewport (replacing main header)
@@ -306,19 +325,46 @@ export default function StickySection({
       headerElement.classList.add('section-header-sticky');
       headerElement.style.zIndex = '60'; // Same as main header z-index
       setIsSticky(true);
-    } else if (!shouldBeSticky && isSticky) {
-      // No longer sticky - remove placeholder and reset positioning
-      if (placeholderElement) {
-        placeholderElement.style.height = '0px';
-        placeholderElement.style.display = 'none';
-      }
 
-      headerElement.style.top = '';
-      headerElement.classList.remove('section-header-sticky');
-      headerElement.style.zIndex = '';
-      setIsSticky(false);
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[StickySection] ${sectionId} - Now sticky`);
+      }
+    } else if (!shouldBeSticky && isSticky) {
+      // No longer sticky - restore to original position
+
+      // IMPORTANT: Use requestAnimationFrame to ensure smooth transition
+      requestAnimationFrame(() => {
+        if (placeholderElement) {
+          // Gradually remove placeholder to prevent jarring transitions
+          placeholderElement.style.height = '0px';
+          placeholderElement.style.display = 'none';
+
+          // Debug logging
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[StickySection] ${sectionId} - Removing placeholder`);
+          }
+        }
+
+        // Reset header positioning and styling
+        headerElement.style.top = '';
+        headerElement.classList.remove('section-header-sticky');
+        headerElement.style.zIndex = '';
+
+        // Ensure the header is visible in its original position
+        headerElement.style.position = '';
+        headerElement.style.visibility = 'visible';
+        headerElement.style.opacity = '1';
+
+        setIsSticky(false);
+
+        // Debug logging
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[StickySection] ${sectionId} - Restored to original position`);
+        }
+      });
     }
-  }, [isActiveStickySection, isSticky]);
+  }, [isActiveStickySection, isSticky, sectionId]);
 
   return (
     <div

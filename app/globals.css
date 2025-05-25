@@ -931,6 +931,10 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   transition-property: transform, box-shadow, background-color, backdrop-filter;
   will-change: transform, box-shadow;
   transform: translateZ(0); /* Force GPU acceleration */
+  /* Ensure headers are always visible and properly positioned */
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative;
 }
 
 /* Section header sticky styling - enhanced when sticky */
