@@ -15,7 +15,9 @@ interface StickySectionProps {
 // Global state to track which section should have the sticky header
 let activeStickySection: string | null = null;
 const sectionCallbacks: Map<string, (isActive: boolean) => void> = new Map();
+const sectionPositions: Map<string, { top: number; bottom: number; headerHeight: number }> = new Map();
 let globalScrollHandler: (() => void) | null = null;
+let isScrollHandlerActive = false;
 
 // Section order for proper z-index management
 const sectionOrder: string[] = ['activity', 'groups', 'trending', 'random_pages', 'top_users'];
@@ -46,7 +48,7 @@ function determineActiveSection(): string | null {
 
   // Find all sections and determine which one should be active
   const sections = document.querySelectorAll('[data-section]');
-  const sectionData: Array<{id: string, top: number, bottom: number}> = [];
+  const sectionData: Array<{id: string, top: number, bottom: number, headerTop: number}> = [];
 
   // Collect all section data and sort by position
   for (const section of sections) {
@@ -58,10 +60,16 @@ function determineActiveSection(): string | null {
     const sectionTop = rect.top + scrollY;
     const sectionBottom = sectionTop + rect.height;
 
+    // Find the header element within this section
+    const headerElement = sectionElement.querySelector(`#${sectionId}-header`);
+    const headerRect = headerElement ? headerElement.getBoundingClientRect() : null;
+    const headerTop = headerRect ? headerRect.top + scrollY : sectionTop;
+
     sectionData.push({
       id: sectionId,
       top: sectionTop,
-      bottom: sectionBottom
+      bottom: sectionBottom,
+      headerTop: headerTop
     });
   }
 
@@ -69,15 +77,44 @@ function determineActiveSection(): string | null {
   sectionData.sort((a, b) => a.top - b.top);
 
   let activeSection: string | null = null;
+  const viewportTop = scrollY + mainHeaderHeight; // Account for main header space
 
-  // Find the section that should have its header sticky
-  // This is the last section whose header we've scrolled past
-  for (const section of sectionData) {
-    // If we've scrolled past this section's header position
-    if (scrollY >= section.top - mainHeaderHeight) {
-      // Only set as active if we haven't scrolled completely past this section
-      if (scrollY < section.bottom) {
+  // IMPROVED LOGIC: Find the section that should be active based on current viewport position
+  // This handles both downward and upward scrolling correctly
+  for (let i = 0; i < sectionData.length; i++) {
+    const section = sectionData[i];
+    const nextSection = sectionData[i + 1];
+
+    // Check if we're currently within this section's content area
+    const isInSectionContent = scrollY >= section.top && scrollY < section.bottom;
+
+    // Check if we've scrolled past this section's header (with small buffer for smooth transitions)
+    const headerBuffer = 5; // Small buffer to prevent flickering
+    const isPastHeader = viewportTop >= (section.headerTop - headerBuffer);
+
+    // Check if we're before the next section's header (or this is the last section)
+    const isBeforeNextHeader = !nextSection || viewportTop < (nextSection.headerTop - headerBuffer);
+
+    // A section should be active if we're in its territory and have passed its header
+    if (isInSectionContent && isPastHeader) {
+      activeSection = section.id;
+      // Debug logging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[StickySection] Active section: ${section.id} (in content, past header)`);
+      }
+    } else if (isPastHeader && isBeforeNextHeader) {
+      // This handles the case where we're past a section's header but before the next one
+      // This is crucial for upward scrolling scenarios
+      const distanceFromSectionStart = Math.abs(scrollY - section.top);
+      const distanceFromNextSection = nextSection ? Math.abs(scrollY - nextSection.top) : Infinity;
+
+      // Choose the section we're closest to
+      if (distanceFromSectionStart <= distanceFromNextSection) {
         activeSection = section.id;
+        // Debug logging (only in development)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[StickySection] Active section: ${section.id} (between sections, closer to this one)`);
+        }
       }
     }
   }
