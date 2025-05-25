@@ -26,15 +26,10 @@ const ActivitySection = () => {
 
   return (
     <div style={{ minHeight: '200px' }}>
-      <SectionTitle
-        icon={Clock}
-        title="Recent Activity"
-        rightContent={filterComponent}
-      />
       <RecentActivity
         ref={activityRef}
         limit={4}
-        renderFilterInHeader={true}
+        renderFilterInHeader={false}
       />
     </div>
   );

@@ -755,6 +755,9 @@ body {
 /* Pill link text - allow full display unless container constrains */
 .pill-text {
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Truncate links in the editor to prevent layout shifts */
@@ -886,6 +889,31 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   background-color: hsl(var(--background));
   z-index: 50;
   transition: transform 0.2s ease-out;
+}
+
+/* Section header sticky styling */
+.section-header-sticky {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: hsl(var(--background)) !important;
+  backdrop-filter: blur(8px);
+  animation: slideDown 0.2s ease-out;
+  /* z-index will be set dynamically via JavaScript for progressive layering */
+  z-index: 50;
+  /* Ensure complete coverage */
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  /* Prevent any content bleed-through */
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .section-header-sticky {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background-color: hsl(var(--background)) !important;
 }
 
 @keyframes slideDown {
