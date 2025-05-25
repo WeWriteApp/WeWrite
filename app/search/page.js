@@ -7,22 +7,11 @@ import { Input } from '../components/ui/input';
 import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
-<<<<<<< HEAD
-import SearchRecommendations from '../components/SearchRecommendations';
-import SavedSearches from '../components/SavedSearches';
-import RecentPages from '../components/RecentPages';
-=======
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
 import { saveSearchQuery } from '../utils/savedSearches';
 import { useSearchState } from '../hooks/useSearchState';
 
-<<<<<<< HEAD
 // Import the new separated components
 import SearchResultsDisplay from '../components/SearchResultsDisplay';
-=======
-// Import the new isolated search page content component
-import SearchPageContent from '../components/SearchPageContent';
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
 import PerformanceMonitor from '../components/PerformanceMonitor';
 
 
@@ -220,87 +209,26 @@ IsolatedSearchInput.displayName = 'IsolatedSearchInput';
 const SearchPage = React.memo(() => {
   const { user } = useContext(AuthContext);
 
-<<<<<<< HEAD
-  // Memoize user data to prevent unnecessary re-renders - with deep comparison
-=======
-  // Simplified state management - removed currentQuery to prevent re-renders during typing
-  const [results, setResults] = useState({ pages: [], users: [], groups: [] });
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastSearchQuery, setLastSearchQuery] = useState(''); // Only for results display
-
   // Memoize user data to prevent unnecessary re-renders
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
   const userEmail = useMemo(() => user?.email || null, [user?.email]);
   const userGroups = useMemo(() => user?.groups ? Object.keys(user.groups) : [], [user?.groups]);
 
-<<<<<<< HEAD
   // Use isolated search state to prevent re-renders
   const { currentQuery, results, isLoading, performSearch, clearSearch } = useSearchState(userId, userGroups);
-=======
-  // Memoize feature flag to prevent re-renders from Firestore listener
-  const groupsEnabled = useMemo(() => {
-    // For now, groups are enabled for all users as per the feature flag implementation
-    // This prevents re-renders from the useFeatureFlag hook's Firestore listener
-    return true;
-  }, []); // No dependencies needed since groups are always enabled
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
 
   // Groups feature is always enabled (per memories) - no need for feature flag listener
   const groupsEnabled = true;
 
   // Get initial query from URL only once on mount
   const initialQuery = useMemo(() => {
-<<<<<<< HEAD
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const q = urlParams.get('q');
       return q && q.trim() ? q.trim() : '';
-=======
-    const q = searchParams.get('q');
-    return q && q.trim() ? q.trim() : '';
-  }, [searchParams]);
-
-
-
-  // Memoized search function to prevent callback recreation
-  const performSearch = useCallback(async (searchTerm) => {
-    if (!searchTerm || !searchTerm.trim()) {
-      setResults({ pages: [], users: [], groups: [] });
-      setIsLoading(false);
-      setLastSearchQuery('');
-      return;
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
     }
     return '';
   }, []); // Empty dependency array - only run once
-
-<<<<<<< HEAD
-
-
-=======
-    const trimmedSearchTerm = searchTerm.trim();
-    setIsLoading(true);
-    setLastSearchQuery(trimmedSearchTerm);
-
-    try {
-      // Build query URL - include userId if available, but allow search without authentication
-      const queryParams = new URLSearchParams({
-        searchTerm: trimmedSearchTerm,
-        useScoring: 'true'
-      });
-
-      if (userId) {
-        queryParams.set('userId', userId);
-        queryParams.set('groupIds', userGroups.join(','));
-        console.log(`Making authenticated API request to search for "${trimmedSearchTerm}"`);
-      } else {
-        console.log(`Making unauthenticated API request to search for "${trimmedSearchTerm}" (public pages only)`);
-      }
-
-      const queryUrl = `/api/search?${queryParams.toString()}`;
-      console.log(`Search API URL: ${queryUrl}`);
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
 
 
 
@@ -314,42 +242,17 @@ const SearchPage = React.memo(() => {
     }
   }, [initialQuery, performSearch]); // Add performSearch dependency
 
-<<<<<<< HEAD
   // Memoized callback functions for SearchInput component - NO URL UPDATES HERE
   const handleSearch = useCallback((searchTerm) => {
     performSearch(searchTerm);
     // URL updates are handled by URLSynchronizer component
-=======
-  // Memoized callback functions for SearchInput component with stable references
-  const handleSearch = useCallback((searchTerm) => {
-    performSearch(searchTerm);
-
-    // Update URL
-    if (searchTerm && searchTerm.trim()) {
-      const url = new URL(window.location);
-      url.searchParams.set('q', searchTerm.trim());
-      window.history.replaceState({}, '', url);
-    }
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
   }, [performSearch]);
 
   // Stable clear function with no dependencies to prevent re-renders
   const handleClear = useCallback(() => {
-<<<<<<< HEAD
     clearSearch();
     // URL updates are handled by URLSynchronizer component
   }, [clearSearch]);
-=======
-    // Use functional updates to avoid dependencies
-    setResults(() => ({ pages: [], users: [], groups: [] }));
-    setLastSearchQuery(() => '');
-
-    // Remove the q parameter from URL
-    const url = new URL(window.location);
-    url.searchParams.delete('q');
-    window.history.replaceState({}, '', url);
-  }, []); // No dependencies needed - uses functional updates
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
 
   // Stable save function - memoized with userId dependency
   const handleSave = useCallback((searchTerm) => {
@@ -375,21 +278,7 @@ const SearchPage = React.memo(() => {
   // Stable submit function with performSearch dependency
   const handleSubmit = useCallback((searchTerm) => {
     performSearch(searchTerm);
-<<<<<<< HEAD
     // URL updates are handled by URLSynchronizer component
-=======
-
-    // Update URL
-    if (searchTerm && searchTerm.trim()) {
-      const url = new URL(window.location);
-      url.searchParams.set('q', searchTerm.trim());
-      window.history.replaceState({}, '', url);
-    } else {
-      const url = new URL(window.location);
-      url.searchParams.delete('q');
-      window.history.replaceState({}, '', url);
-    }
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
   }, [performSearch]);
 
   // Stable helper function to copy to clipboard with toast notification
@@ -455,7 +344,6 @@ const SearchPage = React.memo(() => {
       <PerformanceMonitor
         name="SearchPage"
         data={{
-<<<<<<< HEAD
           userId,
           userEmail,
           currentQuery,
@@ -463,13 +351,6 @@ const SearchPage = React.memo(() => {
           groupsEnabled,
           initialQuery,
           hasResults: !!(results?.pages?.length || results?.users?.length)
-=======
-          isLoading,
-          resultsCount: (results?.pages?.length || 0) + (results?.users?.length || 0),
-          userId,
-          groupsEnabled,
-          hasQuery: !!lastSearchQuery
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
         }}
       />
 
@@ -507,7 +388,6 @@ const SearchPage = React.memo(() => {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* Search Input Component - Completely Isolated */}
       <IsolatedSearchInput
         initialValue={initialQuery}
@@ -519,18 +399,9 @@ const SearchPage = React.memo(() => {
         placeholder="Search for pages, users..."
       />
 
-      {/* Empty search state */}
-      {EmptySearchState}
-
       {/* Search Results Display Component */}
       <SearchResultsDisplay
         query={currentQuery}
-=======
-      {/* Isolated Search Content - Prevents input re-renders */}
-      <SearchPageContent
-        initialQuery={initialQuery}
-        currentQuery={lastSearchQuery}
->>>>>>> bf669a4f18c9e8b9572883bf0f6fadb0b09a2557
         results={results}
         isLoading={isLoading}
         groupsEnabled={groupsEnabled}
