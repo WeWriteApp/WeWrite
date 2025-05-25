@@ -85,7 +85,13 @@ export function PageTransition({
       ? new URLSearchParams(window.location.search).toString()
       : '';
 
-    if (pathname !== prevPathname || searchParams.toString() !== currentSearchParams) {
+    const isPathChange = pathname !== prevPathname;
+    const isSearchParamsChange = searchParams.toString() !== currentSearchParams;
+
+    // Skip transitions for search parameter changes on the search page to prevent flashing
+    const isSearchPageParamChange = pathname === '/search' && !isPathChange && isSearchParamsChange;
+
+    if ((isPathChange || isSearchParamsChange) && !isSearchPageParamChange) {
       // Start loading state
       setIsLoading(true);
 
@@ -137,11 +143,14 @@ export function PageTransition({
         }
       }, 300); // Short delay for better UX
     } else {
-      // If it's not a navigation change, just update the content
-      // Use a small delay to ensure React has time to process updates
-      setTimeout(() => {
-        setContent(children);
-      }, 0);
+      // If it's not a navigation change or it's a search page param change, just update the content immediately
+      // This prevents flashing on search parameter updates
+      setContent(children);
+
+      // Update previous pathname if it changed
+      if (isPathChange) {
+        setPrevPathname(pathname);
+      }
     }
   }, [pathname, searchParams, children, prevPathname, isLoading, isMounted]);
 
@@ -170,7 +179,7 @@ export function PageTransition({
       {/* Page content with animation */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={pathname + (searchParams?.toString() || '')}
+          key={pathname === '/search' ? pathname : pathname + (searchParams?.toString() || '')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

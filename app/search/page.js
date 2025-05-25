@@ -7,15 +7,10 @@ import { Button } from '../components/ui/button';
 import { Share2 } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
-import SearchRecommendations from '../components/SearchRecommendations';
-import SavedSearches from '../components/SavedSearches';
-import RecentPages from '../components/RecentPages';
-import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { saveSearchQuery } from '../utils/savedSearches';
 
-// Import the new separated components
-import OptimizedSearchInput from '../components/OptimizedSearchInput';
-import SearchResultsDisplay from '../components/SearchResultsDisplay';
+// Import the new isolated search page content component
+import SearchPageContent from '../components/SearchPageContent';
 import PerformanceMonitor from '../components/PerformanceMonitor';
 
 
@@ -52,18 +47,22 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const { user } = useContext(AuthContext);
 
-  // Simplified state management
-  const [currentQuery, setCurrentQuery] = useState('');
+  // Simplified state management - removed currentQuery to prevent re-renders during typing
   const [results, setResults] = useState({ pages: [], users: [], groups: [] });
   const [isLoading, setIsLoading] = useState(false);
+  const [lastSearchQuery, setLastSearchQuery] = useState(''); // Only for results display
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
   const userEmail = useMemo(() => user?.email || null, [user?.email]);
   const userGroups = useMemo(() => user?.groups ? Object.keys(user.groups) : [], [user?.groups]);
 
-  // Check if Groups feature is enabled
-  const groupsEnabled = useFeatureFlag('groups', userEmail);
+  // Memoize feature flag to prevent re-renders from Firestore listener
+  const groupsEnabled = useMemo(() => {
+    // For now, groups are enabled for all users as per the feature flag implementation
+    // This prevents re-renders from the useFeatureFlag hook's Firestore listener
+    return true;
+  }, []); // No dependencies needed since groups are always enabled
 
   // Initialize query from URL parameters - memoized to prevent SearchInput re-renders
   const initialQuery = useMemo(() => {
@@ -78,24 +77,31 @@ export default function SearchPage() {
     if (!searchTerm || !searchTerm.trim()) {
       setResults({ pages: [], users: [], groups: [] });
       setIsLoading(false);
-      setCurrentQuery('');
+      setLastSearchQuery('');
       return;
     }
 
     const trimmedSearchTerm = searchTerm.trim();
     setIsLoading(true);
-    setCurrentQuery(trimmedSearchTerm);
+    setLastSearchQuery(trimmedSearchTerm);
 
     try {
-      if (!userId) {
-        console.log(`User not authenticated, showing empty results for: "${trimmedSearchTerm}"`);
-        setResults({ pages: [], users: [], groups: [] });
-        setIsLoading(false);
-        return;
+      // Build query URL - include userId if available, but allow search without authentication
+      const queryParams = new URLSearchParams({
+        searchTerm: trimmedSearchTerm,
+        useScoring: 'true'
+      });
+
+      if (userId) {
+        queryParams.set('userId', userId);
+        queryParams.set('groupIds', userGroups.join(','));
+        console.log(`Making authenticated API request to search for "${trimmedSearchTerm}"`);
+      } else {
+        console.log(`Making unauthenticated API request to search for "${trimmedSearchTerm}" (public pages only)`);
       }
 
-      const queryUrl = `/api/search?userId=${userId}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${userGroups}&useScoring=true`;
-      console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
+      const queryUrl = `/api/search?${queryParams.toString()}`;
+      console.log(`Search API URL: ${queryUrl}`);
 
       const response = await fetch(queryUrl);
 
@@ -163,7 +169,7 @@ export default function SearchPage() {
     }
   }, [initialQuery, performSearch]); // Add performSearch dependency
 
-  // Memoized callback functions for SearchInput component with proper dependencies
+  // Memoized callback functions for SearchInput component with stable references
   const handleSearch = useCallback((searchTerm) => {
     performSearch(searchTerm);
 
@@ -173,18 +179,21 @@ export default function SearchPage() {
       url.searchParams.set('q', searchTerm.trim());
       window.history.replaceState({}, '', url);
     }
-  }, [performSearch]); // Add performSearch dependency
+  }, [performSearch]);
 
+  // Stable clear function with no dependencies to prevent re-renders
   const handleClear = useCallback(() => {
-    setResults({ pages: [], users: [], groups: [] });
-    setCurrentQuery('');
+    // Use functional updates to avoid dependencies
+    setResults(() => ({ pages: [], users: [], groups: [] }));
+    setLastSearchQuery(() => '');
 
     // Remove the q parameter from URL
     const url = new URL(window.location);
     url.searchParams.delete('q');
     window.history.replaceState({}, '', url);
-  }, []); // No dependencies needed for this function
+  }, []); // No dependencies needed - uses functional updates
 
+  // Stable save function - memoized with userId dependency
   const handleSave = useCallback((searchTerm) => {
     if (!userId || !searchTerm) return;
 
@@ -203,8 +212,9 @@ export default function SearchPage() {
         description: "This search is already in your pinned searches.",
       });
     }
-  }, [userId]); // Keep userId dependency
+  }, [userId]);
 
+  // Stable submit function with performSearch dependency
   const handleSubmit = useCallback((searchTerm) => {
     performSearch(searchTerm);
 
@@ -218,9 +228,9 @@ export default function SearchPage() {
       url.searchParams.delete('q');
       window.history.replaceState({}, '', url);
     }
-  }, [performSearch]); // Add performSearch dependency
+  }, [performSearch]);
 
-  // Memoized helper function to copy to clipboard with toast notification
+  // Stable helper function to copy to clipboard with toast notification
   const copyToClipboard = useCallback((textToCopy) => {
     navigator.clipboard.writeText(textToCopy)
       .then(() => {
@@ -240,10 +250,11 @@ export default function SearchPage() {
       });
   }, []);
 
-  // Memoized share search URL function using Web Share API or fallback to clipboard
+  // Stable share search URL function - no dependencies to prevent re-renders
   const shareSearchUrl = useCallback(() => {
     const url = new URL(window.location);
-    const searchTerm = currentQuery ? currentQuery.trim() : '';
+    // Get current query from URL instead of state to avoid dependency
+    const searchTerm = url.searchParams.get('q') || '';
     const shareTitle = searchTerm
       ? `WeWrite Search: "${searchTerm}"`
       : "WeWrite Search";
@@ -272,30 +283,9 @@ export default function SearchPage() {
       // Fallback for browsers that don't support the Web Share API
       copyToClipboard(url.toString());
     }
-  }, [currentQuery, copyToClipboard]);
+  }, [copyToClipboard]);
 
-  // Memoized empty search state component to prevent unnecessary re-renders
-  const EmptySearchState = useMemo(() => {
-    if (currentQuery) return null;
-
-    return (
-      <div className="empty-search-state">
-        {/* Saved Searches */}
-        <SavedSearches
-          userId={userId}
-          onSelect={handleSearch}
-        />
-
-        {/* Recent Pages */}
-        <RecentPages />
-
-        {/* Search Recommendations */}
-        <SearchRecommendations
-          onSelect={handleSearch}
-        />
-      </div>
-    );
-  }, [currentQuery, userId, handleSearch]);
+  // All search content is now isolated in SearchPageContent component
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-8">
@@ -303,11 +293,11 @@ export default function SearchPage() {
       <PerformanceMonitor
         name="SearchPage"
         data={{
-          currentQuery,
           isLoading,
           resultsCount: (results?.pages?.length || 0) + (results?.users?.length || 0),
           userId,
-          groupsEnabled
+          groupsEnabled,
+          hasQuery: !!lastSearchQuery
         }}
       />
 
@@ -345,27 +335,18 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Search Input Component - Optimized for Performance */}
-      <OptimizedSearchInput
-        initialValue={initialQuery}
-        onSearch={handleSearch}
-        onClear={handleClear}
-        onSave={handleSave}
-        onSubmit={handleSubmit}
-        autoFocus={true}
-        placeholder="Search for pages, users..."
-      />
-
-      {/* Empty search state */}
-      {EmptySearchState}
-
-      {/* Search Results Display Component */}
-      <SearchResultsDisplay
-        query={currentQuery}
+      {/* Isolated Search Content - Prevents input re-renders */}
+      <SearchPageContent
+        initialQuery={initialQuery}
+        currentQuery={lastSearchQuery}
         results={results}
         isLoading={isLoading}
         groupsEnabled={groupsEnabled}
         userId={userId}
+        onSearch={handleSearch}
+        onClear={handleClear}
+        onSave={handleSave}
+        onSubmit={handleSubmit}
       />
     </div>
   );

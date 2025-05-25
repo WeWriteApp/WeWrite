@@ -142,7 +142,7 @@ const OptimizedSearchInput = ({
       <PerformanceMonitor
         name="OptimizedSearchInput"
         data={{
-          inputValue,
+          hasInput: inputValue.length > 0,
           hasOnSearch: !!onSearch,
           hasOnClear: !!onClear,
           hasOnSave: !!onSave,
