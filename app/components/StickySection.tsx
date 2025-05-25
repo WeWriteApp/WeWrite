@@ -12,21 +12,115 @@ interface StickySectionProps {
   contentClassName?: string;
 }
 
-// Progressive z-index system for multiple sticky headers
-const STICKY_Z_INDEX_BASE = 45; // Start below main header (z-[60])
-const sectionOrder = ['activity', 'groups', 'trending', 'random_pages', 'top_users'];
+// Global state to track which section should have the sticky header
+let activeStickySection: string | null = null;
+const sectionCallbacks: Map<string, (isActive: boolean) => void> = new Map();
+let globalScrollHandler: (() => void) | null = null;
+
+// Section order for proper z-index management
+const sectionOrder: string[] = ['activity', 'groups', 'trending', 'random_pages', 'top_users'];
+
+// Function to update the active sticky section and notify all sections
+function setActiveStickySection(newActiveSection: string | null): void {
+  if (activeStickySection !== newActiveSection) {
+    activeStickySection = newActiveSection;
+    // Notify all sections about the change
+    sectionCallbacks.forEach((callback, sectionId) => {
+      callback(sectionId === newActiveSection);
+    });
+  }
+}
+
+// Global function to determine which section should be active
+function determineActiveSection(): string | null {
+  const scrollY = window.scrollY;
+
+  // Get main header height to account for when it's still visible
+  const mainHeader = document.querySelector('header');
+  const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 56;
+
+  // If we're at the very top, no section should be sticky (main header visible)
+  if (scrollY < mainHeaderHeight) {
+    return null;
+  }
+
+  // Find all sections and determine which one should be active
+  const sections = document.querySelectorAll('[data-section]');
+  const sectionData: Array<{id: string, top: number, bottom: number}> = [];
+
+  // Collect all section data and sort by position
+  for (const section of sections) {
+    const sectionElement = section as HTMLElement;
+    const sectionId = sectionElement.getAttribute('data-section');
+    if (!sectionId) continue;
+
+    const rect = sectionElement.getBoundingClientRect();
+    const sectionTop = rect.top + scrollY;
+    const sectionBottom = sectionTop + rect.height;
+
+    sectionData.push({
+      id: sectionId,
+      top: sectionTop,
+      bottom: sectionBottom
+    });
+  }
+
+  // Sort sections by their top position to ensure correct order
+  sectionData.sort((a, b) => a.top - b.top);
+
+  let activeSection: string | null = null;
+
+  // Find the section that should have its header sticky
+  // This is the last section whose header we've scrolled past
+  for (const section of sectionData) {
+    // If we've scrolled past this section's header position
+    if (scrollY >= section.top - mainHeaderHeight) {
+      // Only set as active if we haven't scrolled completely past this section
+      if (scrollY < section.bottom) {
+        activeSection = section.id;
+      }
+    }
+  }
+
+  return activeSection;
+}
+
+// Global scroll handler - only one instance for all sections
+function setupGlobalScrollHandler(): void {
+  if (globalScrollHandler) return; // Already set up
+
+  let rafId: number | null = null;
+
+  globalScrollHandler = (): void => {
+    if (rafId) return;
+
+    rafId = requestAnimationFrame(() => {
+      const newActiveSection = determineActiveSection();
+      setActiveStickySection(newActiveSection);
+      rafId = null;
+    });
+  };
+
+  window.addEventListener('scroll', globalScrollHandler, { passive: true });
+}
+
+function cleanupGlobalScrollHandler(): void {
+  if (globalScrollHandler) {
+    window.removeEventListener('scroll', globalScrollHandler);
+    globalScrollHandler = null;
+  }
+}
 
 /**
  * StickySection component that makes section headers stick to the top when scrolling
  *
  * Features:
- * - JavaScript-based sticky positioning for reliable cross-browser support
- * - Automatic background styling when sticky
- * - Progressive z-index management for multiple sticky headers
+ * - Only one section header is sticky at a time (replaces main header)
+ * - Dynamic section switching based on scroll position
+ * - Headers positioned at top of viewport (0px) when sticky
  * - Smart click behavior: scroll to section top or page top
- * - Full-width coverage to prevent content bleed-through
+ * - Smooth transitions between section headers
  * - Mobile responsive behavior
- * - Uses the same proven approach as UserProfileTabs and GroupProfileTabs
  */
 export default function StickySection({
   children,
@@ -35,30 +129,35 @@ export default function StickySection({
   className = '',
   headerClassName = '',
   contentClassName = ''
-}: StickySectionProps) {
+}: StickySectionProps): JSX.Element {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isSticky, setIsSticky] = useState(false);
-  const [isAtSectionTop, setIsAtSectionTop] = useState(false);
-
-  // Calculate progressive z-index for this section
-  const getSectionZIndex = useCallback(() => {
-    const sectionIndex = sectionOrder.indexOf(sectionId);
-    return sectionIndex >= 0 ? STICKY_Z_INDEX_BASE + sectionIndex : STICKY_Z_INDEX_BASE;
-  }, [sectionId]);
+  const placeholderRef = useRef<HTMLDivElement>(null);
+  const [isSticky, setIsSticky] = useState<boolean>(false);
+  const [isAtSectionTop, setIsAtSectionTop] = useState<boolean>(false);
+  const [isActiveStickySection, setIsActiveStickySection] = useState<boolean>(false);
 
   // Smart click handler for sticky headers
-  const handleHeaderClick = useCallback(() => {
-    const sectionElement = sectionRef.current;
+  const handleHeaderClick = useCallback((event: React.MouseEvent<HTMLDivElement>): void => {
+    // Check if the click originated from an interactive element
+    const target = event.target as HTMLElement;
+    const isInteractiveElement = target.closest('button, a, input, select, textarea, [role="button"], [tabindex]');
+
+    // If click came from an interactive element, don't handle the header click
+    if (isInteractiveElement) {
+      return;
+    }
+
+    const sectionElement: HTMLDivElement | null = sectionRef.current;
     if (!sectionElement) return;
 
-    const sectionRect = sectionElement.getBoundingClientRect();
-    const sectionTop = sectionRect.top + window.scrollY;
-    const currentScrollY = window.scrollY;
+    const sectionRect: DOMRect = sectionElement.getBoundingClientRect();
+    const sectionTop: number = sectionRect.top + window.scrollY;
+    const currentScrollY: number = window.scrollY;
 
     // Check if we're already at the top of this section (within 10px tolerance)
-    const isAtTop = Math.abs(currentScrollY - sectionTop) <= 10;
+    const isAtTop: boolean = Math.abs(currentScrollY - sectionTop) <= 10;
 
     if (isAtTop) {
       // If already at section top, scroll to page top
@@ -69,69 +168,120 @@ export default function StickySection({
     }
   }, []);
 
+  // Register this section for global sticky management and set up global scroll handler
   useEffect(() => {
-    const headerElement = headerRef.current;
-    const contentElement = contentRef.current;
-    const sectionElement = sectionRef.current;
-    if (!headerElement || !contentElement || !sectionElement) return;
-
-    let headerOriginalTop = 0;
-    let headerHeight = 0;
-    let currentlySticky = false;
-    const zIndex = getSectionZIndex();
-
-    const handleScroll = () => {
-      // Get the original position on first scroll if not already set
-      if (headerOriginalTop === 0) {
-        const headerRect = headerElement.getBoundingClientRect();
-        headerOriginalTop = headerRect.top + window.scrollY;
-        headerHeight = headerRect.height;
-      }
-
-      // Check if we've scrolled past the original position of the header
-      const scrollPosition = window.scrollY;
-      const sectionRect = sectionElement.getBoundingClientRect();
-      const sectionTop = sectionRect.top + window.scrollY;
-
-      // Update section top detection for smart click behavior
-      setIsAtSectionTop(Math.abs(scrollPosition - sectionTop) <= 10);
-
-      if (scrollPosition >= headerOriginalTop && !currentlySticky) {
-        // We've scrolled past the header, make it sticky
-        headerElement.classList.add('section-header-sticky');
-        headerElement.style.zIndex = zIndex.toString();
-        contentElement.style.paddingTop = `${headerHeight}px`;
-        currentlySticky = true;
-        setIsSticky(true);
-      } else if (scrollPosition < headerOriginalTop && currentlySticky) {
-        // We've scrolled back up, remove sticky
-        headerElement.classList.remove('section-header-sticky');
-        headerElement.style.zIndex = '';
-        contentElement.style.paddingTop = '0';
-        currentlySticky = false;
-        setIsSticky(false);
-      }
+    const callback = (isActive: boolean) => {
+      setIsActiveStickySection(isActive);
     };
 
-    // Initial check after a short delay to ensure DOM is ready
+    sectionCallbacks.set(sectionId, callback);
+
+    // Set up global scroll handler (only once)
+    setupGlobalScrollHandler();
+
+    // Initial check to determine active section
     setTimeout(() => {
-      handleScroll();
+      const newActiveSection = determineActiveSection();
+      setActiveStickySection(newActiveSection);
     }, 100);
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      // Clean up on unmount
-      if (headerElement) {
-        headerElement.classList.remove('section-header-sticky');
-        headerElement.style.zIndex = '';
+      sectionCallbacks.delete(sectionId);
+      // If this was the active section, clear it
+      if (activeStickySection === sectionId) {
+        setActiveStickySection(null);
       }
-      if (contentElement) {
-        contentElement.style.paddingTop = '0';
+
+      // Clean up global scroll handler if no sections remain
+      if (sectionCallbacks.size === 0) {
+        cleanupGlobalScrollHandler();
       }
     };
-  }, [sectionId, getSectionZIndex]);
+  }, [sectionId]);
+
+  // Set up header styling and section top detection
+  useEffect(() => {
+    const headerElement: HTMLDivElement | null = headerRef.current;
+    const sectionElement: HTMLDivElement | null = sectionRef.current;
+
+    if (!headerElement || !sectionElement) return;
+
+    // Add transition classes
+    headerElement.classList.add('section-header', 'section-header-position-transition');
+
+    // Local scroll handler for section-specific behavior (like click detection)
+    const handleLocalScroll = (): void => {
+      const scrollPosition: number = window.scrollY;
+      const sectionRect: DOMRect = sectionElement.getBoundingClientRect();
+      const sectionTop: number = sectionRect.top + scrollPosition;
+      const isAtTop: boolean = Math.abs(scrollPosition - sectionTop) <= 10;
+      setIsAtSectionTop(isAtTop);
+    };
+
+    // Use requestAnimationFrame for smooth handling
+    let rafId: number | null = null;
+    const smoothHandleLocalScroll = (): void => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        handleLocalScroll();
+        rafId = null;
+      });
+    };
+
+    window.addEventListener('scroll', smoothHandleLocalScroll, { passive: true });
+
+    return (): void => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      window.removeEventListener('scroll', smoothHandleLocalScroll);
+      // Clean up any sticky state and transition classes
+      if (headerElement) {
+        headerElement.classList.remove(
+          'section-header-sticky',
+          'section-header',
+          'section-header-position-transition'
+        );
+        headerElement.style.zIndex = '';
+        headerElement.style.top = '';
+      }
+    };
+  }, [sectionId]);
+
+  // Update sticky state when isActiveStickySection changes
+  useEffect(() => {
+    const headerElement: HTMLDivElement | null = headerRef.current;
+    if (!headerElement) return;
+
+    const placeholderElement = placeholderRef.current;
+    const shouldBeSticky = isActiveStickySection;
+
+    if (shouldBeSticky && !isSticky) {
+      // Becoming sticky - prevent layout shift by adding placeholder
+      if (placeholderElement) {
+        const headerRect = headerElement.getBoundingClientRect();
+        placeholderElement.style.height = `${headerRect.height}px`;
+        placeholderElement.style.display = 'block';
+      }
+
+      // Position sticky header at the top of the viewport (replacing main header)
+      headerElement.style.top = '0px';
+      headerElement.classList.add('section-header-sticky');
+      headerElement.style.zIndex = '60'; // Same as main header z-index
+      setIsSticky(true);
+    } else if (!shouldBeSticky && isSticky) {
+      // No longer sticky - remove placeholder and reset positioning
+      if (placeholderElement) {
+        placeholderElement.style.height = '0px';
+        placeholderElement.style.display = 'none';
+      }
+
+      headerElement.style.top = '';
+      headerElement.classList.remove('section-header-sticky');
+      headerElement.style.zIndex = '';
+      setIsSticky(false);
+    }
+  }, [isActiveStickySection, isSticky]);
 
   return (
     <div
@@ -139,16 +289,23 @@ export default function StickySection({
       id={sectionId}
       className={cn('relative mb-6', className)}
     >
+      {/* Placeholder to prevent layout shift when header becomes sticky */}
+      <div
+        ref={placeholderRef}
+        style={{ display: 'none' }}
+        className="w-full"
+      />
+
       {/* Header */}
       <div
         ref={headerRef}
         id={`${sectionId}-header`}
         className={cn(
-          // Base styling
-          'relative z-40',
+          // Base styling - positioning managed via JavaScript
+          // Note: z-index is managed via JavaScript for proper progressive layering
+          'relative',
           'bg-background backdrop-blur-sm',
           'border-b border-border/50',
-          'transition-all duration-200 ease-in-out',
           'w-full cursor-pointer',
           // Hover effects for better UX
           'hover:bg-background/80',
@@ -158,18 +315,12 @@ export default function StickySection({
         data-section={sectionId}
         data-at-section-top={isAtSectionTop}
         onClick={handleHeaderClick}
-        style={{
-          // Ensure the header extends to the full viewport width when sticky
-          marginLeft: '-100vw',
-          marginRight: '-100vw',
-          paddingLeft: 'calc(100vw - 100% + 1.5rem)',
-          paddingRight: 'calc(100vw - 100% + 1.5rem)',
-        }}
+
         title={isAtSectionTop ? "Click to scroll to top of page" : "Click to scroll to top of section"}
       >
         <div className={cn(
           'py-4',
-          isSticky && 'py-3' // Slightly reduce padding when sticky
+          isSticky && 'py-2' // Reduce padding when sticky for more compact appearance
         )}>
           {headerContent}
         </div>

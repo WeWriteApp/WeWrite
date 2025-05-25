@@ -47,6 +47,7 @@ import SiteFooter from "./components/SiteFooter";
 import SectionTitle from "./components/SectionTitle";
 import StickySection from "./components/StickySection";
 import PWABanner from "./components/PWABanner";
+import ActivitySectionHeader from "./components/ActivitySectionHeader";
 import { SmartLoader } from "./components/ui/smart-loader";
 import { usePWA } from "./providers/PWAProvider";
 import React from "react";
@@ -172,10 +173,7 @@ const Home = React.memo(function Home() {
           <StickySection
             sectionId="activity"
             headerContent={
-              <SectionTitle
-                icon={Clock}
-                title="Recent Activity"
-              />
+              <ActivitySectionHeader />
             }
           >
             <LazySection
@@ -198,7 +196,8 @@ const Home = React.memo(function Home() {
                 rightContent={
                   <Button
                     variant="outline"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       window.location.href = '/group/new';
                     }}
                     className="flex items-center gap-2"
@@ -252,7 +251,8 @@ const Home = React.memo(function Home() {
                     {/* Desktop: Button with text and icon */}
                     <Button
                       variant="outline"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         // Trigger shuffle from the sticky header
                         const shuffleEvent = new CustomEvent('shuffleRandomPages');
                         window.dispatchEvent(shuffleEvent);
@@ -267,7 +267,8 @@ const Home = React.memo(function Home() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         // Trigger shuffle from the sticky header
                         const shuffleEvent = new CustomEvent('shuffleRandomPages');
                         window.dispatchEvent(shuffleEvent);

@@ -139,12 +139,28 @@ export function FilterableFeatureList({
     };
   }, []);
 
-  // Toggle a specific filter
+  // Toggle a specific filter with logic to prevent all filters from being disabled
   const toggleFilter = (filterName: 'inProgress' | 'comingSoon' | 'available') => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: !prev[filterName]
-    }));
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        [filterName]: !prev[filterName]
+      };
+
+      // Check if all filters would be disabled
+      const allDisabled = !newFilters.inProgress && !newFilters.comingSoon && !newFilters.available;
+
+      // If all would be disabled, re-enable all filters instead
+      if (allDisabled) {
+        return {
+          inProgress: true,
+          comingSoon: true,
+          available: true
+        };
+      }
+
+      return newFilters;
+    });
   };
 
   // Combine and filter features based on active filters and sort in the specified order:

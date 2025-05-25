@@ -37,7 +37,7 @@ export default function ActivityCarousel() {
       loading={loading}
       error={errorMessage}
       emptyMessage="No recent activity to display"
-      height={200}
+      height={220}
       scrollSpeed={0.25}
       fullWidth={true}
     >
@@ -48,7 +48,7 @@ export default function ActivityCarousel() {
             className="activity-card-item flex-shrink-0"
             style={{
               width: '300px',
-              height: '160px', // Fixed height
+              height: '180px', // Increased height to prevent clipping
               position: 'relative'
             }}
           >

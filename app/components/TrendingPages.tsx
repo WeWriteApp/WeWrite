@@ -157,7 +157,7 @@ export default function TrendingPages({ limit = 5 }) {
       <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border">
+            <tr className="border-b border-theme-medium">
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>

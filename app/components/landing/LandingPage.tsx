@@ -659,7 +659,7 @@ const LandingPage = () => {
             {activityVisible ? (
               <SimpleActivityCarousel />
             ) : (
-              <div style={{ height: '200px' }} className="flex items-center justify-center">
+              <div style={{ height: '220px' }} className="flex items-center justify-center">
                 <p className="text-muted-foreground">Loading activity...</p>
               </div>
             )}
@@ -692,8 +692,8 @@ const LandingPage = () => {
         </section>
 
         {/* Features Kanban Section */}
-        <section id="features" className="py-16 md:py-20 bg-background overflow-visible">
-          <div className="container mx-auto px-4 sm:px-6 max-w-6xl overflow-visible">
+        <section id="features" className="py-20 md:py-24 bg-background overflow-visible">
+          <div className="container mx-auto px-6 sm:px-8 max-w-6xl overflow-visible">
             <div className={`text-center mb-16 ${fadeInClass}`}>
               <h2 className="text-3xl md:text-4xl font-bold mb-4 flex items-center justify-center gap-3">
                 <FileText className="h-7 w-7" />
@@ -710,7 +710,7 @@ const LandingPage = () => {
             </div>
 
             {/* Filterable Feature List */}
-            <div className="container mx-auto px-4 max-w-5xl filter-chips-parent overflow-visible">
+            <div className="container mx-auto px-6 max-w-5xl filter-chips-parent overflow-visible">
               <FilterableFeatureList
                 inProgressFeatures={builtFeatures.filter(f => f.status === 'in-progress')}
                 comingSoonFeatures={comingSoonFeatures}

@@ -22,7 +22,7 @@ const RegistrationCallToAction = () => {
       data-registration-cta
       className="fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300"
     >
-      <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
+      <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-3">
         {/* Desktop Layout: Horizontal */}
         <div className="hidden sm:flex items-center justify-between gap-4">
           <div className="flex-1">
@@ -32,19 +32,19 @@ const RegistrationCallToAction = () => {
           </div>
           <div className="flex gap-2">
             <Button
-              size="sm"
+              size="default"
               variant="outline"
               asChild
-              className="rounded-2xl"
+              className="h-10"
             >
               <Link href="/">
                 Learn more
               </Link>
             </Button>
             <Button
-              size="sm"
+              size="default"
               asChild
-              className="rounded-2xl"
+              className="h-10"
               style={{ backgroundColor: '#1768FF', color: 'white' }}
             >
               <Link href="/auth/register">
@@ -55,7 +55,7 @@ const RegistrationCallToAction = () => {
         </div>
 
         {/* Mobile Layout: Vertical */}
-        <div className="sm:hidden space-y-4">
+        <div className="sm:hidden space-y-3">
           <div className="text-center">
             <h3 className="text-sm font-medium text-foreground">
               Want to start writing on WeWrite?
@@ -63,9 +63,9 @@ const RegistrationCallToAction = () => {
           </div>
           <div className="flex flex-col gap-2">
             <Button
-              size="sm"
+              size="default"
               asChild
-              className="w-full rounded-2xl"
+              className="w-full h-10"
               style={{ backgroundColor: '#1768FF', color: 'white' }}
             >
               <Link href="/auth/register">
@@ -73,10 +73,10 @@ const RegistrationCallToAction = () => {
               </Link>
             </Button>
             <Button
-              size="sm"
+              size="default"
               variant="outline"
               asChild
-              className="w-full rounded-2xl"
+              className="w-full h-10"
             >
               <Link href="/">
                 Learn more
