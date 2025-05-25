@@ -98,28 +98,68 @@ function determineActiveSection(): string | null {
   const viewportTop = scrollY + mainHeaderHeight; // Account for main header space
   const headerBuffer = 10; // Increased buffer for more stable transitions
 
-  // FIXED LOGIC: Proper handling of header restoration and sticky states
+  // BULLETPROOF LOGIC: Robust section boundary detection with explicit transition handling
   for (let i = 0; i < sectionData.length; i++) {
     const section = sectionData[i];
     const nextSection = sectionData[i + 1];
+    const prevSection = sectionData[i - 1];
 
-    // Key insight: A section should be sticky if we've scrolled past its original header position
-    // AND we haven't reached the next section's header position
+    // Core position checks
     const isPastOriginalHeader = viewportTop >= (section.originalHeaderTop + headerBuffer);
-    const isBeforeNextSection = !nextSection || viewportTop < (nextSection.originalHeaderTop + headerBuffer);
-
-    // Additional check: ensure we're still within reasonable bounds of this section
-    const isWithinSectionBounds = scrollY < section.bottom;
-
-    // RESTORATION LOGIC: If we're back at or above the original header position, don't make it sticky
     const isAtOrAboveOriginalPosition = scrollY <= (section.originalHeaderTop - headerBuffer);
 
-    if (isPastOriginalHeader && isBeforeNextSection && isWithinSectionBounds && !isAtOrAboveOriginalPosition) {
+    // Boundary checks with explicit next section handling
+    let isBeforeNextSection = true;
+    if (nextSection) {
+      // For sections with a next section, check if we're before the next section's header
+      isBeforeNextSection = viewportTop < (nextSection.originalHeaderTop + headerBuffer);
+    } else {
+      // For the last section (Top Users), check if we're still within its content area
+      // This prevents it from getting stuck when scrolling up to previous sections
+      const isStillInLastSection = scrollY < (section.bottom - headerBuffer);
+      isBeforeNextSection = isStillInLastSection;
+    }
+
+    // Enhanced section bounds check
+    const isWithinSectionBounds = scrollY >= (section.top - headerBuffer) && scrollY < (section.bottom + headerBuffer);
+
+    // EXPLICIT TRANSITION LOGIC: Handle section transitions more robustly
+    let shouldBeActive = false;
+
+    if (isPastOriginalHeader && !isAtOrAboveOriginalPosition && isWithinSectionBounds) {
+      if (nextSection) {
+        // For sections with a next section, ensure we're before the next section
+        shouldBeActive = isBeforeNextSection;
+      } else {
+        // For the last section, be more restrictive to prevent getting stuck
+        const isInLastSectionTerritory = scrollY >= section.originalHeaderTop && scrollY < (section.bottom - headerBuffer);
+        shouldBeActive = isInLastSectionTerritory;
+      }
+    }
+
+    // ADDITIONAL SAFEGUARD: Prevent conflicts when transitioning between sections
+    if (shouldBeActive && prevSection) {
+      // If the previous section would also be active, choose based on proximity
+      const distanceFromCurrent = Math.abs(viewportTop - section.originalHeaderTop);
+      const distanceFromPrevious = Math.abs(viewportTop - prevSection.originalHeaderTop);
+
+      // Only activate if we're closer to this section than the previous one
+      if (distanceFromPrevious < distanceFromCurrent) {
+        shouldBeActive = false;
+      }
+    }
+
+    if (shouldBeActive) {
       activeSection = section.id;
       // Debug logging (only in development)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] Active section: ${section.id} (past original header, within bounds)`);
+        console.log(`[StickySection] Active section: ${section.id} (bulletproof detection)`);
+        console.log(`  - isPastOriginalHeader: ${isPastOriginalHeader}`);
+        console.log(`  - isBeforeNextSection: ${isBeforeNextSection}`);
+        console.log(`  - isWithinSectionBounds: ${isWithinSectionBounds}`);
+        console.log(`  - viewportTop: ${viewportTop}, sectionHeaderTop: ${section.originalHeaderTop}`);
       }
+      break; // Important: break after finding the active section to prevent conflicts
     }
   }
 
@@ -136,13 +176,26 @@ function setupGlobalScrollHandler(): void {
   if (globalScrollHandler) return; // Already set up
 
   let rafId: number | null = null;
+  let lastActiveSection: string | null = null;
 
   globalScrollHandler = (): void => {
     if (rafId) return;
 
     rafId = requestAnimationFrame(() => {
       const newActiveSection = determineActiveSection();
-      setActiveStickySection(newActiveSection);
+
+      // ADDITIONAL SAFEGUARD: Only update if the active section actually changed
+      // This prevents unnecessary re-renders and potential race conditions
+      if (newActiveSection !== lastActiveSection) {
+        // Debug logging for section transitions
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[StickySection] Section transition: ${lastActiveSection} → ${newActiveSection}`);
+        }
+
+        setActiveStickySection(newActiveSection);
+        lastActiveSection = newActiveSection;
+      }
+
       rafId = null;
     });
   };
