@@ -245,24 +245,6 @@ export default function HomeGroupsSection() {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <SectionTitle
-          icon={Users}
-          title="Your Groups"
-        />
-        <Button
-          variant="outline"
-          onClick={() => {
-            console.log('[DEBUG] HomeGroupsSection - New Group button clicked, navigating to /group/new');
-            // Use window.location for more reliable navigation
-            window.location.href = '/group/new';
-          }}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Group
-        </Button>
-      </div>
 
       {/* Desktop view (md and up): Table layout */}
       <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">

@@ -127,6 +127,61 @@ export function GroupsSkeleton({ limit = 3 }: { limit?: number }) {
 }
 
 /**
+ * Skeleton loader for random pages section
+ */
+export function RandomPagesSkeleton({ limit = 10 }: { limit?: number }) {
+  return (
+    <div className="space-y-4">
+      {/* Section header skeleton */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <Skeleton className="h-9 w-9 rounded-md" />
+      </div>
+
+      {/* Desktop table skeleton - hidden on mobile */}
+      <div className="hidden md:block">
+        <div className="border border-theme-medium rounded-2xl overflow-hidden">
+          <div className="border-b border-theme-medium bg-muted/30 p-4">
+            <div className="grid grid-cols-3 gap-4">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+          <div className="divide-y divide-theme-medium">
+            {Array.from({ length: limit }).map((_, index) => (
+              <div key={index} className="p-4">
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile card skeleton - visible on mobile */}
+      <div className="md:hidden space-y-3">
+        {Array.from({ length: limit }).map((_, index) => (
+          <div key={index} className="border border-theme-medium rounded-2xl p-4 space-y-3">
+            <Skeleton className="h-6 w-3/4" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Skeleton loader for search button
  */
 export function SearchButtonSkeleton() {

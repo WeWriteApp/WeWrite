@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Header from "./components/Header";
 import AddUsername from "./components/AddUsername";
 import SearchButton from "./components/SearchButton";
-import { DashboardSkeleton, ActivitySkeleton, TrendingPagesSkeleton, TopUsersSkeleton, GroupsSkeleton } from "./components/ui/skeleton-loaders";
+import { DashboardSkeleton, ActivitySkeleton, TrendingPagesSkeleton, TopUsersSkeleton, GroupsSkeleton, RandomPagesSkeleton } from "./components/ui/skeleton-loaders";
 import LazySection from "./components/ui/lazy-section";
 
 // Lazy load non-critical components
@@ -29,17 +29,23 @@ const HomeGroupsSection = dynamic(() => import("./components/HomeGroupsSection")
   ssr: false
 });
 
+const RandomPagesOptimized = dynamic(() => import("./components/RandomPagesOptimized"), {
+  loading: () => <RandomPagesSkeleton limit={10} />,
+  ssr: false
+});
+
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "./components/ui/button";
-import { Plus, FileText, Loader, Clock, Flame, Users, Trophy, RefreshCw } from "lucide-react";
+import { Plus, FileText, Loader, Clock, Flame, Users, Trophy, RefreshCw, Shuffle } from "lucide-react";
 import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/LandingPage";
 import { FloatingActionButton } from "./components/ui/floating-action-button";
 import SiteFooter from "./components/SiteFooter";
 import SectionTitle from "./components/SectionTitle";
+import StickySection from "./components/StickySection";
 import PWABanner from "./components/PWABanner";
 import { SmartLoader } from "./components/ui/smart-loader";
 import { usePWA } from "./providers/PWAProvider";
@@ -154,7 +160,7 @@ const Home = React.memo(function Home() {
       <Suspense fallback={<DashboardSkeleton />}>
         <Header />
         <PWABanner />
-        <main className="p-6 space-y-6 bg-background" data-component-name="Home">
+        <main className="p-6 bg-background" data-component-name="Home">
           {/* Critical above-the-fold content - load immediately */}
           <AddUsername />
 
@@ -163,56 +169,147 @@ const Home = React.memo(function Home() {
           </div>
 
           {/* 1. Recent Activity - High priority, loads first */}
-          <LazySection
-            name="activity"
-            priority="high"
-            minHeight={200}
-            fallback={<ActivitySkeleton limit={4} />}
+          <StickySection
+            sectionId="activity"
+            headerContent={
+              <SectionTitle
+                icon={Clock}
+                title="Recent Activity"
+              />
+            }
           >
-            <ActivitySectionOptimized limit={4} priority="high" />
-          </LazySection>
+            <LazySection
+              name="activity"
+              priority="high"
+              minHeight={200}
+              fallback={<ActivitySkeleton limit={4} />}
+            >
+              <ActivitySectionOptimized limit={4} priority="high" />
+            </LazySection>
+          </StickySection>
 
           {/* 2. Groups Section - Medium priority */}
-          <LazySection
-            name="groups"
-            priority="medium"
-            minHeight={200}
-            fallback={<GroupsSkeleton limit={3} />}
+          <StickySection
+            sectionId="groups"
+            headerContent={
+              <SectionTitle
+                icon={Users}
+                title="Your Groups"
+                rightContent={
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      window.location.href = '/group/new';
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Group
+                  </Button>
+                }
+              />
+            }
           >
-            <HomeGroupsSection />
-          </LazySection>
+            <LazySection
+              name="groups"
+              priority="medium"
+              minHeight={200}
+              fallback={<GroupsSkeleton limit={3} />}
+            >
+              <HomeGroupsSection />
+            </LazySection>
+          </StickySection>
 
           {/* 3. Trending Pages - Low priority, lazy loaded */}
-          <LazySection
-            name="trending"
-            priority="low"
-            minHeight={300}
-            fallback={<TrendingPagesSkeleton limit={5} />}
-          >
-            <div>
+          <StickySection
+            sectionId="trending"
+            headerContent={
               <SectionTitle
                 icon={Flame}
                 title="Trending Pages"
               />
-              <TrendingPagesOptimized limit={5} priority="low" />
-            </div>
-          </LazySection>
-
-          {/* 4. Top Users - Lowest priority, lazy loaded */}
-          <LazySection
-            name="top_users"
-            priority="low"
-            minHeight={300}
-            fallback={<TopUsersSkeleton limit={10} />}
+            }
           >
-            <div>
+            <LazySection
+              name="trending"
+              priority="low"
+              minHeight={300}
+              fallback={<TrendingPagesSkeleton limit={5} />}
+            >
+              <TrendingPagesOptimized limit={5} priority="low" />
+            </LazySection>
+          </StickySection>
+
+          {/* 4. Random Pages - Low priority, lazy loaded */}
+          <StickySection
+            sectionId="random_pages"
+            headerContent={
+              <SectionTitle
+                icon={Shuffle}
+                title="Random Pages"
+                rightContent={
+                  <>
+                    {/* Desktop: Button with text and icon */}
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Trigger shuffle from the sticky header
+                        const shuffleEvent = new CustomEvent('shuffleRandomPages');
+                        window.dispatchEvent(shuffleEvent);
+                      }}
+                      className="hidden md:flex rounded-2xl"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                      Shuffle
+                    </Button>
+
+                    {/* Mobile: Icon-only button */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        // Trigger shuffle from the sticky header
+                        const shuffleEvent = new CustomEvent('shuffleRandomPages');
+                        window.dispatchEvent(shuffleEvent);
+                      }}
+                      className="md:hidden rounded-2xl"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                    </Button>
+                  </>
+                }
+              />
+            }
+          >
+            <LazySection
+              name="random_pages"
+              priority="low"
+              minHeight={300}
+              fallback={<RandomPagesSkeleton limit={10} />}
+            >
+              <RandomPagesOptimized limit={10} priority="low" />
+            </LazySection>
+          </StickySection>
+
+          {/* 5. Top Users - Lowest priority, lazy loaded */}
+          <StickySection
+            sectionId="top_users"
+            headerContent={
               <SectionTitle
                 icon={Trophy}
                 title="Top Users"
               />
+            }
+          >
+            <LazySection
+              name="top_users"
+              priority="low"
+              minHeight={300}
+              fallback={<TopUsersSkeleton limit={10} />}
+            >
               <TopUsersOptimized limit={10} priority="low" />
-            </div>
-          </LazySection>
+            </LazySection>
+          </StickySection>
 
           <FloatingActionButton href="/new" />
         </main>

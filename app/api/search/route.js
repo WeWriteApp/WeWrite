@@ -101,6 +101,8 @@ function checkSearchMatch(normalizedTitle, searchTermLower) {
     return true;
   }
 
+
+
   // For multi-word searches, check if all words are present (flexible matching)
   if (searchTermLower.includes(' ')) {
     console.log(`🔍 Multi-word search detected`);
@@ -246,17 +248,47 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // STEP 2: Search public pages (if not filtering by specific user)
     if (!filterByUserId) {
-      const publicPagesQuery = query(
-        collection(db, 'pages'),
-        where('isPublic', '==', true),
-        orderBy('lastModified', 'desc'),
-        limit(2000) // ✅ FIXED: Increased limit to match user pages for consistent search depth
-      );
+      // Try multiple queries to ensure we find all relevant pages
+      const queries = [
+        // Recent pages first
+        query(
+          collection(db, 'pages'),
+          where('isPublic', '==', true),
+          orderBy('lastModified', 'desc'),
+          limit(1000)
+        ),
+        // Also search by creation date to catch older pages
+        query(
+          collection(db, 'pages'),
+          where('isPublic', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(500)
+        )
+      ];
 
-      const publicPagesSnapshot = await getDocs(publicPagesQuery);
-      console.log(`🌐 Found ${publicPagesSnapshot.size} public pages to search`);
+      const allPublicPages = new Map(); // Use Map to deduplicate
 
-      publicPagesSnapshot.forEach(doc => {
+      for (const publicPagesQuery of queries) {
+        try {
+          const publicPagesSnapshot = await getDocs(publicPagesQuery);
+          console.log(`🌐 Found ${publicPagesSnapshot.size} public pages in this query`);
+
+          publicPagesSnapshot.forEach(doc => {
+            if (!allPublicPages.has(doc.id)) {
+              allPublicPages.set(doc.id, doc);
+
+
+            }
+          });
+        } catch (queryError) {
+          console.error('Error in public pages query:', queryError);
+          // Continue with other queries
+        }
+      }
+
+      console.log(`🌐 Total unique public pages to search: ${allPublicPages.size}`);
+
+      allPublicPages.forEach(doc => {
         const data = doc.data();
 
         // Skip user's own pages (already included above)
@@ -267,8 +299,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         const pageTitle = data.title || 'Untitled';
         const normalizedTitle = pageTitle.toLowerCase();
 
+
+
         // Enhanced search logic
         const isMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+
+
 
         if (isMatch) {
           console.log(`✅ Public page match: "${pageTitle}" matches "${searchTermLower}"`);

@@ -122,7 +122,7 @@ export const PillLink = forwardRef(({
     leading-tight
     w-fit
     min-w-fit
-    max-w-none
+    max-w-full
     flex-none
   `.trim().replace(/\s+/g, ' ');
 
@@ -142,7 +142,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className="pill-text">{displayTitle}</span>
+          <span className="pill-text truncate">{displayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -248,7 +248,7 @@ export const PillLink = forwardRef(({
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       {isGroupLinkType && <Users size={14} className="mr-1 flex-shrink-0" />}
-      <span className="pill-text">{displayTitle}</span>
+      <span className="pill-text truncate">{displayTitle}</span>
       {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );
