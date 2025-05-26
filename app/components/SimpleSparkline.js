@@ -22,13 +22,6 @@ export default function SimpleSparkline({
   // Use the accent color from CSS variables if no color is provided
   const effectiveColor = color || "hsl(var(--primary))";
 
-  // Add debugging to check data
-  console.log('SimpleSparkline data:', {
-    dataLength: data?.length || 0,
-    hasData: data && data.length > 0,
-    hasNonZeroValues: data && data.some(val => val > 0)
-  });
-
   // Validate and normalize data
   const normalizedData = useMemo(() => {
     // Ensure data is valid

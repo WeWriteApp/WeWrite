@@ -9,7 +9,7 @@ import { RefreshCw, CheckCircle } from 'lucide-react';
 
 // Define the complete set of feature flags that should exist
 const COMPLETE_FEATURE_FLAGS = {
-  subscription_management: false,
+  payments: false,
   username_management: false,
   map_view: false,
   calendar_view: false,
@@ -42,7 +42,7 @@ export default function SyncFeatureFlagsButton() {
 
       // Merge current flags with complete set, preserving existing values
       const mergedFlags = { ...COMPLETE_FEATURE_FLAGS };
-      
+
       // Preserve existing flag values if they exist
       Object.keys(currentFlags).forEach(flag => {
         if (flag in COMPLETE_FEATURE_FLAGS) {
@@ -67,7 +67,7 @@ export default function SyncFeatureFlagsButton() {
       // Update feature metadata
       const featureMetaRef = doc(db, 'config', 'featureMetadata');
       const timestamp = new Date().toISOString();
-      
+
       const metadata = {
         subscription_management: {
           createdAt: timestamp,
@@ -110,7 +110,7 @@ export default function SyncFeatureFlagsButton() {
       console.log('[SyncFeatureFlags] Successfully updated feature metadata');
 
       setLastSyncTime(new Date().toLocaleString());
-      
+
       toast({
         title: 'Success',
         description: 'Feature flags have been synchronized successfully',
@@ -145,7 +145,7 @@ export default function SyncFeatureFlagsButton() {
         )}
         {isSyncing ? 'Syncing Feature Flags...' : 'Sync Feature Flags'}
       </Button>
-      
+
       {lastSyncTime && (
         <p className="text-xs text-muted-foreground text-center">
           Last synced: {lastSyncTime}

@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
-import SectionTitle from './SectionTitle';
+import { SectionTitle } from './ui/section-title';
 import RecentActivity from './RecentActivity';
 
 /**
@@ -29,7 +29,7 @@ const ActivitySection = () => {
       <RecentActivity
         ref={activityRef}
         limit={4}
-        renderFilterInHeader={false}
+        renderFilterInHeader={true}
       />
     </div>
   );

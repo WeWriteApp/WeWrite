@@ -25,6 +25,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import HydrationSafetyWrapper from "./components/HydrationSafetyWrapper";
 import { useEffect } from "react";
 import { initReloadProtection, getReloadStatus } from "./utils/reload-protection";
+import { useScrollToTop } from "./hooks/useScrollRestoration";
 
 // Dynamically import PendingReplyHandler with no SSR
 const PendingReplyHandler = dynamic(() => import('./components/PendingReplyHandler'), {
@@ -50,6 +51,9 @@ const UsernameEnforcementBanner = dynamic(() => import('./components/UsernameEnf
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
+
+  // Use scroll restoration hook to ensure pages always start at the top
+  useScrollToTop();
 
   // Initialize reload protection only for specific scenarios
   // Disabled global reload protection to prevent unwanted navigation warnings

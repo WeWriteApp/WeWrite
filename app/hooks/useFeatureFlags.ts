@@ -7,7 +7,6 @@ export interface FeatureFlag {
   name: string;
   description: string;
   enabled: boolean;
-  adminOnly: boolean;
   createdAt?: string;
   lastModified?: string;
 }
@@ -19,7 +18,6 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     name: 'Groups',
     description: 'Enable group functionality for organizing pages and collaboration.',
     enabled: true,
-    adminOnly: false,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
@@ -28,16 +26,14 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     name: 'Notifications',
     description: 'Enable in-app notifications for follows, page links, and other activities.',
     enabled: false,
-    adminOnly: false,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
   {
-    id: 'subscription_management',
-    name: 'Subscription Management',
+    id: 'payments',
+    name: 'Payments',
     description: 'Enable subscription functionality and UI for managing user subscriptions.',
     enabled: false,
-    adminOnly: true,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
@@ -46,7 +42,6 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     name: 'Username Management',
     description: 'Allow admins to manage user usernames and handle username-related operations.',
     enabled: false,
-    adminOnly: true,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
@@ -55,7 +50,6 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     name: 'Map View',
     description: 'Enable map view for pages with location data and geographic visualization.',
     enabled: false,
-    adminOnly: false,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
@@ -64,7 +58,6 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     name: 'Calendar View',
     description: 'Enable calendar view for activity tracking and temporal organization.',
     enabled: false,
-    adminOnly: false,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
@@ -73,7 +66,6 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     name: 'Link Functionality',
     description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
     enabled: true,
-    adminOnly: false,
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   }

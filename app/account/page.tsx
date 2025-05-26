@@ -220,8 +220,8 @@ export default function AccountPage() {
             </Card>
           </section>
 
-          {/* Subscription Management Section - Only visible when subscription feature flag is enabled */}
-          {user && user.email && useFeatureFlag('subscription_management', user.email) && (
+          {/* Subscription Management Section - Only visible when payments feature flag is enabled */}
+          {user && user.email && useFeatureFlag('payments', user.email) && (
             <section>
               <SubscriptionManagement />
 

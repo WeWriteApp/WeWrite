@@ -10,6 +10,8 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['react-icons'],
+    // Disable automatic scroll restoration since we handle it manually
+    scrollRestoration: false,
   },
   serverExternalPackages: [
     'firebase-admin',

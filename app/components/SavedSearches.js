@@ -5,6 +5,7 @@ import { Pin, X, Trash2 } from 'lucide-react';
 import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from '../utils/savedSearches';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import { ConfirmationModal } from './ConfirmationModal';
 
 /**
  * SavedSearches Component
@@ -20,6 +21,7 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState(null);
   const [deleteSearchTerm, setDeleteSearchTerm] = useState('');
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
 
   // Function to load saved searches
   const loadSavedSearches = () => {
@@ -48,8 +50,14 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
 
   // Handle clearing all saved searches
   const handleClearAll = () => {
+    setShowClearAllModal(true);
+  };
+
+  // Confirm clearing all saved searches
+  const confirmClearAll = () => {
     clearSavedSearches(userId);
     setSavedSearches([]);
+    setShowClearAllModal(false);
   };
 
   // Handle deleting a specific saved search
@@ -156,6 +164,19 @@ const SavedSearches = React.memo(function SavedSearches({ onSelect, userId = nul
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Clear All Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showClearAllModal}
+        onClose={() => setShowClearAllModal(false)}
+        onConfirm={confirmClearAll}
+        title="Delete All Saved Searches"
+        message={`Are you sure you want to delete ${savedSearches.length} saved searches? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
+        variant="destructive"
+        icon="delete"
+      />
     </div>
   );
 });

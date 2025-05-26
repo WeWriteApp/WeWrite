@@ -2,7 +2,7 @@
 
 import React, { useContext, useEffect, useState } from 'react';
 import { Clock, Filter, Check } from 'lucide-react';
-import SectionTitle from './SectionTitle';
+import { SectionTitle } from './ui/section-title';
 import { useActivityFilter } from '../contexts/ActivityFilterContext';
 import { AuthContext } from '../providers/AuthProvider';
 import { getFollowedPages } from '../firebase/follows';
@@ -62,7 +62,7 @@ const ActivitySectionHeader = () => {
     if (!user) return null;
 
     return (
-      <div className="ml-auto">
+      <div>
         <TooltipProvider>
           <DropdownMenu>
             <Tooltip>
@@ -71,7 +71,7 @@ const ActivitySectionHeader = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`gap-2 h-8 px-3 rounded-full hover:bg-muted/80 transition-colors ${
+                    className={`gap-2 h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors ${
                       viewMode === 'following' ? 'border-primary text-primary' : ''
                     }`}
                     aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : 'Following'}`}

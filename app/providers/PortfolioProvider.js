@@ -182,7 +182,7 @@ export const PortfolioProvider = ({ children }) => {
           let subscriptionEnabled = false;
           if (featureFlagsDoc.exists()) {
             const flagsData = featureFlagsDoc.data();
-            subscriptionEnabled = flagsData.subscription_management === true;
+            subscriptionEnabled = flagsData.payments === true;
           }
 
           // Only fetch subscription data if the feature is enabled

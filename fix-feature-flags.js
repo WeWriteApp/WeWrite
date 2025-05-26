@@ -40,7 +40,7 @@ const db = getFirestore(app);
 
 // Define valid feature flags
 const validFeatureFlags = [
-  'subscription_management',
+  'payments',
   'username_management',
   'map_view',
   'calendar_view',

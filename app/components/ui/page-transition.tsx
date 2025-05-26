@@ -91,6 +91,13 @@ export function PageTransition({
     // Skip transitions for search parameter changes on the search page to prevent flashing
     const isSearchPageParamChange = pathname === '/search' && !isPathChange && isSearchParamsChange;
 
+    // SCROLL RESTORATION FIX: Reset scroll position to top when navigating to a new page
+    if (isPathChange && enableTransitions && typeof window !== 'undefined') {
+      // Scroll to top immediately when path changes
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      console.log('Page transition: Scrolled to top for new page:', pathname);
+    }
+
     if ((isPathChange || isSearchParamsChange) && !isSearchPageParamChange) {
       // Start loading state
       setIsLoading(true);

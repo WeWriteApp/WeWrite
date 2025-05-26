@@ -37,10 +37,22 @@ export default function NavHeader({
   const handleBack = () => {
     if (backUrl) {
       console.log("NavHeader: Navigating to backUrl:", backUrl);
+
+      // SCROLL RESTORATION FIX: Ensure scroll position is reset when navigating
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+
       // Use window.location for more reliable navigation
       window.location.href = backUrl;
     } else {
       console.log("NavHeader: Going back in history");
+
+      // SCROLL RESTORATION FIX: Ensure scroll position is reset when navigating
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+
       // Try router.back() first, but fall back to window.history if needed
       try {
         router.back();

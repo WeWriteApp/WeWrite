@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 
 // Define feature flag types
 export type FeatureFlag =
-  | 'subscription_management'
+  | 'payments'
   | 'username_management'
   | 'map_view'
   | 'calendar_view'

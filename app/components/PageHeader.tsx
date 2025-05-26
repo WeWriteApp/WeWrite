@@ -99,7 +99,7 @@ export default function PageHeader({
 
         if (featureFlagsDoc.exists()) {
           const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.subscription_management === true);
+          setSubscriptionEnabled(flagsData.payments === true);
         }
       } catch (error) {
         console.error('Error checking subscription feature flag:', error);

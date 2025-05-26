@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
-import { collection, getDocs, query, limit, getDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, limit, getDoc, doc, where } from "firebase/firestore";
 import { ref, get } from "firebase/database";
 import { Info, AlertTriangle, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -61,7 +61,7 @@ const TopUsers = () => {
 
         if (featureFlagsDoc.exists()) {
           const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.subscription_management === true);
+          setSubscriptionEnabled(flagsData.payments === true);
         }
       } catch (error) {
         console.error('Error checking subscription feature flag:', error);
@@ -159,26 +159,28 @@ const TopUsers = () => {
         // Create a lookup object to store page counts per user
         const pageCountsByUser = {};
 
-        // Fetch page counts more efficiently using aggregation
-        console.log("TopUsers: Fetching page counts from Firestore");
+        // Fetch PUBLIC page counts more efficiently using aggregation
+        // This ensures consistency with user profile pages which show public pages by default
+        console.log("TopUsers: Fetching public page counts from Firestore");
 
-        // Use a more efficient query to get page counts
+        // Use a more efficient query to get PUBLIC page counts only
+        // This matches what visitors see on user profile pages
         const pagesCountQuery = query(
           collection(db, 'pages'),
-          // We only need the userId field for counting
+          where('isPublic', '==', true), // Only count public pages for consistency
           limit(1000) // Limit to a reasonable number for performance
         );
 
         const pagesSnapshot = await getDocs(pagesCountQuery);
-        console.log(`TopUsers: Retrieved ${pagesSnapshot.size} pages from Firestore`);
+        console.log(`TopUsers: Retrieved ${pagesSnapshot.size} public pages from Firestore`);
 
-        // Count pages by user
+        // Count public pages by user
         pagesSnapshot.forEach((doc) => {
           const pageData = doc.data();
           const userId = pageData.userId;
 
           if (userId) {
-            // Increment page count for this user
+            // Increment public page count for this user
             pageCountsByUser[userId] = (pageCountsByUser[userId] || 0) + 1;
           }
         });
@@ -413,7 +415,7 @@ const TopUsers = () => {
       <div className="hidden md:block space-y-4">
         {/* All-time leaderboard */}
         <div className="space-y-4">
-          <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+          <div className="border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
             {/* Performance metrics (only in development) */}
             {process.env.NODE_ENV === 'development' && loadTime && (
               <div className="bg-muted/30 px-3 py-1 text-xs text-muted-foreground border-b border-border/30">
@@ -599,11 +601,9 @@ const TopUsers = () => {
           className="md:hidden flex items-center justify-between p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-4"
           style={{ animationDelay: `${i * 50}ms` }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
             <ShimmerEffect className="inline-flex px-3 py-1.5 items-center gap-1 whitespace-nowrap rounded-[12px] border-[1.5px] border-muted/50 w-32 h-8" />
-            <div className="flex items-center gap-1">
-              <ShimmerEffect className="h-4 w-8 rounded" />
-            </div>
+            <ShimmerEffect className="h-4 w-12 rounded" />
           </div>
           <ShimmerEffect className="w-24 h-10 rounded" />
         </div>
@@ -650,12 +650,12 @@ const TopUsers = () => {
           onClick={() => window.location.href = `/user/${user.id}`}
           className="md:hidden flex items-center justify-between p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-4"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex flex-col gap-2 min-w-0 flex-1">
             <PillLink
               href={`/user/${user.id}`}
               variant="primary"
               onClick={(e) => e.stopPropagation()} // Prevent double navigation
-              className="max-w-[150px] truncate"
+              className="max-w-[200px] truncate"
             >
               <span className="flex items-center gap-1">
                 {user.username || "Unknown User"}
@@ -669,7 +669,7 @@ const TopUsers = () => {
               </span>
             </PillLink>
 
-            <div className="flex items-center gap-1 text-muted-foreground whitespace-nowrap flex-shrink-0">
+            <div className="flex items-center gap-1 text-muted-foreground">
               <span className="font-medium">{user.pageCount}</span>
               <span className="text-xs">pages</span>
             </div>

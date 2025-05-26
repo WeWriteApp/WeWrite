@@ -19,11 +19,6 @@ const TopUsersOptimized = dynamic(() => import("./components/TopUsersOptimized")
   ssr: false
 });
 
-const ActivitySectionOptimized = dynamic(() => import("./components/ActivitySectionOptimized"), {
-  loading: () => <ActivitySkeleton limit={4} />,
-  ssr: false
-});
-
 const HomeGroupsSection = dynamic(() => import("./components/HomeGroupsSection"), {
   loading: () => <GroupsSkeleton limit={3} />,
   ssr: false
@@ -44,10 +39,12 @@ import { useTheme } from "next-themes";
 import LandingPage from "./components/landing/LandingPage";
 import { FloatingActionButton } from "./components/ui/floating-action-button";
 import SiteFooter from "./components/SiteFooter";
-import SectionTitle from "./components/SectionTitle";
+import { SectionTitle } from "./components/ui/section-title";
 import StickySection from "./components/StickySection";
 import PWABanner from "./components/PWABanner";
 import ActivitySectionHeader from "./components/ActivitySectionHeader";
+import RandomPagesHeader from "./components/RandomPagesHeader";
+import RecentActivity from "./components/RecentActivity";
 import { SmartLoader } from "./components/ui/smart-loader";
 import { usePWA } from "./providers/PWAProvider";
 import React from "react";
@@ -161,7 +158,7 @@ const Home = React.memo(function Home() {
       <Suspense fallback={<DashboardSkeleton />}>
         <Header />
         <PWABanner />
-        <main className="p-6 bg-background" data-component-name="Home">
+        <main className="p-6 bg-background overflow-hidden" data-component-name="Home">
           {/* Critical above-the-fold content - load immediately */}
           <AddUsername />
 
@@ -182,7 +179,11 @@ const Home = React.memo(function Home() {
               minHeight={200}
               fallback={<ActivitySkeleton limit={4} />}
             >
-              <ActivitySectionOptimized limit={4} priority="high" />
+              <RecentActivity
+                limit={4}
+                renderFilterInHeader={true}
+                showViewAll={true}
+              />
             </LazySection>
           </StickySection>
 
@@ -194,17 +195,34 @@ const Home = React.memo(function Home() {
                 icon={Users}
                 title="Your Groups"
                 rightContent={
-                  <Button
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.location.href = '/group/new';
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Group
-                  </Button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Desktop: Button with text and icon */}
+                    <Button
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = '/group/new';
+                      }}
+                      className="hidden sm:flex items-center gap-2 rounded-2xl h-8 px-3"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden md:inline">New Group</span>
+                    </Button>
+
+                    {/* Mobile: Icon-only button */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = '/group/new';
+                      }}
+                      className="sm:hidden h-8 w-8 rounded-2xl"
+                      aria-label="Create new group"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 }
               />
             }
@@ -243,43 +261,7 @@ const Home = React.memo(function Home() {
           <StickySection
             sectionId="random_pages"
             headerContent={
-              <SectionTitle
-                icon={Shuffle}
-                title="Random Pages"
-                rightContent={
-                  <>
-                    {/* Desktop: Button with text and icon */}
-                    <Button
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Trigger shuffle from the sticky header
-                        const shuffleEvent = new CustomEvent('shuffleRandomPages');
-                        window.dispatchEvent(shuffleEvent);
-                      }}
-                      className="hidden md:flex rounded-2xl"
-                    >
-                      <Shuffle className="h-4 w-4" />
-                      Shuffle
-                    </Button>
-
-                    {/* Mobile: Icon-only button */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Trigger shuffle from the sticky header
-                        const shuffleEvent = new CustomEvent('shuffleRandomPages');
-                        window.dispatchEvent(shuffleEvent);
-                      }}
-                      className="md:hidden rounded-2xl"
-                    >
-                      <Shuffle className="h-4 w-4" />
-                    </Button>
-                  </>
-                }
-              />
+              <RandomPagesHeader />
             }
           >
             <LazySection

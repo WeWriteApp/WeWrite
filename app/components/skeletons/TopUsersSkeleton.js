@@ -5,7 +5,7 @@ import { Skeleton } from "../ui/skeleton";
 
 export default function TopUsersSkeleton({ count = 5 }) {
   return (
-    <div className="bg-card border border-border/40 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-card border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden">
       <div className="p-4 border-b border-border/40">
         <Skeleton className="h-6 w-32" />
       </div>

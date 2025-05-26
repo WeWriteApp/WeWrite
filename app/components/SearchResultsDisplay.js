@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import Link from 'next/link';
 import { PillLink } from './PillLink';
 import PerformanceMonitor from './PerformanceMonitor';
+import { Pin } from 'lucide-react';
 
 /**
  * SearchResultsDisplay Component
@@ -17,13 +18,15 @@ import PerformanceMonitor from './PerformanceMonitor';
  * @param {boolean} isLoading - Loading state
  * @param {boolean} groupsEnabled - Whether groups feature is enabled
  * @param {string} userId - Current user ID (extracted from user object)
+ * @param {Function} onSave - Function to save the current search query
  */
 const SearchResultsDisplay = React.memo(({
   query,
   results,
   isLoading,
   groupsEnabled,
-  userId
+  userId,
+  onSave
 }) => {
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
@@ -91,12 +94,23 @@ const SearchResultsDisplay = React.memo(({
         }}
       />
       {/* Search Results Summary */}
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {isLoading
             ? "Searching..."
-            : `Found ${totalResults} results for "${query}"`}
+            : `${totalResults} results`}
         </p>
+        {!isLoading && query && onSave && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSave(query)}
+            className="flex items-center gap-2"
+          >
+            <Pin className="h-4 w-4" />
+            Save search
+          </Button>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -193,6 +207,7 @@ const SearchResultsDisplay = React.memo(({
   if (prevProps.isLoading !== nextProps.isLoading) return false;
   if (prevProps.groupsEnabled !== nextProps.groupsEnabled) return false;
   if (prevProps.userId !== nextProps.userId) return false;
+  if (prevProps.onSave !== nextProps.onSave) return false;
 
   // Shallow comparison for results object to improve performance
   if (!prevProps.results && !nextProps.results) return true;

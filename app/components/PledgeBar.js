@@ -34,7 +34,7 @@ const PledgeBar = () => {
   const [showActivationModal, setShowActivationModal] = useState(false);
   const [showRebalanceModal, setShowRebalanceModal] = useState(false);
   const [showSupportUsModal, setShowSupportUsModal] = useState(false);
-  const isSubscriptionEnabled = useFeatureFlag('subscription_management', user?.email);
+  const isSubscriptionEnabled = useFeatureFlag('payments', user?.email);
   const [pageData, setPageData] = useState(null);
   const [pageTitle, setPageTitle] = useState('Untitled');
   const [sliderValue, setSliderValue] = useState(0);
@@ -45,6 +45,7 @@ const PledgeBar = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [pledges, setPledges] = useState([]);
   const [globalIncrement, setGlobalIncrement] = useState(1);
+  const [totalOtherPledges, setTotalOtherPledges] = useState(0);
   const [donateAmount, setDonateAmount] = useState(0);
   const [selectedAmount, setSelectedAmount] = useState(0);
   const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
@@ -164,6 +165,12 @@ const PledgeBar = () => {
             if (pagePledge) {
               setPledges([pagePledge]);
             }
+
+            // Calculate total pledges for other pages (excluding current page)
+            const otherPledgesTotal = pledges
+              .filter(p => p.pageId !== pageId)
+              .reduce((sum, pledge) => sum + (pledge.amount || 0), 0);
+            setTotalOtherPledges(otherPledgesTotal);
           });
 
           return () => unsubscribe();
@@ -639,8 +646,27 @@ const PledgeBar = () => {
     setShowCustomAmountModal(true);
   };
 
-  return (
-    <>
+  // Helper function to render the subscription usage pledge bar
+  function renderSubscriptionUsagePledgeBar() {
+    if (!subscription || subscription.status !== 'active') {
+      return null;
+    }
+
+    const currentPagePledge = pledges[0]?.amount || 0;
+    const totalSubscriptionAmount = subscription.amount || 0;
+    const availableAmount = Math.max(0, totalSubscriptionAmount - (subscription.pledgedAmount || 0));
+
+    // Calculate percentages for the progress bar segments
+    const currentPagePercentage = totalSubscriptionAmount > 0 ? (currentPagePledge / totalSubscriptionAmount) * 100 : 0;
+    const otherPagesPercentage = totalSubscriptionAmount > 0 ? (totalOtherPledges / totalSubscriptionAmount) * 100 : 0;
+    const usedPercentage = currentPagePercentage + otherPagesPercentage;
+    const availablePercentage = Math.max(0, 100 - usedPercentage);
+
+    const handleSubscriptionBarClick = () => {
+      router.push('/account/subscription/manage');
+    };
+
+    return (
       <div
         data-pledge-bar
         className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
@@ -648,6 +674,96 @@ const PledgeBar = () => {
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
         style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
       >
+        <div
+          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-all rounded-2xl border border-border/40 p-4 cursor-pointer group"
+          onClick={handleSubscriptionBarClick}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1">
+              <h3 className="text-sm font-medium group-hover:text-primary transition-colors">
+                Subscription Usage
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                ${(subscription.pledgedAmount || 0).toFixed(2)} of ${totalSubscriptionAmount.toFixed(2)}/month used
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              ${availableAmount.toFixed(2)} available
+            </div>
+          </div>
+
+          {/* Multi-segment progress bar */}
+          <div className="w-full bg-muted/50 h-3 rounded-full overflow-hidden mb-2">
+            <div className="h-full flex">
+              {/* Current page segment */}
+              {currentPagePercentage > 0 && (
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${currentPagePercentage}%` }}
+                  title={`This page: $${currentPagePledge.toFixed(2)}`}
+                />
+              )}
+              {/* Other pages segment */}
+              {otherPagesPercentage > 0 && (
+                <div
+                  className="h-full bg-primary/60 transition-all duration-300"
+                  style={{ width: `${otherPagesPercentage}%` }}
+                  title={`Other pages: $${totalOtherPledges.toFixed(2)}`}
+                />
+              )}
+              {/* Available segment */}
+              {availablePercentage > 0 && (
+                <div
+                  className="h-full bg-muted/30 transition-all duration-300"
+                  style={{ width: `${availablePercentage}%` }}
+                  title={`Available: $${availableAmount.toFixed(2)}`}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3">
+              {currentPagePledge > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  <span className="text-muted-foreground">This page: ${currentPagePledge.toFixed(2)}</span>
+                </div>
+              )}
+              {totalOtherPledges > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
+                  <span className="text-muted-foreground">Other pages: ${totalOtherPledges.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            <span className="text-muted-foreground group-hover:text-primary transition-colors">
+              Manage →
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Conditionally render subscription usage bar or regular pledge bar */}
+      {isSubscriptionEnabled && subscription && subscription.status === 'active' ? (
+        renderSubscriptionUsagePledgeBar()
+      ) : !user ? (
+        renderLoggedOutPledgeBar()
+      ) : (!subscription || subscription.status !== 'active') ? (
+        renderNonSubscriberPledgeBar()
+      ) : (
+        <div
+          data-pledge-bar
+          className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
+            visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+          } ${animateEntry ? 'spring-and-pulse' : ''}`}
+          style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
+        >
         <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex-1">
@@ -713,6 +829,8 @@ const PledgeBar = () => {
             )}
           </Button>
         )}
+        </div>
+      )}
 
       {/* Rebalance Modal */}
       <Dialog open={showRebalanceModal} onOpenChange={setShowRebalanceModal}>
@@ -794,11 +912,9 @@ const PledgeBar = () => {
             }
           }}
           minAmount={0.50}
-        />
-        ,
+        />,
         document.body
       )}
-    </div>
     </>
   );
 

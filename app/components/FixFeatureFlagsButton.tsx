@@ -10,7 +10,7 @@ import { RefreshCw } from 'lucide-react';
 
 // Define valid feature flags
 const validFeatureFlags: FeatureFlag[] = [
-  'subscription_management',
+  'payments',
   'username_management',
   'map_view',
   'calendar_view',

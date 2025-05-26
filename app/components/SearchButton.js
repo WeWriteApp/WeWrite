@@ -31,7 +31,7 @@ const SearchButton = ({ placeholder = "Search all pages...", className = "" }) =
     >
       {/* Search input (non-functional, just for appearance) */}
       <div
-        className="w-full px-4 py-2 pl-10 border border-input rounded-xl bg-background text-muted-foreground cursor-pointer transition-colors hover:border-primary focus:border-primary"
+        className="w-full px-4 py-2 pl-10 border border-input rounded-2xl bg-background text-muted-foreground cursor-pointer transition-colors hover:border-primary focus:border-primary overflow-hidden"
         onClick={navigateToSearchPage}
       >
         {placeholder}
@@ -40,16 +40,6 @@ const SearchButton = ({ placeholder = "Search all pages...", className = "" }) =
       {/* Search icon */}
       <div className="absolute inset-y-0 left-0 flex items-center pl-3">
         <Search className="h-5 w-5 text-muted-foreground" />
-      </div>
-
-      {/* Search button (positioned on the right) */}
-      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-        <div
-          className="p-1 rounded-full bg-transparent group-hover:bg-primary/10 transition-colors cursor-pointer"
-          onClick={navigateToSearchPage}
-        >
-          <Search className="h-5 w-5 text-foreground" />
-        </div>
       </div>
     </div>
   );

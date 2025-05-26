@@ -154,7 +154,7 @@ export default function TrendingPages({ limit = 5 }) {
     <div className="space-y-4">
 
       {/* Desktop view (md and up): Table layout */}
-      <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+      <div className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
         <table className="w-full">
           <thead>
             <tr className="border-b border-theme-medium">
@@ -168,7 +168,7 @@ export default function TrendingPages({ limit = 5 }) {
             {trendingPages.map((page) => (
               <tr
                 key={page.id}
-                className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="border-b border-theme-medium hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={() => window.location.href = `/${page.id}`}
               >
                 <td className="py-3 px-4">
@@ -214,17 +214,16 @@ export default function TrendingPages({ limit = 5 }) {
         {trendingPages.map((page) => (
           <div
             key={page.id}
-            className="group block bg-card border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all"
+            className="group block bg-card border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all p-4"
             onClick={() => window.location.href = `/${page.id}`}
             style={{ cursor: 'pointer' }}
           >
-            <div className="p-4">
+            <div>
               <div className="mb-3">
                 <h3 className="text-base font-medium mb-1">
-                  {/* Render the title directly instead of using PillLink */}
-                  <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                    <span className="truncate">{page.title || 'Untitled'}</span>
-                  </span>
+                  <PillLink href={`/${page.id}`}>
+                    {page.title || 'Untitled'}
+                  </PillLink>
                 </h3>
                 <div className="text-sm text-muted-foreground">
                   by{' '}

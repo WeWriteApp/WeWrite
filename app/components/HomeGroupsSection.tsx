@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Users, Plus, Lock, FileText } from "lucide-react";
 import SimpleSparkline from "./SimpleSparkline";
 import { useFeatureFlag } from "../utils/feature-flags";
-import SectionTitle from "./SectionTitle";
+import { SectionTitle } from "./ui/section-title";
 import { Placeholder } from "./ui/placeholder";
 import { Loader } from "lucide-react";
 import PillLink from "./PillLink";
@@ -220,7 +220,7 @@ export default function HomeGroupsSection() {
             </Link>
           </Button>
         </div>
-        <div className="border border-theme-medium rounded-lg overflow-hidden">
+        <div className="border border-theme-medium rounded-2xl overflow-hidden">
           <div className="text-muted-foreground p-4 text-center">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
             <p className="mb-4">You haven't joined any groups yet.</p>
@@ -247,10 +247,10 @@ export default function HomeGroupsSection() {
     <div className="w-full space-y-4">
 
       {/* Desktop view (md and up): Table layout */}
-      <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+      <div className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border">
+            <tr className="border-b border-theme-medium">
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Group</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Members</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Pages</th>
@@ -261,7 +261,7 @@ export default function HomeGroupsSection() {
             {displayGroups.map((group) => (
               <tr
                 key={group.id}
-                className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                className="border-b border-theme-medium hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   // Use direct navigation to avoid scroll issues with sticky headers
@@ -359,10 +359,12 @@ export default function HomeGroupsSection() {
             <div className="p-4">
               <div className="mb-4">
                 <h3 className="text-base font-medium">
-                  <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                    {!group.isPublic && <Lock className="h-3.5 w-3.5 mr-1" />}
-                    <span className="truncate">{group.name}</span>
-                  </span>
+                  <div className="flex items-center">
+                    {!group.isPublic && <Lock className="h-4 w-4 mr-1.5 text-muted-foreground" />}
+                    <PillLink href={`/group/${group.id}`}>
+                      {group.name}
+                    </PillLink>
+                  </div>
                 </h3>
                 <div className="text-xs text-muted-foreground">
                   by {group.ownerUsername}

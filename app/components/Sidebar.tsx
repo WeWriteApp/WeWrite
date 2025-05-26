@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, ChevronRight, Palette, Settings, Check, Bell, User, Users } from "lucide-react"
+import { X, ChevronLeft, Palette, Settings, Check, Bell, User, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { auth } from "../firebase/config"
@@ -196,16 +196,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="space-y-1">
               <button
                 onClick={() => router.push('/notifications')}
-                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <div className="flex items-center">
-                  <Bell className="h-5 w-5 mr-2" />
-                  <span>Notifications</span>
-                </div>
-                <div className="flex items-center">
-                  <NotificationBadge className="mr-2" />
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
+                <Bell className="h-5 w-5 mr-2" />
+                <span>Notifications</span>
+                <NotificationBadge className="ml-auto" />
               </button>
 
               {/* Groups navigation item - now always visible for all users */}
@@ -217,46 +212,34 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   // Use window.location for more reliable navigation
                   window.location.href = '/groups';
                 }}
-                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  <span>Groups</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <Users className="h-5 w-5 mr-2" />
+                <span>Groups</span>
               </button>
 
               <button
                 onClick={() => navigateToSection('appearance')}
-                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <div className="flex items-center">
-                  <Palette className="h-5 w-5 mr-2" />
-                  <span>Appearance</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <Palette className="h-5 w-5 mr-2" />
+                <span>Appearance</span>
               </button>
 
               <button
                 onClick={() => router.push('/account')}
-                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <div className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  <span>Settings</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <Settings className="h-5 w-5 mr-2" />
+                <span>Settings</span>
               </button>
 
               <button
                 onClick={() => router.push(`/user/${user?.uid}`)}
-                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <div className="flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  <span>Profile</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <User className="h-5 w-5 mr-2" />
+                <span>Profile</span>
               </button>
             </div>
           </div>

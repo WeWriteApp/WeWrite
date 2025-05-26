@@ -255,7 +255,7 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
         </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-2xl border border-theme-medium shadow-md dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

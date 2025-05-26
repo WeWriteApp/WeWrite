@@ -2,7 +2,7 @@
 
 import React, { useState, forwardRef } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, ExternalLink, Users } from "lucide-react";
+import { Lock, ExternalLink, Users, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
 import { useAuth } from "../providers/AuthProvider";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../utils/linkFormatters";
@@ -237,8 +237,14 @@ export const PillLink = forwardRef(({
 
           // Use Next.js router for navigation when possible
           if (typeof window !== 'undefined') {
+            // SCROLL RESTORATION FIX: Ensure scroll position is reset when navigating
+            // Scroll to top immediately before navigation to prevent scroll position inheritance
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
             // Use router.push for client-side navigation
             router.push(href);
+
+            console.log('PillLink: Scrolled to top before navigation to:', href);
           } else {
             // Fallback to direct navigation if router is not available
             window.location.href = href;

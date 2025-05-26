@@ -7,6 +7,7 @@ import { formatRelativeTime } from '../utils/formatRelativeTime';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
+import { Lock } from 'lucide-react';
 
 interface RandomPage {
   id: string;
@@ -86,7 +87,7 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
     <TooltipProvider>
       {/* Desktop Table Layout */}
       <div
-        className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden relative"
+        className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden relative shadow-md dark:bg-card/90"
         style={{ minHeight }}
       >
         {/* Loading overlay */}
@@ -111,7 +112,7 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
               <div className="grid grid-cols-[1fr_200px_150px] gap-4 items-center">
                 {/* Title Column - Flexible width with proper truncation */}
                 <div className="min-w-0 overflow-hidden">
-                  <div className="max-w-full">
+                  <div className="max-w-full flex items-center gap-2">
                     <PillLink
                       href={`/${page.id}`}
                       isPublic={page.isPublic}
@@ -120,6 +121,16 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
                     >
                       {page.title}
                     </PillLink>
+                    {!page.isPublic && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Private page</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
 
@@ -167,12 +178,12 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
           <div
             key={page.id}
             className={cn(
-              "border border-theme-medium rounded-2xl p-4 space-y-3",
-              "hover:bg-muted/30 transition-colors"
+              "border border-theme-medium rounded-2xl p-4 space-y-3 shadow-md",
+              "hover:bg-muted/30 transition-colors dark:bg-card/90"
             )}
           >
             {/* Title */}
-            <div>
+            <div className="flex items-center gap-2">
               <PillLink
                 href={`/${page.id}`}
                 isPublic={page.isPublic}
@@ -181,6 +192,16 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
               >
                 {page.title}
               </PillLink>
+              {!page.isPublic && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Private page</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
 
             {/* Author and Last Edited */}

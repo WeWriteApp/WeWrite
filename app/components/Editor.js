@@ -13,7 +13,7 @@ import {
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
 import { withHistory } from "slate-history";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Link as LinkIcon } from "lucide-react";
 import { useLineSettings } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
 import { useFeatureFlag } from '../utils/feature-flags';

@@ -13,6 +13,9 @@ import { format } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import DiffPreview, { DiffStats } from "./DiffPreview";
+import { useFeatureFlag } from "../utils/feature-flags";
+import { useContext } from "react";
+import { AuthContext } from "../providers/AuthProvider";
 
 /**
  * ActivityCard component displays a single activity card
@@ -24,7 +27,7 @@ import DiffPreview, { DiffStats } from "./DiffPreview";
 const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+  const { user } = useContext(AuthContext);
 
   // Debug activity data
   useEffect(() => {
@@ -47,24 +50,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     });
   }, [activity]);
 
-  // Check if subscription feature is enabled
-  useEffect(() => {
-    const checkSubscriptionFeature = async () => {
-      try {
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.subscription_management === true);
-        }
-      } catch (error) {
-        console.error('Error checking subscription feature flag:', error);
-      }
-    };
-
-    checkSubscriptionFeature();
-  }, []);
+  // Use the reactive feature flag hook instead of manual Firestore check
+  const subscriptionEnabled = useFeatureFlag('payments', user?.email);
 
   // Ensure we have valid content before generating diffs
   const hasValidContent = activity.currentContent &&
@@ -112,6 +99,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
     console.log('ActivityCard clicked, navigating to:', url);
 
+    // SCROLL RESTORATION FIX: Ensure scroll position is reset when navigating
+    // Scroll to top immediately before navigation to prevent scroll position inheritance
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
     // Force a hard navigation using window.location.href
     // This bypasses any router issues and ensures the navigation works
     window.location.href = url;
@@ -137,7 +128,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card",
+        "w-full border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
         "h-[200px]", // Standardized fixed height for all cards
         "flex flex-col",
         "p-4" // Consistent padding

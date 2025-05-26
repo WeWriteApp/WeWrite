@@ -370,6 +370,33 @@
   background-color: hsl(var(--card)); /* dark:hover:bg-card/100 */
 }
 
+/* High contrast mode card styling - maximum contrast borders for all card components */
+html[data-high-contrast="true"] .border-theme-light,
+html[data-high-contrast="true"] .border-theme-medium,
+html[data-high-contrast="true"] .border-theme-strong,
+html[data-high-contrast="true"] .border-theme-solid,
+html[data-high-contrast="true"] .wewrite-card,
+html[data-high-contrast="true"] .glass-card,
+html[data-high-contrast="true"] .glass-panel {
+  border-color: hsl(var(--border)) !important;
+  border-width: 1px !important;
+}
+
+/* High contrast mode for specific card-like elements */
+html[data-high-contrast="true"] [class*="border-theme-"],
+html[data-high-contrast="true"] [class*="rounded-2xl"][class*="border"],
+html[data-high-contrast="true"] [class*="rounded-lg"][class*="border"],
+html[data-high-contrast="true"] .card,
+html[data-high-contrast="true"] [class*="shadow-md"][class*="border"] {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* High contrast mode for table borders */
+html[data-high-contrast="true"] .border-b,
+html[data-high-contrast="true"] .border-border {
+  border-color: hsl(var(--border)) !important;
+}
+
 /* Hide scrollbar for Chrome, Safari and Opera */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

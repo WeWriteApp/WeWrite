@@ -15,9 +15,10 @@ interface StickySectionProps {
 // Global state to track which section should have the sticky header
 let activeStickySection: string | null = null;
 const sectionCallbacks: Map<string, (isActive: boolean) => void> = new Map();
-const sectionPositions: Map<string, { top: number; bottom: number; headerHeight: number }> = new Map();
-let globalScrollHandler: (() => void) | null = null;
-let isScrollHandlerActive = false;
+const sectionElements: Map<string, HTMLElement> = new Map();
+let intersectionObserver: IntersectionObserver | null = null;
+let scrollHandler: (() => void) | null = null;
+let isInitialized = false;
 
 // Section order for proper z-index management
 const sectionOrder: string[] = ['activity', 'groups', 'trending', 'random_pages', 'top_users'];
@@ -25,169 +26,161 @@ const sectionOrder: string[] = ['activity', 'groups', 'trending', 'random_pages'
 // Function to update the active sticky section and notify all sections
 function setActiveStickySection(newActiveSection: string | null): void {
   if (activeStickySection !== newActiveSection) {
+    const previousSection = activeStickySection;
     activeStickySection = newActiveSection;
+
     // Notify all sections about the change
     sectionCallbacks.forEach((callback, sectionId) => {
       callback(sectionId === newActiveSection);
     });
+
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[StickySection] Global state updated: ${previousSection} → ${newActiveSection}`);
+    }
   }
 }
 
-// Global function to determine which section should be active
-function determineActiveSection(): string | null {
-  const scrollY = window.scrollY;
+// Bulletproof section detection using precise calculations
+function determineActiveSectionPrecise(): string | null {
+  try {
+    const scrollY = window.scrollY;
 
-  // Get main header height to account for when it's still visible
-  const mainHeader = document.querySelector('header');
-  const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 56;
+    // Get main header height with fallback
+    const mainHeader = document.querySelector('header');
+    const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 56;
 
-  // If we're at the very top, no section should be sticky (main header visible)
-  if (scrollY < mainHeaderHeight) {
+    // If we're at the very top, no section should be sticky
+    if (scrollY < mainHeaderHeight) {
+      return null;
+    }
+
+    // Early return if no sections are registered
+    if (sectionElements.size === 0) {
+      return null;
+    }
+
+    // Get all registered sections with error handling
+    const sections: Array<{
+      id: string;
+      element: HTMLElement;
+      top: number;
+      bottom: number;
+      headerHeight: number;
+      contentTop: number;
+    }> = [];
+
+    sectionElements.forEach((element, sectionId) => {
+      try {
+        // Ensure element is still in DOM
+        if (!element.isConnected) {
+          return;
+        }
+
+        const rect = element.getBoundingClientRect();
+        const sectionTop = rect.top + scrollY;
+        const sectionBottom = sectionTop + rect.height;
+
+        // Find header element with fallback
+        const headerElement = element.querySelector(`#${sectionId}-header`) as HTMLElement;
+        const headerHeight = headerElement ? headerElement.getBoundingClientRect().height : 0;
+        const contentTop = sectionTop + headerHeight;
+
+        // Only include sections with valid dimensions
+        if (rect.height > 0) {
+          sections.push({
+            id: sectionId,
+            element,
+            top: sectionTop,
+            bottom: sectionBottom,
+            headerHeight,
+            contentTop
+          });
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`[StickySection] Error processing section ${sectionId}:`, error);
+        }
+      }
+    });
+
+    // Early return if no valid sections
+    if (sections.length === 0) {
+      return null;
+    }
+
+    // Sort by top position
+    sections.sort((a, b) => a.top - b.top);
+
+    // Calculate the effective viewport top (accounting for main header)
+    const effectiveViewportTop = scrollY + mainHeaderHeight;
+    const viewportBottom = scrollY + window.innerHeight;
+
+    // Find the section that should have its header sticky
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      const nextSection = sections[i + 1];
+
+      // Key insight: A section's header should be sticky when:
+      // 1. We've scrolled past the section's original header position
+      // 2. We haven't reached the next section's header position
+      // 3. There's still content from this section visible below the sticky header
+
+      const pastSectionHeader = effectiveViewportTop >= section.top;
+      const beforeNextSection = !nextSection || effectiveViewportTop < nextSection.top;
+      const hasVisibleContent = effectiveViewportTop < section.bottom;
+
+      // Additional check: ensure section is actually visible in viewport
+      const sectionInViewport = section.top < viewportBottom && section.bottom > scrollY;
+
+      if (pastSectionHeader && beforeNextSection && hasVisibleContent && sectionInViewport) {
+        // Additional check: ensure there's meaningful content below the sticky header
+        const contentBelowHeader = section.bottom - effectiveViewportTop;
+        const minContentThreshold = Math.min(50, section.headerHeight * 2); // Dynamic threshold
+
+        if (contentBelowHeader >= minContentThreshold) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[StickySection] Active section: ${section.id}`);
+            console.log(`  - effectiveViewportTop: ${effectiveViewportTop}`);
+            console.log(`  - section.top: ${section.top}`);
+            console.log(`  - section.bottom: ${section.bottom}`);
+            console.log(`  - contentBelowHeader: ${contentBelowHeader}`);
+            console.log(`  - minContentThreshold: ${minContentThreshold}`);
+          }
+          return section.id;
+        }
+      }
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[StickySection] No active section - all headers return to original positions`);
+    }
+
+    return null;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[StickySection] Error in determineActiveSectionPrecise:`, error);
+    }
     return null;
   }
-
-  // Find all sections and determine which one should be active
-  const sections = document.querySelectorAll('[data-section]');
-  const sectionData: Array<{
-    id: string,
-    top: number,
-    bottom: number,
-    originalHeaderTop: number,
-    isCurrentlySticky: boolean
-  }> = [];
-
-  // Collect all section data and sort by position
-  for (const section of sections) {
-    const sectionElement = section as HTMLElement;
-    const sectionId = sectionElement.getAttribute('data-section');
-    if (!sectionId) continue;
-
-    const rect = sectionElement.getBoundingClientRect();
-    const sectionTop = rect.top + scrollY;
-    const sectionBottom = sectionTop + rect.height;
-
-    // Find the header element within this section
-    const headerElement = sectionElement.querySelector(`#${sectionId}-header`);
-    const isCurrentlySticky = headerElement ? headerElement.classList.contains('section-header-sticky') : false;
-
-    // Calculate the original header position (where it should be when not sticky)
-    // If it's currently sticky, we need to estimate its original position
-    let originalHeaderTop: number;
-    if (isCurrentlySticky) {
-      // When sticky, the header's original position would be at the section top
-      originalHeaderTop = sectionTop;
-    } else {
-      // When not sticky, use its current position
-      const headerRect = headerElement ? headerElement.getBoundingClientRect() : null;
-      originalHeaderTop = headerRect ? headerRect.top + scrollY : sectionTop;
-    }
-
-    sectionData.push({
-      id: sectionId,
-      top: sectionTop,
-      bottom: sectionBottom,
-      originalHeaderTop: originalHeaderTop,
-      isCurrentlySticky: isCurrentlySticky
-    });
-  }
-
-  // Sort sections by their top position to ensure correct order
-  sectionData.sort((a, b) => a.top - b.top);
-
-  let activeSection: string | null = null;
-  const viewportTop = scrollY + mainHeaderHeight; // Account for main header space
-  const headerBuffer = 10; // Increased buffer for more stable transitions
-
-  // BULLETPROOF LOGIC: Robust section boundary detection with explicit transition handling
-  for (let i = 0; i < sectionData.length; i++) {
-    const section = sectionData[i];
-    const nextSection = sectionData[i + 1];
-    const prevSection = sectionData[i - 1];
-
-    // Core position checks
-    const isPastOriginalHeader = viewportTop >= (section.originalHeaderTop + headerBuffer);
-    const isAtOrAboveOriginalPosition = scrollY <= (section.originalHeaderTop - headerBuffer);
-
-    // Boundary checks with explicit next section handling
-    let isBeforeNextSection = true;
-    if (nextSection) {
-      // For sections with a next section, check if we're before the next section's header
-      isBeforeNextSection = viewportTop < (nextSection.originalHeaderTop + headerBuffer);
-    } else {
-      // For the last section (Top Users), check if we're still within its content area
-      // This prevents it from getting stuck when scrolling up to previous sections
-      const isStillInLastSection = scrollY < (section.bottom - headerBuffer);
-      isBeforeNextSection = isStillInLastSection;
-    }
-
-    // Enhanced section bounds check
-    const isWithinSectionBounds = scrollY >= (section.top - headerBuffer) && scrollY < (section.bottom + headerBuffer);
-
-    // EXPLICIT TRANSITION LOGIC: Handle section transitions more robustly
-    let shouldBeActive = false;
-
-    if (isPastOriginalHeader && !isAtOrAboveOriginalPosition && isWithinSectionBounds) {
-      if (nextSection) {
-        // For sections with a next section, ensure we're before the next section
-        shouldBeActive = isBeforeNextSection;
-      } else {
-        // For the last section, be more restrictive to prevent getting stuck
-        const isInLastSectionTerritory = scrollY >= section.originalHeaderTop && scrollY < (section.bottom - headerBuffer);
-        shouldBeActive = isInLastSectionTerritory;
-      }
-    }
-
-    // ADDITIONAL SAFEGUARD: Prevent conflicts when transitioning between sections
-    if (shouldBeActive && prevSection) {
-      // If the previous section would also be active, choose based on proximity
-      const distanceFromCurrent = Math.abs(viewportTop - section.originalHeaderTop);
-      const distanceFromPrevious = Math.abs(viewportTop - prevSection.originalHeaderTop);
-
-      // Only activate if we're closer to this section than the previous one
-      if (distanceFromPrevious < distanceFromCurrent) {
-        shouldBeActive = false;
-      }
-    }
-
-    if (shouldBeActive) {
-      activeSection = section.id;
-      // Debug logging (only in development)
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] Active section: ${section.id} (bulletproof detection)`);
-        console.log(`  - isPastOriginalHeader: ${isPastOriginalHeader}`);
-        console.log(`  - isBeforeNextSection: ${isBeforeNextSection}`);
-        console.log(`  - isWithinSectionBounds: ${isWithinSectionBounds}`);
-        console.log(`  - viewportTop: ${viewportTop}, sectionHeaderTop: ${section.originalHeaderTop}`);
-      }
-      break; // Important: break after finding the active section to prevent conflicts
-    }
-  }
-
-  // Debug logging for restoration cases
-  if (process.env.NODE_ENV === 'development' && activeSection === null) {
-    console.log(`[StickySection] No active section - likely at original positions or top of page`);
-  }
-
-  return activeSection;
 }
 
-// Global scroll handler - only one instance for all sections
-function setupGlobalScrollHandler(): void {
-  if (globalScrollHandler) return; // Already set up
+// Enhanced scroll handler with intersection observer backup
+function setupStickyDetection(): void {
+  if (isInitialized) return;
 
   let rafId: number | null = null;
   let lastActiveSection: string | null = null;
 
-  globalScrollHandler = (): void => {
+  // Primary scroll-based detection
+  scrollHandler = (): void => {
     if (rafId) return;
 
     rafId = requestAnimationFrame(() => {
-      const newActiveSection = determineActiveSection();
+      const newActiveSection = determineActiveSectionPrecise();
 
-      // ADDITIONAL SAFEGUARD: Only update if the active section actually changed
-      // This prevents unnecessary re-renders and potential race conditions
+      // Only update if the active section actually changed
       if (newActiveSection !== lastActiveSection) {
-        // Debug logging for section transitions
         if (process.env.NODE_ENV === 'development') {
           console.log(`[StickySection] Section transition: ${lastActiveSection} → ${newActiveSection}`);
         }
@@ -200,13 +193,81 @@ function setupGlobalScrollHandler(): void {
     });
   };
 
-  window.addEventListener('scroll', globalScrollHandler, { passive: true });
+  // Set up intersection observer as backup for edge cases
+  try {
+    intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        // This serves as a backup to trigger recalculation when sections enter/leave viewport
+        let shouldRecalculate = false;
+
+        entries.forEach(entry => {
+          // Trigger recalculation on any intersection change
+          if (entry.isIntersecting !== entry.target.dataset.wasIntersecting) {
+            shouldRecalculate = true;
+            // Store the intersection state to prevent unnecessary recalculations
+            entry.target.dataset.wasIntersecting = entry.isIntersecting.toString();
+          }
+        });
+
+        if (shouldRecalculate && scrollHandler) {
+          // Debounce the recalculation to prevent excessive calls
+          setTimeout(() => {
+            if (scrollHandler) {
+              scrollHandler();
+            }
+          }, 16); // ~60fps
+        }
+      },
+      {
+        root: null,
+        rootMargin: '0px 0px -10px 0px', // Slight margin to prevent flickering
+        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1.0] // More thresholds for better detection
+      }
+    );
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[StickySection] Failed to create IntersectionObserver:', error);
+    }
+    // Continue without intersection observer if it fails
+  }
+
+  // Observe all registered sections
+  sectionElements.forEach((element) => {
+    intersectionObserver?.observe(element);
+  });
+
+  window.addEventListener('scroll', scrollHandler, { passive: true });
+  window.addEventListener('resize', scrollHandler, { passive: true }); // Handle viewport changes
+
+  isInitialized = true;
 }
 
-function cleanupGlobalScrollHandler(): void {
-  if (globalScrollHandler) {
-    window.removeEventListener('scroll', globalScrollHandler);
-    globalScrollHandler = null;
+function cleanupStickyDetection(): void {
+  if (scrollHandler) {
+    window.removeEventListener('scroll', scrollHandler);
+    window.removeEventListener('resize', scrollHandler);
+    scrollHandler = null;
+  }
+
+  if (intersectionObserver) {
+    intersectionObserver.disconnect();
+    intersectionObserver = null;
+  }
+
+  isInitialized = false;
+}
+
+// Function to register a new section with the intersection observer
+function registerSectionWithObserver(element: HTMLElement): void {
+  if (intersectionObserver) {
+    intersectionObserver.observe(element);
+  }
+}
+
+// Function to unregister a section from the intersection observer
+function unregisterSectionFromObserver(element: HTMLElement): void {
+  if (intersectionObserver) {
+    intersectionObserver.unobserve(element);
   }
 }
 
@@ -267,33 +328,47 @@ export default function StickySection({
     }
   }, []);
 
-  // Register this section for global sticky management and set up global scroll handler
+  // Register this section for global sticky management and set up detection system
   useEffect(() => {
+    const sectionElement = sectionRef.current;
+    if (!sectionElement) return;
+
     const callback = (isActive: boolean) => {
       setIsActiveStickySection(isActive);
     };
 
+    // Register section
     sectionCallbacks.set(sectionId, callback);
+    sectionElements.set(sectionId, sectionElement);
 
-    // Set up global scroll handler (only once)
-    setupGlobalScrollHandler();
+    // Set up detection system (only once)
+    setupStickyDetection();
+
+    // Add intersection observer for this specific section
+    registerSectionWithObserver(sectionElement);
 
     // Initial check to determine active section
     setTimeout(() => {
-      const newActiveSection = determineActiveSection();
+      const newActiveSection = determineActiveSectionPrecise();
       setActiveStickySection(newActiveSection);
     }, 100);
 
     return () => {
+      // Unregister section
       sectionCallbacks.delete(sectionId);
+      sectionElements.delete(sectionId);
+
+      // Remove from intersection observer
+      unregisterSectionFromObserver(sectionElement);
+
       // If this was the active section, clear it
       if (activeStickySection === sectionId) {
         setActiveStickySection(null);
       }
 
-      // Clean up global scroll handler if no sections remain
+      // Clean up detection system if no sections remain
       if (sectionCallbacks.size === 0) {
-        cleanupGlobalScrollHandler();
+        cleanupStickyDetection();
       }
     };
   }, [sectionId]);
@@ -423,7 +498,7 @@ export default function StickySection({
     <div
       ref={sectionRef}
       id={sectionId}
-      className={cn('relative mb-6', className)}
+      className={cn('relative mb-6 overflow-hidden', className)}
     >
       {/* Placeholder to prevent layout shift when header becomes sticky */}
       <div
@@ -455,8 +530,8 @@ export default function StickySection({
         title={isAtSectionTop ? "Click to scroll to top of page" : "Click to scroll to top of section"}
       >
         <div className={cn(
-          'py-4',
-          isSticky && 'py-2' // Reduce padding when sticky for more compact appearance
+          'pt-4 pb-1', // Adjusted padding to work with SectionTitle's pt-2 and mb-2
+          isSticky && 'pt-2 pb-1' // Reduce padding when sticky for more compact appearance
         )}>
           {headerContent}
         </div>

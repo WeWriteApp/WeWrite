@@ -12,6 +12,37 @@ import {
   TooltipTrigger
 } from './ui/tooltip';
 
+// Simple stemming function to handle common word variations
+function simpleStem(word) {
+  // Handle common plural forms
+  if (word.endsWith('ies') && word.length > 4) {
+    return word.slice(0, -3) + 'y'; // stories -> story
+  }
+  if (word.endsWith('s') && word.length > 3 && !word.endsWith('ss')) {
+    return word.slice(0, -1); // pages -> page, but not class -> clas
+  }
+  // Handle common verb forms
+  if (word.endsWith('ing') && word.length > 5) {
+    return word.slice(0, -3); // writing -> writ
+  }
+  if (word.endsWith('ed') && word.length > 4) {
+    return word.slice(0, -2); // created -> creat
+  }
+  return word;
+}
+
+// Process words with improved cleaning and stemming
+function processWords(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
+    .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
+    .split(/\s+/)
+    .filter(word => word.length >= 2) // Include words of at least 2 characters
+    .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word))
+    .map(word => simpleStem(word)); // Apply stemming
+}
+
 /**
  * RelatedPages Component
  *
@@ -62,12 +93,8 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           dataFetchedRef.current = true;
 
           // Only focus on title word matching
-          // Extract significant words from the title
-          const titleWords = page.title
-            .toLowerCase()
-            .split(/\s+/)
-            .filter(word => word.length >= 2) // Include words of at least 2 characters
-            .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+          // Extract significant words from the title with improved processing
+          const titleWords = processWords(page.title);
 
           console.log(`Title words for matching: ${titleWords.join(', ')}`);
 
@@ -101,12 +128,8 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
             // Skip pages without titles
             if (!pageData.title) return;
 
-            // Check for word matches in the title
-            const pageTitle = pageData.title.toLowerCase();
-            const pageTitleWords = pageTitle
-              .split(/\s+/)
-              .filter(word => word.length >= 2)
-              .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word));
+            // Check for word matches in the title with improved processing
+            const pageTitleWords = processWords(pageData.title);
 
             // Find exact word matches
             const exactMatches = titleWords.filter(word =>

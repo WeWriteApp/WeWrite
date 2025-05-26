@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/database';
-import { isAdmin } from '../utils/feature-flags.ts';
+import { useState } from 'react';
+import { useFeatureFlag } from '../utils/feature-flags';
 
 /**
  * Hook to check if the subscription feature is enabled
@@ -11,44 +9,14 @@ import { isAdmin } from '../utils/feature-flags.ts';
  * @returns {Object} - { isEnabled, isLoading, showComingSoonModal, setShowComingSoonModal }
  */
 export function useSubscriptionFeature(userEmail) {
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
-  useEffect(() => {
-    const checkFeatureFlag = async () => {
-      try {
-        setIsLoading(true);
-
-        // Always check feature flag in Firestore, even for admin users
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          const isFeatureEnabled = flagsData.subscription_management === true;
-          console.log('Subscription feature flag from database:', isFeatureEnabled);
-          setIsEnabled(isFeatureEnabled);
-        } else {
-          console.log('No feature flags document found, defaulting subscription to disabled');
-          // Default to disabled if no document exists
-          setIsEnabled(false);
-        }
-      } catch (error) {
-        console.error('Error checking subscription feature flag:', error);
-        // Default to disabled on error
-        setIsEnabled(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkFeatureFlag();
-  }, [userEmail]);
+  // Use the reactive feature flag hook for real-time updates
+  const isEnabled = useFeatureFlag('payments', userEmail);
 
   return {
     isEnabled,
-    isLoading,
+    isLoading: false, // The useFeatureFlag hook handles loading internally
     showComingSoonModal,
     setShowComingSoonModal
   };

@@ -153,39 +153,25 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
           placeholder={placeholder}
           value={inputValue}
           onChange={handleInputChange}
-          className="w-full pr-20"
+          className="w-full pl-10 pr-10 rounded-2xl"
           autoComplete="off"
         />
 
-        {/* Search icon */}
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        {/* Search icon on the left */}
+        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
           <Search className="h-5 w-5 text-muted-foreground" />
         </div>
 
-        {/* Clear button */}
+        {/* Clear button - larger size */}
         {inputValue.trim() && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors pointer-events-auto"
             aria-label="Clear search"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
-        )}
-
-        {/* Pin button */}
-        {inputValue.trim() && onSave && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-16 top-1/2 -translate-y-1/2 h-8 w-8"
-            onClick={handleSave}
-            title="Save this search"
-          >
-            <Pin className="h-4 w-4" />
-          </Button>
         )}
       </div>
     </form>
@@ -406,10 +392,7 @@ const SearchPage = React.memo(() => {
         isLoading={isLoading}
         groupsEnabled={groupsEnabled}
         userId={userId}
-        onSearch={handleSearch}
-        onClear={handleClear}
         onSave={handleSave}
-        onSubmit={handleSubmit}
       />
     </div>
   );

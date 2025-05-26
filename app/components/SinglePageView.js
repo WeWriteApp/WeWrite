@@ -207,6 +207,13 @@ function SinglePageView({ params }) {
       setIsLoading(true);
       setLoadingTimedOut(false);
 
+      // SCROLL RESTORATION FIX: Scroll to top when loading a new page
+      // This ensures that when navigating to a new page, we always start at the top
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        console.log('SinglePageView: Scrolled to top for page:', params.id);
+      }
+
       // Set a timeout to prevent infinite loading
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);

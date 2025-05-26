@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { RandomPagesSkeleton } from './ui/skeleton-loaders';
-import SectionTitle from './SectionTitle';
+import { SectionTitle } from './ui/section-title';
 import { Button } from './ui/button';
 import { Shuffle } from 'lucide-react';
 import { useAuth } from '../providers/AuthProvider';
@@ -39,11 +39,22 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   const [loading, setLoading] = useState(true);
   const [shuffling, setShuffling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [includePrivatePages, setIncludePrivatePages] = useState(false);
 
   console.log('RandomPagesOptimized: Rendering with props:', { limit, priority });
 
+  // Load privacy preference from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedPreference = localStorage.getItem('randomPages_includePrivate');
+      if (savedPreference === 'true') {
+        setIncludePrivatePages(true);
+      }
+    }
+  }, []);
+
   // Fetch random pages from API
-  const fetchRandomPages = useCallback(async (isShuffling = false) => {
+  const fetchRandomPages = useCallback(async (isShuffling = false, includePrivate = includePrivatePages) => {
     try {
       if (isShuffling) {
         setShuffling(true);
@@ -59,6 +70,11 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       // Add user ID for access control if user is authenticated
       if (user?.uid) {
         params.append('userId', user.uid);
+      }
+
+      // Add privacy preference
+      if (includePrivate) {
+        params.append('includePrivate', 'true');
       }
 
       const response = await fetch(`/api/random-pages?${params}`);
@@ -87,10 +103,10 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   }, [limit, user?.uid]);
 
   // Handle shuffle button click
-  const handleShuffle = useCallback(() => {
-    console.log('RandomPages: Shuffle button clicked');
-    fetchRandomPages(true);
-  }, [fetchRandomPages]);
+  const handleShuffle = useCallback((includePrivate = includePrivatePages) => {
+    console.log('RandomPages: Shuffle button clicked', { includePrivate });
+    fetchRandomPages(true, includePrivate);
+  }, [fetchRandomPages, includePrivatePages]);
 
   // Initial fetch on component mount
   useEffect(() => {
@@ -99,15 +115,23 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
 
   // Listen for shuffle events from sticky header
   useEffect(() => {
-    const handleShuffleEvent = () => {
-      handleShuffle();
+    const handleShuffleEvent = (event: CustomEvent) => {
+      const includePrivate = event.detail?.includePrivate ?? includePrivatePages;
+      console.log('RandomPages: Shuffle event received', { includePrivate });
+
+      // Update local state if privacy setting changed
+      if (includePrivate !== includePrivatePages) {
+        setIncludePrivatePages(includePrivate);
+      }
+
+      handleShuffle(includePrivate);
     };
 
-    window.addEventListener('shuffleRandomPages', handleShuffleEvent);
+    window.addEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     return () => {
-      window.removeEventListener('shuffleRandomPages', handleShuffleEvent);
+      window.removeEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     };
-  }, [handleShuffle]);
+  }, [handleShuffle, includePrivatePages]);
 
   // Show loading skeleton on initial load
   if (loading && !shuffling) {

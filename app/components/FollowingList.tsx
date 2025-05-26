@@ -11,6 +11,7 @@ import { useAuth } from '../providers/AuthProvider';
 import Link from 'next/link';
 import { PillLink } from './PillLink';
 import { SupporterIcon } from './SupporterIcon';
+import { useFeatureFlag } from '../utils/feature-flags';
 
 interface FollowingListProps {
   userId: string;
@@ -26,27 +27,10 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   const [loadingMore, setLoadingMore] = useState(false);
   const [unfollowingId, setUnfollowingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const limit = 50;
 
-  // Check if subscription feature is enabled
-  useEffect(() => {
-    const checkSubscriptionFeature = async () => {
-      try {
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.subscription_management === true);
-        }
-      } catch (error) {
-        console.error('Error checking subscription feature flag:', error);
-      }
-    };
-
-    checkSubscriptionFeature();
-  }, []);
+  // Use the reactive feature flag hook instead of manual Firestore check
+  const subscriptionEnabled = useFeatureFlag('payments', user?.email);
 
   useEffect(() => {
     if (!userId) return;

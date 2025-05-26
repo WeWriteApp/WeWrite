@@ -47,6 +47,13 @@ export default function RootLayout({
           __html: `
             // Enhanced script to detect and recover from blank pages and script failures
             window.addEventListener('load', function() {
+              // SCROLL RESTORATION FIX: Ensure page starts at top on load
+              // This is a fallback in case other scroll restoration methods fail
+              if (window.scrollY > 0) {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                console.log('Root layout: Fallback scroll to top executed');
+              }
+
               // Track script loading failures
               window.scriptFailures = window.scriptFailures || [];
 

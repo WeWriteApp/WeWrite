@@ -30,7 +30,6 @@ interface FeatureFlagState {
   name: string;
   description: string;
   enabled: boolean;
-  adminOnly: boolean;
 }
 
 export default function AdminPage() {
@@ -47,56 +46,49 @@ export default function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Feature flags state
+  // Feature flags state - using system string names for easier identification
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
     {
-      id: 'subscription_management',
-      name: 'Subscription Management',
+      id: 'payments',
+      name: 'payments',
       description: 'Enable subscription functionality and UI for managing user subscriptions',
-      enabled: false,
-      adminOnly: true
+      enabled: false
     },
     {
       id: 'username_management',
-      name: 'Username Management',
+      name: 'username_management',
       description: 'Allow admins to manage user usernames and handle username-related operations',
-      enabled: false,
-      adminOnly: true
+      enabled: false
     },
     {
       id: 'map_view',
-      name: 'Map View',
+      name: 'map_view',
       description: 'Enable map view for pages with location data and geographic visualization',
-      enabled: false,
-      adminOnly: false
+      enabled: false
     },
     {
       id: 'calendar_view',
-      name: 'Calendar View',
+      name: 'calendar_view',
       description: 'Enable calendar view for activity tracking and temporal organization',
-      enabled: false,
-      adminOnly: false
+      enabled: false
     },
     {
       id: 'groups',
-      name: 'Groups',
+      name: 'groups',
       description: 'Enable group functionality for organizing pages and collaboration',
-      enabled: true,
-      adminOnly: false
+      enabled: true
     },
     {
       id: 'notifications',
-      name: 'Notifications',
+      name: 'notifications',
       description: 'Enable in-app notifications for follows, page links, and other activities',
-      enabled: false,
-      adminOnly: false
+      enabled: false
     },
     {
       id: 'link_functionality',
-      name: 'Link Functionality',
+      name: 'link_functionality',
       description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt',
-      enabled: true,
-      adminOnly: false
+      enabled: true
     }
   ]);
 
@@ -588,11 +580,6 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{flag.name}</span>
-                      {flag.adminOnly && (
-                        <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                          Admin Only
-                        </span>
-                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium">

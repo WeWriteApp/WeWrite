@@ -33,7 +33,6 @@ interface FeatureFlagState {
   name: string;
   description: string;
   enabled: boolean;
-  adminOnly: boolean;
 }
 
 export default function AdminPanel({ userEmail }: AdminPanelProps) {
@@ -55,49 +54,49 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Feature flags state
+  // Feature flags state - using system string names for easier identification
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
     {
-      id: 'subscription_management',
-      name: 'Subscription Management',
+      id: 'payments',
+      name: 'payments',
       description: 'Enable subscription functionality and UI',
-      enabled: false,
-      adminOnly: true
+      enabled: false
     },
     {
       id: 'username_management',
-      name: 'Username Management',
+      name: 'username_management',
       description: 'Allow admins to manage user usernames',
-      enabled: false,
-      adminOnly: true
+      enabled: false
     },
     {
       id: 'map_view',
-      name: 'Map View',
+      name: 'map_view',
       description: 'Enable map view for pages with location data',
-      enabled: false,
-      adminOnly: false
+      enabled: false
     },
     {
       id: 'calendar_view',
-      name: 'Calendar View',
+      name: 'calendar_view',
       description: 'Enable calendar view for activity tracking',
-      enabled: false,
-      adminOnly: false
+      enabled: false
     },
     {
       id: 'groups',
-      name: 'Groups',
+      name: 'groups',
       description: 'Enable groups functionality and UI',
-      enabled: false,
-      adminOnly: false
+      enabled: false
     },
     {
       id: 'link_functionality',
-      name: 'Link Functionality',
+      name: 'link_functionality',
       description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
-      enabled: true,
-      adminOnly: false
+      enabled: true
+    },
+    {
+      id: 'notifications',
+      name: 'notifications',
+      description: 'Enable in-app notifications for follows, page links, and other activities',
+      enabled: false
     }
   ]);
 
@@ -326,12 +325,13 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
         flagsData = featureFlagsDoc.data();
       }
 
-      // Update feature flag
-      const updatedFlag = featureFlags.find(flag => flag.id === flagId);
-      if (updatedFlag) {
+      // Update feature flag - use the current state to determine the new value
+      const currentFlag = featureFlags.find(flag => flag.id === flagId);
+      if (currentFlag) {
+        const newValue = !currentFlag.enabled;
         flagsData = {
           ...flagsData,
-          [flagId]: !updatedFlag.enabled
+          [flagId]: newValue
         };
       }
 
@@ -340,7 +340,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
       toast({
         title: 'Success',
-        description: `${flagId} is now ${updatedFlag?.enabled ? 'disabled' : 'enabled'}`,
+        description: `${flagId} is now ${currentFlag?.enabled ? 'disabled' : 'enabled'}`,
         variant: 'default'
       });
     } catch (error) {

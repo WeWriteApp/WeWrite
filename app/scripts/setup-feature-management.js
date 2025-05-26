@@ -23,7 +23,7 @@ export async function setupFeatureManagement() {
     if (!featureFlagsDoc.exists()) {
       console.log('Feature flags document does not exist, creating...');
       await setDoc(featureFlagsRef, {
-        subscription_management: false,
+        payments: false,
         username_management: false,
         map_view: false,
         calendar_view: false,
@@ -44,7 +44,7 @@ export async function setupFeatureManagement() {
 
       const now = new Date().toISOString();
       const metadata = {
-        subscription_management: {
+        payments: {
           createdAt: now,
           lastModified: now,
           description: 'Enable subscription functionality and UI'

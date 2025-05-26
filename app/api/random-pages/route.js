@@ -16,8 +16,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const limitCount = parseInt(searchParams.get('limit') || '10', 10);
     const userId = searchParams.get('userId'); // For access control
+    const includePrivate = searchParams.get('includePrivate') === 'true'; // Privacy toggle
 
-    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId);
+    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Include private:', includePrivate);
 
     // Import Firebase modules
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
@@ -70,9 +71,10 @@ export async function GET(request) {
       });
     });
 
-    // If user is authenticated, also include their private pages
-    if (userId) {
+    // If user is authenticated and privacy toggle is enabled, include their private pages
+    if (userId && includePrivate) {
       try {
+        // Fetch user's own private pages
         const userPagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
@@ -95,6 +97,11 @@ export async function GET(request) {
             groupId: pageData.groupId || null
           });
         });
+
+        // TODO: Also fetch pages from private groups the user is a member of
+        // This would require querying the user's group memberships first
+        // For now, we only include the user's own private pages
+
       } catch (userPagesError) {
         console.error('Error fetching user private pages:', userPagesError);
         // Continue without user pages
@@ -147,14 +154,15 @@ export async function GET(request) {
     let publicPageCount = 0;
 
     const accessiblePages = pagesWithCompleteInfo.filter(page => {
-      // CRITICAL: Private pages should ONLY be visible to their owners
+      // CRITICAL: Private pages should ONLY be visible to their owners and only when includePrivate is true
       if (!page.isPublic) {
         privatePageCount++;
         const isOwner = userId && page.userId === userId;
         if (isOwner) {
           userPrivatePageCount++;
         }
-        return isOwner;
+        // Only include private pages if the user owns them AND has enabled the privacy toggle
+        return isOwner && includePrivate;
       }
 
       // For public pages, apply additional group-based filtering

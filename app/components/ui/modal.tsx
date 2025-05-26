@@ -126,7 +126,7 @@ export function Modal({
           <motion.div
             ref={modalRef}
             className={cn(
-              "relative bg-background rounded-lg shadow-lg border border-border dark:border-border w-[calc(100%-2rem)] max-w-md p-6 z-10 mx-4 my-4",
+              "relative bg-background rounded-2xl shadow-lg border border-border dark:border-border w-[calc(100%-2rem)] max-w-md p-6 z-10 mx-4 my-4",
               className
             )}
             initial={{ opacity: 0, y: -10 }}
