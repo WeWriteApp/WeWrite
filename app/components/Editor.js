@@ -357,37 +357,36 @@ const EditorComponent = forwardRef((props, ref) => {
 
             console.log('LINK_DEBUG: Parent node type:', parentNode.type);
 
-            // Insert the link node
-            Transforms.insertNodes(editor, link);
+            // CRITICAL FIX: Simplified link insertion with precise cursor positioning
+            // Save the current selection point before insertion
+            const insertionPoint = { ...editor.selection };
 
-            // Get the path to the inserted link
-            const linkEntry = Editor.above(editor, {
-              match: n => n.type === 'link'
+            // Insert the link node at the exact cursor position
+            Transforms.insertNodes(editor, link, {
+              at: insertionPoint,
+              select: false // Don't auto-select the inserted node
             });
 
-            if (linkEntry) {
-              const [linkNode, linkPath] = linkEntry;
-              console.log('LINK_DEBUG: Found inserted link at path:', linkPath);
-
-              // Create a point after the link
-              const endPoint = Editor.end(editor, linkPath);
-              console.log('LINK_DEBUG: End point after link:', endPoint);
-
-              // Select the point after the link
-              Transforms.select(editor, endPoint);
-
-              // CRITICAL FIX: Move cursor one position after the link to allow typing
-              try {
-                Transforms.move(editor, { distance: 1, unit: 'offset' });
-                console.log('LINK_DEBUG: Moved cursor after link for typing');
-              } catch (moveError) {
-                console.log('LINK_DEBUG: Could not move cursor, staying at link end');
+            // Position cursor after the inserted link
+            try {
+              // Calculate the point after the inserted link
+              const afterLinkPoint = Editor.after(editor, insertionPoint);
+              if (afterLinkPoint) {
+                Transforms.select(editor, afterLinkPoint);
+                console.log('LINK_DEBUG: Positioned cursor after link');
+              } else {
+                // Fallback: move to end of the inserted link
+                const linkEntry = Editor.above(editor, {
+                  match: n => n.type === 'link'
+                });
+                if (linkEntry) {
+                  const [linkNode, linkPath] = linkEntry;
+                  const endPoint = Editor.end(editor, linkPath);
+                  Transforms.select(editor, endPoint);
+                }
               }
-
-              console.log('LINK_DEBUG: Positioned cursor after link');
-            } else {
-              console.log('LINK_DEBUG: Could not find inserted link, using fallback');
-              // Fallback: just move to the end without inserting a space
+            } catch (error) {
+              console.error('LINK_DEBUG: Error positioning cursor after link:', error);
               Transforms.collapse(editor, { edge: 'end' });
             }
           } catch (error) {
@@ -1047,7 +1046,7 @@ const EditorComponent = forwardRef((props, ref) => {
   // since we're using inline paragraph numbers
 
   return (
-    <div className="unified-editor relative rounded-lg bg-background">
+    <div className="unified-editor relative rounded-lg bg-background w-full max-w-none">
       {/* Editor-specific styles */}
       <style jsx global>{`
         /* Pill link spacing in editor */
@@ -1076,6 +1075,18 @@ const EditorComponent = forwardRef((props, ref) => {
           margin-right: 0.25rem;
           float: none;
         }
+
+        /* Ensure editor uses full width */
+        .unified-editor {
+          width: 100% !important;
+          max-width: none !important;
+        }
+
+        /* Ensure editable area uses full width */
+        .unified-editor [data-slate-editor] {
+          width: 100% !important;
+          max-width: none !important;
+        }
       `}</style>
 
       {/* Global Link Editor removed to avoid duplicate LinkEditor components */}
@@ -1095,7 +1106,7 @@ const EditorComponent = forwardRef((props, ref) => {
           spellCheck={true}
           autoFocus={false}
           onKeyDown={handleKeyDown}
-          className="min-h-[200px] p-3 outline-none"
+          className="min-h-[200px] p-3 outline-none w-full max-w-none"
           // Critical fix: Preserve selection on blur to prevent cursor jumps
           onBlur={() => {
             if (editor.selection) {

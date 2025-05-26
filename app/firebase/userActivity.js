@@ -276,7 +276,7 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
       return {};
     }
 
-    // Check cache first
+    // CRITICAL FIX: Reduce cache time to 2 minutes for more real-time data
     const cacheKey = `user_activity_${userIds.sort().join('_')}`;
     const cachedData = getCachedActivityData(cacheKey);
 
@@ -285,13 +285,12 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
       return cachedData;
     }
 
-    // Get current date and time with proper timezone handling
+    // CRITICAL FIX: Use more precise time calculation to avoid timezone issues
     const now = new Date();
     console.log('getBatchUserActivityLast24Hours: Current time:', now.toISOString());
 
-    // Calculate 24 hours ago
-    const twentyFourHoursAgo = new Date(now);
-    twentyFourHoursAgo.setHours(now.getHours() - 24);
+    // Calculate 24 hours ago using milliseconds for precision
+    const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
     console.log('getBatchUserActivityLast24Hours: 24 hours ago:', twentyFourHoursAgo.toISOString());
 
     // Initialize result object with empty data for all users
@@ -319,15 +318,36 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
     await Promise.all(batches.map(async (batchUserIds) => {
       console.log('getBatchUserActivityLast24Hours: Processing batch with users:', batchUserIds);
 
-      // Query for pages edited/created by any of these users in the last 24 hours
-      const pagesQuery = query(
-        collection(db, "pages"),
-        where("userId", "in", batchUserIds), // Process one batch at a time
-        where("lastModified", ">=", twentyFourHoursAgo),
-        orderBy("lastModified", "desc")
-      );
+      // CRITICAL FIX: Try both Timestamp and ISO string queries since lastModified format may vary
+      let pagesSnapshot;
 
-      const pagesSnapshot = await getDocs(pagesQuery);
+      try {
+        // First try with Firestore Timestamp
+        const twentyFourHoursAgoTimestamp = Timestamp.fromDate(twentyFourHoursAgo);
+
+        const pagesQuery = query(
+          collection(db, "pages"),
+          where("userId", "in", batchUserIds),
+          where("lastModified", ">=", twentyFourHoursAgoTimestamp),
+          orderBy("lastModified", "desc")
+        );
+
+        pagesSnapshot = await getDocs(pagesQuery);
+      } catch (timestampError) {
+        console.log('Timestamp query failed, trying ISO string query:', timestampError.message);
+
+        // Fallback to ISO string query
+        const twentyFourHoursAgoISO = twentyFourHoursAgo.toISOString();
+
+        const pagesQueryISO = query(
+          collection(db, "pages"),
+          where("userId", "in", batchUserIds),
+          where("lastModified", ">=", twentyFourHoursAgoISO),
+          orderBy("lastModified", "desc")
+        );
+
+        pagesSnapshot = await getDocs(pagesQueryISO);
+      }
       console.log(`getBatchUserActivityLast24Hours: Found ${pagesSnapshot.size} pages for batch`);
 
       // Process each page edit/creation
@@ -336,20 +356,30 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
         const userId = pageData.userId;
 
         if (userId && pageData.lastModified && result[userId]) {
-          // Convert to Date if it's a Timestamp
-          const lastModified = pageData.lastModified instanceof Timestamp
-            ? pageData.lastModified.toDate()
-            : new Date(pageData.lastModified);
+          // CRITICAL FIX: Handle both Timestamp and ISO string formats
+          let lastModified;
+          if (pageData.lastModified instanceof Timestamp) {
+            lastModified = pageData.lastModified.toDate();
+          } else if (typeof pageData.lastModified === 'string') {
+            lastModified = new Date(pageData.lastModified);
+          } else {
+            console.warn('Invalid lastModified format for page:', doc.id);
+            return;
+          }
 
-          // Only count if it's within the last 24 hours
-          if (lastModified >= twentyFourHoursAgo) {
-            // Calculate hours ago (0-23, where 0 is the most recent hour)
-            const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
+          // CRITICAL FIX: Double-check the time range with more precise calculation
+          const timeDiff = now.getTime() - lastModified.getTime();
+          const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
 
-            // Make sure the index is within bounds (0-23)
-            if (hoursAgo >= 0 && hoursAgo < 24) {
-              result[userId].hourly[23 - hoursAgo]++;
+          // Only count if it's within the last 24 hours and valid
+          if (hoursAgo >= 0 && hoursAgo < 24) {
+            // CRITICAL FIX: Use array index 23-hoursAgo for proper chronological order
+            // Index 0 = 23 hours ago, Index 23 = current hour
+            const arrayIndex = 23 - hoursAgo;
+            if (arrayIndex >= 0 && arrayIndex < 24) {
+              result[userId].hourly[arrayIndex]++;
               result[userId].total++;
+              console.log(`Activity recorded for user ${userId}: ${hoursAgo} hours ago (index ${arrayIndex})`);
             }
           }
         }
@@ -375,12 +405,24 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
         await Promise.all(userPagesSnapshot.docs.map(async (pageDoc) => {
           const pageId = pageDoc.id;
 
-          // Query for versions created by this user in the last 24 hours
-          const versionsQuery = query(
-            collection(db, "pages", pageId, "versions"),
-            where("userId", "==", userId),
-            where("createdAt", ">=", twentyFourHoursAgo.toISOString())
-          );
+          // CRITICAL FIX: Query for versions created by this user in the last 24 hours
+          // Try both Timestamp and ISO string formats
+          let versionsQuery;
+          try {
+            // First try with Firestore Timestamp
+            versionsQuery = query(
+              collection(db, "pages", pageId, "versions"),
+              where("userId", "==", userId),
+              where("createdAt", ">=", Timestamp.fromDate(twentyFourHoursAgo))
+            );
+          } catch (timestampError) {
+            // Fallback to ISO string
+            versionsQuery = query(
+              collection(db, "pages", pageId, "versions"),
+              where("userId", "==", userId),
+              where("createdAt", ">=", twentyFourHoursAgo.toISOString())
+            );
+          }
 
           const versionsSnapshot = await getDocs(versionsQuery);
 
@@ -388,16 +430,29 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
           versionsSnapshot.forEach(versionDoc => {
             const versionData = versionDoc.data();
             if (versionData.createdAt) {
-              // Convert ISO string to Date
-              const createdAt = new Date(versionData.createdAt);
+              // CRITICAL FIX: Handle both Timestamp and ISO string formats
+              let createdAt;
+              if (versionData.createdAt instanceof Timestamp) {
+                createdAt = versionData.createdAt.toDate();
+              } else if (typeof versionData.createdAt === 'string') {
+                createdAt = new Date(versionData.createdAt);
+              } else {
+                console.warn('Invalid createdAt format for version:', versionDoc.id);
+                return;
+              }
 
-              // Calculate hours ago (0-23, where 0 is the most recent hour)
-              const hoursAgo = Math.floor((now - createdAt) / (1000 * 60 * 60));
+              // CRITICAL FIX: Use precise time calculation
+              const timeDiff = now.getTime() - createdAt.getTime();
+              const hoursAgo = Math.floor(timeDiff / (1000 * 60 * 60));
 
               // Make sure the index is within bounds (0-23)
               if (hoursAgo >= 0 && hoursAgo < 24) {
-                result[userId].hourly[23 - hoursAgo]++;
-                result[userId].total++;
+                const arrayIndex = 23 - hoursAgo;
+                if (arrayIndex >= 0 && arrayIndex < 24) {
+                  result[userId].hourly[arrayIndex]++;
+                  result[userId].total++;
+                  console.log(`Version activity recorded for user ${userId}: ${hoursAgo} hours ago (index ${arrayIndex})`);
+                }
               }
             }
           });
@@ -434,9 +489,20 @@ export const getBatchUserActivityLast24Hours = async (userIds) => {
     // Cache the results
     setCachedActivityData(cacheKey, result);
 
-    // Log performance
+    // CRITICAL FIX: Add detailed logging for debugging
     const endTime = performance.now();
     console.log(`getBatchUserActivityLast24Hours: Completed in ${(endTime - startTime).toFixed(2)}ms`);
+
+    // Log summary of results for debugging
+    const totalActivities = Object.values(result).reduce((sum, user) => sum + user.total, 0);
+    console.log(`getBatchUserActivityLast24Hours: Summary - Total activities found: ${totalActivities}`);
+
+    Object.keys(result).forEach(userId => {
+      const userData = result[userId];
+      if (userData.total > 0) {
+        console.log(`User ${userId}: ${userData.total} activities, hourly: [${userData.hourly.join(', ')}]`);
+      }
+    });
 
     return result;
   } catch (error) {
@@ -461,8 +527,8 @@ const getCachedActivityData = (key) => {
 
     const { data, timestamp } = JSON.parse(cachedItem);
 
-    // Check if cache is still valid (5 minutes)
-    if (Date.now() - timestamp > 5 * 60 * 1000) {
+    // CRITICAL FIX: Reduce cache time to 2 minutes for more real-time activity data
+    if (Date.now() - timestamp > 2 * 60 * 1000) {
       localStorage.removeItem(key);
       return null;
     }

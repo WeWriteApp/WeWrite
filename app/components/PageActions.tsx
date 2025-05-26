@@ -271,7 +271,7 @@ export function PageActions({
           initialContent
         });
 
-        // Use the direct-reply route instead of the new route
+        // CONSOLIDATION FIX: Use unified /new route for all page creation
         // Include the page title as a separate parameter to ensure it's available for attribution
         const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&title=${params.title}&initialContent=${params.content}&username=${params.username}`;
         router.push(replyUrl);

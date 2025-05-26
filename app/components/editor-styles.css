@@ -16,10 +16,13 @@ a.slate-pill-link,
 a.page-link,
 a.user-link,
 a.external-link,
-[data-slate-editor] a.slate-pill-link {
+[data-slate-editor] a.slate-pill-link,
+[data-slate-editor] a.page-link,
+[data-slate-editor] a.user-link,
+[data-slate-editor] a.external-link {
   display: inline-flex !important;
   align-items: center !important;
-  text-decoration: none;
+  text-decoration: none !important;
   text-indent: 0 !important;
   padding-left: 0 !important;
   float: none !important;
@@ -33,6 +36,8 @@ a.external-link,
   max-width: none !important;
   flex: none !important;
   position: relative !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* User link @ symbol */
@@ -47,17 +52,19 @@ a[data-user-id]::before {
 
 /* Pill text content styling */
 .pill-text {
-  display: inline;
-  white-space: nowrap;
-  width: fit-content;
-  min-width: fit-content;
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-  line-height: inherit;
-  flex: none;
-  position: relative;
-  pointer-events: none; /* Allow clicks to pass through to parent link */
+  display: inline !important;
+  white-space: nowrap !important;
+  width: fit-content !important;
+  min-width: fit-content !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: inherit !important;
+  flex: none !important;
+  position: relative !important;
+  pointer-events: none !important; /* Allow clicks to pass through to parent link */
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* Paragraph integration */

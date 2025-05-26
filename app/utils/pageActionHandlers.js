@@ -137,7 +137,7 @@ export const handleReply = async (page, user, router) => {
         initialContent
       });
 
-      // Create the reply URL with all necessary parameters
+      // CONSOLIDATION FIX: Use unified /new route for all page creation
       const replyUrl = `/new?replyTo=${page.id}&page=${encodeURIComponent(page.title || "Untitled")}&title=${params.title}&initialContent=${params.content}&username=${params.username}`;
 
       // Navigate to the reply page

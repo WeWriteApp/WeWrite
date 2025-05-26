@@ -18,6 +18,7 @@ import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
 import { trackQueryPerformance } from "../utils/queryMonitor";
 import { ShimmerEffect } from "./ui/skeleton";
+import { debugRecentActivity, debugUserActivity } from "../utils/debugActivity";
 
 // UserListSkeleton component removed as it's no longer needed
 
@@ -48,8 +49,8 @@ const TopUsers = () => {
   const fetchStartTimeRef = useRef(null);
   const cachedDataRef = useRef(null);
 
-  // Cache constants
-  const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
+  // Cache constants - CRITICAL FIX: Reduce cache time for more real-time activity data
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds (reduced from 1 hour)
   const CACHE_KEY = 'top-users';
 
   // Check if subscription feature is enabled
@@ -251,6 +252,15 @@ const TopUsers = () => {
           console.log('TopUsers: Fetching activity data for users:', userIds);
           activityData = await getBatchUserActivityLast24Hours(userIds);
 
+          // CRITICAL FIX: Add detailed logging for debugging activity data
+          console.log('TopUsers: Raw activity data received:', activityData);
+
+          // Count total activities across all users for debugging
+          const totalActivitiesFound = Object.values(activityData).reduce((sum, userData) => {
+            return sum + (userData.total || 0);
+          }, 0);
+          console.log(`TopUsers: Total activities found across all users: ${totalActivitiesFound}`);
+
           // Validate activity data
           Object.keys(activityData).forEach(userId => {
             const userData = activityData[userId];
@@ -268,9 +278,14 @@ const TopUsers = () => {
             if (userData.hourly) {
               activityData[userId].hourly = userData.hourly.map(val => Math.max(0, val));
             }
+
+            // CRITICAL FIX: Log individual user activity for debugging
+            if (userData.total > 0) {
+              console.log(`TopUsers: User ${userId} has ${userData.total} activities in last 24h`);
+            }
           });
 
-          console.log('TopUsers: Activity data processed');
+          console.log('TopUsers: Activity data processed and validated');
         } catch (activityError) {
           console.error('TopUsers: Error fetching user activity data:', activityError);
           // Continue with empty activity data rather than failing
@@ -404,6 +419,20 @@ const TopUsers = () => {
     });
   }, [fetchUsersAndPages]);
 
+  // CRITICAL FIX: Debug function for development
+  const runDebugActivity = useCallback(async () => {
+    console.log('=== RUNNING ACTIVITY DEBUG ===');
+    await debugRecentActivity();
+
+    // Debug the first few users
+    if (allTimeUsers.length > 0) {
+      console.log('=== DEBUGGING INDIVIDUAL USERS ===');
+      for (let i = 0; i < Math.min(3, allTimeUsers.length); i++) {
+        await debugUserActivity(allTimeUsers[i].id);
+      }
+    }
+  }, [allTimeUsers]);
+
   // Initial data load
   useEffect(() => {
     fetchUsersAndPages();
@@ -418,12 +447,22 @@ const TopUsers = () => {
           <div className="border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
             {/* Performance metrics (only in development) */}
             {process.env.NODE_ENV === 'development' && loadTime && (
-              <div className="bg-muted/30 px-3 py-1 text-xs text-muted-foreground border-b border-border/30">
-                <span>Load time: {loadTime.toFixed(2)}ms</span>
-                {' | '}
-                <span>Users: {totalUsers}</span>
-                {' | '}
-                <span>Cache: {isFreshData ? 'Fresh data' : 'From cache'}</span>
+              <div className="bg-muted/30 px-3 py-1 text-xs text-muted-foreground border-b border-border/30 flex items-center justify-between">
+                <div>
+                  <span>Load time: {loadTime.toFixed(2)}ms</span>
+                  {' | '}
+                  <span>Users: {totalUsers}</span>
+                  {' | '}
+                  <span>Cache: {isFreshData ? 'Fresh data' : 'From cache'}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={runDebugActivity}
+                  className="text-xs h-6 px-2"
+                >
+                  Debug Activity
+                </Button>
               </div>
             )}
 

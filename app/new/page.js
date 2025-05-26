@@ -289,15 +289,17 @@ export default function NewPage() {
 
   return (
     <DashboardLayout>
-      <div className="container w-full py-6 px-4">
+      {/* Use full-width layout on desktop, container on mobile */}
+      <div className="w-full py-6 px-4 sm:px-6 lg:px-8 max-w-none">
         <div className="flex flex-col items-center w-full">
-          <div className="flex flex-row items-center justify-center w-full mb-4 gap-2">
+          <div className="flex flex-row items-center justify-center w-full mb-4 gap-2 max-w-4xl">
             <Button variant="outline" size="sm" onClick={handleBack} className="flex items-center gap-1">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-semibold text-center flex-1">{isReply ? "Replying to page" : "New page"}</h1>
           </div>
-          <div className="w-full">
+          {/* Full-width editor container on desktop */}
+          <div className="w-full max-w-none">
             <PageEditor
               title={isReply ? "" : title}
               setTitle={handleTitleChange}

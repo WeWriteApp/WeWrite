@@ -541,16 +541,16 @@ const PageEditor = ({
   }, [title, isNewPage, titleHasBeenFocused]);
 
   return (
-    <div className="editor-container" style={{ paddingBottom: '60px' }}>
-      <div className="mb-4">
-        <div className="relative">
+    <div className="editor-container w-full max-w-none" style={{ paddingBottom: '60px' }}>
+      <div className="mb-4 w-full max-w-none">
+        <div className="relative w-full">
           <textarea
             ref={titleInputRef}
             value={title}
             onChange={handleTitleChange}
             onFocus={handleTitleFocus}
             rows={1}
-            className={`w-full mt-1 text-3xl font-semibold bg-background text-foreground border ${
+            className={`w-full max-w-none mt-1 text-3xl font-semibold bg-background text-foreground border ${
               titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
             } rounded-lg px-3 py-2 transition-colors break-words overflow-hidden whitespace-normal resize-none`}
             placeholder={isReply ? "Title your reply..." : "Enter a title..."}
@@ -572,13 +572,15 @@ const PageEditor = ({
       {/* Add separator line between title and content */}
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
-      <Editor
-        ref={editorRef}
-        initialContent={currentEditorValue}
-        onChange={handleContentChange}
-        placeholder="Start typing..."
-        contentType="wiki"
-      />
+      <div className="w-full max-w-none">
+        <Editor
+          ref={editorRef}
+          initialContent={currentEditorValue}
+          onChange={handleContentChange}
+          placeholder="Start typing..."
+          contentType="wiki"
+        />
+      </div>
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
       <div className="mt-8 mb-16">

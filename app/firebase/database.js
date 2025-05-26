@@ -236,8 +236,8 @@ export const createPage = async (data) => {
       isPublic: data.isPublic !== undefined ? data.isPublic : true,
       userId: data.userId,
       username: username || "Anonymous", // Ensure username is saved with the page
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
+      createdAt: Timestamp.now(), // CRITICAL FIX: Use Firestore Timestamp for better querying
+      lastModified: Timestamp.now(), // CRITICAL FIX: Use Firestore Timestamp for better querying
       // Add group ID if provided
       groupId: data.groupId || null,
       groupName: data.groupName || null,
@@ -264,7 +264,7 @@ export const createPage = async (data) => {
       // Ensure we have content before creating a version
       const versionData = {
         content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
-        createdAt: new Date().toISOString(),
+        createdAt: Timestamp.now(), // CRITICAL FIX: Use Firestore Timestamp for better querying
         userId: data.userId,
         username: username || "Anonymous", // Also store username in version data for consistency
         groupId: data.groupId || null // Store group ID if the page belongs to a group
@@ -968,7 +968,7 @@ export const saveNewVersion = async (pageId, data) => {
 
     const versionData = {
       content: contentString,
-      createdAt: new Date().toISOString(),
+      createdAt: Timestamp.now(), // CRITICAL FIX: Use Firestore Timestamp for better querying
       userId: data.userId,
       username: username || "Anonymous",
       groupId: groupId || null,
@@ -978,12 +978,12 @@ export const saveNewVersion = async (pageId, data) => {
 
     // CRITICAL FIX: First update the page document directly to ensure content is immediately available
     // Use the pageRef directly instead of collection/doc name strings
-    const updateTime = new Date().toISOString();
+    const updateTime = Timestamp.now(); // CRITICAL FIX: Use Firestore Timestamp for better querying
 
     // Log the content being saved for debugging
     console.log("Saving content to page document", {
       contentLength: contentString.length,
-      timestamp: updateTime
+      timestamp: updateTime.toDate().toISOString()
     });
 
     try {
@@ -1179,7 +1179,8 @@ export const getSubcollection = async (collectionName, docName, subcollectionNam
 export const updatePage = async (pageId, data) => {
   try {
     const pageRef = doc(db, "pages", pageId);
-    await setDoc(pageRef, { ...data, lastModified: new Date().toISOString() }, { merge: true });
+    // CRITICAL FIX: Use Firestore Timestamp for better querying
+    await setDoc(pageRef, { ...data, lastModified: Timestamp.now() }, { merge: true });
     return true;
   } catch (e) {
     console.error("Error updating page:", e);

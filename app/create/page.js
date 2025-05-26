@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
-// This page now redirects to the direct create page
+// CONSOLIDATION: This page redirects to the unified page creation route
 export default function CreatePage() {
-  // Redirect to the direct create page
+  // Redirect to the unified page creation route
   redirect('/new');
 }
