@@ -248,9 +248,9 @@ export default function GroupActivityTab({ group, limit = 10 }) {
 
       {/* Activity grid */}
       {!loading && !error && activities.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {activities.map((activity, index) => (
-            <div key={`${activity.pageId}-${index}`} className="h-[180px]">
+            <div key={`${activity.pageId}-${index}`} className="min-h-[180px] md:h-[200px]">
               <ActivityCard
                 activity={activity}
                 isCarousel={false}

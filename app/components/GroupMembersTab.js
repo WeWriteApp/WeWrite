@@ -11,6 +11,8 @@ import { Badge } from "./ui/badge";
 import { PillLink } from "./PillLink";
 import SimpleSparkline from "./SimpleSparkline";
 import { getBatchGroupUserActivityLast24Hours } from "../firebase/userActivity";
+import { formatRelativeTime } from "../utils/formatRelativeTime";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -290,11 +292,12 @@ export default function GroupMembersTab({ group, isOwner }) {
     }
   };
 
-  // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+  // Format date for display with relative time and absolute tooltip
+  const formatJoinedDate = (dateString) => {
+    if (!dateString) return { relative: 'Unknown', absolute: 'Unknown' };
+    const relative = formatRelativeTime(dateString);
+    const absolute = format(new Date(dateString), 'PPP');
+    return { relative, absolute };
   };
 
   // Get role badge color
@@ -356,8 +359,8 @@ export default function GroupMembersTab({ group, isOwner }) {
           <p>No members found</p>
         </div>
       ) : (
-        <div className="border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100">
-          <Table className="responsive-table">
+        <div className="border border-theme-medium rounded-lg overflow-hidden">
+          <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Member</TableHead>
@@ -397,10 +400,19 @@ export default function GroupMembersTab({ group, isOwner }) {
                     </Badge>
                   </TableCell>
                   <TableCell label="Joined">
-                    <div className="flex items-center gap-1 text-sm">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span>{formatDate(member.joinedAt)}</span>
-                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 text-sm cursor-help">
+                            <Clock className="h-3 w-3 text-muted-foreground" />
+                            <span>{formatJoinedDate(member.joinedAt).relative}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{formatJoinedDate(member.joinedAt).absolute}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell label="Activity (24h)">
                     <div className="w-24 h-8 ml-auto">

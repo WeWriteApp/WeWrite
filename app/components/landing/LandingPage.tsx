@@ -34,6 +34,9 @@ const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
+  const [showPledgeBar, setShowPledgeBar] = useState(false);
+  const [pledgeBarDismissed, setPledgeBarDismissed] = useState(false);
+  const [pledgeBarAnimatingOut, setPledgeBarAnimatingOut] = useState(false);
   const { setTheme, theme } = useTheme();
   const [pageContents, setPageContents] = useState<Record<string, any>>({});
   const [user, setUser] = useState<any>(null);
@@ -90,6 +93,20 @@ const LandingPage = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
 
+      // Show pledge bar after scrolling past hero section (only if not dismissed)
+      if (!pledgeBarDismissed) {
+        const heroSection = document.querySelector('section[class*="pt-24"]'); // Hero section selector
+        if (heroSection) {
+          const heroRect = heroSection.getBoundingClientRect();
+          const heroBottom = heroRect.bottom;
+          // Show pledge bar when hero section is mostly out of view
+          setShowPledgeBar(heroBottom < window.innerHeight * 0.3);
+        } else {
+          // Fallback: show after scrolling 400px
+          setShowPledgeBar(window.scrollY > 400);
+        }
+      }
+
       // Determine which section is currently in view
       const sections = ['activity', 'trending', 'features', 'about'];
       const headerHeight = isMobileView ? 100 : 60; // Mobile: 100px, Desktop: 60px
@@ -121,7 +138,18 @@ const LandingPage = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isMobileView]);
+  }, [isMobileView, pledgeBarDismissed]);
+
+  // Handle pledge bar dismissal with animation
+  const handlePledgeBarDismiss = () => {
+    setPledgeBarAnimatingOut(true);
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      setPledgeBarDismissed(true);
+      setShowPledgeBar(false);
+      setPledgeBarAnimatingOut(false);
+    }, 350); // Slightly longer than animation duration for smooth completion
+  };
 
   // Check if user is logged in
   useEffect(() => {
@@ -488,7 +516,12 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Donation Bar for non-logged-in users */}
-      <LandingPageDonationBar isLoggedIn={!!user} />
+      <LandingPageDonationBar
+        isLoggedIn={!!user}
+        visible={showPledgeBar && !pledgeBarDismissed}
+        onDismiss={handlePledgeBarDismiss}
+        animatingOut={pledgeBarAnimatingOut}
+      />
 
       {/* Desktop Navigation - Always sticky at the top */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md py-3`}>
@@ -699,24 +732,28 @@ const LandingPage = () => {
                 <FileText className="h-7 w-7" />
                 Feature Roadmap
               </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-4">
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
                 Discover what makes WeWrite special and what's coming next.
               </p>
-              <Button variant="default" size="lg" className="gap-2 mx-auto bg-[#1768FF] hover:bg-[#1768FF]/90 text-white" asChild>
-                <Link href="/zRNwhNgIEfLFo050nyAT">
-                  View Full Feature Roadmap <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
             </div>
 
             {/* Filterable Feature List */}
-            <div className="container mx-auto px-6 max-w-5xl filter-chips-parent overflow-visible">
+            <div className="container mx-auto max-w-5xl filter-chips-parent overflow-visible">
               <FilterableFeatureList
                 inProgressFeatures={builtFeatures.filter(f => f.status === 'in-progress')}
                 comingSoonFeatures={comingSoonFeatures}
                 availableFeatures={builtFeatures.filter(f => f.status === 'done')}
                 fadeInClass={fadeInClass}
               />
+            </div>
+
+            {/* Feature Roadmap Button - Moved to bottom */}
+            <div className="text-center mt-12">
+              <Button variant="default" size="lg" className="gap-2 mx-auto bg-[#1768FF] hover:bg-[#1768FF]/90 text-white" asChild>
+                <Link href="/zRNwhNgIEfLFo050nyAT">
+                  View Full Feature Roadmap <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>

@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Plus, Settings, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -29,6 +29,12 @@ export function AccountSwitcherModal({
   isAtMaxAccounts = false
 }: AccountSwitcherModalProps) {
   const router = useRouter()
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Ensure component is mounted before rendering portal
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleAccountSettings = () => {
     router.push('/account')
@@ -43,9 +49,14 @@ export function AccountSwitcherModal({
     onClose()
   }
 
+  // Don't render anything until mounted to avoid hydration issues
+  if (!isMounted) {
+    return null
+  }
+
   // Use createPortal to render the modal at the document body level
   // This ensures it's centered in the viewport and not constrained by parent elements
-  return typeof document !== 'undefined' ? createPortal(
+  return createPortal(
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -131,5 +142,5 @@ export function AccountSwitcherModal({
         </div>
     </Modal>,
     document.body
-  ) : null
+  )
 }

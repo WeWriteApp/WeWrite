@@ -129,7 +129,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     <div
       className={cn(
         "w-full border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
-        "h-[200px]", // Standardized fixed height for all cards
+        "min-h-[180px] md:h-[200px]", // Dynamic height on mobile, fixed on desktop
         "flex flex-col",
         "p-4" // Consistent padding
       )}

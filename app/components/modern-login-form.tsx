@@ -13,6 +13,7 @@ import { Loader2, AlertCircle } from "lucide-react"
 import { Separator } from "../components/ui/separator"
 // reCAPTCHA functionality removed
 import { Alert, AlertDescription } from "../components/ui/alert"
+import { PageLoader } from "../components/ui/page-loader"
 
 export function ModernLoginForm({
   className,
@@ -102,11 +103,21 @@ export function ModernLoginForm({
   }
 
   return (
-    <form
-      className={cn("flex flex-col gap-4", className)}
-      {...props}
-      onSubmit={handleSubmit}
-    >
+    <>
+      {/* Full-screen loading overlay */}
+      {isLoading && (
+        <PageLoader
+          message="Signing you in..."
+          fullScreen={true}
+          className="z-[9999]"
+        />
+      )}
+
+      <form
+        className={cn("flex flex-col gap-4", className)}
+        {...props}
+        onSubmit={handleSubmit}
+      >
       <div className="flex flex-col items-center gap-1 text-center">
         <h1 className="text-2xl font-bold">Sign in to WeWrite</h1>
       </div>
@@ -173,14 +184,7 @@ export function ModernLoginForm({
           disabled={isLoading || !isFormValid}
           tabIndex={4}
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            "Sign in"
-          )}
+          Sign in
         </Button>
       </div>
 
@@ -203,6 +207,7 @@ export function ModernLoginForm({
       >
         Create an account
       </Button>
-    </form>
+      </form>
+    </>
   )
 }

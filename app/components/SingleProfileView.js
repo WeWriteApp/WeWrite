@@ -21,6 +21,8 @@ import { db } from "../firebase/database";
 import UserProfileTabs from "./UserProfileTabs";
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../firebase/counters";
 import { getUserSubscription } from "../firebase/subscription";
+import SimpleSparkline from "./SimpleSparkline";
+import { getUserActivityLast24Hours } from "../firebase/userActivity";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -34,6 +36,7 @@ const SingleProfileView = ({ profile }) => {
   const [isLoadingTier, setIsLoadingTier] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
+  const [userActivityData, setUserActivityData] = useState(null);
 
   // Check if subscription feature is enabled
   useEffect(() => {
@@ -84,16 +87,18 @@ const SingleProfileView = ({ profile }) => {
         try {
           setIsLoadingStats(true);
 
-          // Get follower count, page count, and view count in parallel
-          const [followerCountResult, pageCountResult, viewCountResult] = await Promise.all([
+          // Get follower count, page count, view count, and activity data in parallel
+          const [followerCountResult, pageCountResult, viewCountResult, activityResult] = await Promise.all([
             getUserFollowerCount(profile.uid),
             getUserPageCount(profile.uid),
-            getUserTotalViewCount(profile.uid)
+            getUserTotalViewCount(profile.uid),
+            getUserActivityLast24Hours(profile.uid)
           ]);
 
           setFollowerCount(followerCountResult);
           setPageCount(pageCountResult);
           setViewCount(viewCountResult);
+          setUserActivityData(activityResult);
 
         } catch (error) {
           console.error('Error fetching user stats:', error);
@@ -306,42 +311,78 @@ const SingleProfileView = ({ profile }) => {
 
         {/* User stats */}
         <div className="flex flex-wrap gap-6 items-center justify-center mb-6">
-          <div className="flex flex-col items-center">
-            <span className="text-lg font-semibold">
-              {isLoadingStats ? (
-                <Loader className="h-4 w-4 animate-spin" />
-              ) : (
-                pageCount
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">
+                {isLoadingStats ? (
+                  <Loader className="h-4 w-4 animate-spin" />
+                ) : (
+                  pageCount
+                )}
+              </span>
+              {!isLoadingStats && userActivityData && (
+                <div className="w-16 h-6">
+                  <SimpleSparkline
+                    data={userActivityData.pageCreation || Array(24).fill(0)}
+                    height={24}
+                    strokeWidth={1.5}
+                    title="Page creation activity in the last 24 hours"
+                  />
+                </div>
               )}
-            </span>
+            </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Users className="h-3 w-3" />
               <span>pages</span>
             </div>
           </div>
 
-          <div className="flex flex-col items-center">
-            <span className="text-lg font-semibold">
-              {isLoadingStats ? (
-                <Loader className="h-4 w-4 animate-spin" />
-              ) : (
-                followerCount
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">
+                {isLoadingStats ? (
+                  <Loader className="h-4 w-4 animate-spin" />
+                ) : (
+                  followerCount
+                )}
+              </span>
+              {!isLoadingStats && userActivityData && (
+                <div className="w-16 h-6">
+                  <SimpleSparkline
+                    data={userActivityData.followerGrowth || Array(24).fill(0)}
+                    height={24}
+                    strokeWidth={1.5}
+                    title="Follower growth in the last 24 hours"
+                  />
+                </div>
               )}
-            </span>
+            </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Heart className="h-3 w-3" />
               <span>followers</span>
             </div>
           </div>
 
-          <div className="flex flex-col items-center">
-            <span className="text-lg font-semibold">
-              {isLoadingStats ? (
-                <Loader className="h-4 w-4 animate-spin" />
-              ) : (
-                viewCount
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">
+                {isLoadingStats ? (
+                  <Loader className="h-4 w-4 animate-spin" />
+                ) : (
+                  viewCount
+                )}
+              </span>
+              {!isLoadingStats && userActivityData && (
+                <div className="w-16 h-6">
+                  <SimpleSparkline
+                    data={userActivityData.viewCount || Array(24).fill(0)}
+                    height={24}
+                    strokeWidth={1.5}
+                    title="View count in the last 24 hours"
+                  />
+                </div>
               )}
-            </span>
+            </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Eye className="h-3 w-3" />
               <span>views</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '../../components/ui/button';
@@ -39,8 +39,21 @@ export default function HeroSection({
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const heroSectionRef = useRef<HTMLElement>(null);
   const analytics = useWeWriteAnalytics();
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Memoize the rotation handler to prevent unnecessary re-renders
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -88,63 +101,123 @@ export default function HeroSection({
     >
       <div className="container mx-auto px-2 sm:px-4 md:px-6 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-12">
-          <div
-            className={`flex-1 text-center lg:text-left ${fadeInClass}`}
-          >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              Write, share, earn.
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-              WeWrite is a free speech platform and social wiki where every page is a <span
-                className="cursor-pointer relative group"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Track fundraiser text click in Google Analytics
-                  analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                    label: 'Fundraiser text click: scroll to features',
-                    link_type: 'text',
-                    link_text: 'fundraiser',
-                    link_url: '#features'
-                  });
-                  const targetElement = document.getElementById('features');
-                  if (targetElement) {
-                    const headerHeight = window.innerWidth >= 768 ? 60 : 100;
-                    const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
-                    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-                  }
-                }}
-              >
-                fundraiser
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs bg-black/80 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                  Coming soon
-                </span>
-              </span>. Write a hundred pages, you've just written a hundred <span
-                ref={platformRef}
-                onClick={handlePlatformClick}
-                className="cursor-pointer hover:text-primary transition-colors select-none"
-                title="Click me!"
-              >
-                {platformOptions[platformIndex]}
-              </span>.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                asChild
-              >
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link href="/auth/register">Create Account</Link>
-              </Button>
+          {/* Mobile containerization - enhanced card styling on mobile */}
+          {isMobile ? (
+            <div className="w-full mx-2 sm:mx-4 px-4 sm:px-6 py-6 sm:py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className={`text-center ${fadeInClass}`}>
+                <h1 className="text-4xl font-bold mb-6">
+                  Write, share, earn.
+                </h1>
+                <p className="text-lg md:text-xl text-muted-foreground mb-8">
+                  WeWrite is a free speech platform and social wiki where every page is a <span
+                    className="cursor-pointer relative group"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Track fundraiser text click in Google Analytics
+                      analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                        label: 'Fundraiser text click: scroll to features',
+                        link_type: 'text',
+                        link_text: 'fundraiser',
+                        link_url: '#features'
+                      });
+                      const targetElement = document.getElementById('features');
+                      if (targetElement) {
+                        const headerHeight = window.innerWidth >= 768 ? 60 : 100;
+                        const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
+                        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+                      }
+                    }}
+                  >
+                    fundraiser
+                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs bg-black/80 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                      Coming soon
+                    </span>
+                  </span>. Write a hundred pages, you've just written a hundred <span
+                    ref={platformRef}
+                    onClick={handlePlatformClick}
+                    className="cursor-pointer hover:text-primary transition-colors select-none"
+                    title="Click me!"
+                  >
+                    {platformOptions[platformIndex]}
+                  </span>.
+                </p>
+                <div className="flex flex-col gap-4">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white w-full"
+                    asChild
+                  >
+                    <Link href="/auth/login">Sign In</Link>
+                  </Button>
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full" asChild>
+                    <Link href="/auth/register">Create Account</Link>
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Desktop layout - unchanged */
+            <div
+              className={`flex-1 text-center lg:text-left ${fadeInClass}`}
+            >
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                Write, share, earn.
+              </h1>
+              <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+                WeWrite is a free speech platform and social wiki where every page is a <span
+                  className="cursor-pointer relative group"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    // Track fundraiser text click in Google Analytics
+                    analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
+                      label: 'Fundraiser text click: scroll to features',
+                      link_type: 'text',
+                      link_text: 'fundraiser',
+                      link_url: '#features'
+                    });
+                    const targetElement = document.getElementById('features');
+                    if (targetElement) {
+                      const headerHeight = window.innerWidth >= 768 ? 60 : 100;
+                      const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
+                      window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+                    }
+                  }}
+                >
+                  fundraiser
+                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs bg-black/80 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                    Coming soon
+                  </span>
+                </span>. Write a hundred pages, you've just written a hundred <span
+                  ref={platformRef}
+                  onClick={handlePlatformClick}
+                  className="cursor-pointer hover:text-primary transition-colors select-none"
+                  title="Click me!"
+                >
+                  {platformOptions[platformIndex]}
+                </span>.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-4">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+                  asChild
+                >
+                  <Link href="/auth/login">Sign In</Link>
+                </Button>
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                  <Link href="/auth/register">Create Account</Link>
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full`} style={{ animationDelay: '0.2s' }}>
             <div
-              className="relative w-full max-w-[95%] sm:max-w-lg mx-auto transform-gpu transition-transform duration-300"
+              className={`relative w-full transform-gpu transition-transform duration-300 ${
+                isMobile ? 'max-w-full mx-0' : 'max-w-[95%] sm:max-w-lg mx-auto'
+              }`}
               style={{
                 transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
                 transformStyle: 'preserve-3d'
@@ -185,11 +258,11 @@ export default function HeroSection({
                         opacity: { duration: 0.3 }
                       }}
                       className="group relative block focus:outline-none w-full bg-none border-none p-0"
-                      onClick={() => setLightboxOpen(true)}
-                      aria-label="Open image lightbox"
-                      role="button"
-                      tabIndex={0}
-                      style={{ position: 'relative', width: '100%', height: '420px' }}
+                      onClick={() => !isMobile && setLightboxOpen(true)}
+                      aria-label={isMobile ? "WeWrite App Interface" : "Open image lightbox"}
+                      role={isMobile ? "img" : "button"}
+                      tabIndex={isMobile ? -1 : 0}
+                      style={{ position: 'relative', width: '100%', height: '420px', cursor: isMobile ? 'default' : 'pointer' }}
                     >
                       <div className="relative w-full h-full">
                         <Image
@@ -197,7 +270,9 @@ export default function HeroSection({
                           src={heroImages[carouselIndex]}
                           alt={`WeWrite App Interface ${carouselIndex + 1}`}
                           fill
-                          className={`rounded-lg shadow-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105 object-contain md:object-cover`}
+                          className={`rounded-lg shadow-2xl transition-transform duration-300 object-contain md:object-cover ${
+                            isMobile ? 'cursor-default' : 'cursor-pointer group-hover:scale-105'
+                          }`}
                           priority
                           loading="eager"
                           sizes="(max-width: 768px) 100vw, 700px"

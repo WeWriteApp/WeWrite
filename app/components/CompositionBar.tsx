@@ -49,6 +49,12 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
 }) => {
   const [showSubscriptionLimitModal, setShowSubscriptionLimitModal] = useState<boolean>(false);
   const [activePledgeId, setActivePledgeId] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  // Ensure component is mounted before rendering portals
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Debugging the props
   console.log("CompositionBar props:", {
@@ -278,7 +284,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
       </div>
 
       {/* Subscription Limit Modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {isMounted && createPortal(
         <ActionModal
           isOpen={showSubscriptionLimitModal}
           onClose={() => setShowSubscriptionLimitModal(false)}

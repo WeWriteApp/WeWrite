@@ -142,35 +142,44 @@ export default function UserProfileTabs({ profile }) {
     }, 10);
   };
 
-  // Handle tab changes
+  // Handle tab changes with enhanced slide animation
   const handleTabChange = (newTab) => {
     const currentIndex = visibleTabs.indexOf(activeTab);
     const newIndex = visibleTabs.indexOf(newTab);
 
     // Set direction for animation
+    let animationDirection = 0;
     if (newIndex > currentIndex) {
-      setDirection(1); // Moving right
+      animationDirection = 1; // Moving right
     } else if (newIndex < currentIndex) {
-      setDirection(-1); // Moving left
+      animationDirection = -1; // Moving left
     }
+    setDirection(animationDirection);
 
-    // Apply a simple slide animation
+    // Apply enhanced slide animation
     const contentContainer = document.getElementById('tabs-content-container');
-    if (contentContainer) {
-      contentContainer.style.transition = 'transform 0.3s ease-out';
-      contentContainer.style.transform = `translateX(${direction * -10}%)`;
+    if (contentContainer && animationDirection !== 0) {
+      // Start the slide animation
+      contentContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      contentContainer.style.transform = `translateX(${animationDirection * -20}px)`;
+      contentContainer.style.opacity = '0.8';
 
       // Scroll the tab into view
       scrollTabIntoView(newTab);
 
       setTimeout(() => {
         setActiveTab(newTab);
-        contentContainer.style.transition = 'transform 0s';
+        // Slide back to center with new content
         contentContainer.style.transform = 'translateX(0)';
-      }, 300);
+        contentContainer.style.opacity = '1';
+
+        // Clean up transition after animation
+        setTimeout(() => {
+          contentContainer.style.transition = '';
+        }, 300);
+      }, 150);
     } else {
       setActiveTab(newTab);
-      // Still scroll the tab into view even if content container is not found
       scrollTabIntoView(newTab);
     }
   };

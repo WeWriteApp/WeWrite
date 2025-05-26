@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ActionModal from './ActionModal';
 import { createPortal } from 'react-dom';
 import { cn } from '../lib/utils';
@@ -19,6 +19,12 @@ const CompositionBar = ({
 }) => {
   const [showSubscriptionLimitModal, setShowSubscriptionLimitModal] = useState(false);
   const [activePledgeId, setActivePledgeId] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure component is mounted before rendering portals
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Debugging the props
   console.log("CompositionBar props:", {
@@ -201,7 +207,7 @@ const CompositionBar = ({
       </div>
 
       {/* Subscription Limit Modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {isMounted && createPortal(
         <ActionModal
           isOpen={showSubscriptionLimitModal}
           onClose={() => setShowSubscriptionLimitModal(false)}

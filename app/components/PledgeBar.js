@@ -52,6 +52,7 @@ const PledgeBar = () => {
   const [customAmountValue, setCustomAmountValue] = useState('0');
   const [showMoreButton, setShowMoreButton] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const contentRef = useRef(null);
 
   const pageId = pathname.substring(1); // Remove the leading slash to get the page ID
@@ -63,6 +64,11 @@ const PledgeBar = () => {
     totalViews: 0,
     followers: 0
   });
+
+  // Ensure component is mounted before rendering portals
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Set CSS variable for pledgebar background color based on theme
   useEffect(() => {
@@ -867,7 +873,7 @@ const PledgeBar = () => {
 
       {/* Modals rendered at document level */}
       {/* When subscription is enabled, show the activation modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {isMounted && createPortal(
         <SubscriptionActivationModal
           isOpen={showActivationModal}
           onClose={() => setShowActivationModal(false)}
@@ -877,7 +883,7 @@ const PledgeBar = () => {
       )}
 
       {/* When subscription is disabled, show the Support Us modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {isMounted && createPortal(
         <SupportUsModal
           isOpen={showSupportUsModal || (!isSubscriptionEnabled && showActivationModal)}
           onClose={() => {
@@ -889,7 +895,7 @@ const PledgeBar = () => {
       )}
 
       {/* Custom Amount Modal */}
-      {typeof document !== 'undefined' && createPortal(
+      {isMounted && createPortal(
         <CustomAmountModal
           open={showCustomAmountModal}
           onOpenChange={setShowCustomAmountModal}
