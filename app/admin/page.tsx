@@ -17,6 +17,7 @@ import { usePWA } from '../providers/PWAProvider';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import SyncFeatureFlagsButton from '../components/SyncFeatureFlagsButton';
 import Link from 'next/link';
+import EnhancedFeatureFlagCard from '../components/admin/EnhancedFeatureFlagCard';
 
 interface User {
   id: string;
@@ -487,34 +488,14 @@ export default function AdminPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {featureFlags.map(flag => (
-                <div
+                <EnhancedFeatureFlagCard
                   key={flag.id}
-                  className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors relative cursor-pointer"
-                  onClick={() => router.push(`/admin/features/${flag.id}`)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{flag.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium">
-                        {flag.enabled ? (
-                          <span className="text-green-600 dark:text-green-400 flex items-center">
-                            <Check className="h-3 w-3 mr-1" />
-                            Enabled
-                          </span>
-                        ) : (
-                          <span className="text-red-600 dark:text-red-400 flex items-center">
-                            <X className="h-3 w-3 mr-1" />
-                            Disabled
-                          </span>
-                        )}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <span className="text-sm text-muted-foreground">{flag.description}</span>
-                </div>
+                  flag={flag}
+                  userEmail={user?.email || ''}
+                  userId={user?.uid || ''}
+                  onToggleGlobal={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
+                  onNavigate={(flagId) => router.push(`/admin/features/${flagId}`)}
+                />
               ))}
               </div>
             </>
