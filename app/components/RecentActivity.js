@@ -334,7 +334,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
               // For homepage, use a grid layout instead of carousel
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
                 {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
-                  <div key={`${activity.pageId}-${index}`} className="h-[200px]">
+                  <div key={`${activity.pageId}-${index}`} className="sm:h-[200px]">
                     <ActivityCard
                       activity={activity}
                       isCarousel={false}
@@ -347,7 +347,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
               // For activity page & user profile, keep the existing grid layout
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activities.slice(0, activities.length).map((activity, index) => (
-                  <div key={`${activity.pageId}-${index}`} className="h-[200px]">
+                  <div key={`${activity.pageId}-${index}`} className="sm:h-[200px]">
                     <ActivityCard
                       activity={activity}
                       isCarousel={false}

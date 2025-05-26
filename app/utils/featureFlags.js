@@ -6,12 +6,17 @@
 // Feature flag definitions
 export const FEATURE_FLAGS = {
   LINK_INSERTION: 'link_insertion',
+  PAYMENTS: 'payments',
   // Add more feature flags here as needed
 };
 
 // Users who have access to specific features
 const FEATURE_ACCESS = {
   [FEATURE_FLAGS.LINK_INSERTION]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.PAYMENTS]: [
     'jamiegray2234@gmail.com', // Admin user
     // Add more user emails here to grant access
   ],
@@ -57,7 +62,7 @@ export const getEnabledFeatures = (userEmail) => {
     return [];
   }
 
-  return Object.keys(FEATURE_ACCESS).filter(featureFlag => 
+  return Object.keys(FEATURE_ACCESS).filter(featureFlag =>
     isFeatureEnabled(featureFlag, userEmail)
   );
 };

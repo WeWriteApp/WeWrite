@@ -37,10 +37,10 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
   console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
 
   try {
-    // For the 'groups' flag, always return true to enable for all users
+    // Check groups flag from Firestore instead of hard-coding it
     if (flag === 'groups') {
-      console.log(`[DEBUG] GROUPS FLAG CHECK - Groups feature is now enabled for all users`);
-      return true;
+      console.log(`[DEBUG] GROUPS FLAG CHECK - Checking groups feature flag from database`);
+      // Fall through to normal flag checking logic
     }
 
     // Check the database for the feature flag setting

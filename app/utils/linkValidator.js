@@ -72,6 +72,20 @@ export function validateLink(linkData) {
       link.children = [{ text: displayText }];
     }
 
+    // CRITICAL FIX: Ensure all children have text property
+    link.children = link.children.map(child => {
+      if (typeof child === 'string') {
+        return { text: child };
+      }
+      if (!child.text && child.displayText) {
+        return { text: child.displayText };
+      }
+      if (!child.text) {
+        return { text: 'Link' };
+      }
+      return child;
+    });
+
     // CRITICAL FIX: Handle links that might be in a data property
     if (link.data && typeof link.data === 'object') {
       // Check if data contains link properties

@@ -103,7 +103,7 @@ export default function HeroSection({
         <div className="flex flex-col lg:flex-row items-center gap-12">
           {/* Mobile containerization - enhanced card styling on mobile */}
           {isMobile ? (
-            <div className="w-full mx-2 sm:mx-4 px-4 sm:px-6 py-6 sm:py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="w-full mx-4 sm:mx-6 px-3 sm:px-6 py-4 sm:py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className={`text-center ${fadeInClass}`}>
                 <h1 className="text-4xl font-bold mb-6">
                   Write, share, earn.
@@ -213,7 +213,7 @@ export default function HeroSection({
             </div>
           )}
 
-          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full`} style={{ animationDelay: '0.2s' }}>
+          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full ${isMobile ? '-mx-2 sm:-mx-4 md:mx-0' : ''}`} style={{ animationDelay: '0.2s' }}>
             <div
               className={`relative w-full transform-gpu transition-transform duration-300 ${
                 isMobile ? 'max-w-full mx-0' : 'max-w-[95%] sm:max-w-lg mx-auto'

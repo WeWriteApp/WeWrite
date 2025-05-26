@@ -9,6 +9,7 @@ import {
   Range,
   Node,
   Path,
+  Point,
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { ReactEditor } from "slate-react";
@@ -374,10 +375,16 @@ const EditorComponent = forwardRef((props, ref) => {
 
               // Select the point after the link
               Transforms.select(editor, endPoint);
-              console.log('LINK_DEBUG: Selected end point');
 
-              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
-              console.log('LINK_DEBUG: Positioned cursor after link without inserting space');
+              // CRITICAL FIX: Move cursor one position after the link to allow typing
+              try {
+                Transforms.move(editor, { distance: 1, unit: 'offset' });
+                console.log('LINK_DEBUG: Moved cursor after link for typing');
+              } catch (moveError) {
+                console.log('LINK_DEBUG: Could not move cursor, staying at link end');
+              }
+
+              console.log('LINK_DEBUG: Positioned cursor after link');
             } else {
               console.log('LINK_DEBUG: Could not find inserted link, using fallback');
               // Fallback: just move to the end without inserting a space
@@ -416,10 +423,16 @@ const EditorComponent = forwardRef((props, ref) => {
 
               // Select the point after the link
               Transforms.select(editor, endPoint);
-              console.log('LINK_DEBUG: Selected end point');
 
-              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
-              console.log('LINK_DEBUG: Positioned cursor after wrapped link without inserting space');
+              // CRITICAL FIX: Move cursor one position after the link to allow typing
+              try {
+                Transforms.move(editor, { distance: 1, unit: 'offset' });
+                console.log('LINK_DEBUG: Moved cursor after wrapped link for typing');
+              } catch (moveError) {
+                console.log('LINK_DEBUG: Could not move cursor, staying at link end');
+              }
+
+              console.log('LINK_DEBUG: Positioned cursor after wrapped link');
             } else {
               console.log('LINK_DEBUG: Could not find wrapped link, using fallback');
               // Fallback: just move to the end without inserting a space

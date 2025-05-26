@@ -18,6 +18,7 @@ export const useFeatureFlag = (featureFlag, userEmail) => {
     const flagMap = {
       'link_functionality': FEATURE_FLAGS.LINK_INSERTION,
       'link_insertion': FEATURE_FLAGS.LINK_INSERTION,
+      'payments': FEATURE_FLAGS.PAYMENTS,
     };
 
     const mappedFlag = flagMap[featureFlag] || featureFlag;
@@ -33,8 +34,8 @@ export const useFeatureFlag = (featureFlag, userEmail) => {
 export const useEnabledFeatures = (userEmail) => {
   return useMemo(() => {
     if (!userEmail) return [];
-    
-    return Object.keys(FEATURE_FLAGS).filter(flag => 
+
+    return Object.keys(FEATURE_FLAGS).filter(flag =>
       isFeatureEnabled(FEATURE_FLAGS[flag], userEmail)
     );
   }, [userEmail]);
