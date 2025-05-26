@@ -502,7 +502,7 @@ const EditorComponent = forwardRef((props, ref) => {
   const openLinkEditor = useCallback((initialTab = "page") => {
     // Check if link functionality is enabled
     if (!linkFunctionalityEnabled) {
-      console.log('[DEBUG] Link functionality is disabled, showing modal');
+      console.log('[DEBUG] Link functionality is disabled, showing DisabledLinkModal');
       setShowDisabledLinkModal(true);
       return false;
     }
