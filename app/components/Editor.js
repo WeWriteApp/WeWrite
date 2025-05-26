@@ -357,36 +357,61 @@ const EditorComponent = forwardRef((props, ref) => {
 
             console.log('LINK_DEBUG: Parent node type:', parentNode.type);
 
-            // CRITICAL FIX: Simplified link insertion with precise cursor positioning
-            // Save the current selection point before insertion
-            const insertionPoint = { ...editor.selection };
+            // CRITICAL FIX: Insert link at exact cursor position
+            // Store the current selection before any operations
+            const currentSelection = { ...editor.selection };
+            console.log('LINK_DEBUG: Current selection before insertion:', currentSelection);
 
-            // Insert the link node at the exact cursor position
+            // Insert the link node directly at the current cursor position
             Transforms.insertNodes(editor, link, {
-              at: insertionPoint,
-              select: false // Don't auto-select the inserted node
+              at: currentSelection.focus,
+              select: false
             });
 
-            // Position cursor after the inserted link
+            // CRITICAL FIX: Position cursor immediately after the inserted link
             try {
-              // Calculate the point after the inserted link
-              const afterLinkPoint = Editor.after(editor, insertionPoint);
-              if (afterLinkPoint) {
-                Transforms.select(editor, afterLinkPoint);
-                console.log('LINK_DEBUG: Positioned cursor after link');
-              } else {
-                // Fallback: move to end of the inserted link
+              // Calculate the position after the insertion point
+              const insertionPath = currentSelection.focus.path;
+              const insertionOffset = currentSelection.focus.offset;
+
+              // Create a point after where we just inserted the link
+              const afterInsertionPoint = {
+                path: insertionPath,
+                offset: insertionOffset + 1 // Move one position after the insertion
+              };
+
+              // Try to select the point after the insertion
+              try {
+                Transforms.select(editor, afterInsertionPoint);
+                console.log('LINK_DEBUG: Positioned cursor after insertion point');
+              } catch (selectError) {
+                // Fallback: try to find the inserted link and position after it
                 const linkEntry = Editor.above(editor, {
                   match: n => n.type === 'link'
                 });
+
                 if (linkEntry) {
                   const [linkNode, linkPath] = linkEntry;
-                  const endPoint = Editor.end(editor, linkPath);
-                  Transforms.select(editor, endPoint);
+                  console.log('LINK_DEBUG: Found inserted link at path:', linkPath);
+
+                  // Move cursor to after the link
+                  const afterLinkPoint = Editor.after(editor, linkPath);
+                  if (afterLinkPoint) {
+                    Transforms.select(editor, afterLinkPoint);
+                    console.log('LINK_DEBUG: Positioned cursor after inserted link');
+                  } else {
+                    // Last fallback: move to end of current selection
+                    Transforms.collapse(editor, { edge: 'end' });
+                    console.log('LINK_DEBUG: Used final fallback cursor positioning');
+                  }
+                } else {
+                  // Ultimate fallback: move to end of current selection
+                  Transforms.collapse(editor, { edge: 'end' });
+                  console.log('LINK_DEBUG: Used ultimate fallback cursor positioning');
                 }
               }
             } catch (error) {
-              console.error('LINK_DEBUG: Error positioning cursor after link:', error);
+              console.error('LINK_DEBUG: Error positioning cursor:', error);
               Transforms.collapse(editor, { edge: 'end' });
             }
           } catch (error) {
