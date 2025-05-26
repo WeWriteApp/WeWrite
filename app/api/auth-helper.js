@@ -26,14 +26,15 @@ export async function getUserIdFromRequest(request) {
   // Get user ID from cookies or query parameters
   let userId;
 
-  // First try to get from query parameters (for testing)
-  const url = new URL(request.url);
-  const queryUserId = url.searchParams.get('userId');
-
-  if (queryUserId) {
-    console.log('Using userId from query parameters:', queryUserId);
-    return queryUserId;
-  }
+  // SECURITY FIX: Remove query parameter authentication
+  // This was a critical security vulnerability that allowed authentication bypass
+  // const url = new URL(request.url);
+  // const queryUserId = url.searchParams.get('userId');
+  //
+  // if (queryUserId) {
+  //   console.log('Using userId from query parameters:', queryUserId);
+  //   return queryUserId;
+  // }
 
   // Check for development mode
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -51,22 +52,23 @@ export async function getUserIdFromRequest(request) {
     } catch (error) {
       console.error('Error verifying session cookie:', error);
 
-      // In development, accept invalid session cookies
-      if (isDevelopment && sessionCookie) {
-        try {
-          // Try to extract a user ID from the token without verification
-          const parts = sessionCookie.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-            if (payload && payload.uid) {
-              console.log('Development mode: Using unverified session cookie:', payload.uid);
-              return payload.uid;
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing session cookie in development mode:', e);
-        }
-      }
+      // SECURITY FIX: Remove unverified session cookie acceptance in development
+      // This was a security vulnerability that could allow session forgery
+      // if (isDevelopment && sessionCookie) {
+      //   try {
+      //     // Try to extract a user ID from the token without verification
+      //     const parts = sessionCookie.split('.');
+      //     if (parts.length === 3) {
+      //       const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      //       if (payload && payload.uid) {
+      //         console.log('Development mode: Using unverified session cookie:', payload.uid);
+      //         return payload.uid;
+      //       }
+      //     }
+      //   } catch (e) {
+      //     console.error('Error parsing session cookie in development mode:', e);
+      //   }
+      // }
 
       // Fall back to other methods
     }
@@ -104,30 +106,32 @@ export async function getUserIdFromRequest(request) {
     } catch (error) {
       console.error('Error verifying ID token:', error);
 
-      // In development, accept invalid tokens
-      if (isDevelopment && token) {
-        try {
-          // Try to extract a user ID from the token without verification
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-            if (payload && payload.uid) {
-              console.log('Development mode: Using unverified token:', payload.uid);
-              return payload.uid;
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing token in development mode:', e);
-        }
-      }
+      // SECURITY FIX: Remove unverified token acceptance in development
+      // This was a security vulnerability that could allow token forgery
+      // if (isDevelopment && token) {
+      //   try {
+      //     // Try to extract a user ID from the token without verification
+      //     const parts = token.split('.');
+      //     if (parts.length === 3) {
+      //       const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      //       if (payload && payload.uid) {
+      //         console.log('Development mode: Using unverified token:', payload.uid);
+      //         return payload.uid;
+      //       }
+      //     }
+      //   } catch (e) {
+      //     console.error('Error parsing token in development mode:', e);
+      //   }
+      // }
     }
   }
 
-  // In development mode, use a default test user ID if no other authentication is found
-  if (isDevelopment) {
-    console.log('Development mode: Using default test user ID');
-    return 'test-user-id-for-development';
-  }
+  // SECURITY FIX: Remove automatic fallback to test user in development
+  // This was a critical security vulnerability that could allow unauthorized access
+  // if (isDevelopment) {
+  //   console.log('Development mode: Using default test user ID');
+  //   return 'test-user-id-for-development';
+  // }
 
   // No user ID found
   return null;

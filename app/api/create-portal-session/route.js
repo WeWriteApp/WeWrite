@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { auth } from '../../firebase/auth';
 import { getUserSubscription } from '../../firebase/subscription';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { getUserIdFromRequest } from '../auth-helper';
 
 export async function POST(request) {
   try {
@@ -15,12 +16,19 @@ export async function POST(request) {
     const body = await request.json();
     const { userId } = body;
 
-    // Note: We're skipping the auth check here because the server-side auth.currentUser
-    // doesn't work properly in Next.js API routes. The authentication is handled by the
-    // Firebase Auth client SDK on the client side before making this request.
-    console.log('Processing portal session request for user ID:', userId);
+    // SECURITY FIX: Add proper authentication check
+    const authenticatedUserId = await getUserIdFromRequest(request);
 
-    // We'll rely on the subscription check below to ensure the user has a valid subscription
+    if (!authenticatedUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify the authenticated user matches the requested user
+    if (authenticatedUserId !== userId) {
+      return NextResponse.json({ error: 'Unauthorized - User ID mismatch' }, { status: 401 });
+    }
+
+    console.log('Processing portal session request for authenticated user ID:', userId);
 
     // Get the user's subscription from Firestore
     const subscription = await getUserSubscription(userId);

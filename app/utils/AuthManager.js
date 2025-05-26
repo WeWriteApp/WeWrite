@@ -1,6 +1,6 @@
 /**
  * AuthManager - A robust utility for managing authentication and account switching
- * 
+ *
  * This utility provides a centralized way to manage authentication state and
  * account switching without directly accessing tokens or cookies, which can
  * trigger security measures in browser extensions.
@@ -46,14 +46,14 @@ export const getSavedAccounts = () => {
  */
 export const saveAccount = (account) => {
   if (!account || !account.uid) return;
-  
+
   try {
     // Get existing accounts
     const accounts = getSavedAccounts();
-    
+
     // Check if account already exists
     const existingIndex = accounts.findIndex(a => a.uid === account.uid);
-    
+
     // Clean up the account object
     const cleanAccount = {
       uid: account.uid,
@@ -62,7 +62,7 @@ export const saveAccount = (account) => {
       displayName: account.displayName || account.username,
       lastLogin: new Date().toISOString()
     };
-    
+
     if (existingIndex >= 0) {
       // Update existing account
       accounts[existingIndex] = {
@@ -73,10 +73,10 @@ export const saveAccount = (account) => {
       // Add new account
       accounts.push(cleanAccount);
     }
-    
+
     // Save accounts
     localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
-    
+
     // Set as current account
     setCurrentAccount(cleanAccount);
   } catch (error) {
@@ -93,21 +93,44 @@ export const setCurrentAccount = (account) => {
     localStorage.removeItem(STORAGE_KEYS.CURRENT_ACCOUNT);
     return;
   }
-  
+
   try {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_ACCOUNT, JSON.stringify(account));
-    
-    // Set auth state
-    localStorage.setItem(STORAGE_KEYS.AUTH_STATE, 'authenticated');
-    
-    // Set cookie for server-side auth
-    Cookies.set('authenticated', 'true', { expires: 7 });
-    Cookies.set('userSession', JSON.stringify({
+    // SECURITY FIX: Validate account object before setting
+    if (!account.uid || !account.email) {
+      console.error('Invalid account object - missing required fields');
+      return;
+    }
+
+    // SECURITY FIX: Sanitize account data
+    const sanitizedAccount = {
       uid: account.uid,
       email: account.email,
-      username: account.username || account.displayName,
-      displayName: account.displayName || account.username
-    }), { expires: 7 });
+      username: account.username || account.displayName || '',
+      displayName: account.displayName || account.username || '',
+      // Only include safe, validated properties
+    };
+
+    localStorage.setItem(STORAGE_KEYS.CURRENT_ACCOUNT, JSON.stringify(sanitizedAccount));
+
+    // Set auth state
+    localStorage.setItem(STORAGE_KEYS.AUTH_STATE, 'authenticated');
+
+    // Set cookie for server-side auth with secure flags
+    Cookies.set('authenticated', 'true', {
+      expires: 7,
+      secure: window.location.protocol === 'https:',
+      sameSite: 'strict'
+    });
+    Cookies.set('userSession', JSON.stringify({
+      uid: sanitizedAccount.uid,
+      email: sanitizedAccount.email,
+      username: sanitizedAccount.username,
+      displayName: sanitizedAccount.displayName
+    }), {
+      expires: 7,
+      secure: window.location.protocol === 'https:',
+      sameSite: 'strict'
+    });
   } catch (error) {
     console.error('Error setting current account:', error);
   }
@@ -127,13 +150,13 @@ export const getCurrentAccount = () => {
       displayName: auth.currentUser.displayName,
       isFirebaseUser: true
     };
-    
+
     // Update saved account with latest data
     saveAccount(firebaseUser);
-    
+
     return firebaseUser;
   }
-  
+
   // Then check local storage
   try {
     const accountJson = localStorage.getItem(STORAGE_KEYS.CURRENT_ACCOUNT);
@@ -143,7 +166,7 @@ export const getCurrentAccount = () => {
   } catch (error) {
     console.error('Error getting current account:', error);
   }
-  
+
   return null;
 };
 
@@ -152,8 +175,8 @@ export const getCurrentAccount = () => {
  * @returns {boolean} True if authenticated
  */
 export const isAuthenticated = () => {
-  return !!auth.currentUser || 
-         !!getCurrentAccount() || 
+  return !!auth.currentUser ||
+         !!getCurrentAccount() ||
          localStorage.getItem(STORAGE_KEYS.AUTH_STATE) === 'authenticated' ||
          Cookies.get('authenticated') === 'true';
 };
@@ -167,19 +190,19 @@ export const switchToAccount = async (account) => {
   if (!account || !account.uid) {
     throw new Error('Invalid account');
   }
-  
+
   try {
     // First sign out from Firebase
     if (auth.currentUser) {
       await signOut(auth);
     }
-    
+
     // Set the new account as current
     setCurrentAccount(account);
-    
+
     // Set a flag for the account switch
     sessionStorage.setItem('accountSwitch', 'true');
-    
+
     // Return the account for chaining
     return account;
   } catch (error) {
@@ -197,22 +220,22 @@ export const signOutUser = async (keepAccounts = true) => {
   try {
     // Sign out from Firebase
     await signOut(auth);
-    
+
     // Clear current account
     localStorage.removeItem(STORAGE_KEYS.CURRENT_ACCOUNT);
-    
+
     // Clear auth state
     localStorage.removeItem(STORAGE_KEYS.AUTH_STATE);
-    
+
     // Clear cookies
     Cookies.remove('authenticated');
     Cookies.remove('userSession');
-    
+
     // Optionally clear saved accounts
     if (!keepAccounts) {
       localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error('Error signing out:', error);
@@ -226,12 +249,12 @@ export const signOutUser = async (keepAccounts = true) => {
  */
 export const removeAccount = (uid) => {
   if (!uid) return;
-  
+
   try {
     const accounts = getSavedAccounts();
     const filteredAccounts = accounts.filter(account => account.uid !== uid);
     localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(filteredAccounts));
-    
+
     // If this was the current account, clear it
     const currentAccount = getCurrentAccount();
     if (currentAccount && currentAccount.uid === uid) {
