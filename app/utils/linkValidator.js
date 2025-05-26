@@ -154,10 +154,10 @@ export function validateLink(linkData) {
     // Set missing properties based on link type
     if (isUserLink) {
       link.isUser = true;
-      if (!link.className) link.className = 'user-link';
+      // Don't set className for inline links in Slate editor
     } else if (isPageLink) {
       link.isPageLink = true;
-      if (!link.className) link.className = 'page-link';
+      // Don't set className for inline links in Slate editor
 
       // CRITICAL FIX: Ensure pageId is always set for page links
       if (!link.pageId && link.url) {
@@ -174,7 +174,7 @@ export function validateLink(linkData) {
       }
     } else if (isExternalLink) {
       link.isExternal = true;
-      if (!link.className) link.className = 'external-link';
+      // Don't set className for inline links in Slate editor
     }
 
     // Ensure children array exists
@@ -240,7 +240,6 @@ export function validateLink(linkData) {
       displayText: fallbackDisplayText,
       originalPageTitle: linkData?.pageTitle || linkData?.originalPageTitle || null,
       pageId: linkData?.pageId || null,
-      className: 'error-link',
       linkVersion: 3,
       isError: true,
       id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`

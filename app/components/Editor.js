@@ -161,6 +161,12 @@ const EditorComponent = forwardRef((props, ref) => {
     // Create the base editor
     const baseEditor = withHistory(withReact(createEditor()));
 
+    // CRITICAL FIX: Configure links as inline elements
+    const { isInline } = baseEditor;
+    baseEditor.isInline = element => {
+      return element.type === 'link' ? true : isInline(element);
+    };
+
     // Store the original normalizeNode function
     const originalNormalizeNode = baseEditor.normalizeNode;
 
@@ -320,11 +326,17 @@ const EditorComponent = forwardRef((props, ref) => {
       // This standardizes link creation and ensures backward compatibility
       const link = validateLink(initialLink);
 
+      // CRITICAL FIX: Ensure the link has proper inline structure for Slate
+      // Remove any properties that might cause Slate to treat this as a block element
+      if (link.className) {
+        delete link.className; // Remove className as it can interfere with inline rendering
+      }
+
+      // Ensure the link is marked as inline
+      link.inline = true;
+
       // Log the validated link structure
       console.log('LINK_DEBUG: Created validated link:', JSON.stringify(link));
-
-      // Log the link structure for debugging
-      console.log('LINK_DEBUG: Inserting link with structure:', JSON.stringify(link));
 
       // Log the editor selection state before insertion
       console.log('Editor selection before insertion:',
@@ -345,74 +357,44 @@ const EditorComponent = forwardRef((props, ref) => {
         );
 
         if (editor.selection.anchor.offset === editor.selection.focus.offset) {
-          // No text is selected, insert the link
-          console.log('LINK_DEBUG: Inserting link node with no selection');
+          // No text is selected, insert the link inline
+          console.log('LINK_DEBUG: Inserting link inline at cursor position');
 
           try {
-            // Create a paragraph node if needed
-            const [parentNode, parentPath] = Editor.parent(
-              editor,
-              editor.selection.focus.path
-            );
-
-            console.log('LINK_DEBUG: Parent node type:', parentNode.type);
-
-            // CRITICAL FIX: Insert link at exact cursor position
-            // Store the current selection before any operations
+            // CRITICAL FIX: Insert link inline using insertText and then wrap it
+            // This ensures the link appears exactly at the cursor position
             const currentSelection = { ...editor.selection };
             console.log('LINK_DEBUG: Current selection before insertion:', currentSelection);
 
-            // Insert the link node directly at the current cursor position
-            Transforms.insertNodes(editor, link, {
-              at: currentSelection.focus,
-              select: false
+            // First, insert the link text at the cursor position
+            const linkText = text || 'Link';
+            Transforms.insertText(editor, linkText, { at: currentSelection });
+
+            // Now select the text we just inserted
+            const startPoint = currentSelection.focus;
+            const endPoint = {
+              path: startPoint.path,
+              offset: startPoint.offset + linkText.length
+            };
+
+            // Select the inserted text
+            Transforms.select(editor, {
+              anchor: startPoint,
+              focus: endPoint
             });
 
-            // CRITICAL FIX: Position cursor immediately after the inserted link
-            try {
-              // Calculate the position after the insertion point
-              const insertionPath = currentSelection.focus.path;
-              const insertionOffset = currentSelection.focus.offset;
+            // Wrap the selected text in a link
+            Transforms.wrapNodes(editor, link, { split: true });
 
-              // Create a point after where we just inserted the link
-              const afterInsertionPoint = {
-                path: insertionPath,
-                offset: insertionOffset + 1 // Move one position after the insertion
-              };
-
-              // Try to select the point after the insertion
-              try {
-                Transforms.select(editor, afterInsertionPoint);
-                console.log('LINK_DEBUG: Positioned cursor after insertion point');
-              } catch (selectError) {
-                // Fallback: try to find the inserted link and position after it
-                const linkEntry = Editor.above(editor, {
-                  match: n => n.type === 'link'
-                });
-
-                if (linkEntry) {
-                  const [linkNode, linkPath] = linkEntry;
-                  console.log('LINK_DEBUG: Found inserted link at path:', linkPath);
-
-                  // Move cursor to after the link
-                  const afterLinkPoint = Editor.after(editor, linkPath);
-                  if (afterLinkPoint) {
-                    Transforms.select(editor, afterLinkPoint);
-                    console.log('LINK_DEBUG: Positioned cursor after inserted link');
-                  } else {
-                    // Last fallback: move to end of current selection
-                    Transforms.collapse(editor, { edge: 'end' });
-                    console.log('LINK_DEBUG: Used final fallback cursor positioning');
-                  }
-                } else {
-                  // Ultimate fallback: move to end of current selection
-                  Transforms.collapse(editor, { edge: 'end' });
-                  console.log('LINK_DEBUG: Used ultimate fallback cursor positioning');
-                }
-              }
-            } catch (error) {
-              console.error('LINK_DEBUG: Error positioning cursor:', error);
+            // Position cursor after the link
+            const afterLinkPoint = Editor.after(editor, endPoint);
+            if (afterLinkPoint) {
+              Transforms.select(editor, afterLinkPoint);
+              console.log('LINK_DEBUG: Positioned cursor after inserted link');
+            } else {
+              // Fallback: collapse to end
               Transforms.collapse(editor, { edge: 'end' });
+              console.log('LINK_DEBUG: Used fallback cursor positioning');
             }
           } catch (error) {
             console.error('LINK_DEBUG: Error during cursor positioning:', error);
@@ -429,45 +411,32 @@ const EditorComponent = forwardRef((props, ref) => {
           console.log('LINK_DEBUG: Wrapping selected text in link');
 
           try {
+            // Store the current selection before wrapping
+            const currentSelection = { ...editor.selection };
+
+            // Update the link's children to match the selected text
+            const selectedText = Editor.string(editor, currentSelection);
+            link.children = [{ text: selectedText }];
+            link.displayText = selectedText;
+
             // Wrap the selected text in a link
             Transforms.wrapNodes(editor, link, { split: true });
 
-            // Get the path to the inserted link
-            const linkEntry = Editor.above(editor, {
-              match: n => n.type === 'link'
-            });
-
-            if (linkEntry) {
-              const [linkNode, linkPath] = linkEntry;
-              console.log('LINK_DEBUG: Found wrapped link at path:', linkPath);
-
-              // Create a point after the link
-              const endPoint = Editor.end(editor, linkPath);
-              console.log('LINK_DEBUG: End point after link:', endPoint);
-
-              // Select the point after the link
-              Transforms.select(editor, endPoint);
-
-              // CRITICAL FIX: Move cursor one position after the link to allow typing
-              try {
-                Transforms.move(editor, { distance: 1, unit: 'offset' });
-                console.log('LINK_DEBUG: Moved cursor after wrapped link for typing');
-              } catch (moveError) {
-                console.log('LINK_DEBUG: Could not move cursor, staying at link end');
-              }
-
+            // Position cursor after the wrapped link
+            const afterLinkPoint = Editor.after(editor, currentSelection.focus);
+            if (afterLinkPoint) {
+              Transforms.select(editor, afterLinkPoint);
               console.log('LINK_DEBUG: Positioned cursor after wrapped link');
             } else {
-              console.log('LINK_DEBUG: Could not find wrapped link, using fallback');
-              // Fallback: just move to the end without inserting a space
+              // Fallback: collapse to end
               Transforms.collapse(editor, { edge: 'end' });
+              console.log('LINK_DEBUG: Used fallback cursor positioning after wrap');
             }
           } catch (error) {
-            console.error('LINK_DEBUG: Error during cursor positioning after wrap:', error);
+            console.error('LINK_DEBUG: Error during text wrapping:', error);
             // Last resort fallback
             try {
               Transforms.collapse(editor, { edge: 'end' });
-              // CRITICAL FIX: Don't insert a space after the link to prevent unwanted line wrapping
             } catch (fallbackError) {
               console.error('LINK_DEBUG: Even fallback failed:', fallbackError);
             }

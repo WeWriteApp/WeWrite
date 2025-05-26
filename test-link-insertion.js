@@ -21,7 +21,7 @@ try {
     pageId: 'test-page',
     displayText: 'Test Link'
   };
-  
+
   console.log('✅ Link validation test passed');
   console.log('   Input:', JSON.stringify(testLink, null, 2));
 } catch (error) {
@@ -36,7 +36,7 @@ try {
     anchor: { path: [0, 0], offset: 5 },
     focus: { path: [0, 0], offset: 5 }
   };
-  
+
   console.log('✅ Cursor positioning test passed');
   console.log('   Mock selection:', JSON.stringify(mockSelection, null, 2));
 } catch (error) {
@@ -63,10 +63,10 @@ try {
       ]
     }
   ];
-  
+
   const serialized = JSON.stringify(testContent);
   const deserialized = JSON.parse(serialized);
-  
+
   console.log('✅ Content serialization test passed');
   console.log('   Serialized length:', serialized.length);
   console.log('   Link preserved:', deserialized[0].children[1].type === 'link');
@@ -86,11 +86,11 @@ try {
     linkVersion: 3,
     id: 'link-test-123'
   };
-  
+
   // Check if all required properties are present
   const requiredProps = ['type', 'url', 'children', 'displayText'];
   const hasAllProps = requiredProps.every(prop => linkNode.hasOwnProperty(prop));
-  
+
   console.log('✅ Link rendering structure test passed');
   console.log('   Has all required props:', hasAllProps);
   console.log('   Link structure:', JSON.stringify(linkNode, null, 2));
@@ -114,5 +114,12 @@ console.log('6. Save the page');
 console.log('7. Verify link is visible in view mode');
 console.log('8. Edit the page again');
 console.log('9. Verify link is still there and editable');
+
+console.log('\n🔧 Recent Fixes Applied:');
+console.log('✅ Configured Slate editor to treat links as inline elements');
+console.log('✅ Changed link insertion to use insertText + wrapNodes for precise positioning');
+console.log('✅ Removed className properties that could interfere with inline rendering');
+console.log('✅ Added inline: true property to link objects');
+console.log('✅ Improved cursor positioning after link insertion');
 
 console.log('\n✨ Test completed!');
