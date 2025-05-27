@@ -1,5 +1,8 @@
 "use client";
 
+// Import Slate patches early to ensure they're applied before any Slate components load
+import "./utils/slate-patch";
+
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { AuthProvider } from "./providers/AuthProvider";
 import { LoggingProvider } from "./providers/LoggingProvider";

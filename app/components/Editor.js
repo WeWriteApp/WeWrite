@@ -48,6 +48,29 @@ const safeReactEditor = {
     }
     return null;
   },
+  toDOMNode: (editor, node) => {
+    try {
+      if (ReactEditor && typeof ReactEditor.toDOMNode === 'function') {
+        return ReactEditor.toDOMNode(editor, node);
+      }
+    } catch (error) {
+      console.error('Error in safeReactEditor.toDOMNode:', error);
+      // Try to find the DOM node by other means as a fallback
+      try {
+        if (node && typeof node === 'object' && 'text' in node) {
+          const textNodes = document.querySelectorAll('[data-slate-leaf]');
+          for (const textNode of textNodes) {
+            if (textNode.textContent === node.text) {
+              return textNode;
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Error in toDOMNode fallback:', fallbackError);
+      }
+    }
+    return null;
+  },
   isFocused: (editor) => {
     try {
       if (ReactEditor && typeof ReactEditor.isFocused === 'function') {
@@ -72,10 +95,42 @@ const safeReactEditor = {
   toDOMPoint: (editor, point) => {
     try {
       if (ReactEditor && typeof ReactEditor.toDOMPoint === 'function') {
+        // Validate point before calling the function
+        if (!point || !point.path || !Array.isArray(point.path) || typeof point.offset !== 'number') {
+          console.warn('Invalid point structure in safeReactEditor.toDOMPoint:', point);
+          // Try to find a safe fallback
+          const firstTextNode = document.querySelector('[data-slate-leaf]');
+          if (firstTextNode) {
+            return [firstTextNode, 0];
+          }
+          return null;
+        }
+
         return ReactEditor.toDOMPoint(editor, point);
       }
     } catch (error) {
-      console.error('Error in safeReactEditor.toDOMPoint:', error);
+      console.error('Error in safeReactEditor.toDOMPoint:', error, 'Point:', point);
+
+      // Enhanced fallback for toDOMPoint errors
+      try {
+        const textNodes = document.querySelectorAll('[data-slate-leaf]');
+        if (textNodes.length > 0) {
+          // Try to find the appropriate text node based on the point path
+          if (point && point.path && Array.isArray(point.path)) {
+            const pathIndex = point.path[0] || 0;
+            if (pathIndex < textNodes.length) {
+              const targetNode = textNodes[pathIndex];
+              const safeOffset = Math.min(point.offset || 0, targetNode.textContent.length);
+              return [targetNode, safeOffset];
+            }
+          }
+
+          // Fallback to first text node
+          return [textNodes[0], 0];
+        }
+      } catch (fallbackError) {
+        console.error('Error in toDOMPoint fallback:', fallbackError);
+      }
     }
     return null;
   },
@@ -170,24 +225,71 @@ const EditorComponent = forwardRef((props, ref) => {
     // Store the original normalizeNode function
     const originalNormalizeNode = baseEditor.normalizeNode;
 
-    // Add custom normalizer to update paragraph indices
+    // Add custom normalizer that preserves links and updates paragraph indices safely
     baseEditor.normalizeNode = entry => {
-      // First run the original normalizer
-      originalNormalizeNode(entry);
+      try {
+        const [node, path] = entry;
 
-      // Then update paragraph indices after every normalization
-      if (baseEditor.children) {
-        try {
-          // Create a new array with updated paragraph indices
-          const updatedChildren = updateParagraphIndices(baseEditor.children);
+        // CRITICAL FIX: Handle link nodes specially to prevent deletion
+        if (SlateElement.isElement(node) && node.type === 'link') {
+          console.log('LINK_PRESERVATION: Processing link node in normalizer:', {
+            url: node.url,
+            children: node.children,
+            path: path
+          });
 
-          // Only update if there are changes
-          if (updatedChildren !== baseEditor.children) {
-            // Replace the entire children array with the updated one
-            baseEditor.children = updatedChildren;
+          // Ensure link has required properties but don't modify structure
+          if (!node.url) {
+            console.log('LINK_PRESERVATION: Link missing URL, attempting to fix or remove');
+            // If no URL, convert to normal text
+            if (node.href) {
+              // Handle legacy href attribute
+              console.log('LINK_PRESERVATION: Converting href to url');
+              Transforms.setNodes(
+                baseEditor,
+                { url: node.href },
+                { at: path }
+              );
+            } else {
+              // Remove the link formatting if no URL available
+              console.log('LINK_PRESERVATION: Removing invalid link');
+              Transforms.unwrapNodes(baseEditor, { at: path });
+            }
+            return; // Return early as we've handled this node
           }
-        } catch (error) {
-          console.error("Error updating paragraph indices in normalizer:", error);
+          // Link is valid, let original normalizer handle it
+          console.log('LINK_PRESERVATION: Link is valid, preserving');
+        }
+
+        // Run the original normalizer for all other cases
+        originalNormalizeNode(entry);
+
+        // CRITICAL FIX: Only update paragraph indices at the root level
+        // and only when we're not in the middle of other operations
+        if (path.length === 0 && baseEditor.children) {
+          // Use a timeout to avoid interfering with ongoing operations
+          setTimeout(() => {
+            try {
+              if (baseEditor.children) {
+                const updatedChildren = updateParagraphIndices(baseEditor.children);
+                // Only update if there are actual changes and we're not destroying content
+                if (updatedChildren !== baseEditor.children &&
+                    updatedChildren.length === baseEditor.children.length) {
+                  baseEditor.children = updatedChildren;
+                }
+              }
+            } catch (error) {
+              console.error("Error updating paragraph indices in timeout:", error);
+            }
+          }, 0);
+        }
+      } catch (error) {
+        console.error('Error in custom normalizeNode:', error);
+        // Try to continue with original normalizeNode
+        try {
+          originalNormalizeNode(entry);
+        } catch (fallbackError) {
+          console.error('Error in fallback normalizeNode:', fallbackError);
         }
       }
     };
@@ -247,18 +349,20 @@ const EditorComponent = forwardRef((props, ref) => {
     }
   }, [initialContent, forceUpdateParagraphIndices]);
 
-  // Force update paragraph indices periodically to ensure they stay in sync
-  useEffect(() => {
-    // Set up an interval to update paragraph indices every 2 seconds
-    const intervalId = setInterval(() => {
-      if (editor && editor.children) {
-        forceUpdateParagraphIndices();
-      }
-    }, 2000);
+  // CRITICAL FIX: Disable periodic paragraph index updates to prevent link deletion
+  // The normalization process now handles paragraph indices safely
+  // Periodic updates were causing links to be lost during content editing
+  // useEffect(() => {
+  //   // Set up an interval to update paragraph indices every 2 seconds
+  //   const intervalId = setInterval(() => {
+  //     if (editor && editor.children) {
+  //       forceUpdateParagraphIndices();
+  //     }
+  //   }, 2000);
 
-    // Clean up the interval when the component unmounts
-    return () => clearInterval(intervalId);
-  }, [editor, forceUpdateParagraphIndices]);
+  //   // Clean up the interval when the component unmounts
+  //   return () => clearInterval(intervalId);
+  // }, [editor, forceUpdateParagraphIndices]);
 
   // Share the linkEditorRef with child components via window
   useEffect(() => {
@@ -656,36 +760,76 @@ const EditorComponent = forwardRef((props, ref) => {
 
   // Handle editor changes
   const handleEditorChange = useCallback((value) => {
-    // Store the current selection to prevent cursor jumps
-    if (editor.selection) {
-      lastSelectionRef.current = editor.selection;
-    }
-
     try {
-      // Create a new value with updated paragraph indices
-      const updatedValue = handleParagraphIndices(value);
-
-      // Update the editor value with the new indices
-      setEditorValue(updatedValue);
-
-      // Also update the editor's children directly to ensure consistency
-      if (editor.children !== updatedValue) {
-        editor.children = updatedValue;
+      // Store the current selection to prevent cursor jumps
+      if (editor.selection) {
+        lastSelectionRef.current = editor.selection;
       }
+
+      // CRITICAL FIX: Only update paragraph indices when necessary to prevent link deletion
+      // The normalization process now handles this more safely
+      let updatedValue = value;
+
+      // Only update paragraph indices if the structure has actually changed
+      // (number of paragraphs changed, not just content within paragraphs)
+      const currentParagraphCount = editorValue.filter(node =>
+        node.type === 'paragraph' || !node.type
+      ).length;
+      const newParagraphCount = value.filter(node =>
+        node.type === 'paragraph' || !node.type
+      ).length;
+
+      if (currentParagraphCount !== newParagraphCount) {
+        // Only update indices when paragraph structure changes
+        try {
+          updatedValue = handleParagraphIndices(value);
+        } catch (indicesError) {
+          console.warn("Error updating paragraph indices, using original value:", indicesError);
+          updatedValue = value;
+        }
+      }
+
+      // Update the editor value
+      setEditorValue(updatedValue);
 
       // Call the onChange callback if provided
       if (onChange) {
-        onChange(updatedValue);
+        try {
+          onChange(updatedValue);
+        } catch (onChangeError) {
+          console.error("Error in onChange callback:", onChangeError);
+        }
       }
     } catch (error) {
       console.error("Error in handleEditorChange:", error);
-      // Fall back to just updating the state without indices
-      setEditorValue(value);
-      if (onChange) {
-        onChange(value);
+
+      // Enhanced error recovery
+      try {
+        // Fall back to just updating the state without indices
+        setEditorValue(value);
+        if (onChange) {
+          onChange(value);
+        }
+      } catch (fallbackError) {
+        console.error("Error in fallback handleEditorChange:", fallbackError);
+        // Last resort: try to maintain editor state
+        try {
+          // If we can't update the value, at least try to preserve the selection
+          if (editor.selection && lastSelectionRef.current) {
+            setTimeout(() => {
+              try {
+                Transforms.select(editor, lastSelectionRef.current);
+              } catch (selectionError) {
+                console.error("Error restoring selection:", selectionError);
+              }
+            }, 0);
+          }
+        } catch (lastResortError) {
+          console.error("Error in last resort recovery:", lastResortError);
+        }
       }
     }
-  }, [editor, onChange, handleParagraphIndices]);
+  }, [editor, onChange, handleParagraphIndices, editorValue]);
 
   // Render a paragraph element or link
   const renderElement = useCallback(({ attributes, children, element }) => {
@@ -788,7 +932,7 @@ const EditorComponent = forwardRef((props, ref) => {
 
                 // Set the link as selected for visual indication
                 try {
-                  const domNode = ReactEditor.toDOMNode(editor, nextNode);
+                  const domNode = safeReactEditor.toDOMNode(editor, nextNode);
                   if (domNode) {
                     // Clear any previously selected links
                     const linkElements = document.querySelectorAll('[data-selected="true"]');
@@ -832,7 +976,7 @@ const EditorComponent = forwardRef((props, ref) => {
 
                 // Set the link as selected for visual indication
                 try {
-                  const domNode = ReactEditor.toDOMNode(editor, prevNode);
+                  const domNode = safeReactEditor.toDOMNode(editor, prevNode);
                   if (domNode) {
                     // Clear any previously selected links
                     const linkElements = document.querySelectorAll('[data-selected="true"]');
@@ -1103,18 +1247,22 @@ const EditorComponent = forwardRef((props, ref) => {
           className="min-h-[200px] p-3 outline-none w-full max-w-none"
           // Critical fix: Preserve selection on blur to prevent cursor jumps
           onBlur={() => {
-            if (editor.selection) {
-              lastSelectionRef.current = editor.selection;
+            try {
+              if (editor.selection) {
+                lastSelectionRef.current = editor.selection;
+              }
+            } catch (error) {
+              console.error('Error in onBlur:', error);
             }
           }}
           // Critical fix: Restore selection on focus to prevent cursor jumps
           onFocus={() => {
-            if (lastSelectionRef.current && !editor.selection) {
-              try {
+            try {
+              if (lastSelectionRef.current && !editor.selection) {
                 Transforms.select(editor, lastSelectionRef.current);
-              } catch (error) {
-                console.error('Error restoring selection on focus:', error);
               }
+            } catch (error) {
+              console.error('Error restoring selection on focus:', error);
             }
           }}
           // We no longer need to synchronize line numbers after DOM mutations
@@ -1153,13 +1301,13 @@ const EditorComponent = forwardRef((props, ref) => {
             />
           </div>
         )}
-
-        {/* Disabled Link Modal */}
-        <DisabledLinkModal
-          isOpen={showDisabledLinkModal}
-          onClose={() => setShowDisabledLinkModal(false)}
-        />
       </Slate>
+
+      {/* Disabled Link Modal */}
+      <DisabledLinkModal
+        isOpen={showDisabledLinkModal}
+        onClose={() => setShowDisabledLinkModal(false)}
+      />
     </div>
   );
 });

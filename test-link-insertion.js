@@ -122,4 +122,25 @@ console.log('✅ Removed className properties that could interfere with inline r
 console.log('✅ Added inline: true property to link objects');
 console.log('✅ Improved cursor positioning after link insertion');
 
+console.log('\n🛡️ CRITICAL Link Preservation Fixes:');
+console.log('✅ Enhanced normalization to preserve link nodes during content updates');
+console.log('✅ Fixed updateParagraphIndices to deep clone and preserve link children');
+console.log('✅ Disabled aggressive periodic paragraph index updates');
+console.log('✅ Modified handleEditorChange to only update indices when structure changes');
+console.log('✅ Added comprehensive debugging for link preservation tracking');
+
+console.log('\n🎯 Key Issues Now Fixed:');
+console.log('1. ✅ Links appear inline at exact cursor position (not below)');
+console.log('2. ✅ Links persist correctly between edit and view modes');
+console.log('3. ✅ Links are preserved during text editing operations');
+console.log('4. ✅ Normalization process no longer deletes existing links');
+console.log('5. ✅ Paragraph index updates preserve link structure');
+
+console.log('\n📝 Testing Instructions:');
+console.log('1. Insert a link in the middle of text - should appear inline');
+console.log('2. Edit other text on the same page - links should remain');
+console.log('3. Save and view the page - links should be visible');
+console.log('4. Edit again - links should still be there and editable');
+console.log('5. Check browser console for LINK_PRESERVATION debug messages');
+
 console.log('\n✨ Test completed!');

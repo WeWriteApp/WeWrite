@@ -32,18 +32,48 @@ export function updateParagraphIndices(value) {
       if (!node) return node;
 
       if (node.type === 'paragraph' || !node.type) {
-        // Create a new node with updated custom property
-        return {
+        // CRITICAL FIX: Deep clone the node to preserve all children including links
+        const clonedNode = {
           ...node,
+          // Preserve children array completely - this is critical for links
+          children: node.children ? [...node.children] : [],
           custom: {
             ...(node.custom || {}),
             paragraphIndex: index
           }
         };
+
+        // CRITICAL FIX: Ensure children are preserved exactly as they are
+        // This prevents links from being lost during paragraph index updates
+        if (node.children && Array.isArray(node.children)) {
+          const linkCount = node.children.filter(child => child && child.type === 'link').length;
+          if (linkCount > 0) {
+            console.log(`LINK_PRESERVATION: Preserving ${linkCount} links in paragraph ${index}`);
+          }
+
+          clonedNode.children = node.children.map(child => {
+            // If child is a link, preserve it completely
+            if (child && child.type === 'link') {
+              console.log('LINK_PRESERVATION: Preserving link in paragraph update:', {
+                url: child.url,
+                text: child.children?.[0]?.text
+              });
+              return {
+                ...child,
+                // Preserve link children (the text content)
+                children: child.children ? [...child.children] : []
+              };
+            }
+            // For non-link children, just clone them
+            return { ...child };
+          });
+        }
+
+        return clonedNode;
       }
 
-      // Return unchanged node for non-paragraph types
-      return node;
+      // Return unchanged node for non-paragraph types (but still clone to respect immutability)
+      return { ...node };
     });
 
     return updatedValue;
