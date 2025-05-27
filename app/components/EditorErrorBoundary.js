@@ -16,7 +16,7 @@ class EditorErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     // Log the error for debugging
     console.error('Editor Error Boundary caught an error:', error, errorInfo);
-    
+
     this.setState({
       error: error,
       errorInfo: errorInfo
@@ -24,8 +24,11 @@ class EditorErrorBoundary extends React.Component {
 
     // Check if this is a Slate.js DOM node resolution error
     if (error.message && error.message.includes('Cannot resolve a DOM node from Slate node')) {
-      console.log('Detected Slate.js DOM node resolution error, attempting recovery...');
-      
+      console.log('Detected Slate.js DOM node resolution error, triggering fallback...');
+
+      // Trigger fallback editor
+      window.dispatchEvent(new CustomEvent('slate-error', { detail: error }));
+
       // Attempt to recover by resetting the error state after a delay
       setTimeout(() => {
         this.setState({ hasError: false, error: null, errorInfo: null });

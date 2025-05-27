@@ -3,6 +3,7 @@
 import { useState, useEffect, forwardRef } from 'react';
 import dynamic from 'next/dynamic';
 import EditorErrorBoundary from './EditorErrorBoundary';
+import FallbackEditor from './FallbackEditor';
 
 // Dynamically import the Editor with no SSR
 const Editor = dynamic(() => import('./Editor'), {
@@ -24,6 +25,7 @@ const Editor = dynamic(() => import('./Editor'), {
 const ClientOnlyEditor = forwardRef(({ initialContent, onChange, placeholder, contentType, ...props }, ref) => {
   const [isMounted, setIsMounted] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     // First mount check
@@ -34,7 +36,18 @@ const ClientOnlyEditor = forwardRef(({ initialContent, onChange, placeholder, co
       setIsReady(true);
     }, 100);
 
-    return () => clearTimeout(timer);
+    // Listen for Slate.js errors and switch to fallback
+    const handleSlateError = () => {
+      console.warn('Slate.js error detected, switching to fallback editor');
+      setUseFallback(true);
+    };
+
+    window.addEventListener('slate-error', handleSlateError);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('slate-error', handleSlateError);
+    };
   }, []);
 
   // Don't render anything until we're mounted and ready
@@ -46,6 +59,19 @@ const ClientOnlyEditor = forwardRef(({ initialContent, onChange, placeholder, co
           <span className="text-sm text-muted-foreground">Loading editor...</span>
         </div>
       </div>
+    );
+  }
+
+  // Use fallback editor if Slate.js has failed
+  if (useFallback) {
+    return (
+      <FallbackEditor
+        ref={ref}
+        initialContent={initialContent}
+        onChange={onChange}
+        placeholder={placeholder}
+        {...props}
+      />
     );
   }
 

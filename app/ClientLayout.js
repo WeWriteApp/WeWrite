@@ -1,7 +1,7 @@
 "use client";
 
-// Import Slate patches early to ensure they're applied before any Slate components load
-import "./utils/slate-patch";
+// Import aggressive Slate override to completely replace problematic functions
+import "./utils/slate-override";
 
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { AuthProvider } from "./providers/AuthProvider";
