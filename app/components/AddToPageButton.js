@@ -56,8 +56,8 @@ const AddToPageButton = ({
         setIsOpen(false);
         setSelectedPage(null);
 
-        // Redirect to the edit state of the target page
-        router.push(`/${selectedPage.id}?edit=true`);
+        // Redirect to the target page (will load in view mode with click-to-edit functionality)
+        router.push(`/${selectedPage.id}`);
       } else {
         toast.error("Failed to add page. Please try again.");
       }
