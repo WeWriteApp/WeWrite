@@ -3,6 +3,7 @@
  *
  * Prevents cascading failures by temporarily disabling operations
  * that are likely to fail, allowing the system to recover gracefully.
+ * Test comment for Vercel build verification
  */
 
 const CIRCUIT_BREAKER_KEY = 'circuit_breaker_state';
