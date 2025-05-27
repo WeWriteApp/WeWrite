@@ -1860,43 +1860,20 @@ export const searchUsers = async (searchQuery, limitCount = 10) => {
     // Import limit function from Firestore
     const { limit } = await import('firebase/firestore');
 
-    // Search by username (case insensitive)
-    const usernameQuery = query(
-      usersRef,
-      where("usernameLower", ">=", searchQuery.toLowerCase()),
-      where("usernameLower", "<=", searchQuery.toLowerCase() + "\uf8ff"),
-      limit(limitCount)
-    );
-
-    // Search by email (case insensitive)
-    const emailQuery = query(
-      usersRef,
-      where("email", ">=", searchQuery.toLowerCase()),
-      where("email", "<=", searchQuery.toLowerCase() + "\uf8ff"),
-      limit(limitCount)
-    );
-
-    // Execute both queries
-    const [usernameResults, emailResults] = await Promise.all([
-      getDocs(usernameQuery),
-      getDocs(emailQuery)
-    ]);
-
-    // Combine and deduplicate results
+    const searchLower = searchQuery.toLowerCase();
     const results = new Map();
 
-    usernameResults.forEach(doc => {
-      const userData = doc.data();
-      results.set(doc.id, {
-        id: doc.id,
-        username: userData.username || "Anonymous",
-        email: userData.email || "",
-        photoURL: userData.photoURL || null
-      });
-    });
+    // Search by usernameLower field (for users who have it)
+    try {
+      const usernameQuery = query(
+        usersRef,
+        where("usernameLower", ">=", searchLower),
+        where("usernameLower", "<=", searchLower + "\uf8ff"),
+        limit(limitCount)
+      );
 
-    emailResults.forEach(doc => {
-      if (!results.has(doc.id)) {
+      const usernameResults = await getDocs(usernameQuery);
+      usernameResults.forEach(doc => {
         const userData = doc.data();
         results.set(doc.id, {
           id: doc.id,
@@ -1904,10 +1881,88 @@ export const searchUsers = async (searchQuery, limitCount = 10) => {
           email: userData.email || "",
           photoURL: userData.photoURL || null
         });
+      });
+    } catch (error) {
+      console.warn("Error searching by usernameLower field:", error);
+    }
+
+    // Search by email (case insensitive)
+    try {
+      const emailQuery = query(
+        usersRef,
+        where("email", ">=", searchLower),
+        where("email", "<=", searchLower + "\uf8ff"),
+        limit(limitCount)
+      );
+
+      const emailResults = await getDocs(emailQuery);
+      emailResults.forEach(doc => {
+        if (!results.has(doc.id)) {
+          const userData = doc.data();
+          results.set(doc.id, {
+            id: doc.id,
+            username: userData.username || "Anonymous",
+            email: userData.email || "",
+            photoURL: userData.photoURL || null
+          });
+        }
+      });
+    } catch (error) {
+      console.warn("Error searching by email field:", error);
+    }
+
+    // If we have few results, do a broader search by fetching more users and filtering client-side
+    // This helps find users who don't have usernameLower field or have indexing issues
+    if (results.size < 3) {
+      try {
+        const broadQuery = query(usersRef, limit(100));
+        const broadResults = await getDocs(broadQuery);
+
+        broadResults.forEach(doc => {
+          if (!results.has(doc.id)) {
+            const userData = doc.data();
+            const username = userData.username || "";
+            const email = userData.email || "";
+
+            // Client-side filtering for partial matches
+            if (username.toLowerCase().includes(searchLower) ||
+                email.toLowerCase().includes(searchLower)) {
+              results.set(doc.id, {
+                id: doc.id,
+                username: username || "Anonymous",
+                email: email,
+                photoURL: userData.photoURL || null
+              });
+            }
+          }
+        });
+      } catch (error) {
+        console.warn("Error in broad search:", error);
       }
+    }
+
+    // Sort results by relevance (exact matches first, then partial matches)
+    const sortedResults = Array.from(results.values()).sort((a, b) => {
+      const aUsernameExact = a.username.toLowerCase() === searchLower;
+      const bUsernameExact = b.username.toLowerCase() === searchLower;
+      const aEmailExact = a.email.toLowerCase() === searchLower;
+      const bEmailExact = b.email.toLowerCase() === searchLower;
+
+      // Exact matches first
+      if (aUsernameExact || aEmailExact) return -1;
+      if (bUsernameExact || bEmailExact) return 1;
+
+      // Then by username starts with
+      const aUsernameStarts = a.username.toLowerCase().startsWith(searchLower);
+      const bUsernameStarts = b.username.toLowerCase().startsWith(searchLower);
+      if (aUsernameStarts && !bUsernameStarts) return -1;
+      if (bUsernameStarts && !aUsernameStarts) return 1;
+
+      // Finally alphabetical
+      return a.username.localeCompare(b.username);
     });
 
-    return Array.from(results.values());
+    return sortedResults.slice(0, limitCount);
   } catch (error) {
     console.error("Error searching users:", error);
     return [];

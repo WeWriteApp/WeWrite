@@ -10,7 +10,8 @@ export type FeatureFlag =
   | 'calendar_view'
   | 'groups'
   | 'notifications'
-  | 'link_functionality';
+  | 'link_functionality'
+  | 'daily_notes';
 
 // Define admin user IDs
 const ADMIN_USER_IDS = [
@@ -87,6 +88,10 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
   }
 };
 
+// Cache for feature flags to prevent excessive database calls
+const featureFlagCache = new Map<string, { value: boolean; timestamp: number; userEmail: string | null }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 /**
  * React hook to check if a feature is enabled
  * @param flag - The feature flag to check
@@ -98,18 +103,37 @@ export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | n
  */
 export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): boolean => {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
 
   // Memoize the flag and userEmail to prevent unnecessary effect re-runs
   const memoizedFlag = useMemo(() => flag, [flag]);
   const memoizedUserEmail = useMemo(() => userEmail, [userEmail]);
 
   useEffect(() => {
-    // Initial check
+    // Check cache first
+    const cacheKey = `${memoizedFlag}-${memoizedUserEmail || 'anonymous'}`;
+    const cached = featureFlagCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < CACHE_DURATION && cached.userEmail === memoizedUserEmail) {
+      console.log(`[DEBUG] Using cached value for ${memoizedFlag}: ${cached.value}`);
+      setIsEnabled(cached.value);
+      setLastUpdate(cached.timestamp);
+    }
+
+    // Initial check (always run to ensure fresh data)
     const checkFeatureFlag = async () => {
       try {
         console.log(`[DEBUG] Checking feature flag ${memoizedFlag} for user ${memoizedUserEmail || 'unknown'}`);
         const enabled = await isFeatureEnabled(memoizedFlag, memoizedUserEmail);
         console.log(`[DEBUG] useFeatureFlag hook for ${memoizedFlag}, user ${memoizedUserEmail || 'unknown'}: ${enabled}`);
+
+        // Update cache
+        featureFlagCache.set(cacheKey, {
+          value: enabled,
+          timestamp: now,
+          userEmail: memoizedUserEmail
+        });
 
         // Enhanced debugging for groups flag
         if (memoizedFlag === 'groups') {
@@ -117,6 +141,7 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
         }
 
         setIsEnabled(enabled);
+        setLastUpdate(now);
       } catch (error) {
         console.error(`[DEBUG] Error in useFeatureFlag for ${memoizedFlag}:`, error);
         // Default all features to OFF on error for consistency
@@ -151,6 +176,23 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
             const flagsData = snapshot.data();
             const isEnabledInDb = flagsData[memoizedFlag] === true;
 
+            // Invalidate cache for this flag for all users
+            const keysToDelete: string[] = [];
+            featureFlagCache.forEach((_, key) => {
+              if (key.startsWith(`${memoizedFlag}-`)) {
+                keysToDelete.push(key);
+              }
+            });
+            keysToDelete.forEach(key => featureFlagCache.delete(key));
+
+            // Update cache with new value
+            const cacheKey = `${memoizedFlag}-${memoizedUserEmail || 'anonymous'}`;
+            featureFlagCache.set(cacheKey, {
+              value: isEnabledInDb,
+              timestamp: now,
+              userEmail: memoizedUserEmail
+            });
+
             // Enhanced debugging for groups flag
             if (memoizedFlag === 'groups') {
               console.log(`[DEBUG] GROUPS FLAG LISTENER - Raw value in database:`, flagsData[memoizedFlag]);
@@ -159,9 +201,11 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
 
             console.log(`Feature flag ${memoizedFlag} changed in database: ${isEnabledInDb}`);
             setIsEnabled(isEnabledInDb);
+            setLastUpdate(now);
           } else {
             // If document doesn't exist, default all features to disabled for consistency
             setIsEnabled(false);
+            setLastUpdate(now);
           }
         });
       } catch (error) {

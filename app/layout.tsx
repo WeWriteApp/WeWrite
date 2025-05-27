@@ -16,6 +16,7 @@ import { ToastProvider } from "./providers/ToastProvider"
 import ErrorBoundary from "./components/ErrorBoundary"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
+import FeatureFlagListener from "./components/FeatureFlagListener"
 
 const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
@@ -133,11 +134,13 @@ export default function RootLayout({
                               <ToastProvider>
                                 <PillStyleProvider>
                                   <PWAProvider>
-                                    <ErrorBoundary name="layout" resetOnPropsChange={true}>
-                                      <ClientLayout>
-                                        {children}
-                                      </ClientLayout>
-                                    </ErrorBoundary>
+                                    <FeatureFlagListener>
+                                      <ErrorBoundary name="layout" resetOnPropsChange={true}>
+                                        <ClientLayout>
+                                          {children}
+                                        </ClientLayout>
+                                      </ErrorBoundary>
+                                    </FeatureFlagListener>
                                     <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
                                       <Analytics debug={process.env.NODE_ENV === 'development'} />
                                     </ErrorBoundary>

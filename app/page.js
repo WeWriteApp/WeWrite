@@ -29,9 +29,15 @@ const RandomPagesOptimized = dynamic(() => import("./components/RandomPagesOptim
   ssr: false
 });
 
+const DailyNotesSection = dynamic(() => import("./components/daily-notes/DailyNotesSection"), {
+  loading: () => <div className="h-32 bg-muted/50 rounded-2xl animate-pulse mx-6 mb-8" />,
+  ssr: false
+});
+
 import { AuthContext } from "./providers/AuthProvider";
 import { DataContext } from "./providers/DataProvider";
 import { useRouter } from "next/navigation";
+import { useFeatureFlag } from "./utils/feature-flags";
 import Link from "next/link";
 import { Button } from "./components/ui/button";
 import { Plus, FileText, Loader, Clock, Flame, Users, Trophy, RefreshCw, Shuffle } from "lucide-react";
@@ -59,6 +65,9 @@ const Home = React.memo(function Home() {
   const [showLanding, setShowLanding] = useState(true);
   const [loadingRetryCount, setLoadingRetryCount] = useState(0);
   const [initialLoadStartTime, setInitialLoadStartTime] = useState(null);
+
+  // Feature flag for daily notes
+  const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email);
 
   // Memoized loading state to prevent unnecessary re-renders
   const isLoading = useMemo(() => dataLoading || authLoading, [dataLoading, authLoading]);
@@ -165,6 +174,11 @@ const Home = React.memo(function Home() {
           <div className="w-full mb-6">
             <SearchButton placeholder="Search all pages..." />
           </div>
+
+          {/* Daily Notes Section - Feature flagged */}
+          {dailyNotesEnabled && (
+            <DailyNotesSection />
+          )}
 
           {/* 1. Recent Activity - High priority, loads first */}
           <StickySection

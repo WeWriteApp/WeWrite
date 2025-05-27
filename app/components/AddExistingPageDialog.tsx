@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Search, Plus, FileText, Lock, Globe } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { AuthContext } from "../providers/AuthProvider";
 import { rtdb } from "../firebase/rtdb";
 import { ref, get, update } from "firebase/database";
@@ -235,52 +235,36 @@ export default function AddExistingPageDialog({
               <p className="text-muted-foreground">No pages found</p>
             </div>
           ) : (
-            <div className="space-y-2 p-2">
+            <div className="space-y-1 p-2">
               {filteredPages.map(page => (
                 <div
                   key={page.id}
                   className={cn(
-                    interactiveCard("flex items-center gap-3 cursor-pointer"),
-                    selectedPages.includes(page.id) && "border-primary bg-primary/5"
+                    "flex items-center gap-3 cursor-pointer p-2 rounded-md border transition-colors hover:bg-muted/50",
+                    selectedPages.includes(page.id) ? "border-primary bg-primary/5" : "border-transparent"
                   )}
                   onClick={() => togglePageSelection(page.id)}
                 >
-                  <div className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full",
-                    "bg-primary/10 text-primary"
-                  )}>
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div className="flex-grow">
-                    <h3 className="font-medium">{page.title}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex-grow min-w-0">
+                    <h3 className="font-medium text-sm truncate">{page.title}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>
                         {new Date(page.lastModified || page.createdAt).toLocaleDateString()}
                       </span>
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        {page.isPublic ? (
-                          <>
-                            <Globe className="h-3 w-3" />
-                            <span>Public</span>
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="h-3 w-3" />
-                            <span>Private</span>
-                          </>
-                        )}
-                      </Badge>
+                      <span className="text-xs">
+                        {page.isPublic ? "Public" : "Private"}
+                      </span>
                       {page.groupName && (
-                        <span className="text-xs">in {page.groupName}</span>
+                        <span className="text-xs truncate">in {page.groupName}</span>
                       )}
                     </div>
                   </div>
                   <div className={cn(
-                    "w-5 h-5 rounded-full border border-primary flex items-center justify-center",
+                    "w-4 h-4 rounded-full border border-primary flex items-center justify-center flex-shrink-0",
                     selectedPages.includes(page.id) ? "bg-primary" : "bg-transparent"
                   )}>
                     {selectedPages.includes(page.id) && (
-                      <div className="w-2 h-2 rounded-full bg-white" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
                     )}
                   </div>
                 </div>
