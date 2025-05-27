@@ -24,6 +24,8 @@ import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-f
 import { validateLink } from '../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import TypeaheadSearch from "./TypeaheadSearch";
+// Import slate patches to handle DOM node resolution errors
+import "../utils/slate-patch";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {

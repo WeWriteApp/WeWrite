@@ -1,10 +1,7 @@
 "use client";
 import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
-import dynamic from "next/dynamic";
-
-// Import the main editor dynamically to avoid SSR issues
-const Editor = dynamic(() => import("./Editor"), { ssr: false });
+import ClientOnlyEditor from "./ClientOnlyEditor";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Globe, Lock, Link, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
@@ -76,13 +73,6 @@ const PageEditor = ({
   isReply = false,
   replyToId = null
 }) => {
-  // Client-side only check to prevent SSR issues
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   // Initialize editor with initialContent
   const [currentEditorValue, setCurrentEditorValue] = useState(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
@@ -580,19 +570,13 @@ const PageEditor = ({
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
       <div className="w-full max-w-none">
-        {isClient ? (
-          <Editor
-            ref={editorRef}
-            initialContent={currentEditorValue}
-            onChange={handleContentChange}
-            placeholder="Start typing..."
-            contentType="wiki"
-          />
-        ) : (
-          <div className="flex justify-center py-8">
-            <div className="loader loader-md"></div>
-          </div>
-        )}
+        <ClientOnlyEditor
+          ref={editorRef}
+          initialContent={currentEditorValue}
+          onChange={handleContentChange}
+          placeholder="Start typing..."
+          contentType="wiki"
+        />
       </div>
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
