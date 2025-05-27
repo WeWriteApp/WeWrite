@@ -18,7 +18,7 @@ import { createReplyAttribution } from "../utils/linkUtils";
 import MapEditor from "./MapEditor";
 
 import { toast } from "./ui/use-toast";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../utils/feature-flags.ts";
 import DisabledLinkModal from "./DisabledLinkModal";
 
 // Safely check if ReactEditor methods exist before using them

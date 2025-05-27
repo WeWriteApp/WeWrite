@@ -17,6 +17,12 @@ const findBacklinksAsync = async (pageId, limit) => {
   return findBacklinks(pageId, limit);
 };
 
+// Import navigation tracking functions
+const getNavigationBacklinksAsync = async (pageId) => {
+  const { getNavigationBacklinks } = await import('../utils/navigationTracking');
+  return getNavigationBacklinks(pageId);
+};
+
 // Local storage key for caching "no backlinks" state
 const NO_BACKLINKS_CACHE_KEY = 'wewrite_no_backlinks_cache';
 const MAX_RETRIES = 3; // Maximum number of consecutive empty results before stopping
@@ -104,8 +110,15 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         setMaxRetriesReached(false);
       }
 
-      // Check if we've already determined this page has no backlinks (from cache)
-      if (getNoBacklinksCache(page.id)) {
+      // CRITICAL FIX: Skip cache for fresh navigation to ensure real-time updates
+      // Check if this is a fresh navigation by looking at navigation history
+      const isFromNavigation = typeof window !== 'undefined' &&
+        window.performance &&
+        window.performance.navigation &&
+        window.performance.navigation.type === 1; // TYPE_NAVIGATE
+
+      // Only use cache if this is not from fresh navigation
+      if (!isFromNavigation && getNoBacklinksCache(page.id)) {
         console.log(`Using cached "no backlinks" state for page ${page.id}`);
         setBacklinks([]);
         setIsLoading(false);
@@ -113,20 +126,55 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         return;
       }
 
-      // If we've already reached max retries, don't fetch again
-      if (maxRetriesReached) {
+      // If we've already reached max retries and this isn't from navigation, don't fetch again
+      if (maxRetriesReached && !isFromNavigation) {
         setIsLoading(false);
         return;
       }
 
       try {
-        // Use the dynamically imported function to find backlinks
-        const backlinkPages = await findBacklinksAsync(page.id, maxPages * 2);
+        // CRITICAL FIX: Combine content-based backlinks with navigation-based backlinks
+        console.log(`Fetching backlinks for page ${page.id} using both content and navigation data`);
+
+        // Get content-based backlinks (traditional method)
+        const contentBacklinks = await findBacklinksAsync(page.id, maxPages * 2);
+
+        // Get navigation-based backlinks (new method for real-time updates)
+        const navigationBacklinkIds = await getNavigationBacklinksAsync(page.id);
+
+        // Fetch page data for navigation backlinks
+        const navigationBacklinks = [];
+        if (navigationBacklinkIds.length > 0) {
+          const { getPageById } = await import('../firebase/database');
+
+          for (const pageId of navigationBacklinkIds) {
+            try {
+              const pageData = await getPageById(pageId);
+              if (pageData && pageData.title) {
+                navigationBacklinks.push(pageData);
+              }
+            } catch (error) {
+              console.warn(`Could not fetch navigation backlink page ${pageId}:`, error);
+            }
+          }
+        }
+
+        // Combine and deduplicate backlinks
+        const allBacklinks = [...contentBacklinks];
+
+        // Add navigation backlinks that aren't already in content backlinks
+        navigationBacklinks.forEach(navBacklink => {
+          if (!allBacklinks.find(existing => existing.id === navBacklink.id)) {
+            allBacklinks.push(navBacklink);
+          }
+        });
+
+        console.log(`Found ${contentBacklinks.length} content backlinks and ${navigationBacklinks.length} navigation backlinks for page ${page.id}`);
 
         // Filter out pages that are already linked in the content
         const filteredBacklinks = linkedPageIds && linkedPageIds.length > 0
-          ? backlinkPages.filter(backlink => !linkedPageIds.includes(backlink.id))
-          : backlinkPages;
+          ? allBacklinks.filter(backlink => !linkedPageIds.includes(backlink.id))
+          : allBacklinks;
 
         // Limit to the requested number of pages after filtering
         const limitedBacklinks = filteredBacklinks.slice(0, maxPages);

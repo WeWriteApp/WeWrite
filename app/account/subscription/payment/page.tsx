@@ -15,7 +15,7 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import { useTheme } from '../../../providers/ThemeProvider';
-import { useFeatureFlag } from '../../../utils/feature-flags';
+import { useFeatureFlag } from '../../../utils/feature-flags.ts';
 import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
 
 // Initialize Stripe

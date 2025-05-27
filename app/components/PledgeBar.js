@@ -8,7 +8,7 @@ import { getPageStats, getDocById } from "../firebase/database";
 import { Button } from './ui/button';
 import { Eye, Users, DollarSign, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from './ui/use-toast';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { openExternalLink } from '../utils/pwa-detection';
 import SubscriptionActivationModal from './SubscriptionActivationModal';
 import SupportUsModal from './SupportUsModal';

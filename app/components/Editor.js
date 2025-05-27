@@ -17,7 +17,7 @@ import { withHistory } from "slate-history";
 import { ExternalLink, Link as LinkIcon } from "lucide-react";
 import { useLineSettings } from '../contexts/LineSettingsContext';
 import { usePillStyle } from '../contexts/PillStyleContext';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { AuthContext } from '../providers/AuthProvider';
 import DisabledLinkModal from './DisabledLinkModal';
 import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-fix";

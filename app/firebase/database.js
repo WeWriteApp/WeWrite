@@ -1305,19 +1305,19 @@ export async function findBacklinks(targetPageId, limit = 10) {
 
     console.log(`Finding backlinks for page ${normalizedTargetId}`);
 
-    // Skip cache for now to ensure fresh results during debugging
-    // We'll re-enable caching once the feature is working correctly
+    // CRITICAL FIX: Disable cache completely to ensure real-time backlink updates
+    // This fixes the issue where recent navigation doesn't appear in "What Links Here"
 
     // Dynamically import Firestore functions to avoid SSR issues
     const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
 
     // Get all pages from Firestore, ordered by last modified date
-    // Increase the limit to ensure we don't miss any backlinks
+    // CRITICAL FIX: Increase limit significantly to catch recent navigation links
     const pagesRef = collection(db, 'pages');
     const pagesQuery = query(
       pagesRef,
       orderBy('lastModified', 'desc'),
-      firestoreLimit(200) // Increased limit for better coverage
+      firestoreLimit(500) // Significantly increased limit for real-time backlink detection
     );
 
     const pagesSnapshot = await getDocs(pagesQuery);

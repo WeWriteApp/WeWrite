@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { DrawerContext } from "../providers/DrawerProvider";
 import SubscriptionsTable from "./SubscriptionsTable";
 import { X, Pencil, Eye, Check, Minus, Plus, DollarSign } from "lucide-react";
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { useAuth } from '../providers/AuthProvider';
 
 const DonateBar = () => {

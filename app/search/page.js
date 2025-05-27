@@ -205,18 +205,37 @@ const SearchPage = React.memo(() => {
   // Perform initial search if there's a query in the URL
   // Use a ref to track if we've performed the initial search
   const hasPerformedInitialSearch = useRef(false);
+  const initialSearchAttempts = useRef(0);
+  const maxInitialSearchAttempts = 3;
 
   useEffect(() => {
-    // Only perform initial search when:
-    // 1. We have a query in the URL
-    // 2. Authentication loading is complete
-    // 3. We haven't already performed the initial search
-    if (initialQuery && !authLoading && !hasPerformedInitialSearch.current) {
-      console.log('Performing initial search for:', initialQuery, 'with userId:', userId || 'public');
-      hasPerformedInitialSearch.current = true;
-      performSearch(initialQuery);
+    // CRITICAL FIX: Perform initial search immediately if there's a query
+    // Don't wait for authentication - the search API handles unauthenticated users
+    if (initialQuery && !hasPerformedInitialSearch.current && initialSearchAttempts.current < maxInitialSearchAttempts) {
+      console.log('Performing initial search for:', initialQuery, 'attempt:', initialSearchAttempts.current + 1, 'with userId:', userId || 'public');
+
+      initialSearchAttempts.current += 1;
+
+      // Perform the search with retry logic
+      performSearch(initialQuery).then(() => {
+        console.log('Initial search completed successfully');
+        hasPerformedInitialSearch.current = true;
+      }).catch((error) => {
+        console.error('Initial search failed, attempt', initialSearchAttempts.current, ':', error);
+
+        // If we haven't reached max attempts, try again after a short delay
+        if (initialSearchAttempts.current < maxInitialSearchAttempts) {
+          setTimeout(() => {
+            // Reset the flag to allow retry
+            hasPerformedInitialSearch.current = false;
+          }, 1000 * initialSearchAttempts.current); // Exponential backoff
+        } else {
+          console.error('Max initial search attempts reached, giving up');
+          hasPerformedInitialSearch.current = true;
+        }
+      });
     }
-  }, [initialQuery, performSearch, userId, authLoading]);
+  }, [initialQuery, performSearch, userId]); // Removed authLoading dependency
 
   // Memoized callback functions for SearchInput component
   const handleSearch = useCallback((searchTerm) => {

@@ -40,14 +40,14 @@ export const useSearchState = (userId, userGroups) => {
       setIsLoading(false);
       setCurrentQuery('');
       lastSearchRef.current = '';
-      return;
+      return Promise.resolve(); // Return resolved promise for consistency
     }
 
     const trimmedSearchTerm = searchTerm.trim();
 
     // Prevent duplicate searches
     if (trimmedSearchTerm === lastSearchRef.current) {
-      return;
+      return Promise.resolve(); // Return resolved promise for consistency
     }
 
     lastSearchRef.current = trimmedSearchTerm;
@@ -66,7 +66,9 @@ export const useSearchState = (userId, userGroups) => {
       console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
 
       const response = await fetch(queryUrl, {
-        signal: abortControllerRef.current.signal
+        signal: abortControllerRef.current.signal,
+        // Add timeout to prevent hanging requests
+        timeout: 10000
       });
 
       if (!response.ok) {
@@ -79,6 +81,7 @@ export const useSearchState = (userId, userGroups) => {
 
       if (data.error) {
         console.warn('Search API returned error:', data.error);
+        // Don't throw on API errors, just log them and continue with empty results
       }
 
       // Process the results to ensure usernames are properly set
@@ -117,10 +120,13 @@ export const useSearchState = (userId, userGroups) => {
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Search aborted:', trimmedSearchTerm);
-        return;
+        return Promise.resolve(); // Return resolved promise for consistency
       }
       console.error('Error searching:', error);
       setResults({ pages: [], users: [], groups: [] });
+
+      // Re-throw the error so the caller can handle it (for retry logic)
+      throw error;
     } finally {
       setIsLoading(false);
     }

@@ -13,7 +13,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import EmptyContentState from "./EmptyContentState";
 import { GroupAboutSkeleton } from "./ui/page-skeleton";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../utils/feature-flags.ts";
 import DisabledLinkModal from "./DisabledLinkModal";
 
 // Import the unified editor dynamically to avoid SSR issues

@@ -15,7 +15,7 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { SupporterIcon } from './SupporterIcon';
 import { useAuth } from '../providers/AuthProvider';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 
 interface TierModalProps {
   children: React.ReactNode;

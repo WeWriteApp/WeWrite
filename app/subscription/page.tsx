@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { createCheckoutSession } from '../services/stripeService';
 import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { useSwipeable } from 'react-swipeable';
 import { CustomAmountModal } from '../components/CustomAmountModal';
 import { loadStripe } from '@stripe/stripe-js';

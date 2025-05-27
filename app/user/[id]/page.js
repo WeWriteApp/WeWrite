@@ -10,7 +10,7 @@ import SingleProfileView from '../../components/SingleProfileView';
 import { useTheme } from 'next-themes';
 import { db } from '../../firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
-import { useFeatureFlag } from '../../utils/feature-flags';
+import { useFeatureFlag } from '../../utils/feature-flags.ts';
 import { useAuth } from '../../providers/AuthProvider';
 
 export default function UserPage({ params }) {

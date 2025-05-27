@@ -14,7 +14,7 @@ import { Sparkline } from './ui/sparkline';
 import FollowButton from './FollowButton';
 import { getPageFollowerCount } from '../firebase/follows';
 import PageMetadataMap from './PageMetadataMap';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 
 // MetadataItem component for the card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
