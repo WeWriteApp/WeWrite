@@ -193,7 +193,7 @@ IsolatedSearchInput.displayName = 'IsolatedSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
-  const { user } = useContext(AuthContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
@@ -222,11 +222,20 @@ const SearchPage = React.memo(() => {
 
 
   // Perform initial search if there's a query in the URL
+  // Use a ref to track if we've performed the initial search
+  const hasPerformedInitialSearch = useRef(false);
+
   useEffect(() => {
-    if (initialQuery) {
+    // Only perform initial search when:
+    // 1. We have a query in the URL
+    // 2. Authentication loading is complete
+    // 3. We haven't already performed the initial search
+    if (initialQuery && !authLoading && !hasPerformedInitialSearch.current) {
+      console.log('Performing initial search for:', initialQuery, 'with userId:', userId || 'public');
+      hasPerformedInitialSearch.current = true;
       performSearch(initialQuery);
     }
-  }, [initialQuery, performSearch]); // Add performSearch dependency
+  }, [initialQuery, performSearch, userId, authLoading]);
 
   // Memoized callback functions for SearchInput component - NO URL UPDATES HERE
   const handleSearch = useCallback((searchTerm) => {

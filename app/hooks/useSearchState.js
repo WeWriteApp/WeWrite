@@ -58,14 +58,11 @@ export const useSearchState = (userId, userGroups) => {
     abortControllerRef.current = new AbortController();
 
     try {
-      if (!stableUserId.current) {
-        console.log(`User not authenticated, showing empty results for: "${trimmedSearchTerm}"`);
-        setResults({ pages: [], users: [], groups: [] });
-        setIsLoading(false);
-        return;
-      }
+      // Allow searches even without authentication for public content
+      const searchUserId = stableUserId.current || null;
+      console.log(`Performing search for: "${trimmedSearchTerm}" with userId:`, searchUserId);
 
-      const queryUrl = `/api/search?userId=${stableUserId.current}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${stableUserGroups.current}&useScoring=true`;
+      const queryUrl = `/api/search?userId=${searchUserId || ''}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${stableUserGroups.current || []}&useScoring=true`;
       console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
 
       const response = await fetch(queryUrl, {
