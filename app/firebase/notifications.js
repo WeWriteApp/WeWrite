@@ -323,3 +323,140 @@ export const createAppendNotification = async (
     targetPageTitle
   });
 };
+
+/**
+ * Delete all notifications related to a specific page
+ * This function is called when a page is deleted to clean up orphaned notifications
+ *
+ * @param {string} pageId - The ID of the page that was deleted
+ * @returns {Promise<number>} - The number of notifications deleted
+ */
+export const deleteNotificationsForPage = async (pageId) => {
+  try {
+    console.log(`Starting notification cleanup for deleted page: ${pageId}`);
+
+    if (!pageId) {
+      console.warn('deleteNotificationsForPage called with empty pageId');
+      return 0;
+    }
+
+    // Get all users to check their notifications
+    const usersRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersRef);
+
+    let totalDeleted = 0;
+    let totalBatches = 0;
+
+    // Process users in smaller chunks to avoid memory issues
+    const userChunks = [];
+    const chunkSize = 50; // Process 50 users at a time
+
+    for (let i = 0; i < usersSnapshot.docs.length; i += chunkSize) {
+      userChunks.push(usersSnapshot.docs.slice(i, i + chunkSize));
+    }
+
+    for (const userChunk of userChunks) {
+      const batch = writeBatch(db);
+      let batchCount = 0;
+      const maxBatchSize = 450; // Leave some buffer for safety
+
+      // Process each user's notifications in this chunk
+      for (const userDoc of userChunk) {
+        const userId = userDoc.id;
+        const notificationsRef = collection(db, 'users', userId, 'notifications');
+
+        try {
+          // Query for notifications that reference the deleted page as targetPageId
+          const targetPageQuery = query(
+            notificationsRef,
+            where('targetPageId', '==', pageId)
+          );
+
+          // Query for notifications that reference the deleted page as sourcePageId
+          const sourcePageQuery = query(
+            notificationsRef,
+            where('sourcePageId', '==', pageId)
+          );
+
+          // Execute both queries
+          const [targetPageSnapshot, sourcePageSnapshot] = await Promise.all([
+            getDocs(targetPageQuery),
+            getDocs(sourcePageQuery)
+          ]);
+
+          // Combine results and remove duplicates
+          const notificationsToDelete = new Map();
+
+          targetPageSnapshot.docs.forEach(doc => {
+            notificationsToDelete.set(doc.id, doc);
+          });
+
+          sourcePageSnapshot.docs.forEach(doc => {
+            notificationsToDelete.set(doc.id, doc);
+          });
+
+          // Skip if no notifications to delete for this user
+          if (notificationsToDelete.size === 0) {
+            continue;
+          }
+
+          let unreadCount = 0;
+
+          // Add deletions to batch
+          for (const [notificationId, notificationDoc] of notificationsToDelete) {
+            const notificationData = notificationDoc.data();
+
+            // Count unread notifications
+            if (!notificationData.read) {
+              unreadCount++;
+            }
+
+            // Delete the notification
+            batch.delete(notificationDoc.ref);
+            batchCount++;
+            totalDeleted++;
+
+            console.log(`Queued for deletion: ${notificationData.type} notification for user ${userId}`);
+
+            // Check if we're approaching batch limit
+            if (batchCount >= maxBatchSize) {
+              break;
+            }
+          }
+
+          // Update unread count if there were unread notifications
+          if (unreadCount > 0) {
+            const userRef = doc(db, 'users', userId);
+            batch.update(userRef, {
+              unreadNotificationsCount: increment(-unreadCount)
+            });
+            batchCount++;
+          }
+
+          // Break if batch is full
+          if (batchCount >= maxBatchSize) {
+            break;
+          }
+
+        } catch (userError) {
+          console.error(`Error processing notifications for user ${userId}:`, userError);
+          // Continue with other users
+        }
+      }
+
+      // Commit batch if there are operations
+      if (batchCount > 0) {
+        await batch.commit();
+        totalBatches++;
+        console.log(`Committed batch ${totalBatches} with ${batchCount} operations`);
+      }
+    }
+
+    console.log(`Notification cleanup completed. Deleted ${totalDeleted} notifications for page ${pageId} across ${totalBatches} batches`);
+    return totalDeleted;
+
+  } catch (error) {
+    console.error('Error deleting notifications for page:', error);
+    throw error;
+  }
+};

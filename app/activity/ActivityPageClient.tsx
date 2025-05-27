@@ -194,9 +194,9 @@ export default function ActivityPageClient({
 
       {/* Activity grid with data - Dynamic height on mobile, fixed on larger screens */}
       {!isLoading && hasActivities && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-4">
           {activitiesToDisplay.map((activity, index) => (
-            <div key={`${activity.pageId || 'unknown'}-${index}`} className="sm:h-[200px]">
+            <div key={`${activity.pageId || 'unknown'}-${index}`} className="md:h-[200px]">
               <ActivityCard
                 activity={activity}
                 isCarousel={false}

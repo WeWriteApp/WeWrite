@@ -53,7 +53,7 @@ export default function UnsavedChangesDialog({
         </p>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-3 w-full mt-4">
+        <div className="flex flex-col sm:flex-row justify-center gap-3 w-full mt-4">
           <Button
             variant="outline"
             onClick={onLeaveWithoutSaving}

@@ -326,7 +326,7 @@ export default function HomeGroupsSection() {
       </div>
 
       {/* Mobile view (smaller than md): Card grid layout */}
-      <div className="md:hidden grid grid-cols-1 gap-4">
+      <div className="md:hidden grid grid-cols-1 gap-6">
         {displayGroups.map((group) => (
           <div
             key={group.id}
@@ -356,7 +356,7 @@ export default function HomeGroupsSection() {
             }}
             style={{ cursor: 'pointer' }}
           >
-            <div className="p-4">
+            <div className="p-5">
               <div className="mb-4">
                 <h3 className="text-base font-medium">
                   <div className="flex items-center">

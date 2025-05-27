@@ -351,7 +351,18 @@
   border: 1px solid hsl(var(--border-theme-medium));
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
   overflow: hidden;
-  padding: 1rem; /* p-4 */
+  /* Mobile-first padding with better spacing */
+  padding: 1.25rem; /* p-5 on mobile */
+  /* Ensure proper spacing between cards on mobile */
+  margin-bottom: 1.5rem; /* mb-6 on mobile */
+}
+
+/* Desktop card styling adjustments */
+@media (min-width: 768px) {
+  .wewrite-card {
+    padding: 1rem; /* p-4 on desktop */
+    margin-bottom: 0; /* Remove bottom margin on desktop (handled by grid gap) */
+  }
 }
 
 /* Dark mode adjustments for cards */
@@ -395,6 +406,59 @@ html[data-high-contrast="true"] [class*="shadow-md"][class*="border"] {
 html[data-high-contrast="true"] .border-b,
 html[data-high-contrast="true"] .border-border {
   border-color: hsl(var(--border)) !important;
+}
+
+/* Mobile-specific card grid improvements */
+@media (max-width: 767px) {
+  /* Standardized spacing between cards in grid layouts on mobile */
+  .grid-cols-1 {
+    gap: 1.5rem !important; /* 24px gap on mobile */
+  }
+
+  /* Standardized spacing for space-y utilities on mobile */
+  .space-y-3 > * + *,
+  .space-y-4 > * + *,
+  .space-y-6 > * + * {
+    margin-top: 1.5rem !important; /* 24px gap to match grid spacing */
+  }
+
+  /* Remove height constraints on mobile for better content flow */
+  .mobile-auto-height {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  /* Better card padding on mobile */
+  .mobile-card-padding {
+    padding: 1.25rem !important; /* 20px padding on mobile */
+  }
+
+  /* Standardized bottom margin for individual cards */
+  .mobile-card-spacing {
+    margin-bottom: 1.5rem !important; /* 24px bottom margin */
+  }
+}
+
+/* Utility class for consistent mobile card spacing */
+.mobile-card-consistent {
+  /* Apply consistent spacing on mobile */
+}
+
+@media (max-width: 767px) {
+  .mobile-card-consistent {
+    margin-bottom: 1.5rem !important; /* 24px spacing between cards */
+    padding: 1.25rem !important; /* 20px internal padding */
+  }
+
+  /* For grid containers with mobile-card-consistent children */
+  .mobile-card-consistent-grid {
+    gap: 1.5rem !important; /* 24px gap between cards */
+  }
+
+  /* For space-y containers with mobile-card-consistent children */
+  .mobile-card-consistent-space > * + * {
+    margin-top: 1.5rem !important; /* 24px gap between cards */
+  }
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

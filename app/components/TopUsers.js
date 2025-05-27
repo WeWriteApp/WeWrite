@@ -637,7 +637,7 @@ const TopUsers = () => {
       {loading && [...Array(8)].map((_, i) => (
         <div
           key={i}
-          className="md:hidden flex items-center justify-between p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-4"
+          className="md:hidden flex items-center justify-between p-5 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-6"
           style={{ animationDelay: `${i * 50}ms` }}
         >
           <div className="flex flex-col gap-2 min-w-0 flex-1">
@@ -687,7 +687,7 @@ const TopUsers = () => {
         <div
           key={user.id}
           onClick={() => window.location.href = `/user/${user.id}`}
-          className="md:hidden flex items-center justify-between p-4 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-4"
+          className="md:hidden flex items-center justify-between p-5 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-6"
         >
           <div className="flex flex-col gap-2 min-w-0 flex-1">
             <PillLink

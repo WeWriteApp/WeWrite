@@ -210,7 +210,7 @@ export default function TrendingPageClient() {
           </div>
 
           {/* Mobile view: Card grid layout */}
-          <div className="md:hidden grid grid-cols-1 gap-4">
+          <div className="md:hidden grid grid-cols-1 gap-6">
             {trendingPages.map((page) => (
               <div
                 key={page.id}
@@ -218,7 +218,7 @@ export default function TrendingPageClient() {
                 onClick={() => window.location.href = `/${page.id}`}
                 style={{ cursor: 'pointer' }}
               >
-                <div className="p-4">
+                <div className="p-5">
                   <div className="mb-3">
                     <h3 className="text-base font-medium mb-1">
                       <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">

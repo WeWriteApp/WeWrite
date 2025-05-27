@@ -162,7 +162,7 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
 
       {/* Mobile Card Layout */}
       <div
-        className="md:hidden space-y-3 relative"
+        className="md:hidden space-y-6 relative"
         style={{ minHeight }}
       >
         {/* Loading overlay for mobile */}
@@ -178,7 +178,7 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
           <div
             key={page.id}
             className={cn(
-              "border border-theme-medium rounded-2xl p-4 space-y-3 shadow-md",
+              "border border-theme-medium rounded-2xl p-5 space-y-3 shadow-md",
               "hover:bg-muted/30 transition-colors dark:bg-card/90"
             )}
           >

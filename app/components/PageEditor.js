@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useState, useContext, useRef } from "react";
 import { AuthContext } from "../providers/AuthProvider";
-import ClientOnlyEditor from "./ClientOnlyEditor";
+import dynamic from "next/dynamic";
+
+// Import the main editor dynamically to avoid SSR issues
+const Editor = dynamic(() => import("./Editor"), { ssr: false });
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { Globe, Lock, Link, MapPin } from "lucide-react";
 import { Switch } from "./ui/switch";
@@ -73,6 +76,14 @@ const PageEditor = ({
   isReply = false,
   replyToId = null
 }) => {
+  // Add hydration safety check
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    // Ensure we're fully hydrated before rendering the editor
+    setIsHydrated(true);
+  }, []);
+
   // Initialize editor with initialContent
   const [currentEditorValue, setCurrentEditorValue] = useState(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
@@ -570,13 +581,19 @@ const PageEditor = ({
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
       <div className="w-full max-w-none">
-        <ClientOnlyEditor
-          ref={editorRef}
-          initialContent={currentEditorValue}
-          onChange={handleContentChange}
-          placeholder="Start typing..."
-          contentType="wiki"
-        />
+        {isHydrated ? (
+          <Editor
+            ref={editorRef}
+            initialContent={currentEditorValue}
+            onChange={handleContentChange}
+            placeholder="Start typing..."
+            contentType="wiki"
+          />
+        ) : (
+          <div className="w-full min-h-[200px] flex items-center justify-center">
+            <div className="loader loader-md"></div>
+          </div>
+        )}
       </div>
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}

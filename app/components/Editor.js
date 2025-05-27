@@ -24,8 +24,8 @@ import { updateParagraphIndices, getParagraphIndex } from "../utils/slate-path-f
 import { validateLink } from '../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../utils/linkFormatters";
 import TypeaheadSearch from "./TypeaheadSearch";
-// Import aggressive slate override to completely replace problematic functions
-import "../utils/slate-override";
+// Import slate patches to handle DOM node resolution errors
+import "../utils/slate-patch";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -183,6 +183,44 @@ Editor.isSelectionAtLink = (editor, linkPath) => {
   }
 };
 
+// Helper function to check if a link is fully selected (entire link is selected)
+Editor.isLinkFullySelected = (editor, linkPath) => {
+  try {
+    if (!editor.selection) return false;
+
+    // Get the range of the link node
+    const linkStart = Editor.start(editor, linkPath);
+    const linkEnd = Editor.end(editor, linkPath);
+
+    // Check if the selection exactly matches the link range
+    return Point.equals(editor.selection.anchor, linkStart) &&
+           Point.equals(editor.selection.focus, linkEnd) ||
+           Point.equals(editor.selection.anchor, linkEnd) &&
+           Point.equals(editor.selection.focus, linkStart);
+  } catch (error) {
+    console.error('Error in isLinkFullySelected:', error);
+    return false;
+  }
+};
+
+// Helper function to find the currently selected link (if any)
+Editor.getSelectedLink = (editor) => {
+  try {
+    if (!editor.selection) return null;
+
+    // Try to find a link node that contains or is contained by the current selection
+    const linkEntry = Editor.above(editor, {
+      at: editor.selection,
+      match: n => n.type === 'link',
+    });
+
+    return linkEntry;
+  } catch (error) {
+    console.error('Error in getSelectedLink:', error);
+    return null;
+  }
+};
+
 /**
  * EditorComponent
  *
@@ -217,6 +255,35 @@ const EditorComponent = forwardRef((props, ref) => {
   const [editor] = useState(() => {
     // Create the base editor
     const baseEditor = withHistory(withReact(createEditor()));
+
+    // CRITICAL FIX: Override ReactEditor methods to prevent DOM node resolution errors
+    const originalToDOMNode = ReactEditor.toDOMNode;
+    const originalToDOMPoint = ReactEditor.toDOMPoint;
+
+    ReactEditor.toDOMNode = function(editor, node) {
+      try {
+        return originalToDOMNode.call(this, editor, node);
+      } catch (error) {
+        console.warn('toDOMNode error prevented:', error);
+        // Return a safe fallback
+        const firstTextNode = document.querySelector('[data-slate-leaf]');
+        return firstTextNode || document.querySelector('[data-slate-editor]') || null;
+      }
+    };
+
+    ReactEditor.toDOMPoint = function(editor, point) {
+      try {
+        return originalToDOMPoint.call(this, editor, point);
+      } catch (error) {
+        console.warn('toDOMPoint error prevented:', error);
+        // Return a safe fallback
+        const firstTextNode = document.querySelector('[data-slate-leaf]');
+        if (firstTextNode) {
+          return [firstTextNode, 0];
+        }
+        return null;
+      }
+    };
 
     // CRITICAL FIX: Configure links as inline elements
     const { isInline } = baseEditor;
@@ -1073,52 +1140,47 @@ const EditorComponent = forwardRef((props, ref) => {
     if ((event.key === 'Delete' || event.key === 'Backspace') && editor.selection) {
       const { selection } = editor;
 
-      // Case 1: Check if we're at a link or inside a link
-      let linkEntry = null;
-      try {
-        // Try to find a link node at or above the current selection
-        linkEntry = Editor.above(editor, {
-          at: selection,
-          match: n => n.type === 'link',
-        });
-      } catch (error) {
-        console.error('Error finding link node:', error);
-      }
+      // Case 1: Check if a link is fully selected (new behavior)
+      if (!Range.isCollapsed(selection)) {
+        // Check if the selection contains or exactly matches a link
+        const selectedLinkEntry = Editor.getSelectedLink(editor);
+        if (selectedLinkEntry) {
+          const [linkNode, linkPath] = selectedLinkEntry;
 
-      // If we found a link, delete the entire link with a single keystroke
-      if (linkEntry) {
-        event.preventDefault(); // Prevent default deletion behavior
-        const [linkNode, linkPath] = linkEntry;
-
-        try {
-          // Remove the entire link node
-          Transforms.removeNodes(editor, { at: linkPath });
-
-          // CRITICAL FIX: Don't insert a space to replace the link - this causes unwanted line wrapping
-
-          // Return early since we've handled the event
-          return;
-        } catch (error) {
-          console.error('Error removing link node:', error);
-          // If there's an error, let the default behavior happen
+          // Check if the entire link is selected
+          if (Editor.isLinkFullySelected(editor, linkPath)) {
+            event.preventDefault();
+            console.log('Deleting fully selected link:', linkNode);
+            Transforms.removeNodes(editor, { at: linkPath });
+            return;
+          }
         }
+        // If not a fully selected link, let default behavior handle text selections
+        return;
       }
 
       // Case 2: Check if cursor is positioned right before a link (for Delete key)
-      if (event.key === 'Delete' && Range.isCollapsed(selection)) {
+      if (event.key === 'Delete') {
         try {
           const point = selection.anchor;
-          const [nextNode, nextPath] = Editor.next(editor, { at: point.path, match: n => n.type === 'link' }) || [];
 
-          // If the next node is a link and we're right before it
-          if (nextNode && nextNode.type === 'link') {
-            const nodeStart = Editor.start(editor, nextPath);
+          // Get the next character/node after the cursor
+          const after = Editor.after(editor, point);
+          if (after) {
+            // Check if there's a link node at the next position
+            const [node] = Editor.node(editor, after.path);
 
-            // Check if we're right before the link
-            if (Point.equals(point, nodeStart) || Point.isBefore(point, nodeStart)) {
-              event.preventDefault();
-              Transforms.removeNodes(editor, { at: nextPath });
-              return;
+            // If we're at the start of a link node, delete the entire link
+            if (node && node.type === 'link') {
+              const linkPath = after.path.slice(0, -1); // Get the link's path
+              const linkStart = Editor.start(editor, linkPath);
+
+              // Only delete if we're exactly at the start of the link
+              if (Point.equals(point, linkStart)) {
+                event.preventDefault();
+                Transforms.removeNodes(editor, { at: linkPath });
+                return;
+              }
             }
           }
         } catch (error) {
@@ -1127,20 +1189,27 @@ const EditorComponent = forwardRef((props, ref) => {
       }
 
       // Case 3: Check if cursor is positioned right after a link (for Backspace key)
-      if (event.key === 'Backspace' && Range.isCollapsed(selection)) {
+      if (event.key === 'Backspace') {
         try {
           const point = selection.anchor;
-          const [prevNode, prevPath] = Editor.previous(editor, { at: point.path, match: n => n.type === 'link' }) || [];
 
-          // If the previous node is a link and we're right after it
-          if (prevNode && prevNode.type === 'link') {
-            const nodeEnd = Editor.end(editor, prevPath);
+          // Get the previous character/node before the cursor
+          const before = Editor.before(editor, point);
+          if (before) {
+            // Check if there's a link node at the previous position
+            const [node] = Editor.node(editor, before.path);
 
-            // Check if we're right after the link
-            if (Point.equals(point, nodeEnd) || Point.isAfter(point, nodeEnd)) {
-              event.preventDefault();
-              Transforms.removeNodes(editor, { at: prevPath });
-              return;
+            // If we're at the end of a link node, delete the entire link
+            if (node && node.type === 'link') {
+              const linkPath = before.path.slice(0, -1); // Get the link's path
+              const linkEnd = Editor.end(editor, linkPath);
+
+              // Only delete if we're exactly at the end of the link
+              if (Point.equals(point, linkEnd)) {
+                event.preventDefault();
+                Transforms.removeNodes(editor, { at: linkPath });
+                return;
+              }
             }
           }
         } catch (error) {
@@ -1151,7 +1220,31 @@ const EditorComponent = forwardRef((props, ref) => {
 
     // Handle Enter key to edit links
     if (event.key === 'Enter' && !event.shiftKey && editor.selection) {
-      // Check if we're at a link or inside a link
+      // Case 1: Check if a link is fully selected (new behavior)
+      const selectedLinkEntry = Editor.getSelectedLink(editor);
+      if (selectedLinkEntry) {
+        const [linkNode, linkPath] = selectedLinkEntry;
+
+        // Check if the entire link is selected or if we're inside a link
+        const isFullySelected = Editor.isLinkFullySelected(editor, linkPath);
+        const isAtLink = Editor.isSelectionAtLink(editor, linkPath);
+
+        if (isFullySelected || isAtLink) {
+          event.preventDefault(); // Prevent default Enter behavior
+          console.log('Opening link editor for selected/focused link:', linkNode);
+
+          try {
+            // Open the link editor for this link
+            openLinkEditor(linkNode);
+            return;
+          } catch (error) {
+            console.error('Error opening link editor:', error);
+            // If there's an error, let the default behavior happen
+          }
+        }
+      }
+
+      // Case 2: Fallback - check if we're at a link or inside a link (existing behavior)
       let linkEntry = null;
       try {
         // Try to find a link node at or above the current selection
@@ -1163,16 +1256,14 @@ const EditorComponent = forwardRef((props, ref) => {
         console.error('Error finding link node:', error);
       }
 
-      // If we found a link, open the link editor
-      if (linkEntry) {
+      // If we found a link and haven't handled it yet, open the link editor
+      if (linkEntry && !selectedLinkEntry) {
         event.preventDefault(); // Prevent default Enter behavior
-        const [linkNode, linkPath] = linkEntry;
+        const [linkNode] = linkEntry;
 
         try {
           // Open the link editor for this link
           openLinkEditor(linkNode);
-
-          // Return early since we've handled the event
           return;
         } catch (error) {
           console.error('Error opening link editor:', error);

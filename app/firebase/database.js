@@ -1132,6 +1132,8 @@ export const removeDoc = async (collectionName, docName) => {
 export const deletePage = async (pageId) => {
   // remove page and the versions subcollection
   try {
+    console.log(`Starting deletion process for page: ${pageId}`);
+
     const pageRef = doc(db, "pages", pageId);
     const versionsRef = collection(pageRef, "versions");
     const versionsSnap = await getDocs(versionsRef);
@@ -1143,10 +1145,22 @@ export const deletePage = async (pageId) => {
 
     // delete the page
     await deleteDoc(pageRef);
+    console.log(`Page ${pageId} deleted from Firestore`);
 
+    // Clean up related notifications
+    try {
+      const { deleteNotificationsForPage } = await import('./notifications');
+      const deletedNotifications = await deleteNotificationsForPage(pageId);
+      console.log(`Cleaned up ${deletedNotifications} notifications for page ${pageId}`);
+    } catch (notificationError) {
+      console.error('Error cleaning up notifications:', notificationError);
+      // Don't fail the entire deletion if notification cleanup fails
+    }
+
+    console.log(`Page deletion completed successfully for: ${pageId}`);
     return true;
   } catch (e) {
-    console.log(e);
+    console.error(`Error deleting page ${pageId}:`, e);
     return e;
   }
 }
