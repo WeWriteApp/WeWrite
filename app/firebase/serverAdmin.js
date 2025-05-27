@@ -15,18 +15,24 @@ let authInstance;
  */
 export function initServerAdmin() {
   console.log('initServerAdmin: Starting initialization');
-  
+
+  // Skip initialization during build time
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+    console.log('Skipping Firebase Admin initialization during build time');
+    return null;
+  }
+
   // Check if any Firebase apps have been initialized
   if (admin.apps.length === 0) {
     try {
       console.log('initServerAdmin: No existing Firebase apps, initializing new app');
-      
+
       // For development environment, use a service account or default credentials
       if (process.env.NODE_ENV === 'development') {
         // For local development, we'll use a simple implementation
         try {
           console.log('initServerAdmin: Development environment detected');
-          
+
           const serviceAccount = {
             type: 'service_account',
             project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
@@ -46,7 +52,7 @@ export function initServerAdmin() {
             credential: admin.credential.cert(serviceAccount),
             databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
           });
-          
+
           console.log('initServerAdmin: Development app initialized successfully');
         } catch (e) {
           console.warn('initServerAdmin: Using fallback Firebase Admin initialization for development:', e.message);
