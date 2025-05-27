@@ -76,6 +76,13 @@ const PageEditor = ({
   isReply = false,
   replyToId = null
 }) => {
+  // Client-side only check to prevent SSR issues
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Initialize editor with initialContent
   const [currentEditorValue, setCurrentEditorValue] = useState(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
@@ -573,13 +580,19 @@ const PageEditor = ({
       <div className="w-full h-px bg-border dark:bg-border my-4"></div>
 
       <div className="w-full max-w-none">
-        <Editor
-          ref={editorRef}
-          initialContent={currentEditorValue}
-          onChange={handleContentChange}
-          placeholder="Start typing..."
-          contentType="wiki"
-        />
+        {isClient ? (
+          <Editor
+            ref={editorRef}
+            initialContent={currentEditorValue}
+            onChange={handleContentChange}
+            placeholder="Start typing..."
+            contentType="wiki"
+          />
+        ) : (
+          <div className="flex justify-center py-8">
+            <div className="loader loader-md"></div>
+          </div>
+        )}
       </div>
 
       {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}

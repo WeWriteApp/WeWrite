@@ -16,9 +16,14 @@ export const useFeatureFlag = (featureFlag, userEmail) => {
   return useMemo(() => {
     // Map feature flag names to our constants
     const flagMap = {
-      'link_functionality': FEATURE_FLAGS.LINK_INSERTION,
+      'link_functionality': FEATURE_FLAGS.LINK_FUNCTIONALITY,
       'link_insertion': FEATURE_FLAGS.LINK_INSERTION,
       'payments': FEATURE_FLAGS.PAYMENTS,
+      'groups': FEATURE_FLAGS.GROUPS,
+      'map_view': FEATURE_FLAGS.MAP_VIEW,
+      'calendar_view': FEATURE_FLAGS.CALENDAR_VIEW,
+      'notifications': FEATURE_FLAGS.NOTIFICATIONS,
+      'username_management': FEATURE_FLAGS.USERNAME_MANAGEMENT,
     };
 
     const mappedFlag = flagMap[featureFlag] || featureFlag;

@@ -15,6 +15,20 @@ import { ChevronLeft } from "lucide-react";
 import { createReplyAttribution } from "../utils/linkUtils";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
+import HydrationSafetyWrapper from "../components/HydrationSafetyWrapper";
+import dynamic from 'next/dynamic';
+
+// Dynamically import PageEditor to prevent SSR issues
+const DynamicPageEditor = dynamic(() => import("../components/PageEditor"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full max-w-none">
+      <div className="flex justify-center py-8">
+        <div className="loader loader-md"></div>
+      </div>
+    </div>
+  )
+});
 
 export default function NewPage() {
   const router = useRouter();
@@ -299,24 +313,26 @@ export default function NewPage() {
             <h1 className="text-2xl font-semibold text-center flex-1">{isReply ? "Replying to page" : "New page"}</h1>
           </div>
           {/* Full-width editor container on desktop */}
-          <div className="w-full max-w-none">
-            <PageEditor
-              title={isReply ? "" : title}
-              setTitle={handleTitleChange}
-              initialContent={initialContent || editorContent}
-              onContentChange={handleContentChange}
-              isPublic={isPublic}
-              setIsPublic={setIsPublic}
-              location={location}
-              setLocation={setLocation}
-              onSave={handleSave}
-              onCancel={handleBack}
-              isSaving={isSaving}
-              error={error}
-              isNewPage={true}
-              isReply={isReply}
-            />
-          </div>
+          <HydrationSafetyWrapper>
+            <div className="w-full max-w-none">
+              <DynamicPageEditor
+                title={isReply ? "" : title}
+                setTitle={handleTitleChange}
+                initialContent={initialContent || editorContent}
+                onContentChange={handleContentChange}
+                isPublic={isPublic}
+                setIsPublic={setIsPublic}
+                location={location}
+                setLocation={setLocation}
+                onSave={handleSave}
+                onCancel={handleBack}
+                isSaving={isSaving}
+                error={error}
+                isNewPage={true}
+                isReply={isReply}
+              />
+            </div>
+          </HydrationSafetyWrapper>
         </div>
       </div>
 

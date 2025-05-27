@@ -7,6 +7,12 @@
 export const FEATURE_FLAGS = {
   LINK_INSERTION: 'link_insertion',
   PAYMENTS: 'payments',
+  GROUPS: 'groups',
+  MAP_VIEW: 'map_view',
+  CALENDAR_VIEW: 'calendar_view',
+  NOTIFICATIONS: 'notifications',
+  USERNAME_MANAGEMENT: 'username_management',
+  LINK_FUNCTIONALITY: 'link_functionality',
   // Add more feature flags here as needed
 };
 
@@ -17,6 +23,30 @@ const FEATURE_ACCESS = {
     // Add more user emails here to grant access
   ],
   [FEATURE_FLAGS.PAYMENTS]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.GROUPS]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.MAP_VIEW]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.CALENDAR_VIEW]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.NOTIFICATIONS]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.USERNAME_MANAGEMENT]: [
+    'jamiegray2234@gmail.com', // Admin user
+    // Add more user emails here to grant access
+  ],
+  [FEATURE_FLAGS.LINK_FUNCTIONALITY]: [
     'jamiegray2234@gmail.com', // Admin user
     // Add more user emails here to grant access
   ],
