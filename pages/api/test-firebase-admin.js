@@ -49,7 +49,7 @@ export default async function handler(req, res) {
       message: 'Firebase Admin SDK authentication working correctly!',
       environmentVariables: envCheck,
       timestamp: new Date().toISOString(),
-      testCommit: 'Testing dev branch preview deployment'
+      testCommit: 'Testing dev branch preview deployment - trigger build'
     });
 
   } catch (error) {
