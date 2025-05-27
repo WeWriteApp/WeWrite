@@ -7,10 +7,10 @@
     "github": {
         "silent": true,
         "autoJobCancelation": true,
-        "enabled": false
+        "enabled": true
     },
     "git": {
-        "deploymentEnabled": false
+        "deploymentEnabled": true
     },
     "ignoreCommand": "exit 0"
 }
