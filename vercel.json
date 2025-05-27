@@ -2,7 +2,8 @@
     "buildCommand": "npm run build",
     "env": {
         "SKIP_TYPE_CHECK": "1",
-        "NODE_OPTIONS": "--max_old_space_size=4096"
+        "NODE_OPTIONS": "--max_old_space_size=4096",
+        "GOOGLE_APPLICATION_CREDENTIALS": ""
     },
     "github": {
         "silent": true,

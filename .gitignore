@@ -38,4 +38,4 @@ next-env.d.ts
 
 # Firebase
 *-firebase-adminsdk-*.json
-# service-account-key.json - temporarily allowing this for Vercel builds
+service-account-key.json
