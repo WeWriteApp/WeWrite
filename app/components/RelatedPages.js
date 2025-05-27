@@ -92,7 +92,6 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           // Mark that we've fetched data for this page
           dataFetchedRef.current = true;
 
-          // Only focus on title word matching
           // Extract significant words from the title with improved processing
           const titleWords = processWords(page.title);
 
@@ -113,10 +112,11 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
           );
 
           const pagesSnapshot = await getDocs(pagesQuery);
-          console.log(`Analyzing ${pagesSnapshot.docs.length} public pages for title matches`);
+          console.log(`Analyzing ${pagesSnapshot.docs.length} public pages for title and content matches`);
 
-          // Array to store pages with matching titles
-          const matchingPages = [];
+          // Arrays to store pages with different types of matches
+          const titleMatchingPages = [];
+          const contentMatchingPages = [];
 
           // Process each page
           pagesSnapshot.docs.forEach(doc => {
@@ -131,15 +131,15 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
             // Check for word matches in the title with improved processing
             const pageTitleWords = processWords(pageData.title);
 
-            // Find exact word matches
-            const exactMatches = titleWords.filter(word =>
+            // Find exact word matches in title
+            const titleExactMatches = titleWords.filter(word =>
               pageTitleWords.includes(word)
             );
 
-            // Calculate base match score from individual word matches
-            let matchScore = exactMatches.length;
+            // Calculate base match score from individual word matches in title
+            let titleMatchScore = titleExactMatches.length;
 
-            // Check for consecutive word matches (phrases)
+            // Check for consecutive word matches (phrases) in title
             let maxConsecutiveMatches = 0;
 
             // Convert title words to string for easier comparison
@@ -156,7 +156,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
                   const wordCount = phrase.split(' ').length;
                   if (wordCount > maxConsecutiveMatches) {
                     maxConsecutiveMatches = wordCount;
-                    console.log(`Found consecutive match: "${phrase}" (${wordCount} words)`);
+                    console.log(`Found consecutive title match: "${phrase}" (${wordCount} words)`);
                   }
                 }
               }
@@ -165,35 +165,92 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
             // Add bonus points for consecutive matches (3x per word)
             const consecutiveMatchBonus = maxConsecutiveMatches > 1 ? maxConsecutiveMatches * 3 : 0;
 
-            // Calculate total score (individual matches + consecutive bonus)
-            const totalScore = matchScore + consecutiveMatchBonus;
+            // Calculate total title score (individual matches + consecutive bonus)
+            const totalTitleScore = titleMatchScore + consecutiveMatchBonus;
 
-            // Only include pages with at least one match
-            if (totalScore > 0) {
-              matchingPages.push({
+            // If we have title matches, add to title matching pages
+            if (totalTitleScore > 0) {
+              titleMatchingPages.push({
                 ...pageData,
-                matchCount: totalScore, // Use the combined score for sorting
+                matchCount: totalTitleScore,
+                matchType: 'title',
                 hasConsecutiveMatches: maxConsecutiveMatches > 1,
                 consecutiveMatchCount: maxConsecutiveMatches
               });
+            } else {
+              // Check for content matches only if no title matches
+              // This prevents duplicate entries and prioritizes title matches
+              let contentMatchScore = 0;
+
+              // Only check content if the page has content and we have a reasonable amount to search
+              if (pageData.content && typeof pageData.content === 'string' && pageData.content.length > 50) {
+                try {
+                  // Parse content if it's JSON (from editor state)
+                  let contentText = pageData.content;
+                  if (contentText.startsWith('[') || contentText.startsWith('{')) {
+                    const parsedContent = JSON.parse(contentText);
+                    // Extract text from editor state structure
+                    if (Array.isArray(parsedContent)) {
+                      contentText = parsedContent
+                        .map(block => block?.children?.map(child => child?.text || '').join('') || '')
+                        .join(' ');
+                    }
+                  }
+
+                  // Process content words (limit to first 1000 characters for performance)
+                  const limitedContent = contentText.substring(0, 1000);
+                  const contentWords = processWords(limitedContent);
+
+                  // Find matches in content
+                  const contentExactMatches = titleWords.filter(word =>
+                    contentWords.includes(word)
+                  );
+
+                  contentMatchScore = contentExactMatches.length;
+
+                  // Add to content matching pages if we have matches
+                  if (contentMatchScore > 0) {
+                    contentMatchingPages.push({
+                      ...pageData,
+                      matchCount: contentMatchScore,
+                      matchType: 'content',
+                      hasConsecutiveMatches: false,
+                      consecutiveMatchCount: 0
+                    });
+                  }
+                } catch (error) {
+                  // If content parsing fails, skip content matching for this page
+                  console.warn(`Failed to parse content for page ${pageData.id}:`, error);
+                }
+              }
             }
           });
 
+          // Combine title and content matches, prioritizing title matches
+          const allMatches = [
+            ...titleMatchingPages,
+            ...contentMatchingPages
+          ];
+
           // Filter out pages that are already linked in the content
-          const filteredPages = matchingPages
+          const filteredPages = allMatches
             .filter(page => !linkedPageIds.includes(page.id))
             .sort((a, b) => {
-              // Sort by match count first
+              // First, prioritize by match type (title matches come first)
+              if (a.matchType !== b.matchType) {
+                return a.matchType === 'title' ? -1 : 1;
+              }
+              // Then sort by match count within the same type
               if (b.matchCount !== a.matchCount) {
                 return b.matchCount - a.matchCount;
               }
-              // Then by last modified date if available
+              // Finally, sort by last modified date if available
               return (b.lastModified ? new Date(b.lastModified) : 0) -
                      (a.lastModified ? new Date(a.lastModified) : 0);
             })
             .slice(0, maxPages);
 
-          console.log(`Found ${filteredPages.length} related pages with title matches`);
+          console.log(`Found ${filteredPages.length} related pages (${titleMatchingPages.length} title matches, ${contentMatchingPages.length} content matches)`);
 
           setRelatedPages(filteredPages);
         } catch (error) {
@@ -221,7 +278,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
               <Info className="h-4 w-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[300px]">
-              <p>Pages that share similar words in their titles, with higher priority given to consecutive matching words. Excludes links that are already mentioned in the page.</p>
+              <p>Pages that share similar words in their titles or content. Title matches are prioritized over content matches. Excludes links that are already mentioned in the page.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

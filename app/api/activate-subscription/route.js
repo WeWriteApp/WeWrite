@@ -1,12 +1,18 @@
 import { db } from '../../firebase/database';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import Stripe from 'stripe';
+import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
 
 // Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request) {
   try {
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
     // Parse request body
     const { amount, userId } = await request.json();
 

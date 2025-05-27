@@ -7,10 +7,14 @@ import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
 import { DollarSign } from "lucide-react";
 import { SupporterIcon } from "./SupporterIcon";
+import { useFeatureFlag } from '../utils/feature-flags.ts';
+import { useAuth } from '../providers/AuthProvider';
 
 const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
-  // Use customContent if provided, otherwise use default content based on sign-in status
-  const content = customContent || (isSignedIn ? {
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  // Use customContent if provided, otherwise use default content based on sign-in status and payments feature flag
+  const content = customContent || (isPaymentsEnabled ? (isSignedIn ? {
     title: "This feature is coming soon!",
     description: "You can help support development by activating your subscription.",
     action: {
@@ -25,6 +29,14 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
       href: "/auth/login",
       label: "Log in",
       external: false
+    }
+  }) : {
+    title: "Support WeWrite Development",
+    description: "Help support WeWrite development through OpenCollective while we work on subscription functionality.",
+    action: {
+      href: "https://opencollective.com/wewrite",
+      label: "Support on OpenCollective",
+      external: true
     }
   });
 
@@ -51,7 +63,7 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
         </p>
 
         {/* Subscription Tiers - Horizontally Scrollable */}
-        {isSignedIn && (
+        {isSignedIn && isPaymentsEnabled && (
           <div className="mt-4 mb-6">
             <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
               <div className="flex space-x-3 w-max min-w-full">
@@ -102,9 +114,9 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
         <div>
           <Button
             asChild
-            className={`w-full ${isSignedIn ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+            className={`w-full ${isSignedIn && isPaymentsEnabled ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
             size="lg"
-            variant={isSignedIn ? "default" : "outline"}
+            variant={isSignedIn && isPaymentsEnabled ? "default" : "outline"}
           >
             <a
               href={content.action.href}
@@ -112,7 +124,7 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
               rel={content.action.external ? "noopener noreferrer" : undefined}
               className="flex items-center justify-center gap-2"
             >
-              {isSignedIn && <DollarSign className="h-4 w-4 text-white" />}
+              {isSignedIn && isPaymentsEnabled && <DollarSign className="h-4 w-4 text-white" />}
               {content.action.label}
             </a>
           </Button>

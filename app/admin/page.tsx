@@ -18,6 +18,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import SyncFeatureFlagsButton from '../components/SyncFeatureFlagsButton';
 import Link from 'next/link';
 import EnhancedFeatureFlagCard from '../components/admin/EnhancedFeatureFlagCard';
+import FeatureFlagTestPanel from '../components/FeatureFlagTestPanel';
 
 interface User {
   id: string;
@@ -90,6 +91,12 @@ export default function AdminPage() {
       name: 'link_functionality',
       description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt',
       enabled: true
+    },
+    {
+      id: 'daily_notes',
+      name: 'daily_notes',
+      description: 'Enable daily notes section on home page with calendar day cards for quick note creation and access',
+      enabled: false
     }
   ]);
 
@@ -335,28 +342,13 @@ export default function AdminPage() {
   const toggleFeatureFlag = async (flagId: FeatureFlag, newState?: boolean) => {
     try {
       setIsLoading(true);
-      console.log(`[DEBUG] Toggling feature flag ${flagId}`);
+      console.log(`[DEBUG] Starting toggle for feature flag: ${flagId}`);
 
-      // Find the current flag state before updating
-      const currentFlag = featureFlags.find(flag => flag.id === flagId);
-      const newEnabledState = newState !== undefined ? newState : (currentFlag ? !currentFlag.enabled : false);
-      console.log(`[DEBUG] Current state: ${currentFlag?.enabled}, New state: ${newEnabledState}`);
-
-      // Update local state first for immediate feedback
-      setFeatureFlags(prev => {
-        const updatedFlags = prev.map(flag =>
-          flag.id === flagId ? { ...flag, enabled: newEnabledState } : flag
-        );
-        console.log(`[DEBUG] Updated local state for ${flagId} to ${newEnabledState}`);
-        return updatedFlags;
-      });
-
-      // Get current feature flags
+      // Get current feature flags from database first to avoid race conditions
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
 
       let flagsData = {};
-
       if (featureFlagsDoc.exists()) {
         flagsData = featureFlagsDoc.data();
         console.log('[DEBUG] Current flags in database:', flagsData);
@@ -368,33 +360,67 @@ export default function AdminPage() {
         }
       }
 
-      // Update feature flag
-      flagsData = {
+      // Get the current value from the database (not local state)
+      const currentDatabaseValue = flagsData[flagId] || false;
+      const newEnabledState = newState !== undefined ? newState : !currentDatabaseValue;
+
+      console.log(`[DEBUG] Current database value for ${flagId}: ${currentDatabaseValue}`);
+      console.log(`[DEBUG] New value for ${flagId}: ${newEnabledState}`);
+
+      // Update the database first
+      const updatedFlagsData = {
         ...flagsData,
         [flagId]: newEnabledState
       };
 
-      console.log('[DEBUG] Updated flags to save:', flagsData);
+      console.log('[DEBUG] Updated flags to save:', updatedFlagsData);
 
-      // Update Firestore
-      await setDoc(featureFlagsRef, flagsData);
-      console.log(`[DEBUG] Feature flag ${flagId} updated in database to ${newEnabledState}`);
+      await setDoc(featureFlagsRef, updatedFlagsData);
+      console.log(`[DEBUG] Successfully updated ${flagId} in database to ${newEnabledState}`);
+
+      // Update local state after successful database write
+      setFeatureFlags(prev =>
+        prev.map(flag =>
+          flag.id === flagId ? { ...flag, enabled: newEnabledState } : flag
+        )
+      );
+
+      // Trigger a feature flag refresh event for all users
+      try {
+        window.dispatchEvent(new CustomEvent('featureFlagChanged', {
+          detail: { flagId, newValue: newEnabledState, timestamp: Date.now() }
+        }));
+      } catch (eventError) {
+        console.warn('Could not dispatch feature flag change event:', eventError);
+      }
 
       toast({
         title: 'Success',
-        description: `${flagId} is now ${newEnabledState ? 'enabled' : 'disabled'}`,
+        description: `${flagId} is now ${newEnabledState ? 'enabled' : 'disabled'} for everyone`,
         variant: 'default'
       });
+
     } catch (error) {
       console.error('[DEBUG] Error toggling feature flag:', error);
+
+      // Provide more specific error messages
+      let errorMessage = 'Failed to update feature flag';
+      if (error.code === 'permission-denied') {
+        errorMessage = 'Permission denied. You may not have admin access.';
+      } else if (error.code === 'unavailable') {
+        errorMessage = 'Database is temporarily unavailable. Please try again.';
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
       toast({
         title: 'Error',
-        description: 'Failed to update feature flag',
+        description: errorMessage,
         variant: 'destructive'
       });
 
-      // Revert local state on error
-      loadFeatureFlags();
+      // Reload feature flags from database to ensure consistency
+      await loadFeatureFlags();
     } finally {
       setIsLoading(false);
     }
@@ -830,6 +856,11 @@ export default function AdminPage() {
                 </Button>
               </div>
             </div>
+          </div>
+
+          {/* Feature Flag Testing Panel */}
+          <div className="mt-8">
+            <FeatureFlagTestPanel />
           </div>
         </SwipeableTabsContent>
       </SwipeableTabs>

@@ -14,6 +14,8 @@ import { X } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { SupporterIcon } from './SupporterIcon';
+import { useAuth } from '../providers/AuthProvider';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 
 interface TierModalProps {
   children: React.ReactNode;
@@ -25,6 +27,13 @@ interface TierModalProps {
 }
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
   const tiers = [
     {
       id: 'none',

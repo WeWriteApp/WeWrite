@@ -43,8 +43,60 @@ export const loginUser = async (email, password) => {
   }
 }
 
-export const logoutUser = async (keepPreviousSession = false) => {
+export const logoutUser = async (keepPreviousSession = false, returnToPreviousAccount = false) => {
   try {
+    // Check if we should return to a previous account
+    if (returnToPreviousAccount) {
+      console.log('Logout: Attempting to return to previous account');
+
+      // Get saved accounts to find the previous account
+      const savedAccountsJson = localStorage.getItem('savedAccounts');
+      if (savedAccountsJson) {
+        try {
+          const savedAccounts = JSON.parse(savedAccountsJson);
+
+          // Find the account that was previously current (not the current one)
+          // Sort by lastUsed to get the most recently used non-current account
+          const nonCurrentAccounts = savedAccounts
+            .filter(account => !account.isCurrent)
+            .sort((a, b) => new Date(b.lastUsed || 0) - new Date(a.lastUsed || 0));
+
+          if (nonCurrentAccounts.length > 0) {
+            const previousAccount = nonCurrentAccounts[0];
+            console.log('Logout: Found previous account to return to:', previousAccount.email);
+
+            // Store the account to switch to
+            localStorage.setItem('switchToAccount', JSON.stringify(previousAccount));
+            localStorage.setItem('accountSwitchInProgress', 'true');
+
+            // Update saved accounts to mark the previous account as current
+            const updatedAccounts = savedAccounts.map(account => ({
+              ...account,
+              isCurrent: account.uid === previousAccount.uid,
+              lastUsed: account.uid === previousAccount.uid ? new Date().toISOString() : account.lastUsed
+            }));
+            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+
+            // Sign out from Firebase
+            await signOut(auth);
+
+            // Redirect to switch account page
+            if (typeof window !== 'undefined') {
+              setTimeout(() => {
+                window.location.href = '/auth/switch-account';
+              }, 100);
+            }
+
+            return { success: true, returnedToPrevious: true };
+          } else {
+            console.log('Logout: No previous account found, proceeding with normal logout');
+          }
+        } catch (parseError) {
+          console.error('Logout: Error parsing saved accounts:', parseError);
+        }
+      }
+    }
+
     // Only clear previous user session if not explicitly keeping it
     if (!keepPreviousSession) {
       localStorage.removeItem('previousUserSession');

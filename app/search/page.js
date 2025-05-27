@@ -47,11 +47,9 @@ function debounce(func, wait, immediate = false) {
 // Completely isolated search input that doesn't cause parent re-renders
 const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
   const [inputValue, setInputValue] = useState(initialValue || '');
-  const [currentQuery, setCurrentQuery] = useState('');
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
   const lastSearchValue = useRef('');
-  const lastSyncedQuery = useRef('');
 
   // Auto-focus effect
   useEffect(() => {
@@ -65,21 +63,7 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
     }
   }, [autoFocus]);
 
-  // URL synchronization effect
-  useEffect(() => {
-    if (currentQuery !== lastSyncedQuery.current) {
-      lastSyncedQuery.current = currentQuery;
-
-      const url = new URL(window.location);
-      if (currentQuery && currentQuery.trim()) {
-        url.searchParams.set('q', currentQuery.trim());
-      } else {
-        url.searchParams.delete('q');
-      }
-
-      window.history.replaceState({}, '', url);
-    }
-  }, [currentQuery]);
+  // Note: URL synchronization is handled by the parent component
 
   // Debounced search function
   const debouncedSearch = useCallback((value) => {
@@ -90,7 +74,6 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
     debounceTimeoutRef.current = setTimeout(() => {
       if (value !== lastSearchValue.current && onSearch) {
         lastSearchValue.current = value;
-        setCurrentQuery(value);
         onSearch(value);
       }
     }, 300);
@@ -110,7 +93,6 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
       clearTimeout(debounceTimeoutRef.current);
     }
     if (onSubmit) {
-      setCurrentQuery(inputValue);
       onSubmit(inputValue);
     }
   }, [inputValue, onSubmit]);
@@ -118,7 +100,6 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
   // Handle clear button
   const handleClear = useCallback(() => {
     setInputValue('');
-    setCurrentQuery('');
     lastSearchValue.current = '';
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -193,7 +174,7 @@ IsolatedSearchInput.displayName = 'IsolatedSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
-  const { user } = useContext(AuthContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
@@ -222,22 +203,62 @@ const SearchPage = React.memo(() => {
 
 
   // Perform initial search if there's a query in the URL
-  useEffect(() => {
-    if (initialQuery) {
-      performSearch(initialQuery);
-    }
-  }, [initialQuery, performSearch]); // Add performSearch dependency
+  // Use a ref to track if we've performed the initial search
+  const hasPerformedInitialSearch = useRef(false);
+  const initialSearchAttempts = useRef(0);
+  const maxInitialSearchAttempts = 3;
 
-  // Memoized callback functions for SearchInput component - NO URL UPDATES HERE
+  useEffect(() => {
+    // CRITICAL FIX: Perform initial search immediately if there's a query
+    // Don't wait for authentication - the search API handles unauthenticated users
+    if (initialQuery && !hasPerformedInitialSearch.current && initialSearchAttempts.current < maxInitialSearchAttempts) {
+      console.log('Performing initial search for:', initialQuery, 'attempt:', initialSearchAttempts.current + 1, 'with userId:', userId || 'public');
+
+      initialSearchAttempts.current += 1;
+
+      // Perform the search with retry logic
+      performSearch(initialQuery).then(() => {
+        console.log('Initial search completed successfully');
+        hasPerformedInitialSearch.current = true;
+      }).catch((error) => {
+        console.error('Initial search failed, attempt', initialSearchAttempts.current, ':', error);
+
+        // If we haven't reached max attempts, try again after a short delay
+        if (initialSearchAttempts.current < maxInitialSearchAttempts) {
+          setTimeout(() => {
+            // Reset the flag to allow retry
+            hasPerformedInitialSearch.current = false;
+          }, 1000 * initialSearchAttempts.current); // Exponential backoff
+        } else {
+          console.error('Max initial search attempts reached, giving up');
+          hasPerformedInitialSearch.current = true;
+        }
+      });
+    }
+  }, [initialQuery, performSearch, userId]); // Removed authLoading dependency
+
+  // Memoized callback functions for SearchInput component
   const handleSearch = useCallback((searchTerm) => {
     performSearch(searchTerm);
-    // URL updates are handled by URLSynchronizer component
+
+    // Update URL to reflect the search query
+    const url = new URL(window.location);
+    if (searchTerm && searchTerm.trim()) {
+      url.searchParams.set('q', searchTerm.trim());
+    } else {
+      url.searchParams.delete('q');
+    }
+    window.history.replaceState({}, '', url);
   }, [performSearch]);
 
-  // Stable clear function with no dependencies to prevent re-renders
+  // Stable clear function
   const handleClear = useCallback(() => {
     clearSearch();
-    // URL updates are handled by URLSynchronizer component
+
+    // Clear URL query parameter
+    const url = new URL(window.location);
+    url.searchParams.delete('q');
+    window.history.replaceState({}, '', url);
   }, [clearSearch]);
 
   // Stable save function - memoized with userId dependency
@@ -261,10 +282,18 @@ const SearchPage = React.memo(() => {
     }
   }, [userId]);
 
-  // Stable submit function with performSearch dependency
+  // Stable submit function
   const handleSubmit = useCallback((searchTerm) => {
     performSearch(searchTerm);
-    // URL updates are handled by URLSynchronizer component
+
+    // Update URL to reflect the search query
+    const url = new URL(window.location);
+    if (searchTerm && searchTerm.trim()) {
+      url.searchParams.set('q', searchTerm.trim());
+    } else {
+      url.searchParams.delete('q');
+    }
+    window.history.replaceState({}, '', url);
   }, [performSearch]);
 
   // Stable helper function to copy to clipboard with toast notification

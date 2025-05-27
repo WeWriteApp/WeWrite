@@ -15,7 +15,8 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import { useTheme } from '../../../providers/ThemeProvider';
-import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
+import { useFeatureFlag } from '../../../utils/feature-flags.ts';
+import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -202,6 +203,25 @@ export default function SubscriptionPaymentPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // If payments feature flag is disabled, show OpenCollective support instead
+  if (!isPaymentsEnabled) {
+    return (
+      <div className="max-w-md mx-auto p-4">
+        <div className="mb-4">
+          <Link href="/account" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
+            <ArrowLeft className="h-3 w-3 mr-1" />
+            Back to Account
+          </Link>
+        </div>
+        <OpenCollectiveSupport
+          title="Payment Processing Coming Soon!"
+          description="We're working on payment functionality. In the meantime, please support WeWrite development through OpenCollective."
+        />
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!user) {

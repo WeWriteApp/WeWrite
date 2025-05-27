@@ -255,7 +255,8 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
         </div>
       </div>
 
-      <div className="rounded-2xl border border-theme-medium shadow-md dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-2xl border border-theme-medium shadow-md dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -311,6 +312,53 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {membersList.length > 0 ? (
+          membersList.map(member => (
+            <div key={member.id} className="wewrite-card">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-medium text-foreground">{member.username}</h3>
+                    <Badge variant={member.role === 'owner' ? 'default' : 'secondary'}>
+                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Joined {new Date(member.joinedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {isOwner && member.role !== 'owner' && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => handleRemoveMember(member.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="wewrite-card text-center py-8">
+            <p className="text-muted-foreground">No members found.</p>
+          </div>
+        )}
       </div>
     </div>
   );

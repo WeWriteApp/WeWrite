@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { createCheckoutSession } from '../services/stripeService';
 import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
-import { PaymentFeatureGuard } from '../components/PaymentFeatureGuard';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 import { useSwipeable } from 'react-swipeable';
 import { CustomAmountModal } from '../components/CustomAmountModal';
 import { loadStripe } from '@stripe/stripe-js';
@@ -91,6 +91,7 @@ const supporterTiers = [
 export default function SubscriptionPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('100');
   const [loading, setLoading] = useState<boolean>(false);
@@ -101,6 +102,13 @@ export default function SubscriptionPage() {
   const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
   const [customAmountModalOpen, setCustomAmountModalOpen] = useState<boolean>(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // If payments feature flag is disabled, redirect to home
+  useEffect(() => {
+    if (!isPaymentsEnabled) {
+      router.push('/');
+    }
+  }, [isPaymentsEnabled, router]);
 
   // Define subscription type
   interface Subscription {

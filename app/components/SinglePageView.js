@@ -11,6 +11,7 @@ import { listenToPageById, getPageVersions } from "../firebase/database";
 import { recordPageView } from "../firebase/pageViews";
 import { trackPageViewWhenReady } from "../utils/analytics-page-titles";
 import PageViewCounter from "./PageViewCounter";
+import { initializeNavigationTracking } from "../utils/navigationTracking";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
 import { createEditor } from "slate";
@@ -213,6 +214,10 @@ function SinglePageView({ params }) {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
         console.log('SinglePageView: Scrolled to top for page:', params.id);
       }
+
+      // CRITICAL FIX: Initialize navigation tracking for "What Links Here"
+      // This tracks when users navigate from one page to another
+      initializeNavigationTracking();
 
       // Set a timeout to prevent infinite loading
       if (loadingTimeoutRef.current) {

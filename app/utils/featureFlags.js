@@ -23,8 +23,8 @@ const FEATURE_ACCESS = {
     // Add more user emails here to grant access
   ],
   [FEATURE_FLAGS.PAYMENTS]: [
-    'jamiegray2234@gmail.com', // Admin user
-    // Add more user emails here to grant access
+    // PAYMENTS FEATURE DISABLED - No users have access regardless of email
+    // This feature is controlled by database feature flags
   ],
   [FEATURE_FLAGS.GROUPS]: [
     'jamiegray2234@gmail.com', // Admin user

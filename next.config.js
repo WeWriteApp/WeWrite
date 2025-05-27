@@ -18,6 +18,14 @@ const nextConfig = {
     '@fastify/busboy',
     '@grpc/grpc-js',
   ],
+  webpack(config) {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false
+    }
+
+    return config;
+  },
   // Add security headers
   async headers() {
     return [

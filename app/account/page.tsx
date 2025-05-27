@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 import PWAInstallationCard from '../components/PWAInstallationCard';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from '../utils/feature-flags.ts';
 
 // Define admin check locally to avoid import issues
 const isAdmin = (userEmail?: string | null): boolean => {
@@ -204,11 +204,34 @@ export default function AccountPage() {
                   variant="destructive"
                   size="sm"
                   onClick={() => {
-                    if (confirm("Are you sure you want to log out?")) {
-                      // Import and call the logout function
+                    // Check if there are multiple accounts to determine logout behavior
+                    const savedAccountsJson = localStorage.getItem('savedAccounts');
+                    let hasMultipleAccounts = false;
+
+                    if (savedAccountsJson) {
+                      try {
+                        const savedAccounts = JSON.parse(savedAccountsJson);
+                        hasMultipleAccounts = savedAccounts.length > 1;
+                      } catch (e) {
+                        console.error('Error parsing saved accounts:', e);
+                      }
+                    }
+
+                    const confirmMessage = hasMultipleAccounts
+                      ? "Are you sure you want to log out? You will be switched back to your previous account."
+                      : "Are you sure you want to log out?";
+
+                    if (confirm(confirmMessage)) {
+                      // Import and call the logout function with appropriate parameters
                       import('../firebase/auth').then(({ logoutUser }) => {
-                        logoutUser().then(() => {
-                          router.push('/');
+                        // If multiple accounts, try to return to previous account
+                        // Otherwise, do a normal logout
+                        logoutUser(false, hasMultipleAccounts).then((result) => {
+                          if (!result.returnedToPrevious) {
+                            // If we didn't return to a previous account, redirect to home
+                            router.push('/');
+                          }
+                          // If we returned to previous account, the redirect is handled by logoutUser
                         });
                       });
                     }

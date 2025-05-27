@@ -7,8 +7,17 @@ import { useParams } from "next/navigation";
 import { DrawerContext } from "../providers/DrawerProvider";
 import SubscriptionsTable from "./SubscriptionsTable";
 import { X, Pencil, Eye, Check, Minus, Plus, DollarSign } from "lucide-react";
+import { useFeatureFlag } from '../utils/feature-flags.ts';
+import { useAuth } from '../providers/AuthProvider';
 
 const DonateBar = () => {
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
   const [donate, setDonate] = useState(0);
   const {
     totalSubscriptionsCost,

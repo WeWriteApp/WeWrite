@@ -194,7 +194,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium">{followedUser.username || 'Anonymous User'}</span>
-                  {subscriptionEnabled && followedUser.tier && (
+                  {false && subscriptionEnabled && followedUser.tier && (
                     <SupporterIcon
                       tier={followedUser.tier}
                       status={followedUser.subscriptionStatus}

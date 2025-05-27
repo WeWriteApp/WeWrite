@@ -17,11 +17,38 @@ export function Sidebar({ className }: SidebarProps) {
   const router = useRouter();
   const { user } = useContext(AuthContext);
 
-  const handleLogout = () => {
-    // Logic to handle logout
-    // This would typically call your auth service
-    // For now, we'll just redirect to the home page
-    router.push('/');
+  const handleLogout = async () => {
+    try {
+      // Check if there are multiple accounts to determine logout behavior
+      const savedAccountsJson = localStorage.getItem('savedAccounts');
+      let hasMultipleAccounts = false;
+
+      if (savedAccountsJson) {
+        try {
+          const savedAccounts = JSON.parse(savedAccountsJson);
+          hasMultipleAccounts = savedAccounts.length > 1;
+        } catch (e) {
+          console.error('Error parsing saved accounts:', e);
+        }
+      }
+
+      // Import the enhanced logout function
+      const { logoutUser } = await import('../../firebase/auth');
+
+      // If multiple accounts, try to return to previous account
+      // Otherwise, do a normal logout
+      const result = await logoutUser(false, hasMultipleAccounts);
+
+      if (!result.returnedToPrevious) {
+        // If we didn't return to a previous account, redirect to home
+        router.push('/');
+      }
+      // If we returned to previous account, the redirect is handled by logoutUser
+    } catch (error) {
+      console.error("Error signing out:", error);
+      // Fallback to home page on error
+      router.push('/');
+    }
   };
 
   return (

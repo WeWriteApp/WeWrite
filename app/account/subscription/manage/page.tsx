@@ -12,6 +12,8 @@ import { SupporterIcon } from '../../../components/SupporterIcon';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
 import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { useFeatureFlag } from '../../../utils/feature-flags';
+import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
 
 interface SubscriptionHistoryItem {
   id: string;
@@ -24,12 +26,31 @@ interface SubscriptionHistoryItem {
 export default function ManageSubscriptionPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
+
+  // If payments feature flag is disabled, show OpenCollective support instead
+  if (!isPaymentsEnabled) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-8">
+          <Link href="/account" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Account
+          </Link>
+        </div>
+        <OpenCollectiveSupport
+          title="Subscription Management Coming Soon!"
+          description="We're working on subscription functionality. In the meantime, please support WeWrite development through OpenCollective."
+        />
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!user) {

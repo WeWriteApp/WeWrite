@@ -10,6 +10,12 @@ let rtdbInstance;
 let authInstance;
 
 function initAdminServer() {
+  // Skip initialization during build time
+  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+    console.log('Skipping Firebase Admin initialization during build time');
+    return null;
+  }
+
   // Check if any Firebase apps have been initialized
   if (admin.apps.length === 0) {
     try {

@@ -3,8 +3,8 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { Ban, Star } from 'lucide-react';
-import { useFeatureFlag } from '../utils/feature-flags';
 import { useAuth } from '../providers/AuthProvider';
+import { useFeatureFlag } from '../utils/feature-flags';
 
 interface SupporterIconProps {
   tier?: string | null;
@@ -15,13 +15,12 @@ interface SupporterIconProps {
 
 export function SupporterIcon({ tier, status, size = 'sm', className = '' }: SupporterIconProps) {
   const { user } = useAuth();
-  const paymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
 
-  // Don't render anything if payments feature is disabled
-  if (!paymentsEnabled) {
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
     return null;
   }
-
   const isActive = status === 'active' || status === 'trialing';
   const iconSizes = { sm: 14, md: 16, lg: 20, xl: 32 };
   const iconSize = iconSizes[size];
