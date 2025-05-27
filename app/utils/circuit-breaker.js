@@ -1,6 +1,6 @@
 /**
  * Circuit Breaker Pattern Implementation
- * 
+ *
  * Prevents cascading failures by temporarily disabling operations
  * that are likely to fail, allowing the system to recover gracefully.
  */
@@ -16,32 +16,35 @@ class CircuitBreaker {
     this.failureThreshold = options.failureThreshold || DEFAULT_FAILURE_THRESHOLD;
     this.timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
     this.resetTimeMs = options.resetTimeMs || DEFAULT_RESET_TIME_MS;
-    
+
     this.state = this.loadState();
   }
 
   loadState() {
     try {
-      const stored = localStorage.getItem(`${CIRCUIT_BREAKER_KEY}_${this.name}`);
-      if (stored) {
-        const state = JSON.parse(stored);
-        
-        // Check if we should reset from OPEN to HALF_OPEN
-        if (state.state === 'OPEN' && Date.now() - state.lastFailureTime > this.resetTimeMs) {
-          return {
-            state: 'HALF_OPEN',
-            failureCount: 0,
-            lastFailureTime: null,
-            lastSuccessTime: Date.now()
-          };
+      // Check if we're in a browser environment
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(`${CIRCUIT_BREAKER_KEY}_${this.name}`);
+        if (stored) {
+          const state = JSON.parse(stored);
+
+          // Check if we should reset from OPEN to HALF_OPEN
+          if (state.state === 'OPEN' && Date.now() - state.lastFailureTime > this.resetTimeMs) {
+            return {
+              state: 'HALF_OPEN',
+              failureCount: 0,
+              lastFailureTime: null,
+              lastSuccessTime: Date.now()
+            };
+          }
+
+          return state;
         }
-        
-        return state;
       }
     } catch (error) {
       console.error('Error loading circuit breaker state:', error);
     }
-    
+
     return {
       state: 'CLOSED', // CLOSED = normal operation, OPEN = failing, HALF_OPEN = testing
       failureCount: 0,
@@ -52,10 +55,13 @@ class CircuitBreaker {
 
   saveState() {
     try {
-      localStorage.setItem(
-        `${CIRCUIT_BREAKER_KEY}_${this.name}`,
-        JSON.stringify(this.state)
-      );
+      // Check if we're in a browser environment
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(
+          `${CIRCUIT_BREAKER_KEY}_${this.name}`,
+          JSON.stringify(this.state)
+        );
+      }
     } catch (error) {
       console.error('Error saving circuit breaker state:', error);
     }
@@ -69,7 +75,7 @@ class CircuitBreaker {
       console.warn(`Circuit breaker ${this.name} is OPEN - blocking operation`);
       return false;
     }
-    
+
     return true;
   }
 
@@ -79,12 +85,12 @@ class CircuitBreaker {
   recordSuccess() {
     this.state.failureCount = 0;
     this.state.lastSuccessTime = Date.now();
-    
+
     if (this.state.state === 'HALF_OPEN') {
       console.log(`Circuit breaker ${this.name} recovered - moving to CLOSED`);
       this.state.state = 'CLOSED';
     }
-    
+
     this.saveState();
   }
 
@@ -94,12 +100,12 @@ class CircuitBreaker {
   recordFailure() {
     this.state.failureCount += 1;
     this.state.lastFailureTime = Date.now();
-    
+
     if (this.state.failureCount >= this.failureThreshold) {
       console.warn(`Circuit breaker ${this.name} tripped - moving to OPEN`);
       this.state.state = 'OPEN';
     }
-    
+
     this.saveState();
   }
 

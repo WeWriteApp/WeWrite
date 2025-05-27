@@ -151,8 +151,19 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
 
     checkFeatureFlag();
 
-    // Set up a real-time listener for feature flag changes
+    // CRITICAL FIX: Disable individual feature flag listeners to prevent conflicts
+    // The centralized FeatureFlagListener component handles all real-time updates
+    // and triggers page reloads when necessary. Individual hooks should only
+    // check the current state, not set up their own listeners.
+
+    // Set up a real-time listener for feature flag changes (DISABLED)
     const setupListener = async () => {
+      // DISABLED: This was causing infinite reload loops when combined with FeatureFlagListener
+      // The FeatureFlagListener component now handles all real-time updates centrally
+      console.log(`[DEBUG] Individual listener for ${memoizedFlag} disabled - using centralized FeatureFlagListener`);
+      return null;
+
+      /* ORIGINAL CODE DISABLED:
       try {
         const { doc, onSnapshot } = await import('firebase/firestore');
         const { db } = await import('../firebase/database');
@@ -212,16 +223,16 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): bo
         console.error(`Error setting up listener for feature flag ${memoizedFlag}:`, error);
         return null;
       }
+      */
     };
 
-    // Set up the listener and store the unsubscribe function
-    const unsubscribePromise = setupListener();
+    // DISABLED: Set up the listener and store the unsubscribe function
+    // const unsubscribePromise = setupListener();
 
-    // Clean up the listener when the component unmounts
+    // Clean up function (no-op since listeners are disabled)
     return () => {
-      unsubscribePromise.then(unsubscribe => {
-        if (unsubscribe) unsubscribe();
-      });
+      // No cleanup needed since individual listeners are disabled
+      console.log(`[DEBUG] Cleanup called for disabled listener: ${memoizedFlag}`);
     };
   }, [memoizedFlag, memoizedUserEmail]);
 
