@@ -518,6 +518,11 @@ export default function AdminPage() {
                     key={flag.id}
                     flag={flag}
                     onToggle={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
+                    onPersonalToggle={(flagId, checked) => {
+                      // Personal toggle doesn't need to update the global state
+                      // The component handles its own personal state
+                      console.log(`Personal toggle for ${flagId}: ${checked}`);
+                    }}
                     isLoading={isLoading}
                   />
                 ))}

@@ -18,7 +18,7 @@ interface DayCardProps {
  * - Empty State: Greyed out card with dotted outline border
  * - Filled State: Solid card with accent color
  */
-export default function DayCard({ date, hasNote, onClick, accentColor = '#1768FF' }: DayCardProps) {
+const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColor = '#1768FF' }: DayCardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -108,4 +108,6 @@ export default function DayCard({ date, hasNote, onClick, accentColor = '#1768FF
       </div>
     </div>
   );
-}
+});
+
+export default DayCard;

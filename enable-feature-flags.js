@@ -8,13 +8,13 @@ require('dotenv').config({ path: '.env.local' });
 // Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL
 };
 
 // Initialize Firebase
@@ -24,12 +24,12 @@ const db = getFirestore(app);
 async function enableFeatureFlags() {
   try {
     console.log('🔧 Enabling feature flags for testing...');
-    
+
     const featureFlagsRef = doc(db, 'config', 'featureFlags');
-    
+
     // First check if document exists
     const featureFlagsDoc = await getDoc(featureFlagsRef);
-    
+
     const flagsToEnable = {
       payments: true,
       daily_notes: true,
@@ -40,7 +40,7 @@ async function enableFeatureFlags() {
       calendar_view: false,
       notifications: false
     };
-    
+
     if (featureFlagsDoc.exists()) {
       // Update existing document
       await updateDoc(featureFlagsRef, flagsToEnable);
@@ -50,7 +50,7 @@ async function enableFeatureFlags() {
       await setDoc(featureFlagsRef, flagsToEnable);
       console.log('✅ Feature flags document created successfully!');
     }
-    
+
     // Verify the update
     const updatedDoc = await getDoc(featureFlagsRef);
     const updatedData = updatedDoc.data();
@@ -58,7 +58,7 @@ async function enableFeatureFlags() {
     Object.entries(updatedData).forEach(([flag, enabled]) => {
       console.log(`  ${flag}: ${enabled ? '✅ ENABLED' : '❌ DISABLED'}`);
     });
-    
+
   } catch (error) {
     console.error('❌ Error enabling feature flags:', error);
   }

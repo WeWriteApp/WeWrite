@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DayCard from './DayCard';
 import { AuthContext } from '../../providers/AuthProvider';
@@ -56,31 +56,29 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
   const [loadingPast, setLoadingPast] = useState(false);
   const [loadingFuture, setLoadingFuture] = useState(false);
 
-  // Generate symmetric array of dates
-  const generateDates = useCallback(() => {
-    const dates: Date[] = [];
+  // Generate symmetric array of dates (memoized to prevent unnecessary re-renders)
+  const dates = useMemo(() => {
+    const dateArray: Date[] = [];
     const today = new Date();
 
     // Add past days (in chronological order)
     for (let i = daysBefore; i >= 1; i--) {
-      dates.push(subDays(today, i));
+      dateArray.push(subDays(today, i));
     }
 
     // Add today
-    dates.push(today);
+    dateArray.push(today);
 
     // Add future days
     for (let i = 1; i <= daysAfter; i++) {
-      dates.push(addDays(today, i));
+      dateArray.push(addDays(today, i));
     }
 
-    return dates;
+    return dateArray;
   }, [daysBefore, daysAfter]);
 
-  const dates = generateDates();
-
   // Load more dates in the past
-  const loadMorePast = useCallback(async () => {
+  const loadMorePast = useCallback(() => {
     if (loadingPast) return;
 
     setLoadingPast(true);
@@ -93,18 +91,18 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     setDaysBefore(prev => prev + 15);
 
     // After state update, restore scroll position accounting for new cards
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       if (carousel) {
         const cardWidth = 88; // 80px width + 8px gap
         const newScrollPosition = currentScrollLeft + (15 * cardWidth);
         carousel.scrollTo({ left: newScrollPosition, behavior: 'instant' });
       }
       setLoadingPast(false);
-    }, 100);
+    });
   }, [loadingPast]);
 
   // Load more dates in the future
-  const loadMoreFuture = useCallback(async () => {
+  const loadMoreFuture = useCallback(() => {
     if (loadingFuture) return;
 
     setLoadingFuture(true);
@@ -113,9 +111,9 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     setDaysAfter(prev => prev + 15);
 
     // No need to adjust scroll position for future dates
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       setLoadingFuture(false);
-    }, 100);
+    });
   }, [loadingFuture]);
 
   // Check for existing notes with exact YYYY-MM-DD format titles only
@@ -179,7 +177,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     };
 
     loadNotes();
-  }, [user?.uid, dates.length, checkExistingNotes, dates]);
+  }, [user?.uid, daysBefore, daysAfter, checkExistingNotes]);
 
   // Handle day card click
   const handleDayClick = (date: Date) => {
@@ -216,7 +214,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
       }
     }
-  }, [dates]);
+  }, [daysBefore, daysAfter]); // Use daysBefore/daysAfter instead of dates array
 
   // Scroll to today's card on initial mount
   useEffect(() => {

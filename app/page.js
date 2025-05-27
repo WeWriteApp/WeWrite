@@ -66,8 +66,29 @@ const Home = React.memo(function Home() {
   const [loadingRetryCount, setLoadingRetryCount] = useState(0);
   const [initialLoadStartTime, setInitialLoadStartTime] = useState(null);
 
-  // Feature flag for daily notes
-  const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email);
+  // Feature flag for daily notes - now includes user ID for user-specific overrides
+  const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email, user?.uid);
+
+  // Debug logging for daily notes feature flag
+  useEffect(() => {
+    if (user) {
+      console.log('[HomePage] Daily notes feature flag check:', {
+        userEmail: user.email,
+        userId: user.uid,
+        dailyNotesEnabled,
+        timestamp: new Date().toISOString()
+      });
+
+      // Also log to help with debugging
+      console.log('[HomePage] User object:', user);
+      console.log('[HomePage] Feature flag result:', dailyNotesEnabled);
+    }
+  }, [user, dailyNotesEnabled]);
+
+  // Additional debug logging for when the component renders
+  useEffect(() => {
+    console.log('[HomePage] Component rendered with dailyNotesEnabled:', dailyNotesEnabled);
+  }, [dailyNotesEnabled]);
 
 
 
@@ -179,7 +200,9 @@ const Home = React.memo(function Home() {
 
           {/* Daily Notes Section - Feature flagged */}
           {dailyNotesEnabled && (
-            <DailyNotesSection />
+            <div data-component="DailyNotesSection">
+              <DailyNotesSection />
+            </div>
           )}
 
 

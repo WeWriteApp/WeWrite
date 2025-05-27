@@ -13,6 +13,9 @@ import Link from "next/link";
 import { PillLink } from "./PillLink";
 import debounce from "lodash.debounce";
 import { Input } from "./ui/input";
+import { navigateToPage } from "../utils/pagePermissions";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/config";
 
 // Simple Loader component
 const Loader = () => {
@@ -25,10 +28,10 @@ const Loader = () => {
 
 /**
  * SearchResults Component
- * 
+ *
  * A clean search component that displays search results in a list format.
  * Supports both link editor mode and general search functionality.
- * 
+ *
  * @param {Function} onSelect - Callback when a result is selected
  * @param {string} userId - Optional user ID to filter results
  * @param {string} placeholder - Input placeholder text
@@ -56,7 +59,7 @@ const SearchResults = ({
 }) => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
-  
+
   // State management
   const [search, setSearch] = useState(initialSearch);
   const [pages, setPages] = useState({
@@ -67,14 +70,15 @@ const SearchResults = ({
   });
   const [isSearching, setIsSearching] = useState(false);
   const [selectedId, setSelectedId] = useState(initialSelectedId);
-  
+  const [pageDataCache, setPageDataCache] = useState(new Map());
+
   // Refs
   const searchInputRef = useRef(null);
   const abortControllerRef = useRef(null);
-  
+
   // Determine if we're in link editor mode
   const isLinkEditor = !!setDisplayText;
-  
+
   // Character count threshold for search
   const characterCount = isLinkEditor ? 0 : 2;
 
@@ -107,11 +111,11 @@ const SearchResults = ({
       }
 
       setIsSearching(true);
-      
+
       try {
         // Create new abort controller for this request
         abortControllerRef.current = new AbortController();
-        
+
         let selectedUserId = userId ? userId : user.uid;
         let groupIds = [];
         if (user && user.groups) {
@@ -174,7 +178,7 @@ const SearchResults = ({
   const handleSearchChange = useCallback((e) => {
     const value = e.target.value;
     setSearch(value);
-    
+
     if (onInputChange) {
       onInputChange(value);
     }
@@ -188,29 +192,51 @@ const SearchResults = ({
   }, [debouncedSearch, onInputChange, characterCount, isLinkEditor, resetSearchResults]);
 
   // Handle item selection
-  const handleSelect = useCallback((item) => {
+  const handleSelect = useCallback(async (item) => {
     setSelectedId(item.id);
-    
+
     if (onSelect) {
       onSelect(item);
     }
-    
+
     // In link editor mode, update display text if needed
     if (isLinkEditor && setDisplayText) {
       if (!displayText.trim() || displayText === search) {
         setDisplayText(item.title || item.username || item.name);
       }
     }
-    
+
     // Navigate if not prevented and not in link editor mode
     if (!preventRedirect && !isLinkEditor) {
       if (item.type === 'user') {
         router.push(`/user/${item.id}`);
       } else {
-        router.push(`/${item.id}`);
+        // For page items, use click-to-edit functionality
+        try {
+          // Check if we have cached page data
+          let pageData = pageDataCache.get(item.id);
+
+          if (!pageData) {
+            // Fetch page data for permission checking
+            const pageRef = doc(db, 'pages', item.id);
+            const pageDoc = await getDoc(pageRef);
+            if (pageDoc.exists()) {
+              pageData = { id: item.id, ...pageDoc.data() };
+              // Cache the page data
+              setPageDataCache(prev => new Map(prev).set(item.id, pageData));
+            }
+          }
+
+          // Use click-to-edit navigation
+          navigateToPage(item.id, user, pageData, user?.groups, router);
+        } catch (error) {
+          console.error('Error fetching page data for navigation:', error);
+          // Fallback to regular navigation
+          router.push(`/${item.id}`);
+        }
       }
     }
-  }, [onSelect, isLinkEditor, setDisplayText, displayText, search, preventRedirect, router]);
+  }, [onSelect, isLinkEditor, setDisplayText, displayText, search, preventRedirect, router, user, pageDataCache]);
 
   // Get all unique pages for display
   const getAllUniquePages = useCallback(() => {
@@ -219,12 +245,12 @@ const SearchResults = ({
       ...(pages.groupPages || []),
       ...(pages.publicPages || [])
     ];
-    
+
     // Remove duplicates based on ID
-    const uniquePages = allPages.filter((page, index, self) => 
+    const uniquePages = allPages.filter((page, index, self) =>
       index === self.findIndex(p => p.id === page.id)
     );
-    
+
     return uniquePages;
   }, [pages]);
 
@@ -257,7 +283,7 @@ const SearchResults = ({
             type="text"
             value={displayText}
             onChange={(e) => setDisplayText(e.target.value)}
-            placeholder={selectedId ? 
+            placeholder={selectedId ?
               getAllUniquePages().find(page => page.id === selectedId)?.title || "Link text"
               : "Link text"}
             className="w-full px-3 py-2 border border-border rounded-md"
@@ -276,7 +302,7 @@ const SearchResults = ({
           className="w-full pr-10"
           autoComplete="off"
         />
-        
+
         {/* Search Icon */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <Search className="h-4 w-4 text-muted-foreground" />
@@ -303,9 +329,9 @@ const SearchResults = ({
                   >
                     <div className="flex items-center gap-2">
                       {user.photoURL && (
-                        <img 
-                          src={user.photoURL} 
-                          alt={user.username} 
+                        <img
+                          src={user.photoURL}
+                          alt={user.username}
                           className="w-6 h-6 rounded-full"
                         />
                       )}

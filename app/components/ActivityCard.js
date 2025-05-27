@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { PillLink } from "./PillLink";
@@ -14,8 +14,9 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import DiffPreview, { DiffStats } from "./DiffPreview";
 import { useFeatureFlag } from "../utils/feature-flags";
-import { useContext } from "react";
 import { AuthContext } from "../providers/AuthProvider";
+import { navigateToPage } from "../utils/pagePermissions";
+import { useRouter } from "next/navigation";
 
 /**
  * ActivityCard component displays a single activity card
@@ -28,6 +29,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { user } = useContext(AuthContext);
+  const router = useRouter();
+  const [pageData, setPageData] = useState(null);
 
   // Debug activity data
   useEffect(() => {
@@ -49,6 +52,27 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       fullActivity: { ...activity }
     });
   }, [activity]);
+
+  // Fetch page data for permission checking (only for regular page activities)
+  useEffect(() => {
+    if (activity?.pageId && user &&
+        activity.activityType !== "bio_edit" &&
+        activity.activityType !== "group_about_edit") {
+      const fetchPageData = async () => {
+        try {
+          const pageRef = doc(db, 'pages', activity.pageId);
+          const pageDoc = await getDoc(pageRef);
+          if (pageDoc.exists()) {
+            setPageData({ id: activity.pageId, ...pageDoc.data() });
+          }
+        } catch (error) {
+          console.error('Error fetching page data for permissions:', error);
+        }
+      };
+
+      fetchPageData();
+    }
+  }, [activity?.pageId, user, activity?.activityType]);
 
   // Use the reactive feature flag hook instead of manual Firestore check
   const subscriptionEnabled = useFeatureFlag('payments', user?.email);
@@ -94,18 +118,37 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       return;
     }
 
-    // Construct the URL based on whether we have a versionId
-    const url = activity.versionId ? `/${activity.pageId}/version/${activity.versionId}` : `/${activity.pageId}`;
+    // Handle special activity types (bio_edit, group_about_edit) with direct navigation
+    if (activity.activityType === "bio_edit") {
+      const userId = activity.pageId.replace("user-bio-", "");
+      const url = `/user/${userId}`;
+      console.log('ActivityCard: Bio edit clicked, navigating to:', url);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      window.location.href = url;
+      return;
+    }
 
-    console.log('ActivityCard clicked, navigating to:', url);
+    if (activity.activityType === "group_about_edit") {
+      const groupId = activity.pageId.replace("group-about-", "");
+      const url = `/group/${groupId}`;
+      console.log('ActivityCard: Group about edit clicked, navigating to:', url);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      window.location.href = url;
+      return;
+    }
 
-    // SCROLL RESTORATION FIX: Ensure scroll position is reset when navigating
-    // Scroll to top immediately before navigation to prevent scroll position inheritance
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-
-    // Force a hard navigation using window.location.href
-    // This bypasses any router issues and ensures the navigation works
-    window.location.href = url;
+    // For regular page activities, use click-to-edit functionality
+    if (activity.versionId) {
+      // Version links should go directly to the version (no edit mode)
+      const url = `/${activity.pageId}/version/${activity.versionId}`;
+      console.log('ActivityCard: Version clicked, navigating to:', url);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      window.location.href = url;
+    } else {
+      // Regular page links should use click-to-edit functionality
+      console.log('ActivityCard: Page clicked, using click-to-edit navigation');
+      navigateToPage(activity.pageId, user, pageData, user?.groups, router);
+    }
   };
 
   // Create the URL for this activity

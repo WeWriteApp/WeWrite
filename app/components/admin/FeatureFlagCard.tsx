@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Card } from '../ui/card';
 import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { Loader, ChevronDown, Users, Settings, Eye } from 'lucide-react';
+import { Loader, ChevronDown, Users, Settings, Eye, User, Globe } from 'lucide-react';
 import { FeatureFlag } from '../../utils/feature-flags';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/database';
+import { AuthContext } from '../../providers/AuthProvider';
 import UserAccessModal from './UserAccessModal';
 
 interface FeatureFlagState {
@@ -22,6 +23,7 @@ interface FeatureFlagState {
 interface FeatureFlagCardProps {
   flag: FeatureFlagState;
   onToggle: (flagId: FeatureFlag, checked: boolean) => void;
+  onPersonalToggle?: (flagId: FeatureFlag, checked: boolean) => void;
   isLoading?: boolean;
 }
 
@@ -34,12 +36,23 @@ interface UserAccessStats {
 export default function FeatureFlagCard({
   flag,
   onToggle,
+  onPersonalToggle,
   isLoading = false
 }: FeatureFlagCardProps) {
+  const { user } = useContext(AuthContext);
   const [isExpanded, setIsExpanded] = useState(false);
   const [userStats, setUserStats] = useState<UserAccessStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [personalEnabled, setPersonalEnabled] = useState<boolean | null>(null);
+  const [loadingPersonal, setLoadingPersonal] = useState(false);
+
+  // Load personal feature flag state on mount
+  useEffect(() => {
+    if (user) {
+      loadPersonalFeatureState();
+    }
+  }, [user, flag.id]);
 
   // Load user access statistics when expanded
   useEffect(() => {
@@ -101,6 +114,66 @@ export default function FeatureFlagCard({
     }
   };
 
+  // Load personal feature flag state
+  const loadPersonalFeatureState = async () => {
+    if (!user) return;
+
+    try {
+      const featureOverrideRef = doc(db, 'featureOverrides', `${user.uid}_${flag.id}`);
+      const featureOverrideDoc = await getDoc(featureOverrideRef);
+
+      if (featureOverrideDoc.exists()) {
+        const data = featureOverrideDoc.data();
+        setPersonalEnabled(data.enabled);
+      } else {
+        // If no override, use the global setting
+        setPersonalEnabled(flag.enabled);
+      }
+    } catch (error) {
+      console.error('Error loading personal feature state:', error);
+      setPersonalEnabled(flag.enabled); // Fall back to global setting
+    }
+  };
+
+  // Handle personal toggle
+  const handlePersonalToggle = async (checked: boolean) => {
+    if (!user) return;
+
+    try {
+      setLoadingPersonal(true);
+
+      // Update user-specific feature override
+      const featureOverrideRef = doc(db, 'featureOverrides', `${user.uid}_${flag.id}`);
+
+      await setDoc(featureOverrideRef, {
+        userId: user.uid,
+        featureId: flag.id,
+        enabled: checked,
+        lastModified: new Date().toISOString()
+      });
+
+      setPersonalEnabled(checked);
+
+      // Call the optional callback
+      if (onPersonalToggle) {
+        onPersonalToggle(flag.id, checked);
+      }
+
+      // Trigger a feature flag refresh event
+      try {
+        window.dispatchEvent(new CustomEvent('featureFlagChanged', {
+          detail: { flagId: flag.id, newValue: checked, timestamp: Date.now(), personal: true }
+        }));
+      } catch (eventError) {
+        console.warn('Could not dispatch personal feature flag change event:', eventError);
+      }
+    } catch (error) {
+      console.error('Error toggling personal feature flag:', error);
+    } finally {
+      setLoadingPersonal(false);
+    }
+  };
+
   const handleExpandToggle = () => {
     setIsExpanded(!isExpanded);
   };
@@ -113,23 +186,41 @@ export default function FeatureFlagCard({
             <span className="font-medium">{flag.name}</span>
             {flag.enabled ? (
               <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                ENABLED
+                GLOBALLY ENABLED
               </span>
             ) : (
               <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded-full">
-                DISABLED
+                GLOBALLY DISABLED
+              </span>
+            )}
+            {personalEnabled !== null && personalEnabled !== flag.enabled && (
+              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                PERSONAL OVERRIDE
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {isLoading && (
-              <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
-            )}
-            <Switch
-              checked={flag.enabled}
-              onCheckedChange={(checked) => onToggle(flag.id, checked)}
-              disabled={isLoading}
-            />
+        </div>
+
+        {/* Personal Toggle Section */}
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div>
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Personal Access</span>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Controls this feature for you only</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {loadingPersonal && (
+                <Loader className="h-4 w-4 animate-spin text-blue-600" />
+              )}
+              <Switch
+                checked={personalEnabled ?? flag.enabled}
+                onCheckedChange={handlePersonalToggle}
+                disabled={loadingPersonal || !user}
+              />
+            </div>
           </div>
         </div>
 
@@ -152,6 +243,32 @@ export default function FeatureFlagCard({
           </CollapsibleTrigger>
 
           <CollapsibleContent className="space-y-3 pt-3">
+            {/* Global Toggle Section */}
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <div>
+                    <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Global Access Control</span>
+                    <p className="text-xs text-orange-700 dark:text-orange-300">Controls this feature for ALL users in the system</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isLoading && (
+                    <Loader className="h-4 w-4 animate-spin text-orange-600" />
+                  )}
+                  <Switch
+                    checked={flag.enabled}
+                    onCheckedChange={(checked) => onToggle(flag.id, checked)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/50 p-2 rounded">
+                ⚠️ <strong>Warning:</strong> This affects all users. Individual user overrides will still apply.
+              </div>
+            </div>
+
             {loadingStats ? (
               <div className="flex justify-center py-4">
                 <Loader className="h-4 w-4 animate-spin text-muted-foreground" />

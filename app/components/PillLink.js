@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, forwardRef } from "react";
+import React, { useState, forwardRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, ExternalLink, Users, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "./ui/skeleton";
@@ -9,6 +9,9 @@ import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink
 import Modal from "./ui/modal";
 import { Button } from "./ui/button";
 import { usePillStyle } from "../contexts/PillStyleContext";
+import { navigateToPage, canUserEditPage } from "../utils/pagePermissions";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase/config";
 
 // Simple skeleton loader
 const PillLinkSkeleton = () => (
@@ -33,6 +36,7 @@ export const PillLink = forwardRef(({
   const { user } = useAuth();
   const { getPillStyleClasses } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
+  const [pageData, setPageData] = useState(null);
   const router = useRouter();
 
   // Show loading state if needed
@@ -58,6 +62,25 @@ export const PillLink = forwardRef(({
   const isPageLinkType = isPageLink(href);
   const isExternalLinkType = isExternalLink(href);
   const pageId = href.split('/').pop();
+
+  // Fetch page data for permission checking (only for page links)
+  useEffect(() => {
+    if (isPageLinkType && pageId && user) {
+      const fetchPageData = async () => {
+        try {
+          const pageRef = doc(db, 'pages', pageId);
+          const pageDoc = await getDoc(pageRef);
+          if (pageDoc.exists()) {
+            setPageData({ id: pageId, ...pageDoc.data() });
+          }
+        } catch (error) {
+          console.error('Error fetching page data for permissions:', error);
+        }
+      };
+
+      fetchPageData();
+    }
+  }, [isPageLinkType, pageId, user]);
 
   // Format byline based on whether the page belongs to a group or user
   let formattedByline = null;
@@ -235,7 +258,14 @@ export const PillLink = forwardRef(({
             return;
           }
 
-          // Use Next.js router for navigation when possible
+          // Handle page links with click-to-edit functionality
+          if (isPageLinkType && pageId) {
+            // Use the new navigation function that handles edit permissions
+            navigateToPage(pageId, user, pageData, user?.groups, router);
+            return;
+          }
+
+          // Use Next.js router for navigation when possible (for non-page links)
           if (typeof window !== 'undefined') {
             // SCROLL RESTORATION FIX: Ensure scroll position is reset when navigating
             // Scroll to top immediately before navigation to prevent scroll position inheritance
