@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useContext } from 'react';
 
 // Define feature flag types
 export type FeatureFlag =
@@ -28,69 +28,84 @@ export const isAdmin = (userEmail?: string | null): boolean => {
   return ADMIN_USER_IDS.includes(userEmail);
 };
 
+// Global feature flag state
+let globalFeatureFlags: Record<string, boolean> = {};
+let isInitialized = false;
+let initializationPromise: Promise<void> | null = null;
+
 /**
- * Get the status of a feature flag
- * @param flag - The feature flag to check
- * @param userEmail - The current user's email (for admin-only features)
- * @returns boolean indicating if the feature is enabled
+ * Initialize feature flags from database
  */
-export const isFeatureEnabled = async (flag: FeatureFlag, userEmail?: string | null): Promise<boolean> => {
-  console.log(`[DEBUG] Checking feature flag ${flag} for user ${userEmail || 'unknown'}`);
+const initializeFeatureFlags = async (): Promise<void> => {
+  if (isInitialized) return;
 
   try {
-    // Check groups flag from Firestore instead of hard-coding it
-    if (flag === 'groups') {
-      console.log(`[DEBUG] GROUPS FLAG CHECK - Checking groups feature flag from database`);
-      // Fall through to normal flag checking logic
-    }
+    console.log('[FeatureFlags] Initializing feature flags from database...');
 
-    // Check the database for the feature flag setting
     const { doc, getDoc } = await import('firebase/firestore');
     const { db } = await import('../firebase/database');
 
-    console.log(`[DEBUG] Database reference created for feature flag ${flag}`);
     const featureFlagsRef = doc(db, 'config', 'featureFlags');
-
-    console.log(`[DEBUG] Fetching feature flags document from Firestore`);
     const featureFlagsDoc = await getDoc(featureFlagsRef);
 
     if (featureFlagsDoc.exists()) {
       const flagsData = featureFlagsDoc.data();
-      console.log(`[DEBUG] Feature flags data:`, flagsData);
+      console.log('[FeatureFlags] Feature flags loaded:', flagsData);
 
-      // Enhanced debugging for groups flag
-      if (flag === 'groups') {
-        console.log(`[DEBUG] GROUPS FLAG CHECK - Raw value in database:`, flagsData[flag]);
-        console.log(`[DEBUG] GROUPS FLAG CHECK - Type of value:`, typeof flagsData[flag]);
-        console.log(`[DEBUG] GROUPS FLAG CHECK - Strict equality check (=== true):`, flagsData[flag] === true);
-        console.log(`[DEBUG] GROUPS FLAG CHECK - Loose equality check (== true):`, flagsData[flag] == true);
-        console.log(`[DEBUG] GROUPS FLAG CHECK - Boolean conversion:`, Boolean(flagsData[flag]));
-      }
-
-      const isEnabledInDb = flagsData[flag] === true;
-      console.log(`[DEBUG] Feature flag ${flag} in database: ${isEnabledInDb}`);
-
-      return isEnabledInDb;
+      // Store all flags globally
+      globalFeatureFlags = { ...flagsData };
+      isInitialized = true;
     } else {
-      console.log(`[DEBUG] No feature flags document found in database, checking defaults`);
+      console.log('[FeatureFlags] No feature flags document found, using defaults');
 
-      // If no document exists, fall back to defaults
-      // All features are disabled by default for consistency
-      console.log(`[DEBUG] Feature flag ${flag}: No document exists, defaulting to OFF`);
-      return false;
+      // Set default flags
+      globalFeatureFlags = {
+        payments: false,
+        username_management: false,
+        map_view: false,
+        calendar_view: false,
+        groups: true,
+        notifications: false,
+        link_functionality: true,
+        daily_notes: false
+      };
+      isInitialized = true;
     }
   } catch (error) {
-    console.error(`[DEBUG] Error checking feature flag ${flag}:`, error);
-    console.error(`[DEBUG] Error details:`, error);
+    console.error('[FeatureFlags] Error initializing feature flags:', error);
 
-    // On error, default to disabled for consistency
-    return false;
+    // Set safe defaults on error
+    globalFeatureFlags = {
+      payments: false,
+      username_management: false,
+      map_view: false,
+      calendar_view: false,
+      groups: true,
+      notifications: false,
+      link_functionality: true,
+      daily_notes: false
+    };
+    isInitialized = true;
   }
 };
 
-// Cache for feature flags to prevent excessive database calls
-const featureFlagCache = new Map<string, { value: boolean; timestamp: number; userEmail: string | null }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+/**
+ * Get the status of a feature flag (synchronous)
+ * @param flag - The feature flag to check
+ * @param userEmail - The current user's email (for admin-only features)
+ * @returns boolean indicating if the feature is enabled
+ */
+export const isFeatureEnabled = (flag: FeatureFlag, userEmail?: string | null): boolean => {
+  // If not initialized, return false (will be updated when initialization completes)
+  if (!isInitialized) {
+    console.log(`[FeatureFlags] Flag ${flag} checked before initialization, returning false`);
+    return false;
+  }
+
+  const isEnabled = globalFeatureFlags[flag] === true;
+  console.log(`[FeatureFlags] Flag ${flag} for user ${userEmail || 'unknown'}: ${isEnabled}`);
+  return isEnabled;
+};
 
 /**
  * React hook to check if a feature is enabled
@@ -103,138 +118,26 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
  */
 export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null): boolean => {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
-  const [lastUpdate, setLastUpdate] = useState<number>(0);
-
-  // Memoize the flag and userEmail to prevent unnecessary effect re-runs
-  const memoizedFlag = useMemo(() => flag, [flag]);
-  const memoizedUserEmail = useMemo(() => userEmail, [userEmail]);
+  const [initialized, setInitialized] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check cache first
-    const cacheKey = `${memoizedFlag}-${memoizedUserEmail || 'anonymous'}`;
-    const cached = featureFlagCache.get(cacheKey);
-    const now = Date.now();
-
-    if (cached && (now - cached.timestamp) < CACHE_DURATION && cached.userEmail === memoizedUserEmail) {
-      console.log(`[DEBUG] Using cached value for ${memoizedFlag}: ${cached.value}`);
-      setIsEnabled(cached.value);
-      setLastUpdate(cached.timestamp);
+    // Initialize feature flags if not already done
+    if (!initializationPromise) {
+      initializationPromise = initializeFeatureFlags();
     }
 
-    // Initial check (always run to ensure fresh data)
-    const checkFeatureFlag = async () => {
-      try {
-        console.log(`[DEBUG] Checking feature flag ${memoizedFlag} for user ${memoizedUserEmail || 'unknown'}`);
-        const enabled = await isFeatureEnabled(memoizedFlag, memoizedUserEmail);
-        console.log(`[DEBUG] useFeatureFlag hook for ${memoizedFlag}, user ${memoizedUserEmail || 'unknown'}: ${enabled}`);
+    // Wait for initialization and then set the flag value
+    initializationPromise.then(() => {
+      const enabled = isFeatureEnabled(flag, userEmail);
+      setIsEnabled(enabled);
+      setInitialized(true);
+    }).catch((error) => {
+      console.error(`[FeatureFlags] Error in useFeatureFlag for ${flag}:`, error);
+      setIsEnabled(false);
+      setInitialized(true);
+    });
+  }, [flag, userEmail]);
 
-        // Update cache
-        featureFlagCache.set(cacheKey, {
-          value: enabled,
-          timestamp: now,
-          userEmail: memoizedUserEmail
-        });
-
-        // Enhanced debugging for groups flag
-        if (memoizedFlag === 'groups') {
-          console.log(`[DEBUG] GROUPS FLAG HOOK - Setting state to:`, enabled);
-        }
-
-        setIsEnabled(enabled);
-        setLastUpdate(now);
-      } catch (error) {
-        console.error(`[DEBUG] Error in useFeatureFlag for ${memoizedFlag}:`, error);
-        // Default all features to OFF on error for consistency
-        setIsEnabled(false);
-      }
-    };
-
-    checkFeatureFlag();
-
-    // CRITICAL FIX: Disable individual feature flag listeners to prevent conflicts
-    // The centralized FeatureFlagListener component handles all real-time updates
-    // and triggers page reloads when necessary. Individual hooks should only
-    // check the current state, not set up their own listeners.
-
-    // Set up a real-time listener for feature flag changes (DISABLED)
-    const setupListener = async () => {
-      // DISABLED: This was causing infinite reload loops when combined with FeatureFlagListener
-      // The FeatureFlagListener component now handles all real-time updates centrally
-      console.log(`[DEBUG] Individual listener for ${memoizedFlag} disabled - using centralized FeatureFlagListener`);
-      return null;
-
-      /* ORIGINAL CODE DISABLED:
-      try {
-        const { doc, onSnapshot } = await import('firebase/firestore');
-        const { db } = await import('../firebase/database');
-
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-
-        // Return the unsubscribe function
-        let lastUpdate = 0;
-        const THROTTLE_MS = 1000; // Throttle updates to max once per second
-
-        return onSnapshot(featureFlagsRef, (snapshot) => {
-          const now = Date.now();
-
-          // Throttle updates to prevent excessive re-renders
-          if (now - lastUpdate < THROTTLE_MS) {
-            return;
-          }
-          lastUpdate = now;
-
-          if (snapshot.exists()) {
-            const flagsData = snapshot.data();
-            const isEnabledInDb = flagsData[memoizedFlag] === true;
-
-            // Invalidate cache for this flag for all users
-            const keysToDelete: string[] = [];
-            featureFlagCache.forEach((_, key) => {
-              if (key.startsWith(`${memoizedFlag}-`)) {
-                keysToDelete.push(key);
-              }
-            });
-            keysToDelete.forEach(key => featureFlagCache.delete(key));
-
-            // Update cache with new value
-            const cacheKey = `${memoizedFlag}-${memoizedUserEmail || 'anonymous'}`;
-            featureFlagCache.set(cacheKey, {
-              value: isEnabledInDb,
-              timestamp: now,
-              userEmail: memoizedUserEmail
-            });
-
-            // Enhanced debugging for groups flag
-            if (memoizedFlag === 'groups') {
-              console.log(`[DEBUG] GROUPS FLAG LISTENER - Raw value in database:`, flagsData[memoizedFlag]);
-              console.log(`[DEBUG] GROUPS FLAG LISTENER - Evaluated to:`, isEnabledInDb);
-            }
-
-            console.log(`Feature flag ${memoizedFlag} changed in database: ${isEnabledInDb}`);
-            setIsEnabled(isEnabledInDb);
-            setLastUpdate(now);
-          } else {
-            // If document doesn't exist, default all features to disabled for consistency
-            setIsEnabled(false);
-            setLastUpdate(now);
-          }
-        });
-      } catch (error) {
-        console.error(`Error setting up listener for feature flag ${memoizedFlag}:`, error);
-        return null;
-      }
-      */
-    };
-
-    // DISABLED: Set up the listener and store the unsubscribe function
-    // const unsubscribePromise = setupListener();
-
-    // Clean up function (no-op since listeners are disabled)
-    return () => {
-      // No cleanup needed since individual listeners are disabled
-      console.log(`[DEBUG] Cleanup called for disabled listener: ${memoizedFlag}`);
-    };
-  }, [memoizedFlag, memoizedUserEmail]);
-
-  return isEnabled;
+  // Return false until initialized to prevent flashing
+  return initialized ? isEnabled : false;
 };

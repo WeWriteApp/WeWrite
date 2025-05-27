@@ -28,7 +28,11 @@ interface Group {
   activity?: number[];
 }
 
-export default function HomeGroupsSection() {
+interface HomeGroupsSectionProps {
+  hideHeader?: boolean; // Add prop to control header visibility
+}
+
+export default function HomeGroupsSection({ hideHeader = false }: HomeGroupsSectionProps) {
   const { user } = useContext(AuthContext);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,12 +196,14 @@ export default function HomeGroupsSection() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <SectionTitle
-            icon={Users}
-            title="Your Groups"
-          />
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between mb-4">
+            <SectionTitle
+              icon={Users}
+              title="Your Groups"
+            />
+          </div>
+        )}
         <div className="flex justify-center items-center py-8">
           <Loader className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -208,18 +214,20 @@ export default function HomeGroupsSection() {
   if (groups.length === 0) {
     return (
       <div className="w-full space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <SectionTitle
-            icon={Users}
-            title="Your Groups"
-          />
-          <Button variant="outline" asChild>
-            <Link href="/group/new" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Group
-            </Link>
-          </Button>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between mb-4">
+            <SectionTitle
+              icon={Users}
+              title="Your Groups"
+            />
+            <Button variant="outline" asChild>
+              <Link href="/group/new" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                New Group
+              </Link>
+            </Button>
+          </div>
+        )}
         <div className="border border-theme-medium rounded-2xl overflow-hidden">
           <div className="text-muted-foreground p-4 text-center">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />

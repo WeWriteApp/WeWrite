@@ -69,6 +69,8 @@ const Home = React.memo(function Home() {
   // Feature flag for daily notes
   const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email);
 
+
+
   // Memoized loading state to prevent unnecessary re-renders
   const isLoading = useMemo(() => dataLoading || authLoading, [dataLoading, authLoading]);
 
@@ -180,6 +182,7 @@ const Home = React.memo(function Home() {
             <DailyNotesSection />
           )}
 
+
           {/* 1. Recent Activity - High priority, loads first */}
           <StickySection
             sectionId="activity"
@@ -247,7 +250,7 @@ const Home = React.memo(function Home() {
               minHeight={200}
               fallback={<GroupsSkeleton limit={3} />}
             >
-              <HomeGroupsSection />
+              <HomeGroupsSection hideHeader={true} />
             </LazySection>
           </StickySection>
 

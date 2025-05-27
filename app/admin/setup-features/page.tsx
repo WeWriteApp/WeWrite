@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContext } from '../../providers/AuthProvider';
-import { isAdmin } from '../../utils/feature-flags.ts';
+import { isAdmin } from '../../utils/feature-flags';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { ArrowLeft, Shield, Database, RefreshCw } from 'lucide-react';

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { AuthContext } from '../../../providers/AuthProvider';
 import { useContext } from 'react';
-import { isAdmin } from '../../../utils/feature-flags.ts';
+import { isAdmin } from '../../../utils/feature-flags';
 import { PageLoader } from '../../../components/ui/page-loader';
 import FeatureDetailPage from '../../../components/admin/FeatureDetailPage';
 import { doc, getDoc } from 'firebase/firestore';

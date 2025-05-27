@@ -7,7 +7,7 @@ import { SocialIcon } from "./ui/social-icon";
 import { socialLinks } from "../config/social-links";
 import { DollarSign } from "lucide-react";
 import { SupporterIcon } from "./SupporterIcon";
-import { useFeatureFlag } from '../utils/feature-flags.ts';
+import { useFeatureFlag } from '../utils/feature-flags';
 import { useAuth } from '../providers/AuthProvider';
 
 const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customContent }) => {

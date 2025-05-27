@@ -12,12 +12,12 @@ import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphon
 import { db } from '../firebase/database';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
-import { FeatureFlag, isAdmin } from '../utils/feature-flags.ts';
+import { FeatureFlag, isAdmin } from '../utils/feature-flags';
 import { usePWA } from '../providers/PWAProvider';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import SyncFeatureFlagsButton from '../components/SyncFeatureFlagsButton';
 import Link from 'next/link';
-import EnhancedFeatureFlagCard from '../components/admin/EnhancedFeatureFlagCard';
+import FeatureFlagCard from '../components/admin/FeatureFlagCard';
 import FeatureFlagTestPanel from '../components/FeatureFlagTestPanel';
 
 interface User {
@@ -513,16 +513,14 @@ export default function AdminPage() {
 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {featureFlags.map(flag => (
-                <EnhancedFeatureFlagCard
-                  key={flag.id}
-                  flag={flag}
-                  userEmail={user?.email || ''}
-                  userId={user?.uid || ''}
-                  onToggleGlobal={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
-                  onNavigate={(flagId) => router.push(`/admin/features/${flagId}`)}
-                />
-              ))}
+                {featureFlags.map(flag => (
+                  <FeatureFlagCard
+                    key={flag.id}
+                    flag={flag}
+                    onToggle={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
+                    isLoading={isLoading}
+                  />
+                ))}
               </div>
             </>
           )}

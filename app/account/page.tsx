@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
 import PWAInstallationCard from '../components/PWAInstallationCard';
-import { useFeatureFlag } from '../utils/feature-flags.ts';
+import { useFeatureFlag } from '../utils/feature-flags';
 
 // Define admin check locally to avoid import issues
 const isAdmin = (userEmail?: string | null): boolean => {

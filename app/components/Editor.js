@@ -2301,18 +2301,12 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     setDisplayText={setDisplayText}
                     preventRedirect={true}
                     onInputChange={(value) => {
+                      setFormTouched(true);
                       // If the input looks like a URL, switch to external tab
                       if (value && (value.startsWith('http://') || value.startsWith('https://') ||
                           value.startsWith('www.') || value.includes('.com') ||
                           value.includes('.org') || value.includes('.net') ||
                           value.includes('.io'))) {
-                        setActiveTab('external');
-                        setExternalUrl(value);
-                      }
-                    }}
-                    onInputChange={(value) => {
-                      setFormTouched(true);
-                      if (value && (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('www.') || value.includes('.com') || value.includes('.org') || value.includes('.net') || value.includes('.io'))) {
                         setActiveTab('external');
                         setExternalUrl(value);
                       }
@@ -2355,15 +2349,19 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 mb-2">
+              <div className="space-y-2">
+                <h2 className="text-sm font-medium">Link Text</h2>
                 <input
-                  type="checkbox"
-                  checked={showAuthor}
-                  onChange={(e) => setShowAuthor(e.target.checked)}
-                  id="show-author-switch-ext"
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                  type="text"
+                  value={displayText}
+                  onChange={handleDisplayTextChange}
+                  placeholder="Enter custom link text (optional)"
+                  className={`w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                  onFocus={() => setFormTouched(true)}
                 />
-                <label htmlFor="show-author-switch-ext" className="text-sm font-medium select-none">Show author</label>
+                <p className="text-xs text-muted-foreground">
+                  If left empty, the URL will be used as the link text
+                </p>
               </div>
             </div>
           )}
