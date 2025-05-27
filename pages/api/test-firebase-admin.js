@@ -38,22 +38,23 @@ export default async function handler(req, res) {
     // Test Firestore access
     const db = admin.firestore();
     const testDoc = await db.collection('test').doc('auth-test').get();
-    
+
     // Test Realtime Database access
     const rtdb = admin.database();
     const testRef = rtdb.ref('test/auth-test');
     await testRef.once('value');
-    
+
     res.status(200).json({
       success: true,
       message: 'Firebase Admin SDK authentication working correctly!',
       environmentVariables: envCheck,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      testCommit: 'Testing dev branch preview deployment'
     });
-    
+
   } catch (error) {
     console.error('Firebase Admin SDK authentication failed:', error);
-    
+
     res.status(500).json({
       success: false,
       error: error.message,
