@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { getUserSubscription } from '../../firebase/subscription';
 import { Button } from '../../ui/button';
+import { PaymentFeatureGuard } from '../../components/PaymentFeatureGuard';
 
 // Define the Subscription interface
 interface Subscription {
@@ -47,11 +48,11 @@ export default function SubscriptionPage() {
     async function fetchSubscription() {
       try {
         const subscriptionData = await getUserSubscription(user.uid);
-        
+
         if (subscriptionData) {
           const subscription = subscriptionData as Subscription;
           setCurrentSubscription(subscription);
-          
+
           if ([10, 20, 50, 100].includes(subscription.amount)) {
             setSelectedAmount(subscription.amount);
           } else {
@@ -85,7 +86,7 @@ export default function SubscriptionPage() {
 
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    
+
     // Allow only numbers and decimal point
     if (/^\d*\.?\d{0,2}$/.test(value) || value === '') {
       setCustomAmount(value);
@@ -94,24 +95,25 @@ export default function SubscriptionPage() {
 
   const handleContinue = () => {
     const amount = isCustomAmount ? parseFloat(customAmount) : selectedAmount;
-    
+
     if (isCustomAmount && (!customAmount || parseFloat(customAmount) < 5)) {
       alert('Please enter a valid amount (minimum $5)');
       return;
     }
-    
+
     router.push(`/account/subscription/payment?amount=${amount}`);
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <PaymentFeatureGuard redirectTo="/account">
+      <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <Link href="/account" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Account
         </Link>
       </div>
-      
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">WeWrite Subscription</h1>
         <p className="text-gray-500 dark:text-gray-400">
@@ -162,8 +164,8 @@ export default function SubscriptionPage() {
                     key={option.value}
                     onClick={() => handleAmountSelect(option.value)}
                     className={`flex flex-col items-center justify-center w-full p-6 rounded-lg border-2 transition-all duration-200 min-h-[140px] ${
-                      selectedAmount === option.value 
-                        ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' 
+                      selectedAmount === option.value
+                        ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                         : 'border-border bg-card hover:border-primary/50 hover:bg-accent/50'
                     }`}
                   >
@@ -175,8 +177,8 @@ export default function SubscriptionPage() {
                 {/* Custom amount card */}
                 <div
                   className={`flex flex-col items-center justify-center w-full p-6 rounded-lg border-2 transition-all duration-200 min-h-[140px] ${
-                    selectedAmount === 'custom' 
-                      ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20' 
+                    selectedAmount === 'custom'
+                      ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                       : 'border-border bg-card hover:border-primary/50 hover:bg-accent/50'
                   }`}
                   onClick={() => handleAmountSelect('custom')}
@@ -227,6 +229,7 @@ export default function SubscriptionPage() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </PaymentFeatureGuard>
   );
 }

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { SupporterIcon } from '../../../components/SupporterIcon';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
+import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
 interface SubscriptionHistoryItem {
@@ -174,7 +175,8 @@ export default function ManageSubscriptionPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <PaymentFeatureGuard redirectTo="/account">
+      <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <Link href="/account" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -548,6 +550,7 @@ export default function ManageSubscriptionPage() {
 
 
 
-    </div>
+      </div>
+    </PaymentFeatureGuard>
   );
 }

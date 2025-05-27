@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { createCheckoutSession } from '../services/stripeService';
 import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { PaymentFeatureGuard } from '../components/PaymentFeatureGuard';
 import { useSwipeable } from 'react-swipeable';
 import { CustomAmountModal } from '../components/CustomAmountModal';
 import { loadStripe } from '@stripe/stripe-js';
@@ -613,7 +614,8 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-0 md:px-6">
+    <PaymentFeatureGuard>
+      <div className="max-w-4xl mx-auto py-6 px-0 md:px-6">
       <div className="mb-8 px-6">
         <Link href="/" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -892,6 +894,7 @@ export default function SubscriptionPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </PaymentFeatureGuard>
   );
 }

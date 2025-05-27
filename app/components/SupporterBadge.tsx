@@ -3,6 +3,8 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { SupporterIcon } from './SupporterIcon';
+import { useFeatureFlag } from '../utils/feature-flags';
+import { useAuth } from '../providers/AuthProvider';
 
 interface SupporterBadgeProps {
   tier?: string;
@@ -12,7 +14,11 @@ interface SupporterBadgeProps {
 }
 
 export default function SupporterBadge({ tier, className = '', showLabel = false, status = 'active' }: SupporterBadgeProps) {
-  if (!tier) return null;
+  const { user } = useAuth();
+  const paymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // Don't render anything if payments feature is disabled or no tier
+  if (!paymentsEnabled || !tier) return null;
 
   // Determine if subscription is active
   const isActive = status === 'active' || status === 'trialing';

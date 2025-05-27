@@ -15,6 +15,7 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import { useTheme } from '../../../providers/ThemeProvider';
+import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -261,7 +262,8 @@ export default function SubscriptionPaymentPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto p-4">
+    <PaymentFeatureGuard redirectTo="/account">
+      <div className="max-w-md mx-auto p-4">
       <div className="mb-4">
         <Link href="/account/subscription" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
           <ArrowLeft className="h-3 w-3 mr-1" />
@@ -314,6 +316,7 @@ export default function SubscriptionPaymentPage() {
           </div>
         )
       )}
-    </div>
+      </div>
+    </PaymentFeatureGuard>
   );
 }

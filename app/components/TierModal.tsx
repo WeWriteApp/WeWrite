@@ -14,6 +14,8 @@ import { X } from "lucide-react";
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { SupporterIcon } from './SupporterIcon';
+import { useFeatureFlag } from '../utils/feature-flags';
+import { useAuth } from '../providers/AuthProvider';
 
 interface TierModalProps {
   children: React.ReactNode;
@@ -25,6 +27,9 @@ interface TierModalProps {
 }
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
+  const { user } = useAuth();
+  const paymentsEnabled = useFeatureFlag('payments', user?.email);
+
   const tiers = [
     {
       id: 'none',
@@ -113,8 +118,8 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
                                         currentTier === 'tier3' ? 'Tier 3' : 'Unknown'} subscription
               </div>
             ) : null}
-            {/* Only show the CTA button if this is for the current user (no username and no userId) */}
-            {(!username && !userId) && (
+            {/* Only show the CTA button if this is for the current user (no username and no userId) and payments are enabled */}
+            {(!username && !userId) && paymentsEnabled && (
               <Link href="/subscription">
                 <Button>{currentTier && currentStatus === 'active' ? 'Manage Your Subscription' : 'Subscribe Now'}</Button>
               </Link>
