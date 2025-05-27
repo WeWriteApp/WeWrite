@@ -47,11 +47,9 @@ function debounce(func, wait, immediate = false) {
 // Completely isolated search input that doesn't cause parent re-renders
 const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
   const [inputValue, setInputValue] = useState(initialValue || '');
-  const [currentQuery, setCurrentQuery] = useState('');
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
   const lastSearchValue = useRef('');
-  const lastSyncedQuery = useRef('');
 
   // Auto-focus effect
   useEffect(() => {
@@ -65,21 +63,7 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
     }
   }, [autoFocus]);
 
-  // URL synchronization effect
-  useEffect(() => {
-    if (currentQuery !== lastSyncedQuery.current) {
-      lastSyncedQuery.current = currentQuery;
-
-      const url = new URL(window.location);
-      if (currentQuery && currentQuery.trim()) {
-        url.searchParams.set('q', currentQuery.trim());
-      } else {
-        url.searchParams.delete('q');
-      }
-
-      window.history.replaceState({}, '', url);
-    }
-  }, [currentQuery]);
+  // Note: URL synchronization is handled by the parent component
 
   // Debounced search function
   const debouncedSearch = useCallback((value) => {
@@ -90,7 +74,6 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
     debounceTimeoutRef.current = setTimeout(() => {
       if (value !== lastSearchValue.current && onSearch) {
         lastSearchValue.current = value;
-        setCurrentQuery(value);
         onSearch(value);
       }
     }, 300);
@@ -110,7 +93,6 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
       clearTimeout(debounceTimeoutRef.current);
     }
     if (onSubmit) {
-      setCurrentQuery(inputValue);
       onSubmit(inputValue);
     }
   }, [inputValue, onSubmit]);
@@ -118,7 +100,6 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
   // Handle clear button
   const handleClear = useCallback(() => {
     setInputValue('');
-    setCurrentQuery('');
     lastSearchValue.current = '';
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -237,16 +218,28 @@ const SearchPage = React.memo(() => {
     }
   }, [initialQuery, performSearch, userId, authLoading]);
 
-  // Memoized callback functions for SearchInput component - NO URL UPDATES HERE
+  // Memoized callback functions for SearchInput component
   const handleSearch = useCallback((searchTerm) => {
     performSearch(searchTerm);
-    // URL updates are handled by URLSynchronizer component
+
+    // Update URL to reflect the search query
+    const url = new URL(window.location);
+    if (searchTerm && searchTerm.trim()) {
+      url.searchParams.set('q', searchTerm.trim());
+    } else {
+      url.searchParams.delete('q');
+    }
+    window.history.replaceState({}, '', url);
   }, [performSearch]);
 
-  // Stable clear function with no dependencies to prevent re-renders
+  // Stable clear function
   const handleClear = useCallback(() => {
     clearSearch();
-    // URL updates are handled by URLSynchronizer component
+
+    // Clear URL query parameter
+    const url = new URL(window.location);
+    url.searchParams.delete('q');
+    window.history.replaceState({}, '', url);
   }, [clearSearch]);
 
   // Stable save function - memoized with userId dependency
@@ -270,10 +263,18 @@ const SearchPage = React.memo(() => {
     }
   }, [userId]);
 
-  // Stable submit function with performSearch dependency
+  // Stable submit function
   const handleSubmit = useCallback((searchTerm) => {
     performSearch(searchTerm);
-    // URL updates are handled by URLSynchronizer component
+
+    // Update URL to reflect the search query
+    const url = new URL(window.location);
+    if (searchTerm && searchTerm.trim()) {
+      url.searchParams.set('q', searchTerm.trim());
+    } else {
+      url.searchParams.delete('q');
+    }
+    window.history.replaceState({}, '', url);
   }, [performSearch]);
 
   // Stable helper function to copy to clipboard with toast notification
