@@ -3,9 +3,15 @@ import Stripe from 'stripe';
 import { auth } from '../../firebase/auth';
 import { createSubscription } from '../../firebase/subscription';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
 
 export async function GET(request) {
   try {
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
     // Initialize Stripe with the appropriate key based on environment
     const stripeSecretKey = getStripeSecretKey();
     const stripe = new Stripe(stripeSecretKey);
@@ -114,6 +120,11 @@ export async function GET(request) {
 // Keep the POST method for backward compatibility
 export async function POST(request) {
   try {
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
     // Initialize Stripe with the appropriate key based on environment
     const stripeSecretKey = getStripeSecretKey();
     const stripe = new Stripe(stripeSecretKey);

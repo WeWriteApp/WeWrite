@@ -4,6 +4,7 @@ import { initAdmin } from '../../firebase/admin';
 import { getUserIdFromRequest } from '../auth-helper';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
 
 // Initialize Firebase Admin
 initAdmin();
@@ -20,6 +21,12 @@ const stripe = new Stripe(stripeSecretKey, {
 // GET /api/payment-methods - Get all payment methods for the current user
 export async function GET(request: NextRequest) {
   try {
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
+
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
 
@@ -84,6 +91,12 @@ export async function GET(request: NextRequest) {
 // DELETE /api/payment-methods - Delete a payment method
 export async function DELETE(request: NextRequest) {
   try {
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
+
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
 

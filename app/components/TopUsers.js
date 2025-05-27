@@ -14,6 +14,7 @@ import { PillLink } from "./PillLink";
 import { SupporterIcon } from "./SupporterIcon";
 import { db as firestoreDb } from "../firebase/database";
 import SimpleSparkline from "./SimpleSparkline";
+import { useFeatureFlag } from "../utils/feature-flags";
 import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
 import { trackQueryPerformance } from "../utils/queryMonitor";
@@ -562,7 +563,7 @@ const TopUsers = () => {
                                 >
                                   <span className="flex items-center gap-1">
                                     {user.username || "Unknown User"}
-                                    {subscriptionEnabled && (
+                                    {false && subscriptionEnabled && (
                                       <SupporterIcon
                                         tier={user.tier}
                                         status={user.subscriptionStatus}
@@ -698,7 +699,7 @@ const TopUsers = () => {
             >
               <span className="flex items-center gap-1">
                 {user.username || "Unknown User"}
-                {subscriptionEnabled && (
+                {false && subscriptionEnabled && (
                   <SupporterIcon
                     tier={user.tier}
                     status={user.subscriptionStatus}

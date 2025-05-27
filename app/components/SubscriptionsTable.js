@@ -3,10 +3,19 @@ import React, { useContext, useEffect, useState } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import { getPageById } from "../firebase/database";
 import {PillLink} from "./PillLink";
+import { useFeatureFlag } from '../utils/feature-flags';
+import { useAuth } from '../providers/AuthProvider';
 
 const SubscriptionsTable = () => {
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
   const { subscriptions } = useContext(PortfolioContext);
-  
+
   // Local copy of subscriptions for editing
   const [localSubscriptions, setLocalSubscriptions] = useState([]);
   const [changesMade, setChangesMade] = useState(false);
@@ -44,7 +53,7 @@ const SubscriptionsTable = () => {
       ) : (
         <div>No subscriptions available.</div>
       )}
-      
+
       {/* Save Changes Button */}
       <div className="pt-4">
         <button

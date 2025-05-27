@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import { Button } from "./ui/button";
 import { UserPlus, Search, Loader, MoreHorizontal, Shield, User, Clock, Check, X, Activity } from "lucide-react";
 import { Input } from "./ui/input";
@@ -160,8 +160,11 @@ export default function GroupMembersTab({ group, isOwner }) {
   }, [members, group.id]);
 
   // Search for users to add to the group
-  const handleUserSearch = async () => {
-    if (!userSearchTerm || userSearchTerm.trim().length < 2) return;
+  const handleUserSearch = useCallback(async (searchTerm = userSearchTerm) => {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
 
     try {
       setIsSearching(true);
@@ -171,7 +174,7 @@ export default function GroupMembersTab({ group, isOwner }) {
       const { searchUsers } = await import("../firebase/database");
 
       // Search for users using the searchUsers function
-      const users = await searchUsers(userSearchTerm);
+      const users = await searchUsers(searchTerm);
 
       // Filter out users who are already members of the group
       const filteredUsers = users.filter(user =>
@@ -197,7 +200,21 @@ export default function GroupMembersTab({ group, isOwner }) {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [userSearchTerm, group.members]);
+
+  // Debounced auto-search effect
+  useEffect(() => {
+    if (!userSearchTerm || userSearchTerm.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      handleUserSearch(userSearchTerm);
+    }, 400); // 400ms debounce delay
+
+    return () => clearTimeout(timeoutId);
+  }, [userSearchTerm, handleUserSearch]);
 
   // Add a member to the group
   const handleAddMember = async () => {
@@ -479,21 +496,21 @@ export default function GroupMembersTab({ group, isOwner }) {
           <DialogHeader>
             <DialogTitle>Add Member to Group</DialogTitle>
             <DialogDescription>
-              Search for users by email or username to add them to this group.
+              Search for users by email or username to add them to this group. Search results will appear automatically as you type.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Search by email or username"
+                placeholder="Type username or email (min 2 characters)"
                 value={userSearchTerm}
                 onChange={(e) => setUserSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUserSearch()}
               />
               <Button
                 variant="outline"
-                onClick={handleUserSearch}
+                onClick={() => handleUserSearch()}
                 disabled={isSearching || !userSearchTerm}
               >
                 {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -525,9 +542,14 @@ export default function GroupMembersTab({ group, isOwner }) {
                   </TableBody>
                 </Table>
               </div>
-            ) : userSearchTerm && !isSearching ? (
+            ) : userSearchTerm && userSearchTerm.trim().length >= 2 && !isSearching ? (
               <div className="text-center py-4 text-muted-foreground">
-                No users found matching "{userSearchTerm}"
+                <p>No users found matching "{userSearchTerm}"</p>
+                <p className="text-sm mt-1">Try searching by exact username or email address</p>
+              </div>
+            ) : userSearchTerm && userSearchTerm.trim().length < 2 && !isSearching ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <p className="text-sm">Type at least 2 characters to search for users</p>
               </div>
             ) : null}
           </div>

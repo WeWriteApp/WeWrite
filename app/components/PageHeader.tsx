@@ -16,6 +16,7 @@ import PageOwnershipDropdown from "./PageOwnershipDropdown";
 import ClickableByline from "./ClickableByline";
 import { useAuth } from "../providers/AuthProvider";
 import { handleAddToPage, handleReply, handleShare } from "../utils/pageActionHandlers";
+import { useFeatureFlag } from "../utils/feature-flags";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -70,7 +71,7 @@ export default function PageHeader({
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
   const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
-  const [subscriptionEnabled, setSubscriptionEnabled] = React.useState<boolean>(false);
+  const subscriptionEnabled = useFeatureFlag('payments', user?.email);
   const [groupId, setGroupId] = React.useState<string | null>(initialGroupId || null);
   const [groupName, setGroupName] = React.useState<string | null>(initialGroupName || null);
   const [pageId, setPageId] = React.useState<string | null>(null);
@@ -90,24 +91,7 @@ export default function PageHeader({
     return false;
   }, [user, userId, groupId, hasGroupAccess]);
 
-  // Check if subscription feature is enabled
-  React.useEffect(() => {
-    const checkSubscriptionFeature = async () => {
-      try {
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
 
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.payments === true);
-        }
-      } catch (error) {
-        console.error('Error checking subscription feature flag:', error);
-      }
-    };
-
-    checkSubscriptionFeature();
-  }, []);
 
   // Fetch username if not provided but userId is available
   React.useEffect(() => {

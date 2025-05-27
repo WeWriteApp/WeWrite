@@ -14,6 +14,7 @@ import { Sparkline } from './ui/sparkline';
 import FollowButton from './FollowButton';
 import { getPageFollowerCount } from '../firebase/follows';
 import PageMetadataMap from './PageMetadataMap';
+import { useFeatureFlag } from '../utils/feature-flags';
 
 // MetadataItem component for the card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
@@ -71,6 +72,7 @@ const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
 
 const PageMetadata = ({ page, hidePageOwner = false }) => {
   const { user } = useContext(AuthContext);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoadingRelated, setIsLoadingRelated] = useState(true);
@@ -427,21 +429,25 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
             value={totalReaders.toLocaleString()}
             sparklineData={totalReadersHistory}
           />
-          <MetadataItem
-            label="Supporters"
-            value={supportersStats.count > 0 ? supportersStats.count : "None"}
-            sparklineData={supportersHistory}
-          />
+          {isPaymentsEnabled && (
+            <MetadataItem
+              label="Supporters"
+              value={supportersStats.count > 0 ? supportersStats.count : "None"}
+              sparklineData={supportersHistory}
+            />
+          )}
           <MetadataItem
             label="Editors"
             value={editorsCount > 0 ? editorsCount : "None"}
             sparklineData={editorsHistory}
           />
-          <MetadataItem
-            label="Page income"
-            value={`$${supportersStats.totalAmount.toFixed(2)}/mo`}
-            sparklineData={incomeHistory}
-          />
+          {isPaymentsEnabled && (
+            <MetadataItem
+              label="Page income"
+              value={`$${supportersStats.totalAmount.toFixed(2)}/mo`}
+              sparklineData={incomeHistory}
+            />
+          )}
           <MetadataItem
             label="Followers"
             value={typeof followerCount === 'number' ? followerCount : 0}

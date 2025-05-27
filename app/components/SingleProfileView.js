@@ -275,8 +275,8 @@ const SingleProfileView = ({ profile }) => {
             </Link>
           </div>
 
-          {/* Tier badge as a chip below username - only show when subscription is enabled */}
-          {subscriptionEnabled && (
+          {/* Tier badge as a chip below username - completely hidden when payments feature is disabled */}
+          {false && subscriptionEnabled && (
             <SubscriptionInfoModal
               currentTier={supporterTier}
               currentStatus={subscriptionStatus}

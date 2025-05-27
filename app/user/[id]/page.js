@@ -10,10 +10,14 @@ import SingleProfileView from '../../components/SingleProfileView';
 import { useTheme } from 'next-themes';
 import { db } from '../../firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
+import { useFeatureFlag } from '../../utils/feature-flags';
+import { useAuth } from '../../providers/AuthProvider';
 
 export default function UserPage({ params }) {
   const { id } = params;
   const router = useRouter();
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,8 +36,11 @@ export default function UserPage({ params }) {
           // Found user by ID
           const userData = userByIdSnapshot.val();
 
-          // Get user's subscription to check for supporter tier
-          const subscription = await getUserSubscription(id);
+          // Get user's subscription to check for supporter tier (only if payments enabled)
+          let subscription = null;
+          if (isPaymentsEnabled) {
+            subscription = await getUserSubscription(id);
+          }
 
           setProfile({
             uid: id,
@@ -56,8 +63,11 @@ export default function UserPage({ params }) {
           const userId = userData[0];
           const userProfile = userData[1];
 
-          // Get user's subscription to check for supporter tier
-          const subscription = await getUserSubscription(userId);
+          // Get user's subscription to check for supporter tier (only if payments enabled)
+          let subscription = null;
+          if (isPaymentsEnabled) {
+            subscription = await getUserSubscription(userId);
+          }
 
           setProfile({
             uid: userId,

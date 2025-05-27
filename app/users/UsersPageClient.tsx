@@ -269,7 +269,7 @@ export default function UsersPageClient() {
                           >
                             <span className="flex items-center gap-1">
                               {user.username || "Unknown User"}
-                              {subscriptionEnabled && (
+                              {false && subscriptionEnabled && (
                                 <SupporterIcon
                                   tier={user.tier}
                                   status={user.subscriptionStatus}

@@ -2,8 +2,17 @@
 import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
+import { useFeatureFlag } from '../utils/feature-flags';
+import { useAuth } from '../providers/AuthProvider';
 
 const PayoutsTable = () => {
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
   const {
     payouts,
   } = useContext(PortfolioContext);

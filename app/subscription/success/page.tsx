@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { SubscriptionSuccessModal } from '../../components/SubscriptionSuccessModal';
+import { useFeatureFlag } from '../../utils/feature-flags';
 
 export default function SubscriptionSuccessPage() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -21,13 +23,18 @@ export default function SubscriptionSuccessPage() {
   });
 
   useEffect(() => {
+    if (!isPaymentsEnabled) {
+      router.push('/');
+      return;
+    }
+
     if (!user) {
       router.push('/auth/login?redirect=/account');
       return;
     }
 
     const sessionId = searchParams.get('session_id');
-    
+
     if (!sessionId) {
       setError('No session ID provided');
       setIsLoading(false);
@@ -55,7 +62,7 @@ export default function SubscriptionSuccessPage() {
 
         // Set the subscription data for the modal
         setSubscriptionData({
-          tier: data.subscription.tier === 'tier1' ? 'Tier 1' : 
+          tier: data.subscription.tier === 'tier1' ? 'Tier 1' :
                 data.subscription.tier === 'tier2' ? 'Tier 2' : 'Tier 3',
           amount: data.subscription.amount,
         });
@@ -71,7 +78,7 @@ export default function SubscriptionSuccessPage() {
     };
 
     handleSubscriptionSuccess();
-  }, [user, router, searchParams]);
+  }, [user, router, searchParams, isPaymentsEnabled]);
 
   // If the modal is closed, redirect to the account page
   const handleModalClose = () => {
