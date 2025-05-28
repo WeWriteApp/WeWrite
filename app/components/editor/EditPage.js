@@ -14,6 +14,15 @@ import EditModeBottomToolbar from "./EditModeBottomToolbar";
 import { toast } from "../ui/use-toast";
 import { validateLink } from "../../utils/linkValidator";
 
+/**
+ * Check if a title exactly matches the YYYY-MM-DD format for daily notes
+ */
+const isExactDateFormat = (title) => {
+  if (!title || title.length !== 10) return false;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  return datePattern.test(title);
+};
+
 const EditPage = ({
   isEditing,
   setIsEditing,
@@ -565,6 +574,12 @@ const EditPage = ({
 
   // Handle title changes
   const handleTitleChange = (newTitle) => {
+    // Prevent title changes for daily notes (YYYY-MM-DD format)
+    if (isExactDateFormat(page.title)) {
+      console.log('Title change blocked for daily note:', page.title);
+      return;
+    }
+
     setTitle(newTitle);
     setHasTitleChanged(newTitle !== page.title);
   };

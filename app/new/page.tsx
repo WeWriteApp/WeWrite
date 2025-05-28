@@ -38,6 +38,15 @@ interface EditorNode {
 }
 
 /**
+ * Check if a title exactly matches the YYYY-MM-DD format for daily notes
+ */
+const isExactDateFormat = (title: string): boolean => {
+  if (!title || title.length !== 10) return false;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  return datePattern.test(title);
+};
+
+/**
  * Page data interface for creation
  */
 interface PageData {
@@ -201,16 +210,37 @@ export default function NewPage() {
       const urlUsername = searchParams.get('username');
       const username = urlUsername || user?.username || user?.displayName || 'Anonymous';
       const userId = user?.uid || 'anonymous';
-      if (!content || !Array.isArray(content) || content.length === 0) {
+
+      // Validate content - be more lenient for daily notes
+      const isDailyNote = isExactDateFormat(title);
+
+      if (!content || !Array.isArray(content)) {
         setError("Error: Invalid content format");
         setIsSaving(false);
         return false;
+      }
+
+      // For daily notes, allow empty content or content with just empty paragraphs
+      if (!isDailyNote && content.length === 0) {
+        setError("Error: Invalid content format");
+        setIsSaving(false);
+        return false;
+      }
+
+      // If content is empty or has only empty paragraphs, create default content
+      const hasActualContent = content.some(node =>
+        node.children && node.children.some(child => child.text && child.text.trim() !== '')
+      );
+
+      let finalContent = content;
+      if (!hasActualContent) {
+        finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
       }
       const data: PageData = {
         title: isReply ? "" : title,
         isPublic,
         location,
-        content: JSON.stringify(content),
+        content: JSON.stringify(finalContent),
         userId,
         username,
         lastModified: new Date().toISOString(),

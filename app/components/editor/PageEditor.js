@@ -39,6 +39,15 @@ const safeReactEditor = {
 };
 
 /**
+ * Check if a title exactly matches the YYYY-MM-DD format for daily notes
+ */
+const isExactDateFormat = (title) => {
+  if (!title || title.length !== 10) return false;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  return datePattern.test(title);
+};
+
+/**
  * PageEditor Component
  *
  * A unified editor component that can be used for editing existing pages, creating new ones,
@@ -438,14 +447,25 @@ const PageEditor = ({
       {/* Title input for new pages and replies */}
       {(isNewPage || isReply) && (
         <div className="mb-6">
-          <input
-            type="text"
-            value={title || ""}
-            onChange={(e) => setTitle && setTitle(e.target.value)}
-            placeholder={isReply ? "Type title here..." : "Type title here..."}
-            className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground"
-            autoFocus={!isReply}
-          />
+          {isExactDateFormat(title) ? (
+            // Read-only title for daily notes with centered styling
+            <div className="w-full text-2xl font-semibold text-center py-2 text-foreground">
+              {title}
+              <div className="text-sm text-muted-foreground mt-1 font-normal">
+                Daily Note
+              </div>
+            </div>
+          ) : (
+            // Editable title for regular pages
+            <input
+              type="text"
+              value={title || ""}
+              onChange={(e) => setTitle && setTitle(e.target.value)}
+              placeholder={isReply ? "Type title here..." : "Type title here..."}
+              className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground"
+              autoFocus={!isReply}
+            />
+          )}
         </div>
       )}
 

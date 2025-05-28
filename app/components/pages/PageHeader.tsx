@@ -31,6 +31,15 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   loading: () => null
 });
 
+/**
+ * Check if a title exactly matches the YYYY-MM-DD format for daily notes
+ */
+const isExactDateFormat = (title: string): boolean => {
+  if (!title || title.length !== 10) return false;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  return datePattern.test(title);
+};
+
 export interface PageHeaderProps {
   title?: string;
   username?: string;
@@ -108,6 +117,12 @@ export default function PageHeader({
 
   // Handle title editing
   const handleTitleClick = () => {
+    // Prevent title editing for daily notes (YYYY-MM-DD format)
+    if (isExactDateFormat(title || "")) {
+      console.log('Title editing blocked for daily note:', title);
+      return;
+    }
+
     if (canEdit && isEditing) {
       setIsEditingTitle(true);
       // Focus the input after state update
@@ -498,8 +513,10 @@ export default function PageHeader({
                       ) : (
                         <span
                           className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
-                            isEditing && canEdit
+                            isEditing && canEdit && !isExactDateFormat(title || "")
                               ? "cursor-pointer hover:bg-muted/30 hover:border-muted-foreground/30 rounded-lg px-2 py-1 border border-muted-foreground/20 transition-all duration-200 group flex items-center gap-2"
+                              : isExactDateFormat(title || "") && !isScrolled
+                              ? "flex flex-col items-center gap-1"
                               : ""
                           }`}
                           style={isScrolled ? {
@@ -510,12 +527,19 @@ export default function PageHeader({
                             paddingRight: '4px'
                           } : {}}
                           onClick={handleTitleClick}
-                          title={isEditing && canEdit ? "Click to edit title" : undefined}
+                          title={
+                            isExactDateFormat(title || "")
+                              ? "Daily Note"
+                              : (isEditing && canEdit ? "Click to edit title" : undefined)
+                          }
                         >
-                          {isEditing && canEdit && !isScrolled && (
+                          {isEditing && canEdit && !isScrolled && !isExactDateFormat(title || "") && (
                             <Edit2 className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground flex-shrink-0" />
                           )}
-                          {title || "Untitled"}
+                          <span>{title || "Untitled"}</span>
+                          {isExactDateFormat(title || "") && !isScrolled && (
+                            <span className="text-xs text-muted-foreground font-normal">Daily Note</span>
+                          )}
                         </span>
                       )}
                       {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
