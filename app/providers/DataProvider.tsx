@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
-import useOptimizedPages from "../../hooks/useOptimizedPages";
-import { auth } from "../../firebase/config";
+import useOptimizedPages from "../hooks/useOptimizedPages";
+import { auth } from "../firebase/config";
 import { useAuth } from "./AuthProvider";
 import Cookies from 'js-cookie';
 

@@ -8,14 +8,14 @@ import { getPageStats, getDocById } from "../../firebase/database";
 import { Button } from "../ui/button";
 import { Eye, Users, DollarSign, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from "../ui/use-toast";
-import { useFeatureFlag } from "../utils/feature-flags";
-import { openExternalLink } from "../utils/pwa-detection";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { openExternalLink } from "../../utils/pwa-detection";
 import SubscriptionActivationModal from "./SubscriptionActivationModal";
 import SupportUsModal from "../payments/SupportUsModal";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { CustomAmountModal } from './CustomAmountModal';
-import RegistrationCallToAction from './RegistrationCallToAction';
-import '../styles/pledge-bar-animations.css';
+import RegistrationCallToAction from '../utils/RegistrationCallToAction';
+import '../../styles/pledge-bar-animations.css';
 
 const PledgeBar = () => {
   const { user } = useContext(AuthContext);

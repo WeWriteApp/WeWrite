@@ -1,22 +1,22 @@
 "use client";
 import React, { useState, useContext, useRef } from "react";
-import { PillLink } from "../utils/PillLink";
+import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
-import SupporterBadge from "./SupporterBadge";
+import SupporterBadge from "../payments/SupporterBadge";
 import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart } from "lucide-react";
 import { AuthContext } from "../../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ProfilePagesContext } from "../providers/ProfilePageProvider";
-import RecentActivity from "./RecentActivity";
+import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
+import RecentActivity from "../features/RecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import usePages from "../../hooks/usePages";
-import UsernameHistory from "./UsernameHistory";
-import FollowingList from './utils/FollowingList';
-import TypeaheadSearch from "./TypeaheadSearch";
-import UserBioTab from './utils/UserBioTab';
-import { useFeatureFlag } from "../utils/feature-flags";
-import FollowingTabContent from './utils/FollowingTabContent';
+import UsernameHistory from "../auth/UsernameHistory";
+import FollowingList from './FollowingList';
+import TypeaheadSearch from "../search/TypeaheadSearch";
+import UserBioTab from './UserBioTab';
+import { useFeatureFlag } from "../../utils/feature-flags";
+import FollowingTabContent from './FollowingTabContent';
 
 
 

@@ -13,14 +13,14 @@ const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GO
 if (credentialsEnvVar && process.env.NODE_ENV !== 'development') {
   try {
     console.log('Attempting to initialize BigQuery for production...');
-    
+
     // Clean up the JSON string
     let jsonString = credentialsEnvVar.replace(/[\n\r\t]/g, '');
-    
+
     // Check if it might be Base64 encoded
-    const mightBeBase64 = credentialsEnvVar.startsWith('eyJ') || 
+    const mightBeBase64 = credentialsEnvVar.startsWith('eyJ') ||
                           process.env.GOOGLE_CLOUD_KEY_BASE64 === 'true';
-    
+
     if (mightBeBase64) {
       console.log('Attempting to decode Base64 credentials...');
       try {
@@ -32,26 +32,26 @@ if (credentialsEnvVar && process.env.NODE_ENV !== 'development') {
         jsonString = credentialsEnvVar;
       }
     }
-    
+
     // Check for HTML content (common error)
     if (jsonString.includes('<!DOCTYPE') || jsonString.includes('<html')) {
       throw new Error('Credentials appear to contain HTML content instead of JSON');
     }
-    
+
     // Try to parse the JSON
     console.log('Attempting to parse credentials JSON...');
     const credentials = JSON.parse(jsonString);
-    
+
     // Validate required fields
     if (!credentials.project_id || !credentials.private_key || !credentials.client_email) {
       throw new Error('Missing required credential fields (project_id, private_key, client_email)');
     }
-    
+
     // Fix potential private key formatting issues
     if (credentials.private_key && !credentials.private_key.includes('\\n')) {
       credentials.private_key = credentials.private_key.replace(/\n/g, '\\n');
     }
-    
+
     console.log('Successfully parsed credentials JSON with project_id:', credentials.project_id);
     bigquery = new BigQuery({
       projectId: credentials.project_id,
@@ -84,7 +84,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
     console.log(`🔍 BIGQUERY UNLIMITED SEARCH: "${searchTerm}" for user: ${userId}`);
 
     const searchTermFormatted = `%${searchTerm.toLowerCase().trim()}%`;
-    
+
     // Query for user's own pages (unlimited)
     let userPages = [];
     if (userId) {
@@ -95,7 +95,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
           AND LOWER(title) LIKE @searchTerm
         ORDER BY lastModified DESC
       `;
-      
+
       const [userResults] = await bigquery.query({
         query: userQuery,
         params: {
@@ -107,7 +107,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
           searchTerm: "STRING"
         }
       });
-      
+
       userPages = userResults.map(page => ({
         id: page.document_id,
         title: page.title,
@@ -119,7 +119,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
         lastModified: page.lastModified,
         type: 'user'
       }));
-      
+
       console.log(`📄 BigQuery found ${userPages.length} user page matches (unlimited)`);
     }
 
@@ -134,7 +134,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
           AND LOWER(title) LIKE @searchTerm
         ORDER BY lastModified DESC
       `;
-      
+
       const [publicResults] = await bigquery.query({
         query: publicQuery,
         params: {
@@ -146,7 +146,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
           searchTerm: "STRING"
         }
       });
-      
+
       publicPages = publicResults.map(page => ({
         id: page.document_id,
         title: page.title,
@@ -158,7 +158,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
         lastModified: page.lastModified,
         type: 'public'
       }));
-      
+
       console.log(`🌐 BigQuery found ${publicPages.length} public page matches (unlimited)`);
     }
 
@@ -182,14 +182,14 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
 // Fallback to unlimited Firestore search
 async function fallbackToFirestoreUnlimited(userId, searchTerm, groupIds = [], filterByUserId = null) {
   console.log('🔄 Falling back to unlimited Firestore search...');
-  
+
   // Import the unlimited Firestore search function
   const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/search-unlimited?userId=${userId}&searchTerm=${encodeURIComponent(searchTerm)}&filterByUserId=${filterByUserId || ''}&groupIds=${groupIds.join(',')}`);
-  
+
   if (!response.ok) {
     throw new Error('Firestore fallback failed');
   }
-  
+
   const data = await response.json();
   return data.pages || [];
 }

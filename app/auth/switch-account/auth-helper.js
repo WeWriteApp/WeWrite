@@ -1,6 +1,6 @@
 "use client";
 
-import { auth } from '../../firebase/auth';
+import { auth } from '../firebase/auth';
 import { signInWithCustomToken } from 'firebase/auth';
 import Cookies from 'js-cookie';
 

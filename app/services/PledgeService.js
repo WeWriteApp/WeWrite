@@ -1,5 +1,5 @@
 import { getDatabase, ref, onValue, get } from 'firebase/database';
-import { db } from "../../firebase/config';
+import { db } from "../firebase/config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 /**

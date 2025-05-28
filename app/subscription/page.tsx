@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../providers/AuthProvider";
 import { ArrowLeft, Check, AlertTriangle, ChevronLeft, ChevronRight, DollarSign, Clock } from 'lucide-react';
-import { SupporterIcon } from '../components/SupporterIcon';
+import { SupporterIcon } from '../components/payments/SupporterIcon';
 import Link from 'next/link';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { createCheckoutSession } from '../services/stripeService';
-import { cancelSubscription, listenToUserSubscription, updateSubscription } from "../../firebase/subscription";
+import { cancelSubscription, listenToUserSubscription, updateSubscription } from "../firebase/subscription";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { useFeatureFlag } from "../../utils/feature-flags.ts';
+import { useFeatureFlag } from "../utils/feature-flags";
 import { useSwipeable } from 'react-swipeable';
-import { CustomAmountModal } from '../components/CustomAmountModal";
+import { CustomAmountModal } from "../components/payments/CustomAmountModal";
 import { loadStripe } from "@stripe/stripe-js";
 
 // Helper function to format relative time
@@ -23,7 +23,7 @@ const getRelativeTimeString = (date: Date): string => {
 
   // Less than a minute
   if (diffInSeconds < 60) {
-    return "just now';
+    return "just now";
   }
 
   // Less than an hour
@@ -67,7 +67,7 @@ const supporterTiers = [
     id: 'tier1',
     name: 'Tier 1',
     amount: 10,
-    price: '$10/month",
+    price: '$10/month',
     icon: <SupporterIcon tier="tier1" status="active" size="xl" />,
   },
   {

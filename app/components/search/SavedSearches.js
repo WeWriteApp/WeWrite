@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Pin, X, Trash2 } from 'lucide-react';
-import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from "../utils/savedSearches";
+import { getSavedSearches, clearSavedSearches, deleteSavedSearch } from "../../utils/savedSearches";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { ConfirmationModal } from './ConfirmationModal';

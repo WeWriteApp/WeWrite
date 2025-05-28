@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
 import ActivityCard from "../components/activity/ActivityCard";
-import { AuthContext } from "../../providers/AuthProvider";
+import { AuthContext } from "../providers/AuthProvider";
 import useStaticRecentActivity from "../hooks/useStaticRecentActivity";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import { getFollowedPages } from "../firebase/follows";

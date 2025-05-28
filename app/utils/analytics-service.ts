@@ -1,17 +1,17 @@
 'use client';
 
-import { initializeAnalytics } from "../../firebase/config';
+import { initializeAnalytics } from "../firebase/config";
 import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
 import ReactGA from 'react-ga4';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
 /**
  * WeWrite Analytics Service
- * 
+ *
  * A unified service for tracking analytics events across multiple providers
  * (Google Analytics and Firebase Analytics). This service maintains compatibility
  * with the existing implementation while providing a more structured approach.
- * 
+ *
  * Features:
  * - Centralized event naming using constants
  * - Automatic tracking of both GA and Firebase Analytics
@@ -54,7 +54,7 @@ class AnalyticsService {
 
   constructor() {
     if (typeof window === 'undefined') return;
-    
+
     this.initializeAnalytics();
   }
 
@@ -67,17 +67,17 @@ class AnalyticsService {
       try {
         if (!window.GA_INITIALIZED) {
           if (this.debug) console.log('Initializing Google Analytics with ID:', this.gaId);
-          
+
           ReactGA.initialize(this.gaId, {
             gaOptions: {
               debug_mode: this.debug
             },
             testMode: process.env.NODE_ENV !== "production"
           });
-          
+
           window.GA_INITIALIZED = true;
           this.gaInitialized = true;
-          
+
           if (this.debug) console.log('Google Analytics initialized successfully');
         } else {
           this.gaInitialized = true;
@@ -86,7 +86,7 @@ class AnalyticsService {
         console.error('Failed to initialize Google Analytics:', error);
       }
     }
-    
+
     // Initialize Firebase Analytics
     try {
       this.firebaseAnalytics = await initializeAnalytics();
@@ -101,42 +101,42 @@ class AnalyticsService {
 
   /**
    * Track a page view
-   * 
+   *
    * @param url - The page URL
    * @param title - The page title
    */
   public trackPageView(url: string, title?: string): void {
     if (typeof window === 'undefined') return;
-    
+
     // Get page title if not provided
     const pageTitle = title || document.title || 'WeWrite';
-    
+
     const pageData = {
       page_path: url,
       page_title: pageTitle,
       page_location: window.location.href
     };
-    
+
     // Track in Google Analytics
     if (this.gaInitialized) {
       try {
-        ReactGA.send({ 
-          hitType: "pageview", 
+        ReactGA.send({
+          hitType: "pageview",
           page: url,
           title: pageTitle
         });
-        
+
         if (this.debug) console.log('Google Analytics page view tracked:', pageTitle);
       } catch (error) {
         console.error('Error tracking Google Analytics page view:', error);
       }
     }
-    
+
     // Track in Firebase Analytics
     if (this.fbInitialized && this.firebaseAnalytics) {
       try {
         firebaseLogEvent(this.firebaseAnalytics, ANALYTICS_EVENTS.PAGE_VIEW, pageData);
-        
+
         if (this.debug) console.log('Firebase Analytics page view tracked:', pageTitle);
       } catch (error) {
         console.error('Error tracking Firebase Analytics page view:', error);
@@ -146,28 +146,28 @@ class AnalyticsService {
 
   /**
    * Track a custom event
-   * 
+   *
    * @param params - Event parameters
    */
   public trackEvent(params: AnalyticsEventParams): void {
     if (typeof window === 'undefined') return;
-    
+
     // Ensure we have a page title
     if (!params.page_title) {
       params.page_title = document.title || 'WeWrite';
     }
-    
+
     // Add page path and location if not provided
     if (!params.page_path) {
       params.page_path = window.location.pathname;
     }
-    
+
     if (!params.page_location) {
       params.page_location = window.location.href;
     }
-    
+
     if (this.debug) console.log(`Tracking event: ${params.action}`, params);
-    
+
     // Track in Google Analytics
     if (this.gaInitialized) {
       try {
@@ -178,13 +178,13 @@ class AnalyticsService {
           value: params.value,
           ...params
         });
-        
+
         if (this.debug) console.log('Google Analytics event tracked:', params.action);
       } catch (error) {
         console.error('Error tracking Google Analytics event:', error);
       }
     }
-    
+
     // Track in Firebase Analytics
     if (this.fbInitialized && this.firebaseAnalytics) {
       try {
@@ -194,14 +194,14 @@ class AnalyticsService {
           value: params.value,
           ...params
         });
-        
+
         if (this.debug) console.log('Firebase Analytics event tracked:', params.action);
       } catch (error) {
         console.error('Error tracking Firebase Analytics event:', error);
       }
     }
   }
-  
+
   /**
    * Helper method to track authentication events
    */
@@ -212,7 +212,7 @@ class AnalyticsService {
       ...params
     });
   }
-  
+
   /**
    * Helper method to track content events
    */
@@ -223,7 +223,7 @@ class AnalyticsService {
       ...params
     });
   }
-  
+
   /**
    * Helper method to track interaction events
    */
@@ -234,7 +234,7 @@ class AnalyticsService {
       ...params
     });
   }
-  
+
   /**
    * Helper method to track group events
    */
@@ -245,7 +245,7 @@ class AnalyticsService {
       ...params
     });
   }
-  
+
   /**
    * Helper method to track feature usage events
    */
@@ -256,7 +256,7 @@ class AnalyticsService {
       ...params
     });
   }
-  
+
   /**
    * Helper method to track session events
    */
@@ -276,7 +276,7 @@ export const getAnalyticsService = (): AnalyticsService => {
   if (!instance && typeof window !== 'undefined') {
     instance = new AnalyticsService();
   }
-  
+
   return instance as AnalyticsService;
 };
 

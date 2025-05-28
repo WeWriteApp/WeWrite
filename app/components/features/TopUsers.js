@@ -14,12 +14,12 @@ import PillLink from "../utils/PillLink";
 import { SupporterIcon } from "../payments/SupporterIcon";
 import { db as firestoreDb } from "../../firebase/database";
 import SimpleSparkline from "../utils/SimpleSparkline";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import { getBatchUserActivityLast24Hours } from "../../firebase/userActivity";
-import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtils";
-import { trackQueryPerformance } from "../utils/queryMonitor";
+import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
+import { trackQueryPerformance } from "../../utils/queryMonitor";
 import { ShimmerEffect } from "../ui/skeleton";
-import { debugRecentActivity, debugUserActivity } from "../utils/debugActivity";
+import { debugRecentActivity, debugUserActivity } from "../../utils/debugActivity";
 import { getUserPageCount } from "../../firebase/counters";
 
 // UserListSkeleton component removed as it's no longer needed

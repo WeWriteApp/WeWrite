@@ -3,7 +3,7 @@
 import React from "react";
 import { usePillStyle, PILL_STYLES } from "../../contexts/PillStyleContext";
 import { Label } from "../ui/label";
-import { PillLink } from "../utils/PillLink";
+import { PillLink } from "./PillLink";
 import { cn } from "../../lib/utils";
 import { Check } from "lucide-react";
 

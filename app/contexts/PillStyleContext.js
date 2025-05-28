@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
-import { getBestTextColor } from "../../utils/accessibility";
+import { getBestTextColor } from "../utils/accessibility";
 
 // Define the available pill styles
 export const PILL_STYLES = {

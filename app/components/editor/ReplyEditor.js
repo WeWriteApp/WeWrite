@@ -9,11 +9,11 @@ import {
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { withHistory } from "slate-history";
-import TypeaheadSearch from "./TypeaheadSearch";
+import TypeaheadSearch from "../search/TypeaheadSearch";
 import { X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
 import { updateParagraphIndices, getParagraphIndex } from "../../utils/slate-path-fix";
-import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext';
-import { usePillStyle } from "../../contexts/PillStyleContext';
+import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
+import { usePillStyle } from "../../contexts/PillStyleContext";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../../utils/linkFormatters";
 import { validateLink } from "../../utils/linkValidator";
 

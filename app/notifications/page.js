@@ -2,7 +2,7 @@
 
 import React, { useContext, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContext } from "../../providers/AuthProvider";
+import { AuthContext } from "../providers/AuthProvider";
 import { NotificationContext } from '../providers/NotificationProvider';
 import NavHeader from '../components/layout/NavHeader';
 import NotificationItem from '../components/utils/NotificationItem';

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs';
-import { Users, FileText, Heart } from 'lucide-react';
-import FollowingList from './utils/FollowingList';
-import FollowedPages from './pages/FollowedPages';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Users, FileText, Heart, Lock } from 'lucide-react';
+import FollowingList from './FollowingList';
+import FollowedPages from '../pages/FollowedPages';
 
 interface FollowingTabContentProps {
   userId: string;
@@ -17,7 +17,7 @@ interface FollowingTabContentProps {
  * Displays both followed users and followed pages in a tabbed interface
  */
 export default function FollowingTabContent({ userId, isCurrentUser }: FollowingTabContentProps) {
-  const [activeTab, setActiveTab] = useState<string>('users");
+  const [activeTab, setActiveTab] = useState<string>('users');
 
   // Privacy restriction: Only allow the current user to see their following list
   if (!isCurrentUser) {

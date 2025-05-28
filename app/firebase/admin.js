@@ -6,7 +6,12 @@ let app;
 
 export const initAdmin = () => {
   // Skip initialization during build time
-  if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
+  if (typeof window === 'undefined' && (
+    process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV ||
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.BUILD_ID ||
+    process.argv.includes('build')
+  )) {
     console.log('Skipping Firebase Admin initialization during build time');
     return null;
   }

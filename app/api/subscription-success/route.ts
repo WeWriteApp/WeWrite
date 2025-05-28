@@ -5,17 +5,29 @@ import Stripe from 'stripe';
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let auth;
 let db;
 
-try {
-  initAdmin();
-  auth = admin.auth();
-  db = admin.firestore();
-  console.log('Firebase Admin initialized successfully in subscription-success route');
-} catch (error) {
-  console.error('Error initializing Firebase Admin in subscription-success route:', error);
+function initializeFirebase() {
+  if (auth && db) return { auth, db }; // Already initialized
+
+  try {
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { auth: null, db: null };
+    }
+
+    auth = admin.auth();
+    db = admin.firestore();
+    console.log('Firebase Admin initialized successfully in subscription-success route');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in subscription-success route:', error);
+    return { auth: null, db: null };
+  }
+
+  return { auth, db };
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -25,11 +37,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // POST /api/subscription-success - Handle subscription success and cleanup
 export async function POST(request: NextRequest) {
   try {
-    // Check if Firebase Admin was initialized properly
-    if (!auth || !db) {
+    // Initialize Firebase lazily
+    const { auth: firebaseAuth, db: firestore } = initializeFirebase();
+
+    if (!firebaseAuth || !firestore) {
       console.error('Firebase Admin not initialized properly in subscription-success route');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
+
+    // Update local references
+    auth = firebaseAuth;
+    db = firestore;
     // Get the session cookie
     const sessionCookie = request.cookies.get('session')?.value;
 

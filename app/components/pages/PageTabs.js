@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useContext, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { DataContext } from "../providers/DataProvider";
+import { DataContext } from "../../providers/DataProvider";
 import { AuthContext } from "../../providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { PillLink, PillLinkSkeleton } from "../utils/PillLink";

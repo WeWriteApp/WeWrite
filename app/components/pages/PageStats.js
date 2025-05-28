@@ -4,7 +4,7 @@ import React from 'react';
 import { Eye, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
-import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext';
+import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 
 /**
  * PageStats Component
@@ -34,7 +34,7 @@ export default function PageStats({
     if (accentColor.startsWith('custom')) {
       return customColors[accentColor];
     }
-    return ACCENT_COLOR_VALUES[accentColor] || "#1768FF';
+    return ACCENT_COLOR_VALUES[accentColor] || "#1768FF";
   };
 
   const accentColorValue = getAccentColorValue();

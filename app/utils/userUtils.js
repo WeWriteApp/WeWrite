@@ -2,9 +2,9 @@
  * Utilities for consistent user data management across the application
  */
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
-import { auth } from "../../firebase/auth";
-import { getUserSubscription } from "../../firebase/subscription";
+import { db } from "../firebase/config";
+import { auth } from "../firebase/auth";
+import { getUserSubscription } from "../firebase/subscription";
 
 /**
  * Gets the username for a given user ID

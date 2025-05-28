@@ -1,6 +1,6 @@
 "use client";
 import React, { useContext, useEffect } from "react";
-import { DataContext } from "../providers/DataProvider";
+import { DataContext } from "../../providers/DataProvider";
 import { AuthContext } from "../../providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import Link from "next/link";

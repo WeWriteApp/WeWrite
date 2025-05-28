@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
-import { SubscriptionSuccessModal } from '../../components/SubscriptionSuccessModal';
-import { useFeatureFlag } from '../../utils/feature-flags';
+import { useAuth } from "../../providers/AuthProvider";
+import { SubscriptionSuccessModal } from '../../components/payments/SubscriptionSuccessModal';
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 export default function SubscriptionSuccessPage() {
   const { user } = useAuth();

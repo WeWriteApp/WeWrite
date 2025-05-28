@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews';
+import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews";
 import { Eye } from 'lucide-react';
 
 /**

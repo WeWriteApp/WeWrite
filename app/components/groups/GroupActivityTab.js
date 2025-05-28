@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Clock, AlertTriangle, Info } from "lucide-react";
 import { AuthContext } from "../../providers/AuthProvider";
-import ActivityCard from "./ActivityCard";
+import ActivityCard from "../activity/ActivityCard";
 import { Button } from "../ui/button";
 import { collection, query, where, orderBy, limit, getDocs, Timestamp, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebase/config";

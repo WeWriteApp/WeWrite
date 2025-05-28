@@ -2,17 +2,17 @@
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import { saveNewVersion, updateDoc } from "../../firebase/database";
 import { AuthContext } from "../../providers/AuthProvider";
-import { GroupsContext } from "../providers/GroupsProvider";
+import { GroupsContext } from "../../providers/GroupsProvider";
 import { ReactSearchAutocomplete } from "react-search-autocomplete";
-import { useLogging } from "../providers/LoggingProvider";
+import { useLogging } from "../../providers/LoggingProvider";
 import { X, Loader2 } from "lucide-react";
 import { usePage } from "../../contexts/PageContext";
 import PageEditor from "./PageEditor";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
-import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import EditModeBottomToolbar from "./EditModeBottomToolbar";
 import { toast } from "../ui/use-toast";
-import { validateLink } from "../utils/linkValidator";
+import { validateLink } from "../../utils/linkValidator";
 
 const EditPage = ({
   isEditing,

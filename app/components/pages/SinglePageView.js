@@ -1,38 +1,38 @@
 // This is a temporary file to fix the issue
 "use client";
 import React, { useEffect, useState, useContext, useRef, useCallback, useMemo } from "react";
-import TextSelectionMenu from "./TextSelectionMenu";
-import TextHighlighter from "./TextHighlighter";
+import TextSelectionMenu from "../editor/TextSelectionMenu";
+import TextHighlighter from "../utils/TextHighlighter";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { app } from "../../firebase/config";
 import { listenToPageById, getPageVersions } from "../../firebase/database";
 import { recordPageView } from "../../firebase/pageViews";
-import { trackPageViewWhenReady } from "../utils/analytics-page-titles";
+import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
 import PageViewCounter from "./PageViewCounter";
-import { initializeNavigationTracking } from "../utils/navigationTracking";
+import { initializeNavigationTracking } from "../../utils/navigationTracking";
 import { AuthContext } from "../../providers/AuthProvider";
-import { DataContext } from "../providers/DataProvider";
-import { setupSaveSuccessFlash } from "../utils/flashAnimation";
+import { DataContext } from "../../providers/DataProvider";
+import { setupSaveSuccessFlash } from "../../utils/flashAnimation";
 import { createEditor } from "slate";
 import { withHistory } from "slate-history";
 import { Slate, Editable, withReact } from "slate-react";
-import DashboardLayout from "../DashboardLayout";
-import PublicLayout from "./layout/PublicLayout";
+import DashboardLayout from "../../DashboardLayout";
+import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
-import SiteFooter from "./SiteFooter";
-import PledgeBar from "./PledgeBar";
-import RelatedPages from "./RelatedPages";
+import SiteFooter from "../layout/SiteFooter";
+import PledgeBar from "../payments/PledgeBar";
+import RelatedPages from "../features/RelatedPages";
 // Import BacklinksSection with dynamic import to avoid SSR issues
-const BacklinksSection = dynamic(() => import("./BacklinksSection"), { ssr: false });
+const BacklinksSection = dynamic(() => import("../features/BacklinksSection"), { ssr: false });
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "../ui/button";
-import { EditorContent } from "./ReplyEditor";
-import TextView from "./TextView";
-import TextViewErrorBoundary from "./TextViewErrorBoundary";
+import { EditorContent } from "../editor/ReplyEditor";
+import TextView from "../editor/TextView";
+import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import { PageLoader } from "../ui/page-loader";
 import { SmartLoader } from "../ui/smart-loader";
 import {
@@ -68,7 +68,7 @@ import {
   CommandItem,
   CommandList
 } from "../ui/command";
-import EditPage from "./EditPage";
+import EditPage from "../editor/EditPage";
 
 // Username handling is now done directly in this component
 
@@ -779,7 +779,7 @@ function SinglePageView({ params }) {
 
   // If the page is deleted, use NotFoundWrapper
   if (isDeleted) {
-    const NotFoundWrapper = dynamic(() => import('../not-found-wrapper'), { ssr: false });
+    const NotFoundWrapper = dynamic(() => import('../../not-found-wrapper'), { ssr: false });
     return <NotFoundWrapper />;
   }
 
@@ -803,7 +803,7 @@ function SinglePageView({ params }) {
   if (!page) {
     // If the page is not loading and there's no error, use NotFoundWrapper
     if (!isLoading && !error) {
-      const NotFoundWrapper = dynamic(() => import('../not-found-wrapper'), { ssr: false });
+      const NotFoundWrapper = dynamic(() => import('../../not-found-wrapper'), { ssr: false });
       return <NotFoundWrapper />;
     }
 

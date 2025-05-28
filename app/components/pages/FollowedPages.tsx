@@ -9,7 +9,7 @@ import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from "../ui/button";
 import { AuthContext } from "../../providers/AuthProvider";
 import { toast } from "../ui/use-toast";
-import UnfollowConfirmationDialog from './UnfollowConfirmationDialog';
+import UnfollowConfirmationDialog from '../utils/UnfollowConfirmationDialog';
 import { ErrorDisplay } from "../ui/error-display";
 
 interface Page {

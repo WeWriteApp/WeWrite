@@ -1,11 +1,16 @@
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin, admin } from "../../firebase/admin';
+import { initAdmin, admin } from "../firebase/admin";
 
-// Initialize Firebase Admin
-initAdmin();
-
-// Get auth instance
-const auth = getAuth();
+// Initialize Firebase Admin only if not during build time
+let auth;
+try {
+  const app = initAdmin();
+  if (app) {
+    auth = getAuth();
+  }
+} catch (error) {
+  console.warn('Firebase Admin initialization skipped during build time');
+}
 
 /**
  * Helper function to get the user ID from a request
@@ -23,6 +28,12 @@ const auth = getAuth();
  * @returns {Promise<string|null>} - The user ID or null if not authenticated
  */
 export async function getUserIdFromRequest(request) {
+  // Return null if auth is not available (during build time)
+  if (!auth) {
+    console.warn('Firebase Auth not available, returning null');
+    return null;
+  }
+
   // Get user ID from cookies or query parameters
   let userId;
 

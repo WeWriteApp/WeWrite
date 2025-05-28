@@ -4,7 +4,7 @@ import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { SupporterIcon } from './SupporterIcon';
 import { useAuth } from "../../providers/AuthProvider";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 interface SupporterBadgeProps {
   tier?: string;

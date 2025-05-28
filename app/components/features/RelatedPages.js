@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from "../../firebase/config';
+import { db } from "../../firebase/config";
 import { PillLink } from "../utils/PillLink";
 import { Loader2, Info } from 'lucide-react';
 import {

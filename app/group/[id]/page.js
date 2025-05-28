@@ -1,5 +1,5 @@
 import { fetchGroupFromFirebase } from "../../firebase/rtdb";
-import GroupProfileView from "../../components/GroupProfileView";
+import GroupProfileView from "../../components/groups/GroupProfileView";
 import { Loader } from "lucide-react";
 import { redirect } from "next/navigation";
 import { isAdminServer } from "../../utils/server-feature-flags";

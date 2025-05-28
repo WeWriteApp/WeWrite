@@ -3,7 +3,7 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { getDatabase, ref, onValue, set, Unsubscribe } from 'firebase/database';
 import { app } from "../firebase/config";
-import { AuthContext } from "../../providers/AuthProvider";
+import { AuthContext } from "../providers/AuthProvider";
 
 /**
  * Recent page data interface

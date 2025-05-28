@@ -4,9 +4,9 @@ import * as React from "react";
 import Modal from "../ui/modal";
 import { Button } from "../ui/button";
 import { SocialIcon } from "../ui/social-icon";
-import { socialLinks } from "../config/social-links";
+import { socialLinks } from "../../config/social-links";
 import { DollarSign } from "lucide-react";
-import { SupporterIcon } from "./SupporterIcon";
+import { SupporterIcon } from "../payments/SupporterIcon";
 import { useAuth } from "../../providers/AuthProvider";
 import { useRouter } from 'next/navigation';
 

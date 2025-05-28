@@ -6,7 +6,7 @@
  * trigger security measures in browser extensions.
  */
 
-import { auth } from "../../firebase/auth';
+import { auth } from "../firebase/auth';
 import { signOut, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import Cookies from 'js-cookie';
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { getAnalytics, logEvent } from 'firebase/analytics';
-import { initializeAnalytics, testFirebaseAnalytics } from "../../firebase/config';
+import { initializeAnalytics, testFirebaseAnalytics } from "../firebase/config";
 
 /**
  * Utility functions for debugging Google Analytics and Firebase Analytics

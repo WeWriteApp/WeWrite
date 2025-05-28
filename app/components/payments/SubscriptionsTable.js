@@ -1,9 +1,9 @@
 "use client";
 import React, { useContext, useEffect, useState } from "react";
-import { PortfolioContext } from "../providers/PortfolioProvider";
+import { PortfolioContext } from "../../providers/PortfolioProvider";
 import { getPageById } from "../../firebase/database";
 import {PillLink} from "../utils/PillLink";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import { useAuth } from "../../providers/AuthProvider";
 
 const SubscriptionsTable = () => {

@@ -3,8 +3,8 @@
 import { useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { Loader } from "lucide-react";
-import { useFeatureFlag } from "../../utils/feature-flags";
-import { AuthContext } from "../../providers/AuthProvider";
+import { useFeatureFlag } from "../utils/feature-flags";
+import { AuthContext } from "../providers/AuthProvider";
 
 export default function GroupRedirectPage() {
   const router = useRouter();

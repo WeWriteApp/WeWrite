@@ -7,7 +7,7 @@
  */
 
 import Cookies from 'js-cookie';
-import { auth } from "../../firebase/auth';
+import { auth } from "../firebase/auth";
 
 // Get the current user from all possible sources
 export const getCurrentUser = () => {
@@ -231,5 +231,5 @@ export const getCurrentUserToken = async () => {
 
   console.log('Using session-based auth as fallback');
   // Return a placeholder token to indicate we're using session-based auth
-  return "session-auth';
+  return "session-auth";
 };

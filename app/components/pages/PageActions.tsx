@@ -20,9 +20,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel
 } from "../ui/dropdown-menu";
-import { getCurrentUsername } from "../utils/userUtils";
-import { generateReplyTitle, createReplyContent, encodeReplyParams } from "../utils/replyUtils";
-import { saveDraftReply, setPendingReplyAction } from "../utils/draftReplyUtils";
+import { getCurrentUsername } from "../../utils/userUtils";
+import { generateReplyTitle, createReplyContent, encodeReplyParams } from "../../utils/replyUtils";
+import { saveDraftReply, setPendingReplyAction } from "../../utils/draftReplyUtils";
 import {
   Dialog,
   DialogContent,
@@ -37,12 +37,12 @@ import { AuthContext } from "../../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../../firebase/config";
 import TypeaheadSearch from './TypeaheadSearch';
-import FollowButton from './FollowButton';
+import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
-import ConfirmationModal from './ConfirmationModal';
+import ConfirmationModal from '../utils/ConfirmationModal';
 
 // Dynamically import AddToPageButton to avoid SSR issues
-const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
+const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   ssr: false,
   loading: () => <Button variant="outline" size="lg" className="gap-2 w-full rounded-2xl" disabled>Loading...</Button>
 });

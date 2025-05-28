@@ -3,7 +3,7 @@ import React, { useContext, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import PillLink from "../utils/PillLink";
-import { formatRelativeTime } from "../utils/formatRelativeTime";
+import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import { generateSimpleDiff, generateTextDiff, extractTextContent } from "../utils/generateTextDiff";
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../../lib/utils";
@@ -13,9 +13,9 @@ import { format } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import DiffPreview, { DiffStats } from "./DiffPreview";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import { AuthContext } from "../../providers/AuthProvider";
-import { navigateToPage } from "../utils/pagePermissions";
+import { navigateToPage } from "../../utils/pagePermissions";
 import { useRouter } from "next/navigation";
 
 /**

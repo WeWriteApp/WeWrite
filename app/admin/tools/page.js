@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '../../providers/AuthProvider';
+import { AuthContext } from "../../providers/AuthProvider";
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';

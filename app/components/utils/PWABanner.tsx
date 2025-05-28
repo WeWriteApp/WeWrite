@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { X, Info, Download } from 'lucide-react';
 import { Button } from "../ui/button";
-import { usePWA } from '../providers/PWAProvider';
-import { dismissPWABanner, permanentlyDismissPWABanner, getPWAInstallInstructions } from "../utils/pwa-detection";
-import { getAnalyticsService } from "../utils/analytics-service";
-import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { usePWA } from '../../providers/PWAProvider';
+import { dismissPWABanner, permanentlyDismissPWABanner, getPWAInstallInstructions } from "../../utils/pwa-detection";
+import { getAnalyticsService } from "../../utils/analytics-service";
+import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 import {
   Dialog,
   DialogContent,

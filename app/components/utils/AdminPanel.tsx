@@ -11,9 +11,9 @@ import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphon
 import { db } from "../../firebase/database";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from "../ui/use-toast";
-import { FeatureFlag, isAdmin } from "../utils/feature-flags";
-import { usePWA } from '../providers/PWAProvider';
-import { getAnalyticsService } from "../utils/analytics-service";
+import { FeatureFlag, isAdmin } from "../../utils/feature-flags";
+import { usePWA } from '../../providers/PWAProvider';
+import { getAnalyticsService } from "../../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 

@@ -8,8 +8,8 @@ import Link from "next/link";
 import { Skeleton } from "../components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { useRouter } from "next/navigation";
-import { useFeatureFlag } from "../../utils/feature-flags";
-import { AuthContext } from "../../providers/AuthProvider";
+import { useFeatureFlag } from "../utils/feature-flags";
+import { AuthContext } from "../providers/AuthProvider";
 import Cookies from 'js-cookie';
 
 export default function GroupsPage() {

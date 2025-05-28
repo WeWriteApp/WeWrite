@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { getUserSubscription } from '../../firebase/subscription';
 import { app } from '../../firebase/config';
-import { Loader } from '../../components/Loader';
-import SingleProfileView from '../../components/SingleProfileView';
+import { Loader } from '../../components/utils/Loader';
+import SingleProfileView from '../../components/pages/SingleProfileView';
 import { useTheme } from 'next-themes';
 import { db } from '../../firebase/database';
 import { doc, getDoc } from 'firebase/firestore';
-import { useFeatureFlag } from '../../utils/feature-flags.ts';
-import { useAuth } from '../../providers/AuthProvider';
+import { useFeatureFlag } from '../../utils/feature-flags';
+import { useAuth } from "../../providers/AuthProvider";
 
 export default function UserPage({ params }) {
   const { id } = params;

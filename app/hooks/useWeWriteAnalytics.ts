@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { getAnalyticsService, AnalyticsEventParams } from "../../utils/analytics-service";
+import { getAnalyticsService, AnalyticsEventParams } from "../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
-import { getAnalyticsPageTitle } from "../../utils/analytics-page-titles";
+import { getAnalyticsPageTitle } from "../utils/analytics-page-titles";
 
 /**
  * Custom hook for using WeWrite analytics in components
@@ -32,7 +32,7 @@ export const useWeWriteAnalytics = () => {
     analytics.trackPageView(url, pageTitle);
 
     // Track session start on first page view
-    if (typeof window !== 'undefined" && !window.sessionStartTracked) {
+    if (typeof window !== 'undefined' && !window.sessionStartTracked) {
       analytics.trackSessionEvent(ANALYTICS_EVENTS.SESSION_START, {
         page_path: url,
         page_title: pageTitle,

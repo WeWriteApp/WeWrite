@@ -7,7 +7,7 @@ import {
   getUnreadNotificationsCount,
   markNotificationAsRead,
   markAllNotificationsAsRead
-} from "../../firebase/notifications";
+} from "../firebase/notifications";
 
 /**
  * Notification data interface

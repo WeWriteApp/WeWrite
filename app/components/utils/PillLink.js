@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { Lock, ExternalLink, Users, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "../ui/skeleton";
 import { useAuth } from "../../providers/AuthProvider";
-import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../utils/linkFormatters";
+import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../../utils/linkFormatters";
 import Modal from "../ui/modal";
 import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
-import { navigateToPage, canUserEditPage } from "../utils/pagePermissions";
+import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 

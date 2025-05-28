@@ -9,14 +9,14 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/database";
 import dynamic from 'next/dynamic';
 
-import { getUsernameById, getUserSubscriptionTier } from "../utils/userUtils";
+import { getUsernameById, getUserSubscriptionTier } from "../../utils/userUtils";
 import { SupporterIcon } from "../payments/SupporterIcon";
 import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
 import PageOwnershipDropdown from "./PageOwnershipDropdown";
 import ClickableByline from "../utils/ClickableByline";
 import { useAuth } from "../../providers/AuthProvider";
-import { handleAddToPage, handleReply, handleShare } from "../utils/pageActionHandlers";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

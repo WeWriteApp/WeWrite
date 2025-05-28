@@ -4,24 +4,35 @@ import { initAdmin, admin } from '../../firebase/admin';
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let db, rtdb;
-try {
-  initAdmin();
 
-  // Get Firestore and RTDB instances
-  db = admin.firestore();
+function initializeFirebase() {
+  if (db) return { db, rtdb }; // Already initialized
 
-  // Try to get RTDB instance, but handle case where it might not be available
   try {
-    rtdb = admin.database();
-  } catch (dbError) {
-    console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
-    rtdb = null;
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null, rtdb: null };
+    }
+
+    // Get Firestore and RTDB instances
+    db = admin.firestore();
+
+    // Try to get RTDB instance, but handle case where it might not be available
+    try {
+      rtdb = admin.database();
+    } catch (dbError) {
+      console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
+      rtdb = null;
+    }
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in activity API route:', error);
+    return { db: null, rtdb: null };
   }
-} catch (error) {
-  console.error('Error initializing Firebase Admin in activity API route:', error);
-  // We'll handle this case in the GET handler
+
+  return { db, rtdb };
 }
 
 // Define headers at the module level to avoid reference errors
@@ -38,35 +49,20 @@ export async function GET(request) {
   try {
     console.log('API: /api/activity endpoint called');
 
-    // Check if Firebase Admin was initialized successfully
-    if (!db) {
-      console.warn('API: Firebase Firestore not available, attempting to initialize again');
-      try {
-        initAdmin();
-        db = admin.firestore();
-        try {
-          rtdb = admin.database();
-        } catch (dbError) {
-          console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
-          rtdb = null;
-        }
-      } catch (initError) {
-        console.error('API: Failed to initialize Firebase Admin on retry:', initError);
-        return NextResponse.json({
-          activities: [],
-          message: "Firebase not initialized properly"
-        }, { status: 500, headers: corsHeaders });
-      }
+    // Initialize Firebase lazily
+    const { db: firestore, rtdb: realtimeDb } = initializeFirebase();
 
-      // Check if initialization was successful
-      if (!db) {
-        console.error('API: Firebase Firestore still not available after retry');
-        return NextResponse.json({
-          activities: [],
-          message: "Firebase not initialized properly"
-        }, { status: 500, headers: corsHeaders });
-      }
+    if (!firestore) {
+      console.error('API: Firebase Firestore not available');
+      return NextResponse.json({
+        activities: [],
+        message: "Firebase not initialized properly"
+      }, { status: 500, headers: corsHeaders });
     }
+
+    // Update local references
+    db = firestore;
+    rtdb = realtimeDb;
 
     // Get limit from query parameter - using a static approach
     // Instead of directly using request.url which causes static rendering issues

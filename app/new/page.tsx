@@ -3,16 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "../DashboardLayout";
-import { createPage } from "../../firebase/database";
+import { createPage } from "../firebase/database";
 import ReactGA from 'react-ga4';
-import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
+import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 import Cookies from 'js-cookie';
 import PageEditor from "../components/editor/PageEditor";
 import { Button } from "../components/ui/button";
 import { ChevronLeft } from "lucide-react";
-import { createReplyAttribution } from "../../utils/linkUtils";
-import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
+import { createReplyAttribution } from "../utils/linkUtils";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 
 /**

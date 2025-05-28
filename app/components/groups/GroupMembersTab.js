@@ -11,7 +11,7 @@ import { Badge } from "../ui/badge";
 import { PillLink } from "../utils/PillLink";
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { getBatchGroupUserActivityLast24Hours } from "../../firebase/userActivity";
-import { formatRelativeTime } from "../utils/formatRelativeTime";
+import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -171,7 +171,7 @@ export default function GroupMembersTab({ group, isOwner }) {
       setSearchResults([]);
 
       // Import the searchUsers function from database.js
-      const { searchUsers } = await import("../firebase/database");
+      const { searchUsers } = await import("../../firebase/database");
 
       // Search for users using the searchUsers function
       const users = await searchUsers(searchTerm);

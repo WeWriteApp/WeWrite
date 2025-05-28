@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Bell, Link as LinkIcon, FilePlus } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { NotificationContext } from '../providers/NotificationProvider';
+import { NotificationContext } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
 
 /**

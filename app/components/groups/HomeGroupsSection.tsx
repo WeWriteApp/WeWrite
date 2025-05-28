@@ -10,7 +10,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Users, Plus, Lock, FileText } from "lucide-react";
 import SimpleSparkline from "../utils/SimpleSparkline";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import { SectionTitle } from "../ui/section-title";
 import { Placeholder } from "../ui/placeholder";
 import { Loader } from "lucide-react";

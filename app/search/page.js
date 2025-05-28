@@ -1,18 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
-import { AuthContext } from "../../providers/AuthProvider";
+import { AuthContext } from "../providers/AuthProvider";
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
-import { saveSearchQuery } from "../../utils/savedSearches";
-import { useSearchState } from "../../hooks/useSearchState';
+import { saveSearchQuery } from "../utils/savedSearches";
+import { useSearchState } from "../hooks/useSearchState";
 
 // Import the new separated components
-import SearchResultsDisplay from '../components/SearchResultsDisplay';
-import PerformanceMonitor from '../components/PerformanceMonitor';
+import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
+import PerformanceMonitor from '../components/utils/PerformanceMonitor';
 
 
 // Debounce utility function
@@ -100,7 +100,7 @@ const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, i
   // Handle clear button
   const handleClear = useCallback(() => {
     setInputValue("");
-    lastSearchValue.current = "';
+    lastSearchValue.current = "";
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }

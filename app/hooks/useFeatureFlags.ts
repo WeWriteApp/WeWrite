@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from "../../firebase/config';
+import { db } from "../firebase/config";
 
 export interface FeatureFlag {
   id: string;
@@ -306,7 +306,7 @@ export function useFeatureFlags() {
 
       return true;
     } catch (err) {
-      console.error('[useFeatureFlags] Error validating state:", err);
+      console.error('[useFeatureFlags] Error validating state:', err);
       return false;
     }
   }, [featureFlags]);

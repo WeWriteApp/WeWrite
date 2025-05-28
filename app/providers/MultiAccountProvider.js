@@ -1,10 +1,10 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { auth } from "../../firebase/config";
+import { auth } from "../firebase/config";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { db } from "../firebase/config";
 
 // Maximum number of accounts that can be stored
 const MAX_ACCOUNTS = 5;
@@ -53,7 +53,7 @@ export const MultiAccountProvider = ({ children }) => {
         try {
           // Get user data from Firestore
           const userDoc = await getDoc(doc(db, "users", user.uid));
-          
+
           let userData = {
             uid: user.uid,
             email: user.email,
@@ -70,7 +70,7 @@ export const MultiAccountProvider = ({ children }) => {
           }
 
           setCurrentAccount(userData);
-          
+
           // Update accounts list if this is a new account
           updateAccountsList(userData);
         } catch (error) {
@@ -86,7 +86,7 @@ export const MultiAccountProvider = ({ children }) => {
       } else {
         setCurrentAccount(null);
       }
-      
+
       setLoading(false);
     });
 
@@ -105,7 +105,7 @@ export const MultiAccountProvider = ({ children }) => {
     setAccounts(prevAccounts => {
       // Check if this account already exists in the list
       const existingIndex = prevAccounts.findIndex(acc => acc.uid === userData.uid);
-      
+
       if (existingIndex >= 0) {
         // Update existing account
         const updatedAccounts = [...prevAccounts];
@@ -121,13 +121,13 @@ export const MultiAccountProvider = ({ children }) => {
           ...userData,
           lastUsed: new Date().toISOString()
         };
-        
+
         // If we're at the limit, don't add a new account
         if (prevAccounts.length >= MAX_ACCOUNTS) {
           console.warn(`Maximum account limit (${MAX_ACCOUNTS}) reached. Cannot add more accounts.`);
           return prevAccounts;
         }
-        
+
         return [...prevAccounts, newAccount];
       }
     });
@@ -137,32 +137,32 @@ export const MultiAccountProvider = ({ children }) => {
   const switchAccount = async (accountId) => {
     // First sign out of the current account
     await signOut(auth);
-    
+
     // Find the account to switch to
     const accountToSwitch = accounts.find(acc => acc.uid === accountId);
     if (!accountToSwitch || !accountToSwitch.email) {
       throw new Error("Account not found or missing email");
     }
-    
+
     // We need to prompt for password since we don't store passwords
     const password = prompt(`Enter password for ${accountToSwitch.email}:`);
     if (!password) {
       return false; // User cancelled
     }
-    
+
     try {
       // Sign in with the selected account
       await signInWithEmailAndPassword(auth, accountToSwitch.email, password);
-      
+
       // Update the last used timestamp
-      setAccounts(prevAccounts => 
-        prevAccounts.map(acc => 
-          acc.uid === accountId 
-            ? { ...acc, lastUsed: new Date().toISOString() } 
+      setAccounts(prevAccounts =>
+        prevAccounts.map(acc =>
+          acc.uid === accountId
+            ? { ...acc, lastUsed: new Date().toISOString() }
             : acc
         )
       );
-      
+
       return true;
     } catch (error) {
       console.error("Error switching account:", error);

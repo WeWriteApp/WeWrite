@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { Button } from "../ui/button";
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
-import PerformanceMonitor from './PerformanceMonitor';
+import PerformanceMonitor from '../utils/PerformanceMonitor';
 import { Pin } from 'lucide-react';
 
 /**

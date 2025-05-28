@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef, useContext, useMemo } from "react";
 import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
-import { nodeTypes } from "../utils/constants";
+import { nodeTypes } from "../../utils/constants";
 import { PillLink } from "../utils/PillLink";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { getPageById } from "../../firebase/database";
 import { LineSettingsProvider, LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 import { AuthContext } from "../../providers/AuthProvider";
-import { isExternalLink } from "../utils/linkFormatters";
-import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../utils/linkValidator';
+import { isExternalLink } from "../../utils/linkFormatters";
+import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
 import { ExternalLink, Edit } from "lucide-react";
 import Modal from "../ui/modal";

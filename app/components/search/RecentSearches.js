@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock, X } from 'lucide-react';
-import { getRecentSearches, clearRecentSearches } from "../utils/recentSearches";
+import { getRecentSearches, clearRecentSearches } from "../../utils/recentSearches";
 import { Button } from "../ui/button";
 
 /**

@@ -2,20 +2,27 @@ import { NextResponse } from 'next/server';
 import { initAdmin, admin } from '../../../firebase/admin';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let db;
 
-// Only initialize Firebase Admin on the server
-if (typeof window === 'undefined') {
+function initializeFirebase() {
+  if (db) return { db }; // Already initialized
+
   try {
-    // Initialize Firebase Admin using our centralized function
-    initAdmin();
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null };
+    }
 
     // Get Firestore instance
     db = getFirestore();
   } catch (error) {
     console.error("Error initializing Firebase Admin:", error);
+    return { db: null };
   }
+
+  return { db };
 }
 
 export async function POST(request) {
@@ -33,6 +40,19 @@ export async function POST(request) {
   }
 
   try {
+    // Initialize Firebase lazily
+    const { db: firestore } = initializeFirebase();
+
+    if (!firestore) {
+      return NextResponse.json(
+        { error: 'Firebase Admin not initialized properly' },
+        { status: 500, headers }
+      );
+    }
+
+    // Update local reference
+    db = firestore;
+
     // Parse request body
     const body = await request.json();
     const { userId, oldUsername, newUsername } = body;
@@ -41,14 +61,6 @@ export async function POST(request) {
       return NextResponse.json(
         { error: 'User ID and new username are required' },
         { status: 400, headers }
-      );
-    }
-
-    // Check if we have admin initialized
-    if (!admin || !db) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized properly' },
-        { status: 500, headers }
       );
     }
 

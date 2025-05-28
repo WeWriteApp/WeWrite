@@ -8,16 +8,16 @@ import { toast } from "../ui/use-toast";
 import { recordGroupAboutEditActivity } from "../../firebase/bioActivity";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
-import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { AuthContext } from "../../providers/AuthProvider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import EmptyContentState from './utils/EmptyContentState';
+import EmptyContentState from '../utils/EmptyContentState';
 import { GroupAboutSkeleton } from "../ui/page-skeleton";
-import { useFeatureFlag } from "../utils/feature-flags.ts";
-import DisabledLinkModal from "./DisabledLinkModal";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import DisabledLinkModal from "../utils/DisabledLinkModal";
 
 // Import the unified editor dynamically to avoid SSR issues
-const Editor = dynamic(() => import("./Editor"), { ssr: false });
+const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
 
 export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
   // Check if the user is a member of the group

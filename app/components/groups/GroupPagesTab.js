@@ -7,7 +7,7 @@ import { rtdb } from "../../firebase/rtdb";
 import { ref, get } from "firebase/database";
 import { Input } from "../ui/input";
 import { PillLink } from "../utils/PillLink";
-import AddExistingPageDialog from "./AddExistingPageDialog";
+import AddExistingPageDialog from "../utils/AddExistingPageDialog";
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { getBatchPageActivityLast24Hours } from "../../firebase/groupPageActivity";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";

@@ -3,19 +3,19 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
-import SearchInput from '../components/SearchInput';
-import RenderTracker from '../components/RenderTracker';
+import SearchInput from '../components/search/SearchInput';
+import RenderTracker from '../components/utils/RenderTracker';
 
 /**
  * Search Performance Test Page
- * 
+ *
  * This page is designed to test and compare different search input implementations
  * to identify performance bottlenecks and validate fixes.
  */
 export default function SearchPerformanceTestPage() {
   const [testResults, setTestResults] = useState([]);
   const [currentTest, setCurrentTest] = useState('');
-  
+
   // Test 1: Basic Input (Control)
   const [basicInputValue, setBasicInputValue] = useState('');
   const handleBasicInputChange = useCallback((e) => {
@@ -31,7 +31,7 @@ export default function SearchPerformanceTestPage() {
     console.log('Search called with:', searchTerm);
     setSearchQuery(searchTerm);
     setIsLoading(true);
-    
+
     // Simulate search delay
     setTimeout(() => {
       setSearchResults([
@@ -63,7 +63,7 @@ export default function SearchPerformanceTestPage() {
   const startPerformanceTest = useCallback((testName) => {
     setCurrentTest(testName);
     const startTime = performance.now();
-    
+
     // Record test start
     setTestResults(prev => [...prev, {
       test: testName,
@@ -74,13 +74,13 @@ export default function SearchPerformanceTestPage() {
 
   const endPerformanceTest = useCallback((testName) => {
     const endTime = performance.now();
-    
-    setTestResults(prev => prev.map(result => 
+
+    setTestResults(prev => prev.map(result =>
       result.test === testName && result.status === 'running'
         ? { ...result, endTime, duration: endTime - result.startTime, status: 'completed' }
         : result
     ));
-    
+
     setCurrentTest('');
   }, []);
 
@@ -99,7 +99,7 @@ export default function SearchPerformanceTestPage() {
       />
 
       <h1 className="text-3xl font-bold mb-8">Search Performance Test</h1>
-      
+
       <div className="space-y-8">
         {/* Test 1: Basic Input Control */}
         <div className="border rounded-lg p-6">
@@ -107,14 +107,14 @@ export default function SearchPerformanceTestPage() {
           <p className="text-sm text-muted-foreground mb-4">
             This is a basic input field with no additional logic. It should be perfectly responsive.
           </p>
-          
+
           <Input
             value={basicInputValue}
             onChange={handleBasicInputChange}
             placeholder="Type here to test basic input responsiveness..."
             className="w-full"
           />
-          
+
           <div className="mt-2 text-sm text-muted-foreground">
             Value: "{basicInputValue}" (Length: {basicInputValue.length})
           </div>
@@ -126,7 +126,7 @@ export default function SearchPerformanceTestPage() {
           <p className="text-sm text-muted-foreground mb-4">
             This uses the actual SearchInput component with debouncing and callbacks.
           </p>
-          
+
           <SearchInput
             initialValue=""
             onSearch={handleSearch}
@@ -136,7 +136,7 @@ export default function SearchPerformanceTestPage() {
             autoFocus={false}
             placeholder="Type here to test SearchInput performance..."
           />
-          
+
           <div className="mt-4 space-y-2">
             <div className="text-sm text-muted-foreground">
               Current Query: "{searchQuery}"
@@ -153,30 +153,30 @@ export default function SearchPerformanceTestPage() {
         {/* Performance Test Controls */}
         <div className="border rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Performance Test Controls</h2>
-          
+
           <div className="flex gap-4 mb-4">
-            <Button 
+            <Button
               onClick={() => startPerformanceTest('typing-speed')}
               disabled={currentTest !== ''}
             >
               Start Typing Speed Test
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={() => endPerformanceTest('typing-speed')}
               disabled={currentTest !== 'typing-speed'}
             >
               End Typing Speed Test
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={() => setTestResults([])}
               variant="outline"
             >
               Clear Results
             </Button>
           </div>
-          
+
           {currentTest && (
             <div className="mb-4 p-3 bg-blue-50 rounded-md">
               <strong>Active Test:</strong> {currentTest}
@@ -190,7 +190,7 @@ export default function SearchPerformanceTestPage() {
         {testResults.length > 0 && (
           <div className="border rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Test Results</h2>
-            
+
             <div className="space-y-2">
               {testResults.map((result, index) => (
                 <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
@@ -209,7 +209,7 @@ export default function SearchPerformanceTestPage() {
         {/* Instructions */}
         <div className="border rounded-lg p-6 bg-blue-50">
           <h2 className="text-xl font-semibold mb-4">Testing Instructions</h2>
-          
+
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>First, test the basic input field. It should be perfectly responsive with no lag.</li>
             <li>Then, test the SearchInput component. Compare the responsiveness to the basic input.</li>
@@ -217,9 +217,9 @@ export default function SearchPerformanceTestPage() {
             <li>Use the Performance Test Controls to measure typing speed and responsiveness.</li>
             <li>Look for any differences in behavior between the two input fields.</li>
           </ol>
-          
+
           <div className="mt-4 p-3 bg-yellow-100 rounded">
-            <strong>Expected Behavior:</strong> Both input fields should feel equally responsive. 
+            <strong>Expected Behavior:</strong> Both input fields should feel equally responsive.
             If the SearchInput feels sluggish, there's a performance issue to investigate.
           </div>
         </div>

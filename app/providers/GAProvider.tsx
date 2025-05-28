@@ -3,9 +3,9 @@
 import React, { useEffect, useState, ReactNode } from "react";
 import ReactGA from 'react-ga4';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { getAnalyticsService } from "../../utils/analytics-service";
+import { getAnalyticsService } from "../utils/analytics-service";
 import { ANALYTICS_EVENTS } from '../constants/analytics-events';
-import { getAnalyticsPageTitle } from "../../utils/analytics-page-titles";
+import { getAnalyticsPageTitle } from "../utils/analytics-page-titles";
 
 /**
  * GA provider props interface

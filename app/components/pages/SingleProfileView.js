@@ -3,22 +3,22 @@ import React, { useContext, useState, useEffect } from "react";
 import { PillLink } from "../utils/PillLink";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DataContext } from "../providers/DataProvider";
-import TypeaheadSearch from "./TypeaheadSearch";
+import { DataContext } from "../../providers/DataProvider";
+import TypeaheadSearch from "../search/TypeaheadSearch";
 import {
   ProfilePagesProvider,
   ProfilePagesContext,
-} from "../providers/ProfilePageProvider";
+} from "../../providers/ProfilePageProvider";
 import { useAuth } from "../../providers/AuthProvider";
 import { Loader, Settings, ChevronLeft, Heart, Users, Eye, Share2 } from "lucide-react";
-import SupporterBadge from "./SupporterBadge";
-import { SupporterIcon } from "./SupporterIcon";
-import { SubscriptionInfoModal } from "./SubscriptionInfoModal";
+import SupporterBadge from "../payments/SupporterBadge";
+import { SupporterIcon } from "../payments/SupporterIcon";
+import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
 import { Button } from "../ui/button";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/database";
 
-import UserProfileTabs from './utils/UserProfileTabs';
+import UserProfileTabs from '../utils/UserProfileTabs';
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../../firebase/counters";
 import { getUserSubscription } from "../../firebase/subscription";
 import SimpleSparkline from "../utils/SimpleSparkline";
@@ -65,7 +65,7 @@ const SingleProfileView = ({ profile }) => {
     const fetchUsername = async () => {
       if (profile.uid && (!profile.username || profile.username === 'Anonymous' || profile.username === 'Missing username')) {
         try {
-          const { getUsernameById } = await import('../utils/userUtils');
+          const { getUsernameById } = await import('../../utils/userUtils');
           const fetchedUsername = await getUsernameById(profile.uid);
           if (fetchedUsername && fetchedUsername !== 'Anonymous' && fetchedUsername !== 'Missing username') {
             setUsername(fetchedUsername);
@@ -121,7 +121,7 @@ const SingleProfileView = ({ profile }) => {
           setIsLoadingTier(true);
 
           // Set up a real-time listener for subscription changes
-          const { listenToUserSubscription } = await import('../firebase/subscription');
+          const { listenToUserSubscription } = await import('../../firebase/subscription');
 
           unsubscribe = listenToUserSubscription(profile.uid, (subscription) => {
             console.log(`Subscription update received for user ${profile.uid}:`, subscription);

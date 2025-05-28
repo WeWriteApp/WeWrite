@@ -1,6 +1,6 @@
 "use client";
 import React, { useContext, useState } from "react";
-import { useTheme } from "../providers/ThemeProvider";
+import { useTheme } from "../../providers/ThemeProvider";
 import { rtdb } from "../../firebase/rtdb";
 import { ref, set, onValue, update } from "firebase/database";
 import { AuthContext } from "../../providers/AuthProvider";

@@ -1,6 +1,6 @@
 "use client";
 import React, { useContext } from "react";
-import { PortfolioContext } from "../providers/PortfolioProvider";
+import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
 
 const ChargesTable = () => {

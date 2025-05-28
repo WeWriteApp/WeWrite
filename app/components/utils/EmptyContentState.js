@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useContext } from 'react';
-import { MobileContext } from '../providers/MobileProvider';
+import { MobileContext } from '../../providers/MobileProvider';
 import { cn } from '../../lib/utils';
 import { Edit } from 'lucide-react';
 

@@ -13,13 +13,13 @@ import {
 
 // Import the database function with dynamic import to avoid SSR issues
 const findBacklinksAsync = async (pageId, limit) => {
-  const { findBacklinks } = await import('../firebase/database');
+  const { findBacklinks } = await import('../../firebase/database');
   return findBacklinks(pageId, limit);
 };
 
 // Import navigation tracking functions
 const getNavigationBacklinksAsync = async (pageId) => {
-  const { getNavigationBacklinks } = await import('../utils/navigationTracking');
+  const { getNavigationBacklinks } = await import('../../utils/navigationTracking');
   return getNavigationBacklinks(pageId);
 };
 
@@ -145,7 +145,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         // Fetch page data for navigation backlinks
         const navigationBacklinks = [];
         if (navigationBacklinkIds.length > 0) {
-          const { getPageById } = await import('../firebase/database');
+          const { getPageById } = await import('../../firebase/database');
 
           for (const pageId of navigationBacklinkIds) {
             try {

@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { db } from "../firebase/config";
 
 /**
  * Debug utility to check recent activity in the database

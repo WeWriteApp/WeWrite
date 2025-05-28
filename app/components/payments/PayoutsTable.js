@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState, useContext } from "react";
-import { PortfolioContext } from "../providers/PortfolioProvider";
+import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import { useAuth } from "../../providers/AuthProvider";
 
 const PayoutsTable = () => {

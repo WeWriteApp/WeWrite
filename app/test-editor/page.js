@@ -5,7 +5,7 @@ import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 // Import the main editor dynamically to avoid SSR issues
-const Editor = dynamic(() => import("../components/Editor"), { ssr: false });
+const Editor = dynamic(() => import("../components/editor/Editor"), { ssr: false });
 
 export default function TestEditorPage() {
   // State for each editor type

@@ -4,7 +4,7 @@
  */
 
 import Cookies from 'js-cookie';
-import { auth } from "../../firebase/auth';
+import { auth } from "../firebase/auth';
 
 /**
  * Ensures that the current user's authentication is properly set up

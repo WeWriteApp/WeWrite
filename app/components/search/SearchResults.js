@@ -13,7 +13,7 @@ import Link from "next/link";
 import { PillLink } from "../utils/PillLink";
 import debounce from "lodash.debounce";
 import { Input } from "../ui/input";
-import { navigateToPage } from "../utils/pagePermissions";
+import { navigateToPage } from "../../utils/pagePermissions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 

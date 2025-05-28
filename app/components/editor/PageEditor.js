@@ -13,12 +13,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { useSearchParams } from "next/navigation";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
-import { getUsernameById } from "../utils/userUtils";
-import { createReplyAttribution } from "../utils/linkUtils";
+import { getUsernameById } from "../../utils/userUtils";
+import { createReplyAttribution } from "../../utils/linkUtils";
 import MapEditor from "./MapEditor";
 
 import { toast } from "../ui/use-toast";
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
 

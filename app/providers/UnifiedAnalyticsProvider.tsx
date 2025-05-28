@@ -3,14 +3,14 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
-import { getAnalyticsInstance } from "../../utils/analytics';
+import { getAnalyticsInstance } from "../utils/analytics';
 import { useRouter } from "next/navigation';
 import {
   getAnalyticsPageTitle,
   getAnalyticsPageTitleForId,
   trackPageViewWhenReady,
   isContentReadyForAnalytics
-} from "../../utils/analytics-page-titles';
+} from "../utils/analytics-page-titles';
 
 /**
  * UnifiedAnalyticsProvider

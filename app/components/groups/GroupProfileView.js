@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
 import { Loader, Settings, ChevronLeft, FileText, Users, Eye, Share2, Globe, Lock, LogOut, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
-import VisibilityDropdown from "./VisibilityDropdown";
+import VisibilityDropdown from "../utils/VisibilityDropdown";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/database";
 import { rtdb } from "../../firebase/rtdb";

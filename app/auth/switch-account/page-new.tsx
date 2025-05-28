@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import AuthManager from "../../utils/AuthManager";
-import { auth } from "../../firebase/auth";
+import AuthManager from "../utils/AuthManager";
+import { auth } from "../firebase/auth";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function SwitchAccountPage() {

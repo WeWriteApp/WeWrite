@@ -9,9 +9,9 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { unfollowUser, getFollowedUsers } from "../../firebase/follows";
 import { useAuth } from "../../providers/AuthProvider";
 import Link from 'next/link';
-import { PillLink } from "../utils/PillLink";
-import { SupporterIcon } from './SupporterIcon';
-import { useFeatureFlag } from "../utils/feature-flags";
+import { PillLink } from "./PillLink";
+import { SupporterIcon } from '../payments/SupporterIcon';
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 interface FollowingListProps {
   userId: string;

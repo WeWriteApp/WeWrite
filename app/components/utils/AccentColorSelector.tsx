@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils";
 import { Label } from "../ui/label";
 import { Palette } from "lucide-react";
 import { Button } from "../ui/button";
-import { getBestTextColor } from "../utils/accessibility";
+import { getBestTextColor } from "../../utils/accessibility";
 import HSLColorPicker from './HSLColorPicker';
 
 export default function AccentColorSelector() {

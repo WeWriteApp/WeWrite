@@ -2,19 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
-import { db } from "../../firebase/database";
+import { db } from "../firebase/database";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
-import { FeatureFlag, isAdmin } from "../../utils/feature-flags";
+import { FeatureFlag, isAdmin } from "../utils/feature-flags";
 import { usePWA } from '../providers/PWAProvider';
-import { useFeatureFlags } from "../../hooks/useFeatureFlags';
+import { useFeatureFlags } from "../hooks/useFeatureFlags";
 import SyncFeatureFlagsButton from '../components/utils/SyncFeatureFlagsButton';
 import Link from 'next/link';
 import FeatureFlagCard from '../components/admin/FeatureFlagCard';
@@ -147,7 +147,7 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error loading admin users:', error);
       toast({
-        title: 'Error',
+        title: "Error",
         description: "Failed to load admin users",
         variant: "destructive"
       });

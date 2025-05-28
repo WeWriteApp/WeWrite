@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { PillLink } from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
-import { generateSimpleDiff, generateTextDiff } from "../../utils/generateTextDiff";
+import { generateSimpleDiff, generateTextDiff } from "../utils/generateTextDiff";
 import DiffPreview, { DiffStats } from "./DiffPreview";
 
 /**

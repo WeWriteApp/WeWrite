@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import { PageActions } from "./PageActions";
-import WordCounter from "./WordCounter";
+import WordCounter from "../editor/WordCounter";
 import PageStats from "./PageStats";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Reply } from "lucide-react";
 
 // Dynamically import AddToPageButton to avoid SSR issues
-const AddToPageButton = dynamic(() => import('./AddToPageButton'), {
+const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   ssr: false,
   loading: () => <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
 });

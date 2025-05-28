@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
+import { useAuth } from "../../providers/AuthProvider";
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { getUserSubscription } from "../../firebase/subscription";

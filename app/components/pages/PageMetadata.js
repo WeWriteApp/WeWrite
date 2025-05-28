@@ -4,17 +4,17 @@ import { db } from "../../firebase/config";
 import { getDatabase } from "firebase/database";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { ref, get, onValue } from "firebase/database";
-import { Loader2, Check, Users, ChevronRight, ChevronDown, Heart } from "lucide-react';
-import { liveReadersService } from '../services/LiveReadersService";
+import { Loader2, Check, Users, ChevronRight, ChevronDown, Heart } from "lucide-react";
+import { liveReadersService } from "../services/LiveReadersService";
 import { pageStatsService } from "../services/PageStatsService";
 import { pledgeService } from "../services/PledgeService";
-import { AuthContext } from "../../providers/AuthProvider';
-import User from './UserBadge';
+import { AuthContext } from "../../providers/AuthProvider";
+import User from "./UserBadge";
 import { Sparkline } from "../ui/sparkline";
-import FollowButton from "./FollowButton";
+import FollowButton from "../utils/FollowButton";
 import { getPageFollowerCount } from "../../firebase/follows";
 import PageMetadataMap from './pages/PageMetadataMap';
-import { useFeatureFlag } from "../utils/feature-flags";
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 // MetadataItem component for the card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (

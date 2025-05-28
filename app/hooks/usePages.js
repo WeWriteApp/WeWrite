@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { db } from "../../firebase/database";
+import { db } from "../firebase/database";
 import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 
 // Default limits for page loading

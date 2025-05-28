@@ -4,15 +4,27 @@ import { initAdmin, admin } from '../../firebase/admin';
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-// Initialize Firebase Admin and get Firestore instance
+// Initialize Firebase Admin lazily
 let app;
 let db;
 
-try {
-  app = initAdmin();
-  db = admin.firestore();
-} catch (error) {
-  console.warn('Failed to initialize Firebase Admin for trending API:', error.message);
+function initializeFirebase() {
+  if (app && db) return { app, db }; // Already initialized
+
+  try {
+    app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { app: null, db: null };
+    }
+
+    db = admin.firestore();
+  } catch (error) {
+    console.warn('Failed to initialize Firebase Admin for trending API:', error.message);
+    return { app: null, db: null };
+  }
+
+  return { app, db };
 }
 
 export async function GET(request) {
@@ -27,17 +39,21 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const limitCount = parseInt(searchParams.get('limit') || '10', 10);
 
-  // Check if Firebase credentials are missing
-  const useFirebase = db && app;
+  // Initialize Firebase lazily
+  const { app: firebaseApp, db: firestore } = initializeFirebase();
 
   // If Firebase credentials are missing, return empty array
-  if (!useFirebase) {
+  if (!firebaseApp || !firestore) {
     console.log('Firebase credentials missing - returning empty trending pages array');
     return NextResponse.json({
       trendingPages: [],
       error: "Firebase credentials not available"
     }, { headers });
   }
+
+  // Update local references
+  app = firebaseApp;
+  db = firestore;
 
   try {
 

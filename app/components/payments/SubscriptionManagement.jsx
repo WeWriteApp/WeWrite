@@ -12,7 +12,7 @@ import { SupporterIcon } from './SupporterIcon';
 import { useSubscriptionFeature } from '../../hooks/useSubscriptionFeature';
 import SubscriptionComingSoonModal from './SubscriptionComingSoonModal';
 import { useConfirmation } from '../../hooks/useConfirmation';
-import ConfirmationModal from "../../utils/ConfirmationModal';
+import ConfirmationModal from "../utils/ConfirmationModal";
 
 import { createPortalSession } from '../../services/stripeService';
 
@@ -198,7 +198,7 @@ export default function SubscriptionManagement() {
       }
 
       // Normal flow for subscriptions with stripeSubscriptionId
-      console.log('Attempting to cancel subscription:', subscription?.stripeSubscriptionId || 'unknown");
+      console.log('Attempting to cancel subscription:', subscription?.stripeSubscriptionId || 'unknown');
       const result = await cancelSubscription(subscription?.stripeSubscriptionId || null, subscription?.stripeCustomerId || null);
 
       // Check if this was a "no subscription found" case, which we now treat as success

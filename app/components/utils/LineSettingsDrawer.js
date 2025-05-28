@@ -6,8 +6,8 @@ import { Button } from "../ui/button";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
-import { MobileContext } from "../providers/MobileProvider';
-import { DrawerContext } from "../providers/DrawerProvider';
+import { MobileContext } from "../../providers/MobileProvider';
+import { DrawerContext } from "../../providers/DrawerProvider';
 
 /**
  * LineSettingsDrawer Component

@@ -15,7 +15,7 @@ import { AccentColorSwitcher } from "../utils/AccentColorSwitcher"
 import PillStyleToggle from "../utils/PillStyleToggle"
 import NotificationBadge from "../utils/NotificationBadge"
 import { AuthContext } from "../../providers/AuthProvider"
-import { useFeatureFlag } from "../utils/feature-flags"
+import { useFeatureFlag } from "../../utils/feature-flags"
 
 interface SidebarProps {
   isOpen: boolean

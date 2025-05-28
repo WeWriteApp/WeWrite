@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useCallback, useContext } from "react";
-import { rtdb } from "../../firebase/rtdb";
+import { rtdb } from "../firebase/rtdb";
 import { onValue, ref, get } from "firebase/database";
-import { AuthContext } from "../../providers/AuthProvider";
+import { AuthContext } from "../providers/AuthProvider";
 
 export const GroupsContext = React.createContext();
 

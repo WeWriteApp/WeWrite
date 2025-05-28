@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
-import { useAuth } from "../../providers/AuthProvider";
+import { useAuth } from "../providers/AuthProvider";
 import { getUserSubscription } from "../firebase/subscription";
 import { doc, getDoc } from "firebase/firestore";
 import { addUsername, updateEmail as updateFirebaseEmail } from "../firebase/auth";
@@ -14,7 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/payments/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/payments/PaymentMethodsManager';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
-import { useFeatureFlag } from "../../utils/feature-flags";
+import { useFeatureFlag } from "../utils/feature-flags";
 
 // Define admin check locally to avoid import issues
 const isAdmin = (userEmail?: string | null): boolean => {

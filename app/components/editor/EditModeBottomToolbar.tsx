@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { Button } from "../ui/button";
-import { Switch } from "../ui/switch';
+import { Switch } from "../ui/switch";
 import { Globe, Lock, Link, X, Check } from "lucide-react";
 import MapEditor from "./MapEditor";
-import { useFeatureFlag } from "../utils/feature-flags';
-import { useAuth } from "../providers/AuthProvider';
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { useAuth } from "../../providers/AuthProvider";
 
 export interface EditModeBottomToolbarProps {
   isPublic: boolean;
@@ -34,7 +34,7 @@ export default function EditModeBottomToolbar({
   const { user } = useAuth();
 
   // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view", user?.email);
+  const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
 
   return (
     <div className="w-full bg-background border-t border-border mt-8">

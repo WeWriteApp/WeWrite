@@ -6,11 +6,11 @@ export async function POST(request) {
   try {
     // Initialize Stripe
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    
+
     // Get request body
     const body = await request.json();
     const { userId, subscriptionData } = body;
-    
+
     // Basic validation - ensure userId exists
     if (!userId) {
       return NextResponse.json(
@@ -18,24 +18,24 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     // Get the user's subscription from Firestore
     const subscription = await getUserSubscription(userId);
-    
+
     if (!subscription) {
       return NextResponse.json(
         { error: 'No subscription found' },
         { status: 400 }
       );
     }
-    
+
     let result;
     let customerId = subscription.stripeCustomerId;
-    
+
     // Get user email from subscription data or use a placeholder
     const userEmail = subscriptionData.email || 'customer@example.com';
     const username = subscriptionData.username || 'Customer';
-    
+
     // Always use a single product in Stripe (if needed)
     // Pricing is handled dynamically by our UI/backend, not Stripe prices
     // No need to reference or create Stripe prices here
@@ -55,16 +55,16 @@ export async function POST(request) {
               userId: userId
             }
           });
-          
+
           customerId = customer.id;
-          
+
           // Update the subscription with the real Stripe customer ID
           await updateSubscription(userId, {
             ...subscription,
             stripeCustomerId: customerId
           });
         }
-        
+
         // Create a PaymentIntent to simulate a charge
         const paymentIntent = await stripe.paymentIntents.create({
           amount: Math.round(subscription.amount * 100), // Stripe uses cents
@@ -87,7 +87,7 @@ export async function POST(request) {
             }
           }
         });
-        
+
         result = paymentIntent;
       } else {
         // For real Stripe subscriptions, use the Stripe billing API
@@ -98,7 +98,7 @@ export async function POST(request) {
           collection_method: 'charge_automatically',
           description: `Manual test renewal for ${userEmail}`
         });
-        
+
         // Add an invoice item for the dynamic amount
         await stripe.invoiceItems.create({
           customer: customerId,
@@ -110,12 +110,12 @@ export async function POST(request) {
             product: 'Subscription'
           }
         });
-        
+
         // Finalize and pay the invoice
         const finalInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
         result = await stripe.invoices.pay(finalInvoice.id);
       }
-      
+
       // Update the subscription renewal dates in Firestore
       const updatedSubscription = {
         ...subscriptionData,
@@ -123,12 +123,12 @@ export async function POST(request) {
         lastPaymentAmount: subscription.amount,
         lastPaymentDate: new Date().toISOString()
       };
-      
+
       await updateSubscription(userId, updatedSubscription);
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Test transaction created successfully', 
+
+      return NextResponse.json({
+        success: true,
+        message: 'Test transaction created successfully',
         transaction: {
           id: result.id,
           amount: subscription.amount,

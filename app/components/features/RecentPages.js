@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Clock, FileText } from 'lucide-react';
-import { getRecentlyViewedPageIds } from "../utils/recentSearches";
+import { getRecentlyViewedPageIds } from "../../utils/recentSearches";
 import { getDocById } from "../../firebase/database";
 import { AuthContext } from "../../providers/AuthProvider";
 import { PillLink } from "../utils/PillLink";
