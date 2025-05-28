@@ -198,7 +198,7 @@ const fallbackShare = (url, text) => {
       toast.success("Link copied to clipboard!");
     }).catch(err => {
       console.error('Failed to copy to clipboard:', err);
-      toast.error("Failed to copy link");
+      // Remove error toast - allow users to cancel share actions without showing error messages
     });
   } else {
     // Very old browser fallback
@@ -212,7 +212,7 @@ const fallbackShare = (url, text) => {
       toast.success("Link copied to clipboard!");
     } catch (err) {
       console.error('Fallback copy failed:', err);
-      toast.error("Failed to copy link");
+      // Remove error toast - allow users to cancel share actions without showing error messages
     }
     document.body.removeChild(textArea);
   }

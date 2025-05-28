@@ -33,7 +33,7 @@ export default function EditingActionBar({
     const handleResize = () => {
       const currentHeight = window.innerHeight;
       const heightDifference = initialHeight - currentHeight;
-      
+
       // If height decreased by more than 150px, assume keyboard is open
       setIsKeyboardOpen(heightDifference > 150);
       setViewportHeight(currentHeight);
@@ -63,13 +63,13 @@ export default function EditingActionBar({
   }, [onSave, onCancel]);
 
   const actionBarVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       y: 20,
       scale: 0.95
     },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       scale: 1,
       transition: {
@@ -78,8 +78,8 @@ export default function EditingActionBar({
         damping: 25
       }
     },
-    exit: { 
-      opacity: 0, 
+    exit: {
+      opacity: 0,
       y: 20,
       scale: 0.95,
       transition: {
@@ -104,8 +104,8 @@ export default function EditingActionBar({
         }}
       >
         <div className={`
-          flex items-center gap-2 px-4 py-2 
-          bg-background/95 backdrop-blur-sm 
+          flex items-center gap-2 px-4 py-2
+          bg-background/95 backdrop-blur-sm
           border border-border rounded-2xl shadow-lg
           ${isKeyboardOpen ? 'bg-background border-2' : ''}
         `}>
@@ -125,7 +125,7 @@ export default function EditingActionBar({
           <Button
             onClick={onSave}
             disabled={isSaving}
-            className="gap-2 rounded-xl bg-primary hover:bg-primary/90"
+            className="gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white"
             size="sm"
           >
             {isSaving ? (

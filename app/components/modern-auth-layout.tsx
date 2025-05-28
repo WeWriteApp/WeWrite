@@ -4,6 +4,7 @@ import { ReactNode, useEffect } from "react";
 import { Image } from "./ui/image";
 import Link from "next/link";
 import { cn } from "../lib/utils";
+import { motion } from "framer-motion";
 
 interface ModernAuthLayoutProps {
   children: ReactNode;
@@ -33,9 +34,17 @@ export function ModernAuthLayout({
         <div className="w-full max-w-md mx-auto">
           {/* Header removed as requested */}
 
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8">
+          <motion.div
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+              duration: 0.4,
+              ease: [0.25, 0.46, 0.45, 0.94] // Professional easing curve
+            }}
+          >
             {children}
-          </div>
+          </motion.div>
 
           {/* Terms and privacy policy removed */}
         </div>

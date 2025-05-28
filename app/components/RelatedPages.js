@@ -31,8 +31,24 @@ function simpleStem(word) {
   return word;
 }
 
+// Check if a title exactly matches the YYYY-MM-DD format
+function isExactDateFormat(title) {
+  // Must be exactly 10 characters long
+  if (title.length !== 10) {
+    return false;
+  }
+  // Must match YYYY-MM-DD pattern exactly
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  return datePattern.test(title);
+}
+
 // Process words with improved cleaning and stemming
 function processWords(text) {
+  // If the text is an exact date format, don't process it as words
+  if (isExactDateFormat(text)) {
+    return [text]; // Return the exact date as a single "word"
+  }
+
   return text
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
@@ -40,6 +56,7 @@ function processWords(text) {
     .split(/\s+/)
     .filter(word => word.length >= 2) // Include words of at least 2 characters
     .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word))
+    .filter(word => !/^\d{4}$|^\d{2}$/.test(word)) // Filter out year-only (YYYY) and month/day-only (MM/DD) matches
     .map(word => simpleStem(word)); // Apply stemming
 }
 

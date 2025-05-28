@@ -103,12 +103,12 @@ export default function HeroSection({
         <div className="flex flex-col lg:flex-row items-center gap-12">
           {/* Mobile containerization - enhanced card styling on mobile */}
           {isMobile ? (
-            <div className="w-full mx-4 sm:mx-6 px-3 sm:px-6 py-4 sm:py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="w-full mx-6 px-6 py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300 mb-6">
               <div className={`text-center ${fadeInClass}`}>
                 <h1 className="text-4xl font-bold mb-6">
                   Write, share, earn.
                 </h1>
-                <p className="text-lg md:text-xl text-muted-foreground mb-8">
+                <p className="text-lg md:text-xl text-muted-foreground mb-8 text-justify">
                   WeWrite is a free speech platform and social wiki where every page is a <span
                     className="cursor-pointer relative group"
                     onClick={(e) => {

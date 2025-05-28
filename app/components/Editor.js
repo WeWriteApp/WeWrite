@@ -2380,7 +2380,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
             <button
               onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
               disabled={!canSave}
-              className="flex-1 py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isEditing ? 'Save changes' : 'Insert link'}
             </button>
@@ -2388,7 +2388,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
             <button
               onClick={handleExternalSubmit}
               disabled={!canSave}
-              className="flex-1 py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isEditing ? 'Save changes' : 'Insert link'}
             </button>

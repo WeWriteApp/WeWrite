@@ -98,7 +98,7 @@ export default function EditModeBottomToolbar({
             disabled={isSaving}
             variant="default"
             size="lg"
-            className="w-full rounded-2xl bg-primary hover:bg-primary/90 font-medium"
+            className="w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white font-medium"
           >
             {isSaving ? (
               <div className="flex items-center gap-2">

@@ -136,70 +136,40 @@ export function FilterableFeatureList({
           <Button
             variant={filters.inProgress ? "default" : "outline"}
             size="sm"
-            className={`filter-chip gap-1.5 px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
+            className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.inProgress
                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md'
                 : 'text-amber-600 border-amber-300 hover:bg-amber-100 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/30'
             }`}
             onClick={() => toggleFilter('inProgress')}
           >
-            <Wrench className="h-3 w-3 flex-shrink-0" />
             <span className="whitespace-nowrap">In Progress</span>
-            <span
-              className={`filter-chip-checkmark ${
-                filters.inProgress
-                  ? 'w-3 opacity-100 ml-1'
-                  : 'w-0 opacity-0 ml-0'
-              }`}
-            >
-              <Check className="h-2.5 w-2.5 flex-shrink-0" />
-            </span>
           </Button>
 
           <Button
             variant={filters.comingSoon ? "default" : "outline"}
             size="sm"
-            className={`filter-chip gap-1.5 px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
+            className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.comingSoon
                 ? 'bg-gray-500 hover:bg-gray-600 text-white shadow-md'
                 : 'text-gray-600 border-gray-300 hover:bg-gray-100 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-900/30'
             }`}
             onClick={() => toggleFilter('comingSoon')}
           >
-            <Clock className="h-3 w-3 flex-shrink-0" />
             <span className="whitespace-nowrap">Coming Soon</span>
-            <span
-              className={`filter-chip-checkmark ${
-                filters.comingSoon
-                  ? 'w-3 opacity-100 ml-1'
-                  : 'w-0 opacity-0 ml-0'
-              }`}
-            >
-              <Check className="h-2.5 w-2.5 flex-shrink-0" />
-            </span>
           </Button>
 
           <Button
             variant={filters.available ? "default" : "outline"}
             size="sm"
-            className={`filter-chip gap-1.5 px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
+            className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.available
                 ? 'bg-green-500 hover:bg-green-600 text-white shadow-md'
                 : 'text-green-600 border-green-300 hover:bg-green-100 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/30'
             }`}
             onClick={() => toggleFilter('available')}
           >
-            <Check className="h-3 w-3 flex-shrink-0" />
             <span className="whitespace-nowrap">Available Now</span>
-            <span
-              className={`filter-chip-checkmark ${
-                filters.available
-                  ? 'w-3 opacity-100 ml-1'
-                  : 'w-0 opacity-0 ml-0'
-              }`}
-            >
-              <Check className="h-2.5 w-2.5 flex-shrink-0" />
-            </span>
           </Button>
         </div>
       </div>

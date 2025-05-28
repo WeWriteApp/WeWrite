@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
+import { Check } from 'lucide-react';
 
 interface DayCardProps {
   date: Date;
@@ -92,6 +93,13 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
       }}
       aria-label={`${hasNote ? 'View note for' : 'Create note for'} ${date.toLocaleDateString()}`}
     >
+      {/* Checkmark icon for filled notes */}
+      {hasNote && (
+        <div className="absolute top-2 right-2">
+          <Check className="h-3 w-3 text-white opacity-80" />
+        </div>
+      )}
+
       {/* Day of week - small text at top */}
       <div
         className="text-xs font-medium uppercase tracking-wide"

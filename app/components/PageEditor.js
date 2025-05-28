@@ -428,6 +428,20 @@ const PageEditor = ({
 
   return (
     <div className="editor-container w-full max-w-none">
+      {/* Title input for new pages and replies */}
+      {(isNewPage || isReply) && (
+        <div className="mb-6">
+          <input
+            type="text"
+            value={title || ""}
+            onChange={(e) => setTitle && setTitle(e.target.value)}
+            placeholder={isReply ? "Type title here..." : "Type title here..."}
+            className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground"
+            autoFocus={!isReply}
+          />
+        </div>
+      )}
+
       <div className="w-full max-w-none">
         {isHydrated ? (
           <Editor
