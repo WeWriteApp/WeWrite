@@ -41,7 +41,7 @@ export default function EditModeBottomToolbar({
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex flex-col gap-3">
           {/* Public/Private visibility switcher */}
-          <div className="flex items-center justify-center gap-2 bg-background/90 p-3 rounded-lg border border-input">
+          <div className="flex items-center justify-center gap-2 bg-background/90 p-3 rounded-2xl border border-input">
             {isPublic ? (
               <Globe className="h-4 w-4 text-green-500" />
             ) : (
